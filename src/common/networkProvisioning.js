@@ -47,7 +47,11 @@ const GENERIC_PROFILE = {
   ],
   pass24Path: [
     `${DEVICE_AP_24}.KeyPassphrase`,
-    `${IGD_WIFI_24}.PreSharedKey.1.KeyPassphrase`
+    `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`,
+    `${DEVICE_AP_24}.PreSharedKey.1.PreSharedKey`,
+    `${IGD_WIFI_24}.KeyPassphrase`,
+    `${IGD_WIFI_24}.PreSharedKey.1.KeyPassphrase`,
+    `${IGD_WIFI_24}.PreSharedKey.1.PreSharedKey`
   ],
   ssid5Path: [
     `${DEVICE_WIFI_5}.SSID`,
@@ -55,7 +59,11 @@ const GENERIC_PROFILE = {
   ],
   pass5Path: [
     `${DEVICE_AP_5}.KeyPassphrase`,
-    `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`
+    `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`,
+    `${DEVICE_AP_5}.PreSharedKey.1.PreSharedKey`,
+    `${IGD_WIFI_5}.KeyPassphrase`,
+    `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`,
+    `${IGD_WIFI_5}.PreSharedKey.1.PreSharedKey`
   ]
 };
 
@@ -73,6 +81,22 @@ const BRAND_OVERRIDES = {
       `${IGD_PPP}.X_ALU_OntWAN.VlanId`,
       `${IGD_PPP}.X_CT-COM_VLANID`,
       "Device.WAN.Ethernet.1.VLANID"
+    ],
+    pass24Path: [
+      `${IGD_WIFI_24}.KeyPassphrase`,
+      `${IGD_WIFI_24}.PreSharedKey.1.KeyPassphrase`,
+      `${IGD_WIFI_24}.PreSharedKey.1.PreSharedKey`,
+      `${DEVICE_AP_24}.KeyPassphrase`,
+      `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`,
+      `${DEVICE_AP_24}.PreSharedKey.1.PreSharedKey`
+    ],
+    pass5Path: [
+      `${IGD_WIFI_5}.KeyPassphrase`,
+      `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`,
+      `${IGD_WIFI_5}.PreSharedKey.1.PreSharedKey`,
+      `${DEVICE_AP_5}.KeyPassphrase`,
+      `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`,
+      `${DEVICE_AP_5}.PreSharedKey.1.PreSharedKey`
     ]
   },
   dasan: {
