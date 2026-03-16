@@ -185,15 +185,18 @@ export class GenieacsClient {
     natEnabled,
     ssid24,
     ssid5,
-    wifiPassword
+    wifiPassword,
+    wifiPassword24,
+    wifiPassword5
   }) {
     const profile = resolveProvisioningProfile(brand);
     const values = [];
-    const push = (pathOrPaths, value, valueType = "xsd:string", transform = (input) => input) => {
+    const push = (pathOrPaths, value, valueType, transform = (input) => input) => {
       const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths];
       for (const path of paths) {
         if (path && value !== undefined && value !== null && value !== "") {
-          values.push([path, transform(value), valueType]);
+          const normalizedValue = transform(value);
+          values.push(valueType ? [path, normalizedValue, valueType] : [path, normalizedValue]);
         }
       }
     };
@@ -206,9 +209,9 @@ export class GenieacsClient {
       push(profile.natPath, natEnabled, "xsd:boolean", Boolean);
     }
     push(profile.ssid24Path, ssid24);
-    push(profile.pass24Path, wifiPassword);
+    push(profile.pass24Path, wifiPassword24 ?? wifiPassword);
     push(profile.ssid5Path, ssid5);
-    push(profile.pass5Path, wifiPassword);
+    push(profile.pass5Path, wifiPassword5 ?? wifiPassword24 ?? wifiPassword);
 
     if (values.length > 0) {
       await this.setParameterValues(deviceId, values);

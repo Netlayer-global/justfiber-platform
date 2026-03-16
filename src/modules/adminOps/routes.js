@@ -262,7 +262,8 @@ adminOpsRouter.patch(
     }
     const ssid24 = req.body?.ssid24 || device.wifiInfo?.ssid24Masked || "JustFiber";
     const ssid5 = req.body?.ssid5 || device.wifiInfo?.ssid5Masked || "JustFiber";
-    const wifiPassword = req.body?.password;
+    const wifiPassword24 = req.body?.password24 || req.body?.password;
+    const wifiPassword5 = req.body?.password5 || req.body?.password24 || req.body?.password;
     const brand = detectOntBrand({
       serialNumber: device.serialNumber,
       productClass: device.productClass,
@@ -276,9 +277,10 @@ adminOpsRouter.patch(
       natEnabled: true,
       ssid24,
       ssid5,
-      wifiPassword
+      wifiPassword24,
+      wifiPassword5
     });
-    if (brand === "nokia" && wifiPassword) {
+    if (brand === "nokia" && (wifiPassword24 || wifiPassword5)) {
       await genieacsClient.rebootDevice(device.deviceId);
     }
     device.wifiInfo = {

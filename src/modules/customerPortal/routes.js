@@ -726,9 +726,11 @@ customerPortalRouter.post(
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
+    const sameSsidMode = payload.sameSsidMode ?? true;
     const ssid24 = payload.ssid24 || device.wifiInfo?.ssid24Masked || "JustFiber";
-    const ssid5 = payload.ssid5 || device.wifiInfo?.ssid5Masked || "JustFiber";
-    const password = payload.password24 || payload.password5;
+    const ssid5 = sameSsidMode ? payload.ssid24 || ssid24 : payload.ssid5 || device.wifiInfo?.ssid5Masked || "JustFiber";
+    const password24 = payload.password24 || payload.password5;
+    const password5 = sameSsidMode ? payload.password24 || payload.password5 : payload.password5 || payload.password24;
     const brand = detectOntBrand({
       serialNumber: device.serialNumber,
       productClass: device.productClass,
@@ -743,9 +745,10 @@ customerPortalRouter.post(
       natEnabled: true,
       ssid24,
       ssid5,
-      wifiPassword: password
+      wifiPassword24: password24,
+      wifiPassword5: password5
     });
-    if (brand === "nokia" && password) {
+    if (brand === "nokia" && (password24 || password5)) {
       await genieacsClient.rebootDevice(device.deviceId);
     }
     device.wifiInfo = {
