@@ -315,4 +315,17 @@ Full local verification (auto-seed + auto-start + smoke + shutdown):
 npm run verify:all
 ```
 
+Live external integrations check (read-only):
+
+```bash
+# ensure real mode
+# in .env -> MOCK_EXTERNALS=false
+
+# optional test IDs
+export TEST_JAZE_CUSTOMER_ID=CUST-1001
+export TEST_GENIE_DEVICE_ID=ONT-1001
+
+npm run test:externals
+```
+
 This workspace currently does not have Node.js installed, so tests could not be executed here. The test suite is included and ready to run on Ubuntu after dependency install.

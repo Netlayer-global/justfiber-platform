@@ -12,6 +12,7 @@
     "worker": "node src/worker.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
     "seed:sample-data": "node src/scripts/seedSampleData.js",
+    "test:externals": "node src/scripts/testExternalIntegrations.js",
     "smoke:all": "node src/scripts/smokeAllModules.js",
     "verify:all": "node src/scripts/verifyAll.js",
     "test": "node --test"
