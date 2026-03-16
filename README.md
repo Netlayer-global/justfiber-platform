@@ -351,6 +351,22 @@ Customer self-care test:
 npm run test:customer
 ```
 
+Live Nokia booking-to-activation scenario:
+
+```bash
+export LIVE_CUSTOMER_MOBILE="9876543210"
+export LIVE_CUSTOMER_NAME="Amit Singh"
+export LIVE_CUSTOMER_ADDRESS="Gomti Nagar, Lucknow"
+export LIVE_CUSTOMER_PIN="226010"
+export LIVE_PLAN_CODE="PLAN-100"
+export LIVE_JAZE_USER_ID="1001"
+export LIVE_INSTALLER_LOGIN="9000000001"
+export LIVE_INSTALLER_PASSWORD="Installer123!"
+export LIVE_NOKIA_SERIAL="ALCLB3DCCB87"
+export LIVE_RUN_ACTIVATION=true
+npm run run:live-nokia
+```
+
 Live external integrations check (read-only):
 
 ```bash
