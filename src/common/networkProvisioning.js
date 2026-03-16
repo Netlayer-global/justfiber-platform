@@ -235,23 +235,23 @@ export function normalizeCustomerId(value) {
 
 export function buildPppoeCredentials(customerId) {
   const normalized = normalizeCustomerId(customerId);
-  const safeId = normalized.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const digitsOnly = normalized.replace(/\D/g, "");
+  const suffix = (digitsOnly || "00000000").slice(-8).padStart(8, "0");
   return {
-    username: `jfr_${safeId || "customer"}`,
+    username: `jf-${suffix}`,
     password: "123456"
   };
 }
 
 export function buildWifiCredentials() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  let password = "";
-  for (let i = 0; i < 8; i += 1) {
-    password += alphabet[Math.floor(Math.random() * alphabet.length)];
+  let suffix = "";
+  for (let i = 0; i < 4; i += 1) {
+    suffix += Math.floor(Math.random() * 10);
   }
   return {
     ssid24: "JustFiber",
     ssid5: "JustFiber",
-    password
+    password: `Just@${suffix}`
   };
 }
 
