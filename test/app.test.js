@@ -30,21 +30,21 @@ test("missing route returns 404 envelope", async () => {
 
 test("admin frontend entrypoint responds", async () => {
   const app = createApp();
-  const response = await request(app).get("/admin");
+  const response = await request(app).get("/admin").redirects(1);
   assert.equal(response.status, 200);
   assert.match(response.text, /Netlayer Control Tower/);
 });
 
 test("user frontend entrypoint responds", async () => {
   const app = createApp();
-  const response = await request(app).get("/user");
+  const response = await request(app).get("/user").redirects(1);
   assert.equal(response.status, 200);
   assert.match(response.text, /Justfiber User Panel/);
 });
 
 test("sales frontend entrypoint responds", async () => {
   const app = createApp();
-  const response = await request(app).get("/sales");
+  const response = await request(app).get("/sales").redirects(1);
   assert.equal(response.status, 200);
   assert.match(response.text, /Justfiber Sales/);
 });
