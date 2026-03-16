@@ -341,4 +341,17 @@ export TEST_JAZE_PPPOE_SERVICE_ID=<REAL_SERVICE_ID>
 npm run test:jaze
 ```
 
+GenieACS module tests:
+
+```bash
+# read-only (safe)
+npm run test:genie
+
+# write test (applies preset on device) - use test device only
+export TEST_GENIE_ENABLE_WRITES=true
+export TEST_GENIE_DEVICE_ID=<REAL_DEVICE_ID>
+export TEST_GENIE_PRESET=SERVICE_RETRY
+npm run test:genie
+```
+
 This workspace currently does not have Node.js installed, so tests could not be executed here. The test suite is included and ready to run on Ubuntu after dependency install.

@@ -13,6 +13,7 @@
     "seed:admin": "node src/scripts/seedAdmin.js",
     "seed:sample-data": "node src/scripts/seedSampleData.js",
     "test:jaze": "node src/scripts/testJazeModules.js",
+    "test:genie": "node src/scripts/testGenieModules.js",
     "test:externals": "node src/scripts/testExternalIntegrations.js",
     "smoke:all": "node src/scripts/smokeAllModules.js",
     "verify:all": "node src/scripts/verifyAll.js",
