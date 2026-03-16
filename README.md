@@ -336,7 +336,7 @@ npm run test:jaze
 
 # write tests (suspend/resume/payment/pppoe) - use only in test sandbox accounts
 export TEST_JAZE_ENABLE_WRITES=true
-export TEST_JAZE_SERVICE_ID=<REAL_SERVICE_ID>
+export TEST_JAZE_USER_ID=<REAL_JAZE_USER_ID>
 export TEST_JAZE_PPPOE_SERVICE_ID=<REAL_SERVICE_ID>
 npm run test:jaze
 ```

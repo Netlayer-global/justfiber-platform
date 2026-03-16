@@ -1,11 +1,11 @@
 import { env } from "../config/env.js";
 import { jazeClient } from "../integrations/jazeClient.js";
 
-const READ_CUSTOMER_ID = process.env.TEST_JAZE_CUSTOMER_ID || "CUST-1001";
+const READ_CUSTOMER_ID = process.env.TEST_JAZE_CUSTOMER_ID || process.env.TEST_JAZE_USER_ID || "CUST-1001";
 const ENABLE_WRITES = process.env.TEST_JAZE_ENABLE_WRITES === "true";
 
 const WRITE_INPUT = {
-  serviceId: process.env.TEST_JAZE_SERVICE_ID,
+  userId: process.env.TEST_JAZE_USER_ID || process.env.TEST_JAZE_SERVICE_ID,
   suspendReason: process.env.TEST_JAZE_SUSPEND_REASON || "integration-test-suspend",
   resumeReason: process.env.TEST_JAZE_RESUME_REASON || "integration-test-resume",
   bookingNumber: process.env.TEST_JAZE_BOOKING_NUMBER || `JF-TEST-${Date.now()}`,
@@ -33,7 +33,7 @@ function printSkip(message) {
 
 function requiredWriteFields() {
   return [
-    ["TEST_JAZE_SERVICE_ID", WRITE_INPUT.serviceId],
+    ["TEST_JAZE_USER_ID (or TEST_JAZE_SERVICE_ID)", WRITE_INPUT.userId],
     ["TEST_JAZE_PPPOE_SERVICE_ID (or TEST_JAZE_SERVICE_ID)", WRITE_INPUT.pppoeServiceId]
   ].filter(([, value]) => !value);
 }
@@ -68,25 +68,25 @@ async function main() {
       throw new Error(`Missing required vars for write tests: ${missing.map(([name]) => name).join(", ")}`);
     }
 
-    await runStep(results, `JAZE suspendService (${WRITE_INPUT.serviceId})`, async () => {
+    await runStep(results, `JAZE suspendService (${WRITE_INPUT.userId})`, async () => {
       return jazeClient.suspendService({
-        serviceId: WRITE_INPUT.serviceId,
+        serviceId: WRITE_INPUT.userId,
         reason: WRITE_INPUT.suspendReason,
         idempotencyKey: `suspend-${Date.now()}`
       });
     });
 
-    await runStep(results, `JAZE resumeService (${WRITE_INPUT.serviceId})`, async () => {
+    await runStep(results, `JAZE resumeService (${WRITE_INPUT.userId})`, async () => {
       return jazeClient.resumeService({
-        serviceId: WRITE_INPUT.serviceId,
+        serviceId: WRITE_INPUT.userId,
         reason: WRITE_INPUT.resumeReason,
         idempotencyKey: `resume-${Date.now()}`
       });
     });
 
-    await runStep(results, `JAZE createBookingPayment (${WRITE_INPUT.bookingNumber})`, async () => {
+    await runStep(results, `JAZE makePayment (${WRITE_INPUT.userId})`, async () => {
       return jazeClient.createBookingPayment({
-        bookingNumber: WRITE_INPUT.bookingNumber,
+        bookingNumber: WRITE_INPUT.userId,
         amount: WRITE_INPUT.amount,
         customerName: WRITE_INPUT.customerName,
         mobile: WRITE_INPUT.mobile

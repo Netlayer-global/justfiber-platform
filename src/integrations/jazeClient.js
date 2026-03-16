@@ -1,5 +1,13 @@
 import { env } from "../config/env.js";
 
+function apiPath(path) {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  if (env.JAZE_API_BASE_URL?.includes("/api/v1")) {
+    return normalized.replace(/^\/api\/v1\/?/, "");
+  }
+  return `/api/v1${normalized}`;
+}
+
 function buildHeaders() {
   const headers = {
     "Content-Type": "application/json"
@@ -16,7 +24,8 @@ function buildHeaders() {
 }
 
 async function jazeRequest(method, path, body, isForm = false) {
-  const url = new URL(path, env.JAZE_API_BASE_URL).toString();
+  const baseUrl = env.JAZE_API_BASE_URL.endsWith("/") ? env.JAZE_API_BASE_URL : `${env.JAZE_API_BASE_URL}/`;
+  const url = new URL(apiPath(path), baseUrl).toString();
 
   if (env.MOCK_EXTERNALS) {
     return { ok: true, mock: true, method, url, body };
@@ -51,18 +60,32 @@ async function jazeRequest(method, path, body, isForm = false) {
 }
 
 export class JazeClient {
-  async suspendService({ serviceId, reason, idempotencyKey }) {
-    return jazeRequest("POST", `/services/${serviceId}/suspend`, {
-      reason,
-      idempotencyKey
-    });
+  async suspendService({ serviceId, reason }) {
+    return jazeRequest(
+      "POST",
+      "/block_unblock_user",
+      {
+        userId: serviceId,
+        accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
+        state: "block",
+        notes: reason
+      },
+      true
+    );
   }
 
-  async resumeService({ serviceId, reason, idempotencyKey }) {
-    return jazeRequest("POST", `/services/${serviceId}/resume`, {
-      reason,
-      idempotencyKey
-    });
+  async resumeService({ serviceId, reason }) {
+    return jazeRequest(
+      "POST",
+      "/block_unblock_user",
+      {
+        userId: serviceId,
+        accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
+        state: "unblock",
+        notes: reason
+      },
+      true
+    );
   }
 
   async createPppoeUser({ customerId, serviceId, planCode, username, password }) {
@@ -83,16 +106,68 @@ export class JazeClient {
   }
 
   async createBookingPayment({ bookingNumber, amount, customerName, mobile }) {
-    return jazeRequest("POST", "/payments/orders", {
-      bookingNumber,
-      amount,
-      customerName,
-      mobile
-    });
+    return jazeRequest(
+      "POST",
+      "/make_payment",
+      {
+        userId: bookingNumber,
+        amount,
+        method: "onlinePayment",
+        notes: `Booking:${bookingNumber} Customer:${customerName || "NA"} Mobile:${mobile || "NA"}`
+      },
+      true
+    );
   }
 
   async getCustomerBilling(customerId) {
-    return jazeRequest("GET", `/customers/${customerId}/billing`);
+    return jazeRequest("GET", `/get_payment_details/${encodeURIComponent(customerId)}`);
+  }
+
+  async getUserByUsername(username) {
+    return jazeRequest("GET", `/get_user_by_username/${encodeURIComponent(username)}`);
+  }
+
+  async blockOrUnblockUser({ userId, state }) {
+    return jazeRequest("POST", "/block_unblock_user", {
+      userId,
+      accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
+      state
+    }, true);
+  }
+
+  async makePayment({ userId, amount, method = "onlinePayment", notes = "Integration test payment" }) {
+    return jazeRequest(
+      "POST",
+      "/make_payment",
+      {
+        userId,
+        amount,
+        method,
+        notes
+      },
+      true
+    );
+  }
+
+  async createUser({ userGroupId, accountId, userName, password, userState = "active", phoneNumber, comments }) {
+    return jazeRequest(
+      "POST",
+      "/add_user",
+      {
+        userGroupId,
+        accountId: accountId || env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
+        userName,
+        password,
+        userState,
+        phoneNumber,
+        comments
+      },
+      true
+    );
+  }
+
+  async getSingleUserDetails(userId) {
+    return jazeRequest("GET", `/get_details/${encodeURIComponent(userId)}`);
   }
 }
 
