@@ -26,6 +26,26 @@ import { installerAppRouter } from "./modules/installerApp/routes.js";
 import { salesAppRouter } from "./modules/salesApp/routes.js";
 import { ApiError } from "./common/ApiError.js";
 
+function resolveCorsOrigin(originValue) {
+  if (!originValue || originValue === "*") {
+    return true;
+  }
+  const allowed = originValue
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (!allowed.length) {
+    return true;
+  }
+  return (origin, callback) => {
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("CORS origin not allowed"));
+  };
+}
+
 export function createApp() {
   const app = express();
   const __filename = fileURLToPath(import.meta.url);
@@ -46,7 +66,7 @@ export function createApp() {
       hsts: env.NODE_ENV === "production" && env.PORT === 443 ? undefined : false
     })
   );
-  app.use(cors({ origin: env.ADMIN_CORS_ORIGIN === "*" ? true : env.ADMIN_CORS_ORIGIN }));
+  app.use(cors({ origin: resolveCorsOrigin(env.ADMIN_CORS_ORIGIN) }));
   app.use(express.json({ limit: "1mb" }));
   app.use(requestContext);
   app.use(morgan("combined"));
@@ -54,6 +74,17 @@ export function createApp() {
 
   app.get("/", (req, res) => {
     const host = (req.hostname || "").toLowerCase();
+    if (host === (env.API_DOMAIN || "").toLowerCase()) {
+      return res.json({
+        success: true,
+        data: {
+          service: "justfiber-api",
+          domain: env.API_DOMAIN,
+          health: "/health/live",
+          versionPrefix: "/api/v1"
+        }
+      });
+    }
     if (host === env.ADMIN_DOMAIN || host === env.NOC_DOMAIN) {
       return res.redirect("/admin");
     }
