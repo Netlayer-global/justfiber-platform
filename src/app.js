@@ -96,6 +96,10 @@ export function createApp() {
     res.sendFile(path.join(publicDir, "user", "index.html"));
   });
 
+  app.get("/user/login", (_req, res) => {
+    res.sendFile(path.join(publicDir, "user", "index.html"));
+  });
+
   app.get("/sales", (_req, res) => {
     res.sendFile(path.join(publicDir, "sales", "index.html"));
   });
