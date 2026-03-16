@@ -122,3 +122,61 @@ export async function fetchInstallerData({ token, apiBase }) {
   const installers = await request("/api/v1/admin/installers?limit=8", { token, apiBase });
   return { installers: installers.items || installers };
 }
+
+export async function fetchTicketData({ token, apiBase }) {
+  const tickets = await request("/api/v1/admin/tickets?limit=10", { token, apiBase });
+  return { tickets: tickets.items || tickets };
+}
+
+export async function createTicket({ token, apiBase, body }) {
+  return request("/api/v1/admin/tickets", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function fetchConfigData({ token, apiBase }) {
+  return request("/api/v1/admin/configs", { token, apiBase });
+}
+
+export async function updateConfigItem({ token, apiBase, key, body }) {
+  return request(`/api/v1/admin/configs/${encodeURIComponent(key)}`, {
+    method: "PATCH",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function fetchAuditData({ token, apiBase }) {
+  const logs = await request("/api/v1/admin/audit/logs?limit=12", { token, apiBase });
+  return { logs: logs.items || logs };
+}
+
+export async function fetchDeviceDetail({ token, apiBase, deviceId }) {
+  return request(`/api/v1/admin/devices/${encodeURIComponent(deviceId)}`, { token, apiBase });
+}
+
+export async function applyDevicePreset({ token, apiBase, deviceId, presetName }) {
+  return request(`/api/v1/admin/devices/${encodeURIComponent(deviceId)}/apply-preset`, {
+    method: "POST",
+    token,
+    apiBase,
+    body: { presetName }
+  });
+}
+
+export async function fetchCustomerDetail({ token, apiBase, customerId }) {
+  return request(`/api/v1/admin/customers/${encodeURIComponent(customerId)}`, { token, apiBase });
+}
+
+export async function runCustomerAction({ token, apiBase, customerId, action, body }) {
+  return request(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/${action}`, {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
