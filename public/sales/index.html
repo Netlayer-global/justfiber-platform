@@ -51,6 +51,22 @@
           <div id="leadsView" class="stack"></div>
         </section>
       </section>
+
+      <section class="grid">
+        <section class="panel">
+          <h2>Sales Bookings</h2>
+          <div id="bookingsView" class="stack"></div>
+        </section>
+        <section class="panel">
+          <h2>Booking Payment (JAZE)</h2>
+          <form id="bookingPaymentForm" class="stack">
+            <input id="bookingIdInput" class="input" type="text" placeholder="Booking Mongo ID" />
+            <input id="bookingJazeUserIdInput" class="input" type="text" placeholder="JAZE User ID" />
+            <button id="bookingLinkButton" class="ghost-button" type="button">Generate Payment Link</button>
+            <button id="bookingConfirmButton" class="primary-button" type="button">Confirm Payment</button>
+          </form>
+        </section>
+      </section>
     </main>
     <script type="module" src="/sales/app.js"></script>
   </body>

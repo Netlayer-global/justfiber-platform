@@ -24,3 +24,15 @@ export const salesKycSchema = z.object({
   backImageUrl: z.string().url().optional(),
   selfieImageUrl: z.string().url().optional()
 });
+
+export const salesBookingPaymentLinkSchema = z.object({
+  jazeUserId: z.string().min(1).optional()
+});
+
+export const salesBookingPaymentConfirmSchema = z.object({
+  status: z.enum(["paid", "failed"]),
+  paymentId: z.string().optional(),
+  reference: z.string().optional(),
+  amount: z.number().positive().optional(),
+  notes: z.string().optional()
+});

@@ -9,6 +9,8 @@ import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { Customer } from "../../models/Customer.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { buildPagination } from "../../common/pagination.js";
+import { ApiError } from "../../common/ApiError.js";
+import { jazeClient } from "../../integrations/jazeClient.js";
 
 export const adminOpsRouter = Router();
 
@@ -166,6 +168,84 @@ adminOpsRouter.get(
       summary: customer.billingSnapshot || {},
       invoices,
       payments
+    });
+  })
+);
+
+adminOpsRouter.post(
+  "/customers/:customerId/billing/payment/link-jaze",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const jazeUserId = String(req.body?.jazeUserId || customer.customerId);
+    const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
+    const rawUrl =
+      gatewayPayload?.paymentUrl ||
+      gatewayPayload?.paymentLink ||
+      gatewayPayload?.payment_link ||
+      gatewayPayload?.url ||
+      gatewayPayload?.redirectUrl ||
+      gatewayPayload?.data?.paymentUrl ||
+      gatewayPayload?.data?.payment_link;
+    const paymentUrl = rawUrl ? (/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${String(rawUrl).replace(/^\/+/, "")}`) : null;
+    return ok(res, {
+      customerId: customer.customerId,
+      userId: jazeUserId,
+      amount: customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0,
+      paymentUrl,
+      raw: gatewayPayload
+    });
+  })
+);
+
+adminOpsRouter.post(
+  "/customers/:customerId/billing/payment/confirm",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+
+    const transactionId = req.body?.paymentId || `JAZE-ADMIN-BILL-${customer.customerId}-${Date.now()}`;
+    const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
+    if (!existingPayment) {
+      await PaymentTransaction.create({
+        transactionId,
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        provider: "jaze",
+        amount: Number(req.body?.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0),
+        status: "success",
+        paidAt: new Date(),
+        method: "onlinePayment",
+        reference: req.body?.reference || req.body?.paymentId,
+        metadata: {
+          source: "admin_billing_confirm",
+          actorAdminId: req.admin?._id?.toString()
+        }
+      });
+    }
+
+    const amount = Number(req.body?.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0);
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      lastInvoiceAmount: amount,
+      dueAmount: 0,
+      lastPaymentStatus: "paid",
+      lastPaidAt: new Date()
+    };
+    await customer.save();
+
+    return ok(res, {
+      customerId: customer.customerId,
+      paymentStatus: "paid",
+      amount,
+      dueAmount: 0,
+      idempotentReplay: Boolean(existingPayment)
     });
   })
 );

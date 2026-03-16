@@ -487,6 +487,10 @@ function renderCustomerDetail(customer) {
       <p class="eyebrow">Billing</p>
       <strong>Due: Rs ${customer.billing?.summary?.dueAmount || customer.billingSnapshot?.dueAmount || 0}</strong>
       <div class="muted">Last payment: ${customer.billing?.summary?.lastPaymentStatus || customer.billingSnapshot?.lastPaymentStatus || "-"}</div>
+      <div class="row-actions">
+        <button class="ghost-button" data-admin-billing-link="${customer.customerId}">Generate Bill Link</button>
+        <button class="ghost-button" data-admin-billing-confirm="${customer.customerId}">Confirm Bill Payment</button>
+      </div>
     </article>
     <article class="detail-card">
       <p class="eyebrow">Invoice</p>
@@ -494,6 +498,37 @@ function renderCustomerDetail(customer) {
       <div class="muted">${customer.invoiceSummary?.billCycle || "-"} / ${customer.invoiceSummary?.billMode || "-"}</div>
     </article>
   `;
+}
+
+async function handleAdminBillingLink(customerId) {
+  try {
+    const data = await api(`/api/v1/admin/customers/${customerId}/billing/payment/link-jaze`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    if (data.paymentUrl) {
+      window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+    }
+    setBanner(data.paymentUrl ? `Payment link opened: ${data.paymentUrl}` : "Payment link generated.");
+  } catch (error) {
+    setBanner(error.message, "error");
+  }
+}
+
+async function handleAdminBillingConfirm(customerId) {
+  try {
+    const data = await api(`/api/v1/admin/customers/${customerId}/billing/payment/confirm`, {
+      method: "POST",
+      body: JSON.stringify({
+        paymentId: `JAZE-ADMIN-${Date.now()}`,
+        reference: `JAZE-ADMIN-REF-${Date.now()}`
+      })
+    });
+    setBanner(`Billing payment confirmed for ${customerId}. Due amount: ${data.dueAmount}`);
+    await Promise.allSettled([loadBilling(), loadCustomerDetail(customerId)]);
+  } catch (error) {
+    setBanner(error.message, "error");
+  }
 }
 
 function renderDevices() {
@@ -848,6 +883,12 @@ function bindEvents() {
 
     const actionButton = event.target.closest("[data-customer-action]");
     if (actionButton) await handleCustomerAction(actionButton.dataset.customerId, actionButton.dataset.customerAction);
+
+    const adminBillingLinkButton = event.target.closest("[data-admin-billing-link]");
+    if (adminBillingLinkButton) await handleAdminBillingLink(adminBillingLinkButton.dataset.adminBillingLink);
+
+    const adminBillingConfirmButton = event.target.closest("[data-admin-billing-confirm]");
+    if (adminBillingConfirmButton) await handleAdminBillingConfirm(adminBillingConfirmButton.dataset.adminBillingConfirm);
 
     const presetButton = event.target.closest("[data-preset]");
     if (presetButton) await handlePreset(presetButton.dataset.deviceId, presetButton.dataset.preset);

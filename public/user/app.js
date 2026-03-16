@@ -170,6 +170,8 @@ document.getElementById("gpsButton").addEventListener("click", () => {
 el.bookingForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
+    const paymentMode = document.getElementById("paymentModeInput").value;
+    const jazeUserId = document.getElementById("jazeUserIdInput").value.trim();
     const booking = await api("/api/v1/customer/bookings", {
       method: "POST",
       body: JSON.stringify({
@@ -181,10 +183,16 @@ el.bookingForm.addEventListener("submit", async (event) => {
         pinCode: document.getElementById("bookingPinInput").value,
         lat: state.demoGps.lat,
         lng: state.demoGps.lng,
-        paymentMode: "razorpay"
+        paymentMode,
+        jazeUserId: jazeUserId || undefined
       })
     });
-    showBanner(`Booking created: ${booking.bookingNumber}`);
+    const paymentUrl = booking?.paymentGateway?.paymentUrl;
+    showBanner(
+      paymentUrl
+        ? `Booking created: ${booking.bookingNumber}. Open payment link: ${paymentUrl}`
+        : `Booking created: ${booking.bookingNumber}`
+    );
     document.getElementById("trackingInput").value = booking.bookingNumber;
     await loadDashboard();
   } catch (error) {
@@ -196,6 +204,48 @@ document.getElementById("trackingButton").addEventListener("click", async () => 
   try {
     const data = await api(`/api/v1/customer/bookings/${document.getElementById("trackingInput").value}/tracking`);
     el.trackingView.innerHTML = `<div class="card"><strong>Current Step</strong><div>${data.currentStep || "N/A"}</div></div>`;
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("bookingPayLinkButton").addEventListener("click", async () => {
+  try {
+    const bookingNumber = document.getElementById("trackingInput").value;
+    const jazeUserId = document.getElementById("jazeUserIdInput").value.trim();
+    if (!bookingNumber) {
+      throw new Error("Enter booking number first");
+    }
+    const data = await api(`/api/v1/customer/bookings/${bookingNumber}/payment/link-jaze`, {
+      method: "POST",
+      body: JSON.stringify({ jazeUserId: jazeUserId || undefined })
+    });
+    if (data.paymentUrl) {
+      window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+    }
+    showBanner(data.paymentUrl ? `Payment link opened: ${data.paymentUrl}` : "Payment link generated.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("bookingPayConfirmButton").addEventListener("click", async () => {
+  try {
+    const bookingNumber = document.getElementById("trackingInput").value;
+    if (!bookingNumber) {
+      throw new Error("Enter booking number first");
+    }
+    const data = await api(`/api/v1/customer/bookings/${bookingNumber}/payment/confirm`, {
+      method: "POST",
+      body: JSON.stringify({
+        status: "paid",
+        paymentId: `JAZE-WEB-${Date.now()}`,
+        reference: `JAZE-WEB-REF-${Date.now()}`,
+        notes: "Confirmed from user web panel"
+      })
+    });
+    showBanner(`Booking payment confirmed. Status: ${data.status}`);
+    await Promise.allSettled([loadDashboard()]);
   } catch (error) {
     showBanner(error.message, true);
   }
@@ -258,6 +308,39 @@ document.getElementById("routerRebootButton").addEventListener("click", async ()
   try {
     const data = await api("/api/v1/customer/device/reboot", { method: "POST" });
     showBanner(`Router reboot queued. Recovery in about ${data.estimatedRecoverySeconds} seconds.`);
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("billingPayLinkButton").addEventListener("click", async () => {
+  try {
+    const jazeUserId = document.getElementById("jazeUserIdInput").value.trim();
+    const data = await api("/api/v1/customer/billing/payment/link-jaze", {
+      method: "POST",
+      body: JSON.stringify({ jazeUserId: jazeUserId || undefined })
+    });
+    if (data.paymentUrl) {
+      window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+    }
+    showBanner(data.paymentUrl ? `Bill payment link opened: ${data.paymentUrl}` : "Bill payment link generated.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("billingPayConfirmButton").addEventListener("click", async () => {
+  try {
+    const data = await api("/api/v1/customer/billing/payment/confirm", {
+      method: "POST",
+      body: JSON.stringify({
+        paymentId: `JAZE-BILL-WEB-${Date.now()}`,
+        reference: `JAZE-BILL-REF-${Date.now()}`,
+        notes: "Confirmed from user web panel"
+      })
+    });
+    showBanner(`Bill payment confirmed. Due amount: ${data.dueAmount}`);
+    await loadDashboard();
   } catch (error) {
     showBanner(error.message, true);
   }

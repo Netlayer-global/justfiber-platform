@@ -233,6 +233,9 @@ Sales APIs:
 - `GET /api/v1/sales/leads`
 - `POST /api/v1/sales/leads/:leadId/kyc`
 - `POST /api/v1/sales/leads/:leadId/convert`
+- `GET /api/v1/sales/bookings`
+- `POST /api/v1/sales/bookings/:bookingId/payment/link-jaze`
+- `POST /api/v1/sales/bookings/:bookingId/payment/confirm`
 
 Admin sales/booking APIs:
 
@@ -251,6 +254,8 @@ Admin billing/network APIs:
 - `GET /api/v1/admin/billing/invoices`
 - `GET /api/v1/admin/billing/payments`
 - `GET /api/v1/admin/customers/:customerId/billing`
+- `POST /api/v1/admin/customers/:customerId/billing/payment/link-jaze`
+- `POST /api/v1/admin/customers/:customerId/billing/payment/confirm`
 - `GET /api/v1/admin/network/overview`
 - `GET /api/v1/admin/network/nodes`
 - `GET /api/v1/admin/network/bng-status`

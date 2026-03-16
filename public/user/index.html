@@ -82,6 +82,12 @@
             <input id="bookingEmailInput" class="input" type="email" placeholder="Email" />
             <input id="bookingAddressInput" class="input" type="text" placeholder="Full address" />
             <input id="bookingPinInput" class="input" type="text" placeholder="PIN code" />
+            <select id="paymentModeInput" class="input">
+              <option value="jaze">JAZE Gateway</option>
+              <option value="razorpay">Razorpay (legacy)</option>
+              <option value="cash">Cash</option>
+            </select>
+            <input id="jazeUserIdInput" class="input" type="text" placeholder="JAZE User ID (required for JAZE mode)" />
             <button id="gpsButton" class="ghost-button" type="button">Use Current Demo GPS</button>
             <button class="primary-button" type="submit">Book Now</button>
           </form>
@@ -93,6 +99,8 @@
           </div>
           <input id="trackingInput" class="input" type="text" placeholder="Booking number" />
           <button id="trackingButton" class="ghost-button" type="button">Track Booking</button>
+          <button id="bookingPayLinkButton" class="ghost-button" type="button">Generate JAZE Payment Link</button>
+          <button id="bookingPayConfirmButton" class="ghost-button" type="button">Confirm Booking Payment</button>
           <div id="trackingView" class="stack"></div>
         </section>
       </section>
@@ -139,6 +147,8 @@
             <button id="planOptionsRefresh" class="ghost-button">Refresh</button>
           </div>
           <div id="planOptionsView" class="stack"></div>
+          <button id="billingPayLinkButton" class="ghost-button" type="button">Generate Bill Payment Link</button>
+          <button id="billingPayConfirmButton" class="ghost-button" type="button">Confirm Bill Payment</button>
           <form id="wifiForm" class="stack">
             <input id="ssid24Input" class="input" type="text" placeholder="2.4G SSID" />
             <input id="password24Input" class="input" type="text" placeholder="2.4G Password" />

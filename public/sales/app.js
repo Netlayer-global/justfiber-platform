@@ -37,6 +37,22 @@ async function loadLeads() {
     .join("");
 }
 
+async function loadBookings() {
+  if (!token) return;
+  const bookings = await api("/api/v1/sales/bookings");
+  document.getElementById("bookingsView").innerHTML = bookings
+    .map(
+      (booking) => `
+        <div class="card">
+          <strong>${booking.bookingNumber}</strong>
+          <div>${booking.status}</div>
+          <div class="muted">${booking._id}</div>
+        </div>
+      `
+    )
+    .join("");
+}
+
 document.getElementById("loginForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -49,7 +65,7 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
     });
     token = data.accessToken;
     banner("Sales session established.");
-    await Promise.all([loadDashboard(), loadLeads()]);
+    await Promise.all([loadDashboard(), loadLeads(), loadBookings()]);
   } catch (error) {
     banner(error.message, true);
   }
@@ -73,6 +89,43 @@ document.getElementById("leadForm").addEventListener("submit", async (event) => 
     });
     banner("Lead created.");
     await loadLeads();
+    await loadBookings();
+  } catch (error) {
+    banner(error.message, true);
+  }
+});
+
+document.getElementById("bookingLinkButton").addEventListener("click", async () => {
+  try {
+    const bookingId = document.getElementById("bookingIdInput").value;
+    const jazeUserId = document.getElementById("bookingJazeUserIdInput").value;
+    const data = await api(`/api/v1/sales/bookings/${bookingId}/payment/link-jaze`, {
+      method: "POST",
+      body: JSON.stringify({ jazeUserId: jazeUserId || undefined })
+    });
+    if (data.paymentUrl) {
+      window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
+    }
+    banner(data.paymentUrl ? `Payment link opened: ${data.paymentUrl}` : "Payment link generated.");
+  } catch (error) {
+    banner(error.message, true);
+  }
+});
+
+document.getElementById("bookingConfirmButton").addEventListener("click", async () => {
+  try {
+    const bookingId = document.getElementById("bookingIdInput").value;
+    const data = await api(`/api/v1/sales/bookings/${bookingId}/payment/confirm`, {
+      method: "POST",
+      body: JSON.stringify({
+        status: "paid",
+        paymentId: `JAZE-SALES-WEB-${Date.now()}`,
+        reference: `JAZE-SALES-REF-${Date.now()}`,
+        notes: "Confirmed from sales panel"
+      })
+    });
+    banner(`Booking payment confirmed. Status: ${data.status}`);
+    await loadBookings();
   } catch (error) {
     banner(error.message, true);
   }

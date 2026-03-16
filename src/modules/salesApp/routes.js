@@ -5,13 +5,127 @@ import { ok } from "../../common/response.js";
 import { ApiError } from "../../common/ApiError.js";
 import { requireSalesAuth, signSalesAccessToken, signSalesRefreshToken } from "../../common/salesAuth.js";
 import { ConnectionBooking } from "../../models/ConnectionBooking.js";
+import { Installer } from "../../models/Installer.js";
+import { InstallerJob } from "../../models/InstallerJob.js";
+import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { Lead } from "../../models/Lead.js";
 import { LeadKycDocument } from "../../models/LeadKycDocument.js";
+import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
-import { salesKycSchema, salesLeadSchema, salesLoginSchema } from "./schemas.js";
+import { jazeClient } from "../../integrations/jazeClient.js";
+import { salesBookingPaymentConfirmSchema, salesBookingPaymentLinkSchema, salesKycSchema, salesLeadSchema, salesLoginSchema } from "./schemas.js";
 
 export const salesAppRouter = Router();
+
+function pickPaymentUrl(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const raw =
+    payload.paymentUrl ||
+    payload.paymentLink ||
+    payload.payment_link ||
+    payload.url ||
+    payload.redirectUrl ||
+    payload.link ||
+    payload.data?.paymentUrl ||
+    payload.data?.payment_link ||
+    payload.data?.url;
+  if (!raw || typeof raw !== "string") {
+    return null;
+  }
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+  return `https://${raw.replace(/^\/+/, "")}`;
+}
+
+async function ensureSalesBookingOwnership(bookingId, salesAgentId) {
+  const booking = await ConnectionBooking.findById(bookingId);
+  if (!booking) {
+    throw new ApiError(404, "Booking not found");
+  }
+  if (!booking.leadId) {
+    throw new ApiError(403, "Booking is not owned by sales app flow");
+  }
+  const lead = await Lead.findOne({ _id: booking.leadId, salesAgentId });
+  if (!lead) {
+    throw new ApiError(403, "Booking does not belong to this sales agent");
+  }
+  return { booking, lead };
+}
+
+async function assignInstallerForSalesBooking(booking, lead) {
+  if (booking.assignment?.installerId || booking.status === "assigned") {
+    return booking;
+  }
+  const installer = await Installer.findOne({ availabilityStatus: "available", status: "active" }).sort({ updatedAt: 1 });
+  if (!installer) {
+    booking.status = "awaiting_assignment";
+    booking.tracking = {
+      currentStep: "payment_confirmed",
+      steps: [
+        { code: "booking_placed", status: "done", at: booking.createdAt || new Date() },
+        { code: "payment_confirmed", status: "done", at: new Date() },
+        { code: "installer_assigned", status: "pending", at: null }
+      ]
+    };
+    await booking.save();
+    return booking;
+  }
+
+  const installerJob = await InstallerJob.create({
+    jobNumber: `JOB-${Date.now()}`,
+    type: "installation",
+    customerId: booking.bookingNumber,
+    serviceId: booking.bookingNumber,
+    installerId: installer._id,
+    priority: "medium",
+    customerSnapshot: {
+      fullName: lead.fullName,
+      phone: lead.mobile,
+      address: lead.address,
+      location: lead.gps,
+      planName: lead.selectedPlan?.planName,
+      planCode: lead.selectedPlan?.planCode
+    },
+    timeline: [
+      {
+        event: "job.assigned",
+        actorType: "system",
+        actorId: "sales-booking-engine",
+        note: `Auto-assigned from sales booking ${booking.bookingNumber}`
+      }
+    ]
+  });
+
+  booking.status = "assigned";
+  booking.assignment = {
+    installerId: installer._id,
+    assignedAt: new Date(),
+    autoAssigned: true
+  };
+  booking.tracking = {
+    currentStep: "installer_assigned",
+    steps: [
+      { code: "booking_placed", status: "done", at: booking.createdAt || new Date() },
+      { code: "payment_confirmed", status: "done", at: new Date() },
+      { code: "installer_assigned", status: "done", at: new Date(), jobId: installerJob._id }
+    ]
+  };
+  await booking.save();
+
+  await InstallerNotification.create({
+    installerId: installer._id,
+    type: "new_job",
+    title: "New sales booking assigned",
+    body: `${lead.fullName} installation has been assigned.`,
+    payload: { bookingNumber: booking.bookingNumber, installerJobId: installerJob._id }
+  });
+
+  return booking;
+}
 
 salesAppRouter.post(
   "/auth/login",
@@ -139,5 +253,97 @@ salesAppRouter.post(
     lead.convertedBookingId = booking._id;
     await lead.save();
     return ok(res, booking);
+  })
+);
+
+salesAppRouter.get(
+  "/bookings",
+  requireSalesAuth,
+  asyncHandler(async (req, res) => {
+    const leadIds = await Lead.find({ salesAgentId: req.salesAgent._id }).distinct("_id");
+    const bookings = await ConnectionBooking.find({ leadId: { $in: leadIds } }).sort({ createdAt: -1 }).lean();
+    return ok(res, bookings);
+  })
+);
+
+salesAppRouter.post(
+  "/bookings/:bookingId/payment/link-jaze",
+  requireSalesAuth,
+  asyncHandler(async (req, res) => {
+    const payload = salesBookingPaymentLinkSchema.parse(req.body || {});
+    const { booking, lead } = await ensureSalesBookingOwnership(req.params.bookingId, req.salesAgent._id);
+    const jazeUserId = payload.jazeUserId || String(lead.mobile || "").replace(/\D/g, "") || lead.leadNumber;
+
+    const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
+    const paymentUrl = pickPaymentUrl(gatewayPayload);
+    booking.payment = {
+      ...(booking.payment || {}),
+      provider: "jaze",
+      status: "pending",
+      jazeUserId,
+      paymentLink: paymentUrl,
+      paymentLinkPayload: gatewayPayload,
+      linkRequestedAt: new Date()
+    };
+    await booking.save();
+
+    return ok(res, {
+      bookingId: booking._id,
+      bookingNumber: booking.bookingNumber,
+      userId: jazeUserId,
+      paymentUrl,
+      raw: gatewayPayload
+    });
+  })
+);
+
+salesAppRouter.post(
+  "/bookings/:bookingId/payment/confirm",
+  requireSalesAuth,
+  asyncHandler(async (req, res) => {
+    const payload = salesBookingPaymentConfirmSchema.parse(req.body || {});
+    const { booking, lead } = await ensureSalesBookingOwnership(req.params.bookingId, req.salesAgent._id);
+
+    booking.payment = {
+      ...(booking.payment || {}),
+      provider: "jaze",
+      status: payload.status,
+      paymentId: payload.paymentId,
+      reference: payload.reference,
+      notes: payload.notes,
+      paidAt: payload.status === "paid" ? new Date() : null
+    };
+
+    if (payload.status === "failed") {
+      booking.status = "payment_pending";
+      await booking.save();
+      return ok(res, { bookingId: booking._id, bookingNumber: booking.bookingNumber, status: booking.status, payment: booking.payment });
+    }
+
+    const transactionId = payload.paymentId || `JAZE-SALES-${booking.bookingNumber}-${Date.now()}`;
+    const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
+    if (!existingPayment) {
+      await PaymentTransaction.create({
+        transactionId,
+        customerId: booking.personalDetails?.mobile || booking.bookingNumber,
+        serviceId: booking.bookingNumber,
+        provider: "jaze",
+        amount: payload.amount || booking.selectedPlan?.amount || booking.selectedPlan?.totalAmount || 0,
+        status: "success",
+        paidAt: new Date(),
+        method: "onlinePayment",
+        reference: payload.reference || payload.paymentId,
+        metadata: { source: "sales_booking", bookingNumber: booking.bookingNumber }
+      });
+    }
+
+    await assignInstallerForSalesBooking(booking, lead);
+    return ok(res, {
+      bookingId: booking._id,
+      bookingNumber: booking.bookingNumber,
+      status: booking.status,
+      payment: booking.payment,
+      assignment: booking.assignment
+    });
   })
 );
