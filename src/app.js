@@ -93,11 +93,15 @@ export function createApp() {
   app.use("/api/v1/sales", salesAppRouter);
 
   app.get("/admin", (_req, res) => {
+    res.sendFile(path.join(publicDir, "admin", "index.html"));
+  });
+
+  app.get("/admin-next", (_req, res) => {
     const target = hasReactAdminBuild() ? adminAppIndex : path.join(publicDir, "admin", "index.html");
     res.sendFile(target);
   });
 
-  app.get("/admin/*", (_req, res) => {
+  app.get("/admin-next/*", (_req, res) => {
     const target = hasReactAdminBuild() ? adminAppIndex : path.join(publicDir, "admin", "index.html");
     res.sendFile(target);
   });
@@ -115,8 +119,7 @@ export function createApp() {
   });
 
   app.get("/noc", (_req, res) => {
-    const target = hasReactAdminBuild() ? adminAppIndex : path.join(publicDir, "admin", "index.html");
-    res.sendFile(target);
+    res.sendFile(path.join(publicDir, "admin", "index.html"));
   });
 
   app.use((_req, _res, next) => {

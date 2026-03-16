@@ -170,8 +170,9 @@ npm run ui:admin:dev
 
 Production serving behavior:
 
-- if `public/admin-app/index.html` exists, `/admin` and `/noc` serve the React console
-- otherwise the existing static admin panel in `public/admin` remains the fallback
+- `/admin` and `/noc` continue to serve the stable static admin panel
+- if `public/admin-app/index.html` exists, `/admin-next` serves the React preview console
+- if the React build is missing, `/admin-next` falls back to the static admin panel
 
 Installer sample login after `npm run seed:sample-data`:
 
