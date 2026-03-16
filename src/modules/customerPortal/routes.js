@@ -745,6 +745,9 @@ customerPortalRouter.post(
       ssid5,
       wifiPassword: password
     });
+    if (brand === "nokia" && password) {
+      await genieacsClient.rebootDevice(device.deviceId);
+    }
     device.wifiInfo = {
       ...(device.wifiInfo || {}),
       ssid24Masked: ssid24,

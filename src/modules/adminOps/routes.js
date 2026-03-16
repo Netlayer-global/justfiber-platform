@@ -278,6 +278,9 @@ adminOpsRouter.patch(
       ssid5,
       wifiPassword
     });
+    if (brand === "nokia" && wifiPassword) {
+      await genieacsClient.rebootDevice(device.deviceId);
+    }
     device.wifiInfo = {
       ...(device.wifiInfo || {}),
       ssid24Masked: ssid24,
