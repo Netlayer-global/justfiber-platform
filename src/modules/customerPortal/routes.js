@@ -575,21 +575,28 @@ customerPortalRouter.post(
     const amount =
       payload.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0;
 
-    await PaymentTransaction.create({
-      transactionId: payload.paymentId || `JAZE-BILL-${customer.customerId}-${Date.now()}`,
-      customerId: customer.customerId,
-      serviceId: customer.serviceId,
-      provider: "jaze",
-      amount,
-      status: "success",
-      paidAt: new Date(),
-      method: "onlinePayment",
-      reference: payload.reference || payload.paymentId,
-      metadata: {
-        source: "customer_billing",
-        notes: payload.notes
-      }
-    });
+    const transactionId = payload.paymentId || `JAZE-BILL-${customer.customerId}-${Date.now()}`;
+    const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
+    if (existingPayment && existingPayment.customerId !== customer.customerId) {
+      throw new ApiError(409, "Payment reference already used for another customer");
+    }
+    if (!existingPayment) {
+      await PaymentTransaction.create({
+        transactionId,
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        provider: "jaze",
+        amount,
+        status: "success",
+        paidAt: new Date(),
+        method: "onlinePayment",
+        reference: payload.reference || payload.paymentId,
+        metadata: {
+          source: "customer_billing",
+          notes: payload.notes
+        }
+      });
+    }
 
     customer.billingSnapshot = {
       ...(customer.billingSnapshot || {}),
@@ -604,7 +611,8 @@ customerPortalRouter.post(
       customerId: customer.customerId,
       paymentStatus: "paid",
       amount,
-      dueAmount: 0
+      dueAmount: 0,
+      idempotentReplay: Boolean(existingPayment)
     });
   })
 );
