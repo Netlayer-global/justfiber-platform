@@ -1,13 +1,203 @@
 const BRAND_PATTERNS = [
-  { brand: "nokia", patterns: ["nokia", "g-2425", "g2425", "alcl"] },
-  { brand: "dasan", patterns: ["dasan", "h660", "h640"] },
-  { brand: "zte", patterns: ["zte", "f6", "zxhn"] },
-  { brand: "syrotech", patterns: ["syrotech", "sy-gpon"] },
-  { brand: "tp-link", patterns: ["tp-link", "tplink", "xc220"] },
-  { brand: "secureeye", patterns: ["secureeye"] },
-  { brand: "gx", patterns: ["gx", "gpon"] },
-  { brand: "zyxel", patterns: ["zyxel", "pmg", "ex"] }
+  { brand: "nokia", patterns: ["nokia", "g-2425", "g2425", "g-140w", "g140w", "alcl", "alcatel"] },
+  { brand: "dasan", patterns: ["dasan", "h660", "h640", "h665"] },
+  { brand: "zte", patterns: ["zte", "f6", "zxhn", "f670", "f660", "f680"] },
+  { brand: "syrotech", patterns: ["syrotech", "sy-gpon", "slt", "goxsq"] },
+  { brand: "tp-link", patterns: ["tp-link", "tplink", "xc220", "xz000", "archer"] },
+  { brand: "secureeye", patterns: ["secureeye", "se-", "sewifi"] },
+  { brand: "gx", patterns: ["gx", "gpon", "gpononu", "g-ont"] },
+  { brand: "zyxel", patterns: ["zyxel", "pmg", "ex", "px"] }
 ];
+
+const IGD_PPP = "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1";
+const IGD_WIFI_24 = "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1";
+const IGD_WIFI_5 = "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5";
+const DEVICE_PPP = "Device.PPP.Interface.1";
+const DEVICE_IP = "Device.IP.Interface.1";
+const DEVICE_WIFI_24 = "Device.WiFi.SSID.1";
+const DEVICE_WIFI_5 = "Device.WiFi.SSID.5";
+const DEVICE_AP_24 = "Device.WiFi.AccessPoint.1.Security";
+const DEVICE_AP_5 = "Device.WiFi.AccessPoint.5.Security";
+
+const GENERIC_PROFILE = {
+  pppoeUsernamePath: [
+    `${DEVICE_PPP}.Username`,
+    "Device.WAN.PPPConnection.1.Username",
+    `${IGD_PPP}.Username`
+  ],
+  pppoePasswordPath: [
+    `${DEVICE_PPP}.Password`,
+    "Device.WAN.PPPConnection.1.Password",
+    `${IGD_PPP}.Password`
+  ],
+  vlanPath: [
+    `${DEVICE_IP}.X_BROADCOM_COM_VLANIDMark`,
+    "Device.WAN.Ethernet.1.VLANID",
+    `${IGD_PPP}.X_CT-COM_VLANID`,
+    `${IGD_PPP}.X_TP_VLANID`
+  ],
+  natPath: [
+    "Device.NAT.Enable",
+    `${IGD_PPP}.NATEnabled`,
+    `${DEVICE_IP}.NAT`
+  ],
+  ssid24Path: [
+    `${DEVICE_WIFI_24}.SSID`,
+    `${IGD_WIFI_24}.SSID`
+  ],
+  pass24Path: [
+    `${DEVICE_AP_24}.KeyPassphrase`,
+    `${IGD_WIFI_24}.PreSharedKey.1.KeyPassphrase`
+  ],
+  ssid5Path: [
+    `${DEVICE_WIFI_5}.SSID`,
+    `${IGD_WIFI_5}.SSID`
+  ],
+  pass5Path: [
+    `${DEVICE_AP_5}.KeyPassphrase`,
+    `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`
+  ]
+};
+
+const BRAND_OVERRIDES = {
+  nokia: {
+    pppoeUsernamePath: [
+      `${IGD_PPP}.Username`,
+      `${DEVICE_PPP}.Username`
+    ],
+    pppoePasswordPath: [
+      `${IGD_PPP}.Password`,
+      `${DEVICE_PPP}.Password`
+    ],
+    vlanPath: [
+      `${IGD_PPP}.X_ALU_OntWAN.VlanId`,
+      `${IGD_PPP}.X_CT-COM_VLANID`,
+      "Device.WAN.Ethernet.1.VLANID"
+    ]
+  },
+  dasan: {
+    pppoeUsernamePath: [
+      `${IGD_PPP}.Username`,
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username"
+    ],
+    pppoePasswordPath: [
+      `${IGD_PPP}.Password`,
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password"
+    ],
+    vlanPath: [
+      `${IGD_PPP}.X_DASAN_VLANID`,
+      `${IGD_PPP}.X_CT-COM_VLANID`
+    ]
+  },
+  zte: {
+    pppoeUsernamePath: [
+      `${IGD_PPP}.Username`,
+      `${DEVICE_PPP}.Username`
+    ],
+    pppoePasswordPath: [
+      `${IGD_PPP}.Password`,
+      `${DEVICE_PPP}.Password`
+    ],
+    vlanPath: [
+      `${IGD_PPP}.X_ZTE-COM_VLANID`,
+      `${IGD_PPP}.X_CT-COM_VLANID`
+    ],
+    natPath: [
+      `${IGD_PPP}.NATEnabled`,
+      "Device.NAT.Enable"
+    ]
+  },
+  syrotech: {
+    pppoeUsernamePath: [
+      `${IGD_PPP}.Username`,
+      `${DEVICE_PPP}.Username`
+    ],
+    pppoePasswordPath: [
+      `${IGD_PPP}.Password`,
+      `${DEVICE_PPP}.Password`
+    ],
+    vlanPath: [
+      `${IGD_PPP}.X_SYROTECH_VLANID`,
+      `${IGD_PPP}.X_CT-COM_VLANID`
+    ]
+  },
+  "tp-link": {
+    pppoeUsernamePath: [
+      `${IGD_PPP}.Username`,
+      `${DEVICE_PPP}.Username`
+    ],
+    pppoePasswordPath: [
+      `${IGD_PPP}.Password`,
+      `${DEVICE_PPP}.Password`
+    ],
+    vlanPath: [
+      `${IGD_PPP}.X_TP_VLANID`,
+      "Device.WAN.Ethernet.1.VLANID"
+    ],
+    natPath: [
+      `${IGD_PPP}.NATEnabled`,
+      "Device.NAT.Enable"
+    ],
+    ssid24Path: [
+      `${IGD_WIFI_24}.SSID`,
+      `${DEVICE_WIFI_24}.SSID`
+    ],
+    pass24Path: [
+      `${IGD_WIFI_24}.PreSharedKey.1.KeyPassphrase`,
+      `${DEVICE_AP_24}.KeyPassphrase`
+    ],
+    ssid5Path: [
+      `${IGD_WIFI_5}.SSID`,
+      `${DEVICE_WIFI_5}.SSID`
+    ],
+    pass5Path: [
+      `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`,
+      `${DEVICE_AP_5}.KeyPassphrase`
+    ]
+  },
+  secureeye: {
+    pppoeUsernamePath: [
+      `${IGD_PPP}.Username`,
+      `${DEVICE_PPP}.Username`
+    ],
+    pppoePasswordPath: [
+      `${IGD_PPP}.Password`,
+      `${DEVICE_PPP}.Password`
+    ],
+    vlanPath: [
+      `${IGD_PPP}.X_SECUREEYE_VLANID`,
+      `${IGD_PPP}.X_CT-COM_VLANID`
+    ]
+  },
+  gx: {
+    pppoeUsernamePath: [
+      `${IGD_PPP}.Username`,
+      `${DEVICE_PPP}.Username`
+    ],
+    pppoePasswordPath: [
+      `${IGD_PPP}.Password`,
+      `${DEVICE_PPP}.Password`
+    ],
+    vlanPath: [
+      `${IGD_PPP}.X_GX_VLANID`,
+      `${IGD_PPP}.X_CT-COM_VLANID`
+    ]
+  },
+  zyxel: {
+    pppoeUsernamePath: [
+      `${DEVICE_PPP}.Username`,
+      `${IGD_PPP}.Username`
+    ],
+    pppoePasswordPath: [
+      `${DEVICE_PPP}.Password`,
+      `${IGD_PPP}.Password`
+    ],
+    vlanPath: [
+      `${DEVICE_IP}.X_ZYXEL_VlanId`,
+      `${IGD_PPP}.X_CT-COM_VLANID`
+    ]
+  }
+};
 
 export function normalizeCustomerId(value) {
   return String(value || "").trim();
@@ -45,33 +235,24 @@ export function detectOntBrand({ serialNumber, productClass, deviceId }) {
   return "generic";
 }
 
-export function resolveProvisioningProfile(brand) {
-  const generic = {
-    pppoeUsernamePath: "Device.WAN.PPPConnection.1.Username",
-    pppoePasswordPath: "Device.WAN.PPPConnection.1.Password",
-    vlanPath: "Device.WAN.Ethernet.1.VLANID",
-    natPath: "Device.NAT.Enable",
-    ssid24Path: "Device.WiFi.SSID.1.SSID",
-    pass24Path: "Device.WiFi.AccessPoint.1.Security.KeyPassphrase",
-    ssid5Path: "Device.WiFi.SSID.5.SSID",
-    pass5Path: "Device.WiFi.AccessPoint.5.Security.KeyPassphrase"
-  };
-
-  const overrides = {
-    "tp-link": {
-      pppoeUsernamePath: "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Username",
-      pppoePasswordPath: "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Password",
-      vlanPath: "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.X_TP_VLANID",
-      natPath: "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.NATEnabled",
-      ssid24Path: "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
-      pass24Path: "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
-      ssid5Path: "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
-      pass5Path: "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase"
+function mergePathLists(baseValue, overrideValue) {
+  const list = [];
+  for (const source of [overrideValue, baseValue]) {
+    const values = Array.isArray(source) ? source : source ? [source] : [];
+    for (const item of values) {
+      if (item && !list.includes(item)) {
+        list.push(item);
+      }
     }
-  };
+  }
+  return list;
+}
 
-  return {
-    ...generic,
-    ...(overrides[brand] || {})
-  };
+export function resolveProvisioningProfile(brand) {
+  const override = BRAND_OVERRIDES[brand] || {};
+  const merged = {};
+  for (const key of Object.keys(GENERIC_PROFILE)) {
+    merged[key] = mergePathLists(GENERIC_PROFILE[key], override[key]);
+  }
+  return merged;
 }

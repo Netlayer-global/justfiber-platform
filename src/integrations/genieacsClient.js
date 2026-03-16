@@ -189,18 +189,21 @@ export class GenieacsClient {
   }) {
     const profile = resolveProvisioningProfile(brand);
     const values = [];
-    const push = (path, value) => {
-      if (path && value !== undefined && value !== null && value !== "") {
-        values.push([path, String(value), "xsd:string"]);
+    const push = (pathOrPaths, value, valueType = "xsd:string", transform = (input) => input) => {
+      const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths];
+      for (const path of paths) {
+        if (path && value !== undefined && value !== null && value !== "") {
+          values.push([path, transform(value), valueType]);
+        }
       }
     };
     push(profile.pppoeUsernamePath, pppoeUsername);
     push(profile.pppoePasswordPath, pppoePassword);
     if (vlanId !== undefined && vlanId !== null && vlanId !== "") {
-      values.push([profile.vlanPath, Number(vlanId), "xsd:unsignedInt"]);
+      push(profile.vlanPath, vlanId, "xsd:unsignedInt", Number);
     }
     if (natEnabled !== undefined && natEnabled !== null) {
-      values.push([profile.natPath, Boolean(natEnabled), "xsd:boolean"]);
+      push(profile.natPath, natEnabled, "xsd:boolean", Boolean);
     }
     push(profile.ssid24Path, ssid24);
     push(profile.pass24Path, wifiPassword);
