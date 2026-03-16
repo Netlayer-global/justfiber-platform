@@ -53,6 +53,31 @@ async function genieacsRequest(method, path, body) {
   return payload;
 }
 
+async function findDeviceByQuery(query) {
+  const encoded = encodeURIComponent(JSON.stringify(query));
+  const result = await genieacsRequest("GET", `/devices?query=${encoded}`);
+  if (Array.isArray(result)) {
+    return result[0] || null;
+  }
+  return null;
+}
+
+async function resolveDeviceIdForWrite(deviceId) {
+  const direct = await findDeviceByQuery({ _id: deviceId });
+  if (direct?._id) {
+    return direct._id;
+  }
+  const byDeviceId = await findDeviceByQuery({ "DeviceID.ID": deviceId });
+  if (byDeviceId?._id) {
+    return byDeviceId._id;
+  }
+  const bySerial = await findDeviceByQuery({ "DeviceID.SerialNumber": deviceId });
+  if (bySerial?._id) {
+    return bySerial._id;
+  }
+  return deviceId;
+}
+
 export class GenieacsClient {
   async applyPreset({ deviceId, presetName, correlationId }) {
     if (!allowedPresets.has(presetName)) {
@@ -64,29 +89,48 @@ export class GenieacsClient {
     }
 
     // Preset-only approach: add a tag and trigger device interaction.
-    const tagPath = `/devices/${encodeURIComponent(deviceId)}/tags/${encodeURIComponent(presetName)}`;
-    try {
-      await genieacsRequest("POST", tagPath);
-    } catch (error) {
-      if (!String(error.message).includes("405")) {
-        throw error;
+    let targetDeviceId = deviceId;
+    const buildTagPath = (id) => `/devices/${encodeURIComponent(id)}/tags/${encodeURIComponent(presetName)}`;
+    const buildTaskPath = (id) => `/devices/${encodeURIComponent(id)}/tasks`;
+
+    let tagPath = buildTagPath(targetDeviceId);
+    const trySetTag = async () => {
+      try {
+        await genieacsRequest("POST", tagPath);
+        return;
+      } catch (postError) {
+        if (!String(postError.message).includes("405")) {
+          throw postError;
+        }
       }
       await genieacsRequest("PUT", tagPath);
+    };
+
+    try {
+      await trySetTag();
+    } catch (error) {
+      if (String(error.message).includes("404") && String(error.message).includes("No such device")) {
+        targetDeviceId = await resolveDeviceIdForWrite(deviceId);
+        tagPath = buildTagPath(targetDeviceId);
+        await trySetTag();
+      } else {
+        throw error;
+      }
     }
 
     try {
-      await genieacsRequest("POST", `/devices/${encodeURIComponent(deviceId)}/tasks?connection_request`);
+      await genieacsRequest("POST", `${buildTaskPath(targetDeviceId)}?connection_request`);
     } catch (error) {
       if (!String(error.message).includes("405")) {
         throw error;
       }
-      await genieacsRequest("POST", `/devices/${encodeURIComponent(deviceId)}/tasks`, {
+      await genieacsRequest("POST", buildTaskPath(targetDeviceId), {
         name: "refreshObject",
         objectName: "InternetGatewayDevice"
       });
     }
 
-    return { ok: true, deviceId, presetName, correlationId };
+    return { ok: true, deviceId: targetDeviceId, presetName, correlationId };
   }
 
   async getDeviceSummary(deviceId) {

@@ -36,7 +36,11 @@ async function main() {
   const results = [];
 
   await runStep(results, `GenieACS getDeviceSummary (${DEVICE_ID})`, async () => {
-    return genieacsClient.getDeviceSummary(DEVICE_ID);
+    const summary = await genieacsClient.getDeviceSummary(DEVICE_ID);
+    if (!summary) {
+      throw new Error(`Device ${DEVICE_ID} not found in GenieACS`);
+    }
+    return summary;
   });
 
   await runStep(results, "GenieACS allowed presets list", async () => {
