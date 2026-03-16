@@ -43,6 +43,29 @@ function logStep(label, value) {
   console.log(`[PASS] ${label}${value ? ` (${value})` : ""}`);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForInstallerAssignment({ bookingNumber, customerToken, timeoutMs = 30000, pollMs = 2000 }) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const tracking = await requestJson({
+      path: `/api/v1/customer/bookings/${bookingNumber}/tracking`,
+      token: customerToken
+    });
+    const installerStep = (tracking.data.steps || []).find((step) => step.code === "installer_assigned");
+    if (tracking.data.currentStep === "installer_assigned" && installerStep?.jobId) {
+      return {
+        currentStep: tracking.data.currentStep,
+        jobId: installerStep.jobId
+      };
+    }
+    await sleep(pollMs);
+  }
+  throw new Error(`Booking ${bookingNumber} not assigned to installer within ${timeoutMs / 1000}s. Ensure at least one installer is available.`);
+}
+
 async function runLiveNokiaScenario() {
   const mobile = requireEnv("LIVE_CUSTOMER_MOBILE");
   const fullName = requireEnv("LIVE_CUSTOMER_NAME");
@@ -112,11 +135,13 @@ async function runLiveNokiaScenario() {
   });
   logStep("Booking payment confirmed", bookingNumber);
 
-  const tracking = await requestJson({
-    path: `/api/v1/customer/bookings/${bookingNumber}/tracking`,
-    token: customerToken
+  const assignment = await waitForInstallerAssignment({
+    bookingNumber,
+    customerToken,
+    timeoutMs: Number(process.env.LIVE_ASSIGN_TIMEOUT_MS || "30000"),
+    pollMs: Number(process.env.LIVE_ASSIGN_POLL_MS || "2000")
   });
-  logStep("Booking tracking", tracking.data.currentStep || "unknown");
+  logStep("Booking tracking", assignment.currentStep);
 
   const installerLoginPayload = await requestJson({
     method: "POST",
@@ -127,9 +152,9 @@ async function runLiveNokiaScenario() {
   logStep("Installer login", installerLogin);
 
   const jobs = await requestJson({ path: "/api/v1/installer/jobs", token: installerToken });
-  const job = (jobs.data || []).find((item) => item.customerId === bookingNumber) || jobs.data?.[0];
+  const job = (jobs.data || []).find((item) => item._id === assignment.jobId || item.customerId === bookingNumber);
   if (!job?._id) {
-    throw new Error(`Installer job not found for booking ${bookingNumber}`);
+    throw new Error(`Installer job ${assignment.jobId} not visible for booking ${bookingNumber}. Check installer assignment.`);
   }
   const jobId = job._id;
   logStep("Installer job found", job.jobNumber || jobId);
