@@ -34,14 +34,33 @@ async function main() {
     throw new Error("MOCK_EXTERNALS=true. Set MOCK_EXTERNALS=false before live GenieACS inspection.");
   }
 
-  const response = await fetch(new URL(`/devices/${encodeURIComponent(DEVICE_ID)}`, env.GENIEACS_URL), {
-    headers: buildHeaders()
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to fetch GenieACS device: ${response.status} ${text}`);
+  let payload;
+  {
+    const response = await fetch(new URL(`/devices/${encodeURIComponent(DEVICE_ID)}`, env.GENIEACS_URL), {
+      headers: buildHeaders()
+    });
+    if (response.ok) {
+      payload = await response.json();
+    } else {
+      const text = await response.text();
+      if (response.status !== 405) {
+        throw new Error(`Failed to fetch GenieACS device: ${response.status} ${text}`);
+      }
+      const query = encodeURIComponent(JSON.stringify({ _id: DEVICE_ID }));
+      const queryResponse = await fetch(new URL(`/devices?query=${query}`, env.GENIEACS_URL), {
+        headers: buildHeaders()
+      });
+      if (!queryResponse.ok) {
+        const queryText = await queryResponse.text();
+        throw new Error(`Failed to query GenieACS device: ${queryResponse.status} ${queryText}`);
+      }
+      const result = await queryResponse.json();
+      payload = Array.isArray(result) ? result[0] : result;
+    }
   }
-  const payload = await response.json();
+  if (!payload) {
+    throw new Error(`Device ${DEVICE_ID} not found in GenieACS`);
+  }
 
   const candidatePaths = [
     "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
