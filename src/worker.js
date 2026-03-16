@@ -12,10 +12,57 @@ import { CustomerUser } from "./models/CustomerUser.js";
 import { jazeClient } from "./integrations/jazeClient.js";
 import { genieacsClient } from "./integrations/genieacsClient.js";
 import { writeAuditLog } from "./common/audit.js";
-import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand } from "./common/networkProvisioning.js";
+import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand, resolveProvisioningProfile } from "./common/networkProvisioning.js";
 
 await connectMongo();
 await seedSystemData();
+
+function updateActivationStage(jobRecord, stage, note, extra = {}) {
+  jobRecord.activation = {
+    ...(jobRecord.activation || {}),
+    stage,
+    ...extra
+  };
+  jobRecord.timeline.push({
+    event: `job.activation_stage.${stage}`,
+    actorType: "system",
+    actorId: "worker",
+    note,
+    at: new Date()
+  });
+}
+
+function readPathValue(source, path) {
+  if (!source || !path) return undefined;
+  return path.split(".").reduce((current, segment) => {
+    if (current === null || current === undefined) return undefined;
+    return current[segment];
+  }, source)?._value;
+}
+
+function findFirstMatchingValue(deviceSummary, paths, expectedValue) {
+  for (const path of paths || []) {
+    const actual = readPathValue(deviceSummary, path);
+    if (actual !== undefined && String(actual) === String(expectedValue)) {
+      return { path, actual };
+    }
+  }
+  return null;
+}
+
+function verifyProvisionedConfig({ deviceSummary, brand, expected }) {
+  const profile = resolveProvisioningProfile(brand);
+  const checks = {
+    pppoeUsername: findFirstMatchingValue(deviceSummary, profile.pppoeUsernamePath, expected.pppoeUsername),
+    ssid24: findFirstMatchingValue(deviceSummary, profile.ssid24Path, expected.ssid24),
+    ssid5: findFirstMatchingValue(deviceSummary, profile.ssid5Path, expected.ssid5)
+  };
+  const verified = Object.values(checks).every(Boolean);
+  return {
+    verified,
+    checks
+  };
+}
 
 const worker = new Worker(
   "admin-actions",
@@ -109,6 +156,7 @@ const worker = new Worker(
         const wifi = prepared.wifi || buildWifiCredentials();
         const vlanId = prepared.vlanId || existingDevice?.wanInfo?.vlanId || 100;
 
+        updateActivationStage(jobRecord, "jaze_create_pending", "Creating PPPoE user in JAZE");
         await jazeClient.createPppoeUser({
           customerId: jobRecord.customerId,
           serviceId: jobRecord.serviceId,
@@ -116,7 +164,9 @@ const worker = new Worker(
           username: pppoe.username,
           password: pppoe.password
         });
+        updateActivationStage(jobRecord, "jaze_create_done", "PPPoE user created in JAZE");
         try {
+          updateActivationStage(jobRecord, "genie_push_pending", "Pushing access config to GenieACS");
           await genieacsClient.pushAccessConfig({
             deviceId,
             brand,
@@ -128,6 +178,7 @@ const worker = new Worker(
             ssid5: wifi.ssid5,
             wifiPassword: wifi.password
           });
+          updateActivationStage(jobRecord, "genie_push_done", "Access config pushed to GenieACS");
         } catch (configError) {
           await genieacsClient.applyPreset({
             deviceId,
@@ -139,6 +190,9 @@ const worker = new Worker(
             configFallback: true,
             configFallbackError: configError.message
           };
+          updateActivationStage(jobRecord, "genie_fallback", "Config push failed, fallback preset applied", {
+            lastConfigError: configError.message
+          });
         }
         if (brand === "nokia" && wifi.password) {
           await genieacsClient.rebootDevice(deviceId);
@@ -148,6 +202,37 @@ const worker = new Worker(
             actorId: "worker",
             note: "Queued reboot after Nokia Wi-Fi security update",
             at: new Date()
+          });
+        }
+        let verification = { verified: false, checks: {} };
+        try {
+          updateActivationStage(jobRecord, "readback_pending", "Reading back device config from GenieACS");
+          const deviceSummary = await genieacsClient.getDeviceSummary(deviceId);
+          verification = verifyProvisionedConfig({
+            deviceSummary,
+            brand,
+            expected: {
+              pppoeUsername: pppoe.username,
+              ssid24: wifi.ssid24,
+              ssid5: wifi.ssid5
+            }
+          });
+          updateActivationStage(
+            jobRecord,
+            verification.verified ? "readback_verified" : "readback_warning",
+            verification.verified
+              ? "Provisioned config read-back verified"
+              : "Provisioned config pushed but read-back verification is partial",
+            {
+              verification
+            }
+          );
+        } catch (verificationError) {
+          updateActivationStage(jobRecord, "readback_failed", "Read-back verification failed", {
+            verification: {
+              verified: false,
+              error: verificationError.message
+            }
           });
         }
         await DeviceOperationalCache.updateOne(
@@ -178,12 +263,13 @@ const worker = new Worker(
         jobRecord.status = "active";
         jobRecord.activation = {
           ...(jobRecord.activation || {}),
-          configStatus: "pushed",
+          configStatus: verification.verified ? "verified" : "pushed",
           rebootQueuedAt: brand === "nokia" && wifi.password ? new Date() : jobRecord.activation?.rebootQueuedAt,
           internetVerifiedAt: new Date(),
           smsSentAt: new Date(),
           notificationSentAt: new Date(),
           ontBrand: brand,
+          verification,
           credentials: {
             pppoeUsername: pppoe.username,
             pppoePassword: pppoe.password,
@@ -239,7 +325,12 @@ const worker = new Worker(
           action: "installer.activation.executed",
           entityType: "installer_job",
           entityId: jobRecord._id.toString(),
-          metadata: { installerJobId: jobRecord._id.toString() }
+          metadata: {
+            installerJobId: jobRecord._id.toString(),
+            ontBrand: brand,
+            verificationStatus: verification.verified ? "verified" : "pushed",
+            verification
+          }
         });
         console.log(`[worker] installer activation completed for ${jobRecord._id.toString()}`);
         break;
