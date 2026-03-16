@@ -4,12 +4,15 @@ import { ok } from "../../common/response.js";
 import { requireAuth, requirePermission } from "../../common/auth.js";
 import { permissions } from "../../config/permissions.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
+import { BillingLedgerEntry } from "../../models/BillingLedgerEntry.js";
+import { IntegrationConnection } from "../../models/IntegrationConnection.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { Customer } from "../../models/Customer.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
+import { auditFromRequest } from "../../common/audit.js";
 import { jazeClient } from "../../integrations/jazeClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
@@ -17,6 +20,45 @@ import { detectOntBrand } from "../../common/networkProvisioning.js";
 export const adminOpsRouter = Router();
 
 adminOpsRouter.use(requireAuth);
+
+function computeBalanceAfter({ currentBalance, direction, amount }) {
+  return currentBalance + (direction === "debit" ? amount : -amount);
+}
+
+async function createLedgerEntry({
+  customerId,
+  serviceId,
+  invoiceId,
+  paymentId,
+  category,
+  direction,
+  amount,
+  reference,
+  note,
+  source,
+  createdByAdminId,
+  metadata
+}) {
+  const latestEntry = await BillingLedgerEntry.findOne({ customerId }).sort({ postedAt: -1, createdAt: -1 }).lean();
+  const currentBalance = latestEntry?.balanceAfter || 0;
+  const balanceAfter = computeBalanceAfter({ currentBalance, direction, amount });
+  return BillingLedgerEntry.create({
+    entryId: `BL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    customerId,
+    serviceId,
+    invoiceId,
+    paymentId,
+    category,
+    direction,
+    amount,
+    balanceAfter,
+    reference,
+    note,
+    source,
+    createdByAdminId,
+    metadata
+  });
+}
 
 adminOpsRouter.get(
   "/billing/overview",
@@ -162,14 +204,16 @@ adminOpsRouter.get(
     if (!customer) {
       return ok(res, null);
     }
-    const [invoices, payments] = await Promise.all([
+    const [invoices, payments, ledger] = await Promise.all([
       BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1 }).limit(12).lean(),
-      PaymentTransaction.find({ customerId: customer.customerId }).sort({ paidAt: -1 }).limit(12).lean()
+      PaymentTransaction.find({ customerId: customer.customerId }).sort({ paidAt: -1 }).limit(12).lean(),
+      BillingLedgerEntry.find({ customerId: customer.customerId }).sort({ postedAt: -1, createdAt: -1 }).limit(25).lean()
     ]);
     return ok(res, {
       summary: customer.billingSnapshot || {},
       invoices,
-      payments
+      payments,
+      ledger
     });
   })
 );
@@ -214,6 +258,7 @@ adminOpsRouter.post(
 
     const transactionId = req.body?.paymentId || `JAZE-ADMIN-BILL-${customer.customerId}-${Date.now()}`;
     const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
+    let createdLedgerEntry = null;
     if (!existingPayment) {
       await PaymentTransaction.create({
         transactionId,
@@ -229,6 +274,19 @@ adminOpsRouter.post(
           source: "admin_billing_confirm",
           actorAdminId: req.admin?._id?.toString()
         }
+      });
+      createdLedgerEntry = await createLedgerEntry({
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        paymentId: transactionId,
+        category: "payment",
+        direction: "credit",
+        amount: Number(req.body?.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0),
+        reference: req.body?.reference || req.body?.paymentId,
+        note: "Admin confirmed customer payment",
+        source: "admin_billing_confirm",
+        createdByAdminId: req.admin?._id,
+        metadata: { requestId: req.requestId }
       });
     }
 
@@ -247,7 +305,8 @@ adminOpsRouter.post(
       paymentStatus: "paid",
       amount,
       dueAmount: 0,
-      idempotentReplay: Boolean(existingPayment)
+      idempotentReplay: Boolean(existingPayment),
+      ledgerEntryId: createdLedgerEntry?.entryId
     });
   })
 );
@@ -302,6 +361,127 @@ adminOpsRouter.patch(
   })
 );
 
+adminOpsRouter.get(
+  "/billing/ledger",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const { page, limit, skip } = buildPagination(req.query);
+    const filter = {};
+    if (req.query.customerId) filter.customerId = req.query.customerId;
+    if (req.query.category) filter.category = req.query.category;
+    if (req.query.direction) filter.direction = req.query.direction;
+    const [items, total] = await Promise.all([
+      BillingLedgerEntry.find(filter).sort({ postedAt: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
+      BillingLedgerEntry.countDocuments(filter)
+    ]);
+    return ok(res, items, { page, limit, total });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/ledger/adjustment",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.body?.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ApiError(400, "Valid positive amount is required");
+    }
+    const direction = req.body?.direction === "credit" ? "credit" : "debit";
+    const category = direction === "credit" ? "credit_adjustment" : "debit_adjustment";
+    const entry = await createLedgerEntry({
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      category,
+      direction,
+      amount,
+      reference: req.body?.reference,
+      note: req.body?.note || `Manual ${category.replace("_", " ")}`,
+      source: "admin_manual_adjustment",
+      createdByAdminId: req.admin?._id,
+      metadata: {
+        requestId: req.requestId,
+        reason: req.body?.reason
+      }
+    });
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      dueAmount: Math.max(0, entry.balanceAfter)
+    };
+    await customer.save();
+    await auditFromRequest(req, {
+      action: "billing.adjustment.created",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: { ledgerEntryId: entry.entryId, direction, amount }
+    });
+    return ok(res, entry, { created: true });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/refunds",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.body?.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ApiError(400, "Valid positive amount is required");
+    }
+    const refundId = req.body?.refundId || `REF-${Date.now()}`;
+    const entry = await createLedgerEntry({
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      paymentId: req.body?.paymentId,
+      category: "refund",
+      direction: "credit",
+      amount,
+      reference: refundId,
+      note: req.body?.note || "Customer refund issued",
+      source: "admin_refund",
+      createdByAdminId: req.admin?._id,
+      metadata: {
+        requestId: req.requestId,
+        paymentId: req.body?.paymentId
+      }
+    });
+    await PaymentTransaction.create({
+      transactionId: refundId,
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      provider: "manual_refund",
+      amount,
+      status: "success",
+      paidAt: new Date(),
+      method: "refund",
+      reference: refundId,
+      metadata: {
+        source: "admin_refund",
+        originalPaymentId: req.body?.paymentId
+      }
+    });
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      dueAmount: Math.max(0, entry.balanceAfter),
+      lastRefundAt: new Date()
+    };
+    await customer.save();
+    await auditFromRequest(req, {
+      action: "billing.refund.created",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: { ledgerEntryId: entry.entryId, refundId, amount }
+    });
+    return ok(res, entry, { created: true });
+  })
+);
+
 adminOpsRouter.post(
   "/network/device-management/:deviceId/reboot",
   requirePermission(permissions.deviceApplyPreset),
@@ -312,5 +492,86 @@ adminOpsRouter.post(
     }
     await genieacsClient.rebootDevice(device.deviceId);
     return ok(res, { queued: true, deviceId: device.deviceId, estimatedRecoverySeconds: 60 });
+  })
+);
+
+adminOpsRouter.get(
+  "/integrations",
+  requirePermission(permissions.configRead),
+  asyncHandler(async (_req, res) => {
+    const items = await IntegrationConnection.find({}).sort({ category: 1, displayName: 1 }).lean();
+    return ok(res, items);
+  })
+);
+
+adminOpsRouter.post(
+  "/integrations",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const key = String(req.body?.key || "").trim();
+    const provider = String(req.body?.provider || "").trim();
+    const category = String(req.body?.category || "").trim();
+    if (!key || !provider || !category) {
+      throw new ApiError(400, "key, provider, and category are required");
+    }
+    const integration = await IntegrationConnection.findOneAndUpdate(
+      { key },
+      {
+        $set: {
+          category,
+          provider,
+          displayName: String(req.body?.displayName || provider).trim(),
+          status: req.body?.status || "inactive",
+          mode: req.body?.mode || "sandbox",
+          capabilities: Array.isArray(req.body?.capabilities) ? req.body.capabilities : [],
+          credentialsMasked: req.body?.credentialsMasked || {},
+          config: req.body?.config || {},
+          health: req.body?.health || {},
+          lastCheckedAt: req.body?.health ? new Date() : undefined,
+          notes: req.body?.notes
+        }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean();
+    await auditFromRequest(req, {
+      action: "integration.upserted",
+      entityType: "integration",
+      entityId: integration.key,
+      metadata: { category: integration.category, provider: integration.provider }
+    });
+    return ok(res, integration, { created: true });
+  })
+);
+
+adminOpsRouter.patch(
+  "/integrations/:key",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const integration = await IntegrationConnection.findOneAndUpdate(
+      { key: req.params.key },
+      {
+        $set: {
+          ...(req.body?.displayName ? { displayName: req.body.displayName } : {}),
+          ...(req.body?.status ? { status: req.body.status } : {}),
+          ...(req.body?.mode ? { mode: req.body.mode } : {}),
+          ...(req.body?.capabilities ? { capabilities: req.body.capabilities } : {}),
+          ...(req.body?.credentialsMasked ? { credentialsMasked: req.body.credentialsMasked } : {}),
+          ...(req.body?.config ? { config: req.body.config } : {}),
+          ...(req.body?.health ? { health: req.body.health, lastCheckedAt: new Date() } : {}),
+          ...(req.body?.notes !== undefined ? { notes: req.body.notes } : {})
+        }
+      },
+      { new: true }
+    ).lean();
+    if (!integration) {
+      throw new ApiError(404, "Integration not found");
+    }
+    await auditFromRequest(req, {
+      action: "integration.updated",
+      entityType: "integration",
+      entityId: integration.key,
+      metadata: { status: integration.status, mode: integration.mode }
+    });
+    return ok(res, integration);
   })
 );
