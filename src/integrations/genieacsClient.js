@@ -47,7 +47,7 @@ async function genieacsRequest(method, path, body) {
   }
 
   if (!response.ok) {
-    throw new Error(`GenieACS request failed: ${response.status} ${JSON.stringify(payload)}`);
+    throw new Error(`GenieACS request failed: ${method} ${url} -> ${response.status} ${JSON.stringify(payload)}`);
   }
 
   return payload;
@@ -63,12 +63,28 @@ export class GenieacsClient {
       return { ok: true, deviceId, presetName, correlationId, source: "mock-genieacs" };
     }
 
-    // Preset-only approach: add a tag and trigger a connection request task.
-    await genieacsRequest("PUT", `/devices/${encodeURIComponent(deviceId)}/tags/${encodeURIComponent(presetName)}`);
-    await genieacsRequest("POST", `/devices/${encodeURIComponent(deviceId)}/tasks?connection_request`, {
-      name: "refreshObject",
-      objectName: "InternetGatewayDevice"
-    });
+    // Preset-only approach: add a tag and trigger device interaction.
+    const tagPath = `/devices/${encodeURIComponent(deviceId)}/tags/${encodeURIComponent(presetName)}`;
+    try {
+      await genieacsRequest("POST", tagPath);
+    } catch (error) {
+      if (!String(error.message).includes("405")) {
+        throw error;
+      }
+      await genieacsRequest("PUT", tagPath);
+    }
+
+    try {
+      await genieacsRequest("POST", `/devices/${encodeURIComponent(deviceId)}/tasks?connection_request`);
+    } catch (error) {
+      if (!String(error.message).includes("405")) {
+        throw error;
+      }
+      await genieacsRequest("POST", `/devices/${encodeURIComponent(deviceId)}/tasks`, {
+        name: "refreshObject",
+        objectName: "InternetGatewayDevice"
+      });
+    }
 
     return { ok: true, deviceId, presetName, correlationId };
   }
