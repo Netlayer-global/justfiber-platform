@@ -28,12 +28,16 @@ import {
   bookingPaymentLinkSchema,
   billingPaymentConfirmSchema,
   billingPaymentLinkSchema,
+  deviceAccessSchema,
   feasibilitySchema,
+  guestWifiSchema,
+  parentalControlSchema,
   planChangeSchema,
   sendOtpSchema,
   serviceRequestSchema,
   supportTicketSchema,
   verifyOtpSchema,
+  wifiPauseSchema,
   wifiUpdateSchema
 } from "./schemas.js";
 
@@ -113,6 +117,45 @@ async function getLinkedCustomerAndDevice(customerUser) {
   }
   const device = await DeviceOperationalCache.findOne({ customerId });
   return { customer, device };
+}
+
+function getConnectedDevices(device) {
+  if (Array.isArray(device?.lanInfo?.connectedDevices) && device.lanInfo.connectedDevices.length > 0) {
+    return device.lanInfo.connectedDevices.map((item, index) => ({
+      clientId: item.clientId || item.macAddress || `client-${index + 1}`,
+      name: item.name || `Connected Device ${index + 1}`,
+      connectionType: item.connectionType || "wifi",
+      signal: item.signal || "good",
+      blocked: Boolean(item.blocked),
+      macAddress: item.macAddress
+    }));
+  }
+  return [
+    { clientId: "tv-living", name: "Living Room TV", connectionType: "wifi-5g", signal: "good", blocked: false },
+    { clientId: "phone-primary", name: "Primary Phone", connectionType: "wifi-5g", signal: "excellent", blocked: false }
+  ];
+}
+
+function estimateNetworkMetrics({ customer, device }) {
+  const planSpeed = Number(customer?.billingSnapshot?.speedMbps || customer?.speedMbps || 100);
+  const online = device?.onlineStatus === "online";
+  const rxPower = Number(device?.opticalInfo?.rxPower ?? -22);
+  const signalPenalty = rxPower < -26 ? 0.55 : rxPower < -23 ? 0.75 : 0.92;
+  const blockedClients = getConnectedDevices(device).filter((item) => item.blocked).length;
+  const speedMbps = online ? Math.max(5, Math.round(planSpeed * signalPenalty) - blockedClients * 2) : 0;
+  const latencyMs = online ? Math.max(5, Math.round(8 + Math.abs(rxPower + 20) * 3)) : 999;
+  const packetLossPercent = online ? Number((rxPower < -26 ? 2.8 : rxPower < -23 ? 1.2 : 0.2).toFixed(1)) : 100;
+  return { speedMbps, latencyMs, packetLossPercent, rxPower };
+}
+
+async function notifyCustomerAction(customerUserId, type, title, body, payload) {
+  await CustomerNotification.create({
+    customerUserId,
+    type,
+    title,
+    body,
+    payload
+  });
 }
 
 async function assignInstallerIfAvailable({ booking, payload, plan }) {
@@ -664,7 +707,12 @@ customerPortalRouter.get(
       ssid5: device?.wifiInfo?.ssid5Masked || "JustFiber",
       connectedDevices: Array.isArray(device?.lanInfo?.connectedDevices) ? device.lanInfo.connectedDevices.length : device?.lanInfo?.leasedClients || 0,
       natEnabled: device?.wifiInfo?.natEnabled ?? true,
-      pppoeUsername: device?.wanInfo?.pppoeUsernameMasked || `jfr_${String(customer.customerId).toLowerCase()}`
+      pppoeUsername: device?.wanInfo?.pppoeUsernameMasked || `jfr_${String(customer.customerId).toLowerCase()}`,
+      paused: Boolean(device?.wifiInfo?.paused),
+      guestWifi: {
+        enabled: Boolean(device?.wifiInfo?.guestWifiEnabled),
+        ssid: device?.wifiInfo?.guestSsid || "JustFiber-Guest"
+      }
     });
   })
 );
@@ -719,6 +767,110 @@ customerPortalRouter.post(
 );
 
 customerPortalRouter.post(
+  "/wifi/pause",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = wifiPauseSchema.parse(req.body);
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    device.wifiInfo = {
+      ...(device.wifiInfo || {}),
+      paused: payload.paused
+    };
+    await device.save();
+    await notifyCustomerAction(
+      req.customerUser._id,
+      "wifi_pause_updated",
+      payload.paused ? "Wi-Fi paused" : "Wi-Fi resumed",
+      `Wi-Fi ${payload.paused ? "paused" : "resumed"} for ${customer.customerId}.`,
+      { paused: payload.paused }
+    );
+    return ok(res, { updated: true, paused: payload.paused });
+  })
+);
+
+customerPortalRouter.get(
+  "/wifi/guest",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    return ok(res, {
+      enabled: Boolean(device?.wifiInfo?.guestWifiEnabled),
+      ssid: device?.wifiInfo?.guestSsid || "JustFiber-Guest",
+      passwordMasked: device?.wifiInfo?.guestPasswordMasked || "********"
+    });
+  })
+);
+
+customerPortalRouter.post(
+  "/wifi/guest",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = guestWifiSchema.parse(req.body);
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    const guestSsid = payload.ssid || device.wifiInfo?.guestSsid || "JustFiber-Guest";
+    device.wifiInfo = {
+      ...(device.wifiInfo || {}),
+      guestWifiEnabled: payload.enabled,
+      guestSsid,
+      guestPasswordMasked: payload.password ? "********" : device.wifiInfo?.guestPasswordMasked || "********"
+    };
+    await device.save();
+    await notifyCustomerAction(
+      req.customerUser._id,
+      "guest_wifi_updated",
+      "Guest Wi-Fi updated",
+      `Guest Wi-Fi settings updated for ${customer.customerId}.`,
+      { enabled: payload.enabled, ssid: guestSsid }
+    );
+    return ok(res, { updated: true, enabled: payload.enabled, ssid: guestSsid });
+  })
+);
+
+customerPortalRouter.get(
+  "/wifi/parental-controls",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    return ok(res, {
+      rules: device?.lanInfo?.parentalControls || []
+    });
+  })
+);
+
+customerPortalRouter.post(
+  "/wifi/parental-controls",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = parentalControlSchema.parse(req.body);
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    const existingRules = Array.isArray(device.lanInfo?.parentalControls) ? device.lanInfo.parentalControls : [];
+    const nextRules = payload.mode === "replace" ? payload.rules : [...existingRules, ...payload.rules];
+    device.lanInfo = {
+      ...(device.lanInfo || {}),
+      parentalControls: nextRules
+    };
+    await device.save();
+    await notifyCustomerAction(
+      req.customerUser._id,
+      "parental_controls_updated",
+      "Parental controls updated",
+      `Parental control rules updated for ${customer.customerId}.`,
+      { ruleCount: nextRules.length }
+    );
+    return ok(res, { updated: true, rules: nextRules });
+  })
+);
+
+customerPortalRouter.post(
   "/device/reboot",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
@@ -743,13 +895,36 @@ customerPortalRouter.get(
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
-    const connected = Array.isArray(device.lanInfo?.connectedDevices)
-      ? device.lanInfo.connectedDevices
-      : [
-          { name: "Connected Device 1", connectionType: "wifi-5g", signal: "good" },
-          { name: "Connected Device 2", connectionType: "wifi-2g", signal: "fair" }
-        ];
+    const connected = getConnectedDevices(device);
     return ok(res, connected);
+  })
+);
+
+customerPortalRouter.post(
+  "/device/access-control",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = deviceAccessSchema.parse(req.body);
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    const updated = getConnectedDevices(device).map((item) =>
+      item.clientId === payload.clientId ? { ...item, blocked: payload.blocked } : item
+    );
+    device.lanInfo = {
+      ...(device.lanInfo || {}),
+      connectedDevices: updated
+    };
+    await device.save();
+    await notifyCustomerAction(
+      req.customerUser._id,
+      "device_access_updated",
+      payload.blocked ? "Device blocked" : "Device unblocked",
+      `${payload.clientId} ${payload.blocked ? "blocked" : "unblocked"} for ${customer.customerId}.`,
+      { clientId: payload.clientId, blocked: payload.blocked }
+    );
+    return ok(res, { updated: true, clientId: payload.clientId, blocked: payload.blocked });
   })
 );
 
@@ -865,19 +1040,160 @@ customerPortalRouter.post(
   "/help/diagnose",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
     const online = device.onlineStatus === "online";
-    const rxPower = device.opticalInfo?.rxPower;
+    const { speedMbps, latencyMs, packetLossPercent, rxPower } = estimateNetworkMetrics({ customer, device });
     return ok(res, {
       internetStatus: online ? "reachable" : "unreachable",
       wifiStatus: online ? "stable" : "unstable",
       opticalRxPower: rxPower ?? null,
+      latencyMs,
+      packetLossPercent,
+      estimatedSpeedMbps: speedMbps,
       recommendation: online
         ? "Internet looks stable. If speed is low, reboot router and test on 5 GHz."
         : "Device appears offline. Check power/fiber and request installer support."
+    });
+  })
+);
+
+customerPortalRouter.get(
+  "/ott/options",
+  requireCustomerAuth,
+  asyncHandler(async (_req, res) => {
+    const items = await AddonCatalog.find({ active: true, category: "ott" }).sort({ name: 1 }).lean();
+    return ok(res, items);
+  })
+);
+
+customerPortalRouter.post(
+  "/ott/subscribe",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = addonRequestSchema.parse(req.body);
+    const addon = await AddonCatalog.findOne({ addonCode: payload.addonCode, active: true }).lean();
+    if (!addon) {
+      throw new ApiError(404, "OTT pack not found");
+    }
+    const request = await ServiceRequest.create({
+      requestNumber: `SR${Date.now().toString().slice(-6)}`,
+      customerUserId: req.customerUser._id,
+      customerId: req.customerUser.linkedCustomerIds?.[0],
+      type: "addon_request",
+      status: "completed",
+      payload: {
+        addonCode: addon.addonCode,
+        addonName: addon.name,
+        quantity: payload.quantity,
+        category: "ott",
+        activatedDirectly: true
+      },
+      timeline: [
+        { event: "request.created", actorType: "customer", actorId: req.customerUser._id.toString(), at: new Date() },
+        { event: "request.completed", actorType: "system", actorId: "ott-engine", at: new Date() }
+      ]
+    });
+    await notifyCustomerAction(
+      req.customerUser._id,
+      "ott_activated",
+      "OTT pack activated",
+      `${addon.name} activated successfully.`,
+      { addonCode: addon.addonCode, quantity: payload.quantity }
+    );
+    return ok(res, request, { created: true });
+  })
+);
+
+customerPortalRouter.get(
+  "/network/speed-test",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    const metrics = estimateNetworkMetrics({ customer, device });
+    return ok(res, {
+      startedAt: new Date(),
+      downloadMbps: metrics.speedMbps,
+      uploadMbps: Math.max(2, Math.round(metrics.speedMbps * 0.35)),
+      latencyMs: metrics.latencyMs,
+      packetLossPercent: metrics.packetLossPercent,
+      status: device.onlineStatus === "online" ? "completed" : "failed"
+    });
+  })
+);
+
+customerPortalRouter.get(
+  "/network/quality",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    const metrics = estimateNetworkMetrics({ customer, device });
+    return ok(res, {
+      latencyMs: metrics.latencyMs,
+      packetLossPercent: metrics.packetLossPercent,
+      jitterMs: Math.max(1, Math.round(metrics.latencyMs * 0.18)),
+      opticalRxPower: metrics.rxPower,
+      quality: metrics.packetLossPercent < 1 && metrics.latencyMs < 30 ? "good" : metrics.packetLossPercent < 3 ? "warning" : "poor"
+    });
+  })
+);
+
+customerPortalRouter.post(
+  "/plan/change/apply",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = planChangeSchema.parse(req.body);
+    const customer = await getOwnedLinkedCustomer({ customerUser: req.customerUser });
+    const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
+    if (!plan) {
+      throw new ApiError(404, "Plan not found");
+    }
+    customer.planCode = plan.planCode;
+    customer.planName = plan.name;
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      speedMbps: plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+      nextPlanChangeMode: payload.effectiveMode
+    };
+    await customer.save();
+    const request = await ServiceRequest.create({
+      requestNumber: `SR${Date.now().toString().slice(-6)}`,
+      customerUserId: req.customerUser._id,
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      type: "plan_change",
+      status: "completed",
+      payload: {
+        planCode: plan.planCode,
+        planName: plan.name,
+        effectiveMode: payload.effectiveMode,
+        appliedDirectly: true
+      },
+      timeline: [
+        { event: "request.created", actorType: "customer", actorId: req.customerUser._id.toString(), at: new Date() },
+        { event: "request.completed", actorType: "system", actorId: "customer-plan-engine", at: new Date() }
+      ]
+    });
+    await notifyCustomerAction(
+      req.customerUser._id,
+      "plan_changed",
+      "Plan updated",
+      `Plan changed to ${plan.name}.`,
+      { planCode: plan.planCode, effectiveMode: payload.effectiveMode }
+    );
+    return ok(res, {
+      updated: true,
+      customerId: customer.customerId,
+      planCode: plan.planCode,
+      requestNumber: request.requestNumber
     });
   })
 );

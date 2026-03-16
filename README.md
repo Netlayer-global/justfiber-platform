@@ -220,11 +220,22 @@ Customer APIs:
 - `POST /api/v1/customer/billing/payment/link-jaze`
 - `POST /api/v1/customer/billing/payment/confirm`
 - `GET /api/v1/customer/wifi`
+- `POST /api/v1/customer/wifi/pause`
+- `GET /api/v1/customer/wifi/guest`
+- `POST /api/v1/customer/wifi/guest`
+- `GET /api/v1/customer/wifi/parental-controls`
+- `POST /api/v1/customer/wifi/parental-controls`
 - `POST /api/v1/customer/device/reboot`
+- `POST /api/v1/customer/device/access-control`
+- `GET /api/v1/customer/network/speed-test`
+- `GET /api/v1/customer/network/quality`
 - `GET /api/v1/customer/services/track`
 - `GET /api/v1/customer/notifications`
 - `GET /api/v1/customer/addons`
+- `GET /api/v1/customer/ott/options`
+- `POST /api/v1/customer/ott/subscribe`
 - `GET /api/v1/customer/plan/change-options`
+- `POST /api/v1/customer/plan/change/apply`
 - `GET /api/v1/customer/help/faqs`
 - `POST /api/v1/customer/tickets`
 - `GET /api/v1/customer/requests`
@@ -332,6 +343,12 @@ Installer safe flow test:
 
 ```bash
 npm run test:installer
+```
+
+Customer self-care test:
+
+```bash
+npm run test:customer
 ```
 
 Live external integrations check (read-only):

@@ -273,6 +273,70 @@ export async function runSmokeAllModules() {
     await requestJson({ path: "/api/v1/customer/requests", token: customerToken });
   });
 
+  await run("Customer Wi-Fi info", async () => {
+    await requestJson({ path: "/api/v1/customer/wifi", token: customerToken });
+  });
+
+  await run("Customer pause Wi-Fi", async () => {
+    await requestJson({
+      method: "POST",
+      path: "/api/v1/customer/wifi/pause",
+      token: customerToken,
+      body: { paused: true }
+    });
+  });
+
+  await run("Customer guest Wi-Fi update", async () => {
+    await requestJson({
+      method: "POST",
+      path: "/api/v1/customer/wifi/guest",
+      token: customerToken,
+      body: { enabled: true, ssid: "JustFiber-Guest", password: "Guest123" }
+    });
+  });
+
+  await run("Customer parental controls", async () => {
+    await requestJson({
+      method: "POST",
+      path: "/api/v1/customer/wifi/parental-controls",
+      token: customerToken,
+      body: {
+        mode: "append",
+        rules: [{ targetName: "Kids Tablet", blocked: true, startTime: "22:00", endTime: "06:00" }]
+      }
+    });
+  });
+
+  await run("Customer device access control", async () => {
+    await requestJson({
+      method: "POST",
+      path: "/api/v1/customer/device/access-control",
+      token: customerToken,
+      body: { clientId: "tv-living", blocked: true }
+    });
+  });
+
+  await run("Customer speed test", async () => {
+    await requestJson({ path: "/api/v1/customer/network/speed-test", token: customerToken });
+  });
+
+  await run("Customer network quality", async () => {
+    await requestJson({ path: "/api/v1/customer/network/quality", token: customerToken });
+  });
+
+  await run("Customer plan change apply", async () => {
+    await requestJson({
+      method: "POST",
+      path: "/api/v1/customer/plan/change/apply",
+      token: customerToken,
+      body: { planCode: process.env.SMOKE_PLAN_CHANGE_CODE || "PLAN-200", effectiveMode: "immediate" }
+    });
+  });
+
+  await run("Customer OTT options", async () => {
+    await requestJson({ path: "/api/v1/customer/ott/options", token: customerToken });
+  });
+
   const failed = checks.filter((step) => !step.ok);
   console.log(`\nSmoke check result: ${checks.length - failed.length}/${checks.length} passed`);
   if (failed.length > 0) {

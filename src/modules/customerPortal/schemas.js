@@ -64,6 +64,35 @@ export const wifiUpdateSchema = z.object({
   password5: z.string().min(8).optional()
 });
 
+export const wifiPauseSchema = z.object({
+  paused: z.coerce.boolean()
+});
+
+export const guestWifiSchema = z.object({
+  enabled: z.coerce.boolean(),
+  ssid: z.string().min(3).max(64).optional(),
+  password: z.string().min(8).max(64).optional()
+});
+
+export const parentalControlSchema = z.object({
+  mode: z.enum(["replace", "append"]).default("append"),
+  rules: z.array(
+    z.object({
+      targetName: z.string().min(2).max(100),
+      macAddress: z.string().min(8).max(32).optional(),
+      blocked: z.coerce.boolean().default(true),
+      startTime: z.string().min(3).max(20).optional(),
+      endTime: z.string().min(3).max(20).optional(),
+      days: z.array(z.string().min(2).max(12)).optional()
+    })
+  ).min(1)
+});
+
+export const deviceAccessSchema = z.object({
+  clientId: z.string().min(2).max(100),
+  blocked: z.coerce.boolean()
+});
+
 export const planChangeSchema = z.object({
   planCode: z.string().min(2),
   effectiveMode: z.enum(["immediate", "next_cycle"]).default("next_cycle")

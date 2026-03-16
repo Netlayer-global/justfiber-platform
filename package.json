@@ -12,6 +12,7 @@
     "worker": "node src/worker.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
     "seed:sample-data": "node src/scripts/seedSampleData.js",
+    "test:customer": "node src/scripts/testCustomerFeatures.js",
     "test:installer": "node src/scripts/testInstallerModules.js",
     "test:jaze": "node src/scripts/testJazeModules.js",
     "test:genie": "node src/scripts/testGenieModules.js",

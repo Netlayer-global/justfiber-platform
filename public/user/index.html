@@ -147,6 +147,8 @@
             <button id="planOptionsRefresh" class="ghost-button">Refresh</button>
           </div>
           <div id="planOptionsView" class="stack"></div>
+          <input id="planChangeCodeInput" class="input" type="text" placeholder="Target plan code" />
+          <button id="planChangeApplyButton" class="ghost-button" type="button">Apply Plan Change</button>
           <button id="billingPayLinkButton" class="ghost-button" type="button">Generate Bill Payment Link</button>
           <button id="billingPayConfirmButton" class="ghost-button" type="button">Confirm Bill Payment</button>
           <form id="wifiForm" class="stack">
@@ -156,7 +158,16 @@
             <input id="password5Input" class="input" type="text" placeholder="5G Password" />
             <button class="primary-button" type="submit">Update Wi-Fi</button>
           </form>
+          <button id="wifiPauseButton" class="ghost-button" type="button">Pause Wi-Fi</button>
+          <button id="wifiResumeButton" class="ghost-button" type="button">Resume Wi-Fi</button>
+          <input id="guestSsidInput" class="input" type="text" placeholder="Guest Wi-Fi SSID" />
+          <input id="guestPasswordInput" class="input" type="text" placeholder="Guest Wi-Fi Password" />
+          <button id="guestWifiEnableButton" class="ghost-button" type="button">Enable Guest Wi-Fi</button>
+          <button id="guestWifiDisableButton" class="ghost-button" type="button">Disable Guest Wi-Fi</button>
           <button id="routerRebootButton" class="ghost-button" type="button">Reboot Router</button>
+          <button id="speedTestButton" class="ghost-button" type="button">Run Speed Test</button>
+          <button id="qualityCheckButton" class="ghost-button" type="button">Check Latency / Packet Loss</button>
+          <div id="networkToolsView" class="stack"></div>
         </section>
 
         <section class="panel">
@@ -165,6 +176,24 @@
             <button id="connectedDevicesRefresh" class="ghost-button">Refresh</button>
           </div>
           <div id="connectedDevicesView" class="stack"></div>
+          <input id="deviceAccessClientIdInput" class="input" type="text" placeholder="Device clientId to block/unblock" />
+          <button id="deviceBlockButton" class="ghost-button" type="button">Block Device</button>
+          <button id="deviceUnblockButton" class="ghost-button" type="button">Unblock Device</button>
+          <input id="parentalTargetInput" class="input" type="text" placeholder="Parental control target name" />
+          <input id="parentalStartInput" class="input" type="text" placeholder="Start time, e.g. 22:00" />
+          <input id="parentalEndInput" class="input" type="text" placeholder="End time, e.g. 06:00" />
+          <button id="parentalAddButton" class="ghost-button" type="button">Add Parental Control</button>
+          <div id="parentalControlsView" class="stack"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>OTT Packs</h3>
+            <button id="ottRefreshButton" class="ghost-button">Refresh</button>
+          </div>
+          <div id="ottView" class="stack"></div>
+          <input id="ottAddonCodeInput" class="input" type="text" placeholder="OTT add-on code" />
+          <button id="ottSubscribeButton" class="ghost-button" type="button">Activate OTT Pack</button>
         </section>
       </section>
     </div>

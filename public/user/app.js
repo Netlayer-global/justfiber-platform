@@ -19,7 +19,10 @@ const el = {
   addonsView: document.getElementById("addonsView"),
   ticketsView: document.getElementById("ticketsView"),
   planOptionsView: document.getElementById("planOptionsView"),
-  connectedDevicesView: document.getElementById("connectedDevicesView")
+  connectedDevicesView: document.getElementById("connectedDevicesView"),
+  networkToolsView: document.getElementById("networkToolsView"),
+  parentalControlsView: document.getElementById("parentalControlsView"),
+  ottView: document.getElementById("ottView")
 };
 
 function showBanner(message, isError = false) {
@@ -114,7 +117,23 @@ async function loadConnectedDevices() {
   if (!state.accessToken) return;
   const items = await api("/api/v1/customer/device/connected-devices");
   el.connectedDevicesView.innerHTML = items
-    .map((item) => `<div class="card"><strong>${item.name}</strong><div>${item.connectionType}</div><div>${item.signal}</div></div>`)
+    .map((item) => `<div class="card"><strong>${item.name}</strong><div>${item.clientId} | ${item.connectionType}</div><div>${item.signal} | ${item.blocked ? "blocked" : "allowed"}</div></div>`)
+    .join("");
+}
+
+async function loadParentalControls() {
+  if (!state.accessToken) return;
+  const data = await api("/api/v1/customer/wifi/parental-controls");
+  el.parentalControlsView.innerHTML = (data.rules || [])
+    .map((item) => `<div class="card"><strong>${item.targetName}</strong><div>${item.startTime || "-"} to ${item.endTime || "-"}</div></div>`)
+    .join("");
+}
+
+async function loadOttOptions() {
+  if (!state.accessToken) return;
+  const items = await api("/api/v1/customer/ott/options");
+  el.ottView.innerHTML = items
+    .map((item) => `<div class="card"><strong>${item.name}</strong><div>${item.addonCode}</div><div>Rs. ${item.price}</div></div>`)
     .join("");
 }
 
@@ -148,7 +167,16 @@ el.verifyOtpForm.addEventListener("submit", async (event) => {
     state.accessToken = data.accessToken;
     showBanner("Customer session established.");
     await loadDashboard();
-    await Promise.allSettled([loadNotifications(), loadAddons(), loadRequests(), loadTickets(), loadPlanOptions(), loadConnectedDevices()]);
+    await Promise.allSettled([
+      loadNotifications(),
+      loadAddons(),
+      loadRequests(),
+      loadTickets(),
+      loadPlanOptions(),
+      loadConnectedDevices(),
+      loadParentalControls(),
+      loadOttOptions()
+    ]);
   } catch (error) {
     showBanner(error.message, true);
   }
@@ -162,6 +190,7 @@ document.getElementById("requestsRefresh").addEventListener("click", () => loadR
 document.getElementById("addonsRefresh").addEventListener("click", () => loadAddons().catch((error) => showBanner(error.message, true)));
 document.getElementById("planOptionsRefresh").addEventListener("click", () => loadPlanOptions().catch((error) => showBanner(error.message, true)));
 document.getElementById("connectedDevicesRefresh").addEventListener("click", () => loadConnectedDevices().catch((error) => showBanner(error.message, true)));
+document.getElementById("ottRefreshButton").addEventListener("click", () => loadOttOptions().catch((error) => showBanner(error.message, true)));
 
 document.getElementById("gpsButton").addEventListener("click", () => {
   showBanner(`Using demo GPS ${state.demoGps.lat}, ${state.demoGps.lng}`);
@@ -324,6 +353,159 @@ document.getElementById("billingPayLinkButton").addEventListener("click", async 
       window.open(data.paymentUrl, "_blank", "noopener,noreferrer");
     }
     showBanner(data.paymentUrl ? `Bill payment link opened: ${data.paymentUrl}` : "Bill payment link generated.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("wifiPauseButton").addEventListener("click", async () => {
+  try {
+    await api("/api/v1/customer/wifi/pause", {
+      method: "POST",
+      body: JSON.stringify({ paused: true })
+    });
+    showBanner("Wi-Fi paused.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("wifiResumeButton").addEventListener("click", async () => {
+  try {
+    await api("/api/v1/customer/wifi/pause", {
+      method: "POST",
+      body: JSON.stringify({ paused: false })
+    });
+    showBanner("Wi-Fi resumed.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("guestWifiEnableButton").addEventListener("click", async () => {
+  try {
+    await api("/api/v1/customer/wifi/guest", {
+      method: "POST",
+      body: JSON.stringify({
+        enabled: true,
+        ssid: document.getElementById("guestSsidInput").value || undefined,
+        password: document.getElementById("guestPasswordInput").value || undefined
+      })
+    });
+    showBanner("Guest Wi-Fi enabled.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("guestWifiDisableButton").addEventListener("click", async () => {
+  try {
+    await api("/api/v1/customer/wifi/guest", {
+      method: "POST",
+      body: JSON.stringify({ enabled: false })
+    });
+    showBanner("Guest Wi-Fi disabled.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("deviceBlockButton").addEventListener("click", async () => {
+  try {
+    await api("/api/v1/customer/device/access-control", {
+      method: "POST",
+      body: JSON.stringify({ clientId: document.getElementById("deviceAccessClientIdInput").value, blocked: true })
+    });
+    showBanner("Device blocked.");
+    await loadConnectedDevices();
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("deviceUnblockButton").addEventListener("click", async () => {
+  try {
+    await api("/api/v1/customer/device/access-control", {
+      method: "POST",
+      body: JSON.stringify({ clientId: document.getElementById("deviceAccessClientIdInput").value, blocked: false })
+    });
+    showBanner("Device unblocked.");
+    await loadConnectedDevices();
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("parentalAddButton").addEventListener("click", async () => {
+  try {
+    await api("/api/v1/customer/wifi/parental-controls", {
+      method: "POST",
+      body: JSON.stringify({
+        mode: "append",
+        rules: [
+          {
+            targetName: document.getElementById("parentalTargetInput").value,
+            blocked: true,
+            startTime: document.getElementById("parentalStartInput").value || undefined,
+            endTime: document.getElementById("parentalEndInput").value || undefined
+          }
+        ]
+      })
+    });
+    showBanner("Parental control rule added.");
+    await loadParentalControls();
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("speedTestButton").addEventListener("click", async () => {
+  try {
+    const data = await api("/api/v1/customer/network/speed-test");
+    el.networkToolsView.innerHTML = `<div class="card"><strong>Speed Test</strong><div>Down ${data.downloadMbps} Mbps | Up ${data.uploadMbps} Mbps | Latency ${data.latencyMs} ms</div></div>`;
+    showBanner("Speed test completed.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("qualityCheckButton").addEventListener("click", async () => {
+  try {
+    const data = await api("/api/v1/customer/network/quality");
+    el.networkToolsView.innerHTML = `<div class="card"><strong>Network Quality</strong><div>${data.quality} | Latency ${data.latencyMs} ms | Packet loss ${data.packetLossPercent}%</div></div>`;
+    showBanner("Network quality checked.");
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("planChangeApplyButton").addEventListener("click", async () => {
+  try {
+    const data = await api("/api/v1/customer/plan/change/apply", {
+      method: "POST",
+      body: JSON.stringify({
+        planCode: document.getElementById("planChangeCodeInput").value,
+        effectiveMode: "immediate"
+      })
+    });
+    showBanner(`Plan changed to ${data.planCode}.`);
+    await Promise.allSettled([loadDashboard(), loadPlanOptions()]);
+  } catch (error) {
+    showBanner(error.message, true);
+  }
+});
+
+document.getElementById("ottSubscribeButton").addEventListener("click", async () => {
+  try {
+    await api("/api/v1/customer/ott/subscribe", {
+      method: "POST",
+      body: JSON.stringify({
+        addonCode: document.getElementById("ottAddonCodeInput").value,
+        quantity: 1
+      })
+    });
+    showBanner("OTT pack activated.");
+    await loadOttOptions();
   } catch (error) {
     showBanner(error.message, true);
   }
