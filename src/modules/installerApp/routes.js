@@ -267,7 +267,8 @@ installerAppRouter.post(
     job.deviceContext = {
       ...(job.deviceContext || {}),
       scannedSerialNumber: payload.serialNumber,
-      finalSerialNumber: payload.serialNumber
+      finalSerialNumber: payload.serialNumber,
+      ...(payload.deviceId ? { finalDeviceId: payload.deviceId } : {})
     };
     pushTimeline(job, "job.device_scanned", req.installer._id, payload.serialNumber);
     await job.save();
@@ -284,7 +285,8 @@ installerAppRouter.post(
     job.deviceContext = {
       ...(job.deviceContext || {}),
       manualSerialNumber: payload.serialNumber,
-      finalSerialNumber: payload.serialNumber
+      finalSerialNumber: payload.serialNumber,
+      ...(payload.deviceId ? { finalDeviceId: payload.deviceId } : {})
     };
     pushTimeline(job, "job.manual_serial", req.installer._id, payload.serialNumber);
     await job.save();
@@ -409,7 +411,8 @@ installerAppRouter.post(
       installerJobId: job._id.toString(),
       customerId: job.customerId,
       serviceId: job.serviceId,
-      finalSerialNumber: job.deviceContext?.finalSerialNumber
+      finalSerialNumber: job.deviceContext?.finalSerialNumber,
+      finalDeviceId: job.deviceContext?.finalDeviceId
     });
     return ok(res, { status: job.status, activation: job.activation });
   })
@@ -432,7 +435,8 @@ installerAppRouter.post(
       installerJobId: job._id.toString(),
       customerId: job.customerId,
       serviceId: job.serviceId,
-      finalSerialNumber: job.deviceContext?.finalSerialNumber
+      finalSerialNumber: job.deviceContext?.finalSerialNumber,
+      finalDeviceId: job.deviceContext?.finalDeviceId
     });
     return ok(res, job.activation);
   })

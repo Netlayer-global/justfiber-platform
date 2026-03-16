@@ -94,7 +94,10 @@ const worker = new Worker(
         if (!jobRecord) {
           throw new Error("Installer job not found");
         }
-        const deviceId = jobRecord.deviceContext?.finalDeviceId || `ONT-${job.data.finalSerialNumber}`;
+        const deviceId =
+          jobRecord.deviceContext?.finalDeviceId ||
+          job.data.finalDeviceId ||
+          `ONT-${job.data.finalSerialNumber}`;
         const existingDevice = await DeviceOperationalCache.findOne({ deviceId }).lean();
         const brand = detectOntBrand({
           serialNumber: jobRecord.deviceContext?.finalSerialNumber || existingDevice?.serialNumber,
@@ -143,6 +146,8 @@ const worker = new Worker(
             $set: {
               customerId: jobRecord.customerId,
               serviceId: jobRecord.serviceId || jobRecord.customerId,
+              deviceId,
+              serialNumber: jobRecord.deviceContext?.finalSerialNumber || existingDevice?.serialNumber,
               provisioningState: "SERVICE_ACTIVATE",
               wifiInfo: {
                 ...(existingDevice?.wifiInfo || {}),

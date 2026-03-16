@@ -6,7 +6,8 @@ export const leaveStartSchema = z.object({
 });
 
 export const serialSchema = z.object({
-  serialNumber: z.string().min(4).max(64)
+  serialNumber: z.string().min(4).max(64),
+  deviceId: z.string().min(3).max(255).optional()
 });
 
 export const opticalSchema = z.object({

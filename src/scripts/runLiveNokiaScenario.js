@@ -76,6 +76,7 @@ async function runLiveNokiaScenario() {
   const installerLogin = requireEnv("LIVE_INSTALLER_LOGIN");
   const installerPassword = requireEnv("LIVE_INSTALLER_PASSWORD");
   const serialNumber = requireEnv("LIVE_NOKIA_SERIAL");
+  const deviceId = process.env.LIVE_NOKIA_DEVICE_ID;
   const lat = Number(process.env.LIVE_LAT || "26.8467");
   const lng = Number(process.env.LIVE_LNG || "80.9462");
   const rxPower = Number(process.env.LIVE_RX_POWER || "-19.5");
@@ -175,7 +176,10 @@ async function runLiveNokiaScenario() {
     method: "POST",
     path: `/api/v1/installer/jobs/${jobId}/manual-serial`,
     token: installerToken,
-    body: { serialNumber }
+    body: {
+      serialNumber,
+      ...(deviceId ? { deviceId } : {})
+    }
   });
   await requestJson({
     method: "POST",
@@ -215,6 +219,9 @@ async function runLiveNokiaScenario() {
   console.log(`- bookingNumber: ${bookingNumber}`);
   console.log(`- installerJobId: ${jobId}`);
   console.log(`- serialNumber: ${serialNumber}`);
+  if (deviceId) {
+    console.log(`- deviceId: ${deviceId}`);
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
