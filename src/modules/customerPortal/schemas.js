@@ -27,7 +27,33 @@ export const bookingSchema = z.object({
   pinCode: z.string().min(4),
   lat: z.number(),
   lng: z.number(),
-  paymentMode: z.enum(["jaze", "razorpay", "cash"]).default("razorpay")
+  paymentMode: z.enum(["jaze", "razorpay", "cash"]).default("razorpay"),
+  jazeUserId: z.string().min(1).optional()
+});
+
+export const bookingPaymentLinkSchema = z.object({
+  jazeUserId: z.string().min(1).optional()
+});
+
+export const bookingPaymentConfirmSchema = z.object({
+  status: z.enum(["paid", "failed"]),
+  paymentId: z.string().optional(),
+  reference: z.string().optional(),
+  amount: z.number().positive().optional(),
+  notes: z.string().optional()
+});
+
+export const billingPaymentLinkSchema = z.object({
+  customerId: z.string().optional(),
+  jazeUserId: z.string().optional()
+});
+
+export const billingPaymentConfirmSchema = z.object({
+  customerId: z.string().optional(),
+  paymentId: z.string().optional(),
+  reference: z.string().optional(),
+  amount: z.number().positive().optional(),
+  notes: z.string().optional()
 });
 
 export const wifiUpdateSchema = z.object({

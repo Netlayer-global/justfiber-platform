@@ -24,6 +24,15 @@ function buildHeaders() {
   return headers;
 }
 
+function normalizeUserId(value) {
+  if (value === undefined || value === null) {
+    return value;
+  }
+  const text = String(value).trim();
+  const match = text.match(/(\d+)$/);
+  return match ? match[1] : text;
+}
+
 async function jazeRequest(method, path, body, isForm = false) {
   const baseUrl = env.JAZE_API_BASE_URL.endsWith("/") ? env.JAZE_API_BASE_URL : `${env.JAZE_API_BASE_URL}/`;
   const url = new URL(apiPath(path), baseUrl).toString();
@@ -62,11 +71,12 @@ async function jazeRequest(method, path, body, isForm = false) {
 
 export class JazeClient {
   async suspendService({ serviceId, reason }) {
+    const userId = normalizeUserId(serviceId);
     return jazeRequest(
       "POST",
       "/block_unblock_user",
       {
-        userId: serviceId,
+        userId,
         accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
         state: "block",
         notes: reason
@@ -76,11 +86,12 @@ export class JazeClient {
   }
 
   async resumeService({ serviceId, reason }) {
+    const userId = normalizeUserId(serviceId);
     return jazeRequest(
       "POST",
       "/block_unblock_user",
       {
-        userId: serviceId,
+        userId,
         accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
         state: "unblock",
         notes: reason
@@ -107,11 +118,12 @@ export class JazeClient {
   }
 
   async createBookingPayment({ bookingNumber, amount, customerName, mobile }) {
+    const userId = normalizeUserId(bookingNumber);
     return jazeRequest(
       "POST",
       "/make_payment",
       {
-        userId: bookingNumber,
+        userId,
         amount,
         method: "onlinePayment",
         notes: `Booking:${bookingNumber} Customer:${customerName || "NA"} Mobile:${mobile || "NA"}`
@@ -120,8 +132,21 @@ export class JazeClient {
     );
   }
 
+  async getPaymentLink({ userId }) {
+    const normalizedUserId = normalizeUserId(userId);
+    return jazeRequest(
+      "POST",
+      "/get_payment_link",
+      {
+        userId: normalizedUserId
+      },
+      true
+    );
+  }
+
   async getCustomerBilling(customerId) {
-    return jazeRequest("GET", `/get_payment_details/${encodeURIComponent(customerId)}`);
+    const userId = normalizeUserId(customerId);
+    return jazeRequest("GET", `/get_payment_details/${encodeURIComponent(userId)}`);
   }
 
   async getUserByUsername(username) {
@@ -129,11 +154,16 @@ export class JazeClient {
   }
 
   async blockOrUnblockUser({ userId, state }) {
-    return jazeRequest("POST", "/block_unblock_user", {
-      userId,
-      accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
-      state
-    }, true);
+    return jazeRequest(
+      "POST",
+      "/block_unblock_user",
+      {
+        userId: normalizeUserId(userId),
+        accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME,
+        state
+      },
+      true
+    );
   }
 
   async makePayment({ userId, amount, method = "onlinePayment", notes = "Integration test payment" }) {
@@ -141,7 +171,7 @@ export class JazeClient {
       "POST",
       "/make_payment",
       {
-        userId,
+        userId: normalizeUserId(userId),
         amount,
         method,
         notes
@@ -168,7 +198,7 @@ export class JazeClient {
   }
 
   async getSingleUserDetails(userId) {
-    return jazeRequest("GET", `/get_details/${encodeURIComponent(userId)}`);
+    return jazeRequest("GET", `/get_details/${encodeURIComponent(normalizeUserId(userId))}`);
   }
 }
 

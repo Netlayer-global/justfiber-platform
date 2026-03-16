@@ -209,8 +209,12 @@ Customer APIs:
 - `POST /api/v1/customer/auth/verify-otp`
 - `GET /api/v1/customer/plans`
 - `POST /api/v1/customer/bookings`
+- `POST /api/v1/customer/bookings/:bookingNumber/payment/link-jaze`
+- `POST /api/v1/customer/bookings/:bookingNumber/payment/confirm`
 - `GET /api/v1/customer/dashboard`
 - `GET /api/v1/customer/billing/summary`
+- `POST /api/v1/customer/billing/payment/link-jaze`
+- `POST /api/v1/customer/billing/payment/confirm`
 - `GET /api/v1/customer/wifi`
 - `POST /api/v1/customer/device/reboot`
 - `GET /api/v1/customer/services/track`

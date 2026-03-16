@@ -14,11 +14,17 @@ import { InstallerJob } from "../../models/InstallerJob.js";
 import { Installer } from "../../models/Installer.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
+import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
+import { jazeClient } from "../../integrations/jazeClient.js";
 import {
   addonRequestSchema,
   bookingSchema,
+  bookingPaymentConfirmSchema,
+  bookingPaymentLinkSchema,
+  billingPaymentConfirmSchema,
+  billingPaymentLinkSchema,
   feasibilitySchema,
   planChangeSchema,
   sendOtpSchema,
@@ -31,6 +37,135 @@ import {
 const otpStore = new Map();
 
 export const customerPortalRouter = Router();
+
+function normalizeJazeUserId(raw) {
+  if (!raw) return null;
+  return String(raw).trim();
+}
+
+function deriveJazeUserId({ explicitJazeUserId, linkedCustomerId }) {
+  if (explicitJazeUserId) {
+    return normalizeJazeUserId(explicitJazeUserId);
+  }
+  if (!linkedCustomerId) {
+    return null;
+  }
+  const match = String(linkedCustomerId).match(/(\d+)$/);
+  return match ? match[1] : normalizeJazeUserId(linkedCustomerId);
+}
+
+function pickPaymentUrl(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidates = [
+    payload.paymentUrl,
+    payload.paymentLink,
+    payload.url,
+    payload.redirectUrl,
+    payload.link,
+    payload.data?.paymentUrl,
+    payload.data?.paymentLink,
+    payload.data?.url
+  ];
+  return candidates.find((value) => typeof value === "string" && value.length > 0) || null;
+}
+
+async function getOwnedBookingOrThrow(bookingNumber, customerUserId) {
+  const booking = await ConnectionBooking.findOne({
+    bookingNumber,
+    customerUserId
+  });
+  if (!booking) {
+    throw new ApiError(404, "Booking not found");
+  }
+  return booking;
+}
+
+async function getOwnedLinkedCustomer({ customerUser, requestedCustomerId }) {
+  const linkedIds = customerUser.linkedCustomerIds || [];
+  const customerId = requestedCustomerId || linkedIds[0];
+  if (!customerId || !linkedIds.includes(customerId)) {
+    throw new ApiError(404, "Linked customer not found");
+  }
+  const customer = await Customer.findOne({ customerId });
+  if (!customer) {
+    throw new ApiError(404, "Customer not found");
+  }
+  return customer;
+}
+
+async function assignInstallerIfAvailable({ booking, payload, plan }) {
+  if (booking.assignment?.installerId || booking.status === "assigned") {
+    return booking;
+  }
+
+  const installer = await Installer.findOne({ availabilityStatus: "available", status: "active" }).sort({ updatedAt: 1 });
+  if (!installer) {
+    booking.status = "awaiting_assignment";
+    booking.tracking = {
+      currentStep: "payment_confirmed",
+      steps: [
+        { code: "booking_placed", status: "done", at: booking.createdAt || new Date() },
+        { code: "payment_confirmed", status: "done", at: new Date() },
+        { code: "installer_assigned", status: "pending", at: null }
+      ]
+    };
+    await booking.save();
+    return booking;
+  }
+
+  const installerJob = await InstallerJob.create({
+    jobNumber: `JOB-${Date.now()}`,
+    type: "installation",
+    customerId: booking.bookingNumber,
+    serviceId: booking.bookingNumber,
+    installerId: installer._id,
+    priority: "medium",
+    customerSnapshot: {
+      fullName: payload.fullName,
+      phone: payload.mobile,
+      address: payload.fullAddress,
+      location: { lat: payload.lat, lng: payload.lng },
+      planName: plan.name,
+      planCode: plan.planCode
+    },
+    timeline: [
+      {
+        event: "job.assigned",
+        actorType: "system",
+        actorId: "booking-engine",
+        note: `Auto-assigned from booking ${booking.bookingNumber}`
+      }
+    ]
+  });
+
+  booking.status = "assigned";
+  booking.assignment = {
+    installerId: installer._id,
+    assignedAt: new Date(),
+    autoAssigned: true
+  };
+  booking.tracking = {
+    currentStep: "installer_assigned",
+    steps: [
+      { code: "booking_placed", status: "done", at: booking.createdAt || new Date() },
+      { code: "payment_confirmed", status: "done", at: new Date() },
+      { code: "installer_assigned", status: "done", at: new Date(), jobId: installerJob._id }
+    ]
+  };
+  await booking.save();
+
+  await InstallerNotification.create({
+    installerId: installer._id,
+    type: "new_job",
+    title: "New booking assigned",
+    body: `${payload.fullName} installation has been assigned.`,
+    payload: { bookingNumber: booking.bookingNumber, installerJobId: installerJob._id }
+  });
+
+  return booking;
+}
 
 customerPortalRouter.post(
   "/auth/send-otp",
@@ -122,6 +257,14 @@ customerPortalRouter.post(
     if (!plan) {
       throw new ApiError(404, "Plan not found");
     }
+    const amount = (plan.monthlyPrice || 0) + (plan.otcCharge || 0);
+    const isJazePayment = payload.paymentMode === "jaze";
+    const linkedCustomerId = req.customerUser.linkedCustomerIds?.[0];
+    const jazeUserId = deriveJazeUserId({
+      explicitJazeUserId: payload.jazeUserId,
+      linkedCustomerId
+    });
+
     const booking = await ConnectionBooking.create({
       bookingNumber: `JF${Date.now().toString().slice(-6)}`,
       customerUserId: req.customerUser._id,
@@ -131,7 +274,7 @@ customerPortalRouter.post(
         planName: plan.name,
         monthlyPrice: plan.monthlyPrice,
         otcCharge: plan.otcCharge,
-        totalAmount: (plan.monthlyPrice || 0) + (plan.otcCharge || 0)
+        totalAmount: amount
       },
       feasibility: {
         feasible: true,
@@ -146,75 +289,68 @@ customerPortalRouter.post(
       },
       payment: {
         provider: payload.paymentMode,
-        status: "paid",
-        amount: (plan.monthlyPrice || 0) + (plan.otcCharge || 0),
-        paidAt: new Date()
+        status: isJazePayment ? "pending" : "paid",
+        amount,
+        paidAt: isJazePayment ? null : new Date(),
+        jazeUserId: isJazePayment ? jazeUserId : undefined
       },
       tracking: {
-        currentStep: "payment_confirmed",
+        currentStep: isJazePayment ? "payment_pending" : "payment_confirmed",
         steps: [
           { code: "booking_placed", status: "done", at: new Date() },
-          { code: "payment_confirmed", status: "done", at: new Date() },
+          {
+            code: "payment_confirmed",
+            status: isJazePayment ? "pending" : "done",
+            at: isJazePayment ? null : new Date()
+          },
           { code: "installer_assigned", status: "pending", at: null }
         ]
       }
     });
-    const installer = await Installer.findOne({ availabilityStatus: "available", status: "active" }).sort({ updatedAt: 1 });
-    if (installer) {
-      const installerJob = await InstallerJob.create({
-        jobNumber: `JOB-${Date.now()}`,
-        type: "installation",
-        customerId: booking.bookingNumber,
-        serviceId: booking.bookingNumber,
-        installerId: installer._id,
-        priority: "medium",
-        customerSnapshot: {
-          fullName: payload.fullName,
-          phone: payload.mobile,
-          address: payload.fullAddress,
-          location: { lat: payload.lat, lng: payload.lng },
-          planName: plan.name,
-          planCode: plan.planCode
-        },
-        timeline: [
-          {
-            event: "job.assigned",
-            actorType: "system",
-            actorId: "booking-engine",
-            note: `Auto-assigned from booking ${booking.bookingNumber}`
-          }
-        ]
-      });
-      booking.status = "assigned";
-      booking.assignment = {
-        installerId: installer._id,
-        assignedAt: new Date(),
-        autoAssigned: true
-      };
-      booking.tracking = {
-        currentStep: "installer_assigned",
-        steps: [
-          { code: "booking_placed", status: "done", at: booking.createdAt },
-          { code: "payment_confirmed", status: "done", at: new Date() },
-          { code: "installer_assigned", status: "done", at: new Date(), jobId: installerJob._id }
-        ]
-      };
-      await booking.save();
-      await InstallerNotification.create({
-        installerId: installer._id,
-        type: "new_job",
-        title: "New booking assigned",
-        body: `${payload.fullName} installation has been assigned.`,
-        payload: { bookingNumber: booking.bookingNumber, installerJobId: installerJob._id }
-      });
-    } else {
-      booking.status = "awaiting_assignment";
-      await booking.save();
+
+    let paymentGateway = null;
+    if (isJazePayment && jazeUserId) {
+      try {
+        const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
+        paymentGateway = {
+          provider: "jaze",
+          userId: jazeUserId,
+          paymentUrl: pickPaymentUrl(gatewayPayload),
+          raw: gatewayPayload
+        };
+        booking.payment = {
+          ...(booking.payment || {}),
+          paymentLink: paymentGateway.paymentUrl,
+          paymentLinkPayload: gatewayPayload,
+          linkRequestedAt: new Date()
+        };
+        await booking.save();
+      } catch (error) {
+        booking.payment = {
+          ...(booking.payment || {}),
+          gatewayError: error.message
+        };
+        await booking.save();
+      }
     }
+
+    if (!isJazePayment) {
+      await assignInstallerIfAvailable({ booking, payload, plan });
+    }
+
     req.customerUser.state = "booking_in_progress";
     req.customerUser.fullName = payload.fullName;
     await req.customerUser.save();
-    return ok(res, booking, { created: true });
+
+    const responseBooking = await ConnectionBooking.findById(booking._id).lean();
+    return ok(
+      res,
+      {
+        ...responseBooking,
+        paymentGateway
+      },
+      { created: true }
+    );
   })
 );
 
@@ -230,6 +366,123 @@ customerPortalRouter.get(
       throw new ApiError(404, "Booking not found");
     }
     return ok(res, booking.tracking || {});
+  })
+);
+
+customerPortalRouter.post(
+  "/bookings/:bookingNumber/payment/link-jaze",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = bookingPaymentLinkSchema.parse(req.body || {});
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+    if (booking.payment?.provider !== "jaze") {
+      throw new ApiError(400, "This booking is not configured for JAZE payment");
+    }
+    const jazeUserId =
+      deriveJazeUserId({
+        explicitJazeUserId: payload.jazeUserId,
+        linkedCustomerId: booking.payment?.jazeUserId
+      }) || booking.payment?.jazeUserId;
+    if (!jazeUserId) {
+      throw new ApiError(400, "JAZE userId is required to generate payment link");
+    }
+
+    const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
+    const paymentUrl = pickPaymentUrl(gatewayPayload);
+
+    booking.payment = {
+      ...(booking.payment || {}),
+      jazeUserId,
+      paymentLink: paymentUrl,
+      paymentLinkPayload: gatewayPayload,
+      linkRequestedAt: new Date(),
+      status: "pending"
+    };
+    await booking.save();
+
+    return ok(res, {
+      bookingNumber: booking.bookingNumber,
+      provider: "jaze",
+      userId: jazeUserId,
+      paymentUrl,
+      raw: gatewayPayload
+    });
+  })
+);
+
+customerPortalRouter.post(
+  "/bookings/:bookingNumber/payment/confirm",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = bookingPaymentConfirmSchema.parse(req.body);
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+
+    booking.payment = {
+      ...(booking.payment || {}),
+      status: payload.status,
+      paidAt: payload.status === "paid" ? new Date() : null,
+      reference: payload.reference,
+      paymentId: payload.paymentId,
+      notes: payload.notes
+    };
+
+    if (payload.status === "failed") {
+      booking.status = "payment_pending";
+      booking.tracking = {
+        currentStep: "payment_pending",
+        steps: [
+          { code: "booking_placed", status: "done", at: booking.createdAt || new Date() },
+          { code: "payment_confirmed", status: "pending", at: null },
+          { code: "installer_assigned", status: "pending", at: null }
+        ]
+      };
+      await booking.save();
+      return ok(res, {
+        bookingNumber: booking.bookingNumber,
+        status: booking.status,
+        payment: booking.payment
+      });
+    }
+
+    await PaymentTransaction.create({
+      transactionId: payload.paymentId || `JAZE-${booking.bookingNumber}-${Date.now()}`,
+      customerId: booking.personalDetails?.mobile || booking.bookingNumber,
+      serviceId: booking.bookingNumber,
+      provider: "jaze",
+      amount: payload.amount || booking.selectedPlan?.totalAmount || booking.payment?.amount || 0,
+      status: "success",
+      paidAt: new Date(),
+      method: "onlinePayment",
+      reference: payload.reference || payload.paymentId,
+      metadata: {
+        bookingNumber: booking.bookingNumber,
+        source: "customer_app_booking"
+      }
+    }).catch(() => null);
+
+    const plan = await PlanCatalog.findOne({ planCode: booking.selectedPlan?.planCode });
+    if (!plan) {
+      throw new ApiError(404, "Plan for booking not found");
+    }
+
+    await assignInstallerIfAvailable({
+      booking,
+      payload: {
+        fullName: booking.personalDetails?.fullName,
+        mobile: booking.personalDetails?.mobile,
+        fullAddress: booking.personalDetails?.fullAddress,
+        lat: booking.feasibility?.gps?.lat,
+        lng: booking.feasibility?.gps?.lng
+      },
+      plan
+    });
+
+    return ok(res, {
+      bookingNumber: booking.bookingNumber,
+      status: booking.status,
+      payment: booking.payment,
+      assignment: booking.assignment
+    });
   })
 );
 
@@ -273,6 +526,82 @@ customerPortalRouter.get(
       customerId: { $in: req.customerUser.linkedCustomerIds || [] }
     }).sort({ createdAt: -1 }).limit(20).lean();
     return ok(res, jobs);
+  })
+);
+
+customerPortalRouter.post(
+  "/billing/payment/link-jaze",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = billingPaymentLinkSchema.parse(req.body || {});
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: payload.customerId
+    });
+    const jazeUserId =
+      deriveJazeUserId({
+        explicitJazeUserId: payload.jazeUserId,
+        linkedCustomerId: customer.customerId
+      }) || customer.customerId;
+
+    const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
+    const paymentUrl = pickPaymentUrl(gatewayPayload);
+
+    return ok(res, {
+      provider: "jaze",
+      customerId: customer.customerId,
+      userId: jazeUserId,
+      amount: customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0,
+      paymentUrl,
+      raw: gatewayPayload
+    });
+  })
+);
+
+customerPortalRouter.post(
+  "/billing/payment/confirm",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = billingPaymentConfirmSchema.parse(req.body || {});
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: payload.customerId
+    });
+
+    const amount =
+      payload.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0;
+
+    await PaymentTransaction.create({
+      transactionId: payload.paymentId || `JAZE-BILL-${customer.customerId}-${Date.now()}`,
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      provider: "jaze",
+      amount,
+      status: "success",
+      paidAt: new Date(),
+      method: "onlinePayment",
+      reference: payload.reference || payload.paymentId,
+      metadata: {
+        source: "customer_billing",
+        notes: payload.notes
+      }
+    });
+
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      lastInvoiceAmount: amount,
+      dueAmount: 0,
+      lastPaymentStatus: "paid",
+      lastPaidAt: new Date()
+    };
+    await customer.save();
+
+    return ok(res, {
+      customerId: customer.customerId,
+      paymentStatus: "paid",
+      amount,
+      dueAmount: 0
+    });
   })
 );
 
