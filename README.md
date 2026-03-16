@@ -194,6 +194,10 @@ Installer APIs:
 - `POST /api/v1/installer/auth/login`
 - `GET /api/v1/installer/dashboard`
 - `GET /api/v1/installer/jobs`
+- `GET /api/v1/installer/jobs/:jobId/provisioning-preview`
+- `POST /api/v1/installer/jobs/:jobId/checkin-location`
+- `POST /api/v1/installer/jobs/:jobId/save-checklist`
+- `GET /api/v1/installer/jobs/:jobId/diagnostics`
 - `POST /api/v1/installer/jobs/:jobId/check-optical`
 - `POST /api/v1/installer/jobs/:jobId/activate`
 - `POST /api/v1/installer/jobs/:jobId/retry-activation`
@@ -322,6 +326,12 @@ Full local verification (auto-seed + auto-start + smoke + shutdown):
 
 ```bash
 npm run verify:all
+```
+
+Installer safe flow test:
+
+```bash
+npm run test:installer
 ```
 
 Live external integrations check (read-only):

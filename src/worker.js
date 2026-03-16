@@ -100,9 +100,10 @@ const worker = new Worker(
           productClass: existingDevice?.productClass,
           deviceId
         });
-        const pppoe = buildPppoeCredentials(jobRecord.customerId);
-        const wifi = buildWifiCredentials();
-        const vlanId = existingDevice?.wanInfo?.vlanId || 100;
+        const prepared = jobRecord.activation?.preparedCredentials || {};
+        const pppoe = prepared.pppoe || buildPppoeCredentials(jobRecord.customerId);
+        const wifi = prepared.wifi || buildWifiCredentials();
+        const vlanId = prepared.vlanId || existingDevice?.wanInfo?.vlanId || 100;
 
         await jazeClient.createPppoeUser({
           customerId: jobRecord.customerId,

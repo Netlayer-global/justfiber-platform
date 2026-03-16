@@ -13,8 +13,15 @@ import { DeviceReplacementLog } from "../../models/DeviceReplacementLog.js";
 import { OtpEvent } from "../../models/OtpEvent.js";
 import { buildPagination } from "../../common/pagination.js";
 import {
+  buildPppoeCredentials,
+  buildWifiCredentials,
+  detectOntBrand
+} from "../../common/networkProvisioning.js";
+import {
   complaintStartSchema,
+  installationChecklistSchema,
   leaveStartSchema,
+  locationCheckinSchema,
   opticalSchema,
   otpVerifySchema,
   proofSchema,
@@ -42,6 +49,43 @@ function buildHealth(rxPower) {
   if (rxPower > -21) return "good";
   if (rxPower > -27) return "warning";
   return "critical";
+}
+
+function buildInstallerRecommendations({ opticalHealth, checklist, device }) {
+  const recommendations = [];
+  if (opticalHealth === "critical") {
+    recommendations.push("Optical RX critical. Activation should stay blocked until fiber levels improve.");
+  } else if (opticalHealth === "warning") {
+    recommendations.push("Optical RX is marginal. Validate connector cleanliness and final patching before closure.");
+  }
+  if (checklist && Object.values(checklist).some((value) => value === false)) {
+    recommendations.push("Installation checklist has incomplete items. Resolve them before sending completion OTP.");
+  }
+  if (device?.onlineStatus && device.onlineStatus !== "online") {
+    recommendations.push("Device is not reporting online in cache. Recheck provisioning push and ONU registration.");
+  }
+  if (!recommendations.length) {
+    recommendations.push("Installation looks healthy. Complete customer handover and close the job.");
+  }
+  return recommendations;
+}
+
+function buildProvisioningPreview(job, device) {
+  const existing = job.activation?.preparedCredentials;
+  const pppoe = existing?.pppoe || buildPppoeCredentials(job.customerId);
+  const wifi = existing?.wifi || buildWifiCredentials();
+  const brand = detectOntBrand({
+    serialNumber: job.deviceContext?.finalSerialNumber || device?.serialNumber,
+    productClass: device?.productClass,
+    deviceId: job.deviceContext?.finalDeviceId || device?.deviceId
+  });
+  return {
+    brand,
+    pppoe,
+    wifi,
+    vlanId: job.activation?.preparedCredentials?.vlanId || device?.wanInfo?.vlanId || 100,
+    natEnabled: true
+  };
 }
 
 async function getInstallerJobOrThrow(jobId, installerId) {
@@ -158,6 +202,24 @@ installerAppRouter.get(
   })
 );
 
+installerAppRouter.get(
+  "/jobs/:jobId/provisioning-preview",
+  asyncHandler(async (req, res) => {
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    const deviceId = job.deviceContext?.finalDeviceId || `ONT-${job.deviceContext?.finalSerialNumber || ""}`;
+    const device = deviceId ? await DeviceOperationalCache.findOne({ deviceId }).lean() : null;
+    const preview = buildProvisioningPreview(job, device);
+    job.activation = {
+      ...(job.activation || {}),
+      preparedCredentials: preview,
+      previewGeneratedAt: new Date()
+    };
+    pushTimeline(job, "job.provisioning_previewed", req.installer._id, `Brand ${preview.brand}`);
+    await job.save();
+    return ok(res, preview);
+  })
+);
+
 installerAppRouter.post(
   "/jobs/:jobId/accept",
   asyncHandler(async (req, res) => {
@@ -248,6 +310,79 @@ installerAppRouter.post(
 );
 
 installerAppRouter.post(
+  "/jobs/:jobId/checkin-location",
+  asyncHandler(async (req, res) => {
+    const payload = locationCheckinSchema.parse(req.body);
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    job.deviceContext = {
+      ...(job.deviceContext || {}),
+      onsiteLocation: {
+        lat: payload.lat,
+        lng: payload.lng,
+        address: payload.address,
+        checkedInAt: new Date()
+      }
+    };
+    pushTimeline(job, "job.location_checked_in", req.installer._id, payload.address || `${payload.lat},${payload.lng}`);
+    await job.save();
+    return ok(res, job.deviceContext.onsiteLocation);
+  })
+);
+
+installerAppRouter.post(
+  "/jobs/:jobId/save-checklist",
+  asyncHandler(async (req, res) => {
+    const payload = installationChecklistSchema.parse(req.body);
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    job.proof = {
+      ...(job.proof || {}),
+      checklist: {
+        ...payload,
+        savedAt: new Date()
+      }
+    };
+    pushTimeline(job, "job.checklist_saved", req.installer._id, payload.notes || "Installation checklist saved");
+    await job.save();
+    return ok(res, job.proof.checklist);
+  })
+);
+
+installerAppRouter.get(
+  "/jobs/:jobId/diagnostics",
+  asyncHandler(async (req, res) => {
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    const finalDeviceId = job.deviceContext?.finalDeviceId || (job.deviceContext?.finalSerialNumber ? `ONT-${job.deviceContext.finalSerialNumber}` : null);
+    const device = finalDeviceId ? await DeviceOperationalCache.findOne({ deviceId: finalDeviceId }).lean() : null;
+    const opticalHealth = job.opticalReadings?.healthStatus || "unknown";
+    return ok(res, {
+      jobId: job._id,
+      customerId: job.customerId,
+      status: job.status,
+      optical: job.opticalReadings || null,
+      device: device
+        ? {
+            deviceId: device.deviceId,
+            serialNumber: device.serialNumber,
+            productClass: device.productClass,
+            onlineStatus: device.onlineStatus,
+            provisioningState: device.provisioningState,
+            wanInfo: device.wanInfo || {},
+            wifiInfo: device.wifiInfo || {},
+            opticalInfo: device.opticalInfo || {},
+            lanInfo: device.lanInfo || {}
+          }
+        : null,
+      checklist: job.proof?.checklist || null,
+      recommendations: buildInstallerRecommendations({
+        opticalHealth,
+        checklist: job.proof?.checklist,
+        device
+      })
+    });
+  })
+);
+
+installerAppRouter.post(
   "/jobs/:jobId/activate",
   asyncHandler(async (req, res) => {
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
@@ -257,11 +392,16 @@ installerAppRouter.post(
     if (job.opticalReadings.healthStatus === "critical") {
       throw new ApiError(409, "Optical readings are critical; activation blocked");
     }
+    const finalDeviceId = job.deviceContext?.finalDeviceId || (job.deviceContext?.finalSerialNumber ? `ONT-${job.deviceContext.finalSerialNumber}` : null);
+    const device = finalDeviceId ? await DeviceOperationalCache.findOne({ deviceId: finalDeviceId }).lean() : null;
+    const preview = buildProvisioningPreview(job, device);
     job.status = "activation_in_progress";
     job.activation = {
       ...(job.activation || {}),
       configStatus: "pending",
-      configRetryCount: job.activation?.configRetryCount || 0
+      configRetryCount: job.activation?.configRetryCount || 0,
+      preparedCredentials: preview,
+      requestedAt: new Date()
     };
     pushTimeline(job, "job.activation_requested", req.installer._id, "Activation requested");
     await job.save();

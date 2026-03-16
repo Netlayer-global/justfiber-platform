@@ -122,6 +122,7 @@ export async function runSmokeAllModules() {
   });
 
   let installerToken = "";
+  let installerJobId = "";
   await run("Installer login", async () => {
     const payload = await requestJson({
       method: "POST",
@@ -142,7 +143,75 @@ export async function runSmokeAllModules() {
   });
 
   await run("Installer jobs", async () => {
-    await requestJson({ path: "/api/v1/installer/jobs", token: installerToken });
+    const payload = await requestJson({ path: "/api/v1/installer/jobs", token: installerToken });
+    installerJobId = payload.data?.[0]?._id || "";
+    if (!installerJobId) {
+      throw new Error("Missing installer job in seeded data");
+    }
+  });
+
+  await run("Installer provisioning preview", async () => {
+    await requestJson({ path: `/api/v1/installer/jobs/${installerJobId}/provisioning-preview`, token: installerToken });
+  });
+
+  await run("Installer accept job", async () => {
+    await requestJson({ method: "POST", path: `/api/v1/installer/jobs/${installerJobId}/accept`, token: installerToken, body: {} });
+  });
+
+  await run("Installer start travel", async () => {
+    await requestJson({ method: "POST", path: `/api/v1/installer/jobs/${installerJobId}/start-travel`, token: installerToken, body: {} });
+  });
+
+  await run("Installer start onsite", async () => {
+    await requestJson({ method: "POST", path: `/api/v1/installer/jobs/${installerJobId}/start-onsite`, token: installerToken, body: {} });
+  });
+
+  await run("Installer checkin location", async () => {
+    await requestJson({
+      method: "POST",
+      path: `/api/v1/installer/jobs/${installerJobId}/checkin-location`,
+      token: installerToken,
+      body: { lat: 26.8467, lng: 80.9462, address: "Gomti Nagar, Lucknow" }
+    });
+  });
+
+  await run("Installer manual serial", async () => {
+    await requestJson({
+      method: "POST",
+      path: `/api/v1/installer/jobs/${installerJobId}/manual-serial`,
+      token: installerToken,
+      body: { serialNumber: "ALCLB3DCCB87" }
+    });
+  });
+
+  await run("Installer optical check", async () => {
+    await requestJson({
+      method: "POST",
+      path: `/api/v1/installer/jobs/${installerJobId}/check-optical`,
+      token: installerToken,
+      body: { rxPower: -19.5, txPower: 1.2 }
+    });
+  });
+
+  await run("Installer save checklist", async () => {
+    await requestJson({
+      method: "POST",
+      path: `/api/v1/installer/jobs/${installerJobId}/save-checklist`,
+      token: installerToken,
+      body: {
+        fiberLinked: true,
+        powerLevelOk: true,
+        wanConfigured: true,
+        wifiConfigured: true,
+        speedTestDone: true,
+        customerEducated: true,
+        notes: "Smoke installer flow"
+      }
+    });
+  });
+
+  await run("Installer diagnostics", async () => {
+    await requestJson({ path: `/api/v1/installer/jobs/${installerJobId}/diagnostics`, token: installerToken });
   });
 
   let salesToken = "";

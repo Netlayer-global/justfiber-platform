@@ -37,3 +37,19 @@ export const replaceDeviceSchema = z.object({
   newSerialNumber: z.string().min(4).max(64),
   reason: z.string().min(3).max(300)
 });
+
+export const locationCheckinSchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+  address: z.string().min(3).max(500).optional()
+});
+
+export const installationChecklistSchema = z.object({
+  fiberLinked: z.coerce.boolean(),
+  powerLevelOk: z.coerce.boolean(),
+  wanConfigured: z.coerce.boolean(),
+  wifiConfigured: z.coerce.boolean(),
+  speedTestDone: z.coerce.boolean(),
+  customerEducated: z.coerce.boolean(),
+  notes: z.string().min(3).max(500).optional()
+});
