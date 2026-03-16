@@ -44,7 +44,7 @@ async function jazeRequest(method, path, body, isForm = false) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(`JAZE request failed: ${response.status} ${JSON.stringify(payload)}`);
+    throw new Error(`JAZE request failed: ${method} ${url} -> ${response.status} ${JSON.stringify(payload)}`);
   }
 
   return payload;
