@@ -58,3 +58,30 @@ test("nokia wifi password update uses direct KeyPassphrase paths without xsd:str
     /\/devices\/240B88-G%252D2425G%252DA-ALCLB3DCCB87\/tasks$/
   );
 });
+
+test("dasan wifi update pushes both SSIDs and both passwords to all expected WLAN indexes", async () => {
+  requests.length = 0;
+  const client = new GenieacsClient();
+
+  await client.pushAccessConfig({
+    deviceId: "DSNW295B5B70",
+    brand: "dasan",
+    ssid24: "Khalsa PG",
+    ssid5: "Honey5G",
+    wifiPassword24: "himanshu@1411",
+    wifiPassword5: "himanshu@1411"
+  });
+
+  const setParameterRequest = requests.find((entry) => entry.body?.name === "setParameterValues");
+  assert.ok(setParameterRequest, "expected setParameterValues request");
+  assert.deepEqual(setParameterRequest.body.parameterValues, [
+    ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID", "Khalsa PG"],
+    ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID", "Khalsa PG"],
+    ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase", "himanshu@1411"],
+    ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase", "himanshu@1411"],
+    ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID", "Honey5G"],
+    ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID", "Honey5G"],
+    ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase", "himanshu@1411"],
+    ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase", "himanshu@1411"]
+  ]);
+});

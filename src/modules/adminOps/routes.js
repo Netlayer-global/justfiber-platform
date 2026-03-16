@@ -257,23 +257,21 @@ adminOpsRouter.patch(
   requirePermission(permissions.deviceApplyPreset),
   asyncHandler(async (req, res) => {
     const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId });
-    if (!device) {
-      throw new ApiError(404, "Device not found");
-    }
-    const ssid24 = req.body?.ssid24 || device.wifiInfo?.ssid24Masked || "JustFiber";
-    const ssid5 = req.body?.ssid5 || device.wifiInfo?.ssid5Masked || "JustFiber";
+    const targetDeviceId = device?.deviceId || req.params.deviceId;
+    const ssid24 = req.body?.ssid24 || device?.wifiInfo?.ssid24Masked || "JustFiber";
+    const ssid5 = req.body?.ssid5 || device?.wifiInfo?.ssid5Masked || "JustFiber";
     const wifiPassword24 = req.body?.password24 || req.body?.password;
     const wifiPassword5 = req.body?.password5 || req.body?.password24 || req.body?.password;
     const brand = detectOntBrand({
-      serialNumber: device.serialNumber,
-      productClass: device.productClass,
-      deviceId: device.deviceId
+      serialNumber: device?.serialNumber,
+      productClass: device?.productClass,
+      deviceId: targetDeviceId
     });
     await genieacsClient.pushAccessConfig({
-      deviceId: device.deviceId,
+      deviceId: targetDeviceId,
       brand,
-      pppoeUsername: device.wanInfo?.pppoeUsernameMasked,
-      vlanId: device.wanInfo?.vlanId,
+      pppoeUsername: device?.wanInfo?.pppoeUsernameMasked,
+      vlanId: device?.wanInfo?.vlanId,
       natEnabled: true,
       ssid24,
       ssid5,
@@ -281,16 +279,18 @@ adminOpsRouter.patch(
       wifiPassword5
     });
     if (brand === "nokia" && (wifiPassword24 || wifiPassword5)) {
-      await genieacsClient.rebootDevice(device.deviceId);
+      await genieacsClient.rebootDevice(targetDeviceId);
     }
-    device.wifiInfo = {
-      ...(device.wifiInfo || {}),
-      ssid24Masked: ssid24,
-      ssid5Masked: ssid5,
-      natEnabled: true
-    };
-    await device.save();
-    return ok(res, { deviceId: device.deviceId, ssid24, ssid5, updated: true });
+    if (device) {
+      device.wifiInfo = {
+        ...(device.wifiInfo || {}),
+        ssid24Masked: ssid24,
+        ssid5Masked: ssid5,
+        natEnabled: true
+      };
+      await device.save();
+    }
+    return ok(res, { deviceId: targetDeviceId, ssid24, ssid5, updated: true, cacheBacked: Boolean(device) });
   })
 );
 
