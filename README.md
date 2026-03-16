@@ -94,6 +94,26 @@ Optional helper script:
 bash deploy/ubuntu/clone-and-verify.sh
 ```
 
+## Recommended delivery flow
+
+Follow this flow for every change:
+
+1. Run local check:
+
+```bash
+npm run verify:all
+```
+
+2. Commit and push your branch.
+3. GitHub Actions auto-runs:
+- `CI` (unit tests)
+- `Verify All Modules` (Mongo + Redis + full smoke validation)
+4. Clone on Ubuntu server and re-validate:
+
+```bash
+bash deploy/ubuntu/clone-and-verify.sh
+```
+
 If you are using the production domains through Nginx, open the domain root directly:
 
 ```bash

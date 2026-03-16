@@ -1,0 +1,53 @@
+name: Verify All Modules
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - codex/**
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    env:
+      NODE_ENV: test
+      PORT: 4000
+      MONGODB_URI: mongodb://127.0.0.1:27017/isp-backend
+      REDIS_URL: redis://127.0.0.1:6379
+      JWT_ACCESS_SECRET: test-access-secret
+      JWT_REFRESH_SECRET: test-refresh-secret
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 7d
+      ADMIN_CORS_ORIGIN: "*"
+      MOCK_EXTERNALS: "true"
+      SEED_SUPERADMIN_USERNAME: admin
+      SEED_SUPERADMIN_EMAIL: admin@justfiber.in
+      SEED_SUPERADMIN_PASSWORD: Netlayer@1411
+      JAZE_API_BASE_URL: https://example.com
+      USAGE_API_URL: https://example.com
+      GENIEACS_URL: http://127.0.0.1:7557
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify all modules
+        run: npm run verify:all
