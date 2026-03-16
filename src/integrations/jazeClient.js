@@ -3,7 +3,8 @@ import { env } from "../config/env.js";
 function apiPath(path) {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   if (env.JAZE_API_BASE_URL?.includes("/api/v1")) {
-    return normalized.replace(/^\/api\/v1\/?/, "");
+    const withoutPrefix = normalized.replace(/^\/api\/v1\/?/, "");
+    return withoutPrefix.replace(/^\/+/, "");
   }
   return `/api/v1${normalized}`;
 }
