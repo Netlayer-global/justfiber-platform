@@ -328,4 +328,17 @@ export TEST_GENIE_DEVICE_ID=ONT-1001
 npm run test:externals
 ```
 
+JAZE module tests:
+
+```bash
+# read-only (safe)
+npm run test:jaze
+
+# write tests (suspend/resume/payment/pppoe) - use only in test sandbox accounts
+export TEST_JAZE_ENABLE_WRITES=true
+export TEST_JAZE_SERVICE_ID=<REAL_SERVICE_ID>
+export TEST_JAZE_PPPOE_SERVICE_ID=<REAL_SERVICE_ID>
+npm run test:jaze
+```
+
 This workspace currently does not have Node.js installed, so tests could not be executed here. The test suite is included and ready to run on Ubuntu after dependency install.
