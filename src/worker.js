@@ -20,6 +20,7 @@ await seedSystemData();
 const worker = new Worker(
   "admin-actions",
   async (job) => {
+    console.log(`[worker] processing ${job.name} ${job.id || ""}`.trim());
     if (job.name === "approved-action") {
       const request = await AdminActionRequest.findById(job.data.actionRequestId);
       if (!request) {
@@ -224,6 +225,7 @@ const worker = new Worker(
           entityId: jobRecord._id.toString(),
           metadata: { installerJobId: jobRecord._id.toString() }
         });
+        console.log(`[worker] installer activation completed for ${jobRecord._id.toString()}`);
         break;
       }
       case "retry-provisioning":
@@ -268,6 +270,7 @@ async function processDevicePresetJob(data) {
 }
 
 worker.on("failed", async (job, error) => {
+  console.error(`[worker] job failed ${job?.name || "unknown"} ${job?.id || ""}: ${error.message}`);
   if (job?.data?.actionRequestId) {
     await AdminActionRequest.findByIdAndUpdate(job.data.actionRequestId, {
       $set: {
@@ -276,6 +279,47 @@ worker.on("failed", async (job, error) => {
       }
     });
   }
+  if (job?.name === "installer-activation" && job?.data?.installerJobId) {
+    const jobRecord = await InstallerJob.findById(job.data.installerJobId);
+    if (jobRecord) {
+      jobRecord.status = "failed";
+      jobRecord.activation = {
+        ...(jobRecord.activation || {}),
+        configStatus: "failed",
+        lastConfigError: error.message,
+        failedAt: new Date()
+      };
+      jobRecord.timeline.push({
+        event: "job.activation_failed",
+        actorType: "system",
+        actorId: "worker",
+        note: error.message,
+        at: new Date()
+      });
+      await jobRecord.save();
+      await InstallerNotification.create({
+        installerId: jobRecord.installerId,
+        type: "activation_failed",
+        title: "Activation failed",
+        body: `${jobRecord.jobNumber} activation failed: ${error.message}`,
+        payload: { installerJobId: jobRecord._id, error: error.message }
+      }).catch(() => null);
+      const customerUser = await CustomerUser.findOne({ linkedCustomerIds: jobRecord.customerId });
+      if (customerUser) {
+        await CustomerNotification.create({
+          customerUserId: customerUser._id,
+          type: "activation_failed",
+          title: "Activation delayed",
+          body: "Your installation is delayed. Our team is retrying activation.",
+          payload: { customerId: jobRecord.customerId, error: error.message }
+        }).catch(() => null);
+      }
+    }
+  }
+});
+
+worker.on("completed", (job) => {
+  console.log(`[worker] job completed ${job.name} ${job.id || ""}`.trim());
 });
 
 console.log("Admin worker started");
