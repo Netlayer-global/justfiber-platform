@@ -101,6 +101,22 @@ const BRAND_OVERRIDES = {
     vlanPath: [
       `${IGD_PPP}.X_DASAN_VLANID`,
       `${IGD_PPP}.X_CT-COM_VLANID`
+    ],
+    ssid24Path: [
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID"
+    ],
+    pass24Path: [
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase"
+    ],
+    ssid5Path: [
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID"
+    ],
+    pass5Path: [
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase"
     ]
   },
   zte: {
