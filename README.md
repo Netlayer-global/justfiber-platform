@@ -142,6 +142,37 @@ Admin panel now includes management screens for:
 
 If backend data is not seeded yet, use the `Load Demo Data` button inside the UI for a visual preview.
 
+## React Admin Console
+
+A new React-based admin console scaffold is available under [`frontend/admin-console`](frontend/admin-console).
+
+Stack:
+
+- React
+- Vite
+- Tailwind
+- shadcn-style UI primitives
+- Recharts
+- Framer Motion
+
+Install and build:
+
+```bash
+npm --prefix frontend/admin-console install
+npm run ui:admin:build
+```
+
+Development preview:
+
+```bash
+npm run ui:admin:dev
+```
+
+Production serving behavior:
+
+- if `public/admin-app/index.html` exists, `/admin` and `/noc` serve the React console
+- otherwise the existing static admin panel in `public/admin` remains the fallback
+
 Installer sample login after `npm run seed:sample-data`:
 
 ```bash

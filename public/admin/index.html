@@ -9,45 +9,83 @@
   <body>
     <div class="shell">
       <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark">N</div>
-          <div>
-            <p class="eyebrow">Netlayer</p>
-            <h1>Control Tower</h1>
+        <div class="brand-shell">
+          <div class="brand">
+            <div class="brand-mark">
+              <span>N</span>
+            </div>
+            <div>
+              <p class="eyebrow">Netlayer</p>
+              <h1>Control Tower</h1>
+            </div>
           </div>
+          <p class="brand-copy">CRM, billing, NOC, ACS and field orchestration in one operating surface.</p>
         </div>
 
-        <nav class="nav">
-          <button class="nav-item active" data-screen="overview">Overview</button>
-          <button class="nav-item" data-screen="users">Users</button>
-          <button class="nav-item" data-screen="installers">Installers</button>
-          <button class="nav-item" data-screen="sales">Sales</button>
-          <button class="nav-item" data-screen="catalog">Catalog</button>
-          <button class="nav-item" data-screen="billing">Billing</button>
-          <button class="nav-item" data-screen="network">Network</button>
-          <button class="nav-item" data-screen="customers">Customers</button>
-          <button class="nav-item" data-screen="devices">Devices</button>
-          <button class="nav-item" data-screen="tickets">Support</button>
-          <button class="nav-item" data-screen="configs">Configs</button>
-          <button class="nav-item" data-screen="audit">Audit</button>
-        </nav>
+        <div class="sidebar-section">
+          <p class="section-label">Workspace</p>
+          <nav class="nav">
+            <button class="nav-item active" data-screen="overview">Overview</button>
+            <button class="nav-item" data-screen="users">Users</button>
+            <button class="nav-item" data-screen="installers">Installers</button>
+            <button class="nav-item" data-screen="sales">Sales</button>
+            <button class="nav-item" data-screen="catalog">Catalog</button>
+            <button class="nav-item" data-screen="billing">Billing</button>
+            <button class="nav-item" data-screen="network">Network</button>
+            <button class="nav-item" data-screen="customers">Customers</button>
+            <button class="nav-item" data-screen="devices">Devices</button>
+            <button class="nav-item" data-screen="tickets">Support</button>
+            <button class="nav-item" data-screen="configs">Configs</button>
+            <button class="nav-item" data-screen="audit">Audit</button>
+          </nav>
+        </div>
 
         <section class="sidebar-card">
+          <p class="sidebar-label">Platform Posture</p>
+          <div class="status-stack">
+            <div class="status-row">
+              <span class="status-dot live"></span>
+              <span>Provisioning workers online</span>
+            </div>
+            <div class="status-row">
+              <span class="status-dot warm"></span>
+              <span>JAZE-led billing controls</span>
+            </div>
+            <div class="status-row">
+              <span class="status-dot cool"></span>
+              <span>GenieACS governed writes</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="sidebar-card session-card">
           <p class="sidebar-label">Session</p>
-          <div id="sessionState">Signed out</div>
+          <div id="sessionState" class="session-value">Signed out</div>
           <button id="logoutButton" class="ghost-button hidden">Logout</button>
         </section>
       </aside>
 
       <main class="main">
         <header class="topbar">
-          <div>
-            <p class="eyebrow">Phase-4 Admin Panel</p>
+          <div class="topbar-copy">
+            <p class="eyebrow">Netlayer operating system</p>
             <h2 id="screenTitle">Overview</h2>
+            <p class="topbar-subtitle">Modern admin workspace for CRM, billing operations, NOC visibility and controlled ACS actions.</p>
           </div>
-          <div class="topbar-actions">
-            <input id="apiBaseInput" class="input compact" type="text" placeholder="API base" />
+
+          <div class="topbar-cluster">
+            <label class="search-shell">
+              <span class="search-icon">+</span>
+              <input id="apiBaseInput" class="input compact input-dark" type="text" placeholder="API base" />
+            </label>
             <button id="loadDemoButton" class="ghost-button">Load Demo Data</button>
+            <div class="operator-card">
+              <div class="operator-avatar">NL</div>
+              <div>
+                <p class="operator-name">Ops Console</p>
+                <p class="operator-role">Billing-safe mode</p>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -56,11 +94,24 @@
         <section id="loginPanel" class="panel login-panel">
           <div class="login-copy">
             <p class="eyebrow">Secure Access</p>
-            <h3>Operate billing-safe automation from one console.</h3>
+            <h3>Operate broadband automation from a single command surface.</h3>
             <p>
-              JAZE remains the source of truth, GenieACS stays preset-only, and this panel orchestrates
-              actions with audit trails.
+              Keep JAZE as the source of truth, drive ACS writes through controlled workflows, and review every action through audit-backed visibility.
             </p>
+            <div class="login-points">
+              <div class="mini-kpi">
+                <span class="mini-kpi-label">Provisioning</span>
+                <strong>Worker-backed</strong>
+              </div>
+              <div class="mini-kpi">
+                <span class="mini-kpi-label">Billing</span>
+                <strong>Ledger-ready</strong>
+              </div>
+              <div class="mini-kpi">
+                <span class="mini-kpi-label">NOC</span>
+                <strong>ACS-aware</strong>
+              </div>
+            </div>
           </div>
           <form id="loginForm" class="login-form">
             <label>
@@ -76,8 +127,54 @@
         </section>
 
         <section id="overviewScreen" class="screen">
+          <div class="hero-grid">
+            <section class="panel hero-panel">
+              <div class="panel-head">
+                <h3>Control Stack</h3>
+                <span class="tag">Production-ready</span>
+              </div>
+              <div class="hero-layout">
+                <div>
+                  <p class="hero-kicker">Operations cockpit</p>
+                  <h3 class="hero-title">One panel for customer lifecycle, network control, billing actions and provisioning oversight.</h3>
+                  <p class="hero-text">
+                    Inspired by modern product dashboards, this workspace is designed for dense operational work without losing visibility on NOC, CRM and ACS actions.
+                  </p>
+                </div>
+                <div class="hero-orbit">
+                  <div class="orbit-card">
+                    <span class="orbit-label">Billing</span>
+                    <strong>Ledger, refunds, adjustments</strong>
+                  </div>
+                  <div class="orbit-card">
+                    <span class="orbit-label">NOC</span>
+                    <strong>Nodes, devices, provisioning health</strong>
+                  </div>
+                  <div class="orbit-card">
+                    <span class="orbit-label">CRM</span>
+                    <strong>Customers, sales, installers, support</strong>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel side-spotlight">
+              <div class="panel-head">
+                <h3>Action Center</h3>
+                <span class="tag">Priority flow</span>
+              </div>
+              <div class="action-stack">
+                <button class="action-card" data-screen-jump="customers">Suspend or resume customer service</button>
+                <button class="action-card" data-screen-jump="devices">Push approved GenieACS presets</button>
+                <button class="action-card" data-screen-jump="billing">Review invoices, payments and ledger health</button>
+                <button class="action-card" data-screen-jump="audit">Review audit trails and config changes</button>
+              </div>
+            </section>
+          </div>
+
           <div class="metrics-grid" id="metricsGrid"></div>
-          <div class="content-grid">
+
+          <div class="content-grid overview-grid">
             <section class="panel">
               <div class="panel-head">
                 <h3>Operational Signals</h3>
@@ -85,287 +182,411 @@
               </div>
               <div id="signalsList" class="list-stack"></div>
             </section>
-            <section class="panel accent-panel">
+
+            <section class="panel timeline-panel">
               <div class="panel-head">
-                <h3>Action Center</h3>
+                <h3>Operating Rhythm</h3>
+                <span class="tag">Live focus</span>
               </div>
-              <div class="action-stack">
-                <button class="action-card" data-screen-jump="customers">Suspend or resume customer service</button>
-                <button class="action-card" data-screen-jump="devices">Push approved GenieACS presets</button>
-                <button class="action-card" data-screen-jump="tickets">Work support tickets</button>
-                <button class="action-card" data-screen-jump="audit">Review audit trails</button>
+              <div class="timeline-shell">
+                <div class="timeline-row">
+                  <span class="timeline-time">06:00</span>
+                  <div>
+                    <strong>Billing checks</strong>
+                    <p class="muted">Collections, due aging, renewal exceptions</p>
+                  </div>
+                </div>
+                <div class="timeline-row">
+                  <span class="timeline-time">11:00</span>
+                  <div>
+                    <strong>NOC supervision</strong>
+                    <p class="muted">Node health, drift warnings, device-write audits</p>
+                  </div>
+                </div>
+                <div class="timeline-row">
+                  <span class="timeline-time">16:00</span>
+                  <div>
+                    <strong>Field sync</strong>
+                    <p class="muted">Installer jobs, activations, delayed closes</p>
+                  </div>
+                </div>
               </div>
             </section>
           </div>
         </section>
 
         <section id="usersScreen" class="screen hidden">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Admin Users</h3>
-                <button id="usersRefreshButton" class="ghost-button">Refresh</button>
-              </div>
-              <div id="usersList" class="list-stack"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Create Admin User</h3>
-              </div>
-              <form id="adminUserForm" class="stack-form">
-                <input id="adminUsername" class="input" type="text" placeholder="Username" required />
-                <input id="adminFullName" class="input" type="text" placeholder="Full name" required />
-                <input id="adminEmail" class="input" type="email" placeholder="Email" required />
-                <input id="adminPassword" class="input" type="password" placeholder="Password" required />
-                <select id="adminRole" class="input" required>
-                  <option value="super_admin">super_admin</option>
-                  <option value="noc_admin">noc_admin</option>
-                  <option value="sales_admin">sales_admin</option>
-                  <option value="support_admin">support_admin</option>
-                  <option value="ops_admin">ops_admin</option>
-                  <option value="installer_manager">installer_manager</option>
-                  <option value="auditor">auditor</option>
-                </select>
-                <button class="primary-button" type="submit">Create User</button>
-              </form>
-            </section>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Identity and roles</p>
+              <h3>Admin users and permissions</h3>
+            </div>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Admin Users</h3>
+                  <button id="usersRefreshButton" class="ghost-button">Refresh</button>
+                </div>
+                <div id="usersList" class="list-stack"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Create Admin User</h3>
+                </div>
+                <form id="adminUserForm" class="stack-form">
+                  <input id="adminUsername" class="input" type="text" placeholder="Username" required />
+                  <input id="adminFullName" class="input" type="text" placeholder="Full name" required />
+                  <input id="adminEmail" class="input" type="email" placeholder="Email" required />
+                  <input id="adminPassword" class="input" type="password" placeholder="Password" required />
+                  <select id="adminRole" class="input" required>
+                    <option value="super_admin">super_admin</option>
+                    <option value="noc_admin">noc_admin</option>
+                    <option value="sales_admin">sales_admin</option>
+                    <option value="support_admin">support_admin</option>
+                    <option value="ops_admin">ops_admin</option>
+                    <option value="installer_manager">installer_manager</option>
+                    <option value="auditor">auditor</option>
+                  </select>
+                  <button class="primary-button" type="submit">Create User</button>
+                </form>
+              </section>
+            </div>
           </div>
         </section>
 
         <section id="installersScreen" class="screen hidden">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Installer Workforce</h3>
-                <button id="installersRefreshButton" class="ghost-button">Refresh</button>
-              </div>
-              <div id="installersList" class="list-stack"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Installer Jobs</h3>
-              </div>
-              <div id="installerJobsList" class="list-stack"></div>
-            </section>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Field operations</p>
+              <h3>Installer workforce and live jobs</h3>
+            </div>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Installer Workforce</h3>
+                  <button id="installersRefreshButton" class="ghost-button">Refresh</button>
+                </div>
+                <div id="installersList" class="list-stack"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Installer Jobs</h3>
+                </div>
+                <div id="installerJobsList" class="list-stack"></div>
+              </section>
+            </div>
           </div>
         </section>
 
         <section id="salesScreen" class="screen hidden">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Sales Overview</h3>
-                <button id="salesRefreshButton" class="ghost-button">Refresh</button>
-              </div>
-              <div id="salesOverview" class="list-stack"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>KYC Review Queue</h3>
-              </div>
-              <div id="kycList" class="list-stack"></div>
-            </section>
-          </div>
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Sales Agents</h3>
-              </div>
-              <div id="salesAgentsList" class="list-stack"></div>
-              <form id="salesAgentForm" class="stack-form">
-                <input id="salesAgentCode" class="input" type="text" placeholder="Agent code" required />
-                <input id="salesAgentName" class="input" type="text" placeholder="Full name" required />
-                <input id="salesAgentPhone" class="input" type="text" placeholder="Phone" required />
-                <input id="salesAgentEmail" class="input" type="email" placeholder="Email" />
-                <input id="salesAgentPassword" class="input" type="password" placeholder="Password" required />
-                <button class="primary-button" type="submit">Create Sales Agent</button>
-              </form>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Recent Leads</h3>
-              </div>
-              <div id="salesLeadsList" class="list-stack"></div>
-            </section>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Pipeline and KYC</p>
+              <h3>Sales operating view</h3>
+            </div>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Sales Overview</h3>
+                  <button id="salesRefreshButton" class="ghost-button">Refresh</button>
+                </div>
+                <div id="salesOverview" class="list-stack"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>KYC Review Queue</h3>
+                </div>
+                <div id="kycList" class="list-stack"></div>
+              </section>
+            </div>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Sales Agents</h3>
+                </div>
+                <div id="salesAgentsList" class="list-stack"></div>
+                <form id="salesAgentForm" class="stack-form">
+                  <input id="salesAgentCode" class="input" type="text" placeholder="Agent code" required />
+                  <input id="salesAgentName" class="input" type="text" placeholder="Full name" required />
+                  <input id="salesAgentPhone" class="input" type="text" placeholder="Phone" required />
+                  <input id="salesAgentEmail" class="input" type="email" placeholder="Email" />
+                  <input id="salesAgentPassword" class="input" type="password" placeholder="Password" required />
+                  <button class="primary-button" type="submit">Create Sales Agent</button>
+                </form>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Recent Leads</h3>
+                </div>
+                <div id="salesLeadsList" class="list-stack"></div>
+              </section>
+            </div>
           </div>
         </section>
 
         <section id="catalogScreen" class="screen hidden">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Plan Catalog</h3>
-                <button id="catalogRefreshButton" class="ghost-button">Refresh</button>
-              </div>
-              <div id="plansList" class="list-stack"></div>
-              <form id="planForm" class="stack-form">
-                <input id="planCodeField" class="input" type="text" placeholder="Plan code" required />
-                <input id="planNameField" class="input" type="text" placeholder="Plan name" required />
-                <input id="planSpeedField" class="input" type="number" placeholder="Speed Mbps" />
-                <input id="planPriceField" class="input" type="number" placeholder="Monthly price" />
-                <input id="planOtcField" class="input" type="number" placeholder="OTC charge" />
-                <button class="primary-button" type="submit">Save Plan</button>
-              </form>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Banners</h3>
-              </div>
-              <div id="bannersList" class="list-stack"></div>
-              <form id="bannerForm" class="stack-form">
-                <input id="bannerTitleField" class="input" type="text" placeholder="Banner title" required />
-                <input id="bannerImageField" class="input" type="url" placeholder="Image URL" />
-                <input id="bannerTargetField" class="input" type="text" placeholder="Target value" />
-                <button class="primary-button" type="submit">Create Banner</button>
-              </form>
-            </section>
-          </div>
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Serviceability Zones</h3>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Commercial catalog</p>
+              <h3>Plans, banners and serviceability</h3>
             </div>
-            <div id="zonesList" class="list-stack"></div>
-            <form id="zoneForm" class="stack-form">
-              <input id="zoneNameField" class="input" type="text" placeholder="Zone name" required />
-              <input id="zoneCityField" class="input" type="text" placeholder="City" />
-              <input id="zoneAreaField" class="input" type="text" placeholder="Area" />
-              <select id="zoneStatusField" class="input">
-                <option value="active">active</option>
-                <option value="planned">planned</option>
-                <option value="coming_soon">coming_soon</option>
-              </select>
-              <button class="primary-button" type="submit">Create Zone</button>
-            </form>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Plan Catalog</h3>
+                  <button id="catalogRefreshButton" class="ghost-button">Refresh</button>
+                </div>
+                <div id="plansList" class="list-stack"></div>
+                <form id="planForm" class="stack-form">
+                  <input id="planCodeField" class="input" type="text" placeholder="Plan code" required />
+                  <input id="planNameField" class="input" type="text" placeholder="Plan name" required />
+                  <input id="planSpeedField" class="input" type="number" placeholder="Speed Mbps" />
+                  <input id="planPriceField" class="input" type="number" placeholder="Monthly price" />
+                  <input id="planOtcField" class="input" type="number" placeholder="OTC charge" />
+                  <button class="primary-button" type="submit">Save Plan</button>
+                </form>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Banners</h3>
+                </div>
+                <div id="bannersList" class="list-stack"></div>
+                <form id="bannerForm" class="stack-form">
+                  <input id="bannerTitleField" class="input" type="text" placeholder="Banner title" required />
+                  <input id="bannerImageField" class="input" type="url" placeholder="Image URL" />
+                  <input id="bannerTargetField" class="input" type="text" placeholder="Target value" />
+                  <button class="primary-button" type="submit">Create Banner</button>
+                </form>
+              </section>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Serviceability Zones</h3>
+              </div>
+              <div id="zonesList" class="list-stack"></div>
+              <form id="zoneForm" class="stack-form">
+                <input id="zoneNameField" class="input" type="text" placeholder="Zone name" required />
+                <input id="zoneCityField" class="input" type="text" placeholder="City" />
+                <input id="zoneAreaField" class="input" type="text" placeholder="Area" />
+                <select id="zoneStatusField" class="input">
+                  <option value="active">active</option>
+                  <option value="planned">planned</option>
+                  <option value="coming_soon">coming_soon</option>
+                </select>
+                <button class="primary-button" type="submit">Create Zone</button>
+              </form>
+            </div>
           </div>
         </section>
 
         <section id="billingScreen" class="screen hidden">
-          <div class="metrics-grid" id="billingMetricsGrid"></div>
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Invoices</h3>
-                <button id="billingRefreshButton" class="ghost-button">Refresh</button>
-              </div>
-              <div id="billingInvoicesList" class="list-stack"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Payments</h3>
-              </div>
-              <div id="billingPaymentsList" class="list-stack"></div>
-            </section>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Collections and finance</p>
+              <h3>Billing command center</h3>
+            </div>
+            <div class="billing-hero-grid">
+              <section class="panel billing-hero-panel">
+                <div class="panel-head">
+                  <h3>Revenue posture</h3>
+                  <button id="billingRefreshButton" class="ghost-button">Refresh</button>
+                </div>
+                <p class="hero-text">
+                  Track invoice pressure, payment recovery, refunds and ledger adjustments from one view while keeping JAZE-linked controls visible.
+                </p>
+                <div class="metrics-grid" id="billingMetricsGrid"></div>
+              </section>
+              <section class="panel billing-side-panel">
+                <div class="panel-head">
+                  <h3>Collections Focus</h3>
+                  <span class="tag">Finance ops</span>
+                </div>
+                <div class="timeline-shell compact">
+                  <div class="timeline-row">
+                    <span class="timeline-time">D0</span>
+                    <div>
+                      <strong>Invoice published</strong>
+                      <p class="muted">Ledger booking and notification dispatch</p>
+                    </div>
+                  </div>
+                  <div class="timeline-row">
+                    <span class="timeline-time">D3</span>
+                    <div>
+                      <strong>Reminder window</strong>
+                      <p class="muted">Collections follow-up and payment exceptions</p>
+                    </div>
+                  </div>
+                  <div class="timeline-row">
+                    <span class="timeline-time">D7</span>
+                    <div>
+                      <strong>Action review</strong>
+                      <p class="muted">Suspension logic, dispute handling and refunds</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Invoices</h3>
+                </div>
+                <div id="billingInvoicesList" class="list-stack"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Payments</h3>
+                </div>
+                <div id="billingPaymentsList" class="list-stack"></div>
+              </section>
+            </div>
           </div>
         </section>
 
         <section id="networkScreen" class="screen hidden">
-          <div class="metrics-grid" id="networkMetricsGrid"></div>
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>BNG / OLT Status</h3>
-                <button id="networkRefreshButton" class="ghost-button">Refresh</button>
-              </div>
-              <div id="networkNodesList" class="list-stack"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Device Management Snapshot</h3>
-              </div>
-              <div id="deviceManagementView" class="list-stack"></div>
-            </section>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">NOC and ACS</p>
+              <h3>Network visibility and device control</h3>
+            </div>
+            <div class="metrics-grid" id="networkMetricsGrid"></div>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>BNG / OLT Status</h3>
+                  <button id="networkRefreshButton" class="ghost-button">Refresh</button>
+                </div>
+                <div id="networkNodesList" class="list-stack"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Device Management Snapshot</h3>
+                </div>
+                <div id="deviceManagementView" class="list-stack"></div>
+              </section>
+            </div>
           </div>
         </section>
 
         <section id="customersScreen" class="screen hidden">
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Customer 360</h3>
-              <div class="inline-actions">
-                <input id="customerSearchInput" class="input compact" type="text" placeholder="Search name, phone, account" />
-                <button id="customerSearchButton" class="ghost-button">Search</button>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Customer 360</p>
+              <h3>Service, billing and support context</h3>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Customer 360</h3>
+                <div class="inline-actions">
+                  <input id="customerSearchInput" class="input compact" type="text" placeholder="Search name, phone, account" />
+                  <button id="customerSearchButton" class="ghost-button">Search</button>
+                </div>
               </div>
+              <div id="customersTable" class="table-shell"></div>
             </div>
-            <div id="customersTable" class="table-shell"></div>
-          </div>
-          <div class="panel hidden" id="customerDetailPanel">
-            <div class="panel-head">
-              <h3>Selected Customer</h3>
+            <div class="panel hidden" id="customerDetailPanel">
+              <div class="panel-head">
+                <h3>Selected Customer</h3>
+              </div>
+              <div id="customerDetail" class="detail-grid"></div>
             </div>
-            <div id="customerDetail" class="detail-grid"></div>
           </div>
         </section>
 
         <section id="devicesScreen" class="screen hidden">
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Device Visibility</h3>
-              <button id="devicesRefreshButton" class="ghost-button">Refresh</button>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Device estate</p>
+              <h3>Live device visibility</h3>
             </div>
-            <div id="devicesTable" class="table-shell"></div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Device Visibility</h3>
+                <button id="devicesRefreshButton" class="ghost-button">Refresh</button>
+              </div>
+              <div id="devicesTable" class="table-shell"></div>
+            </div>
           </div>
         </section>
 
         <section id="ticketsScreen" class="screen hidden">
-          <div class="content-grid support-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Create Ticket</h3>
-              </div>
-              <form id="ticketForm" class="stack-form">
-                <input id="ticketCustomerId" class="input" type="text" placeholder="Customer ID" required />
-                <input id="ticketCategory" class="input" type="text" placeholder="Category" required />
-                <input id="ticketSubject" class="input" type="text" placeholder="Subject" required />
-                <textarea id="ticketDescription" class="input textarea" placeholder="Description" required></textarea>
-                <button class="primary-button" type="submit">Create Ticket</button>
-              </form>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Open Tickets</h3>
-                <button id="ticketsRefreshButton" class="ghost-button">Refresh</button>
-              </div>
-              <div id="ticketsList" class="list-stack"></div>
-            </section>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Service assurance</p>
+              <h3>Support operations</h3>
+            </div>
+            <div class="content-grid support-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Create Ticket</h3>
+                </div>
+                <form id="ticketForm" class="stack-form">
+                  <input id="ticketCustomerId" class="input" type="text" placeholder="Customer ID" required />
+                  <input id="ticketCategory" class="input" type="text" placeholder="Category" required />
+                  <input id="ticketSubject" class="input" type="text" placeholder="Subject" required />
+                  <textarea id="ticketDescription" class="input textarea" placeholder="Description" required></textarea>
+                  <button class="primary-button" type="submit">Create Ticket</button>
+                </form>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Open Tickets</h3>
+                  <button id="ticketsRefreshButton" class="ghost-button">Refresh</button>
+                </div>
+                <div id="ticketsList" class="list-stack"></div>
+              </section>
+            </div>
           </div>
         </section>
 
         <section id="configsScreen" class="screen hidden">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Config Registry</h3>
-                <button id="configsRefreshButton" class="ghost-button">Refresh</button>
-              </div>
-              <div id="configsList" class="list-stack"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <h3>Update Config</h3>
-              </div>
-              <form id="configForm" class="stack-form">
-                <input id="configKey" class="input" type="text" placeholder="config.key" required />
-                <input id="configCategory" class="input" type="text" placeholder="policy" required />
-                <select id="configValueType" class="input" required>
-                  <option value="string">string</option>
-                  <option value="number">number</option>
-                  <option value="boolean">boolean</option>
-                  <option value="json">json</option>
-                </select>
-                <textarea id="configValue" class="input textarea" placeholder="Value" required></textarea>
-                <button class="primary-button" type="submit">Save Config</button>
-              </form>
-            </section>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">System policies</p>
+              <h3>Config registry and runtime controls</h3>
+            </div>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Config Registry</h3>
+                  <button id="configsRefreshButton" class="ghost-button">Refresh</button>
+                </div>
+                <div id="configsList" class="list-stack"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Update Config</h3>
+                </div>
+                <form id="configForm" class="stack-form">
+                  <input id="configKey" class="input" type="text" placeholder="config.key" required />
+                  <input id="configCategory" class="input" type="text" placeholder="policy" required />
+                  <select id="configValueType" class="input" required>
+                    <option value="string">string</option>
+                    <option value="number">number</option>
+                    <option value="boolean">boolean</option>
+                    <option value="json">json</option>
+                  </select>
+                  <textarea id="configValue" class="input textarea" placeholder="Value" required></textarea>
+                  <button class="primary-button" type="submit">Save Config</button>
+                </form>
+              </section>
+            </div>
           </div>
         </section>
 
         <section id="auditScreen" class="screen hidden">
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Audit Trail</h3>
-              <button id="auditRefreshButton" class="ghost-button">Refresh</button>
+          <div class="screen-shell">
+            <div class="screen-intro">
+              <p class="eyebrow">Audit and governance</p>
+              <h3>Action history and security trace</h3>
             </div>
-            <div id="auditList" class="list-stack"></div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Audit Trail</h3>
+                <button id="auditRefreshButton" class="ghost-button">Refresh</button>
+              </div>
+              <div id="auditList" class="list-stack"></div>
+            </div>
           </div>
         </section>
       </main>

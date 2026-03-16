@@ -1,4 +1,5 @@
 import path from "node:path";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
@@ -30,6 +31,9 @@ export function createApp() {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   const publicDir = path.resolve(__dirname, "../public");
+  const adminAppDir = path.join(publicDir, "admin-app");
+  const adminAppIndex = path.join(adminAppDir, "index.html");
+  const hasReactAdminBuild = () => existsSync(adminAppIndex);
 
   app.use(
     helmet({
@@ -89,7 +93,13 @@ export function createApp() {
   app.use("/api/v1/sales", salesAppRouter);
 
   app.get("/admin", (_req, res) => {
-    res.sendFile(path.join(publicDir, "admin", "index.html"));
+    const target = hasReactAdminBuild() ? adminAppIndex : path.join(publicDir, "admin", "index.html");
+    res.sendFile(target);
+  });
+
+  app.get("/admin/*", (_req, res) => {
+    const target = hasReactAdminBuild() ? adminAppIndex : path.join(publicDir, "admin", "index.html");
+    res.sendFile(target);
   });
 
   app.get("/user", (_req, res) => {
@@ -105,7 +115,8 @@ export function createApp() {
   });
 
   app.get("/noc", (_req, res) => {
-    res.sendFile(path.join(publicDir, "admin", "index.html"));
+    const target = hasReactAdminBuild() ? adminAppIndex : path.join(publicDir, "admin", "index.html");
+    res.sendFile(target);
   });
 
   app.use((_req, _res, next) => {
