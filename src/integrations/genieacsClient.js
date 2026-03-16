@@ -74,7 +74,20 @@ export class GenieacsClient {
   }
 
   async getDeviceSummary(deviceId) {
-    return genieacsRequest("GET", `/devices/${encodeURIComponent(deviceId)}`);
+    try {
+      return await genieacsRequest("GET", `/devices/${encodeURIComponent(deviceId)}`);
+    } catch (error) {
+      // Some GenieACS deployments reject direct GET /devices/:id and only support query-based reads.
+      if (!String(error.message).includes("405")) {
+        throw error;
+      }
+      const query = encodeURIComponent(JSON.stringify({ _id: deviceId }));
+      const devices = await genieacsRequest("GET", `/devices?query=${query}`);
+      if (Array.isArray(devices)) {
+        return devices[0] || null;
+      }
+      return devices;
+    }
   }
 }
 
