@@ -69,6 +69,31 @@ Open the sales panel:
 http://SERVER_IP:4000/sales
 ```
 
+## Git clone quick verify (Ubuntu)
+
+Use this when you want to validate all core modules quickly after clone.
+
+```bash
+git clone <YOUR_REPO_URL> netlayer-admin
+cd netlayer-admin
+cp .env.example .env
+npm install
+npm run verify:all
+```
+
+`npm run verify:all` will:
+
+- seed admin + sample data
+- start API + worker
+- run smoke checks for admin, installer, sales, and customer modules
+- stop local processes automatically
+
+Optional helper script:
+
+```bash
+bash deploy/ubuntu/clone-and-verify.sh
+```
+
 If you are using the production domains through Nginx, open the domain root directly:
 
 ```bash
@@ -231,7 +256,7 @@ npm run seed:sample-data
 
 ### systemd
 
-Unit files are available in [`deploy/systemd/netlayer-admin-api.service`](/C:/Users/NETLAYER/Documents/Playground/deploy/systemd/netlayer-admin-api.service) and [`deploy/systemd/netlayer-admin-worker.service`](/C:/Users/NETLAYER/Documents/Playground/deploy/systemd/netlayer-admin-worker.service).
+Unit files are available in [`deploy/systemd/netlayer-admin-api.service`](deploy/systemd/netlayer-admin-api.service) and [`deploy/systemd/netlayer-admin-worker.service`](deploy/systemd/netlayer-admin-worker.service).
 
 ```bash
 sudo cp deploy/systemd/netlayer-admin-*.service /etc/systemd/system/
@@ -254,6 +279,18 @@ sudo systemctl reload nginx
 
 ```bash
 npm test
+```
+
+Module smoke checks (expects API + worker running):
+
+```bash
+npm run smoke:all
+```
+
+Full local verification (auto-seed + auto-start + smoke + shutdown):
+
+```bash
+npm run verify:all
 ```
 
 This workspace currently does not have Node.js installed, so tests could not be executed here. The test suite is included and ready to run on Ubuntu after dependency install.
