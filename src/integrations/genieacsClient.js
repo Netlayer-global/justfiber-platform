@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { resolveProvisioningProfile } from "../common/networkProvisioning.js";
 
 const allowedPresets = new Set([
   "SERVICE_PREPARE",
@@ -78,6 +79,11 @@ async function resolveDeviceIdForWrite(deviceId) {
   return deviceId;
 }
 
+async function getWriteTargetDeviceId(deviceId) {
+  const resolved = await resolveDeviceIdForWrite(deviceId);
+  return resolved || deviceId;
+}
+
 export class GenieacsClient {
   async applyPreset({ deviceId, presetName, correlationId }) {
     if (!allowedPresets.has(presetName)) {
@@ -148,6 +154,69 @@ export class GenieacsClient {
       }
       return devices;
     }
+  }
+
+  async runTask(deviceId, task) {
+    const targetDeviceId = await getWriteTargetDeviceId(deviceId);
+    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks`, task);
+  }
+
+  async setParameterValues(deviceId, parameterValues) {
+    const targetDeviceId = await getWriteTargetDeviceId(deviceId);
+    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks`, {
+      name: "setParameterValues",
+      parameterValues
+    });
+  }
+
+  async rebootDevice(deviceId) {
+    const targetDeviceId = await getWriteTargetDeviceId(deviceId);
+    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks`, {
+      name: "reboot"
+    });
+  }
+
+  async pushAccessConfig({
+    deviceId,
+    brand = "generic",
+    pppoeUsername,
+    pppoePassword,
+    vlanId,
+    natEnabled,
+    ssid24,
+    ssid5,
+    wifiPassword
+  }) {
+    const profile = resolveProvisioningProfile(brand);
+    const values = [];
+    const push = (path, value) => {
+      if (path && value !== undefined && value !== null && value !== "") {
+        values.push([path, String(value), "xsd:string"]);
+      }
+    };
+    push(profile.pppoeUsernamePath, pppoeUsername);
+    push(profile.pppoePasswordPath, pppoePassword);
+    if (vlanId !== undefined && vlanId !== null && vlanId !== "") {
+      values.push([profile.vlanPath, Number(vlanId), "xsd:unsignedInt"]);
+    }
+    if (natEnabled !== undefined && natEnabled !== null) {
+      values.push([profile.natPath, Boolean(natEnabled), "xsd:boolean"]);
+    }
+    push(profile.ssid24Path, ssid24);
+    push(profile.pass24Path, wifiPassword);
+    push(profile.ssid5Path, ssid5);
+    push(profile.pass5Path, wifiPassword);
+
+    if (values.length > 0) {
+      await this.setParameterValues(deviceId, values);
+    }
+
+    await this.runTask(deviceId, {
+      name: "refreshObject",
+      objectName: "InternetGatewayDevice."
+    });
+
+    return { ok: true, deviceId, brand, configured: values.length };
   }
 }
 

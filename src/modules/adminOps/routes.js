@@ -11,6 +11,8 @@ import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
 import { jazeClient } from "../../integrations/jazeClient.js";
+import { genieacsClient } from "../../integrations/genieacsClient.js";
+import { detectOntBrand } from "../../common/networkProvisioning.js";
 
 export const adminOpsRouter = Router();
 
@@ -247,5 +249,55 @@ adminOpsRouter.post(
       dueAmount: 0,
       idempotentReplay: Boolean(existingPayment)
     });
+  })
+);
+
+adminOpsRouter.patch(
+  "/network/device-management/:deviceId/wifi",
+  requirePermission(permissions.deviceApplyPreset),
+  asyncHandler(async (req, res) => {
+    const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId });
+    if (!device) {
+      throw new ApiError(404, "Device not found");
+    }
+    const ssid24 = req.body?.ssid24 || device.wifiInfo?.ssid24Masked || "JustFiber";
+    const ssid5 = req.body?.ssid5 || device.wifiInfo?.ssid5Masked || "JustFiber";
+    const wifiPassword = req.body?.password;
+    const brand = detectOntBrand({
+      serialNumber: device.serialNumber,
+      productClass: device.productClass,
+      deviceId: device.deviceId
+    });
+    await genieacsClient.pushAccessConfig({
+      deviceId: device.deviceId,
+      brand,
+      pppoeUsername: device.wanInfo?.pppoeUsernameMasked,
+      vlanId: device.wanInfo?.vlanId,
+      natEnabled: true,
+      ssid24,
+      ssid5,
+      wifiPassword
+    });
+    device.wifiInfo = {
+      ...(device.wifiInfo || {}),
+      ssid24Masked: ssid24,
+      ssid5Masked: ssid5,
+      natEnabled: true
+    };
+    await device.save();
+    return ok(res, { deviceId: device.deviceId, ssid24, ssid5, updated: true });
+  })
+);
+
+adminOpsRouter.post(
+  "/network/device-management/:deviceId/reboot",
+  requirePermission(permissions.deviceApplyPreset),
+  asyncHandler(async (req, res) => {
+    const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId });
+    if (!device) {
+      throw new ApiError(404, "Device not found");
+    }
+    await genieacsClient.rebootDevice(device.deviceId);
+    return ok(res, { queued: true, deviceId: device.deviceId, estimatedRecoverySeconds: 60 });
   })
 );

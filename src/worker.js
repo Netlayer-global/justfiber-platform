@@ -7,9 +7,12 @@ import { Customer } from "./models/Customer.js";
 import { DeviceOperationalCache } from "./models/DeviceOperationalCache.js";
 import { InstallerJob } from "./models/InstallerJob.js";
 import { InstallerNotification } from "./models/InstallerNotification.js";
+import { CustomerNotification } from "./models/CustomerNotification.js";
+import { CustomerUser } from "./models/CustomerUser.js";
 import { jazeClient } from "./integrations/jazeClient.js";
 import { genieacsClient } from "./integrations/genieacsClient.js";
 import { writeAuditLog } from "./common/audit.js";
+import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand } from "./common/networkProvisioning.js";
 
 await connectMongo();
 await seedSystemData();
@@ -90,31 +93,96 @@ const worker = new Worker(
         if (!jobRecord) {
           throw new Error("Installer job not found");
         }
+        const deviceId = jobRecord.deviceContext?.finalDeviceId || `ONT-${job.data.finalSerialNumber}`;
+        const existingDevice = await DeviceOperationalCache.findOne({ deviceId }).lean();
+        const brand = detectOntBrand({
+          serialNumber: jobRecord.deviceContext?.finalSerialNumber || existingDevice?.serialNumber,
+          productClass: existingDevice?.productClass,
+          deviceId
+        });
+        const pppoe = buildPppoeCredentials(jobRecord.customerId);
+        const wifi = buildWifiCredentials();
+        const vlanId = existingDevice?.wanInfo?.vlanId || 100;
+
         await jazeClient.createPppoeUser({
           customerId: jobRecord.customerId,
           serviceId: jobRecord.serviceId,
           planCode: jobRecord.customerSnapshot?.planCode || jobRecord.customerSnapshot?.planName,
-          username: `${jobRecord.customerId}`.toLowerCase(),
-          password: `jf-${jobRecord.customerId}`.toLowerCase()
+          username: pppoe.username,
+          password: pppoe.password
         });
-        await genieacsClient.applyPreset({
-          deviceId: jobRecord.deviceContext?.finalDeviceId || `ONT-${job.data.finalSerialNumber}`,
-          presetName: "SERVICE_ACTIVATE",
-          correlationId: jobRecord._id.toString()
-        });
+        try {
+          await genieacsClient.pushAccessConfig({
+            deviceId,
+            brand,
+            pppoeUsername: pppoe.username,
+            pppoePassword: pppoe.password,
+            vlanId,
+            natEnabled: true,
+            ssid24: wifi.ssid24,
+            ssid5: wifi.ssid5,
+            wifiPassword: wifi.password
+          });
+        } catch (configError) {
+          await genieacsClient.applyPreset({
+            deviceId,
+            presetName: "SERVICE_ACTIVATE",
+            correlationId: jobRecord._id.toString()
+          });
+          jobRecord.activation = {
+            ...(jobRecord.activation || {}),
+            configFallback: true,
+            configFallbackError: configError.message
+          };
+        }
+        await DeviceOperationalCache.updateOne(
+          { deviceId },
+          {
+            $set: {
+              customerId: jobRecord.customerId,
+              serviceId: jobRecord.serviceId || jobRecord.customerId,
+              provisioningState: "SERVICE_ACTIVATE",
+              wifiInfo: {
+                ...(existingDevice?.wifiInfo || {}),
+                ssid24Masked: wifi.ssid24,
+                ssid5Masked: wifi.ssid5,
+                passwordMasked: "********",
+                natEnabled: true
+              },
+              wanInfo: {
+                ...(existingDevice?.wanInfo || {}),
+                pppoeUsernameMasked: pppoe.username,
+                vlanId
+              }
+            }
+          },
+          { upsert: true }
+        );
         jobRecord.status = "active";
         jobRecord.activation = {
           ...(jobRecord.activation || {}),
           configStatus: "pushed",
           internetVerifiedAt: new Date(),
           smsSentAt: new Date(),
-          notificationSentAt: new Date()
+          notificationSentAt: new Date(),
+          ontBrand: brand,
+          credentials: {
+            pppoeUsername: pppoe.username,
+            pppoePassword: pppoe.password,
+            vlanId,
+            natEnabled: true,
+            wifi: {
+              ssid24: wifi.ssid24,
+              ssid5: wifi.ssid5,
+              password: wifi.password
+            }
+          }
         };
         jobRecord.timeline.push({
           event: "job.activation_completed",
           actorType: "system",
           actorId: "worker",
-          note: "Provisioning completed and welcome notification dispatched",
+          note: "Provisioning completed with PPPoE + Wi-Fi config",
           at: new Date()
         });
         await jobRecord.save();
@@ -122,9 +190,30 @@ const worker = new Worker(
           installerId: jobRecord.installerId,
           type: "activation_success",
           title: "Activation complete",
-          body: `${jobRecord.jobNumber} is live now.`,
-          payload: { installerJobId: jobRecord._id }
+          body: `${jobRecord.jobNumber} live. PPPoE: ${pppoe.username} / ${pppoe.password}, Wi-Fi: ${wifi.ssid24} (${wifi.password})`,
+          payload: {
+            installerJobId: jobRecord._id,
+            credentials: jobRecord.activation?.credentials
+          }
         });
+        const customerUser = await CustomerUser.findOne({
+          linkedCustomerIds: jobRecord.customerId
+        });
+        if (customerUser) {
+          await CustomerNotification.create({
+            customerUserId: customerUser._id,
+            type: "activation_success",
+            title: "Connection Activated",
+            body: `Wi-Fi SSID: ${wifi.ssid24}, Password: ${wifi.password}. PPPoE User: ${pppoe.username}`,
+            payload: {
+              customerId: jobRecord.customerId,
+              pppoeUsername: pppoe.username,
+              pppoePassword: pppoe.password,
+              wifiSsid: wifi.ssid24,
+              wifiPassword: wifi.password
+            }
+          });
+        }
         await writeAuditLog({
           actorType: "system",
           actorId: "worker",

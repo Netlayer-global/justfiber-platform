@@ -17,7 +17,10 @@ import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
+import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { jazeClient } from "../../integrations/jazeClient.js";
+import { genieacsClient } from "../../integrations/genieacsClient.js";
+import { detectOntBrand } from "../../common/networkProvisioning.js";
 import {
   addonRequestSchema,
   bookingSchema,
@@ -97,6 +100,19 @@ async function getOwnedLinkedCustomer({ customerUser, requestedCustomerId }) {
     throw new ApiError(404, "Customer not found");
   }
   return customer;
+}
+
+async function getLinkedCustomerAndDevice(customerUser) {
+  const customerId = customerUser.linkedCustomerIds?.[0];
+  if (!customerId) {
+    throw new ApiError(404, "Linked customer not found");
+  }
+  const customer = await Customer.findOne({ customerId });
+  if (!customer) {
+    throw new ApiError(404, "Customer not found");
+  }
+  const device = await DeviceOperationalCache.findOne({ customerId });
+  return { customer, device };
 }
 
 async function assignInstallerIfAvailable({ booking, payload, plan }) {
@@ -641,13 +657,14 @@ customerPortalRouter.get(
   "/wifi",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customerId: req.customerUser.linkedCustomerIds?.[0] }).lean();
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
     return ok(res, {
       sameSsidMode: true,
-      ssid24: customer?.fullName ? `${customer.fullName.split(" ")[0]}-2.4G` : "Justfiber-Home-2.4G",
-      ssid5: customer?.fullName ? `${customer.fullName.split(" ")[0]}-5G` : "Justfiber-Home-5G",
-      connectedDevices: 4,
-      natEnabled: true
+      ssid24: device?.wifiInfo?.ssid24Masked || "JustFiber",
+      ssid5: device?.wifiInfo?.ssid5Masked || "JustFiber",
+      connectedDevices: Array.isArray(device?.lanInfo?.connectedDevices) ? device.lanInfo.connectedDevices.length : device?.lanInfo?.leasedClients || 0,
+      natEnabled: device?.wifiInfo?.natEnabled ?? true,
+      pppoeUsername: device?.wanInfo?.pppoeUsernameMasked || `jfr_${String(customer.customerId).toLowerCase()}`
     });
   })
 );
@@ -657,9 +674,46 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = wifiUpdateSchema.parse(req.body);
+    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    const ssid24 = payload.ssid24 || device.wifiInfo?.ssid24Masked || "JustFiber";
+    const ssid5 = payload.ssid5 || device.wifiInfo?.ssid5Masked || "JustFiber";
+    const password = payload.password24 || payload.password5;
+    const brand = detectOntBrand({
+      serialNumber: device.serialNumber,
+      productClass: device.productClass,
+      deviceId: device.deviceId
+    });
+    await genieacsClient.pushAccessConfig({
+      deviceId: device.deviceId,
+      brand,
+      pppoeUsername: device.wanInfo?.pppoeUsernameMasked,
+      pppoePassword: undefined,
+      vlanId: device.wanInfo?.vlanId,
+      natEnabled: true,
+      ssid24,
+      ssid5,
+      wifiPassword: password
+    });
+    device.wifiInfo = {
+      ...(device.wifiInfo || {}),
+      ssid24Masked: ssid24,
+      ssid5Masked: ssid5,
+      natEnabled: true
+    };
+    await device.save();
+    await CustomerNotification.create({
+      customerUserId: req.customerUser._id,
+      type: "wifi_updated",
+      title: "Wi-Fi updated",
+      body: `Wi-Fi updated for ${customer.customerId}.`
+    });
     return ok(res, {
       updated: true,
-      requestedPayload: payload
+      requestedPayload: payload,
+      applied: { ssid24, ssid5 }
     });
   })
 );
@@ -667,10 +721,16 @@ customerPortalRouter.post(
 customerPortalRouter.post(
   "/device/reboot",
   requireCustomerAuth,
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    await genieacsClient.rebootDevice(device.deviceId);
     return ok(res, {
       queued: true,
-      estimatedRecoverySeconds: 60
+      estimatedRecoverySeconds: 60,
+      deviceId: device.deviceId
     });
   })
 );
@@ -678,12 +738,18 @@ customerPortalRouter.post(
 customerPortalRouter.get(
   "/device/connected-devices",
   requireCustomerAuth,
-  asyncHandler(async (_req, res) => {
-    return ok(res, [
-      { name: "Samsung TV", connectionType: "wifi-5g", signal: "good" },
-      { name: "Amit iPhone", connectionType: "wifi-5g", signal: "excellent" },
-      { name: "Bedroom Camera", connectionType: "wifi-2g", signal: "fair" }
-    ]);
+  asyncHandler(async (req, res) => {
+    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    const connected = Array.isArray(device.lanInfo?.connectedDevices)
+      ? device.lanInfo.connectedDevices
+      : [
+          { name: "Connected Device 1", connectionType: "wifi-5g", signal: "good" },
+          { name: "Connected Device 2", connectionType: "wifi-2g", signal: "fair" }
+        ];
+    return ok(res, connected);
   })
 );
 
@@ -798,11 +864,20 @@ customerPortalRouter.get(
 customerPortalRouter.post(
   "/help/diagnose",
   requireCustomerAuth,
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    if (!device) {
+      throw new ApiError(404, "Customer device not found");
+    }
+    const online = device.onlineStatus === "online";
+    const rxPower = device.opticalInfo?.rxPower;
     return ok(res, {
-      internetStatus: "reachable",
-      wifiStatus: "stable",
-      recommendation: "If speed feels low, try router reboot and test on 5 GHz."
+      internetStatus: online ? "reachable" : "unreachable",
+      wifiStatus: online ? "stable" : "unstable",
+      opticalRxPower: rxPower ?? null,
+      recommendation: online
+        ? "Internet looks stable. If speed is low, reboot router and test on 5 GHz."
+        : "Device appears offline. Check power/fiber and request installer support."
     });
   })
 );

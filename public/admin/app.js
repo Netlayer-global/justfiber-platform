@@ -457,7 +457,45 @@ function renderNetwork() {
     <div class="list-item"><strong>WAN</strong><span>IP: ${mgmt.wan?.ipAddress || "-"} | Session: ${mgmt.wan?.sessionStatus || "-"} | VLAN: ${mgmt.wan?.vlanId || "-"}</span></div>
     <div class="list-item"><strong>LAN</strong><span>Router: ${mgmt.lan?.routerIp || "-"} | Leased clients: ${mgmt.lan?.leasedClients || 0} | LAN up ports: ${mgmt.lan?.ethernetPortsUp || 0}</span></div>
     <div class="list-item"><strong>Optical</strong><span>RX: ${mgmt.optical?.rxPower || "-"} dBm | TX: ${mgmt.optical?.txPower || "-"} dBm</span></div>
+    <div class="row-actions">
+      <button class="ghost-button" data-admin-device-reboot="${mgmt.deviceId}">Reboot Device</button>
+      <button class="ghost-button" data-admin-device-wifi="${mgmt.deviceId}">Update Wi-Fi</button>
+    </div>
   `;
+}
+
+async function handleAdminDeviceReboot(deviceId) {
+  try {
+    const data = await api(`/api/v1/admin/network/device-management/${deviceId}/reboot`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    setBanner(`Reboot queued for ${data.deviceId}.`);
+  } catch (error) {
+    setBanner(error.message, "error");
+  }
+}
+
+async function handleAdminDeviceWifiUpdate(deviceId) {
+  const ssid24 = window.prompt("Enter 2.4G SSID", "JustFiber");
+  if (!ssid24) return;
+  const ssid5 = window.prompt("Enter 5G SSID", "JustFiber");
+  if (!ssid5) return;
+  const password = window.prompt("Enter Wi-Fi password (8+ chars)");
+  if (!password || password.length < 8) {
+    setBanner("Password must be at least 8 characters.", "error");
+    return;
+  }
+  try {
+    const data = await api(`/api/v1/admin/network/device-management/${deviceId}/wifi`, {
+      method: "PATCH",
+      body: JSON.stringify({ ssid24, ssid5, password })
+    });
+    setBanner(`Wi-Fi updated for ${data.deviceId}.`);
+    await Promise.allSettled([loadDevices(), loadNetwork()]);
+  } catch (error) {
+    setBanner(error.message, "error");
+  }
 }
 
 function renderCustomerDetail(customer) {
@@ -895,6 +933,12 @@ function bindEvents() {
 
     const inspectButton = event.target.closest("[data-device-inspect]");
     if (inspectButton) await handleDeviceInspect(inspectButton.dataset.deviceInspect);
+
+    const adminDeviceReboot = event.target.closest("[data-admin-device-reboot]");
+    if (adminDeviceReboot) await handleAdminDeviceReboot(adminDeviceReboot.dataset.adminDeviceReboot);
+
+    const adminDeviceWifi = event.target.closest("[data-admin-device-wifi]");
+    if (adminDeviceWifi) await handleAdminDeviceWifiUpdate(adminDeviceWifi.dataset.adminDeviceWifi);
 
     const action = event.target.closest("[data-action]");
     if (action?.dataset.action === "refresh-overview") {
