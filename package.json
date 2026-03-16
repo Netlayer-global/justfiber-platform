@@ -1,0 +1,33 @@
+{
+  "name": "netlayer-admin-backend",
+  "version": "1.0.0",
+  "description": "Production-oriented Admin Panel backend for ISP OSS/BSS orchestration",
+  "type": "module",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "worker": "node src/worker.js",
+    "seed:admin": "node src/scripts/seedAdmin.js",
+    "seed:sample-data": "node src/scripts/seedSampleData.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "argon2": "^0.41.1",
+    "bullmq": "^5.16.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.1",
+    "morgan": "^1.10.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  }
+}

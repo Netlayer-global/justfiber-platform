@@ -1,0 +1,15 @@
+[Unit]
+Description=Netlayer Admin API
+After=network.target redis.service mongod.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/netlayer-admin
+EnvironmentFile=/opt/netlayer-admin/.env
+ExecStart=/usr/bin/node /opt/netlayer-admin/src/index.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

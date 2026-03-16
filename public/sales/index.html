@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Justfiber Sales</title>
+    <link rel="stylesheet" href="/sales/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel hero">
+        <p class="eyebrow">Justfiber Sales</p>
+        <h1>Lead Capture and Conversion</h1>
+        <p>Field sales team can create leads, upload KYC, and convert prospects into bookings.</p>
+      </section>
+
+      <section id="banner" class="panel hidden"></section>
+
+      <section class="grid">
+        <section class="panel">
+          <h2>Login</h2>
+          <form id="loginForm" class="stack">
+            <input id="loginInput" class="input" type="text" value="9111111111" />
+            <input id="passwordInput" class="input" type="password" value="Sales123!" />
+            <button class="primary-button" type="submit">Login</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h2>Dashboard</h2>
+          <div id="dashboardView" class="stack"></div>
+        </section>
+      </section>
+
+      <section class="grid">
+        <section class="panel">
+          <h2>Create Lead</h2>
+          <form id="leadForm" class="stack">
+            <input id="leadName" class="input" type="text" placeholder="Full name" />
+            <input id="leadMobile" class="input" type="text" placeholder="Mobile" />
+            <input id="leadEmail" class="input" type="email" placeholder="Email" />
+            <input id="leadAddress" class="input" type="text" placeholder="Address" />
+            <input id="leadPin" class="input" type="text" placeholder="PIN code" />
+            <input id="leadPlan" class="input" type="text" placeholder="Plan code e.g. PLAN-100" />
+            <button class="primary-button" type="submit">Create Lead</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h2>My Leads</h2>
+          <div id="leadsView" class="stack"></div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="/sales/app.js"></script>
+  </body>
+</html>

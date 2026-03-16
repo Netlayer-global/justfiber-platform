@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Justfiber User Panel</title>
+    <link rel="stylesheet" href="/user/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Justfiber</p>
+          <h1>Customer Self-Care & Booking</h1>
+          <p class="subtle">Login with mobile or email, book new connection, track installation, and manage your service.</p>
+        </div>
+      </header>
+
+      <section id="banner" class="banner hidden"></section>
+
+      <section class="panel auth-panel">
+        <div class="auth-grid">
+          <form id="sendOtpForm" class="stack">
+            <h2>Login</h2>
+            <input id="mobileInput" class="input" type="text" placeholder="Mobile number" />
+            <input id="emailInput" class="input" type="email" placeholder="Email address" />
+            <button class="primary-button" type="submit">Send OTP</button>
+          </form>
+          <form id="verifyOtpForm" class="stack">
+            <h2>Verify OTP</h2>
+            <input id="otpInput" class="input" type="text" placeholder="Enter OTP" />
+            <input id="fullNameInput" class="input" type="text" placeholder="Full name for new user" />
+            <button class="primary-button" type="submit">Login</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Dashboard</h3>
+            <button id="dashboardRefresh" class="ghost-button">Refresh</button>
+          </div>
+          <div id="dashboardView" class="stack"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Plans</h3>
+            <button id="plansRefresh" class="ghost-button">Refresh</button>
+          </div>
+          <div id="plansView" class="stack"></div>
+        </section>
+      </section>
+
+      <section class="grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Notifications</h3>
+            <button id="notificationsRefresh" class="ghost-button">Refresh</button>
+          </div>
+          <div id="notificationsView" class="stack"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Help & FAQs</h3>
+            <button id="faqsRefresh" class="ghost-button">Refresh</button>
+          </div>
+          <div id="faqsView" class="stack"></div>
+        </section>
+      </section>
+
+      <section class="grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>New Booking</h3>
+          </div>
+          <form id="bookingForm" class="stack">
+            <input id="planCodeInput" class="input" type="text" placeholder="Selected plan code" />
+            <input id="bookingNameInput" class="input" type="text" placeholder="Full name" />
+            <input id="bookingMobileInput" class="input" type="text" placeholder="Mobile" />
+            <input id="bookingEmailInput" class="input" type="email" placeholder="Email" />
+            <input id="bookingAddressInput" class="input" type="text" placeholder="Full address" />
+            <input id="bookingPinInput" class="input" type="text" placeholder="PIN code" />
+            <button id="gpsButton" class="ghost-button" type="button">Use Current Demo GPS</button>
+            <button class="primary-button" type="submit">Book Now</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Tracking</h3>
+          </div>
+          <input id="trackingInput" class="input" type="text" placeholder="Booking number" />
+          <button id="trackingButton" class="ghost-button" type="button">Track Booking</button>
+          <div id="trackingView" class="stack"></div>
+        </section>
+      </section>
+
+      <section class="grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Service Requests</h3>
+            <button id="requestsRefresh" class="ghost-button">Refresh</button>
+          </div>
+          <form id="requestForm" class="stack">
+            <select id="requestTypeInput" class="input">
+              <option value="complaint">Complaint</option>
+              <option value="shift">Shift</option>
+              <option value="disconnect">Disconnect</option>
+              <option value="link_service">Add Existing Connection</option>
+            </select>
+            <input id="requestNoteInput" class="input" type="text" placeholder="Request note" />
+            <button class="primary-button" type="submit">Create Request</button>
+          </form>
+          <div id="requestsView" class="stack"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Add-ons & Support</h3>
+            <button id="addonsRefresh" class="ghost-button">Refresh</button>
+          </div>
+          <div id="addonsView" class="stack"></div>
+          <form id="ticketForm" class="stack">
+            <input id="ticketCategoryInput" class="input" type="text" placeholder="Complaint category" />
+            <input id="ticketSubjectInput" class="input" type="text" placeholder="Subject" />
+            <input id="ticketDescriptionInput" class="input" type="text" placeholder="Description" />
+            <button class="primary-button" type="submit">Raise Complaint</button>
+          </form>
+          <div id="ticketsView" class="stack"></div>
+        </section>
+      </section>
+
+      <section class="grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Plan Change & Wi-Fi</h3>
+            <button id="planOptionsRefresh" class="ghost-button">Refresh</button>
+          </div>
+          <div id="planOptionsView" class="stack"></div>
+          <form id="wifiForm" class="stack">
+            <input id="ssid24Input" class="input" type="text" placeholder="2.4G SSID" />
+            <input id="password24Input" class="input" type="text" placeholder="2.4G Password" />
+            <input id="ssid5Input" class="input" type="text" placeholder="5G SSID" />
+            <input id="password5Input" class="input" type="text" placeholder="5G Password" />
+            <button class="primary-button" type="submit">Update Wi-Fi</button>
+          </form>
+          <button id="routerRebootButton" class="ghost-button" type="button">Reboot Router</button>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Connected Devices</h3>
+            <button id="connectedDevicesRefresh" class="ghost-button">Refresh</button>
+          </div>
+          <div id="connectedDevicesView" class="stack"></div>
+        </section>
+      </section>
+    </div>
+
+    <script type="module" src="/user/app.js"></script>
+  </body>
+</html>
