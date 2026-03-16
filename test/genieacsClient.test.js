@@ -85,3 +85,28 @@ test("dasan wifi update pushes both SSIDs and both passwords to all expected WLA
     ["InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase", "himanshu@1411"]
   ]);
 });
+
+test("dasan access config includes PPPoE username, PPPoE password, and NAT flag", async () => {
+  requests.length = 0;
+  const client = new GenieacsClient();
+
+  await client.pushAccessConfig({
+    deviceId: "DSNW295B5B70",
+    brand: "dasan",
+    pppoeUsername: "newuser@justfiber.in",
+    pppoePassword: "NewPPPoEPass123",
+    natEnabled: true
+  });
+
+  const setParameterRequest = requests.find((entry) => entry.body?.name === "setParameterValues");
+  assert.ok(setParameterRequest, "expected setParameterValues request");
+  assert.deepEqual(setParameterRequest.body.parameterValues, [
+    ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Username", "newuser@justfiber.in"],
+    ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username", "newuser@justfiber.in"],
+    ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Password", "NewPPPoEPass123"],
+    ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password", "NewPPPoEPass123"],
+    ["Device.NAT.Enable", true, "xsd:boolean"],
+    ["InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.NATEnabled", true, "xsd:boolean"],
+    ["Device.IP.Interface.1.NAT", true, "xsd:boolean"]
+  ]);
+});

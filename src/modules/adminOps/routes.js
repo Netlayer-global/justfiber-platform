@@ -262,6 +262,9 @@ adminOpsRouter.patch(
     const ssid5 = req.body?.ssid5 || device?.wifiInfo?.ssid5Masked || "JustFiber";
     const wifiPassword24 = req.body?.password24 || req.body?.password;
     const wifiPassword5 = req.body?.password5 || req.body?.password24 || req.body?.password;
+    const pppoeUsername = req.body?.pppoeUsername || device?.wanInfo?.pppoeUsernameMasked;
+    const pppoePassword = req.body?.pppoePassword;
+    const natEnabled = req.body?.natEnabled ?? device?.wifiInfo?.natEnabled ?? true;
     const brand = detectOntBrand({
       serialNumber: device?.serialNumber,
       productClass: device?.productClass,
@@ -270,9 +273,10 @@ adminOpsRouter.patch(
     await genieacsClient.pushAccessConfig({
       deviceId: targetDeviceId,
       brand,
-      pppoeUsername: device?.wanInfo?.pppoeUsernameMasked,
+      pppoeUsername,
+      pppoePassword,
       vlanId: device?.wanInfo?.vlanId,
-      natEnabled: true,
+      natEnabled,
       ssid24,
       ssid5,
       wifiPassword24,
@@ -286,11 +290,15 @@ adminOpsRouter.patch(
         ...(device.wifiInfo || {}),
         ssid24Masked: ssid24,
         ssid5Masked: ssid5,
-        natEnabled: true
+        natEnabled
+      };
+      device.wanInfo = {
+        ...(device.wanInfo || {}),
+        ...(pppoeUsername ? { pppoeUsernameMasked: pppoeUsername } : {})
       };
       await device.save();
     }
-    return ok(res, { deviceId: targetDeviceId, ssid24, ssid5, updated: true, cacheBacked: Boolean(device) });
+    return ok(res, { deviceId: targetDeviceId, ssid24, ssid5, pppoeUsername, natEnabled, updated: true, cacheBacked: Boolean(device) });
   })
 );
 
