@@ -367,6 +367,31 @@ export LIVE_RUN_ACTIVATION=true
 npm run run:live-nokia
 ```
 
+Live Nokia / DASAN auto-provision scenario:
+
+```bash
+export LIVE_CUSTOMER_MOBILE="9876543210"
+export LIVE_CUSTOMER_NAME="Amit Singh"
+export LIVE_CUSTOMER_ADDRESS="Gomti Nagar, Lucknow"
+export LIVE_CUSTOMER_PIN="226010"
+export LIVE_PLAN_CODE="PLAN-100"
+export LIVE_JAZE_USER_ID="1001"
+export LIVE_INSTALLER_LOGIN="9000000001"
+export LIVE_INSTALLER_PASSWORD="Installer123!"
+export LIVE_ONT_LABEL="DASAN"
+export LIVE_ONT_SERIAL="DSNW295B5B70"
+export LIVE_ONT_DEVICE_ID="DSNW29-H660GM%2DA-DSNW295B5B70"
+export LIVE_RUN_ACTIVATION=true
+npm run run:live-provision
+```
+
+Notes:
+
+- `run:live-provision` uses the existing installer activation worker, so brand handling is automatic through `detectOntBrand`.
+- For Nokia use `LIVE_ONT_LABEL="Nokia"` and the Nokia serial/device id values.
+- For DASAN use `LIVE_ONT_LABEL="DASAN"` and the DASAN serial/device id values.
+- Installer activation pushes PPPoE username/password, VLAN, NAT, SSID, and Wi-Fi password through brand-specific GenieACS paths.
+
 Live external integrations check (read-only):
 
 ```bash

@@ -12,6 +12,7 @@
     "worker": "node src/worker.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
     "seed:sample-data": "node src/scripts/seedSampleData.js",
+    "run:live-provision": "node src/scripts/runLiveProvisionScenario.js",
     "run:live-nokia": "node src/scripts/runLiveNokiaScenario.js",
     "inspect:genie-subtree": "node src/scripts/inspectGenieSubtree.js",
     "inspect:genie-wifi": "node src/scripts/inspectGenieWifiParams.js",
