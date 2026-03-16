@@ -6,16 +6,22 @@ const PROJECT_ROOT = process.cwd();
 const NODE_BIN = process.execPath;
 const STARTUP_TIMEOUT_MS = Number(process.env.VERIFY_STARTUP_TIMEOUT_MS || 90000);
 const POLL_INTERVAL_MS = 1500;
-const BASE_URL = process.env.SMOKE_BASE_URL || `http://127.0.0.1:${process.env.PORT || 4000}`;
+const VERIFY_PORT = Number(process.env.VERIFY_PORT || 4100);
+const BASE_URL = process.env.SMOKE_BASE_URL || `http://127.0.0.1:${VERIFY_PORT}`;
+const VERIFY_ENV = {
+  ...process.env,
+  PORT: String(VERIFY_PORT),
+  SMOKE_BASE_URL: BASE_URL
+};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function spawnNode(scriptPath, label) {
+function spawnNode(scriptPath, label, extraEnv = {}) {
   const child = spawn(NODE_BIN, [scriptPath], {
     cwd: PROJECT_ROOT,
-    env: process.env,
+    env: { ...VERIFY_ENV, ...extraEnv },
     stdio: ["ignore", "pipe", "pipe"]
   });
 
@@ -29,9 +35,9 @@ function spawnNode(scriptPath, label) {
   return child;
 }
 
-async function runNodeScript(scriptPath, label) {
+async function runNodeScript(scriptPath, label, envOverride = {}) {
   await new Promise((resolve, reject) => {
-    const child = spawnNode(scriptPath, label);
+    const child = spawnNode(scriptPath, label, envOverride);
     child.on("exit", (code) => {
       if (code === 0) {
         resolve();
@@ -43,9 +49,12 @@ async function runNodeScript(scriptPath, label) {
   });
 }
 
-async function waitForApiReady() {
+async function waitForApiReady(apiProcess) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < STARTUP_TIMEOUT_MS) {
+    if (apiProcess.exitCode !== null) {
+      throw new Error(`API process exited early with code ${apiProcess.exitCode}`);
+    }
     try {
       const response = await fetch(`${BASE_URL}/health/ready`);
       if (response.ok) {
@@ -79,15 +88,15 @@ async function stopChild(child, label) {
 
 async function main() {
   console.log("Seeding admin and sample data...");
-  await runNodeScript("src/scripts/seedAdmin.js", "seed-admin");
-  await runNodeScript("src/scripts/seedSampleData.js", "seed-sample");
+  await runNodeScript("src/scripts/seedAdmin.js", "seed-admin", VERIFY_ENV);
+  await runNodeScript("src/scripts/seedSampleData.js", "seed-sample", VERIFY_ENV);
 
   console.log("Starting API and worker...");
-  const api = spawnNode("src/index.js", "api");
-  const worker = spawnNode("src/worker.js", "worker");
+  const api = spawnNode("src/index.js", "api", VERIFY_ENV);
+  const worker = spawnNode("src/worker.js", "worker", VERIFY_ENV);
 
   try {
-    await waitForApiReady();
+    await waitForApiReady(api);
     console.log("API is ready. Running smoke checks...");
     await runSmokeAllModules();
     console.log("verify:all completed successfully");

@@ -1,6 +1,8 @@
 import { pathToFileURL } from "node:url";
 
-const DEFAULT_BASE_URL = process.env.SMOKE_BASE_URL || `http://127.0.0.1:${process.env.PORT || 4000}`;
+function getBaseUrl() {
+  return process.env.SMOKE_BASE_URL || `http://127.0.0.1:${process.env.PORT || 4000}`;
+}
 
 function logStep(status, message) {
   const marker = status === "ok" ? "[PASS]" : "[FAIL]";
@@ -16,7 +18,7 @@ async function parseResponse(response) {
 }
 
 async function requestJson({ method = "GET", path, token, body, expectedStatus = 200 }) {
-  const response = await fetch(`${DEFAULT_BASE_URL}${path}`, {
+  const response = await fetch(`${getBaseUrl()}${path}`, {
     method,
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -35,7 +37,7 @@ async function requestJson({ method = "GET", path, token, body, expectedStatus =
 }
 
 async function requestText({ path, expectedContains }) {
-  const response = await fetch(`${DEFAULT_BASE_URL}${path}`);
+  const response = await fetch(`${getBaseUrl()}${path}`);
   const text = await response.text();
   if (!response.ok) {
     throw new Error(`GET ${path} failed with ${response.status}`);

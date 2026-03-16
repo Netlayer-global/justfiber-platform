@@ -88,6 +88,8 @@ npm run verify:all
 - run smoke checks for admin, installer, sales, and customer modules
 - stop local processes automatically
 
+Note: `verify:all` uses port `4100` by default to avoid conflict with already-running systemd/API instances. Override with `VERIFY_PORT`.
+
 Optional helper script:
 
 ```bash
