@@ -13,6 +13,7 @@
     "seed:admin": "node src/scripts/seedAdmin.js",
     "seed:sample-data": "node src/scripts/seedSampleData.js",
     "run:live-nokia": "node src/scripts/runLiveNokiaScenario.js",
+    "inspect:genie-subtree": "node src/scripts/inspectGenieSubtree.js",
     "inspect:genie-wifi": "node src/scripts/inspectGenieWifiParams.js",
     "test:customer": "node src/scripts/testCustomerFeatures.js",
     "test:installer": "node src/scripts/testInstallerModules.js",
