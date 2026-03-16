@@ -61,6 +61,7 @@ function pickPaymentUrl(payload) {
   const candidates = [
     payload.paymentUrl,
     payload.paymentLink,
+    payload.payment_link,
     payload.url,
     payload.redirectUrl,
     payload.link,
@@ -68,7 +69,10 @@ function pickPaymentUrl(payload) {
     payload.data?.paymentLink,
     payload.data?.url
   ];
-  return candidates.find((value) => typeof value === "string" && value.length > 0) || null;
+  const raw = candidates.find((value) => typeof value === "string" && value.length > 0);
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw.replace(/^\/+/, "")}`;
 }
 
 async function getOwnedBookingOrThrow(bookingNumber, customerUserId) {
