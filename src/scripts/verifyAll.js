@@ -14,6 +14,10 @@ const VERIFY_ENV = {
   SMOKE_BASE_URL: BASE_URL
 };
 
+// Ensure in-process smoke runner also targets isolated verify server.
+process.env.PORT = String(VERIFY_PORT);
+process.env.SMOKE_BASE_URL = BASE_URL;
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
