@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'models.dart';
 
-const installerApiBase = 'https://api.justfiber.in';
+const installerApiBase = 'http://103.139.191.114:4000';
 const _installerLoginKey = 'installer.login';
 const _installerAccessTokenKey = 'installer.access_token';
 const _installerRefreshTokenKey = 'installer.refresh_token';
