@@ -21,6 +21,7 @@
     "test:customer": "node src/scripts/testCustomerFeatures.js",
     "test:installer": "node src/scripts/testInstallerModules.js",
     "test:jaze": "node src/scripts/testJazeModules.js",
+    "test:radius": "node src/scripts/testRadiusModules.js",
     "test:genie": "node src/scripts/testGenieModules.js",
     "test:externals": "node src/scripts/testExternalIntegrations.js",
     "smoke:all": "node src/scripts/smokeAllModules.js",
@@ -37,6 +38,7 @@
     "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.1",
+    "mysql2": "^3.14.0",
     "morgan": "^1.10.0",
     "zod": "^3.23.8"
   },

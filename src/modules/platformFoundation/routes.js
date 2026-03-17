@@ -10,6 +10,7 @@ import { BngNode } from "../../models/BngNode.js";
 import { NatLogEntry } from "../../models/NatLogEntry.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { buildPagination } from "../../common/pagination.js";
+import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 
 const accessProfileSchema = z.object({
   code: z.string().min(2),
@@ -94,6 +95,14 @@ const natLogSchema = z.object({
   bytesDown: z.number().nonnegative().optional(),
   connectionState: z.string().optional(),
   raw: z.record(z.any()).optional()
+});
+
+const provisionSchema = z.object({
+  radiusPassword: z.string().min(4).optional()
+});
+
+const suspendSchema = z.object({
+  reason: z.string().min(2).optional()
 });
 
 export const platformFoundationRouter = Router();
@@ -215,6 +224,53 @@ platformFoundationRouter.post(
     await SubscriberService.updateOne({ serviceId: payload.serviceId }, { $set: update }, { upsert: true });
     const item = await SubscriberService.findOne({ serviceId: payload.serviceId }).lean();
     return ok(res, item, { created: true });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/subscriber-services/:serviceId/provision",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = provisionSchema.parse(req.body || {});
+    const service = await SubscriberService.findOne({ serviceId: req.params.serviceId }).lean();
+    if (!service) {
+      throw new Error("Subscriber service not found");
+    }
+    const result = await radiusServiceManager.createSubscriberAccess({
+      serviceId: service.serviceId,
+      customerId: service.customerId,
+      radiusUsername: service.radiusUsername,
+      radiusPassword: payload.radiusPassword,
+      accessProfileCode: service.accessProfileCode,
+      billingProfileCode: service.billingProfileCode,
+      bngNodeCode: service.bngNodeCode,
+      metadata: service.metadata || {}
+    });
+    return ok(res, result);
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/subscriber-services/:serviceId/suspend",
+  requirePermission(permissions.customerSuspend),
+  asyncHandler(async (req, res) => {
+    const payload = suspendSchema.parse(req.body || {});
+    const result = await radiusServiceManager.suspendSubscriberAccess({
+      serviceId: req.params.serviceId,
+      reason: payload.reason
+    });
+    return ok(res, result);
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/subscriber-services/:serviceId/resume",
+  requirePermission(permissions.customerResume),
+  asyncHandler(async (req, res) => {
+    const result = await radiusServiceManager.resumeSubscriberAccess({
+      serviceId: req.params.serviceId
+    });
+    return ok(res, result);
   })
 );
 

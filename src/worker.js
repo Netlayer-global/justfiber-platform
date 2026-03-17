@@ -9,8 +9,10 @@ import { InstallerJob } from "./models/InstallerJob.js";
 import { InstallerNotification } from "./models/InstallerNotification.js";
 import { CustomerNotification } from "./models/CustomerNotification.js";
 import { CustomerUser } from "./models/CustomerUser.js";
+import { env } from "./config/env.js";
 import { jazeClient } from "./integrations/jazeClient.js";
 import { genieacsClient } from "./integrations/genieacsClient.js";
+import { radiusServiceManager } from "./integrations/radiusServiceManager.js";
 import { writeAuditLog } from "./common/audit.js";
 import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand, resolveProvisioningProfile } from "./common/networkProvisioning.js";
 
@@ -91,11 +93,18 @@ const worker = new Worker(
           throw new Error("Customer action prerequisites missing");
         }
         if (job.data.actionType === "suspend") {
-          await jazeClient.suspendService({
-            serviceId: job.data.serviceId,
-            reason: request.payload.reason,
-            idempotencyKey: request._id.toString()
-          });
+          if (env.SERVICE_CONTROL_PROVIDER === "radius") {
+            await radiusServiceManager.suspendSubscriberAccess({
+              serviceId: job.data.serviceId,
+              reason: request.payload.reason
+            });
+          } else {
+            await jazeClient.suspendService({
+              serviceId: job.data.serviceId,
+              reason: request.payload.reason,
+              idempotencyKey: request._id.toString()
+            });
+          }
           const device = await DeviceOperationalCache.findOne({ customerId: job.data.customerId });
           if (device) {
             await genieacsClient.applyPreset({
@@ -106,11 +115,17 @@ const worker = new Worker(
           }
           customer.operationalStatus = "suspended";
         } else {
-          await jazeClient.resumeService({
-            serviceId: job.data.serviceId,
-            reason: request.payload.reason,
-            idempotencyKey: request._id.toString()
-          });
+          if (env.SERVICE_CONTROL_PROVIDER === "radius") {
+            await radiusServiceManager.resumeSubscriberAccess({
+              serviceId: job.data.serviceId
+            });
+          } else {
+            await jazeClient.resumeService({
+              serviceId: job.data.serviceId,
+              reason: request.payload.reason,
+              idempotencyKey: request._id.toString()
+            });
+          }
           const device = await DeviceOperationalCache.findOne({ customerId: job.data.customerId });
           if (device) {
             await genieacsClient.applyPreset({
@@ -156,15 +171,33 @@ const worker = new Worker(
         const wifi = prepared.wifi || buildWifiCredentials();
         const vlanId = prepared.vlanId || existingDevice?.wanInfo?.vlanId || 100;
 
-        updateActivationStage(jobRecord, "jaze_create_pending", "Creating PPPoE user in JAZE");
-        await jazeClient.createPppoeUser({
-          customerId: jobRecord.customerId,
-          serviceId: jobRecord.serviceId,
-          planCode: jobRecord.customerSnapshot?.planCode || jobRecord.customerSnapshot?.planName,
-          username: pppoe.username,
-          password: pppoe.password
-        });
-        updateActivationStage(jobRecord, "jaze_create_done", "PPPoE user created in JAZE");
+        updateActivationStage(
+          jobRecord,
+          env.SERVICE_CONTROL_PROVIDER === "radius" ? "radius_create_pending" : "jaze_create_pending",
+          env.SERVICE_CONTROL_PROVIDER === "radius" ? "Creating PPPoE user in FreeRADIUS" : "Creating PPPoE user in JAZE"
+        );
+        if (env.SERVICE_CONTROL_PROVIDER === "radius") {
+          await radiusServiceManager.createSubscriberAccess({
+            serviceId: jobRecord.serviceId,
+            customerId: jobRecord.customerId,
+            radiusUsername: pppoe.username,
+            radiusPassword: pppoe.password,
+            accessProfileCode: jobRecord.customerSnapshot?.planCode,
+            metadata: {
+              source: "installer_activation"
+            }
+          });
+          updateActivationStage(jobRecord, "radius_create_done", "PPPoE user created in FreeRADIUS");
+        } else {
+          await jazeClient.createPppoeUser({
+            customerId: jobRecord.customerId,
+            serviceId: jobRecord.serviceId,
+            planCode: jobRecord.customerSnapshot?.planCode || jobRecord.customerSnapshot?.planName,
+            username: pppoe.username,
+            password: pppoe.password
+          });
+          updateActivationStage(jobRecord, "jaze_create_done", "PPPoE user created in JAZE");
+        }
         try {
           updateActivationStage(jobRecord, "genie_push_pending", "Pushing access config to GenieACS");
           await genieacsClient.pushAccessConfig({

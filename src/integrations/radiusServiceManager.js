@@ -1,0 +1,188 @@
+import mysql from "mysql2/promise";
+import { env } from "../config/env.js";
+import { AccessProfile } from "../models/AccessProfile.js";
+import { SubscriberService } from "../models/SubscriberService.js";
+
+let pool;
+
+function getPool() {
+  if (!pool) {
+    pool = mysql.createPool({
+      host: env.RADIUS_SQL_HOST,
+      port: env.RADIUS_SQL_PORT,
+      user: env.RADIUS_SQL_USER,
+      password: env.RADIUS_SQL_PASSWORD,
+      database: env.RADIUS_SQL_DATABASE,
+      waitForConnections: true,
+      connectionLimit: 10
+    });
+  }
+  return pool;
+}
+
+function buildReplyAttributes(accessProfile) {
+  const attributes = { ...(accessProfile?.radiusAttributes || {}) };
+  if (!attributes["Mikrotik-Rate-Limit"] && accessProfile?.downMbps && accessProfile?.upMbps) {
+    attributes["Mikrotik-Rate-Limit"] = `${accessProfile.downMbps}M/${accessProfile.upMbps}M`;
+  }
+  return Object.entries(attributes)
+    .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "")
+    .map(([attribute, value]) => ({
+      attribute,
+      op: ":=",
+      value: String(value)
+    }));
+}
+
+async function replaceRadcheckEntries(connection, username, entries) {
+  await connection.execute("DELETE FROM radcheck WHERE username = ?", [username]);
+  for (const entry of entries) {
+    await connection.execute(
+      "INSERT INTO radcheck (username, attribute, op, value) VALUES (?, ?, ?, ?)",
+      [username, entry.attribute, entry.op || ":=", entry.value]
+    );
+  }
+}
+
+async function replaceRadreplyEntries(connection, username, entries) {
+  await connection.execute("DELETE FROM radreply WHERE username = ?", [username]);
+  for (const entry of entries) {
+    await connection.execute(
+      "INSERT INTO radreply (username, attribute, op, value) VALUES (?, ?, ?, ?)",
+      [username, entry.attribute, entry.op || ":=", entry.value]
+    );
+  }
+}
+
+async function getServiceOrThrow(serviceId) {
+  const service = await SubscriberService.findOne({ serviceId });
+  if (!service) {
+    throw new Error(`Subscriber service not found: ${serviceId}`);
+  }
+  return service;
+}
+
+export class RadiusServiceManager {
+  async createSubscriberAccess({
+    serviceId,
+    customerId,
+    radiusUsername,
+    radiusPassword,
+    accessProfileCode,
+    billingProfileCode,
+    bngNodeCode,
+    metadata = {}
+  }) {
+    const service =
+      (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
+      (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
+    const username = radiusUsername || service?.radiusUsername;
+    const password = radiusPassword || service?.metadata?.radiusPassword;
+
+    if (!username || !password) {
+      throw new Error("Radius username and password are required");
+    }
+
+    const effectiveAccessProfileCode = accessProfileCode || service?.accessProfileCode;
+    const accessProfile = effectiveAccessProfileCode
+      ? await AccessProfile.findOne({ code: effectiveAccessProfileCode, active: true }).lean()
+      : null;
+
+    const connection = await getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      await replaceRadcheckEntries(connection, username, [
+        { attribute: "Cleartext-Password", op: ":=", value: password }
+      ]);
+      await replaceRadreplyEntries(connection, username, buildReplyAttributes(accessProfile));
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
+    const nextService =
+      service ||
+      (await SubscriberService.create({
+        serviceId,
+        customerId,
+        radiusUsername: username,
+        radiusPasswordMasked: "********",
+        accessProfileCode: effectiveAccessProfileCode,
+        billingProfileCode,
+        bngNodeCode,
+        status: "active",
+        metadata: {}
+      }));
+
+    nextService.customerId = customerId || nextService.customerId;
+    nextService.radiusUsername = username;
+    nextService.radiusPasswordMasked = "********";
+    nextService.accessProfileCode = effectiveAccessProfileCode || nextService.accessProfileCode;
+    nextService.billingProfileCode = billingProfileCode || nextService.billingProfileCode;
+    nextService.bngNodeCode = bngNodeCode || nextService.bngNodeCode;
+    nextService.status = "active";
+    nextService.activatedAt = nextService.activatedAt || new Date();
+    nextService.suspendedAt = null;
+    nextService.metadata = {
+      ...(nextService.metadata || {}),
+      ...metadata,
+      radiusPassword: password,
+      suspensionReason: null
+    };
+    await nextService.save();
+
+    return nextService.toObject();
+  }
+
+  async suspendSubscriberAccess({ serviceId, reason }) {
+    const service = await getServiceOrThrow(serviceId);
+    const connection = await getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      await replaceRadcheckEntries(connection, service.radiusUsername, [
+        { attribute: "Auth-Type", op: ":=", value: "Reject" }
+      ]);
+      await replaceRadreplyEntries(connection, service.radiusUsername, [
+        { attribute: "Reply-Message", op: ":=", value: reason || env.RADIUS_REJECT_MESSAGE }
+      ]);
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
+    service.status = "suspended";
+    service.suspendedAt = new Date();
+    service.metadata = {
+      ...(service.metadata || {}),
+      suspensionReason: reason || env.RADIUS_REJECT_MESSAGE
+    };
+    await service.save();
+    return service.toObject();
+  }
+
+  async resumeSubscriberAccess({ serviceId }) {
+    const service = await getServiceOrThrow(serviceId);
+    const password = service.metadata?.radiusPassword;
+    if (!password) {
+      throw new Error(`No stored radius password for service ${serviceId}`);
+    }
+    return this.createSubscriberAccess({
+      serviceId: service.serviceId,
+      customerId: service.customerId,
+      radiusUsername: service.radiusUsername,
+      radiusPassword: password,
+      accessProfileCode: service.accessProfileCode,
+      billingProfileCode: service.billingProfileCode,
+      bngNodeCode: service.bngNodeCode,
+      metadata: service.metadata || {}
+    });
+  }
+}
+
+export const radiusServiceManager = new RadiusServiceManager();

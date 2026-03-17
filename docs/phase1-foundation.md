@@ -25,6 +25,9 @@ Base path: `/api/v1/admin/foundation`
 - `GET/POST /bng-nodes`
 - `GET/POST /subscriber-services`
 - `GET /subscriber-services/:serviceId`
+- `POST /subscriber-services/:serviceId/provision`
+- `POST /subscriber-services/:serviceId/suspend`
+- `POST /subscriber-services/:serviceId/resume`
 - `GET/POST /nat-logs`
 
 ## Intended stack
@@ -42,3 +45,13 @@ Base path: `/api/v1/admin/foundation`
 3. Integrate Razorpay payment order + webhook
 4. Add Radius SQL schema and MikroTik client onboarding
 5. Build admin UI around these APIs
+
+## Service control provider
+
+Set `SERVICE_CONTROL_PROVIDER=radius` to use FreeRADIUS-backed subscriber create/suspend/resume in worker and foundation APIs.
+
+## Test script
+
+Run:
+
+`node src/scripts/testRadiusModules.js`
