@@ -15,6 +15,7 @@ import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { jazeClient } from "../../integrations/jazeClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
+import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
 
 export const adminOpsRouter = Router();
@@ -375,6 +376,26 @@ adminOpsRouter.get(
       BillingLedgerEntry.countDocuments(filter)
     ]);
     return ok(res, items, { page, limit, total });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/run-cycle",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const result = await internalBillingEngine.runBillingCycle({
+      customerId: req.body?.customerId,
+      serviceId: req.body?.serviceId,
+      totalAmount: req.body?.totalAmount,
+      paymentStatus: req.body?.paymentStatus
+    });
+    await auditFromRequest(req, {
+      action: "billing.cycle.run",
+      entityType: "billing_cycle",
+      entityId: req.body?.customerId || req.body?.serviceId || "all",
+      metadata: { processed: result.processed, created: result.created, skipped: result.skipped }
+    });
+    return ok(res, result);
   })
 );
 
