@@ -109,6 +109,20 @@ export const platformFoundationRouter = Router();
 
 platformFoundationRouter.use(requireAuth);
 
+async function buildSubscriberContext(logEntry) {
+  const service = await SubscriberService.findOne({
+    $or: [
+      ...(logEntry.subscriberId ? [{ serviceId: logEntry.subscriberId }] : []),
+      ...(logEntry.customerId ? [{ customerId: logEntry.customerId }] : []),
+      ...(logEntry.pppoeUsername ? [{ radiusUsername: logEntry.pppoeUsername }] : [])
+    ]
+  }).lean();
+  return {
+    logEntry,
+    subscriberService: service || null
+  };
+}
+
 platformFoundationRouter.get(
   "/foundation/overview",
   requirePermission(permissions.configRead),
@@ -289,6 +303,45 @@ platformFoundationRouter.get(
       NatLogEntry.countDocuments(filter)
     ]);
     return ok(res, items, { page, limit, total });
+  })
+);
+
+platformFoundationRouter.get(
+  "/foundation/nat-logs/trace",
+  requirePermission(permissions.auditRead),
+  asyncHandler(async (req, res) => {
+    const publicIp = String(req.query.publicIp || "").trim();
+    const publicPort = Number(req.query.publicPort || 0);
+    const privateIp = String(req.query.privateIp || "").trim();
+    const privatePort = Number(req.query.privatePort || 0);
+    const pppoeUsername = String(req.query.pppoeUsername || "").trim();
+    const timestamp = req.query.timestamp ? new Date(String(req.query.timestamp)) : null;
+
+    if (!publicIp && !privateIp && !pppoeUsername) {
+      throw new Error("publicIp, privateIp, or pppoeUsername is required");
+    }
+
+    const filter = {};
+    if (publicIp) filter.publicIp = publicIp;
+    if (Number.isFinite(publicPort) && publicPort > 0) filter.publicPort = publicPort;
+    if (privateIp) filter.privateIp = privateIp;
+    if (Number.isFinite(privatePort) && privatePort > 0) filter.privatePort = privatePort;
+    if (pppoeUsername) filter.pppoeUsername = pppoeUsername;
+    if (timestamp && !Number.isNaN(timestamp.getTime())) {
+      const start = new Date(timestamp.getTime() - 5 * 60 * 1000);
+      const end = new Date(timestamp.getTime() + 5 * 60 * 1000);
+      filter.loggedAt = { $gte: start, $lte: end };
+    }
+
+    const items = await NatLogEntry.find(filter).sort({ loggedAt: -1 }).limit(50).lean();
+    const exact = items[0] || null;
+    const context = exact ? await buildSubscriberContext(exact) : { logEntry: null, subscriberService: null };
+
+    return ok(res, {
+      exactMatch: context.logEntry,
+      subscriberService: context.subscriberService,
+      candidates: items
+    });
   })
 );
 

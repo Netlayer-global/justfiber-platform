@@ -11,6 +11,8 @@ import { InstallerLeaveLog } from "../../models/InstallerLeaveLog.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { DeviceReplacementLog } from "../../models/DeviceReplacementLog.js";
 import { OtpEvent } from "../../models/OtpEvent.js";
+import { Customer } from "../../models/Customer.js";
+import { SubscriberService } from "../../models/SubscriberService.js";
 import { buildPagination } from "../../common/pagination.js";
 import {
   buildPppoeCredentials,
@@ -545,7 +547,31 @@ installerAppRouter.post(
     req.installer.availabilityStatus = "available";
     pushTimeline(job, "job.completed", req.installer._id, "Installation completed");
     await Promise.all([job.save(), req.installer.save()]);
-    return ok(res, { status: job.status, completedAt: job.completedAt });
+    const [customer, subscriberService] = await Promise.all([
+      Customer.findOne({ customerId: job.customerId }).lean(),
+      SubscriberService.findOne({ serviceId: job.serviceId }).lean()
+    ]);
+    return ok(res, {
+      status: job.status,
+      completedAt: job.completedAt,
+      customer: customer
+        ? {
+            customerId: customer.customerId,
+            accountNumber: customer.accountNumber,
+            serviceId: customer.serviceId,
+            fullName: customer.fullName,
+            planName: customer.planName
+          }
+        : null,
+      subscriberService: subscriberService
+        ? {
+            serviceId: subscriberService.serviceId,
+            radiusUsername: subscriberService.radiusUsername,
+            status: subscriberService.status,
+            ontSerialNumber: subscriberService.ontSerialNumber
+          }
+        : null
+    });
   })
 );
 
@@ -633,7 +659,17 @@ installerAppRouter.post(
     req.installer.availabilityStatus = "available";
     pushTimeline(job, "complaint.completed", req.installer._id, "Complaint resolved");
     await Promise.all([job.save(), req.installer.save()]);
-    return ok(res, job);
+    const subscriberService = await SubscriberService.findOne({ serviceId: job.serviceId }).lean();
+    return ok(res, {
+      job,
+      subscriberService: subscriberService
+        ? {
+            serviceId: subscriberService.serviceId,
+            radiusUsername: subscriberService.radiusUsername,
+            status: subscriberService.status
+          }
+        : null
+    });
   })
 );
 
