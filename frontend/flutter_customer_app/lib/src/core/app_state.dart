@@ -40,10 +40,13 @@ class AppState extends ChangeNotifier {
     currentPlan: 'JustFiber 100',
     dueAmount: 0,
     nextBillDate: '05/05/2029',
-    lastPaymentAmount: 1000,
+    lastPaymentAmount: 0,
     billCycle: 'Monthly',
     generatedDate: '',
     paymentStatus: 'paid',
+    lastPaymentDate: '',
+    invoices: [],
+    payments: [],
   );
   List<RequestItem> requests = const [];
   List<NotificationItem> notifications = const [];

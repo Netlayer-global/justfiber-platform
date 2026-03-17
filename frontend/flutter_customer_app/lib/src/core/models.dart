@@ -63,6 +63,9 @@ class BillingData {
     required this.billCycle,
     required this.generatedDate,
     required this.paymentStatus,
+    required this.lastPaymentDate,
+    required this.invoices,
+    required this.payments,
   });
 
   final String currentPlan;
@@ -72,6 +75,41 @@ class BillingData {
   final String billCycle;
   final String generatedDate;
   final String paymentStatus;
+  final String lastPaymentDate;
+  final List<BillingInvoiceItem> invoices;
+  final List<BillingPaymentItem> payments;
+}
+
+class BillingInvoiceItem {
+  const BillingInvoiceItem({
+    required this.invoiceNumber,
+    required this.totalAmount,
+    required this.generatedAt,
+    required this.dueDate,
+    required this.paymentStatus,
+  });
+
+  final String invoiceNumber;
+  final double totalAmount;
+  final String generatedAt;
+  final String dueDate;
+  final String paymentStatus;
+}
+
+class BillingPaymentItem {
+  const BillingPaymentItem({
+    required this.transactionId,
+    required this.amount,
+    required this.paidAt,
+    required this.provider,
+    required this.reference,
+  });
+
+  final String transactionId;
+  final double amount;
+  final String paidAt;
+  final String provider;
+  final String reference;
 }
 
 class RequestItem {

@@ -1052,6 +1052,42 @@ customerPortalRouter.post(
 );
 
 customerPortalRouter.get(
+  "/billing/details",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.customerUser.linkedCustomerIds?.[0] }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Billing details not available");
+    }
+
+    const [invoices, payments, ledger] = await Promise.all([
+      BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1, createdAt: -1 }).limit(6).lean(),
+      PaymentTransaction.find({ customerId: customer.customerId, status: "success" }).sort({ paidAt: -1, createdAt: -1 }).limit(6).lean(),
+      BillingLedgerEntry.find({ customerId: customer.customerId }).sort({ postedAt: -1, createdAt: -1 }).limit(10).lean()
+    ]);
+
+    return ok(res, {
+      customerId: customer.customerId,
+      summary: {
+        currentPlan: customer.planName,
+        dueDate: customer.expiryAt,
+        billCycle: "Monthly",
+        billMode: "Prepaid",
+        generatedDate: customer.updatedAt,
+        amount: customer.billingSnapshot?.lastInvoiceAmount || 0,
+        dueAmount: customer.billingSnapshot?.dueAmount || 0,
+        paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown",
+        lastPaymentAmount: payments[0]?.amount || 0,
+        lastPaymentDate: payments[0]?.paidAt || null
+      },
+      invoices,
+      payments,
+      ledger
+    });
+  })
+);
+
+customerPortalRouter.get(
   "/billing/summary",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {

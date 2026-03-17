@@ -89,15 +89,39 @@ class ApiClient {
   }
 
   Future<BillingData> fetchBilling(CustomerSession session) async {
-    final data = _asMap(await _request('/api/v1/customer/billing/summary', token: session.accessToken));
+    final details = _asMap(await _request('/api/v1/customer/billing/details', token: session.accessToken));
+    final data = _asMap(details['summary']);
+    final invoices = _asList(details['invoices']).map((item) {
+      final map = item as Map<String, dynamic>;
+      return BillingInvoiceItem(
+        invoiceNumber: (map['invoiceNumber'] ?? map['invoiceId'] ?? '').toString(),
+        totalAmount: double.tryParse('${map['totalAmount'] ?? map['amount'] ?? 0}') ?? 0,
+        generatedAt: (map['generatedAt'] ?? '').toString(),
+        dueDate: (map['dueDate'] ?? '').toString(),
+        paymentStatus: (map['paymentStatus'] ?? 'unknown').toString(),
+      );
+    }).toList();
+    final payments = _asList(details['payments']).map((item) {
+      final map = item as Map<String, dynamic>;
+      return BillingPaymentItem(
+        transactionId: (map['transactionId'] ?? '').toString(),
+        amount: double.tryParse('${map['amount'] ?? 0}') ?? 0,
+        paidAt: (map['paidAt'] ?? '').toString(),
+        provider: (map['provider'] ?? '').toString(),
+        reference: (map['reference'] ?? '').toString(),
+      );
+    }).toList();
     return BillingData(
       currentPlan: (data['currentPlan'] ?? data['currentPlanName'] ?? 'JustFiber 100').toString(),
       dueAmount: double.tryParse('${data['dueAmount'] ?? data['amount'] ?? 0}') ?? 0,
       nextBillDate: (data['dueDate'] ?? data['nextBillDate'] ?? '05/05/2029').toString(),
-      lastPaymentAmount: double.tryParse('${data['lastPaymentAmount'] ?? 1000}') ?? 1000,
+      lastPaymentAmount: double.tryParse('${data['lastPaymentAmount'] ?? payments.firstOrNull?.amount ?? 0}') ?? 0,
       billCycle: (data['billCycle'] ?? 'Monthly').toString(),
       generatedDate: (data['generatedDate'] ?? '').toString(),
       paymentStatus: (data['paymentStatus'] ?? 'unknown').toString(),
+      lastPaymentDate: (data['lastPaymentDate'] ?? payments.firstOrNull?.paidAt ?? '').toString(),
+      invoices: invoices,
+      payments: payments,
     );
   }
 
@@ -487,4 +511,8 @@ class ApiClient {
       quality: (data['quality'] ?? 'unknown').toString(),
     );
   }
+}
+
+extension _FirstOrNull<T> on List<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
