@@ -48,6 +48,20 @@ export const billingPaymentLinkSchema = z.object({
   jazeUserId: z.string().optional()
 });
 
+export const billingPaymentOrderSchema = z.object({
+  customerId: z.string().optional(),
+  amount: z.number().positive().optional()
+});
+
+export const billingPaymentVerifySchema = z.object({
+  customerId: z.string().optional(),
+  razorpayOrderId: z.string().min(1),
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
+  amount: z.number().positive().optional(),
+  notes: z.string().optional()
+});
+
 export const billingPaymentConfirmSchema = z.object({
   customerId: z.string().optional(),
   paymentId: z.string().optional(),

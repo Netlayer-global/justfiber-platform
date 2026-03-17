@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { Router } from "express";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
@@ -15,19 +14,24 @@ import { Installer } from "../../models/Installer.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
+import { BillingLedgerEntry } from "../../models/BillingLedgerEntry.js";
+import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { jazeClient } from "../../integrations/jazeClient.js";
+import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
+import { env } from "../../config/env.js";
 import {
   addonRequestSchema,
   bookingSchema,
   bookingPaymentConfirmSchema,
   bookingPaymentLinkSchema,
   billingPaymentConfirmSchema,
-  billingPaymentLinkSchema,
+  billingPaymentOrderSchema,
+  billingPaymentVerifySchema,
   deviceAccessSchema,
   feasibilitySchema,
   guestWifiSchema,
@@ -44,6 +48,43 @@ import {
 const otpStore = new Map();
 
 export const customerPortalRouter = Router();
+
+function computeBalanceAfter({ currentBalance, direction, amount }) {
+  return currentBalance + (direction === "debit" ? amount : -amount);
+}
+
+async function createLedgerEntry({
+  customerId,
+  serviceId,
+  invoiceId,
+  paymentId,
+  category,
+  direction,
+  amount,
+  reference,
+  note,
+  source,
+  metadata
+}) {
+  const latestEntry = await BillingLedgerEntry.findOne({ customerId }).sort({ postedAt: -1, createdAt: -1 }).lean();
+  const currentBalance = latestEntry?.balanceAfter || 0;
+  const balanceAfter = computeBalanceAfter({ currentBalance, direction, amount });
+  return BillingLedgerEntry.create({
+    entryId: `BL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    customerId,
+    serviceId,
+    invoiceId,
+    paymentId,
+    category,
+    direction,
+    amount,
+    balanceAfter,
+    reference,
+    note,
+    source,
+    metadata
+  });
+}
 
 function normalizeJazeUserId(raw) {
   if (!raw) return null;
@@ -236,6 +277,95 @@ async function notifyCustomerAction(customerUserId, type, title, body, payload) 
     body,
     payload
   });
+}
+
+async function markLatestInvoicePaid({ customerId, paymentId, amount, source }) {
+  const invoice = await BillingInvoice.findOne({
+    customerId,
+    paymentStatus: { $in: ["pending", "overdue"] }
+  }).sort({ dueDate: 1, generatedAt: 1 });
+  if (!invoice) {
+    return null;
+  }
+  invoice.paymentStatus = "paid";
+  invoice.status = "settled";
+  invoice.metadata = {
+    ...(invoice.metadata || {}),
+    lastPaymentId: paymentId,
+    lastPaymentSource: source,
+    lastPaymentAmount: amount,
+    lastPaidAt: new Date()
+  };
+  await invoice.save();
+  return invoice;
+}
+
+async function finalizeSuccessfulBillingPayment({
+  customer,
+  provider,
+  transactionId,
+  amount,
+  reference,
+  paymentId,
+  metadata
+}) {
+  const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
+  if (existingPayment && existingPayment.customerId !== customer.customerId) {
+    throw new ApiError(409, "Payment reference already used for another customer");
+  }
+
+  let createdLedgerEntry = null;
+  if (!existingPayment) {
+    await PaymentTransaction.create({
+      transactionId,
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      provider,
+      amount,
+      status: "success",
+      paidAt: new Date(),
+      method: "onlinePayment",
+      reference,
+      metadata
+    });
+    const invoice = await markLatestInvoicePaid({
+      customerId: customer.customerId,
+      paymentId,
+      amount,
+      source: provider
+    });
+    createdLedgerEntry = await createLedgerEntry({
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      invoiceId: invoice?.invoiceId,
+      paymentId,
+      category: "payment",
+      direction: "credit",
+      amount,
+      reference,
+      note: `${provider} payment received`,
+      source: `${provider}_billing`,
+      metadata
+    });
+  }
+
+  customer.billingSnapshot = {
+    ...(customer.billingSnapshot || {}),
+    lastInvoiceAmount: amount,
+    dueAmount: 0,
+    lastPaymentStatus: "paid",
+    lastPaidAt: new Date(),
+    lastPaymentProvider: provider
+  };
+  await customer.save();
+
+  return {
+    amount,
+    dueAmount: 0,
+    paymentStatus: "paid",
+    idempotentReplay: Boolean(existingPayment),
+    ledgerEntryId: createdLedgerEntry?.entryId
+  };
 }
 
 async function assignInstallerIfAvailable({ booking, payload, plan }) {
@@ -673,6 +803,128 @@ customerPortalRouter.get(
 );
 
 customerPortalRouter.post(
+  "/billing/payment/order",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = billingPaymentOrderSchema.parse(req.body || {});
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: payload.customerId
+    });
+    const amount = payload.amount || customer.billingSnapshot?.dueAmount || customer.billingSnapshot?.lastInvoiceAmount || 0;
+    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+      throw new ApiError(400, "No payable bill amount found");
+    }
+
+    const order = await razorpayClient.createOrder({
+      amount,
+      receipt: `bill_${customer.customerId}_${Date.now()}`,
+      notes: {
+        customerId: customer.customerId,
+        serviceId: customer.serviceId || "",
+        source: "customer_billing"
+      }
+    });
+
+    await PaymentTransaction.findOneAndUpdate(
+      { transactionId: order.id },
+      {
+        $set: {
+          customerId: customer.customerId,
+          serviceId: customer.serviceId,
+          provider: "razorpay",
+          amount,
+          currency: order.currency || "INR",
+          status: "pending",
+          reference: order.receipt,
+          metadata: {
+            orderId: order.id,
+            source: "customer_billing_order",
+            notes: order.notes
+          }
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return ok(res, {
+      provider: "razorpay",
+      customerId: customer.customerId,
+      keyId: env.RAZORPAY_KEY_ID,
+      orderId: order.id,
+      amount,
+      amountPaise: order.amount,
+      currency: order.currency || "INR",
+      receipt: order.receipt,
+      prefill: {
+        name: customer.fullName,
+        email: customer.email,
+        contact: customer.phone
+      },
+      notes: order.notes || {}
+    });
+  })
+);
+
+customerPortalRouter.post(
+  "/billing/payment/verify",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = billingPaymentVerifySchema.parse(req.body || {});
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: payload.customerId
+    });
+
+    const valid = razorpayClient.verifyCheckoutSignature({
+      orderId: payload.razorpayOrderId,
+      paymentId: payload.razorpayPaymentId,
+      signature: payload.razorpaySignature
+    });
+    if (!valid) {
+      throw new ApiError(400, "Invalid Razorpay signature");
+    }
+
+    const pendingOrder = await PaymentTransaction.findOne({ transactionId: payload.razorpayOrderId }).lean();
+    const amount = payload.amount || pendingOrder?.amount || customer.billingSnapshot?.dueAmount || customer.billingSnapshot?.lastInvoiceAmount || 0;
+    const result = await finalizeSuccessfulBillingPayment({
+      customer,
+      provider: "razorpay",
+      transactionId: payload.razorpayPaymentId,
+      amount,
+      reference: payload.razorpayOrderId,
+      paymentId: payload.razorpayPaymentId,
+      metadata: {
+        source: "customer_billing_verify",
+        orderId: payload.razorpayOrderId,
+        signature: payload.razorpaySignature,
+        notes: payload.notes
+      }
+    });
+
+    await PaymentTransaction.updateOne(
+      { transactionId: payload.razorpayOrderId },
+      {
+        $set: {
+          status: "captured",
+          paidAt: new Date(),
+          metadata: {
+            orderId: payload.razorpayOrderId,
+            capturedPaymentId: payload.razorpayPaymentId,
+            source: "customer_billing_verify"
+          }
+        }
+      }
+    );
+
+    return ok(res, {
+      customerId: customer.customerId,
+      ...result
+    });
+  })
+);
+
+customerPortalRouter.post(
   "/billing/payment/link-jaze",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
@@ -699,6 +951,74 @@ customerPortalRouter.post(
 );
 
 customerPortalRouter.post(
+  "/webhooks/razorpay",
+  asyncHandler(async (req, res) => {
+    const signature = req.headers["x-razorpay-signature"];
+    if (!signature || !req.rawBody) {
+      throw new ApiError(400, "Missing Razorpay webhook signature");
+    }
+    const valid = razorpayClient.verifyWebhookSignature({
+      rawBody: req.rawBody,
+      signature: String(signature)
+    });
+    if (!valid) {
+      throw new ApiError(400, "Invalid Razorpay webhook signature");
+    }
+
+    const event = req.body || {};
+    const payment = event?.payload?.payment?.entity;
+    if (!payment || !["payment.captured", "order.paid"].includes(event.event)) {
+      return ok(res, { acknowledged: true, ignored: true });
+    }
+
+    const customerId = payment.notes?.customerId;
+    if (!customerId) {
+      return ok(res, { acknowledged: true, ignored: true, reason: "customer_id_missing" });
+    }
+
+    const customer = await Customer.findOne({ customerId });
+    if (!customer) {
+      return ok(res, { acknowledged: true, ignored: true, reason: "customer_not_found" });
+    }
+
+    const result = await finalizeSuccessfulBillingPayment({
+      customer,
+      provider: "razorpay",
+      transactionId: payment.id,
+      amount: Number(payment.amount || 0) / 100,
+      reference: payment.order_id,
+      paymentId: payment.id,
+      metadata: {
+        source: "razorpay_webhook",
+        event: event.event,
+        orderId: payment.order_id
+      }
+    });
+
+    await PaymentTransaction.updateOne(
+      { transactionId: payment.order_id },
+      {
+        $set: {
+          status: "captured",
+          paidAt: new Date(),
+          metadata: {
+            orderId: payment.order_id,
+            capturedPaymentId: payment.id,
+            source: "razorpay_webhook"
+          }
+        }
+      }
+    );
+
+    return ok(res, {
+      acknowledged: true,
+      customerId,
+      ...result
+    });
+  })
+);
+
+customerPortalRouter.post(
   "/billing/payment/confirm",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
@@ -711,44 +1031,22 @@ customerPortalRouter.post(
     const amount =
       payload.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0;
 
-    const transactionId = payload.paymentId || `JAZE-BILL-${customer.customerId}-${Date.now()}`;
-    const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
-    if (existingPayment && existingPayment.customerId !== customer.customerId) {
-      throw new ApiError(409, "Payment reference already used for another customer");
-    }
-    if (!existingPayment) {
-      await PaymentTransaction.create({
-        transactionId,
-        customerId: customer.customerId,
-        serviceId: customer.serviceId,
-        provider: "jaze",
-        amount,
-        status: "success",
-        paidAt: new Date(),
-        method: "onlinePayment",
-        reference: payload.reference || payload.paymentId,
-        metadata: {
-          source: "customer_billing",
-          notes: payload.notes
-        }
-      });
-    }
-
-    customer.billingSnapshot = {
-      ...(customer.billingSnapshot || {}),
-      lastInvoiceAmount: amount,
-      dueAmount: 0,
-      lastPaymentStatus: "paid",
-      lastPaidAt: new Date()
-    };
-    await customer.save();
+    const result = await finalizeSuccessfulBillingPayment({
+      customer,
+      provider: "jaze",
+      transactionId: payload.paymentId || `JAZE-BILL-${customer.customerId}-${Date.now()}`,
+      amount,
+      reference: payload.reference || payload.paymentId,
+      paymentId: payload.paymentId,
+      metadata: {
+        source: "customer_billing",
+        notes: payload.notes
+      }
+    });
 
     return ok(res, {
       customerId: customer.customerId,
-      paymentStatus: "paid",
-      amount,
-      dueAmount: 0,
-      idempotentReplay: Boolean(existingPayment)
+      ...result
     });
   })
 );
