@@ -138,7 +138,8 @@ export class JazeClient {
       "POST",
       "/get_payment_link",
       {
-        userId: normalizedUserId
+        userId: normalizedUserId,
+        accountId: env.JAZE_ACCOUNT_ID || env.JAZE_API_USERNAME
       },
       true
     );

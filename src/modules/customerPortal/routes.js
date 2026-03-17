@@ -69,17 +69,92 @@ function pickPaymentUrl(payload) {
     payload.paymentUrl,
     payload.paymentLink,
     payload.payment_link,
+    payload.gatewayUrl,
+    payload.gateway_url,
+    payload.checkoutUrl,
+    payload.checkout_url,
+    payload.payUrl,
+    payload.pay_url,
     payload.url,
     payload.redirectUrl,
     payload.link,
     payload.data?.paymentUrl,
     payload.data?.paymentLink,
+    payload.data?.payment_link,
+    payload.data?.gatewayUrl,
+    payload.data?.gateway_url,
+    payload.data?.checkoutUrl,
+    payload.data?.checkout_url,
+    payload.data?.payUrl,
+    payload.data?.pay_url,
     payload.data?.url
   ];
-  const raw = candidates.find((value) => typeof value === "string" && value.length > 0);
+  const urls = candidates.filter((value) => typeof value === "string" && value.length > 0);
+  const raw =
+    urls.find((value) => /(payment|pay|checkout|bill)/i.test(value) && !/login/i.test(value)) ||
+    urls.find((value) => !/login/i.test(value)) ||
+    urls[0];
   if (!raw) return null;
   if (/^https?:\/\//i.test(raw)) return raw;
   return `https://${raw.replace(/^\/+/, "")}`;
+}
+
+function uniqueNonEmpty(values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function buildJazeUserCandidates({ explicitJazeUserId, customer }) {
+  const rawCandidates = [
+    explicitJazeUserId,
+    customer?.customerId,
+    customer?.accountNumber,
+    customer?.serviceId,
+    customer?.phone
+  ];
+  const derivedCandidates = rawCandidates.map((value) => deriveJazeUserId({ explicitJazeUserId: value }));
+  return uniqueNonEmpty([...rawCandidates, ...derivedCandidates]);
+}
+
+function isPortalLoginUrl(url) {
+  if (!url) return false;
+  return /customer_portal/i.test(url) && /login|\/account\//i.test(url) && !/payment|checkout|bill/i.test(url);
+}
+
+async function resolveJazePaymentLink({ customer, explicitJazeUserId }) {
+  const attemptedUserIds = [];
+  let fallback = null;
+
+  for (const userId of buildJazeUserCandidates({ explicitJazeUserId, customer })) {
+    attemptedUserIds.push(userId);
+    try {
+      const gatewayPayload = await jazeClient.getPaymentLink({ userId });
+      const paymentUrl = pickPaymentUrl(gatewayPayload);
+      const result = {
+        userId,
+        paymentUrl,
+        raw: gatewayPayload,
+        attemptedUserIds: [...attemptedUserIds]
+      };
+      if (paymentUrl && !isPortalLoginUrl(paymentUrl)) {
+        return result;
+      }
+      fallback ??= result;
+    } catch (error) {
+      fallback ??= {
+        userId,
+        paymentUrl: null,
+        raw: { error: error.message },
+        attemptedUserIds: [...attemptedUserIds]
+      };
+    }
+  }
+
+  return fallback || {
+    userId: explicitJazeUserId || customer?.customerId || null,
+    paymentUrl: null,
+    raw: null,
+    attemptedUserIds
+  };
 }
 
 async function getOwnedBookingOrThrow(bookingNumber, customerUserId) {
@@ -606,22 +681,19 @@ customerPortalRouter.post(
       customerUser: req.customerUser,
       requestedCustomerId: payload.customerId
     });
-    const jazeUserId =
-      deriveJazeUserId({
-        explicitJazeUserId: payload.jazeUserId,
-        linkedCustomerId: customer.customerId
-      }) || customer.customerId;
-
-    const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
-    const paymentUrl = pickPaymentUrl(gatewayPayload);
+    const gateway = await resolveJazePaymentLink({
+      customer,
+      explicitJazeUserId: payload.jazeUserId
+    });
 
     return ok(res, {
       provider: "jaze",
       customerId: customer.customerId,
-      userId: jazeUserId,
+      userId: gateway.userId,
       amount: customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0,
-      paymentUrl,
-      raw: gatewayPayload
+      paymentUrl: gateway.paymentUrl,
+      attemptedUserIds: gateway.attemptedUserIds,
+      raw: gateway.raw
     });
   })
 );
