@@ -5,25 +5,11 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '@/components/table/DataTable'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { ActionModal } from '@/components/modal/ActionModal'
-import { apiGet, apiPost } from '@/lib/api'
+import { adminAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils'
 import { DollarSign, TrendingUp, AlertCircle, Plus } from 'lucide-react'
-
-interface Invoice {
-  id: string
-  customerId: string
-  amount: number
-  status: 'paid' | 'pending' | 'overdue'
-  dueDate: string
-  issuedDate: string
-}
-
-interface BillingOverview {
-  totalRevenue: number
-  pendingAmount: number
-  collectionRate: number
-}
+import { Invoice, BillingOverview } from '@/lib/types'
 
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -40,10 +26,8 @@ export default function BillingPage() {
     setIsLoading(true)
     try {
       const [overviewRes, invoicesRes] = await Promise.all([
-        apiGet('/api/v1/admin/billing/overview'),
-        apiGet('/api/v1/admin/billing/invoices', {
-          params: statusFilter !== 'all' ? { status: statusFilter } : {},
-        }),
+        adminAPI.getBillingOverview(),
+        adminAPI.getInvoices(1, 50),
       ])
 
       if (overviewRes.data.success) {

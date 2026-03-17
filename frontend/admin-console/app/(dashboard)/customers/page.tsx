@@ -5,22 +5,11 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '@/components/table/DataTable'
 import { DetailDrawer } from '@/components/drawer/DetailDrawer'
 import { ActionModal } from '@/components/modal/ActionModal'
-import { apiGet, apiPost } from '@/lib/api'
+import { adminAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import { getStatusColor, formatDate } from '@/lib/utils'
 import { Search, Plus, MoreVertical, Eye, Pause, Play, RotateCcw } from 'lucide-react'
-
-interface Customer {
-  id: string
-  email: string
-  phone: string
-  name: string
-  plan: string
-  status: 'active' | 'inactive' | 'suspended'
-  createdAt: string
-  totalBilled: number
-  lastPayment: string
-}
+import { Customer } from '@/lib/types'
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -41,9 +30,7 @@ export default function CustomersPage() {
   async function loadCustomers() {
     setIsLoading(true)
     try {
-      const params = searchQuery ? { search: searchQuery } : {}
-      const response = await apiGet('/api/v1/admin/customers', { params })
-
+      const response = await adminAPI.getCustomers(1, 50, searchQuery)
       if (response.data.success) {
         setCustomers(response.data.data || [])
       }
@@ -57,19 +44,18 @@ export default function CustomersPage() {
 
   async function handleCustomerAction(action: string, customerId: string) {
     try {
-      let endpoint = ''
+      let response
       if (action === 'suspend') {
-        endpoint = `/api/v1/admin/customers/${customerId}/suspend`
+        response = await adminAPI.suspendCustomer(customerId)
       } else if (action === 'resume') {
-        endpoint = `/api/v1/admin/customers/${customerId}/resume`
+        response = await adminAPI.resumeCustomer(customerId)
       } else if (action === 'retry') {
-        endpoint = `/api/v1/admin/customers/${customerId}/retry-provisioning`
+        response = await adminAPI.retryProvisioning(customerId)
+      } else {
+        return
       }
 
-      if (!endpoint) return
-
-      const response = await apiPost(endpoint, {})
-      if (response.data.success) {
+      if (response?.data.success) {
         toast.success(`Customer ${action}ed successfully`)
         loadCustomers()
         setActionModal({ isOpen: false, type: '' })

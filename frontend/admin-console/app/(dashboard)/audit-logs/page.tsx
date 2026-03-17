@@ -3,19 +3,10 @@
 import { useEffect, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '@/components/table/DataTable'
-import { apiGet } from '@/lib/api'
+import { adminAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
-
-interface AuditLog {
-  id: string
-  actor: string
-  action: string
-  resource: string
-  resourceId: string
-  changes?: Record<string, any>
-  timestamp: string
-}
+import { AuditLog } from '@/lib/types'
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -28,7 +19,7 @@ export default function AuditLogsPage() {
   async function loadAuditLogs() {
     setIsLoading(true)
     try {
-      const response = await apiGet('/api/v1/admin/foundation/logs/audit')
+      const response = await adminAPI.getAuditLogs(1, 100)
       if (response.data.success) {
         setLogs(response.data.data || [])
       }

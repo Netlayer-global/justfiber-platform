@@ -1,17 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { apiGet, apiPost, apiPatch } from '@/lib/api'
+import { adminAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import { Edit2, TestTube, Plus } from 'lucide-react'
-
-interface Integration {
-  key: string
-  name: string
-  category: string
-  isConfigured: boolean
-  lastUsed?: string
-}
+import { Integration } from '@/lib/types'
 
 const integrationCategories = [
   { name: 'SMS', key: 'sms', icon: '💬' },
@@ -34,7 +27,7 @@ export default function IntegrationsPage() {
   async function loadIntegrations() {
     setIsLoading(true)
     try {
-      const response = await apiGet('/api/v1/admin/integrations')
+      const response = await adminAPI.getIntegrations()
       if (response.data.success) {
         setIntegrations(response.data.data || [])
       }
@@ -48,7 +41,7 @@ export default function IntegrationsPage() {
 
   async function handleTestDispatch(category: string) {
     try {
-      const response = await apiPost('/api/v1/admin/foundation/dispatch/test-message', {
+      const response = await adminAPI.testDispatch({
         category,
         recipient: '9876543210',
         subject: 'Test message',

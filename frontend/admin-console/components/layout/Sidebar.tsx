@@ -19,6 +19,8 @@ import {
   KeyRound,
   Send,
   Menu,
+  Shield,
+  Tv,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -89,6 +91,16 @@ const navItems: NavItem[] = [
     label: 'Reports & Automation',
     href: '/reports',
     icon: <BarChart3 className="w-5 h-5" />,
+  },
+  {
+    label: 'KYC Verification',
+    href: '/kyc',
+    icon: <Shield className="w-5 h-5" />,
+  },
+  {
+    label: 'OTT Subscriptions',
+    href: '/ott',
+    icon: <Tv className="w-5 h-5" />,
   },
   {
     label: 'Settings',

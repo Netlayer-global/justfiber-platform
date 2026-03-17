@@ -4,22 +4,11 @@ import { useEffect, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '@/components/table/DataTable'
 import { DetailDrawer } from '@/components/drawer/DetailDrawer'
-import { apiGet, apiPost } from '@/lib/api'
+import { adminAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import { formatDate, getStatusColor } from '@/lib/utils'
 import { Plus, Eye, Clock, AlertCircle } from 'lucide-react'
-
-interface Ticket {
-  id: string
-  customerId: string
-  subject: string
-  category: string
-  priority: 'low' | 'medium' | 'high' | 'critical'
-  status: 'open' | 'assigned' | 'in_progress' | 'resolved' | 'closed'
-  createdAt: string
-  updatedAt: string
-  assignedTo?: string
-}
+import { Ticket } from '@/lib/types'
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -35,9 +24,7 @@ export default function TicketsPage() {
   async function loadTickets() {
     setIsLoading(true)
     try {
-      const params = statusFilter !== 'all' ? { status: statusFilter } : {}
-      const response = await apiGet('/api/v1/admin/tickets', { params })
-
+      const response = await adminAPI.getTickets(1, 50)
       if (response.data.success) {
         setTickets(response.data.data || [])
       }
