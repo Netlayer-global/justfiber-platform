@@ -13,33 +13,9 @@ import { LeadKycDocument } from "../../models/LeadKycDocument.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
-import { jazeClient } from "../../integrations/jazeClient.js";
 import { salesBookingPaymentConfirmSchema, salesBookingPaymentLinkSchema, salesKycSchema, salesLeadSchema, salesLoginSchema } from "./schemas.js";
 
 export const salesAppRouter = Router();
-
-function pickPaymentUrl(payload) {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const raw =
-    payload.paymentUrl ||
-    payload.paymentLink ||
-    payload.payment_link ||
-    payload.url ||
-    payload.redirectUrl ||
-    payload.link ||
-    payload.data?.paymentUrl ||
-    payload.data?.payment_link ||
-    payload.data?.url;
-  if (!raw || typeof raw !== "string") {
-    return null;
-  }
-  if (/^https?:\/\//i.test(raw)) {
-    return raw;
-  }
-  return `https://${raw.replace(/^\/+/, "")}`;
-}
 
 async function ensureSalesBookingOwnership(bookingId, salesAgentId) {
   const booking = await ConnectionBooking.findById(bookingId);
@@ -270,30 +246,8 @@ salesAppRouter.post(
   "/bookings/:bookingId/payment/link-jaze",
   requireSalesAuth,
   asyncHandler(async (req, res) => {
-    const payload = salesBookingPaymentLinkSchema.parse(req.body || {});
-    const { booking, lead } = await ensureSalesBookingOwnership(req.params.bookingId, req.salesAgent._id);
-    const jazeUserId = payload.jazeUserId || String(lead.mobile || "").replace(/\D/g, "") || lead.leadNumber;
-
-    const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
-    const paymentUrl = pickPaymentUrl(gatewayPayload);
-    booking.payment = {
-      ...(booking.payment || {}),
-      provider: "jaze",
-      status: "pending",
-      jazeUserId,
-      paymentLink: paymentUrl,
-      paymentLinkPayload: gatewayPayload,
-      linkRequestedAt: new Date()
-    };
-    await booking.save();
-
-    return ok(res, {
-      bookingId: booking._id,
-      bookingNumber: booking.bookingNumber,
-      userId: jazeUserId,
-      paymentUrl,
-      raw: gatewayPayload
-    });
+    salesBookingPaymentLinkSchema.parse(req.body || {});
+    throw new ApiError(410, "Jaze sales payment has been removed. Use internal billing flow.");
   })
 );
 
@@ -306,7 +260,7 @@ salesAppRouter.post(
 
     booking.payment = {
       ...(booking.payment || {}),
-      provider: "jaze",
+      provider: "internal_platform",
       status: payload.status,
       paymentId: payload.paymentId,
       reference: payload.reference,
@@ -320,14 +274,14 @@ salesAppRouter.post(
       return ok(res, { bookingId: booking._id, bookingNumber: booking.bookingNumber, status: booking.status, payment: booking.payment });
     }
 
-    const transactionId = payload.paymentId || `JAZE-SALES-${booking.bookingNumber}-${Date.now()}`;
+    const transactionId = payload.paymentId || `SALES-${booking.bookingNumber}-${Date.now()}`;
     const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
     if (!existingPayment) {
       await PaymentTransaction.create({
         transactionId,
         customerId: booking.personalDetails?.mobile || booking.bookingNumber,
         serviceId: booking.bookingNumber,
-        provider: "jaze",
+        provider: "internal_platform",
         amount: payload.amount || booking.selectedPlan?.amount || booking.selectedPlan?.totalAmount || 0,
         status: "success",
         paidAt: new Date(),

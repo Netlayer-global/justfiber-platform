@@ -30,7 +30,7 @@ const schema = z.object({
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
-  SERVICE_CONTROL_PROVIDER: z.enum(["jaze", "radius"]).default("jaze"),
+  SERVICE_CONTROL_PROVIDER: z.enum(["jaze", "radius"]).default("radius"),
   RADIUS_SQL_HOST: z.string().default("127.0.0.1"),
   RADIUS_SQL_PORT: z.coerce.number().default(3306),
   RADIUS_SQL_USER: z.string().default("radius"),

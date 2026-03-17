@@ -15,7 +15,7 @@ const billingInvoiceSchema = new mongoose.Schema(
     currency: { type: String, default: "INR" },
     status: { type: String, default: "generated", index: true },
     paymentStatus: { type: String, default: "pending", index: true },
-    source: { type: String, default: "jaze" },
+    source: { type: String, default: "internal_platform" },
     pdfUrl: String,
     metadata: mongoose.Schema.Types.Mixed
   },

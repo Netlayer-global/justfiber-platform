@@ -27,13 +27,10 @@ export const bookingSchema = z.object({
   pinCode: z.string().min(4),
   lat: z.number(),
   lng: z.number(),
-  paymentMode: z.enum(["jaze", "razorpay", "cash"]).default("razorpay"),
-  jazeUserId: z.string().min(1).optional()
+  paymentMode: z.enum(["razorpay", "cash"]).default("razorpay")
 });
 
-export const bookingPaymentLinkSchema = z.object({
-  jazeUserId: z.string().min(1).optional()
-});
+export const bookingPaymentLinkSchema = z.object({});
 
 export const bookingPaymentConfirmSchema = z.object({
   status: z.enum(["paid", "failed"]),
@@ -44,8 +41,7 @@ export const bookingPaymentConfirmSchema = z.object({
 });
 
 export const billingPaymentLinkSchema = z.object({
-  customerId: z.string().optional(),
-  jazeUserId: z.string().optional()
+  customerId: z.string().optional()
 });
 
 export const billingPaymentOrderSchema = z.object({

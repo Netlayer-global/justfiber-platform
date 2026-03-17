@@ -19,7 +19,6 @@ import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
-import { jazeClient } from "../../integrations/jazeClient.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
@@ -84,118 +83,6 @@ async function createLedgerEntry({
     source,
     metadata
   });
-}
-
-function normalizeJazeUserId(raw) {
-  if (!raw) return null;
-  return String(raw).trim();
-}
-
-function deriveJazeUserId({ explicitJazeUserId, linkedCustomerId }) {
-  if (explicitJazeUserId) {
-    return normalizeJazeUserId(explicitJazeUserId);
-  }
-  if (!linkedCustomerId) {
-    return null;
-  }
-  const match = String(linkedCustomerId).match(/(\d+)$/);
-  return match ? match[1] : normalizeJazeUserId(linkedCustomerId);
-}
-
-function pickPaymentUrl(payload) {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidates = [
-    payload.paymentUrl,
-    payload.paymentLink,
-    payload.payment_link,
-    payload.gatewayUrl,
-    payload.gateway_url,
-    payload.checkoutUrl,
-    payload.checkout_url,
-    payload.payUrl,
-    payload.pay_url,
-    payload.url,
-    payload.redirectUrl,
-    payload.link,
-    payload.data?.paymentUrl,
-    payload.data?.paymentLink,
-    payload.data?.payment_link,
-    payload.data?.gatewayUrl,
-    payload.data?.gateway_url,
-    payload.data?.checkoutUrl,
-    payload.data?.checkout_url,
-    payload.data?.payUrl,
-    payload.data?.pay_url,
-    payload.data?.url
-  ];
-  const urls = candidates.filter((value) => typeof value === "string" && value.length > 0);
-  const raw =
-    urls.find((value) => /(payment|pay|checkout|bill)/i.test(value) && !/login/i.test(value)) ||
-    urls.find((value) => !/login/i.test(value)) ||
-    urls[0];
-  if (!raw) return null;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  return `https://${raw.replace(/^\/+/, "")}`;
-}
-
-function uniqueNonEmpty(values) {
-  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
-}
-
-function buildJazeUserCandidates({ explicitJazeUserId, customer }) {
-  const rawCandidates = [
-    explicitJazeUserId,
-    customer?.customerId,
-    customer?.accountNumber,
-    customer?.serviceId,
-    customer?.phone
-  ];
-  const derivedCandidates = rawCandidates.map((value) => deriveJazeUserId({ explicitJazeUserId: value }));
-  return uniqueNonEmpty([...rawCandidates, ...derivedCandidates]);
-}
-
-function isPortalLoginUrl(url) {
-  if (!url) return false;
-  return /customer_portal/i.test(url) && /login|\/account\//i.test(url) && !/payment|checkout|bill/i.test(url);
-}
-
-async function resolveJazePaymentLink({ customer, explicitJazeUserId }) {
-  const attemptedUserIds = [];
-  let fallback = null;
-
-  for (const userId of buildJazeUserCandidates({ explicitJazeUserId, customer })) {
-    attemptedUserIds.push(userId);
-    try {
-      const gatewayPayload = await jazeClient.getPaymentLink({ userId });
-      const paymentUrl = pickPaymentUrl(gatewayPayload);
-      const result = {
-        userId,
-        paymentUrl,
-        raw: gatewayPayload,
-        attemptedUserIds: [...attemptedUserIds]
-      };
-      if (paymentUrl && !isPortalLoginUrl(paymentUrl)) {
-        return result;
-      }
-      fallback ??= result;
-    } catch (error) {
-      fallback ??= {
-        userId,
-        paymentUrl: null,
-        raw: { error: error.message },
-        attemptedUserIds: [...attemptedUserIds]
-      };
-    }
-  }
-
-  return fallback || {
-    userId: explicitJazeUserId || customer?.customerId || null,
-    paymentUrl: null,
-    raw: null,
-    attemptedUserIds
-  };
 }
 
 async function getOwnedBookingOrThrow(bookingNumber, customerUserId) {
@@ -531,12 +418,7 @@ customerPortalRouter.post(
       throw new ApiError(404, "Plan not found");
     }
     const amount = (plan.monthlyPrice || 0) + (plan.otcCharge || 0);
-    const isJazePayment = payload.paymentMode === "jaze";
-    const linkedCustomerId = req.customerUser.linkedCustomerIds?.[0];
-    const jazeUserId = deriveJazeUserId({
-      explicitJazeUserId: payload.jazeUserId,
-      linkedCustomerId
-    });
+    const isOfflinePayment = payload.paymentMode === "cash";
 
     const booking = await ConnectionBooking.create({
       bookingNumber: `JF${Date.now().toString().slice(-6)}`,
@@ -562,52 +444,25 @@ customerPortalRouter.post(
       },
       payment: {
         provider: payload.paymentMode,
-        status: isJazePayment ? "pending" : "paid",
+        status: isOfflinePayment ? "paid" : "pending",
         amount,
-        paidAt: isJazePayment ? null : new Date(),
-        jazeUserId: isJazePayment ? jazeUserId : undefined
+        paidAt: isOfflinePayment ? new Date() : null
       },
       tracking: {
-        currentStep: isJazePayment ? "payment_pending" : "payment_confirmed",
+        currentStep: isOfflinePayment ? "payment_confirmed" : "payment_pending",
         steps: [
           { code: "booking_placed", status: "done", at: new Date() },
           {
             code: "payment_confirmed",
-            status: isJazePayment ? "pending" : "done",
-            at: isJazePayment ? null : new Date()
+            status: isOfflinePayment ? "done" : "pending",
+            at: isOfflinePayment ? new Date() : null
           },
           { code: "installer_assigned", status: "pending", at: null }
         ]
       }
     });
 
-    let paymentGateway = null;
-    if (isJazePayment && jazeUserId) {
-      try {
-        const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
-        paymentGateway = {
-          provider: "jaze",
-          userId: jazeUserId,
-          paymentUrl: pickPaymentUrl(gatewayPayload),
-          raw: gatewayPayload
-        };
-        booking.payment = {
-          ...(booking.payment || {}),
-          paymentLink: paymentGateway.paymentUrl,
-          paymentLinkPayload: gatewayPayload,
-          linkRequestedAt: new Date()
-        };
-        await booking.save();
-      } catch (error) {
-        booking.payment = {
-          ...(booking.payment || {}),
-          gatewayError: error.message
-        };
-        await booking.save();
-      }
-    }
-
-    if (!isJazePayment) {
+    if (isOfflinePayment) {
       await assignInstallerIfAvailable({ booking, payload, plan });
     }
 
@@ -619,8 +474,7 @@ customerPortalRouter.post(
     return ok(
       res,
       {
-        ...responseBooking,
-        paymentGateway
+        ...responseBooking
       },
       { created: true }
     );
@@ -646,40 +500,8 @@ customerPortalRouter.post(
   "/bookings/:bookingNumber/payment/link-jaze",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const payload = bookingPaymentLinkSchema.parse(req.body || {});
-    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
-    if (booking.payment?.provider !== "jaze") {
-      throw new ApiError(400, "This booking is not configured for JAZE payment");
-    }
-    const jazeUserId =
-      deriveJazeUserId({
-        explicitJazeUserId: payload.jazeUserId,
-        linkedCustomerId: booking.payment?.jazeUserId
-      }) || booking.payment?.jazeUserId;
-    if (!jazeUserId) {
-      throw new ApiError(400, "JAZE userId is required to generate payment link");
-    }
-
-    const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
-    const paymentUrl = pickPaymentUrl(gatewayPayload);
-
-    booking.payment = {
-      ...(booking.payment || {}),
-      jazeUserId,
-      paymentLink: paymentUrl,
-      paymentLinkPayload: gatewayPayload,
-      linkRequestedAt: new Date(),
-      status: "pending"
-    };
-    await booking.save();
-
-    return ok(res, {
-      bookingNumber: booking.bookingNumber,
-      provider: "jaze",
-      userId: jazeUserId,
-      paymentUrl,
-      raw: gatewayPayload
-    });
+    bookingPaymentLinkSchema.parse(req.body || {});
+    throw new ApiError(410, "Jaze booking payment has been removed. Use Razorpay or cash payment.");
   })
 );
 
@@ -718,10 +540,10 @@ customerPortalRouter.post(
     }
 
     await PaymentTransaction.create({
-      transactionId: payload.paymentId || `JAZE-${booking.bookingNumber}-${Date.now()}`,
+      transactionId: payload.paymentId || `BOOKING-${booking.bookingNumber}-${Date.now()}`,
       customerId: booking.personalDetails?.mobile || booking.bookingNumber,
       serviceId: booking.bookingNumber,
-      provider: "jaze",
+      provider: booking.payment?.provider || "internal_platform",
       amount: payload.amount || booking.selectedPlan?.totalAmount || booking.payment?.amount || 0,
       status: "success",
       paidAt: new Date(),
@@ -928,25 +750,8 @@ customerPortalRouter.post(
   "/billing/payment/link-jaze",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const payload = billingPaymentLinkSchema.parse(req.body || {});
-    const customer = await getOwnedLinkedCustomer({
-      customerUser: req.customerUser,
-      requestedCustomerId: payload.customerId
-    });
-    const gateway = await resolveJazePaymentLink({
-      customer,
-      explicitJazeUserId: payload.jazeUserId
-    });
-
-    return ok(res, {
-      provider: "jaze",
-      customerId: customer.customerId,
-      userId: gateway.userId,
-      amount: customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0,
-      paymentUrl: gateway.paymentUrl,
-      attemptedUserIds: gateway.attemptedUserIds,
-      raw: gateway.raw
-    });
+    billingPaymentLinkSchema.parse(req.body || {});
+    throw new ApiError(410, "Jaze billing payment has been removed. Use /billing/payment/order instead.");
   })
 );
 
@@ -1033,8 +838,8 @@ customerPortalRouter.post(
 
     const result = await finalizeSuccessfulBillingPayment({
       customer,
-      provider: "jaze",
-      transactionId: payload.paymentId || `JAZE-BILL-${customer.customerId}-${Date.now()}`,
+      provider: "internal_platform",
+      transactionId: payload.paymentId || `BILL-${customer.customerId}-${Date.now()}`,
       amount,
       reference: payload.reference || payload.paymentId,
       paymentId: payload.paymentId,

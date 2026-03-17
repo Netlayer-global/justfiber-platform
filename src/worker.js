@@ -10,7 +10,6 @@ import { InstallerNotification } from "./models/InstallerNotification.js";
 import { CustomerNotification } from "./models/CustomerNotification.js";
 import { CustomerUser } from "./models/CustomerUser.js";
 import { env } from "./config/env.js";
-import { jazeClient } from "./integrations/jazeClient.js";
 import { genieacsClient } from "./integrations/genieacsClient.js";
 import { radiusServiceManager } from "./integrations/radiusServiceManager.js";
 import { internalSubscriberPlatform } from "./integrations/internalSubscriberPlatform.js";
@@ -94,18 +93,10 @@ const worker = new Worker(
           throw new Error("Customer action prerequisites missing");
         }
         if (job.data.actionType === "suspend") {
-          if (env.SERVICE_CONTROL_PROVIDER === "radius") {
-            await radiusServiceManager.suspendSubscriberAccess({
-              serviceId: job.data.serviceId,
-              reason: request.payload.reason
-            });
-          } else {
-            await jazeClient.suspendService({
-              serviceId: job.data.serviceId,
-              reason: request.payload.reason,
-              idempotencyKey: request._id.toString()
-            });
-          }
+          await radiusServiceManager.suspendSubscriberAccess({
+            serviceId: job.data.serviceId,
+            reason: request.payload.reason
+          });
           const device = await DeviceOperationalCache.findOne({ customerId: job.data.customerId });
           if (device) {
             await genieacsClient.applyPreset({
@@ -116,17 +107,9 @@ const worker = new Worker(
           }
           customer.operationalStatus = "suspended";
         } else {
-          if (env.SERVICE_CONTROL_PROVIDER === "radius") {
-            await radiusServiceManager.resumeSubscriberAccess({
-              serviceId: job.data.serviceId
-            });
-          } else {
-            await jazeClient.resumeService({
-              serviceId: job.data.serviceId,
-              reason: request.payload.reason,
-              idempotencyKey: request._id.toString()
-            });
-          }
+          await radiusServiceManager.resumeSubscriberAccess({
+            serviceId: job.data.serviceId
+          });
           const device = await DeviceOperationalCache.findOne({ customerId: job.data.customerId });
           if (device) {
             await genieacsClient.applyPreset({
@@ -188,33 +171,22 @@ const worker = new Worker(
 
         updateActivationStage(
           jobRecord,
-          env.SERVICE_CONTROL_PROVIDER === "radius" ? "radius_create_pending" : "jaze_create_pending",
-          env.SERVICE_CONTROL_PROVIDER === "radius" ? "Creating PPPoE user in FreeRADIUS" : "Creating PPPoE user in JAZE"
+          "radius_create_pending",
+          "Creating PPPoE user in FreeRADIUS"
         );
-        if (env.SERVICE_CONTROL_PROVIDER === "radius") {
-          await radiusServiceManager.createSubscriberAccess({
-            serviceId: jobRecord.serviceId,
-            customerId: jobRecord.customerId,
-            radiusUsername: pppoe.username,
-            radiusPassword: pppoe.password,
-            accessProfileCode: bootstrap?.accessProfile?.code || jobRecord.customerSnapshot?.planCode,
-            billingProfileCode: bootstrap?.billingProfile?.code,
-            bngNodeCode: bootstrap?.bngNode?.nodeCode,
-            metadata: {
-              source: "installer_activation"
-            }
-          });
-          updateActivationStage(jobRecord, "radius_create_done", "PPPoE user created in FreeRADIUS");
-        } else {
-          await jazeClient.createPppoeUser({
-            customerId: jobRecord.customerId,
-            serviceId: jobRecord.serviceId,
-            planCode: jobRecord.customerSnapshot?.planCode || jobRecord.customerSnapshot?.planName,
-            username: pppoe.username,
-            password: pppoe.password
-          });
-          updateActivationStage(jobRecord, "jaze_create_done", "PPPoE user created in JAZE");
-        }
+        await radiusServiceManager.createSubscriberAccess({
+          serviceId: jobRecord.serviceId,
+          customerId: jobRecord.customerId,
+          radiusUsername: pppoe.username,
+          radiusPassword: pppoe.password,
+          accessProfileCode: bootstrap?.accessProfile?.code || jobRecord.customerSnapshot?.planCode,
+          billingProfileCode: bootstrap?.billingProfile?.code,
+          bngNodeCode: bootstrap?.bngNode?.nodeCode,
+          metadata: {
+            source: "installer_activation"
+          }
+        });
+        updateActivationStage(jobRecord, "radius_create_done", "PPPoE user created in FreeRADIUS");
         try {
           updateActivationStage(jobRecord, "genie_push_pending", "Pushing access config to GenieACS");
           await genieacsClient.pushAccessConfig({
