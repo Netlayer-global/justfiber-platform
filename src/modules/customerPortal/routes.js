@@ -136,6 +136,11 @@ function getConnectedDevices(device) {
   ];
 }
 
+function isMissingGenieDeviceError(error) {
+  const message = String(error?.message || "");
+  return message.includes("GenieACS request failed") && message.includes("No such device");
+}
+
 function estimateNetworkMetrics({ customer, device }) {
   const planSpeed = Number(customer?.billingSnapshot?.speedMbps || customer?.speedMbps || 100);
   const online = device?.onlineStatus === "online";
@@ -736,20 +741,30 @@ customerPortalRouter.post(
       productClass: device.productClass,
       deviceId: device.deviceId
     });
-    await genieacsClient.pushAccessConfig({
-      deviceId: device.deviceId,
-      brand,
-      pppoeUsername: device.wanInfo?.pppoeUsernameMasked,
-      pppoePassword: undefined,
-      vlanId: device.wanInfo?.vlanId,
-      natEnabled: true,
-      ssid24,
-      ssid5,
-      wifiPassword24: password24,
-      wifiPassword5: password5
-    });
-    if (brand === "nokia" && (password24 || password5)) {
-      await genieacsClient.rebootDevice(device.deviceId);
+    let syncMode = "genieacs";
+    let syncWarning = null;
+    try {
+      await genieacsClient.pushAccessConfig({
+        deviceId: device.deviceId,
+        brand,
+        pppoeUsername: device.wanInfo?.pppoeUsernameMasked,
+        pppoePassword: undefined,
+        vlanId: device.wanInfo?.vlanId,
+        natEnabled: true,
+        ssid24,
+        ssid5,
+        wifiPassword24: password24,
+        wifiPassword5: password5
+      });
+      if (brand === "nokia" && (password24 || password5)) {
+        await genieacsClient.rebootDevice(device.deviceId);
+      }
+    } catch (error) {
+      if (!isMissingGenieDeviceError(error)) {
+        throw error;
+      }
+      syncMode = "cache_only";
+      syncWarning = "Device not present in GenieACS; updated local cache only.";
     }
     device.wifiInfo = {
       ...(device.wifiInfo || {}),
@@ -767,7 +782,9 @@ customerPortalRouter.post(
     return ok(res, {
       updated: true,
       requestedPayload: payload,
-      applied: { ssid24, ssid5 }
+      applied: { ssid24, ssid5 },
+      syncMode,
+      syncWarning
     });
   })
 );

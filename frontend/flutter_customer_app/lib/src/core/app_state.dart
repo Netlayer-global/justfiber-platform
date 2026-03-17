@@ -53,10 +53,13 @@ class AppState extends ChangeNotifier {
     busy = true;
     error = null;
     notifyListeners();
+    debugPrint('requestOtp: mobile=$mobile');
     try {
       demoOtp = await api.sendOtp(mobile);
+      debugPrint('requestOtp: success demoOtp=$demoOtp');
     } catch (e) {
       error = e.toString();
+      debugPrint('requestOtp: error=$error');
     } finally {
       busy = false;
       notifyListeners();
@@ -67,8 +70,10 @@ class AppState extends ChangeNotifier {
     busy = true;
     error = null;
     notifyListeners();
+    debugPrint('verifyOtp: mobile=$mobile otpLength=${otp.length}');
     try {
       session = await api.verifyOtp(mobile, otp);
+      debugPrint('verifyOtp: success accessTokenLength=${session?.accessToken.length ?? 0}');
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_mobileKey, session!.mobile);
       await prefs.setString(_accessTokenKey, session!.accessToken);
@@ -77,6 +82,7 @@ class AppState extends ChangeNotifier {
       return true;
     } catch (e) {
       error = e.toString();
+      debugPrint('verifyOtp: error=$error');
       return false;
     } finally {
       busy = false;
@@ -90,6 +96,7 @@ class AppState extends ChangeNotifier {
     busy = true;
     error = null;
     notifyListeners();
+    debugPrint('refresh: start');
     try {
       dashboard = await api.fetchDashboard(current);
       wifi = await api.fetchWifi(current);
@@ -99,8 +106,10 @@ class AppState extends ChangeNotifier {
       faqs = await api.fetchFaqs();
       addons = await api.fetchAddons(current);
       connectedDevices = await api.fetchConnectedDevices(current);
+      debugPrint('refresh: success');
     } catch (e) {
       error = e.toString();
+      debugPrint('refresh: error=$error');
     } finally {
       busy = false;
       notifyListeners();

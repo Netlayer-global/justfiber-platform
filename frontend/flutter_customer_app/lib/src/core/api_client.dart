@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'models.dart';
@@ -17,6 +18,7 @@ class ApiClient {
     String? token,
     Map<String, dynamic>? body,
   }) async {
+    debugPrint('API $method $path body=${body ?? const {}}');
     final headers = <String, String>{
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -27,10 +29,13 @@ class ApiClient {
     } else {
       response = await http.get(_uri(path), headers: headers);
     }
+    debugPrint('API $method $path status=${response.statusCode}');
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400 || payload['success'] == false) {
+      debugPrint('API $method $path errorBody=${response.body}');
       throw Exception(payload['error']?['message'] ?? 'Request failed');
     }
+    debugPrint('API $method $path success');
     return payload['data'];
   }
 
