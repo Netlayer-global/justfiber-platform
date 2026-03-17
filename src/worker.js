@@ -13,6 +13,7 @@ import { env } from "./config/env.js";
 import { jazeClient } from "./integrations/jazeClient.js";
 import { genieacsClient } from "./integrations/genieacsClient.js";
 import { radiusServiceManager } from "./integrations/radiusServiceManager.js";
+import { internalSubscriberPlatform } from "./integrations/internalSubscriberPlatform.js";
 import { writeAuditLog } from "./common/audit.js";
 import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand, resolveProvisioningProfile } from "./common/networkProvisioning.js";
 
@@ -156,6 +157,20 @@ const worker = new Worker(
         if (!jobRecord) {
           throw new Error("Installer job not found");
         }
+        const bootstrap = await internalSubscriberPlatform.prepareServiceFromInstallerJob(jobRecord);
+        if (bootstrap?.customer?.customerId && bootstrap?.customer?.serviceId) {
+          jobRecord.customerId = bootstrap.customer.customerId;
+          jobRecord.serviceId = bootstrap.customer.serviceId;
+          jobRecord.customerSnapshot = {
+            ...(jobRecord.customerSnapshot || {}),
+            customerId: bootstrap.customer.customerId,
+            accountNumber: bootstrap.customer.accountNumber,
+            serviceId: bootstrap.customer.serviceId,
+            planCode: bootstrap.customer.planCode,
+            planName: bootstrap.customer.planName,
+            speedMbps: bootstrap.accessProfile?.downMbps || jobRecord.customerSnapshot?.speedMbps
+          };
+        }
         const deviceId =
           jobRecord.deviceContext?.finalDeviceId ||
           job.data.finalDeviceId ||
@@ -182,7 +197,9 @@ const worker = new Worker(
             customerId: jobRecord.customerId,
             radiusUsername: pppoe.username,
             radiusPassword: pppoe.password,
-            accessProfileCode: jobRecord.customerSnapshot?.planCode,
+            accessProfileCode: bootstrap?.accessProfile?.code || jobRecord.customerSnapshot?.planCode,
+            billingProfileCode: bootstrap?.billingProfile?.code,
+            bngNodeCode: bootstrap?.bngNode?.nodeCode,
             metadata: {
               source: "installer_activation"
             }
@@ -294,6 +311,14 @@ const worker = new Worker(
           { upsert: true }
         );
         jobRecord.status = "active";
+        await internalSubscriberPlatform.finalizeActivation({
+          installerJob: jobRecord,
+          pppoe,
+          wifi,
+          deviceId,
+          serialNumber: jobRecord.deviceContext?.finalSerialNumber || existingDevice?.serialNumber,
+          vlanId
+        });
         jobRecord.activation = {
           ...(jobRecord.activation || {}),
           configStatus: verification.verified ? "verified" : "pushed",
