@@ -20,6 +20,7 @@ import { adminInstallersRouter } from "./modules/adminInstallers/routes.js";
 import { adminSalesRouter } from "./modules/adminSales/routes.js";
 import { adminCatalogRouter } from "./modules/adminCatalog/routes.js";
 import { adminOpsRouter } from "./modules/adminOps/routes.js";
+import { platformFoundationRouter } from "./modules/platformFoundation/routes.js";
 import { customerPortalRouter } from "./modules/customerPortal/routes.js";
 import { installerAuthRouter } from "./modules/installerAuth/routes.js";
 import { installerAppRouter } from "./modules/installerApp/routes.js";
@@ -118,6 +119,7 @@ export function createApp() {
   app.use("/api/v1/admin", adminSalesRouter);
   app.use("/api/v1/admin", adminCatalogRouter);
   app.use("/api/v1/admin", adminOpsRouter);
+  app.use("/api/v1/admin", platformFoundationRouter);
   app.use("/api/v1/installer/auth", installerAuthRouter);
   app.use("/api/v1/installer", installerAppRouter);
   app.use("/api/v1/customer", customerPortalRouter);
