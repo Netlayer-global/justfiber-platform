@@ -250,6 +250,68 @@ Important installer flow:
 - `POST /api/v1/sales/kyc`
 - `POST /api/v1/sales/booking-payment`
 
+## Admin Settings / Foundation
+
+Settings engine:
+
+- `GET /api/v1/admin/configs/settings/catalog`
+- `GET /api/v1/admin/configs/settings/:section`
+- `PUT /api/v1/admin/configs/settings/:section`
+- `GET /api/v1/admin/configs/notification-events`
+- `PUT /api/v1/admin/configs/notification-events/:eventKey`
+- `GET /api/v1/admin/configs/table-views/:viewKey`
+- `PUT /api/v1/admin/configs/table-views/:viewKey`
+
+Foundation modules:
+
+- `GET /api/v1/admin/foundation/inventory/overview`
+- `GET/POST /api/v1/admin/foundation/vendors`
+- `GET/POST /api/v1/admin/foundation/inventory/locations`
+- `GET/POST /api/v1/admin/foundation/inventory/items`
+- `POST /api/v1/admin/foundation/inventory/items/:itemCode/move`
+- `GET/POST /api/v1/admin/foundation/franchises`
+- `GET/POST /api/v1/admin/foundation/collections`
+- `POST /api/v1/admin/foundation/collections/:requestNumber/approve`
+- `POST /api/v1/admin/foundation/collections/:requestNumber/reject`
+- `GET /api/v1/admin/foundation/logs/overview`
+- `GET /api/v1/admin/foundation/logs/audit`
+- `GET /api/v1/admin/foundation/logs/payments`
+- `GET/POST /api/v1/admin/foundation/logs/integration-events`
+- `GET /api/v1/admin/foundation/external-integrations/overview`
+- `GET/POST /api/v1/admin/foundation/discount-vouchers`
+- `GET/POST /api/v1/admin/foundation/scheduled-reports`
+- `POST /api/v1/admin/foundation/scheduled-reports/:reportCode/run`
+- `GET/POST /api/v1/admin/foundation/announcements`
+- `GET/POST /api/v1/admin/foundation/automation-triggers`
+- `POST /api/v1/admin/foundation/automation-triggers/:triggerCode/fire`
+- `GET /api/v1/admin/foundation/helpdesk/overview`
+- `POST /api/v1/admin/foundation/helpdesk/run-sla-scan`
+- `POST /api/v1/admin/foundation/dispatch/test-message`
+- `GET/POST /api/v1/admin/foundation/kyc/requests`
+- `POST /api/v1/admin/foundation/kyc/requests/:requestNumber/submit`
+- `GET/POST /api/v1/admin/foundation/ott/subscriptions`
+- `POST /api/v1/admin/foundation/ott/subscriptions/:subscriptionCode/activate`
+
+Covered settings sections:
+
+- `general`
+- `express_configuration`
+- `miscellaneous`
+- `billing`
+- `billing_address`
+- `billing_period`
+- `prefix_settings`
+- `api_settings`
+- `tag_payment_gateway`
+- `user_fields`
+- `additional_fields`
+- `router_visibility`
+- `helpdesk_sla`
+- `helpdesk_rules`
+- `external_integrations`
+- `inventory_configuration`
+- `franchise_configuration`
+
 ## Verified Product Flows
 
 These flows were already validated in Ubuntu during previous runs:

@@ -10,9 +10,17 @@ import { InstallerNotification } from "./models/InstallerNotification.js";
 import { CustomerNotification } from "./models/CustomerNotification.js";
 import { CustomerUser } from "./models/CustomerUser.js";
 import { env } from "./config/env.js";
+import { IntegrationEventLog } from "./models/IntegrationEventLog.js";
+import { KycVerificationRequest } from "./models/KycVerificationRequest.js";
+import { OttSubscription } from "./models/OttSubscription.js";
 import { genieacsClient } from "./integrations/genieacsClient.js";
+import { AutomationTrigger } from "./models/AutomationTrigger.js";
+import { ScheduledReport } from "./models/ScheduledReport.js";
+import { SupportTicket } from "./models/SupportTicket.js";
 import { radiusServiceManager } from "./integrations/radiusServiceManager.js";
 import { internalSubscriberPlatform } from "./integrations/internalSubscriberPlatform.js";
+import { notificationDispatcher } from "./integrations/notificationDispatcher.js";
+import { providerAdapters } from "./integrations/providerAdapters.js";
 import { writeAuditLog } from "./common/audit.js";
 import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand, resolveProvisioningProfile } from "./common/networkProvisioning.js";
 
@@ -64,6 +72,15 @@ function verifyProvisionedConfig({ deviceSummary, brand, expected }) {
     verified,
     checks
   };
+}
+
+function computeNextRun(frequency, from = new Date()) {
+  const next = new Date(from);
+  if (frequency === "daily") next.setDate(next.getDate() + 1);
+  else if (frequency === "weekly") next.setDate(next.getDate() + 7);
+  else if (frequency === "monthly") next.setMonth(next.getMonth() + 1);
+  else return null;
+  return next;
 }
 
 const worker = new Worker(
@@ -368,6 +385,240 @@ const worker = new Worker(
       case "retry-provisioning":
       case "device-apply-preset":
         return processDevicePresetJob(job.data);
+      case "dispatch-message": {
+        return notificationDispatcher.dispatchChannel(job.data);
+      }
+      case "kyc-request-submit": {
+        const request = await KycVerificationRequest.findOne({ requestNumber: job.data.requestNumber });
+        if (!request) {
+          throw new Error("KYC request not found");
+        }
+        request.status = "submitted";
+        request.timeline.push({
+          type: "kyc.submitted",
+          actorType: "system",
+          actorId: "worker",
+          note: "KYC verification submitted to provider"
+        });
+        await request.save();
+
+        const result = await providerAdapters.startKycVerification({
+          providerKey: request.providerKey,
+          requestNumber: request.requestNumber,
+          customerId: request.customerId,
+          documentType: request.documentType,
+          verificationMode: request.verificationMode,
+          payload: request.payload,
+          entityId: request._id
+        });
+
+        request.provider = result.connection?.provider || "mock";
+        request.providerResponse = result.response || result.log?.response;
+        if (result.ok) {
+          request.status = env.MOCK_EXTERNALS ? "verified" : "submitted";
+          if (request.status === "verified") {
+            request.verifiedAt = new Date();
+          }
+          request.timeline.push({
+            type: request.status === "verified" ? "kyc.verified" : "kyc.provider_accepted",
+            actorType: "system",
+            actorId: "worker",
+            note: request.status === "verified"
+              ? "KYC verified in mock/provider sandbox mode"
+              : "KYC request accepted by provider"
+          });
+        } else {
+          request.status = "failed";
+          request.errorMessage = result.error || "KYC verification failed";
+          request.timeline.push({
+            type: "kyc.failed",
+            actorType: "system",
+            actorId: "worker",
+            note: request.errorMessage
+          });
+        }
+        await request.save();
+        return {
+          requestNumber: request.requestNumber,
+          status: request.status
+        };
+      }
+      case "ott-subscription-activate": {
+        const subscription = await OttSubscription.findOne({ subscriptionCode: job.data.subscriptionCode });
+        if (!subscription) {
+          throw new Error("OTT subscription not found");
+        }
+        const result = await providerAdapters.activateOttSubscription({
+          providerKey: subscription.providerKey,
+          subscriptionCode: subscription.subscriptionCode,
+          customerId: subscription.customerId,
+          addonCode: subscription.addonCode,
+          planCode: subscription.planCode,
+          metadata: subscription.metadata,
+          entityId: subscription._id
+        });
+        subscription.provider = result.connection?.provider || "mock";
+        subscription.providerResponse = result.response || result.log?.response;
+        if (result.ok) {
+          subscription.status = "active";
+          subscription.startsAt = subscription.startsAt || new Date();
+          subscription.timeline.push({
+            type: "ott.activated",
+            actorType: "system",
+            actorId: "worker",
+            note: "OTT subscription activated"
+          });
+        } else {
+          subscription.status = "failed";
+          subscription.errorMessage = result.error || "OTT activation failed";
+          subscription.timeline.push({
+            type: "ott.failed",
+            actorType: "system",
+            actorId: "worker",
+            note: subscription.errorMessage
+          });
+        }
+        await subscription.save();
+        return {
+          subscriptionCode: subscription.subscriptionCode,
+          status: subscription.status
+        };
+      }
+      case "scheduled-report-run": {
+        const report = await ScheduledReport.findOne({ reportCode: job.data.reportCode });
+        if (!report) {
+          throw new Error("Scheduled report not found");
+        }
+        const recipientCount = report.recipients?.length || 0;
+        await IntegrationEventLog.create({
+          integrationKey: "internal_reports",
+          category: "reporting",
+          provider: "internal_platform",
+          eventType: "scheduled_report_run",
+          status: "success",
+          entityType: "scheduled_report",
+          entityId: report.reportCode,
+          payload: {
+            reportCode: report.reportCode,
+            title: report.title,
+            format: report.format,
+            recipientCount
+          },
+          response: {
+            generated: true,
+            mocked: env.MOCK_EXTERNALS
+          }
+        });
+        report.lastRunAt = new Date();
+        report.nextRunAt = computeNextRun(report.frequency, report.lastRunAt);
+        await report.save();
+        return {
+          reportCode: report.reportCode,
+          generated: true,
+          recipientCount
+        };
+      }
+      case "automation-trigger-fire": {
+        const trigger = await AutomationTrigger.findOne({ triggerCode: job.data.triggerCode });
+        if (!trigger) {
+          throw new Error("Automation trigger not found");
+        }
+        trigger.lastTriggeredAt = new Date();
+        await trigger.save();
+        if (trigger.actionType === "notify" && trigger.actionConfig?.category && trigger.actionConfig?.recipient) {
+          await notificationDispatcher.dispatchChannel({
+            category: trigger.actionConfig.category,
+            recipient: trigger.actionConfig.recipient,
+            subject: trigger.actionConfig.subject || trigger.title,
+            body: trigger.actionConfig.body || `Trigger fired: ${trigger.title}`,
+            entityType: "automation_trigger",
+            entityId: trigger.triggerCode,
+            metadata: {
+              triggerCode: trigger.triggerCode,
+              payload: job.data.payload || {}
+            }
+          });
+        }
+        await IntegrationEventLog.create({
+          integrationKey: "internal_automation",
+          category: "automation",
+          provider: "internal_platform",
+          eventType: "automation_trigger_fire",
+          status: "success",
+          entityType: "automation_trigger",
+          entityId: trigger.triggerCode,
+          payload: job.data.payload || {},
+          response: {
+            actionType: trigger.actionType
+          }
+        });
+        return {
+          triggerCode: trigger.triggerCode,
+          actionType: trigger.actionType,
+          fired: true
+        };
+      }
+      case "helpdesk-sla-scan": {
+        const now = new Date();
+        const tickets = await SupportTicket.find({
+          status: { $in: ["open", "assigned", "in_progress"] },
+          $or: [
+            {
+              "sla.resolutionDueAt": { $ne: null, $lt: now },
+              "sla.breached": { $ne: true }
+            },
+            {
+              status: "open",
+              "sla.firstResponseDueAt": { $ne: null, $lt: now },
+              "sla.firstResponseBreached": { $ne: true }
+            }
+          ]
+        });
+        const breachedTicketIds = [];
+        for (const ticket of tickets) {
+          const firstResponseBreached = ticket.status === "open" &&
+            ticket.sla?.firstResponseDueAt &&
+            ticket.sla.firstResponseDueAt < now;
+          const resolutionBreached = ticket.sla?.resolutionDueAt &&
+            ticket.sla.resolutionDueAt < now;
+          ticket.sla = {
+            ...(ticket.sla || {}),
+            breached: Boolean(ticket.sla?.breached || resolutionBreached),
+            firstResponseBreached: Boolean(ticket.sla?.firstResponseBreached || firstResponseBreached)
+          };
+          ticket.timeline.push({
+            type: firstResponseBreached && !resolutionBreached ? "sla_first_response_breached" : "sla_breached",
+            actorType: "system",
+            actorId: "worker",
+            note: firstResponseBreached && !resolutionBreached
+              ? "First response SLA breached"
+              : "Resolution SLA breached"
+          });
+          await ticket.save();
+          breachedTicketIds.push(ticket.ticketNumber);
+        }
+        await IntegrationEventLog.create({
+          integrationKey: "internal_helpdesk",
+          category: "helpdesk",
+          provider: "internal_platform",
+          eventType: "sla_scan",
+          status: "success",
+          entityType: "support_ticket",
+          entityId: "batch",
+          payload: {
+            scannedAt: now
+          },
+          response: {
+            breachedCount: breachedTicketIds.length,
+            breachedTicketIds
+          }
+        });
+        return {
+          scanned: true,
+          breachedCount: breachedTicketIds.length,
+          breachedTicketIds
+        };
+      }
       default:
         throw new Error(`Unsupported job type: ${job.name}`);
     }

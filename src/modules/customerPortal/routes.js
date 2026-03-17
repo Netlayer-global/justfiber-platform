@@ -497,6 +497,15 @@ customerPortalRouter.get(
 );
 
 customerPortalRouter.post(
+  "/bookings/:bookingNumber/payment/link",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    bookingPaymentLinkSchema.parse(req.body || {});
+    throw new ApiError(410, "Direct booking payment link creation is disabled. Use Razorpay billing flow or cash payment.");
+  })
+);
+
+customerPortalRouter.post(
   "/bookings/:bookingNumber/payment/link-jaze",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {

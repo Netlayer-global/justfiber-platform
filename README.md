@@ -1,12 +1,22 @@
 # Netlayer Admin Backend
 
-Production-oriented Phase-4 Admin Panel backend for the locked ISP automation architecture:
+Production-oriented ISP operations platform for JustFiber:
 
-- `JAZE` remains source of truth for CRM, billing, payments, and RADIUS
-- `GenieACS` remains preset-only provisioning control
-- this backend acts as orchestration, approvals, audit, dashboards, and admin APIs
+- internal CRM, subscriber lifecycle, and billing foundations
+- `FreeRADIUS`-based subscriber access control
+- `GenieACS`-based ONT provisioning and device management
+- `Razorpay` for online payment collection
+- orchestration, approvals, audit, dashboards, and admin APIs
 - role-wise admin access for `super_admin`, `noc_admin`, `sales_admin`, `support_admin`
-- installer app APIs, customer app APIs, booking/lead foundations, and user web panel
+- installer app APIs, customer app APIs, booking/lead flows, and user web panel
+
+Primary integration handoff docs:
+
+- [`API_ENDPOINTS.md`](./API_ENDPOINTS.md)
+- [`VERCEL_AI_UI_GUIDE.md`](./VERCEL_AI_UI_GUIDE.md)
+- [`BACKEND_COMPLETION_STATUS.md`](./BACKEND_COMPLETION_STATUS.md)
+- [`ADMIN_BACKEND_CONTRACT.md`](./ADMIN_BACKEND_CONTRACT.md)
+- [`SERVER_VERIFICATION_CHECKLIST.md`](./SERVER_VERIFICATION_CHECKLIST.md)
 
 ## Included modules
 
@@ -19,6 +29,9 @@ Production-oriented Phase-4 Admin Panel backend for the locked ISP automation ar
 - Support ticket APIs
 - Config registry and versioned updates
 - Approval workflow and BullMQ-backed action processing
+- Internal billing cycle engine, ledger, refunds, and adjustments
+- Nokia and DASAN provisioning with PPPoE, Wi-Fi, NAT, and VLAN push
+- Customer billing/order verification via Razorpay + internal manual confirmation
 - Health/readiness endpoints
 - Docker, systemd, and Ubuntu install assets
 
@@ -139,6 +152,16 @@ Admin panel now includes management screens for:
 - invoices and payment status
 - BNG / OLT / NOC network status
 - device Wi-Fi / WAN / LAN management visibility
+
+## Current architecture
+
+- `src/integrations/internalSubscriberPlatform.js` handles internal customer and service records
+- `src/integrations/internalBillingEngine.js` handles invoice generation and billing cycle runs
+- `src/integrations/radiusServiceManager.js` handles PPPoE subscriber create/suspend/resume
+- `src/integrations/genieacsClient.js` handles ONT read/write and provisioning push
+- `src/integrations/razorpayClient.js` handles customer billing orders, verification, and webhooks
+
+Legacy JAZE compatibility files may still exist in the repository for migration support, but primary runtime flows now use the internal platform, Radius, GenieACS, and Razorpay stack.
 
 If backend data is not seeded yet, use the `Load Demo Data` button inside the UI for a visual preview.
 
@@ -391,7 +414,7 @@ export LIVE_CUSTOMER_NAME="Amit Singh"
 export LIVE_CUSTOMER_ADDRESS="Gomti Nagar, Lucknow"
 export LIVE_CUSTOMER_PIN="226010"
 export LIVE_PLAN_CODE="PLAN-100"
-export LIVE_JAZE_USER_ID="1001"
+export LIVE_PAYMENT_MODE="cash"
 export LIVE_INSTALLER_LOGIN="9000000001"
 export LIVE_INSTALLER_PASSWORD="Installer123!"
 export LIVE_NOKIA_SERIAL="ALCLB3DCCB87"
@@ -407,7 +430,7 @@ export LIVE_CUSTOMER_NAME="Amit Singh"
 export LIVE_CUSTOMER_ADDRESS="Gomti Nagar, Lucknow"
 export LIVE_CUSTOMER_PIN="226010"
 export LIVE_PLAN_CODE="PLAN-100"
-export LIVE_JAZE_USER_ID="1001"
+export LIVE_PAYMENT_MODE="cash"
 export LIVE_INSTALLER_LOGIN="9000000001"
 export LIVE_INSTALLER_PASSWORD="Installer123!"
 export LIVE_ONT_LABEL="DASAN"
@@ -431,7 +454,7 @@ Live external integrations check (read-only):
 # in .env -> MOCK_EXTERNALS=false
 
 # optional test IDs
-export TEST_JAZE_CUSTOMER_ID=CUST-1001
+export TEST_CUSTOMER_ID=CUST-1001
 export TEST_GENIE_DEVICE_ID=ONT-1001
 
 npm run test:externals

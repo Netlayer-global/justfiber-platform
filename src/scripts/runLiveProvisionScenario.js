@@ -84,17 +84,21 @@ export default async function runLiveProvisionScenario() {
   const address = requireEnv("LIVE_CUSTOMER_ADDRESS");
   const pinCode = requireEnv("LIVE_CUSTOMER_PIN");
   const planCode = requireEnv("LIVE_PLAN_CODE");
-  const jazeUserId = requireEnv("LIVE_JAZE_USER_ID");
   const installerLogin = requireEnv("LIVE_INSTALLER_LOGIN");
   const installerPassword = requireEnv("LIVE_INSTALLER_PASSWORD");
   const serialNumber = getLiveSerial() || requireEnv("LIVE_ONT_SERIAL");
   const deviceId = getLiveDeviceId();
   const ontLabel = getOntLabel();
+  const paymentMode = String(process.env.LIVE_PAYMENT_MODE || "cash").toLowerCase();
   const lat = Number(process.env.LIVE_LAT || "26.8467");
   const lng = Number(process.env.LIVE_LNG || "80.9462");
   const rxPower = Number(process.env.LIVE_RX_POWER || "-19.5");
   const txPower = Number(process.env.LIVE_TX_POWER || "1.2");
   const runActivation = String(process.env.LIVE_RUN_ACTIVATION || "false").toLowerCase() === "true";
+
+  if (!["cash", "razorpay"].includes(paymentMode)) {
+    throw new Error(`Unsupported LIVE_PAYMENT_MODE: ${paymentMode}. Use cash or razorpay.`);
+  }
 
   const sendOtp = await requestJson({
     method: "POST",
@@ -122,33 +126,28 @@ export default async function runLiveProvisionScenario() {
       pinCode,
       lat,
       lng,
-      paymentMode: "jaze",
-      jazeUserId
+      paymentMode
     }
   });
   const bookingNumber = booking.data.bookingNumber;
   logStep("Booking created", bookingNumber);
 
-  await requestJson({
-    method: "POST",
-    path: `/api/v1/customer/bookings/${bookingNumber}/payment/link-jaze`,
-    token: customerToken,
-    body: { jazeUserId }
-  });
-  logStep("Booking payment link generated", bookingNumber);
-
-  await requestJson({
-    method: "POST",
-    path: `/api/v1/customer/bookings/${bookingNumber}/payment/confirm`,
-    token: customerToken,
-    body: {
-      status: "paid",
-      paymentId: `LIVE-JAZE-${Date.now()}`,
-      reference: `LIVE-JAZE-REF-${Date.now()}`,
-      notes: `Live ${ontLabel} activation flow`
-    }
-  });
-  logStep("Booking payment confirmed", bookingNumber);
+  if (paymentMode === "cash") {
+    logStep("Booking payment confirmed", `${bookingNumber} / cash`);
+  } else {
+    await requestJson({
+      method: "POST",
+      path: `/api/v1/customer/bookings/${bookingNumber}/payment/confirm`,
+      token: customerToken,
+      body: {
+        status: "paid",
+        paymentId: `LIVE-PAY-${Date.now()}`,
+        reference: `LIVE-PAY-REF-${Date.now()}`,
+        notes: `Live ${ontLabel} activation flow`
+      }
+    });
+    logStep("Booking payment confirmed", bookingNumber);
+  }
 
   const assignment = await waitForInstallerAssignment({
     bookingNumber,
@@ -232,6 +231,7 @@ export default async function runLiveProvisionScenario() {
   console.log(`\nLive ${ontLabel} scenario summary:`);
   console.log(`- bookingNumber: ${bookingNumber}`);
   console.log(`- installerJobId: ${jobId}`);
+  console.log(`- paymentMode: ${paymentMode}`);
   console.log(`- serialNumber: ${serialNumber}`);
   if (deviceId) {
     console.log(`- deviceId: ${deviceId}`);

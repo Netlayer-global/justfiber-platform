@@ -13,7 +13,6 @@ import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
-import { jazeClient } from "../../integrations/jazeClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
@@ -220,6 +219,24 @@ adminOpsRouter.get(
 );
 
 adminOpsRouter.post(
+  "/customers/:customerId/billing/payment/link",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    return ok(res, {
+      customerId: customer.customerId,
+      provider: "manual_admin",
+      amount: customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0,
+      paymentUrl: null,
+      nextAction: "Use /customers/:customerId/billing/payment/confirm to post a manual or externally collected payment."
+    });
+  })
+);
+
+adminOpsRouter.post(
   "/customers/:customerId/billing/payment/link-jaze",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
@@ -227,23 +244,13 @@ adminOpsRouter.post(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
-    const jazeUserId = String(req.body?.jazeUserId || customer.customerId);
-    const gatewayPayload = await jazeClient.getPaymentLink({ userId: jazeUserId });
-    const rawUrl =
-      gatewayPayload?.paymentUrl ||
-      gatewayPayload?.paymentLink ||
-      gatewayPayload?.payment_link ||
-      gatewayPayload?.url ||
-      gatewayPayload?.redirectUrl ||
-      gatewayPayload?.data?.paymentUrl ||
-      gatewayPayload?.data?.payment_link;
-    const paymentUrl = rawUrl ? (/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${String(rawUrl).replace(/^\/+/, "")}`) : null;
     return ok(res, {
       customerId: customer.customerId,
-      userId: jazeUserId,
+      provider: "manual_admin",
       amount: customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0,
-      paymentUrl,
-      raw: gatewayPayload
+      paymentUrl: null,
+      nextAction: "Use /customers/:customerId/billing/payment/confirm to post a manual or externally collected payment.",
+      deprecatedRoute: true
     });
   })
 );
@@ -257,7 +264,7 @@ adminOpsRouter.post(
       throw new ApiError(404, "Customer not found");
     }
 
-    const transactionId = req.body?.paymentId || `JAZE-ADMIN-BILL-${customer.customerId}-${Date.now()}`;
+    const transactionId = req.body?.paymentId || `BILL-ADMIN-${customer.customerId}-${Date.now()}`;
     const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
     let createdLedgerEntry = null;
     if (!existingPayment) {
@@ -265,15 +272,16 @@ adminOpsRouter.post(
         transactionId,
         customerId: customer.customerId,
         serviceId: customer.serviceId,
-        provider: "jaze",
+        provider: "internal_platform",
         amount: Number(req.body?.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0),
         status: "success",
         paidAt: new Date(),
-        method: "onlinePayment",
+        method: req.body?.method || "manualCollection",
         reference: req.body?.reference || req.body?.paymentId,
         metadata: {
           source: "admin_billing_confirm",
-          actorAdminId: req.admin?._id?.toString()
+          actorAdminId: req.admin?._id?.toString(),
+          collectionMode: req.body?.collectionMode || "admin_confirmed"
         }
       });
       createdLedgerEntry = await createLedgerEntry({

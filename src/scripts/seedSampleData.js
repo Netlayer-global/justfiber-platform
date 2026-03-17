@@ -288,24 +288,24 @@ const payments = [
     customerId: "CUST-1001",
     serviceId: "SVC-1001",
     invoiceId: "INV-1001",
-    provider: "jaze",
+    provider: "internal_platform",
     amount: 799,
     status: "success",
     paidAt: new Date("2026-03-05T09:00:00.000Z"),
     method: "upi",
-    reference: "JZP-443210"
+    reference: "INT-443210"
   },
   {
     transactionId: "PAY-1003",
     customerId: "CUST-1003",
     serviceId: "SVC-1003",
     invoiceId: "INV-1003",
-    provider: "jaze",
+    provider: "internal_platform",
     amount: 1499,
     status: "success",
     paidAt: new Date("2026-03-07T17:15:00.000Z"),
     method: "card",
-    reference: "JZP-443399"
+    reference: "INT-443399"
   }
 ];
 

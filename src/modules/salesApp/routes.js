@@ -243,6 +243,15 @@ salesAppRouter.get(
 );
 
 salesAppRouter.post(
+  "/bookings/:bookingId/payment/link",
+  requireSalesAuth,
+  asyncHandler(async (req, res) => {
+    salesBookingPaymentLinkSchema.parse(req.body || {});
+    throw new ApiError(410, "Direct sales booking payment link creation is disabled. Use internal billing flow.");
+  })
+);
+
+salesAppRouter.post(
   "/bookings/:bookingId/payment/link-jaze",
   requireSalesAuth,
   asyncHandler(async (req, res) => {
