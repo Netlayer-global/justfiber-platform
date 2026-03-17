@@ -32,20 +32,50 @@ class AppState extends ChangeNotifier {
     ssid5: 'JustFiber',
     passwordMask: '********',
     paused: false,
+    guestEnabled: false,
+    guestSsid: 'JustFiber-Guest',
+    connectedDevicesCount: 0,
   );
   BillingData billing = const BillingData(
     currentPlan: 'JustFiber 100',
     dueAmount: 0,
     nextBillDate: '05/05/2029',
     lastPaymentAmount: 1000,
+    billCycle: 'Monthly',
+    generatedDate: '',
+    paymentStatus: 'paid',
   );
   List<RequestItem> requests = const [];
   List<NotificationItem> notifications = const [];
   List<FaqItem> faqs = const [];
   List<AddonItem> addons = const [];
-  List<String> connectedDevices = const [];
+  List<ConnectedDevice> connectedDevices = const [];
+  List<PlanItem> plans = const [];
+  BookingQuote? latestBooking;
+  BookingTrackingData? bookingTracking;
+  FeasibilityResult? feasibility;
+  BillingPaymentOrder? billingPaymentOrder;
+  SpeedTestData speedTest = const SpeedTestData(
+    downloadMbps: 0,
+    uploadMbps: 0,
+    latencyMs: 0,
+    packetLossPercent: 0,
+    status: 'idle',
+  );
+  NetworkQualityData networkQuality = const NetworkQualityData(
+    latencyMs: 0,
+    packetLossPercent: 0,
+    jitterMs: 0,
+    opticalRxPower: 0,
+    quality: 'unknown',
+  );
+  List<ParentalRule> parentalRules = const [];
+  List<PlanItem> planChangeOptions = const [];
+  bool bookingBusy = false;
+  String? bookingError;
 
   AppState() {
+    loadPlans();
     restoreSession();
   }
 
@@ -53,13 +83,10 @@ class AppState extends ChangeNotifier {
     busy = true;
     error = null;
     notifyListeners();
-    debugPrint('requestOtp: mobile=$mobile');
     try {
       demoOtp = await api.sendOtp(mobile);
-      debugPrint('requestOtp: success demoOtp=$demoOtp');
     } catch (e) {
       error = e.toString();
-      debugPrint('requestOtp: error=$error');
     } finally {
       busy = false;
       notifyListeners();
@@ -70,10 +97,8 @@ class AppState extends ChangeNotifier {
     busy = true;
     error = null;
     notifyListeners();
-    debugPrint('verifyOtp: mobile=$mobile otpLength=${otp.length}');
     try {
       session = await api.verifyOtp(mobile, otp);
-      debugPrint('verifyOtp: success accessTokenLength=${session?.accessToken.length ?? 0}');
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_mobileKey, session!.mobile);
       await prefs.setString(_accessTokenKey, session!.accessToken);
@@ -82,7 +107,6 @@ class AppState extends ChangeNotifier {
       return true;
     } catch (e) {
       error = e.toString();
-      debugPrint('verifyOtp: error=$error');
       return false;
     } finally {
       busy = false;
@@ -96,7 +120,6 @@ class AppState extends ChangeNotifier {
     busy = true;
     error = null;
     notifyListeners();
-    debugPrint('refresh: start');
     try {
       dashboard = await api.fetchDashboard(current);
       wifi = await api.fetchWifi(current);
@@ -106,12 +129,58 @@ class AppState extends ChangeNotifier {
       faqs = await api.fetchFaqs();
       addons = await api.fetchAddons(current);
       connectedDevices = await api.fetchConnectedDevices(current);
-      debugPrint('refresh: success');
+      parentalRules = await api.fetchParentalRules(current);
+      speedTest = await api.fetchSpeedTest(current);
+      networkQuality = await api.fetchNetworkQuality(current);
+      planChangeOptions = await api.fetchPlanChangeOptions(current);
     } catch (e) {
       error = e.toString();
-      debugPrint('refresh: error=$error');
     } finally {
       busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadPlans() async {
+    try {
+      plans = await api.fetchPlans();
+      notifyListeners();
+    } catch (_) {
+      // Keep the app usable even if plans are temporarily unavailable.
+    }
+  }
+
+  Future<bool> createBooking({
+    required String planCode,
+    required String fullName,
+    required String address,
+    required String pinCode,
+  }) async {
+    final current = session;
+    if (current == null) {
+      bookingError = 'Login required before booking.';
+      notifyListeners();
+      return false;
+    }
+    bookingBusy = true;
+    bookingError = null;
+    notifyListeners();
+    try {
+      latestBooking = await api.createBooking(
+        current,
+        planCode: planCode,
+        fullName: fullName,
+        mobile: current.mobile,
+        address: address,
+        pinCode: pinCode,
+      );
+      bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
+      return true;
+    } catch (e) {
+      bookingError = e.toString();
+      return false;
+    } finally {
+      bookingBusy = false;
       notifyListeners();
     }
   }
@@ -123,10 +192,293 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.updateWifi(current, password);
+      await api.updateWifi(current, password: password, ssid24: wifi.ssid24, ssid5: wifi.ssid5);
       await refresh();
     } catch (e) {
       error = e.toString();
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> changeWifiPasswordAndRefresh({
+    required String password,
+    required String ssid24,
+    required String ssid5,
+  }) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.updateWifi(current, password: password, ssid24: ssid24, ssid5: ssid5);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> checkFeasibility({
+    required String address,
+    required String pinCode,
+  }) async {
+    bookingBusy = true;
+    bookingError = null;
+    notifyListeners();
+    try {
+      feasibility = await api.checkFeasibility(address: address, pinCode: pinCode);
+      return feasibility!.feasible;
+    } catch (e) {
+      bookingError = e.toString();
+      return false;
+    } finally {
+      bookingBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshBookingTracking() async {
+    final current = session;
+    final bookingNumber = latestBooking?.bookingNumber;
+    if (current == null || bookingNumber == null || bookingNumber.isEmpty) return;
+    try {
+      bookingTracking = await api.fetchBookingTracking(current, bookingNumber);
+      notifyListeners();
+    } catch (_) {
+      // keep current state
+    }
+  }
+
+  Future<bool> verifyBillPayment({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+    required double amount,
+  }) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.verifyBillingPayment(
+        current,
+        orderId: orderId,
+        paymentId: paymentId,
+        signature: signature,
+        amount: amount,
+      );
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<BillingPaymentOrder?> loadBillingPaymentOrder() async {
+    final current = session;
+    if (current == null) return null;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      billingPaymentOrder = await api.createBillingPaymentOrder(current);
+      return billingPaymentOrder;
+    } catch (e) {
+      error = e.toString();
+      return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> toggleWifiPause(bool paused) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.pauseWifi(current, paused);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> rebootRouter() async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.rebootDevice(current);
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateGuestWifi({
+    required bool enabled,
+    required String ssid,
+    required String password,
+  }) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.setGuestWifi(current, enabled: enabled, ssid: ssid, password: password);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> addParentalControl({
+    required String targetName,
+    required String startTime,
+    required String endTime,
+  }) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.addParentalRule(current, targetName: targetName, startTime: startTime, endTime: endTime);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> setDeviceBlocked(String clientId, bool blocked) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.setDeviceBlocked(current, clientId: clientId, blocked: blocked);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> raiseComplaint({
+    required String category,
+    required String subject,
+    required String description,
+  }) async {
+    final current = session;
+    if (current == null) return null;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      final ticketNumber = await api.createSupportTicket(
+        current,
+        category: category,
+        subject: subject,
+        description: description,
+      );
+      return ticketNumber;
+    } catch (e) {
+      error = e.toString();
+      return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> submitServiceRequest({
+    required String type,
+    required String note,
+  }) async {
+    final current = session;
+    if (current == null) return null;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      final requestNumber = await api.createServiceRequest(
+        current,
+        type: type,
+        note: note,
+      );
+      await refresh();
+      return requestNumber;
+    } catch (e) {
+      error = e.toString();
+      return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> requestPlanChange({
+    required String planCode,
+    required String effectiveMode,
+  }) async {
+    final current = session;
+    if (current == null) return null;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      final requestNumber = await api.submitPlanChangeRequest(
+        current,
+        planCode: planCode,
+        effectiveMode: effectiveMode,
+      );
+      await refresh();
+      return requestNumber;
+    } catch (e) {
+      error = e.toString();
+      return null;
     } finally {
       busy = false;
       notifyListeners();
@@ -142,6 +494,11 @@ class AppState extends ChangeNotifier {
     session = null;
     demoOtp = null;
     error = null;
+    latestBooking = null;
+    bookingTracking = null;
+    feasibility = null;
+    billingPaymentOrder = null;
+    bookingError = null;
     notifyListeners();
   }
 
