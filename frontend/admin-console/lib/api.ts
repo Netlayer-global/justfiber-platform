@@ -234,4 +234,24 @@ export const adminAPI = {
     apiGet(`/api/v1/admin/configs/settings/${section}`),
   updateSettings: (section: string, data: any) =>
     apiPut(`/api/v1/admin/configs/settings/${section}`, data),
+
+  // Serviceability & Feasibility
+  getServiceabilityZones: (page = 1, limit = 20) =>
+    apiGet(`/api/v1/admin/serviceability/zones?page=${page}&limit=${limit}`),
+  getServiceabilityZone: (zoneId: string) =>
+    apiGet(`/api/v1/admin/serviceability/zones/${zoneId}`),
+  createServiceabilityZone: (data: any) =>
+    apiPost('/api/v1/admin/serviceability/zones', data),
+  updateServiceabilityZone: (zoneId: string, data: any) =>
+    apiPut(`/api/v1/admin/serviceability/zones/${zoneId}`, data),
+  deleteServiceabilityZone: (zoneId: string) =>
+    apiDelete(`/api/v1/admin/serviceability/zones/${zoneId}`),
+  checkFeasibility: (data: any) =>
+    apiPost('/api/v1/admin/serviceability/check-feasibility', data),
+  getExpansionInterestLeads: (page = 1, limit = 20) =>
+    apiGet(`/api/v1/admin/serviceability/expansion-leads?page=${page}&limit=${limit}`),
+  createExpansionLead: (data: any) =>
+    apiPost('/api/v1/admin/serviceability/expansion-leads', data),
+  updateExpansionLead: (leadId: string, data: any) =>
+    apiPatch(`/api/v1/admin/serviceability/expansion-leads/${leadId}`, data),
 }

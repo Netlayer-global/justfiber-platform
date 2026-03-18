@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '@/components/table/DataTable'
 import { DetailDrawer } from '@/components/drawer/DetailDrawer'
@@ -102,16 +103,13 @@ export default function CustomersPage() {
       header: 'Actions',
       cell: (info) => (
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setSelectedCustomer(info.row.original)
-              setShowDetailDrawer(true)
-            }}
+          <Link
+            href={`/customers/${info.row.original.id}`}
             className="p-2 hover:bg-muted rounded transition-colors"
             aria-label="View details"
           >
             <Eye className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-          </button>
+          </Link>
           <div className="relative group">
             <button className="p-2 hover:bg-muted rounded transition-colors">
               <MoreVertical className="w-4 h-4 text-muted-foreground" />

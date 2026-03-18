@@ -4,20 +4,13 @@ import { useEffect, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '@/components/table/DataTable'
 import { DetailDrawer } from '@/components/drawer/DetailDrawer'
-import { apiGet, apiPatch, apiPost } from '@/lib/api'
+import { adminAPI } from '@/lib/api'
+import { Device } from '@/lib/types'
 import { toast } from 'sonner'
 import { formatDate, getStatusColor } from '@/lib/utils'
-import { Search, Eye, MoreVertical, Power } from 'lucide-react'
-
-interface Device {
-  id: string
-  customerId: string
-  serialNumber: string
-  model: string
-  status: string
-  wifiSsid: string
-  lastSeen: string
-}
+import { Search, Eye, MoreVertical, Power, Wifi, Zap } from 'lucide-react'
+import { WifiConfigForm } from './components/WifiConfigForm'
+import { PPPoEConfigForm } from './components/PPPoEConfigForm'
 
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
@@ -25,6 +18,9 @@ export default function DevicesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
   const [showDetailDrawer, setShowDetailDrawer] = useState(false)
+  const [showWifiForm, setShowWifiForm] = useState(false)
+  const [showPPPoEForm, setShowPPPoEForm] = useState(false)
+  const [isActionLoading, setIsActionLoading] = useState(false)
 
   useEffect(() => {
     loadDevices()
@@ -33,9 +29,7 @@ export default function DevicesPage() {
   async function loadDevices() {
     setIsLoading(true)
     try {
-      const params = searchQuery ? { search: searchQuery } : {}
-      const response = await apiGet('/api/v1/admin/devices', { params })
-
+      const response = await adminAPI.getDevices(1, 50, searchQuery)
       if (response.data.success) {
         setDevices(response.data.data || [])
       }
@@ -48,8 +42,9 @@ export default function DevicesPage() {
   }
 
   async function handleReboot(deviceId: string) {
+    setIsActionLoading(true)
     try {
-      const response = await apiPost(`/api/v1/admin/devices/${deviceId}/reboot`, {})
+      const response = await adminAPI.rebootDevice(deviceId)
       if (response.data.success) {
         toast.success('Reboot command sent')
         loadDevices()
@@ -57,6 +52,42 @@ export default function DevicesPage() {
     } catch (error) {
       toast.error('Failed to send reboot command')
       console.error(error)
+    } finally {
+      setIsActionLoading(false)
+    }
+  }
+
+  async function handleWifiConfig(data: any) {
+    setIsActionLoading(true)
+    try {
+      const response = await adminAPI.configureDeviceWifi(data.deviceId, data)
+      if (response.data.success) {
+        toast.success('WiFi configuration saved')
+        loadDevices()
+        setShowWifiForm(false)
+      }
+    } catch (error) {
+      toast.error('Failed to save WiFi configuration')
+      console.error(error)
+    } finally {
+      setIsActionLoading(false)
+    }
+  }
+
+  async function handlePPPoEConfig(data: any) {
+    setIsActionLoading(true)
+    try {
+      const response = await adminAPI.configureDevicePPPoE(data.deviceId, data)
+      if (response.data.success) {
+        toast.success('PPPoE configuration saved')
+        loadDevices()
+        setShowPPPoEForm(false)
+      }
+    } catch (error) {
+      toast.error('Failed to save PPPoE configuration')
+      console.error(error)
+    } finally {
+      setIsActionLoading(false)
     }
   }
 
@@ -192,15 +223,60 @@ export default function DevicesPage() {
             <div className="space-y-2 border-t border-border pt-6">
               <button
                 onClick={() => handleReboot(selectedDevice.id)}
-                className="w-full btn-secondary text-sm"
+                disabled={isActionLoading}
+                className="w-full px-4 py-2 rounded-lg bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 border border-yellow-600/30 text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
               >
+                <Power className="w-4 h-4" />
                 Reboot Device
               </button>
-              <button className="w-full btn-ghost text-sm">Configure WiFi</button>
-              <button className="w-full btn-ghost text-sm">Configure PPPoE</button>
+              <button
+                onClick={() => setShowWifiForm(true)}
+                disabled={isActionLoading}
+                className="w-full px-4 py-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-600/30 text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Wifi className="w-4 h-4" />
+                Configure WiFi
+              </button>
+              <button
+                onClick={() => setShowPPPoEForm(true)}
+                disabled={isActionLoading}
+                className="w-full px-4 py-2 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 border border-purple-600/30 text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                Configure PPPoE
+              </button>
             </div>
           </div>
         </DetailDrawer>
+      )}
+
+      {/* WiFi Config Form */}
+      {selectedDevice && (
+        <WifiConfigForm
+          deviceId={selectedDevice.id}
+          isOpen={showWifiForm}
+          onClose={() => setShowWifiForm(false)}
+          onSave={handleWifiConfig}
+          isLoading={isActionLoading}
+          initialData={{
+            ssid24: selectedDevice.wifiSSID24,
+            ssid5: selectedDevice.wifiSSID5,
+          }}
+        />
+      )}
+
+      {/* PPPoE Config Form */}
+      {selectedDevice && (
+        <PPPoEConfigForm
+          deviceId={selectedDevice.id}
+          isOpen={showPPPoEForm}
+          onClose={() => setShowPPPoEForm(false)}
+          onSave={handlePPPoEConfig}
+          isLoading={isActionLoading}
+          initialData={{
+            username: selectedDevice.pppoeUsername,
+          }}
+        />
       )}
     </div>
   )

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Users, TrendingUp, DollarSign, Wifi } from 'lucide-react'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { ChartCard } from '@/components/dashboard/ChartCard'
-import { apiGet } from '@/lib/api'
+import { adminAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import {
   LineChart,
@@ -34,9 +34,9 @@ export default function DashboardPage() {
     setIsLoading(true)
     try {
       const [executiveRes, networkRes, billingRes] = await Promise.all([
-        apiGet('/api/v1/admin/dashboard/executive'),
-        apiGet('/api/v1/admin/dashboard/network'),
-        apiGet('/api/v1/admin/dashboard/billing'),
+        adminAPI.getDashboardExecutive(),
+        adminAPI.getDashboardNetwork(),
+        adminAPI.getDashboardBilling(),
       ])
 
       if (executiveRes.data.success) {

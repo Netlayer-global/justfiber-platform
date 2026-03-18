@@ -21,6 +21,7 @@ import {
   Menu,
   Shield,
   Tv,
+  Map,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -91,6 +92,11 @@ const navItems: NavItem[] = [
     label: 'Reports & Automation',
     href: '/reports',
     icon: <BarChart3 className="w-5 h-5" />,
+  },
+  {
+    label: 'Serviceability Map',
+    href: '/serviceability',
+    icon: <Map className="w-5 h-5" />,
   },
   {
     label: 'KYC Verification',

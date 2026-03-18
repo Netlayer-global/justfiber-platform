@@ -314,3 +314,67 @@ export interface OTTSubscription {
   expiryDate?: string
   createdAt: string
 }
+
+// Serviceability & Feasibility types
+export type AreaType = 'active_service' | 'planned_expansion' | 'blocked' | 'franchise'
+export type TechnologyType = 'fiber' | 'wireless' | 'other'
+export type AreaStatus = 'active' | 'planned' | 'blocked'
+
+export interface GeoCoordinates {
+  latitude: number
+  longitude: number
+}
+
+export interface ServiceabilityZone {
+  zoneId: string
+  zoneName: string
+  areaType: AreaType
+  city: string
+  state: string
+  pinCodes: string[]
+  subZone?: string
+  franchiseCode?: string
+  technologyType: TechnologyType
+  status: AreaStatus
+  polygon: GeoCoordinates[] // Array of lat/lng points
+  priority: number
+  notes?: string
+  createdBy: string
+  updatedBy: string
+  createdAt: string
+  updatedAt: string
+  color?: string // Hex color for UI
+}
+
+export interface FeasibilityCheckRequest {
+  latitude?: number
+  longitude?: number
+  pinCode?: string
+  address?: string
+}
+
+export interface FeasibilityCheckResponse {
+  isServiceable: boolean
+  zone?: ServiceabilityZone
+  message: string
+  bookingEligible: boolean
+  alternateZones?: ServiceabilityZone[]
+  expansionInterest?: boolean
+}
+
+export interface ExpansionInterestLead {
+  leadId: string
+  customerName: string
+  email: string
+  phone: string
+  address: string
+  pinCode: string
+  city: string
+  latitude: number
+  longitude: number
+  preferredTechnology: TechnologyType
+  priority: 'low' | 'medium' | 'high'
+  status: 'new' | 'contacted' | 'interested' | 'qualified' | 'closed'
+  createdAt: string
+  notes?: string
+}
