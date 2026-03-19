@@ -1,65 +1,100 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createColumnHelper } from '@tanstack/react-table'
 import { motion } from 'framer-motion'
-import { DataTable } from '@/components/table/DataTable'
-import { ServiceabilityMap } from '@/components/serviceability/ServiceabilityMap'
-import { ActionModal } from '@/components/modal/ActionModal'
-import { DetailDrawer } from '@/components/drawer/DetailDrawer'
+import { Map, Plus, Layers, Search, Filter, Eye, Trash2, Edit2, Download, AlertCircle, CheckCircle2, Zap } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
-import { ServiceabilityZone, ExpansionInterestLead, AreaType, TechnologyType } from '@/lib/types'
 import { toast } from 'sonner'
-import { formatDate, getStatusColor } from '@/lib/utils'
-import { Plus, MapPin, Users, Eye } from 'lucide-react'
+import ServiceabilityMap from './components/ServiceabilityMap'
+import ZonesList from './components/ZonesList'
+import LeadsPanel from './components/LeadsPanel'
+import ZoneForm from './components/ZoneForm'
 
-type Tab = 'zones' | 'leads'
+type Tab = 'map' | 'zones' | 'leads'
+type AreaType = 'active_service' | 'planned_expansion' | 'blocked' | 'franchise'
+
+const AREA_TYPE_CONFIG: Record<AreaType, { label: string; color: string; bgColor: string }> = {
+  active_service: { label: 'Active Service', color: '#00cc99', bgColor: 'bg-green-500/20' },
+  planned_expansion: { label: 'Planned Expansion', color: '#ffaa00', bgColor: 'bg-yellow-500/20' },
+  blocked: { label: 'Blocked/Restricted', color: '#ff5555', bgColor: 'bg-red-500/20' },
+  franchise: { label: 'Franchise Zone', color: '#6699ff', bgColor: 'bg-blue-500/20' },
+}
 
 export default function ServiceabilityPage() {
-  const [tab, setTab] = useState<Tab>('zones')
-  const [zones, setZones] = useState<ServiceabilityZone[]>([])
-  const [leads, setLeads] = useState<ExpansionInterestLead[]>([])
+  const [tab, setTab] = useState<Tab>('map')
+  const [zones, setZones] = useState<any[]>([])
+  const [leads, setLeads] = useState<any[]>([])
+  const [selectedZone, setSelectedZone] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedZone, setSelectedZone] = useState<ServiceabilityZone | null>(null)
-  const [selectedLead, setSelectedLead] = useState<ExpansionInterestLead | null>(null)
-  const [showDetailDrawer, setShowDetailDrawer] = useState(false)
-  const [showLeadDrawer, setShowLeadDrawer] = useState(false)
-  const [actionModal, setActionModal] = useState({ isOpen: false, type: '', resourceId: '' })
+  const [showZoneForm, setShowZoneForm] = useState(false)
+  const [editingZone, setEditingZone] = useState<any>(null)
+  const [filterAreaType, setFilterAreaType] = useState<AreaType | 'all'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     loadData()
-  }, [tab])
+    const interval = setInterval(loadData, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   async function loadData() {
     setIsLoading(true)
     try {
-      if (tab === 'zones') {
-        const response = await adminAPI.getServiceabilityZones(1, 100)
-        if (response.data.success) {
-          setZones(response.data.data || [])
-        }
-      } else {
-        const response = await adminAPI.getExpansionInterestLeads(1, 100)
-        if (response.data.success) {
-          setLeads(response.data.data || [])
-        }
+      const [zonesRes, leadsRes] = await Promise.all([
+        adminAPI.getServiceabilityZones(1, 100),
+        adminAPI.getExpansionInterestLeads(1, 50),
+      ])
+
+      if (zonesRes.data.success) {
+        setZones(zonesRes.data.data || [])
+      }
+      if (leadsRes.data.success) {
+        setLeads(leadsRes.data.data || [])
       }
     } catch (error) {
-      toast.error('Failed to load data')
+      toast.error('Failed to load serviceability data')
       console.error(error)
     } finally {
       setIsLoading(false)
     }
   }
 
+  async function handleCreateZone(zoneData: any) {
+    try {
+      const response = await adminAPI.createServiceabilityZone(zoneData)
+      if (response.data.success) {
+        toast.success('Zone created successfully')
+        loadData()
+        setShowZoneForm(false)
+      }
+    } catch (error) {
+      toast.error('Failed to create zone')
+      console.error(error)
+    }
+  }
+
+  async function handleUpdateZone(zoneData: any) {
+    if (!editingZone) return
+    try {
+      const response = await adminAPI.updateServiceabilityZone(editingZone.id, zoneData)
+      if (response.data.success) {
+        toast.success('Zone updated successfully')
+        loadData()
+        setEditingZone(null)
+      }
+    } catch (error) {
+      toast.error('Failed to update zone')
+      console.error(error)
+    }
+  }
+
   async function handleDeleteZone(zoneId: string) {
+    if (!confirm('Delete this serviceability zone? This action cannot be undone.')) return
     try {
       const response = await adminAPI.deleteServiceabilityZone(zoneId)
       if (response.data.success) {
-        toast.success('Zone deleted successfully')
+        toast.success('Zone deleted')
         loadData()
-        setShowDetailDrawer(false)
-        setSelectedZone(null)
       }
     } catch (error) {
       toast.error('Failed to delete zone')
@@ -67,332 +102,299 @@ export default function ServiceabilityPage() {
     }
   }
 
-  async function handleUpdateLead(leadId: string, status: string) {
-    try {
-      const response = await adminAPI.updateExpansionLead(leadId, { status })
-      if (response.data.success) {
-        toast.success('Lead updated')
-        loadData()
-      }
-    } catch (error) {
-      toast.error('Failed to update lead')
-      console.error(error)
-    }
-  }
+  const filteredZones = zones.filter((zone) => {
+    const matchesType = filterAreaType === 'all' || zone.areaType === filterAreaType
+    const matchesSearch =
+      zone.zoneName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      zone.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      zone.pinCodes?.some((pc: string) => pc.includes(searchQuery))
+    return matchesType && matchesSearch
+  })
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-balance">Serviceability & Feasibility</h1>
-          <p className="text-muted-foreground mt-1">Manage service coverage areas and expansion leads</p>
-        </div>
-        <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Zone
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-border">
-        <button
-          onClick={() => setTab('zones')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            tab === 'zones'
-              ? 'text-primary border-b-2 border-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            Coverage Zones
-          </div>
-        </button>
-        <button
-          onClick={() => setTab('leads')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            tab === 'leads'
-              ? 'text-primary border-b-2 border-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Expansion Leads
-          </div>
-        </button>
-      </div>
-
-      {/* Content */}
-      {tab === 'zones' ? (
-        <ZonesTab
-          zones={zones}
-          isLoading={isLoading}
-          selectedZone={selectedZone}
-          onZoneSelect={(zone) => {
-            setSelectedZone(zone)
-            setShowDetailDrawer(true)
-          }}
-          onZoneDelete={handleDeleteZone}
-        />
-      ) : (
-        <LeadsTab
-          leads={leads}
-          isLoading={isLoading}
-          selectedLead={selectedLead}
-          onLeadSelect={(lead) => {
-            setSelectedLead(lead)
-            setShowLeadDrawer(true)
-          }}
-          onStatusChange={handleUpdateLead}
-        />
-      )}
-
-      {/* Zone Details Drawer */}
-      {showDetailDrawer && selectedZone && (
-        <DetailDrawer
-          isOpen={showDetailDrawer}
-          onClose={() => setShowDetailDrawer(false)}
-          title={selectedZone.zoneName}
-          subtitle={`${selectedZone.city}, ${selectedZone.state}`}
-        >
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Type</p>
-                <p className="font-semibold capitalize">{selectedZone.areaType.replace('_', ' ')}</p>
+    <div className="h-screen flex flex-col bg-background text-foreground">
+      {/* Professional Header - UISP Style */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="tech-header border-b border-border bg-gradient-to-r from-card via-card to-background sticky top-0 z-40 shadow-sm"
+      >
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded bg-primary/10 border border-primary/20">
+                <Map className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Technology</p>
-                <p className="font-semibold capitalize">{selectedZone.technologyType}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Status</p>
-                <p className={`font-semibold capitalize px-2 py-1 rounded text-xs w-fit ${getStatusColor(selectedZone.status)}`}>
-                  {selectedZone.status}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Priority</p>
-                <p className="font-semibold">{selectedZone.priority}</p>
+                <h1 className="text-2xl font-bold text-foreground">Serviceability Map</h1>
+                <p className="text-xs text-muted-foreground">Coverage zones, feasibility checks & expansion tracking</p>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <button className="p-2 rounded hover:bg-muted/50 transition-colors" title="Export data">
+                <Download className="w-5 h-5 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => {
+                  setEditingZone(null)
+                  setShowZoneForm(true)
+                }}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                New Zone
+              </button>
+            </div>
+          </div>
 
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Pin Codes</p>
-              <div className="flex flex-wrap gap-1">
-                {selectedZone.pinCodes.slice(0, 10).map(pin => (
-                  <span key={pin} className="px-2 py-1 rounded bg-foreground/10 text-xs">
-                    {pin}
-                  </span>
-                ))}
-                {selectedZone.pinCodes.length > 10 && (
-                  <span className="px-2 py-1 rounded bg-foreground/10 text-xs">
-                    +{selectedZone.pinCodes.length - 10}
+          {/* Navigation Tabs */}
+          <div className="flex gap-1 border-b border-border/50">
+            {[
+              { id: 'map', label: 'Map View', icon: Map, badge: null },
+              { id: 'zones', label: 'All Zones', icon: Layers, badge: filteredZones.length },
+              { id: 'leads', label: 'Expansion Leads', icon: AlertCircle, badge: leads.length },
+            ].map(({ id, label, icon: Icon, badge }) => (
+              <button
+                key={id}
+                onClick={() => setTab(id as Tab)}
+                className={`px-4 py-2 rounded-t flex items-center gap-2 text-sm font-medium transition-colors border-b-2 ${
+                  tab === id
+                    ? 'bg-primary/10 text-primary border-primary text-sm font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/20 border-transparent'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+                {badge !== null && (
+                  <span className="ml-1 px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-bold">
+                    {badge}
                   </span>
                 )}
-              </div>
-            </div>
-
-            {selectedZone.notes && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Notes</p>
-                <p className="text-sm">{selectedZone.notes}</p>
-              </div>
-            )}
-
-            <div className="border-t border-border pt-4">
-              <p className="text-xs text-muted-foreground mb-2">Metadata</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <p className="text-muted-foreground">Created By</p>
-                  <p className="font-medium">{selectedZone.createdBy}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Updated By</p>
-                  <p className="font-medium">{selectedZone.updatedBy}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Created</p>
-                  <p className="font-medium">{formatDate(selectedZone.createdAt)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Updated</p>
-                  <p className="font-medium">{formatDate(selectedZone.updatedAt)}</p>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                handleDeleteZone(selectedZone.zoneId)
-              }}
-              className="w-full mt-4 px-4 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-600/30 text-sm font-medium"
-            >
-              Delete Zone
-            </button>
+              </button>
+            ))}
           </div>
-        </DetailDrawer>
+        </div>
+      </motion.div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full flex flex-col">
+          {/* Map View - Full Screen */}
+          {tab === 'map' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 overflow-hidden"
+            >
+              <ServiceabilityMap
+                zones={filteredZones}
+                isLoading={isLoading}
+                onZoneSelect={setSelectedZone}
+                areaTypeConfig={AREA_TYPE_CONFIG}
+              />
+            </motion.div>
+          )}
+
+          {/* Zones View - Split Panel */}
+          {tab === 'zones' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex gap-4 h-full p-4 overflow-hidden"
+            >
+              {/* Left Panel - Filters & List */}
+              <div className="w-80 flex flex-col gap-4 bg-card rounded border border-border overflow-hidden flex-shrink-0">
+                {/* Search & Filters */}
+                <div className="border-b border-border p-4 space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search zones, cities, codes..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="input-field pl-10 text-sm"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <select
+                      value={filterAreaType}
+                      onChange={(e) => setFilterAreaType(e.target.value as AreaType | 'all')}
+                      className="input-field text-sm flex-1"
+                    >
+                      <option value="all">All Area Types</option>
+                      {Object.entries(AREA_TYPE_CONFIG).map(([key, { label }]) => (
+                        <option key={key} value={key}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Zones List */}
+                <div className="flex-1 overflow-y-auto px-4">
+                  <ZonesList
+                    zones={filteredZones}
+                    isLoading={isLoading}
+                    selectedZone={selectedZone}
+                    onSelectZone={setSelectedZone}
+                    onEditZone={(zone) => {
+                      setEditingZone(zone)
+                      setShowZoneForm(true)
+                    }}
+                    onDeleteZone={handleDeleteZone}
+                    areaTypeConfig={AREA_TYPE_CONFIG}
+                  />
+                </div>
+              </div>
+
+              {/* Right Panel - Zone Details */}
+              {selectedZone ? (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex-1 command-panel space-y-4 overflow-y-auto p-5"
+                >
+                  {/* Header */}
+                  <div className="border-b border-border pb-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h2 className="text-xl font-bold text-foreground">{selectedZone.zoneName}</h2>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {selectedZone.city}, {selectedZone.state}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-xs px-3 py-1 rounded font-semibold ${
+                          AREA_TYPE_CONFIG[selectedZone.areaType]?.bgColor || 'bg-blue-500/20'
+                        }`}
+                      >
+                        {AREA_TYPE_CONFIG[selectedZone.areaType]?.label || selectedZone.areaType}
+                      </span>
+                    </div>
+
+                    {/* Status Bar */}
+                    <div className="flex items-center gap-2 text-xs">
+                      <Zap className="w-3 h-3 text-primary" />
+                      <span className="text-muted-foreground">Status:</span>
+                      <span className="font-medium capitalize">{selectedZone.status}</span>
+                    </div>
+                  </div>
+
+                  {/* Grid Info */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-muted/30 rounded p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Technology</p>
+                      <p className="text-sm font-semibold capitalize">{selectedZone.technologyType}</p>
+                    </div>
+                    <div className="bg-muted/30 rounded p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Priority</p>
+                      <p className="text-sm font-semibold">{selectedZone.priority || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  {/* PIN Codes */}
+                  {selectedZone.pinCodes && selectedZone.pinCodes.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2 font-semibold">Service Coverage</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedZone.pinCodes.map((pc: string) => (
+                          <span key={pc} className="badge badge-primary text-xs">
+                            {pc}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {selectedZone.notes && (
+                    <div className="bg-muted/20 rounded p-3 border border-border/30">
+                      <p className="text-xs text-muted-foreground mb-2">Notes</p>
+                      <p className="text-sm leading-relaxed">{selectedZone.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Metadata */}
+                  <div className="border-t border-border pt-4 text-xs">
+                    <p className="text-muted-foreground mb-2 font-semibold">Audit Trail</p>
+                    <div className="space-y-1 text-muted-foreground">
+                      <div>Created by {selectedZone.createdBy} on {new Date(selectedZone.createdAt).toLocaleDateString()}</div>
+                      <div>Updated by {selectedZone.updatedBy}</div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-4">
+                    <button
+                      onClick={() => {
+                        setEditingZone(selectedZone)
+                        setShowZoneForm(true)
+                      }}
+                      className="btn-secondary flex items-center gap-2 text-sm flex-1"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDeleteZone(selectedZone.id)
+                        setSelectedZone(null)
+                      }}
+                      className="btn-destructive flex items-center gap-2 text-sm flex-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex-1 flex items-center justify-center"
+                >
+                  <div className="text-center text-muted-foreground">
+                    <MapPin className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Select a zone to view details</p>
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Leads View */}
+          {tab === 'leads' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 p-4 overflow-y-auto"
+            >
+              <LeadsPanel leads={leads} isLoading={isLoading} areaTypeConfig={AREA_TYPE_CONFIG} />
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      {/* Zone Form Modal */}
+      {showZoneForm && (
+        <ZoneForm
+          zone={editingZone}
+          onClose={() => {
+            setShowZoneForm(false)
+            setEditingZone(null)
+          }}
+          onSave={editingZone ? handleUpdateZone : handleCreateZone}
+          areaTypeConfig={AREA_TYPE_CONFIG}
+        />
       )}
     </div>
   )
 }
 
-function ZonesTab({
-  zones,
-  isLoading,
-  selectedZone,
-  onZoneSelect,
-  onZoneDelete,
-}: {
-  zones: ServiceabilityZone[]
-  isLoading: boolean
-  selectedZone: ServiceabilityZone | null
-  onZoneSelect: (zone: ServiceabilityZone) => void
-  onZoneDelete: (zoneId: string) => void
-}) {
-  const columnHelper = createColumnHelper<ServiceabilityZone>()
-
-  const columns = [
-    columnHelper.accessor('zoneName', {
-      header: 'Zone Name',
-      cell: info => (
-        <div className="font-medium">{info.getValue()}</div>
-      ),
-    }),
-    columnHelper.accessor('city', {
-      header: 'Location',
-      cell: info => (
-        <div className="text-sm text-muted-foreground">
-          {info.row.original.city}, {info.row.original.state}
-        </div>
-      ),
-    }),
-    columnHelper.accessor('areaType', {
-      header: 'Type',
-      cell: info => (
-        <span className="text-xs px-2 py-1 rounded bg-foreground/10 capitalize">
-          {info.getValue().replace('_', ' ')}
-        </span>
-      ),
-    }),
-    columnHelper.accessor('technologyType', {
-      header: 'Technology',
-      cell: info => (
-        <span className="text-sm capitalize">{info.getValue()}</span>
-      ),
-    }),
-    columnHelper.accessor('status', {
-      header: 'Status',
-      cell: info => (
-        <span className={`text-xs px-2 py-1 rounded ${getStatusColor(info.getValue())}`}>
-          {info.getValue()}
-        </span>
-      ),
-    }),
-  ]
-
-  return (
-    <div className="space-y-4">
-      {/* Map View */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="h-96"
-      >
-        <ServiceabilityMap
-          zones={zones}
-          isLoading={isLoading}
-          onZoneSelect={onZoneSelect}
-        />
-      </motion.div>
-
-      {/* Table View */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <div className="rounded-lg border border-border overflow-hidden">
-          <DataTable columns={columns} data={zones} />
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
-function LeadsTab({
-  leads,
-  isLoading,
-  selectedLead,
-  onLeadSelect,
-  onStatusChange,
-}: {
-  leads: ExpansionInterestLead[]
-  isLoading: boolean
-  selectedLead: ExpansionInterestLead | null
-  onLeadSelect: (lead: ExpansionInterestLead) => void
-  onStatusChange: (leadId: string, status: string) => void
-}) {
-  const columnHelper = createColumnHelper<ExpansionInterestLead>()
-
-  const columns = [
-    columnHelper.accessor('customerName', {
-      header: 'Name',
-      cell: info => (
-        <div className="font-medium">{info.getValue()}</div>
-      ),
-    }),
-    columnHelper.accessor('email', {
-      header: 'Email',
-      cell: info => (
-        <div className="text-sm text-muted-foreground">{info.getValue()}</div>
-      ),
-    }),
-    columnHelper.accessor('city', {
-      header: 'Location',
-      cell: info => (
-        <div className="text-sm">{info.getValue()}</div>
-      ),
-    }),
-    columnHelper.accessor('preferredTechnology', {
-      header: 'Preferred Tech',
-      cell: info => (
-        <span className="text-xs px-2 py-1 rounded bg-foreground/10 capitalize">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor('priority', {
-      header: 'Priority',
-      cell: info => (
-        <span className={`text-xs px-2 py-1 rounded ${
-          info.getValue() === 'high' ? 'bg-red-600/20 text-red-400' :
-          info.getValue() === 'medium' ? 'bg-yellow-600/20 text-yellow-400' :
-          'bg-blue-600/20 text-blue-400'
-        }`}>
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor('status', {
-      header: 'Status',
-      cell: info => (
-        <span className={`text-xs px-2 py-1 rounded ${getStatusColor(info.getValue())}`}>
-          {info.getValue()}
-        </span>
-      ),
-    }),
-  ]
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-lg border border-border overflow-hidden"
-    >
-      <DataTable columns={columns} data={leads} />
-    </motion.div>
-  )
-}
