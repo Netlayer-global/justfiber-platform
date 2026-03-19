@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Navbar } from '@/components/layout/Navbar'
 import { getSession } from '@/lib/auth'
 import { Toaster } from 'sonner'
+import { motion } from 'framer-motion'
 
 export default function DashboardLayout({
   children,
@@ -30,8 +31,18 @@ export default function DashboardLayout({
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-muted-foreground text-sm">Loading...</p>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="w-12 h-12 border-3 border-muted/30 border-t-primary rounded-full"
+          />
+          <motion.p
+            animate={{ opacity: [0.5, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="text-muted-foreground text-sm font-medium"
+          >
+            Loading JustFiber Admin...
+          </motion.p>
         </div>
       </div>
     )
@@ -39,15 +50,34 @@ export default function DashboardLayout({
 
   return (
     <>
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
-      <Navbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Toaster position="top-right" theme="dark" />
+      <div className="flex h-screen bg-background text-foreground overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
 
-      {/* Main Content */}
-      <main className="pt-16 sm:ml-64 min-h-screen bg-background">
-        <div className="p-4 sm:p-6 lg:p-8">
+        {/* Main Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Navbar */}
+          <Navbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+
+          {/* Content */}
+          <motion.main
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex-1 overflow-y-auto scrollbar-thin"
+          >
+            <div className="p-6 max-w-7xl">{children}</div>
+          </motion.main>
+        </div>
+      </div>
+    </>
+  )
+}
+
           {children}
         </div>
       </main>
