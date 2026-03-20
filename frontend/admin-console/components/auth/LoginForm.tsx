@@ -8,10 +8,10 @@ import { z } from 'zod'
 import { apiPost } from '@/lib/api'
 import { saveSession } from '@/lib/auth'
 import { toast } from 'sonner'
-import { AlertCircle, Loader2, Mail, Lock, Terminal } from 'lucide-react'
+import { AlertCircle, Loader2, User, Lock, Terminal } from 'lucide-react'
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  login: z.string().min(1, 'Login is required'),
   password: z.string().min(1, 'Password is required'),
 })
 
@@ -32,7 +32,7 @@ export function LoginForm() {
     setIsLoading(true)
     try {
       const response = await apiPost('/api/v1/admin/auth/login', {
-        email: data.email,
+        login: data.login,
         password: data.password,
       })
 
@@ -69,25 +69,25 @@ export function LoginForm() {
         </div>
       </div>
 
-      {/* Email Field */}
+      {/* Login Field */}
       <div className="space-y-2">
-        <label htmlFor="email" className="block text-sm font-medium text-foreground">
-          Email Address
+        <label htmlFor="login" className="block text-sm font-medium text-foreground">
+          Login
         </label>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
           <input
-            id="email"
-            type="email"
-            placeholder="admin@justfiber.in"
+            id="login"
+            type="text"
+            placeholder="admin"
             className="input-field pl-10"
-            {...register('email')}
+            {...register('login')}
           />
         </div>
-        {errors.email && (
+        {errors.login && (
           <div className="flex items-center gap-2 text-sm text-destructive mt-1">
             <AlertCircle className="w-4 h-4" />
-            {errors.email.message}
+            {errors.login.message}
           </div>
         )}
       </div>
