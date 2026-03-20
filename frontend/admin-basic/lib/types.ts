@@ -40,6 +40,7 @@ export interface Device {
   id: string
   name: string
   type: string
+  ip?: string
   status: 'online' | 'offline' | 'error'
   customerId?: string
   location?: string
