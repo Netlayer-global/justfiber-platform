@@ -19,7 +19,7 @@
     "axios": "^1.6.8",
     "clsx": "^2.0.0",
     "class-variance-authority": "^0.7.0",
-    "lucide-react": "^0.356.0",
+    "lucide-react": "^0.263.1",
     "framer-motion": "^10.16.16",
     "recharts": "^2.10.3",
     "@tanstack/react-table": "^8.17.3",

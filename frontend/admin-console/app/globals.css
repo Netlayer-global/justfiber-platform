@@ -175,6 +175,15 @@
 }
 
 @layer utilities {
+  /* Ring utilities for focus states */
+  .ring-primary {
+    @apply ring-2 ring-primary;
+  }
+
+  .ring-offset-background {
+    @apply ring-offset-background;
+  }
+
   /* Ubiquiti Command Center Effects */
   .glow-primary {
     @apply shadow-[0_0_20px_rgba(0,102,204,0.25)];
