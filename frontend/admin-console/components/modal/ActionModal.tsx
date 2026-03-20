@@ -7,7 +7,7 @@ import { AlertCircle, X } from 'lucide-react'
 interface ActionModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void | Promise<void>
+  onConfirm?: () => void | Promise<void>
   title: string
   description?: string
   confirmText?: string
@@ -91,17 +91,19 @@ export function ActionModal({
                 >
                   {cancelText}
                 </button>
-                <button
-                  onClick={onConfirm}
-                  disabled={isLoading}
-                  className={cn(
-                    'flex-1',
-                    isDestructive ? 'btn-destructive' : 'btn-primary',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
-                  )}
-                >
-                  {confirmText}
-                </button>
+                {onConfirm && (
+                  <button
+                    onClick={onConfirm}
+                    disabled={isLoading}
+                    className={cn(
+                      'flex-1',
+                      isDestructive ? 'btn-destructive' : 'btn-primary',
+                      'disabled:opacity-50 disabled:cursor-not-allowed'
+                    )}
+                  >
+                    {confirmText}
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>
