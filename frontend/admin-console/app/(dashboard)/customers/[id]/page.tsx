@@ -3,18 +3,68 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { adminAPI } from '@/lib/api'
-import { CustomerDetail } from '@/lib/types'
+import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils'
 import { Phone, Mail, MapPin, Calendar, AlertCircle, Loader } from 'lucide-react'
+
+interface CustomerDetailView {
+  customerId: string
+  accountNumber: string
+  name: string
+  email: string
+  phone: string
+  serviceId: string
+  planName: string
+  planCode: string
+  status: string
+  createdAt: string
+  lastPaymentDate?: string
+  dueAmount: number
+  lastInvoiceAmount: number
+  lastPaymentStatus: string
+  address: string
+  city: string
+  state: string
+  pincode: string
+  devices: any[]
+  tickets: any[]
+}
+
+function mapCustomerDetail(item: any): CustomerDetailView {
+  const address = item.address || {}
+  const billingSnapshot = item.billingSnapshot || {}
+
+  return {
+    customerId: item.customerId,
+    accountNumber: item.accountNumber || '-',
+    name: item.fullName || item.customerId,
+    email: item.email || '-',
+    phone: item.phone || '-',
+    serviceId: item.serviceId || '-',
+    planName: item.planName || item.planCode || 'Unassigned',
+    planCode: item.planCode || '-',
+    status: item.operationalStatus || 'unknown',
+    createdAt: item.createdAt,
+    lastPaymentDate: billingSnapshot.lastPaidAt,
+    dueAmount: Number(billingSnapshot.dueAmount || 0),
+    lastInvoiceAmount: Number(billingSnapshot.lastInvoiceAmount || 0),
+    lastPaymentStatus: billingSnapshot.lastPaymentStatus || 'unknown',
+    address: [address.addressLine1, address.addressLine2, address.locality].filter(Boolean).join(', ') || 'No address available',
+    city: address.city || '-',
+    state: address.state || '-',
+    pincode: address.pincode || '-',
+    devices: Array.isArray(item.devices) ? item.devices : [],
+    tickets: Array.isArray(item.tickets) ? item.tickets : [],
+  }
+}
 
 export default function CustomerDetailPage() {
   const params = useParams()
   const router = useRouter()
   const customerId = params.id as string
 
-  const [customer, setCustomer] = useState<CustomerDetail | null>(null)
+  const [customer, setCustomer] = useState<CustomerDetailView | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isActionLoading, setIsActionLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState<string | null>(null)
@@ -26,9 +76,9 @@ export default function CustomerDetailPage() {
   async function loadCustomer() {
     setIsLoading(true)
     try {
-      const response = await adminAPI.getCustomer(customerId)
-      if (response.data.success) {
-        setCustomer(response.data.data)
+      const response = await apiClient.getCustomer(customerId)
+      if (response.data.success && response.data.data) {
+        setCustomer(mapCustomerDetail(response.data.data))
       }
     } catch (error) {
       toast.error('Failed to load customer')
@@ -38,20 +88,20 @@ export default function CustomerDetailPage() {
     }
   }
 
-  async function handleCustomerAction(action: string) {
+  async function handleCustomerAction(action: 'suspend' | 'resume' | 'retry') {
     setIsActionLoading(true)
     try {
       let response
       if (action === 'suspend') {
-        response = await adminAPI.suspendCustomer(customerId)
+        response = await apiClient.suspendCustomer(customerId)
       } else if (action === 'resume') {
-        response = await adminAPI.resumeCustomer(customerId)
-      } else if (action === 'retry') {
-        response = await adminAPI.retryProvisioning(customerId)
+        response = await apiClient.resumeCustomer(customerId)
+      } else {
+        response = await apiClient.retryProvisioning(customerId)
       }
 
       if (response?.data.success) {
-        toast.success(`Customer ${action}ed successfully`)
+        toast.success(action === 'retry' ? 'Provisioning retry queued' : `Customer ${action} request queued`)
         setShowConfirm(null)
         loadCustomer()
       }
@@ -79,10 +129,7 @@ export default function CustomerDetailPage() {
       <div className="text-center py-12">
         <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
         <p className="text-muted-foreground mb-4">Customer not found</p>
-        <button
-          onClick={() => router.back()}
-          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
-        >
+        <button onClick={() => router.back()} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">
           Go Back
         </button>
       </div>
@@ -91,30 +138,18 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between"
-      >
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold">{customer.name}</h1>
-          <p className="text-muted-foreground mt-1">Customer ID: {customer.id}</p>
+          <p className="text-muted-foreground mt-1">Customer ID: {customer.customerId}</p>
+          <p className="text-xs font-mono text-muted-foreground mt-1">Account: {customer.accountNumber}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(customer.status)}`}>
-            {customer.status}
-          </span>
+          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(customer.status)}`}>{customer.status}</span>
         </div>
       </motion.div>
 
-      {/* Contact & Location */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-lg border border-border p-6 bg-foreground/2.5">
           <h3 className="font-semibold mb-4 text-balance">Contact Information</h3>
           <div className="space-y-3">
@@ -136,7 +171,9 @@ export default function CustomerDetailPage() {
               <MapPin className="w-5 h-5 text-muted-foreground" />
               <div>
                 <p className="text-xs text-muted-foreground">Location</p>
-                <p className="font-medium">{customer.city}, {customer.state}</p>
+                <p className="font-medium">
+                  {customer.city}, {customer.state}
+                </p>
               </div>
             </div>
           </div>
@@ -150,33 +187,32 @@ export default function CustomerDetailPage() {
               <p className="text-xs text-muted-foreground">PIN Code</p>
               <p className="font-medium">{customer.pincode}</p>
             </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Service ID</p>
+              <p className="font-medium">{customer.serviceId}</p>
+            </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Subscription & Billing */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-6"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="rounded-lg border border-border p-6 bg-foreground/2.5">
           <h3 className="font-semibold mb-4 text-sm">Current Plan</h3>
           <p className="text-2xl font-bold mb-2">{customer.planName}</p>
-          <p className="text-muted-foreground text-sm mb-4">₹{customer.monthlyCharges}/month</p>
-          <p className={`text-xs px-2 py-1 rounded w-fit ${getStatusColor(customer.subscriptionStatus)}`}>
-            {customer.subscriptionStatus}
-          </p>
+          <p className="text-muted-foreground text-sm mb-4">{customer.planCode}</p>
+          <p className={`text-xs px-2 py-1 rounded w-fit ${getStatusColor(customer.status)}`}>{customer.status}</p>
         </div>
 
         <div className="rounded-lg border border-border p-6 bg-foreground/2.5">
-          <h3 className="font-semibold mb-4 text-sm">Billing Cycle</h3>
-          <p className="text-muted-foreground text-sm mb-2">{customer.billingCycle}</p>
+          <h3 className="font-semibold mb-4 text-sm">Billing Snapshot</h3>
           <div className="space-y-1 text-sm">
             <div>
-              <p className="text-xs text-muted-foreground">Next Billing</p>
-              <p className="font-medium">{formatDate(customer.nextBillingDate)}</p>
+              <p className="text-xs text-muted-foreground">Last Invoice</p>
+              <p className="font-medium">{formatCurrency(customer.lastInvoiceAmount)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Last Payment Status</p>
+              <p className="font-medium capitalize">{customer.lastPaymentStatus}</p>
             </div>
           </div>
         </div>
@@ -185,26 +221,18 @@ export default function CustomerDetailPage() {
           <h3 className="font-semibold mb-4 text-sm">Account Balance</h3>
           <div className="space-y-2">
             <div>
-              <p className="text-xs text-muted-foreground">Total Paid</p>
-              <p className="text-lg font-bold text-green-400">₹{customer.totalPaid.toLocaleString('en-IN')}</p>
+              <p className="text-xs text-muted-foreground">Outstanding Due</p>
+              <p className={`text-lg font-bold ${customer.dueAmount > 0 ? 'text-red-400' : 'text-green-400'}`}>{formatCurrency(customer.dueAmount)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Pending Amount</p>
-              <p className={`text-lg font-bold ${customer.pendingAmount > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                ₹{customer.pendingAmount.toLocaleString('en-IN')}
-              </p>
+              <p className="text-xs text-muted-foreground">Attached Devices</p>
+              <p className="text-lg font-bold">{customer.devices.length}</p>
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Account Timeline */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="rounded-lg border border-border p-6 bg-foreground/2.5"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-lg border border-border p-6 bg-foreground/2.5">
         <h3 className="font-semibold mb-4">Account Timeline</h3>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
@@ -223,75 +251,48 @@ export default function CustomerDetailPage() {
               </div>
             </div>
           )}
+          <div className="flex items-center gap-3">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <div className="text-sm">
+              <p className="text-muted-foreground">Recent Tickets</p>
+              <p className="font-medium">{customer.tickets.length}</p>
+            </div>
+          </div>
         </div>
       </motion.div>
 
-      {/* Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="rounded-lg border border-border p-6 bg-foreground/2.5"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-lg border border-border p-6 bg-foreground/2.5">
         <h3 className="font-semibold mb-4">Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {customer.status === 'active' ? (
-            <button
-              onClick={() => setShowConfirm('suspend')}
-              disabled={isActionLoading}
-              className="px-4 py-2 rounded-lg bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 border border-yellow-600/30 text-sm font-medium disabled:opacity-50"
-            >
+            <button onClick={() => setShowConfirm('suspend')} disabled={isActionLoading} className="px-4 py-2 rounded-lg bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 border border-yellow-600/30 text-sm font-medium disabled:opacity-50">
               {isActionLoading && showConfirm === 'suspend' ? 'Processing...' : 'Suspend'}
             </button>
           ) : (
-            <button
-              onClick={() => setShowConfirm('resume')}
-              disabled={isActionLoading}
-              className="px-4 py-2 rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30 border border-green-600/30 text-sm font-medium disabled:opacity-50"
-            >
+            <button onClick={() => setShowConfirm('resume')} disabled={isActionLoading} className="px-4 py-2 rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30 border border-green-600/30 text-sm font-medium disabled:opacity-50">
               {isActionLoading && showConfirm === 'resume' ? 'Processing...' : 'Resume'}
             </button>
           )}
 
-          <button
-            onClick={() => setShowConfirm('retry')}
-            disabled={isActionLoading}
-            className="px-4 py-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-600/30 text-sm font-medium disabled:opacity-50"
-          >
+          <button onClick={() => setShowConfirm('retry')} disabled={isActionLoading} className="px-4 py-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-600/30 text-sm font-medium disabled:opacity-50">
             {isActionLoading && showConfirm === 'retry' ? 'Processing...' : 'Retry Provisioning'}
           </button>
 
-          <button
-            onClick={() => router.back()}
-            className="px-4 py-2 rounded-lg bg-foreground/10 text-foreground hover:bg-foreground/20 border border-border text-sm font-medium"
-          >
+          <button onClick={() => router.back()} className="px-4 py-2 rounded-lg bg-foreground/10 text-foreground hover:bg-foreground/20 border border-border text-sm font-medium">
             Back
           </button>
         </div>
 
-        {/* Confirmation Dialog */}
         {showConfirm && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mt-4 p-4 rounded-lg bg-red-600/10 border border-red-600/30"
-          >
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="mt-4 p-4 rounded-lg bg-red-600/10 border border-red-600/30">
             <p className="text-sm mb-3">
               Are you sure you want to <strong>{showConfirm}</strong> this customer?
             </p>
             <div className="flex gap-2">
-              <button
-                onClick={() => handleCustomerAction(showConfirm)}
-                disabled={isActionLoading}
-                className="px-4 py-2 rounded text-sm font-medium bg-red-600/20 text-red-400 hover:bg-red-600/30 disabled:opacity-50"
-              >
+              <button onClick={() => handleCustomerAction(showConfirm as 'suspend' | 'resume' | 'retry')} disabled={isActionLoading} className="px-4 py-2 rounded text-sm font-medium bg-red-600/20 text-red-400 hover:bg-red-600/30 disabled:opacity-50">
                 {isActionLoading ? 'Processing...' : 'Confirm'}
               </button>
-              <button
-                onClick={() => setShowConfirm(null)}
-                disabled={isActionLoading}
-                className="px-4 py-2 rounded text-sm font-medium bg-foreground/10 text-foreground hover:bg-foreground/20 disabled:opacity-50"
-              >
+              <button onClick={() => setShowConfirm(null)} disabled={isActionLoading} className="px-4 py-2 rounded text-sm font-medium bg-foreground/10 text-foreground hover:bg-foreground/20 disabled:opacity-50">
                 Cancel
               </button>
             </div>

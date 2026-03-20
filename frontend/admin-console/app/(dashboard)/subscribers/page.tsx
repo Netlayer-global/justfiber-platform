@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Users, Search, RefreshCw, Plus, AlertCircle, CheckCircle, XCircle, Phone, Mail, MapPin } from 'lucide-react'
+import { Users, Search, RefreshCw, AlertCircle, CheckCircle, XCircle, Phone, Mail, MapPin } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
-import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 
 interface Subscriber {
   id: string
@@ -13,10 +13,36 @@ interface Subscriber {
   phone: string
   address: string
   plan: string
-  status: 'active' | 'suspended' | 'inactive'
+  status: 'active' | 'suspended' | 'inactive' | 'unknown'
   monthlyCharge: number
   joinDate: string
   balance: number
+}
+
+function mapSubscriber(item: any): Subscriber {
+  const address = item.address || {}
+  const lineItems = [
+    address.addressLine1,
+    address.addressLine2,
+    address.locality,
+    address.city,
+    address.state,
+    address.pincode,
+  ].filter(Boolean)
+
+  return {
+    id: item.customerId,
+    customerId: item.customerId,
+    name: item.fullName || item.customerId,
+    email: item.email || '-',
+    phone: item.phone || '-',
+    address: lineItems.join(', ') || 'No address available',
+    plan: item.planName || item.planCode || 'Unassigned',
+    status: item.operationalStatus || 'unknown',
+    monthlyCharge: Number(item.billingSnapshot?.lastInvoiceAmount || item.billingSnapshot?.monthlyAmount || 0),
+    joinDate: item.createdAt,
+    balance: Number(item.billingSnapshot?.dueAmount || 0),
+  }
 }
 
 export default function SubscribersPage() {
@@ -35,18 +61,19 @@ export default function SubscribersPage() {
 
       const response = await apiClient.getSubscribers({
         search: search || undefined,
-        status: filterStatus || undefined,
         page: 1,
         limit: 100,
       })
 
       if (response.data?.success) {
-        setSubscribers(response.data.data || [])
+        const items = Array.isArray(response.data.data) ? response.data.data.map(mapSubscriber) : []
+        const filteredItems = filterStatus ? items.filter((item) => item.status === filterStatus) : items
+        setSubscribers(filteredItems)
       } else {
         setError('Failed to load subscribers')
       }
-    } catch (err: any) {
-      console.error('[v0] Load subscribers error:', err)
+    } catch (err) {
+      console.error('[admin-console] Load subscribers error:', err)
       setError('Failed to load subscribers')
     } finally {
       setIsLoading(false)
@@ -57,27 +84,29 @@ export default function SubscribersPage() {
     loadSubscribers()
   }, [search, filterStatus])
 
-  const handleSuspend = async (subscriberId: string) => {
+  const handleSuspend = async (customerId: string) => {
     if (!confirm('Are you sure you want to suspend this subscriber?')) return
-    
+
     try {
-      const response = await apiClient.suspendSubscriber(subscriberId)
+      const response = await apiClient.suspendSubscriber(customerId)
       if (response.data?.success) {
-        loadSubscribers()
+        await loadSubscribers()
       }
     } catch (err) {
-      console.error('[v0] Suspend error:', err)
+      console.error('[admin-console] Suspend error:', err)
+      setError('Failed to suspend subscriber')
     }
   }
 
-  const handleResume = async (subscriberId: string) => {
+  const handleResume = async (customerId: string) => {
     try {
-      const response = await apiClient.resumeSubscriber(subscriberId)
+      const response = await apiClient.resumeSubscriber(customerId)
       if (response.data?.success) {
-        loadSubscribers()
+        await loadSubscribers()
       }
     } catch (err) {
-      console.error('[v0] Resume error:', err)
+      console.error('[admin-console] Resume error:', err)
+      setError('Failed to resume subscriber')
     }
   }
 
@@ -87,69 +116,49 @@ export default function SubscribersPage() {
         return <CheckCircle className="w-4 h-4 text-green-400" />
       case 'suspended':
         return <AlertCircle className="w-4 h-4 text-yellow-400" />
-      case 'inactive':
-        return <XCircle className="w-4 h-4 text-red-400" />
       default:
-        return null
+        return <XCircle className="w-4 h-4 text-red-400" />
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Subscribers</h1>
-          <p className="text-muted-foreground mt-1">Manage customer accounts and services</p>
+          <p className="text-muted-foreground mt-1">Live customer records from the backend customer registry</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={loadSubscribers}
-            disabled={isLoading}
-            className="btn-ghost flex items-center gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-          <button className="btn-primary flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            New Subscriber
-          </button>
-        </div>
+        <button onClick={loadSubscribers} disabled={isLoading} className="btn-ghost flex items-center gap-2">
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
-      {/* Error State */}
       {error && (
         <div className="flex items-start gap-3 p-4 rounded bg-destructive/20 border border-destructive/30">
           <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <p className="font-medium text-destructive">{error}</p>
-            <button
-              onClick={loadSubscribers}
-              className="text-xs text-destructive/80 hover:text-destructive mt-1 underline"
-            >
+            <button onClick={loadSubscribers} className="text-xs text-destructive/80 hover:text-destructive mt-1 underline">
               Try again
             </button>
           </div>
         </div>
       )}
 
-      {/* Filters */}
       <div className="card p-4 space-y-4">
         <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, email, phone, or ID..."
-              className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded hover:border-primary/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors text-sm"
+              placeholder="Search by customer ID, account number, phone, or full name..."
+              className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded hover:border-primary/50 focus:outline-none focus:border-primary transition-colors text-sm"
             />
           </div>
 
-          {/* Status Filter */}
           <select
             value={filterStatus || ''}
             onChange={(e) => setFilterStatus(e.target.value || null)}
@@ -159,10 +168,10 @@ export default function SubscribersPage() {
             <option value="active">Active</option>
             <option value="suspended">Suspended</option>
             <option value="inactive">Inactive</option>
+            <option value="unknown">Unknown</option>
           </select>
         </div>
 
-        {/* Summary */}
         <div className="grid grid-cols-3 gap-3 text-xs">
           <div className="flex items-center justify-between p-2 rounded bg-background/50 border border-border/50">
             <span className="text-muted-foreground">Total</span>
@@ -170,16 +179,15 @@ export default function SubscribersPage() {
           </div>
           <div className="flex items-center justify-between p-2 rounded bg-background/50 border border-border/50">
             <span className="text-muted-foreground">Active</span>
-            <span className="font-semibold text-green-400">{subscribers.filter(s => s.status === 'active').length}</span>
+            <span className="font-semibold text-green-400">{subscribers.filter((s) => s.status === 'active').length}</span>
           </div>
           <div className="flex items-center justify-between p-2 rounded bg-background/50 border border-border/50">
             <span className="text-muted-foreground">Suspended</span>
-            <span className="font-semibold text-yellow-400">{subscribers.filter(s => s.status === 'suspended').length}</span>
+            <span className="font-semibold text-yellow-400">{subscribers.filter((s) => s.status === 'suspended').length}</span>
           </div>
         </div>
       </div>
 
-      {/* Table */}
       <div className="card overflow-hidden">
         {isLoading ? (
           <div className="p-12 flex justify-center">
@@ -201,7 +209,7 @@ export default function SubscribersPage() {
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-muted-foreground">Contact</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-muted-foreground">Plan</th>
                   <th className="px-6 py-3 text-right text-xs font-semibold uppercase text-muted-foreground">Monthly</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase text-muted-foreground">Balance</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase text-muted-foreground">Due</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-muted-foreground">Actions</th>
                 </tr>
               </thead>
@@ -216,9 +224,7 @@ export default function SubscribersPage() {
                     }}
                   >
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-center">
-                        {getStatusIcon(sub.status)}
-                      </div>
+                      <div className="flex items-center justify-center">{getStatusIcon(sub.status)}</div>
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-medium">{sub.name}</p>
@@ -239,28 +245,24 @@ export default function SubscribersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary">
-                        {sub.plan}
-                      </span>
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary">{sub.plan}</span>
                     </td>
-                    <td className="px-6 py-4 text-right font-semibold">
-                      {formatCurrency(sub.monthlyCharge)}
-                    </td>
-                    <td className={`px-6 py-4 text-right font-semibold ${sub.balance < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                    <td className="px-6 py-4 text-right font-semibold">{formatCurrency(sub.monthlyCharge)}</td>
+                    <td className={`px-6 py-4 text-right font-semibold ${sub.balance > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
                       {formatCurrency(sub.balance)}
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         {sub.status === 'active' ? (
                           <button
-                            onClick={() => handleSuspend(sub.id)}
+                            onClick={() => handleSuspend(sub.customerId)}
                             className="px-2 py-1 rounded text-xs font-medium bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
                           >
                             Suspend
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleResume(sub.id)}
+                            onClick={() => handleResume(sub.customerId)}
                             className="px-2 py-1 rounded text-xs font-medium bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
                           >
                             Resume
@@ -276,7 +278,6 @@ export default function SubscribersPage() {
         )}
       </div>
 
-      {/* Detail Panel */}
       {showDetailPanel && selectedSubscriber && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-card border border-border rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -285,16 +286,12 @@ export default function SubscribersPage() {
                 <h2 className="text-2xl font-bold">{selectedSubscriber.name}</h2>
                 <p className="text-sm text-muted-foreground mt-1">{selectedSubscriber.customerId}</p>
               </div>
-              <button
-                onClick={() => setShowDetailPanel(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                ✕
+              <button onClick={() => setShowDetailPanel(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                x
               </button>
             </div>
 
             <div className="space-y-6">
-              {/* Status & Plan */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded bg-background/50 border border-border/50">
                   <p className="text-xs text-muted-foreground mb-1">Status</p>
@@ -309,21 +306,16 @@ export default function SubscribersPage() {
                 </div>
               </div>
 
-              {/* Contact Info */}
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm">Contact Information</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-muted-foreground" />
-                    <a href={`mailto:${selectedSubscriber.email}`} className="text-blue-400 hover:underline">
-                      {selectedSubscriber.email}
-                    </a>
+                    <span>{selectedSubscriber.email}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
-                    <a href={`tel:${selectedSubscriber.phone}`} className="text-blue-400 hover:underline">
-                      {selectedSubscriber.phone}
-                    </a>
+                    <span>{selectedSubscriber.phone}</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
@@ -332,7 +324,6 @@ export default function SubscribersPage() {
                 </div>
               </div>
 
-              {/* Billing Info */}
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm">Billing Information</h3>
                 <div className="grid grid-cols-3 gap-3">
@@ -341,24 +332,23 @@ export default function SubscribersPage() {
                     <p className="font-semibold">{formatCurrency(selectedSubscriber.monthlyCharge)}</p>
                   </div>
                   <div className="p-3 rounded bg-background/50 border border-border/50">
-                    <p className="text-xs text-muted-foreground mb-1">Current Balance</p>
-                    <p className={`font-semibold ${selectedSubscriber.balance < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                    <p className="text-xs text-muted-foreground mb-1">Due Amount</p>
+                    <p className={`font-semibold ${selectedSubscriber.balance > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
                       {formatCurrency(selectedSubscriber.balance)}
                     </p>
                   </div>
                   <div className="p-3 rounded bg-background/50 border border-border/50">
-                    <p className="text-xs text-muted-foreground mb-1">Join Date</p>
+                    <p className="text-xs text-muted-foreground mb-1">Created</p>
                     <p className="font-semibold text-xs">{formatDate(selectedSubscriber.joinDate)}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-2 pt-4 border-t border-border/50">
                 {selectedSubscriber.status === 'active' ? (
                   <button
                     onClick={() => {
-                      handleSuspend(selectedSubscriber.id)
+                      handleSuspend(selectedSubscriber.customerId)
                       setShowDetailPanel(false)
                     }}
                     className="flex-1 px-4 py-2 rounded bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 font-medium text-sm transition-colors"
@@ -368,7 +358,7 @@ export default function SubscribersPage() {
                 ) : (
                   <button
                     onClick={() => {
-                      handleResume(selectedSubscriber.id)
+                      handleResume(selectedSubscriber.customerId)
                       setShowDetailPanel(false)
                     }}
                     className="flex-1 px-4 py-2 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 font-medium text-sm transition-colors"
@@ -376,10 +366,7 @@ export default function SubscribersPage() {
                     Resume Account
                   </button>
                 )}
-                <button
-                  onClick={() => setShowDetailPanel(false)}
-                  className="flex-1 px-4 py-2 rounded bg-foreground/10 hover:bg-foreground/20 font-medium text-sm transition-colors"
-                >
+                <button onClick={() => setShowDetailPanel(false)} className="flex-1 px-4 py-2 rounded bg-foreground/10 hover:bg-foreground/20 font-medium text-sm transition-colors">
                   Close
                 </button>
               </div>

@@ -4,32 +4,42 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { DollarSign, RefreshCw } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 
-interface Invoice {
-  id: string
-  invoiceId: string
-  customerId: string
-  amount: number
-  status: string
-  dueDate: string
-  issueDate: string
+interface BillingOverview {
+  totalInvoices: number
+  overdueInvoices: number
+  paidTransactions: number
+  dueAmount: number
+  collectedAmount: number
 }
 
-interface Payment {
+interface InvoiceRow {
   id: string
-  paymentId: string
+  invoiceId: string
+  invoiceNumber: string
+  customerId: string
+  totalAmount: number
+  paymentStatus: string
+  dueDate?: string
+  generatedAt?: string
+}
+
+interface PaymentRow {
+  id: string
+  transactionId: string
   customerId: string
   amount: number
   method: string
   status: string
-  date: string
+  paidAt?: string
 }
 
 export default function BillingPage() {
-  const [overview, setOverview] = useState<any>(null)
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [payments, setPayments] = useState<Payment[]>([])
+  const [overview, setOverview] = useState<BillingOverview | null>(null)
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([])
+  const [payments, setPayments] = useState<PaymentRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'invoices' | 'payments'>('overview')
 
@@ -40,19 +50,48 @@ export default function BillingPage() {
   async function loadData() {
     try {
       setIsLoading(true)
-      
+
       if (activeTab === 'overview') {
-        const res = await apiClient.getBillingOverview().catch(() => ({ data: { success: false } }))
-        if (res.data.success) setOverview(res.data.data)
+        const res = await apiClient.getBillingOverview()
+        if (res.data.success) setOverview(res.data.data || null)
       } else if (activeTab === 'invoices') {
-        const res = await apiClient.getInvoices({ page: 1, limit: 50 }).catch(() => ({ data: { success: false } }))
-        if (res.data.success) setInvoices(res.data.data || [])
+        const res = await apiClient.getInvoices({ page: 1, limit: 50 })
+        if (res.data.success) {
+          setInvoices(
+            Array.isArray(res.data.data)
+              ? res.data.data.map((item: any) => ({
+                  id: item.invoiceId,
+                  invoiceId: item.invoiceId,
+                  invoiceNumber: item.invoiceNumber || item.invoiceId,
+                  customerId: item.customerId,
+                  totalAmount: Number(item.totalAmount || item.amount || 0),
+                  paymentStatus: item.paymentStatus || item.status || 'pending',
+                  dueDate: item.dueDate,
+                  generatedAt: item.generatedAt,
+                }))
+              : []
+          )
+        }
       } else if (activeTab === 'payments') {
-        const res = await apiClient.getPayments({ page: 1, limit: 50 }).catch(() => ({ data: { success: false } }))
-        if (res.data.success) setPayments(res.data.data || [])
+        const res = await apiClient.getPayments({ page: 1, limit: 50 })
+        if (res.data.success) {
+          setPayments(
+            Array.isArray(res.data.data)
+              ? res.data.data.map((item: any) => ({
+                  id: item.transactionId,
+                  transactionId: item.transactionId,
+                  customerId: item.customerId,
+                  amount: Number(item.amount || 0),
+                  method: item.method || 'unknown',
+                  status: item.status || 'unknown',
+                  paidAt: item.paidAt,
+                }))
+              : []
+          )
+        }
       }
     } catch (error) {
-      console.error('[v0] Billing load error:', error)
+      console.error('[admin-console] Billing load error:', error)
       toast.error('Failed to load billing data')
     } finally {
       setIsLoading(false)
@@ -60,13 +99,7 @@ export default function BillingPage() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="space-y-6"
-    >
-      {/* Header */}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded bg-primary/10 border border-primary/20">
@@ -74,29 +107,22 @@ export default function BillingPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
-            <p className="text-sm text-muted-foreground">Invoices, payments, and ledger management</p>
+            <p className="text-sm text-muted-foreground">Invoices, payments, and collections from live billing data</p>
           </div>
         </div>
-        <button
-          onClick={loadData}
-          disabled={isLoading}
-          className="btn-ghost flex items-center gap-2"
-        >
+        <button onClick={loadData} disabled={isLoading} className="btn-ghost flex items-center gap-2">
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 border-b border-border">
         {['overview', 'invoices', 'payments'].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab as 'overview' | 'invoices' | 'payments')}
             className={`px-4 py-3 font-semibold border-b-2 transition-colors capitalize ${
-              activeTab === tab
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+              activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             {tab}
@@ -104,67 +130,46 @@ export default function BillingPage() {
         ))}
       </div>
 
-      {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <motion.div variants={{
-          hidden: { opacity: 0 },
-          show: {
-            opacity: 1,
-            transition: {
-              staggerChildren: 0.1,
-            },
-          },
-        }} initial="hidden" animate="show" className="space-y-6">
-          {/* KPIs */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Total Revenue', value: overview?.totalRevenue || '₹0', color: 'primary' },
-              { label: 'This Month', value: overview?.monthlyRevenue || '₹0', color: 'secondary' },
-              { label: 'Collected', value: overview?.collected || '₹0', color: 'green-500' },
-              { label: 'Pending', value: overview?.pending || '₹0', color: 'yellow-500' },
+              { label: 'Collected Amount', value: formatCurrency(overview?.collectedAmount || 0) },
+              { label: 'Outstanding Due', value: formatCurrency(overview?.dueAmount || 0) },
+              { label: 'Total Invoices', value: String(overview?.totalInvoices || 0) },
+              { label: 'Overdue Invoices', value: String(overview?.overdueInvoices || 0) },
             ].map((item) => (
-              <motion.div
-                key={item.label}
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  show: { opacity: 1, y: 0 },
-                }}
-                className="command-panel p-6 space-y-2"
-              >
+              <div key={item.label} className="command-panel p-6 space-y-2">
                 <span className="text-sm font-semibold text-muted-foreground">{item.label}</span>
-                <p className="text-3xl font-bold">{item.value}</p>
-              </motion.div>
+                <p className="text-3xl font-bold">{isLoading ? 'Loading...' : item.value}</p>
+              </div>
             ))}
           </div>
 
-          {/* Billing Snapshot */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 },
-            }}
-            className="command-panel p-6 space-y-4"
-          >
+          <div className="command-panel p-6 space-y-4">
             <h3 className="text-lg font-semibold">Billing Snapshot</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded bg-muted/30 border border-border">
-                <p className="text-sm text-muted-foreground mb-2">Collection Rate</p>
-                <p className="text-2xl font-bold">{overview?.collectionRate || '0'}%</p>
+                <p className="text-sm text-muted-foreground mb-2">Successful Payments</p>
+                <p className="text-2xl font-bold">{overview?.paidTransactions || 0}</p>
               </div>
               <div className="p-4 rounded bg-muted/30 border border-border">
-                <p className="text-sm text-muted-foreground mb-2">Overdue Amount</p>
-                <p className="text-2xl font-bold text-yellow-400">{overview?.overdueAmount || '₹0'}</p>
+                <p className="text-sm text-muted-foreground mb-2">Overdue Invoices</p>
+                <p className="text-2xl font-bold text-yellow-400">{overview?.overdueInvoices || 0}</p>
               </div>
               <div className="p-4 rounded bg-muted/30 border border-border">
-                <p className="text-sm text-muted-foreground mb-2">Active Invoices</p>
-                <p className="text-2xl font-bold">{overview?.activeInvoices || '0'}</p>
+                <p className="text-sm text-muted-foreground mb-2">Average Collected / Payment</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(
+                    overview?.paidTransactions ? (overview.collectedAmount || 0) / overview.paidTransactions : 0
+                  )}
+                </p>
               </div>
             </div>
-          </motion.div>
+          </div>
         </motion.div>
       )}
 
-      {/* Invoices Tab */}
       {activeTab === 'invoices' && (
         <div className="command-panel overflow-hidden">
           {isLoading ? (
@@ -178,28 +183,30 @@ export default function BillingPage() {
               <table className="w-full">
                 <thead>
                   <tr className="table-header border-b border-border">
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Invoice ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Invoice</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Customer</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Payment Status</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Due Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invoices.map((invoice) => (
                     <tr key={invoice.id} className="table-row hover:bg-muted/20">
-                      <td className="px-6 py-4 font-mono text-sm">{invoice.invoiceId}</td>
-                      <td className="px-6 py-4 text-sm">{invoice.customerId}</td>
-                      <td className="px-6 py-4 text-right font-semibold">₹{invoice.amount}</td>
                       <td className="px-6 py-4">
-                        <span className={`badge ${
-                          invoice.status === 'paid' ? 'badge-success' : 
-                          invoice.status === 'overdue' ? 'badge-danger' : 'badge-warning'
-                        }`}>
-                          {invoice.status}
+                        <div className="space-y-1">
+                          <p className="font-mono text-sm">{invoice.invoiceNumber}</p>
+                          <p className="text-xs text-muted-foreground">{invoice.invoiceId}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm">{invoice.customerId}</td>
+                      <td className="px-6 py-4 text-right font-semibold">{formatCurrency(invoice.totalAmount)}</td>
+                      <td className="px-6 py-4">
+                        <span className={`badge ${invoice.paymentStatus === 'paid' ? 'badge-success' : invoice.paymentStatus === 'overdue' ? 'badge-danger' : 'badge-warning'}`}>
+                          {invoice.paymentStatus}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{invoice.dueDate}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{invoice.dueDate ? formatDate(invoice.dueDate) : '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -209,7 +216,6 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Payments Tab */}
       {activeTab === 'payments' && (
         <div className="command-panel overflow-hidden">
           {isLoading ? (
@@ -223,28 +229,24 @@ export default function BillingPage() {
               <table className="w-full">
                 <thead>
                   <tr className="table-header border-b border-border">
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Payment ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Transaction</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Customer</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase">Amount</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Method</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Paid At</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map((payment) => (
                     <tr key={payment.id} className="table-row hover:bg-muted/20">
-                      <td className="px-6 py-4 font-mono text-sm">{payment.paymentId}</td>
+                      <td className="px-6 py-4 font-mono text-sm">{payment.transactionId}</td>
                       <td className="px-6 py-4 text-sm">{payment.customerId}</td>
-                      <td className="px-6 py-4 text-right font-semibold">₹{payment.amount}</td>
+                      <td className="px-6 py-4 text-right font-semibold">{formatCurrency(payment.amount)}</td>
                       <td className="px-6 py-4 text-sm capitalize">{payment.method}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{payment.date}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{payment.paidAt ? formatDate(payment.paidAt, 'long') : '-'}</td>
                       <td className="px-6 py-4">
-                        <span className={`badge ${
-                          payment.status === 'completed' ? 'badge-success' : 'badge-warning'
-                        }`}>
-                          {payment.status}
-                        </span>
+                        <span className={`badge ${payment.status === 'success' ? 'badge-success' : 'badge-warning'}`}>{payment.status}</span>
                       </td>
                     </tr>
                   ))}

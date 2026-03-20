@@ -112,24 +112,24 @@ class ApiClient {
     return this.client.get(`/api/v1/admin/customers/${customerId}`)
   }
 
-  async suspendCustomer(customerId: string): Promise<ApiResponse> {
-    return this.client.post(`/api/v1/admin/customers/${customerId}/suspend`)
+  async suspendCustomer(customerId: string, reason: string = 'Suspended from admin console'): Promise<ApiResponse> {
+    return this.client.post(`/api/v1/admin/customers/${customerId}/suspend`, { reason })
   }
 
-  async suspendSubscriber(customerId: string): Promise<ApiResponse> {
-    return this.suspendCustomer(customerId)
+  async suspendSubscriber(customerId: string, reason?: string): Promise<ApiResponse> {
+    return this.suspendCustomer(customerId, reason)
   }
 
-  async resumeCustomer(customerId: string): Promise<ApiResponse> {
-    return this.client.post(`/api/v1/admin/customers/${customerId}/resume`)
+  async resumeCustomer(customerId: string, reason: string = 'Resumed from admin console'): Promise<ApiResponse> {
+    return this.client.post(`/api/v1/admin/customers/${customerId}/resume`, { reason })
   }
 
-  async resumeSubscriber(customerId: string): Promise<ApiResponse> {
-    return this.resumeCustomer(customerId)
+  async resumeSubscriber(customerId: string, reason?: string): Promise<ApiResponse> {
+    return this.resumeCustomer(customerId, reason)
   }
 
-  async retryProvisioning(customerId: string): Promise<ApiResponse> {
-    return this.client.post(`/api/v1/admin/customers/${customerId}/retry-provisioning`)
+  async retryProvisioning(customerId: string, presetName: string = 'SERVICE_PREPARE'): Promise<ApiResponse> {
+    return this.client.post(`/api/v1/admin/customers/${customerId}/retry-provisioning`, { presetName })
   }
 
   async getCustomerBilling(customerId: string): Promise<ApiResponse> {
