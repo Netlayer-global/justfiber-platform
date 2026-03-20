@@ -561,3 +561,22 @@ export async function assignBookingToInstaller({ token, apiBase, installerId, bo
     body: { bookingId }
   });
 }
+
+// Audit Logs
+export async function getAuditLogs(page = 1, limit = 100, { token, apiBase } = {}) {
+  const data = await request(`/api/v1/admin/audit-logs?page=${page}&limit=${limit}`, { token, apiBase });
+  return {
+    success: true,
+    data: {
+      items: data.items || data || [],
+      total: data.total || 0,
+      page,
+      limit
+    }
+  };
+}
+
+// API Client wrapper for convenience
+export const adminAPI = {
+  getAuditLogs: (page, limit) => getAuditLogs(page, limit)
+};
