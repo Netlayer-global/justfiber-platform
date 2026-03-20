@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LogOut, Menu } from 'lucide-react'
-import { api } from '@/lib/api'
+import { clearAuthToken } from '@/lib/api'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
@@ -22,7 +22,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   const handleLogout = () => {
-    api.clearToken()
+    clearAuthToken()
     router.push('/auth/login')
   }
 
