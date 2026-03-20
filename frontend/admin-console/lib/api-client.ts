@@ -66,6 +66,10 @@ class ApiClient {
     localStorage.removeItem('adminRefreshToken')
   }
 
+  logout(): void {
+    this.clearToken()
+  }
+
   setToken(token: string, refreshToken?: string): void {
     localStorage.setItem('adminToken', token)
     if (refreshToken) {

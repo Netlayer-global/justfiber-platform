@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    apiClient.clearToken()
+    apiClient.logout()
     setAdmin(null)
     router.push('/auth/login')
   }
