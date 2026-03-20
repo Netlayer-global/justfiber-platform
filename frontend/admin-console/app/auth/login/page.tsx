@@ -4,23 +4,22 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Lock, User, LogIn } from 'lucide-react'
-import { apiClient } from '@/lib/api-client'
+import { useAuth } from '@/lib/auth-context'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login: signIn, isAuthenticated } = useAuth()
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
-    // If already logged in, redirect to dashboard
-    const token = localStorage.getItem('adminToken')
-    if (token) {
+    if (isAuthenticated) {
       router.push('/dashboard')
     }
-  }, [router])
+  }, [isAuthenticated, router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -32,20 +31,11 @@ export default function LoginPage() {
 
     try {
       setIsLoading(true)
-      const response = await apiClient.login(login, password)
-
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Login failed')
-      }
-
-      const { accessToken, refreshToken } = response.data.data
-      apiClient.setToken(accessToken, refreshToken)
-
+      await signIn(login, password)
       toast.success('Welcome back!')
-      router.push('/dashboard')
     } catch (error: any) {
       console.error('[v0] Login error:', error)
-      toast.error(error.response?.data?.error || error.message || 'Login failed')
+      toast.error(error.response?.data?.error?.message || error.response?.data?.error || error.message || 'Login failed')
     } finally {
       setIsLoading(false)
     }

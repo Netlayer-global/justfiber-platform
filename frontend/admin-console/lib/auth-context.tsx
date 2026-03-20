@@ -6,16 +6,20 @@ import { useRouter } from 'next/navigation'
 
 export interface Admin {
   id: string
+  username?: string
   email: string
-  name: string
-  role: string
+  fullName?: string
+  name?: string
+  role?: string
+  roles?: string[]
+  permissions?: string[]
 }
 
 interface AuthContextType {
   admin: Admin | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (login: string, password: string) => Promise<void>
   logout: () => void
   error: string | null
 }
@@ -28,6 +32,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const loadCurrentAdmin = async () => {
+    const response = await apiClient.getMe()
+    const adminData = response.data?.data || response.data
+
+    if (response.data?.success === false || !adminData?.id) {
+      throw new Error('Unable to load admin profile')
+    }
+
+    setAdmin(adminData as Admin)
+  }
+
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,15 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        const response = await apiClient.getMe()
-        if (response.data?.success && response.data?.data) {
-          setAdmin(response.data.data as Admin)
-        } else {
-          localStorage.removeItem('adminToken')
-        }
+        await loadCurrentAdmin()
       } catch (err) {
         console.error('[v0] Auth check failed:', err)
         localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminRefreshToken')
       } finally {
         setIsLoading(false)
       }
@@ -55,19 +66,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (login: string, password: string) => {
     try {
       setError(null)
       setIsLoading(true)
-      const response = await apiClient.login(email, password)
+      const response = await apiClient.login(login, password)
 
       if (!response.data?.success) {
         throw new Error(response.data?.error || 'Login failed')
       }
 
-      const { accessToken, admin: adminData } = response.data.data
-      apiClient.setToken(accessToken)
-      setAdmin(adminData)
+      const { accessToken, refreshToken } = response.data.data
+      apiClient.setToken(accessToken, refreshToken)
+      await loadCurrentAdmin()
       router.push('/dashboard')
     } catch (err: any) {
       const message = err.response?.data?.error || err.message || 'Login failed'
