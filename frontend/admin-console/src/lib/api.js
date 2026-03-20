@@ -387,28 +387,181 @@ export async function testDispatch({ token, apiBase, body }) {
   });
 }
 
-// Helpdesk SLA and rules
-export async function fetchHelpdeskOverview({ token, apiBase }) {
-  return request("/api/v1/admin/foundation/helpdesk/overview", { token, apiBase });
+// Subscriber Services
+export async function fetchSubscriberServices({ token, apiBase, page = 1, limit = 20 }) {
+  const data = await request(`/api/v1/admin/foundation/subscriber-services?page=${page}&limit=${limit}`, { token, apiBase });
+  return { items: data.items || data, total: data.total || 0 };
 }
 
-export async function runSLAScan({ token, apiBase }) {
-  return request("/api/v1/admin/foundation/helpdesk/run-sla-scan", {
+export async function createSubscriberService({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/subscriber-services", {
     method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function updateSubscriberService({ token, apiBase, serviceId, body }) {
+  return request(`/api/v1/admin/foundation/subscriber-services/${encodeURIComponent(serviceId)}`, {
+    method: "PATCH",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function deleteSubscriberService({ token, apiBase, serviceId }) {
+  return request(`/api/v1/admin/foundation/subscriber-services/${encodeURIComponent(serviceId)}`, {
+    method: "DELETE",
     token,
     apiBase
   });
 }
 
-export async function fetchHelpdeskSLAConfig({ token, apiBase }) {
-  return request("/api/v1/admin/configs/settings/helpdesk_sla", { token, apiBase });
+// Access Profiles
+export async function fetchAccessProfiles({ token, apiBase, page = 1, limit = 20 }) {
+  const data = await request(`/api/v1/admin/foundation/access-profiles?page=${page}&limit=${limit}`, { token, apiBase });
+  return { items: data.items || data, total: data.total || 0 };
 }
 
-export async function updateHelpdeskSLAConfig({ token, apiBase, body }) {
-  return request("/api/v1/admin/configs/settings/helpdesk_sla", {
-    method: "PUT",
+export async function createAccessProfile({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/access-profiles", {
+    method: "POST",
     token,
     apiBase,
     body
+  });
+}
+
+export async function updateAccessProfile({ token, apiBase, profileId, body }) {
+  return request(`/api/v1/admin/foundation/access-profiles/${encodeURIComponent(profileId)}`, {
+    method: "PATCH",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function deleteAccessProfile({ token, apiBase, profileId }) {
+  return request(`/api/v1/admin/foundation/access-profiles/${encodeURIComponent(profileId)}`, {
+    method: "DELETE",
+    token,
+    apiBase
+  });
+}
+
+// Billing Profiles
+export async function fetchBillingProfiles({ token, apiBase, page = 1, limit = 20 }) {
+  const data = await request(`/api/v1/admin/foundation/billing-profiles?page=${page}&limit=${limit}`, { token, apiBase });
+  return { items: data.items || data, total: data.total || 0 };
+}
+
+export async function createBillingProfile({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/billing-profiles", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function updateBillingProfile({ token, apiBase, profileId, body }) {
+  return request(`/api/v1/admin/foundation/billing-profiles/${encodeURIComponent(profileId)}`, {
+    method: "PATCH",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function deleteBillingProfile({ token, apiBase, profileId }) {
+  return request(`/api/v1/admin/foundation/billing-profiles/${encodeURIComponent(profileId)}`, {
+    method: "DELETE",
+    token,
+    apiBase
+  });
+}
+
+// BNG Nodes (full CRUD)
+export async function fetchBNGNodesFullList({ token, apiBase, page = 1, limit = 20 }) {
+  const data = await request(`/api/v1/admin/foundation/bng-nodes?page=${page}&limit=${limit}`, { token, apiBase });
+  return { items: data.items || data, total: data.total || 0 };
+}
+
+export async function createBNGNode({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/bng-nodes", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function updateBNGNode({ token, apiBase, nodeId, body }) {
+  return request(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeId)}`, {
+    method: "PATCH",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function deleteBNGNode({ token, apiBase, nodeId }) {
+  return request(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeId)}`, {
+    method: "DELETE",
+    token,
+    apiBase
+  });
+}
+
+// NAT Trace (query and trace)
+export async function queryNATLogs({ token, apiBase, filters = {}, page = 1, limit = 20 }) {
+  const queryStr = new URLSearchParams({ page, limit, ...filters }).toString();
+  const data = await request(`/api/v1/admin/foundation/nat-logs?${queryStr}`, { token, apiBase });
+  return { items: data.items || data, total: data.total || 0 };
+}
+
+export async function traceNATConnection({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/nat-trace", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+// Ledger Adjustments & Refunds (already exist, verify)
+export async function fetchLedgerFull({ token, apiBase, page = 1, limit = 20 }) {
+  const data = await request(`/api/v1/admin/billing/ledger?page=${page}&limit=${limit}`, { token, apiBase });
+  return { items: data.items || data, total: data.total || 0 };
+}
+
+// Device ACS Actions (already exist, verify they're callable)
+export async function getDeviceDetail({ token, apiBase, deviceId }) {
+  return request(`/api/v1/admin/network/device-management/${encodeURIComponent(deviceId)}`, { token, apiBase });
+}
+
+// Installer Operations
+export async function fetchInstallersFullList({ token, apiBase, page = 1, limit = 20 }) {
+  const data = await request(`/api/v1/admin/installers?page=${page}&limit=${limit}`, { token, apiBase });
+  return { items: data.items || data, total: data.total || 0 };
+}
+
+export async function getInstallerDetail({ token, apiBase, installerId }) {
+  return request(`/api/v1/admin/installers/${encodeURIComponent(installerId)}`, { token, apiBase });
+}
+
+export async function fetchPendingBookings({ token, apiBase, page = 1, limit = 20 }) {
+  const data = await request(`/api/v1/admin/sales/bookings?status=pending&page=${page}&limit=${limit}`, { token, apiBase });
+  return { items: data.items || data, total: data.total || 0 };
+}
+
+export async function assignBookingToInstaller({ token, apiBase, installerId, bookingId }) {
+  return request(`/api/v1/admin/installers/${encodeURIComponent(installerId)}/assign-booking`, {
+    method: "POST",
+    token,
+    apiBase,
+    body: { bookingId }
   });
 }
