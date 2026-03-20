@@ -240,6 +240,13 @@ export interface AuditLog {
   status: 'success' | 'failure'
 }
 
+export interface AuditLogsResponse {
+  items: AuditLog[]
+  total: number
+  page: number
+  limit: number
+}
+
 // Integration types
 export type IntegrationCategory = 'sms' | 'email' | 'whatsapp' | 'kyc' | 'ott' | 'payment_gateway' | 'crm' | 'acs' | 'analytics'
 
