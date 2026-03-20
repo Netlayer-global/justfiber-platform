@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Map, Plus, Layers, Search, Filter, Eye, Trash2, Edit2, Download, AlertCircle, CheckCircle2, Zap } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
+import type { AreaType, ServiceabilityZone, ExpansionInterestLead } from '@/lib/types'
 import { toast } from 'sonner'
 import ServiceabilityMap from './components/ServiceabilityMap'
 import ZonesList from './components/ZonesList'
@@ -11,7 +12,6 @@ import LeadsPanel from './components/LeadsPanel'
 import ZoneForm from './components/ZoneForm'
 
 type Tab = 'map' | 'zones' | 'leads'
-type AreaType = 'active_service' | 'planned_expansion' | 'blocked' | 'franchise'
 
 const AREA_TYPE_CONFIG: Record<AreaType, { label: string; color: string; bgColor: string }> = {
   active_service: { label: 'Active Service', color: '#00cc99', bgColor: 'bg-green-500/20' },
@@ -22,12 +22,12 @@ const AREA_TYPE_CONFIG: Record<AreaType, { label: string; color: string; bgColor
 
 export default function ServiceabilityPage() {
   const [tab, setTab] = useState<Tab>('map')
-  const [zones, setZones] = useState<any[]>([])
-  const [leads, setLeads] = useState<any[]>([])
-  const [selectedZone, setSelectedZone] = useState<any>(null)
+  const [zones, setZones] = useState<ServiceabilityZone[]>([])
+  const [leads, setLeads] = useState<ExpansionInterestLead[]>([])
+  const [selectedZone, setSelectedZone] = useState<ServiceabilityZone | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showZoneForm, setShowZoneForm] = useState(false)
-  const [editingZone, setEditingZone] = useState<any>(null)
+  const [editingZone, setEditingZone] = useState<ServiceabilityZone | null>(null)
   const [filterAreaType, setFilterAreaType] = useState<AreaType | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
