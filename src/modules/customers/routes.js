@@ -8,11 +8,13 @@ import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
-import { statusActionSchema, retryProvisioningSchema } from "./schemas.js";
+import { statusActionSchema, retryProvisioningSchema, updateCustomerSchema } from "./schemas.js";
 import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { allowedPresets } from "../../integrations/genieacsClient.js";
 import { buildPagination } from "../../common/pagination.js";
+import { BillingInvoice } from "../../models/BillingInvoice.js";
+import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 
 export const customersRouter = Router();
 
@@ -32,6 +34,15 @@ customersRouter.get(
         { fullName: { $regex: req.query.search, $options: "i" } }
       ];
     }
+    if (req.query.status) {
+      filter.operationalStatus = req.query.status;
+    }
+    if (req.query.planCode) {
+      filter.planCode = req.query.planCode;
+    }
+    if (req.query.city) {
+      filter["address.city"] = req.query.city;
+    }
     const [items, total] = await Promise.all([
       Customer.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
       Customer.countDocuments(filter)
@@ -48,11 +59,38 @@ customersRouter.get(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
-    const [devices, tickets] = await Promise.all([
+    const [devices, tickets, invoices, payments, actions] = await Promise.all([
       DeviceOperationalCache.find({ customerId: customer.customerId }).lean(),
       SupportTicket.find({ customerId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean()
+      ,
+      BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1 }).limit(12).lean(),
+      PaymentTransaction.find({ customerId: customer.customerId }).sort({ paidAt: -1, createdAt: -1 }).limit(12).lean(),
+      AdminActionRequest.find({ targetType: "customer", targetId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean()
     ]);
-    return ok(res, { ...customer, devices, tickets });
+    return ok(res, { ...customer, devices, tickets, invoices, payments, actions });
+  })
+);
+
+customersRouter.patch(
+  "/:customerId",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = updateCustomerSchema.parse(req.body || {});
+    const customer = await Customer.findOneAndUpdate(
+      { customerId: req.params.customerId },
+      { $set: payload },
+      { new: true }
+    ).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    await auditFromRequest(req, {
+      action: "customer.updated",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: Object.keys(payload)
+    });
+    return ok(res, customer);
   })
 );
 

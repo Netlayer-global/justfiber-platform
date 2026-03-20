@@ -60,6 +60,31 @@ async function createLedgerEntry({
   });
 }
 
+async function settleLatestPendingInvoice({ customerId, serviceId, paymentId, amount, source }) {
+  const invoice = await BillingInvoice.findOne({
+    customerId,
+    paymentStatus: { $in: ["pending", "overdue"] }
+  }).sort({ dueDate: 1, generatedAt: 1 });
+  if (!invoice) {
+    return null;
+  }
+  invoice.paymentStatus = "paid";
+  invoice.status = "settled";
+  invoice.metadata = {
+    ...(invoice.metadata || {}),
+    lastPaymentId: paymentId,
+    lastPaymentSource: source,
+    lastPaymentAmount: amount,
+    settledBy: "admin_ops",
+    settledAt: new Date()
+  };
+  if (!invoice.serviceId && serviceId) {
+    invoice.serviceId = serviceId;
+  }
+  await invoice.save();
+  return invoice;
+}
+
 adminOpsRouter.get(
   "/billing/overview",
   requirePermission(permissions.billingRead),
@@ -116,6 +141,12 @@ adminOpsRouter.get(
     const filter = {};
     if (req.query.customerId) {
       filter.customerId = req.query.customerId;
+    }
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+    if (req.query.provider) {
+      filter.provider = req.query.provider;
     }
     const [items, total] = await Promise.all([
       PaymentTransaction.find(filter).sort({ paidAt: -1 }).skip(skip).limit(limit).lean(),
@@ -267,13 +298,15 @@ adminOpsRouter.post(
     const transactionId = req.body?.paymentId || `BILL-ADMIN-${customer.customerId}-${Date.now()}`;
     const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
     let createdLedgerEntry = null;
+    let settledInvoice = null;
+    const amount = Number(req.body?.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0);
     if (!existingPayment) {
       await PaymentTransaction.create({
         transactionId,
         customerId: customer.customerId,
         serviceId: customer.serviceId,
         provider: "internal_platform",
-        amount: Number(req.body?.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0),
+        amount,
         status: "success",
         paidAt: new Date(),
         method: req.body?.method || "manualCollection",
@@ -284,13 +317,21 @@ adminOpsRouter.post(
           collectionMode: req.body?.collectionMode || "admin_confirmed"
         }
       });
-      createdLedgerEntry = await createLedgerEntry({
+      settledInvoice = await settleLatestPendingInvoice({
         customerId: customer.customerId,
         serviceId: customer.serviceId,
         paymentId: transactionId,
+        amount,
+        source: "admin_billing_confirm"
+      });
+      createdLedgerEntry = await createLedgerEntry({
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        invoiceId: settledInvoice?.invoiceId,
+        paymentId: transactionId,
         category: "payment",
         direction: "credit",
-        amount: Number(req.body?.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0),
+        amount,
         reference: req.body?.reference || req.body?.paymentId,
         note: "Admin confirmed customer payment",
         source: "admin_billing_confirm",
@@ -299,7 +340,6 @@ adminOpsRouter.post(
       });
     }
 
-    const amount = Number(req.body?.amount || customer.billingSnapshot?.lastInvoiceAmount || customer.billingSnapshot?.dueAmount || 0);
     customer.billingSnapshot = {
       ...(customer.billingSnapshot || {}),
       lastInvoiceAmount: amount,
@@ -315,7 +355,8 @@ adminOpsRouter.post(
       amount,
       dueAmount: 0,
       idempotentReplay: Boolean(existingPayment),
-      ledgerEntryId: createdLedgerEntry?.entryId
+      ledgerEntryId: createdLedgerEntry?.entryId,
+      invoiceId: settledInvoice?.invoiceId || null
     });
   })
 );

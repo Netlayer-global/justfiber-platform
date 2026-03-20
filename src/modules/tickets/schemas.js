@@ -16,3 +16,14 @@ export const assignTicketSchema = z.object({
 export const resolveTicketSchema = z.object({
   resolutionSummary: z.string().min(5).max(2000)
 });
+
+export const updateTicketSchema = z.object({
+  status: z.enum(["open", "assigned", "in_progress", "resolved", "closed"]).optional(),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+  assignedTeam: z.string().min(2).max(100).nullable().optional(),
+  note: z.string().min(2).max(2000).optional()
+});
+
+export const closeTicketSchema = z.object({
+  closeNote: z.string().min(2).max(2000).optional()
+});

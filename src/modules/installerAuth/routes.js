@@ -23,7 +23,7 @@ installerAuthRouter.post(
   asyncHandler(async (req, res) => {
     const payload = installerLoginSchema.parse(req.body);
     const installer = await Installer.findOne({
-      $or: [{ phone: payload.login }, { email: payload.login }]
+      $or: [{ phone: payload.login }, { email: payload.login }, { installerCode: payload.login }]
     });
     if (!installer || !(await argon2.verify(installer.passwordHash, payload.password))) {
       throw new ApiError(401, "Invalid installer credentials");

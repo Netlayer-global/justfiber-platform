@@ -7,7 +7,7 @@ import { permissions } from "../../config/permissions.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
-import { createTicketSchema, assignTicketSchema, resolveTicketSchema } from "./schemas.js";
+import { createTicketSchema, assignTicketSchema, resolveTicketSchema, updateTicketSchema, closeTicketSchema } from "./schemas.js";
 import { auditFromRequest } from "../../common/audit.js";
 
 export const ticketsRouter = Router();
@@ -54,6 +54,55 @@ ticketsRouter.post(
       entityId: ticket._id.toString()
     });
     return ok(res, ticket, { created: true });
+  })
+);
+
+ticketsRouter.get(
+  "/:ticketId",
+  requirePermission(permissions.ticketRead),
+  asyncHandler(async (req, res) => {
+    const ticket = await SupportTicket.findById(req.params.ticketId).lean();
+    if (!ticket) {
+      throw new ApiError(404, "Ticket not found");
+    }
+    return ok(res, ticket);
+  })
+);
+
+ticketsRouter.patch(
+  "/:ticketId",
+  requirePermission(permissions.ticketWrite),
+  asyncHandler(async (req, res) => {
+    const payload = updateTicketSchema.parse(req.body || {});
+    const ticket = await SupportTicket.findById(req.params.ticketId);
+    if (!ticket) {
+      throw new ApiError(404, "Ticket not found");
+    }
+    if (payload.status) {
+      ticket.status = payload.status;
+    }
+    if (payload.priority) {
+      ticket.priority = payload.priority;
+    }
+    if (payload.assignedTeam !== undefined) {
+      ticket.assignedTeam = payload.assignedTeam;
+    }
+    if (payload.note) {
+      ticket.timeline.push({
+        type: "updated",
+        actorType: "admin",
+        actorId: req.admin._id,
+        note: payload.note
+      });
+    }
+    await ticket.save();
+    await auditFromRequest(req, {
+      action: "ticket.updated",
+      entityType: "ticket",
+      entityId: ticket._id.toString(),
+      metadata: payload
+    });
+    return ok(res, ticket);
   })
 );
 
@@ -104,6 +153,33 @@ ticketsRouter.post(
     await ticket.save();
     await auditFromRequest(req, {
       action: "ticket.resolved",
+      entityType: "ticket",
+      entityId: ticket._id.toString()
+    });
+    return ok(res, ticket);
+  })
+);
+
+ticketsRouter.post(
+  "/:ticketId/close",
+  requirePermission(permissions.ticketResolve),
+  asyncHandler(async (req, res) => {
+    const payload = closeTicketSchema.parse(req.body || {});
+    const ticket = await SupportTicket.findById(req.params.ticketId);
+    if (!ticket) {
+      throw new ApiError(404, "Ticket not found");
+    }
+    ticket.status = "closed";
+    ticket.closedAt = new Date();
+    ticket.timeline.push({
+      type: "closed",
+      actorType: "admin",
+      actorId: req.admin._id,
+      note: payload.closeNote || "Ticket closed from admin panel"
+    });
+    await ticket.save();
+    await auditFromRequest(req, {
+      action: "ticket.closed",
       entityType: "ticket",
       entityId: ticket._id.toString()
     });

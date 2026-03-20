@@ -23,13 +23,20 @@ const salesAgentSchema = z.object({
 });
 
 const zoneSchema = z.object({
+  zoneCode: z.string().min(2).optional(),
   zoneName: z.string().min(2),
   city: z.string().optional(),
   area: z.string().optional(),
+  pinCodes: z.array(z.string().min(4)).optional(),
   status: z.enum(["active", "planned", "coming_soon"]).default("planned"),
   polygonGeoJson: z.any().optional(),
   serviceType: z.string().default("fiber"),
-  priority: z.number().default(1)
+  priority: z.number().default(1),
+  center: z.object({
+    lat: z.number(),
+    lng: z.number()
+  }).optional(),
+  notes: z.string().optional()
 });
 
 const planSchema = z.object({
@@ -60,10 +67,19 @@ const bannerSchema = z.object({
 
 export const adminCatalogRouter = Router();
 
-adminCatalogRouter.use(requireAuth, requirePermission(permissions.dashboardRead));
+adminCatalogRouter.use(requireAuth);
+
+function normalizeZoneCode(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 adminCatalogRouter.get(
   "/sales/agents",
+  requirePermission(permissions.configRead),
   asyncHandler(async (_req, res) => {
     const agents = await SalesAgent.find().sort({ createdAt: -1 }).lean();
     return ok(res, agents);
@@ -72,6 +88,7 @@ adminCatalogRouter.get(
 
 adminCatalogRouter.post(
   "/sales/agents",
+  requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const payload = salesAgentSchema.parse(req.body);
     const passwordHash = await argon2.hash(payload.password);
@@ -86,6 +103,7 @@ adminCatalogRouter.post(
 
 adminCatalogRouter.get(
   "/sales/kyc-review",
+  requirePermission(permissions.customerRead),
   asyncHandler(async (_req, res) => {
     const items = await LeadKycDocument.find().sort({ createdAt: -1 }).limit(100).lean();
     return ok(res, items);
@@ -94,6 +112,7 @@ adminCatalogRouter.get(
 
 adminCatalogRouter.post(
   "/sales/kyc-review/:id/approve",
+  requirePermission(permissions.customerUpdate),
   asyncHandler(async (req, res) => {
     const doc = await LeadKycDocument.findById(req.params.id);
     if (!doc) {
@@ -109,6 +128,7 @@ adminCatalogRouter.post(
 
 adminCatalogRouter.post(
   "/sales/kyc-review/:id/reject",
+  requirePermission(permissions.customerUpdate),
   asyncHandler(async (req, res) => {
     const doc = await LeadKycDocument.findById(req.params.id);
     if (!doc) {
@@ -125,6 +145,7 @@ adminCatalogRouter.post(
 
 adminCatalogRouter.get(
   "/serviceability/zones",
+  requirePermission(permissions.configRead),
   asyncHandler(async (_req, res) => {
     const zones = await ServiceabilityZone.find().sort({ priority: 1, createdAt: -1 }).lean();
     return ok(res, zones);
@@ -133,15 +154,60 @@ adminCatalogRouter.get(
 
 adminCatalogRouter.post(
   "/serviceability/zones",
+  requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const payload = zoneSchema.parse(req.body);
-    const zone = await ServiceabilityZone.create(payload);
+    const zoneCode = payload.zoneCode || normalizeZoneCode(payload.zoneName);
+    await ServiceabilityZone.updateOne(
+      { zoneCode },
+      { $set: { ...payload, zoneCode, pinCodes: payload.pinCodes || [] } },
+      { upsert: true }
+    );
+    const zone = await ServiceabilityZone.findOne({ zoneCode }).lean();
     return ok(res, zone, { created: true });
+  })
+);
+
+adminCatalogRouter.patch(
+  "/serviceability/zones/:zoneId",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = zoneSchema.partial().parse(req.body || {});
+    const zone = await ServiceabilityZone.findOne({
+      $or: [{ _id: req.params.zoneId }, { zoneCode: req.params.zoneId }]
+    });
+    if (!zone) {
+      throw new ApiError(404, "Serviceability zone not found");
+    }
+    if (payload.zoneName && !payload.zoneCode) {
+      payload.zoneCode = normalizeZoneCode(payload.zoneName);
+    }
+    Object.assign(zone, payload);
+    if (payload.pinCodes) {
+      zone.pinCodes = payload.pinCodes;
+    }
+    await zone.save();
+    return ok(res, zone);
+  })
+);
+
+adminCatalogRouter.delete(
+  "/serviceability/zones/:zoneId",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const zone = await ServiceabilityZone.findOneAndDelete({
+      $or: [{ _id: req.params.zoneId }, { zoneCode: req.params.zoneId }]
+    }).lean();
+    if (!zone) {
+      throw new ApiError(404, "Serviceability zone not found");
+    }
+    return ok(res, { deleted: true, zoneId: req.params.zoneId });
   })
 );
 
 adminCatalogRouter.get(
   "/catalog/plans",
+  requirePermission(permissions.configRead),
   asyncHandler(async (_req, res) => {
     const plans = await PlanCatalog.find().sort({ sortOrder: 1 }).lean();
     return ok(res, plans);
@@ -150,6 +216,7 @@ adminCatalogRouter.get(
 
 adminCatalogRouter.post(
   "/catalog/plans",
+  requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const payload = planSchema.parse(req.body);
     await PlanCatalog.updateOne({ planCode: payload.planCode }, { $set: payload }, { upsert: true });
@@ -158,8 +225,42 @@ adminCatalogRouter.post(
   })
 );
 
+adminCatalogRouter.patch(
+  "/catalog/plans/:planCode",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = planSchema.partial().parse(req.body || {});
+    const plan = await PlanCatalog.findOneAndUpdate(
+      { planCode: req.params.planCode },
+      { $set: payload },
+      { new: true }
+    ).lean();
+    if (!plan) {
+      throw new ApiError(404, "Plan not found");
+    }
+    return ok(res, plan);
+  })
+);
+
+adminCatalogRouter.delete(
+  "/catalog/plans/:planCode",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const plan = await PlanCatalog.findOneAndUpdate(
+      { planCode: req.params.planCode },
+      { $set: { active: false } },
+      { new: true }
+    ).lean();
+    if (!plan) {
+      throw new ApiError(404, "Plan not found");
+    }
+    return ok(res, { deleted: true, plan });
+  })
+);
+
 adminCatalogRouter.get(
   "/catalog/banners",
+  requirePermission(permissions.configRead),
   asyncHandler(async (_req, res) => {
     const banners = await AppBanner.find().sort({ sortOrder: 1 }).lean();
     return ok(res, banners);
@@ -168,6 +269,7 @@ adminCatalogRouter.get(
 
 adminCatalogRouter.post(
   "/catalog/banners",
+  requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const payload = bannerSchema.parse(req.body);
     const banner = await AppBanner.create({
