@@ -67,7 +67,7 @@ export default function SubscribersPage() {
 
       if (response.data?.success) {
         const items = Array.isArray(response.data.data) ? response.data.data.map(mapSubscriber) : []
-        const filteredItems = filterStatus ? items.filter((item) => item.status === filterStatus) : items
+        const filteredItems = filterStatus ? items.filter((item: Subscriber) => item.status === filterStatus) : items
         setSubscribers(filteredItems)
       } else {
         setError('Failed to load subscribers')
