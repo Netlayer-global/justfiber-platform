@@ -52,7 +52,6 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -60,16 +59,8 @@ export function DataTable<TData, TValue>({
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className="px-6 py-3 text-left font-semibold text-foreground whitespace-nowrap"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                    <th key={header.id} className="px-6 py-3 text-left font-semibold text-foreground whitespace-nowrap">
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
                 </tr>
@@ -78,22 +69,16 @@ export function DataTable<TData, TValue>({
             <tbody>
               {table.getRowModel().rows.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="px-6 py-12 text-center text-muted-foreground"
-                  >
+                  <td colSpan={columns.length} className="px-6 py-12 text-center text-muted-foreground">
                     {isLoading ? 'Loading...' : 'No results'}
                   </td>
                 </tr>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="table-row">
+                  <tr key={row.id} className="border-t border-border hover:bg-muted/50">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-6 py-4">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
                   </tr>
@@ -104,42 +89,36 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{' '}
-          {table.getPageCount()}
+          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
-            className="p-2 hover:bg-muted rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            aria-label="Go to first page"
+            className="p-2 hover:bg-muted rounded-lg disabled:opacity-50"
           >
             <ChevronsLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="p-2 hover:bg-muted rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            aria-label="Previous page"
+            className="p-2 hover:bg-muted rounded-lg disabled:opacity-50"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="p-2 hover:bg-muted rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            aria-label="Next page"
+            className="p-2 hover:bg-muted rounded-lg disabled:opacity-50"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
-            className="p-2 hover:bg-muted rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            aria-label="Go to last page"
+            className="p-2 hover:bg-muted rounded-lg disabled:opacity-50"
           >
             <ChevronsRight className="w-4 h-4" />
           </button>
