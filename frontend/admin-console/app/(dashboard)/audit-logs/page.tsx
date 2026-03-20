@@ -6,7 +6,7 @@ import { DataTable } from '@/components/table/DataTable'
 import { adminAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
-import type { AuditLog, AuditLogsResponse, ApiResponse } from '@/lib/types'
+import type { AuditLog } from '@/lib/types'
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -19,9 +19,9 @@ export default function AuditLogsPage() {
   async function loadAuditLogs() {
     setIsLoading(true)
     try {
-      const response: ApiResponse<AuditLogsResponse> = await adminAPI.getAuditLogs(1, 100)
-      if (response.success && response.data) {
-        setLogs(response.data.items || [])
+      const response = await adminAPI.getAuditLogs(1, 100)
+      if (response.data.success && response.data.data) {
+        setLogs(response.data.data.items || [])
       }
     } catch (error) {
       toast.error('Failed to load audit logs')
