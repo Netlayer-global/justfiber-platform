@@ -279,7 +279,6 @@ export default function KYCPage() {
         title="Submit KYC Request"
         description="Are you sure you want to submit this KYC request to the verification provider? This action cannot be undone."
         confirmText="Submit"
-        confirmColor="primary"
       />
 
       {/* Create Modal */}
