@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createColumnHelper } from '@tanstack/react-table'
+import { createColumnHelper, type ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/table/DataTable'
 import { DetailDrawer } from '@/components/drawer/DetailDrawer'
 import { adminAPI } from '@/lib/api'
@@ -92,7 +92,7 @@ export default function DevicesPage() {
   }
 
   const columnHelper = createColumnHelper<DeviceDetail>()
-  const columns = [
+  const columns: ColumnDef<DeviceDetail, any>[] = [
     columnHelper.accessor('serialNumber', {
       header: 'Serial Number',
       cell: (info) => <div className="font-mono text-sm text-foreground">{info.getValue()}</div>,
