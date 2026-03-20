@@ -1,220 +1,322 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createColumnHelper } from '@tanstack/react-table'
-import { DataTable } from '@/components/table/DataTable'
-import { DetailDrawer } from '@/components/drawer/DetailDrawer'
-import { adminAPI } from '@/lib/api'
+import { motion } from 'framer-motion'
+import { AlertCircle, Plus, RefreshCw, Headset } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
-import { formatDate, getStatusColor } from '@/lib/utils'
-import { Plus, Eye, Clock, AlertCircle } from 'lucide-react'
-import { Ticket } from '@/lib/types'
+
+interface Ticket {
+  id: string
+  ticketId: string
+  customerId: string
+  category: string
+  priority: string
+  subject: string
+  description: string
+  status: string
+  createdAt: string
+}
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState<string>('open')
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
-  const [showDetailDrawer, setShowDetailDrawer] = useState(false)
+  const [search, setSearch] = useState('')
+  const [filterPriority, setFilterPriority] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState({
+    customerId: '',
+    category: 'support',
+    priority: 'medium',
+    subject: '',
+    description: '',
+  })
 
   useEffect(() => {
     loadTickets()
-  }, [statusFilter])
+  }, [search, filterPriority, filterStatus])
 
   async function loadTickets() {
-    setIsLoading(true)
     try {
-      const response = await adminAPI.getTickets(1, 50)
+      setIsLoading(true)
+      const response = await apiClient.getTickets({
+        search: search || undefined,
+        priority: filterPriority || undefined,
+        status: filterStatus || undefined,
+        page: 1,
+        limit: 50,
+      })
+
       if (response.data.success) {
         setTickets(response.data.data || [])
       }
     } catch (error) {
+      console.error('[v0] Load tickets error:', error)
       toast.error('Failed to load tickets')
-      console.error(error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return 'text-destructive bg-destructive/20'
-      case 'high':
-        return 'text-yellow-400 bg-yellow-500/20'
-      case 'medium':
-        return 'text-blue-400 bg-blue-500/20'
-      case 'low':
-        return 'text-green-400 bg-green-500/20'
-      default:
-        return 'text-muted-foreground bg-muted'
+  async function handleCreateTicket(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      const response = await apiClient.createTicket(formData)
+      if (response.data.success) {
+        toast.success('Ticket created successfully')
+        setFormData({
+          customerId: '',
+          category: 'support',
+          priority: 'medium',
+          subject: '',
+          description: '',
+        })
+        setShowForm(false)
+        loadTickets()
+      } else {
+        toast.error(response.data.error || 'Failed to create ticket')
+      }
+    } catch (error: any) {
+      console.error('[v0] Create ticket error:', error)
+      toast.error(error.message || 'Failed to create ticket')
     }
   }
 
-  const columnHelper = createColumnHelper<Ticket>()
-  const columns = [
-    columnHelper.accessor('id', {
-      header: 'Ticket ID',
-      cell: (info) => <div className="font-mono text-sm text-primary">{info.getValue()}</div>,
-    }),
-    columnHelper.accessor('subject', {
-      header: 'Subject',
-      cell: (info) => <div className="font-medium text-foreground">{info.getValue()}</div>,
-    }),
-    columnHelper.accessor('category', {
-      header: 'Category',
-      cell: (info) => <div className="text-sm text-muted-foreground">{info.getValue()}</div>,
-    }),
-    columnHelper.accessor('priority', {
-      header: 'Priority',
-      cell: (info) => (
-        <span className={`text-xs font-semibold px-2 py-1 rounded ${getPriorityColor(info.getValue())}`}>
-          {info.getValue().toUpperCase()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor('status', {
-      header: 'Status',
-      cell: (info) => (
-        <span className={`badge ${getStatusColor(info.getValue())}`}>
-          {info.getValue().replace('_', ' ').toUpperCase()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor('createdAt', {
-      header: 'Created',
-      cell: (info) => <div className="text-sm text-muted-foreground">{formatDate(info.getValue())}</div>,
-    }),
-    columnHelper.display({
-      id: 'actions',
-      header: 'Actions',
-      cell: (info) => (
-        <button
-          onClick={() => {
-            setSelectedTicket(info.row.original)
-            setShowDetailDrawer(true)
-          }}
-          className="p-2 hover:bg-muted rounded transition-colors"
-        >
-          <Eye className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-        </button>
-      ),
-    }),
-  ]
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'badge-danger'
+      case 'medium':
+        return 'badge-warning'
+      case 'low':
+        return 'badge-success'
+      default:
+        return 'badge-muted'
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'open':
+        return 'badge-primary'
+      case 'in-progress':
+        return 'badge-warning'
+      case 'resolved':
+        return 'badge-success'
+      case 'closed':
+        return 'badge-muted'
+      default:
+        return 'badge-muted'
+    }
+  }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Tickets & Helpdesk</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage customer support tickets and requests
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded bg-primary/10 border border-primary/20">
+            <Headset className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Tickets</h1>
+            <p className="text-sm text-muted-foreground">Support ticket management and tracking</p>
+          </div>
         </div>
-        <button className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Ticket
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadTickets}
+            disabled={isLoading}
+            className="btn-ghost flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+          <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            New Ticket
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-muted-foreground">Filter by:</span>
-        <div className="flex gap-2 flex-wrap">
-          {['open', 'assigned', 'in_progress', 'resolved', 'closed', 'all'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={cn(
-                'px-3 py-1 rounded-lg text-sm font-medium transition-colors',
-                statusFilter === status
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              )}
-            >
-              {status.replace('_', ' ').toUpperCase()}
-            </button>
-          ))}
+      <div className="command-panel p-4 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by customer ID or subject..."
+            className="input-field"
+          />
+          <select
+            value={filterPriority || ''}
+            onChange={(e) => setFilterPriority(e.target.value || null)}
+            className="input-field"
+          >
+            <option value="">All Priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select
+            value={filterStatus || ''}
+            onChange={(e) => setFilterStatus(e.target.value || null)}
+            className="input-field"
+          >
+            <option value="">All Statuses</option>
+            <option value="open">Open</option>
+            <option value="in-progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
         </div>
       </div>
 
       {/* Table */}
-      <DataTable columns={columns} data={tickets} isLoading={isLoading} pageSize={25} />
-
-      {/* Detail Drawer */}
-      {selectedTicket && (
-        <DetailDrawer
-          isOpen={showDetailDrawer}
-          onClose={() => setShowDetailDrawer(false)}
-          title={`Ticket ${selectedTicket.id}`}
-        >
-          <div className="space-y-6">
-            {/* Ticket Info */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground">Ticket Information</h3>
-              <div className="grid gap-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Subject</p>
-                  <p className="text-foreground font-medium">{selectedTicket.subject}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Category</p>
-                  <p className="text-foreground">{selectedTicket.category}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Priority</p>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded inline-block ${getPriorityColor(selectedTicket.priority)}`}>
-                      {selectedTicket.priority.toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <span className={`badge ${getStatusColor(selectedTicket.status)} inline-block mt-1`}>
-                      {selectedTicket.status.replace('_', ' ').toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Timeline */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground">Timeline</h3>
-              <div className="space-y-3">
-                <div className="flex gap-3">
-                  <div className="w-2 h-2 mt-2 rounded-full bg-primary flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Created</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(selectedTicket.createdAt, 'long')}</p>
-                  </div>
-                </div>
-                {selectedTicket.assignedTo && (
-                  <div className="flex gap-3">
-                    <div className="w-2 h-2 mt-2 rounded-full bg-primary flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Assigned to</p>
-                      <p className="text-xs text-muted-foreground">{selectedTicket.assignedTo}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-2 border-t border-border pt-6">
-              <button className="w-full btn-primary text-sm">Reply to Ticket</button>
-              <button className="w-full btn-secondary text-sm">Assign Ticket</button>
-              <button className="w-full btn-ghost text-sm">Resolve Ticket</button>
-            </div>
+      <div className="command-panel overflow-hidden">
+        {isLoading ? (
+          <div className="p-12 flex justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="w-8 h-8 border-3 border-muted/30 border-t-primary rounded-full"
+            />
           </div>
-        </DetailDrawer>
-      )}
-    </div>
-  )
-}
+        ) : tickets.length === 0 ? (
+          <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-2">
+            <AlertCircle className="w-8 h-8" />
+            No tickets found
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="table-header border-b border-border">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Ticket ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Customer</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Priority</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tickets.map((ticket) => (
+                  <tr key={ticket.id} className="table-row hover:bg-muted/20">
+                    <td className="px-6 py-4 font-mono text-sm">{ticket.ticketId}</td>
+                    <td className="px-6 py-4 text-sm">{ticket.customerId}</td>
+                    <td className="px-6 py-4 text-sm font-medium max-w-xs truncate">{ticket.subject}</td>
+                    <td className="px-6 py-4 text-sm capitalize">{ticket.category}</td>
+                    <td className="px-6 py-4">
+                      <span className={`badge ${getPriorityColor(ticket.priority)}`}>
+                        {ticket.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`badge ${getStatusColor(ticket.status)}`}>
+                        {ticket.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">{ticket.createdAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ')
+      {/* Create Ticket Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card border border-border rounded-lg p-6 max-w-md w-full"
+          >
+            <h2 className="text-xl font-bold mb-4">Create New Ticket</h2>
+            <form onSubmit={handleCreateTicket} className="space-y-4">
+              <div>
+                <label className="label">Customer ID</label>
+                <input
+                  type="text"
+                  value={formData.customerId}
+                  onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                  placeholder="CUST-1001"
+                  className="input-field"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Category</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="support">Support</option>
+                  <option value="billing">Billing</option>
+                  <option value="technical">Technical</option>
+                  <option value="general">General</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Priority</label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Subject</label>
+                <input
+                  type="text"
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  placeholder="Brief description"
+                  className="input-field"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Detailed description"
+                  className="input-field"
+                  rows={3}
+                  required
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button type="submit" className="btn-primary flex-1">
+                  Create Ticket
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="btn-ghost flex-1"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </motion.div>
+  )
 }
