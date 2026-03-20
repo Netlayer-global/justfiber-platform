@@ -78,8 +78,8 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async login(email: string, password: string): Promise<ApiResponse> {
-    return this.client.post('/api/v1/admin/auth/login', { email, password })
+  async login(login: string, password: string): Promise<ApiResponse> {
+    return this.client.post('/api/v1/admin/auth/login', { login, password })
   }
 
   async getMe(): Promise<ApiResponse> {

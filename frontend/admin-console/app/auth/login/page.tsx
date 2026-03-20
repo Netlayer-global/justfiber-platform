@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Lock, Mail, LogIn } from 'lucide-react'
+import { Lock, User, LogIn } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -25,14 +25,14 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!email || !password) {
-      toast.error('Please enter email and password')
+    if (!login || !password) {
+      toast.error('Please enter login and password')
       return
     }
 
     try {
       setIsLoading(true)
-      const response = await apiClient.login(email, password)
+      const response = await apiClient.login(login, password)
 
       if (!response.data.success) {
         throw new Error(response.data.error || 'Login failed')
@@ -93,17 +93,17 @@ export default function LoginPage() {
             onSubmit={handleSubmit}
             className="space-y-4"
           >
-            {/* Email */}
+            {/* Login */}
             <div className="space-y-1.5">
               <label className="label flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email
+                <User className="w-4 h-4" />
+                Login
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@justfiber.com"
+                type="text"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                placeholder="admin"
                 disabled={isLoading}
                 className="input-field"
               />
