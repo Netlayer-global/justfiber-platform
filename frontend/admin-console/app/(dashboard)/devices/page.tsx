@@ -5,7 +5,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable } from '@/components/table/DataTable'
 import { DetailDrawer } from '@/components/drawer/DetailDrawer'
 import { adminAPI } from '@/lib/api'
-import { Device } from '@/lib/types'
+import { DeviceDetail } from '@/lib/types'
 import { toast } from 'sonner'
 import { formatDate, getStatusColor } from '@/lib/utils'
 import { Search, Eye, MoreVertical, Power, Wifi, Zap } from 'lucide-react'
@@ -13,10 +13,10 @@ import { WifiConfigForm } from './components/WifiConfigForm'
 import { PPPoEConfigForm } from './components/PPPoEConfigForm'
 
 export default function DevicesPage() {
-  const [devices, setDevices] = useState<Device[]>([])
+  const [devices, setDevices] = useState<DeviceDetail[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
+  const [selectedDevice, setSelectedDevice] = useState<DeviceDetail | null>(null)
   const [showDetailDrawer, setShowDetailDrawer] = useState(false)
   const [showWifiForm, setShowWifiForm] = useState(false)
   const [showPPPoEForm, setShowPPPoEForm] = useState(false)
@@ -60,7 +60,7 @@ export default function DevicesPage() {
   async function handleWifiConfig(data: any) {
     setIsActionLoading(true)
     try {
-      const response = await adminAPI.configureDeviceWifi(data.deviceId, data)
+      const response = await adminAPI.updateWiFi(data.deviceId, data)
       if (response.data.success) {
         toast.success('WiFi configuration saved')
         loadDevices()
@@ -77,7 +77,7 @@ export default function DevicesPage() {
   async function handlePPPoEConfig(data: any) {
     setIsActionLoading(true)
     try {
-      const response = await adminAPI.configureDevicePPPoE(data.deviceId, data)
+      const response = await adminAPI.updatePPPoE(data.deviceId, data)
       if (response.data.success) {
         toast.success('PPPoE configuration saved')
         loadDevices()
@@ -91,7 +91,7 @@ export default function DevicesPage() {
     }
   }
 
-  const columnHelper = createColumnHelper<Device>()
+  const columnHelper = createColumnHelper<DeviceDetail>()
   const columns = [
     columnHelper.accessor('serialNumber', {
       header: 'Serial Number',
@@ -210,7 +210,7 @@ export default function DevicesPage() {
               <div className="grid gap-3">
                 <div>
                   <p className="text-sm text-muted-foreground">WiFi SSID</p>
-                  <p className="text-foreground">{selectedDevice.wifiSsid}</p>
+                  <p className="text-foreground">{selectedDevice.wifiSSID24 || selectedDevice.wifiSSID5 || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Last Seen</p>
