@@ -20,7 +20,7 @@ export default function AuditLogsPage() {
     setIsLoading(true)
     try {
       const response = await adminAPI.getAuditLogs(1, 100)
-      if (response.data.success && response.data.data) {
+      if (response.data.success) {
         setLogs(response.data.data.items || [])
       }
     } catch (error) {
@@ -33,13 +33,13 @@ export default function AuditLogsPage() {
 
   const columnHelper = createColumnHelper<AuditLog>()
   const columns = [
-    columnHelper.accessor('timestamp', {
+    columnHelper.accessor('createdAt', {
       header: 'Time',
       cell: (info) => <div className="text-sm text-muted-foreground">{formatDate(info.getValue(), 'long')}</div>,
     }),
-    columnHelper.accessor('actor', {
+    columnHelper.accessor('actorName', {
       header: 'Actor',
-      cell: (info) => <div className="text-sm font-medium">{info.getValue()}</div>,
+      cell: (info) => <div className="text-sm font-medium">{info.getValue() || '-'}</div>,
     }),
     columnHelper.accessor('action', {
       header: 'Action',
@@ -49,12 +49,12 @@ export default function AuditLogsPage() {
         </span>
       ),
     }),
-    columnHelper.accessor('resource', {
-      header: 'Resource',
+    columnHelper.accessor('entityType', {
+      header: 'Entity',
       cell: (info) => <div className="text-sm text-muted-foreground">{info.getValue()}</div>,
     }),
-    columnHelper.accessor('resourceId', {
-      header: 'Resource ID',
+    columnHelper.accessor('entityId', {
+      header: 'Entity ID',
       cell: (info) => <div className="text-sm font-mono text-foreground">{info.getValue()}</div>,
     }),
   ]

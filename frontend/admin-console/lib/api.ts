@@ -182,7 +182,7 @@ export const adminAPI = {
 
   // Audit Logs
   getAuditLogs: (page = 1, limit = 20) =>
-    apiGet<ApiResponse<AuditLogsResponse>>(`/api/v1/admin/foundation/logs/audit?page=${page}&limit=${limit}`),
+    apiGet<ApiResponse<AuditLogsResponse>>(`/api/v1/admin/audit/logs?page=${page}&limit=${limit}`),
 
   // Integrations
   getIntegrations: () =>
