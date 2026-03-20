@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ChevronDown, LogOut, Menu, X, Settings, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sidebar } from './Sidebar'
+import { Sidebar } from './sidebar'
 import { toast } from 'sonner'
 
 interface DashboardLayoutProps {
