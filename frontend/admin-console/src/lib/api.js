@@ -276,10 +276,6 @@ export async function fetchBNGNodes({ token, apiBase }) {
   return request("/api/v1/admin/foundation/bng-nodes", { token, apiBase });
 }
 
-export async function fetchSubscriberServices({ token, apiBase }) {
-  return request("/api/v1/admin/foundation/subscriber-services", { token, apiBase });
-}
-
 // Collections and franchises
 export async function fetchCollections({ token, apiBase, page = 1, limit = 20 }) {
   return request(`/api/v1/admin/foundation/collections?page=${page}&limit=${limit}`, { token, apiBase });

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Map, Plus, Layers, Search, Filter, Eye, Trash2, Edit2, Download, AlertCircle, CheckCircle2, Zap } from 'lucide-react'
+import { Map, Plus, Layers, Search, Filter, Eye, Trash2, Edit2, Download, AlertCircle, CheckCircle2, Zap, MapPin } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import ServiceabilityMap from './components/ServiceabilityMap'
