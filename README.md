@@ -163,39 +163,15 @@ Admin panel now includes management screens for:
 
 Legacy JAZE compatibility files may still exist in the repository for migration support, but primary runtime flows now use the internal platform, Radius, GenieACS, and Razorpay stack.
 
-If backend data is not seeded yet, use the `Load Demo Data` button inside the UI for a visual preview.
+## Admin UI
 
-## React Admin Console
+The previous admin console scaffold has been removed from the repository.
 
-A new React-based admin console scaffold is available under [`frontend/admin-console`](frontend/admin-console).
+Current direction:
 
-Stack:
-
-- React
-- Vite
-- Tailwind
-- shadcn-style UI primitives
-- Recharts
-- Framer Motion
-
-Install and build:
-
-```bash
-npm --prefix frontend/admin-console install
-npm run ui:admin:build
-```
-
-Development preview:
-
-```bash
-npm run ui:admin:dev
-```
-
-Production serving behavior:
-
-- `/admin` and `/noc` continue to serve the stable static admin panel
-- if `public/admin-app/index.html` exists, `/admin-next` serves the React preview console
-- if the React build is missing, `/admin-next` falls back to the static admin panel
+- backend is the primary source of truth
+- customer and installer app flows are validated against the backend
+- a new backend-driven admin UI will be rebuilt separately
 
 Installer sample login after `npm run seed:sample-data`:
 
