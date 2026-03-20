@@ -145,7 +145,10 @@ export default function SubscribersPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email, phone, or ID..."
-              className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded hover:border-primary/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-colors text-sm"
+              className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded hover:border-primary/50 focus:outline-none focus:border-primary transition-colors text-sm"
+              style={{ borderColor: 'hsl(var(--border))' }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'hsl(var(--primary))')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'hsl(var(--border))')}
             />
           </div>
 

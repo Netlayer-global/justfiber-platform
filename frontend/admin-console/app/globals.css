@@ -49,8 +49,9 @@
   }
 
   *:focus-visible {
-    @apply outline-none ring-2 ring-primary ring-offset-1;
-    background-color: var(--background);
+    @apply outline-none ring-2 ring-offset-1;
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary));
   }
 }
 
@@ -105,7 +106,14 @@
 
   /* Forms */
   .input-field {
-    @apply w-full px-4 py-2.5 bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm font-normal;
+    @apply w-full px-4 py-2.5 bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-transparent transition-all text-sm font-normal;
+    border-color: hsl(var(--border));
+    background-color: hsl(var(--input));
+  }
+
+  .input-field:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.1);
   }
 
   .input-field:disabled {
@@ -354,7 +362,14 @@
   }
 
   .input-field {
-    @apply w-full px-3 py-2 bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all;
+    @apply w-full px-3 py-2 bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-transparent transition-all;
+    border-color: hsl(var(--border));
+    background-color: hsl(var(--input));
+  }
+
+  .input-field:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1);
   }
 
   .badge {
