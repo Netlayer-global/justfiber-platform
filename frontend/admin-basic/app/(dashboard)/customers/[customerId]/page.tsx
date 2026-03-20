@@ -1,21 +1,28 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import { Customer } from '@/lib/types'
 import { Loader } from 'lucide-react'
 
-export default function CustomerDetailPage({ params }: { params: { customerId: string } }) {
+export default function CustomerDetailPage() {
+  const params = useParams<{ customerId: string }>()
+  const customerId = params.customerId
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    if (!customerId) {
+      setIsLoading(false)
+      return
+    }
     loadCustomer()
-  }, [params.customerId])
+  }, [customerId])
 
   async function loadCustomer() {
     try {
-      const res = await adminAPI.getCustomer(params.customerId)
+      const res = await adminAPI.getCustomer(customerId)
       if (res.success && res.data) {
         setCustomer(res.data)
       }
