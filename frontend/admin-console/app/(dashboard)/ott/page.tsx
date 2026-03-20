@@ -291,7 +291,6 @@ export default function OTTPage() {
         title="Activate OTT Subscription"
         description="Confirm activation of this OTT subscription for the customer?"
         confirmText="Activate"
-        confirmColor="primary"
       />
 
       {/* Create Modal */}
