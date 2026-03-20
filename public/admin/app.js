@@ -518,7 +518,7 @@ function renderCustomerDetail(customer) {
     </article>
     <article class="detail-card">
       <p class="eyebrow">Status</p>
-      <strong>${customer.operationalStatus || customer.jazeStatus || "unknown"}</strong>
+      <strong>${customer.operationalStatus || "unknown"}</strong>
       <div class="muted">${customer.phone || "-"}</div>
     </article>
     <article class="detail-card">
@@ -540,7 +540,7 @@ function renderCustomerDetail(customer) {
 
 async function handleAdminBillingLink(customerId) {
   try {
-    const data = await api(`/api/v1/admin/customers/${customerId}/billing/payment/link-jaze`, {
+    const data = await api(`/api/v1/admin/customers/${customerId}/billing/payment/link`, {
       method: "POST",
       body: JSON.stringify({})
     });
@@ -558,8 +558,8 @@ async function handleAdminBillingConfirm(customerId) {
     const data = await api(`/api/v1/admin/customers/${customerId}/billing/payment/confirm`, {
       method: "POST",
       body: JSON.stringify({
-        paymentId: `JAZE-ADMIN-${Date.now()}`,
-        reference: `JAZE-ADMIN-REF-${Date.now()}`
+        paymentId: `ADMIN-${Date.now()}`,
+        reference: `ADMIN-REF-${Date.now()}`
       })
     });
     setBanner(`Billing payment confirmed for ${customerId}. Due amount: ${data.dueAmount}`);
