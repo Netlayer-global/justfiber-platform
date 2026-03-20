@@ -1,28 +1,45 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Search, Plus, AlertCircle, Users } from 'lucide-react'
+import { Search, AlertCircle, Users, Eye, RefreshCw } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { toast } from 'sonner'
 
-interface Customer {
+interface CustomerRow {
   id: string
   customerId: string
   email: string
   accountNumber: string
   serviceStatus: string
   billingStatus: string
-  name?: string
+  name: string
+  dueAmount: number
+}
+
+function mapCustomer(item: any): CustomerRow {
+  const dueAmount = Number(item.billingSnapshot?.dueAmount || 0)
+
+  return {
+    id: item.customerId,
+    customerId: item.customerId,
+    email: item.email || '-',
+    accountNumber: item.accountNumber || '-',
+    serviceStatus: item.operationalStatus || 'unknown',
+    billingStatus: dueAmount > 0 ? 'overdue' : item.billingSnapshot?.lastPaymentStatus || 'paid',
+    name: item.fullName || item.customerId,
+    dueAmount,
+  }
 }
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const router = useRouter()
+  const [customers, setCustomers] = useState<CustomerRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const limit = 20
 
   useEffect(() => {
@@ -39,11 +56,12 @@ export default function CustomersPage() {
       })
 
       if (response.data.success) {
-        setCustomers(response.data.data || [])
+        const items = Array.isArray(response.data.data) ? response.data.data.map(mapCustomer) : []
+        setCustomers(items)
         setTotal(response.data.meta?.total || 0)
       }
     } catch (error) {
-      console.error('[v0] Load customers error:', error)
+      console.error('[admin-console] Load customers error:', error)
       toast.error('Failed to load customers')
     } finally {
       setIsLoading(false)
@@ -55,25 +73,21 @@ export default function CustomersPage() {
     setPage(1)
   }
 
-  async function handleAction(customerId: string, action: 'suspend' | 'resume' | 'retry') {
+  async function handleAction(customerId: string, action: 'suspend' | 'resume') {
     try {
-      let response
-      if (action === 'suspend') {
-        response = await apiClient.suspendCustomer(customerId)
-      } else if (action === 'resume') {
-        response = await apiClient.resumeCustomer(customerId)
-      } else {
-        response = await apiClient.retryProvisioning(customerId)
-      }
+      const response =
+        action === 'suspend'
+          ? await apiClient.suspendCustomer(customerId)
+          : await apiClient.resumeCustomer(customerId)
 
       if (response.data.success) {
-        toast.success(`Customer ${action}ed successfully`)
+        toast.success(`Customer ${action} request queued`)
         loadCustomers()
       } else {
         toast.error(response.data.error || `Failed to ${action} customer`)
       }
     } catch (error: any) {
-      console.error('[v0] Action error:', error)
+      console.error('[admin-console] Customer action error:', error)
       toast.error(error.message || `Failed to ${action} customer`)
     }
   }
@@ -81,13 +95,7 @@ export default function CustomersPage() {
   const pageCount = Math.ceil(total / limit)
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="space-y-6"
-    >
-      {/* Header */}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded bg-primary/10 border border-primary/20">
@@ -95,16 +103,15 @@ export default function CustomersPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-            <p className="text-sm text-muted-foreground">Manage subscriber accounts and services</p>
+            <p className="text-sm text-muted-foreground">Live customer registry and service status</p>
           </div>
         </div>
-        <button className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Customer
+        <button onClick={loadCustomers} disabled={isLoading} className="btn-ghost flex items-center gap-2">
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
         </button>
       </div>
 
-      {/* Search & Filters */}
       <div className="command-panel p-4">
         <div className="flex items-center gap-2 px-4 py-2.5 bg-input rounded border border-border">
           <Search className="w-4 h-4 text-muted-foreground" />
@@ -112,13 +119,12 @@ export default function CustomersPage() {
             type="text"
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search by email, account number, or customer ID..."
+            placeholder="Search by customer ID, account number, phone, or full name..."
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
           />
         </div>
       </div>
 
-      {/* Table */}
       <div className="command-panel overflow-hidden">
         {isLoading ? (
           <div className="p-12 flex flex-col items-center justify-center gap-3">
@@ -149,57 +155,40 @@ export default function CustomersPage() {
                 </thead>
                 <tbody>
                   {customers.map((customer) => (
-                    <motion.tr
-                      key={customer.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="table-row hover:bg-muted/20 transition-colors"
-                    >
+                    <motion.tr key={customer.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="table-row hover:bg-muted/20 transition-colors">
                       <td className="px-6 py-4">
                         <div className="space-y-1">
-                          <p className="font-medium">{customer.name || customer.email}</p>
+                          <p className="font-medium">{customer.name}</p>
                           <p className="text-xs text-muted-foreground">{customer.email}</p>
+                          <p className="text-xs font-mono text-muted-foreground">{customer.customerId}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-mono text-muted-foreground">
-                        {customer.accountNumber}
-                      </td>
+                      <td className="px-6 py-4 text-sm font-mono text-muted-foreground">{customer.accountNumber}</td>
                       <td className="px-6 py-4">
-                        <span className={`badge ${
-                          customer.serviceStatus === 'active'
-                            ? 'badge-success'
-                            : customer.serviceStatus === 'suspended'
-                            ? 'badge-warning'
-                            : 'badge-muted'
-                        }`}>
-                          {customer.serviceStatus || 'unknown'}
+                        <span className={`badge ${customer.serviceStatus === 'active' ? 'badge-success' : customer.serviceStatus === 'suspended' ? 'badge-warning' : 'badge-muted'}`}>
+                          {customer.serviceStatus}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`badge ${
-                          customer.billingStatus === 'paid'
-                            ? 'badge-success'
-                            : customer.billingStatus === 'overdue'
-                            ? 'badge-danger'
-                            : 'badge-warning'
-                        }`}>
-                          {customer.billingStatus || 'unknown'}
-                        </span>
+                        <div className="space-y-1">
+                          <span className={`badge ${customer.billingStatus === 'paid' ? 'badge-success' : customer.billingStatus === 'overdue' ? 'badge-danger' : 'badge-warning'}`}>
+                            {customer.billingStatus}
+                          </span>
+                          <p className="text-xs text-muted-foreground">Due: {customer.dueAmount.toLocaleString('en-IN')}</p>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => router.push(`/customers/${customer.customerId}`)} className="btn-ghost text-xs flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            View
+                          </button>
                           {customer.serviceStatus === 'active' ? (
-                            <button
-                              onClick={() => handleAction(customer.id, 'suspend')}
-                              className="btn-ghost text-xs"
-                            >
+                            <button onClick={() => handleAction(customer.customerId, 'suspend')} className="btn-ghost text-xs">
                               Suspend
                             </button>
                           ) : (
-                            <button
-                              onClick={() => handleAction(customer.id, 'resume')}
-                              className="btn-ghost text-xs"
-                            >
+                            <button onClick={() => handleAction(customer.customerId, 'resume')} className="btn-ghost text-xs">
                               Resume
                             </button>
                           )}
@@ -211,27 +200,18 @@ export default function CustomersPage() {
               </table>
             </div>
 
-            {/* Pagination */}
             <div className="flex items-center justify-between px-6 py-4 border-t border-border">
               <p className="text-sm text-muted-foreground">
                 Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total} customers
               </p>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                  className="btn-ghost px-3 disabled:opacity-50"
-                >
+                <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="btn-ghost px-3 disabled:opacity-50">
                   Previous
                 </button>
                 <p className="text-sm text-muted-foreground px-3">
                   {page} / {pageCount || 1}
                 </p>
-                <button
-                  onClick={() => setPage(Math.min(pageCount, page + 1))}
-                  disabled={page >= pageCount}
-                  className="btn-ghost px-3 disabled:opacity-50"
-                >
+                <button onClick={() => setPage(Math.min(pageCount, page + 1))} disabled={page >= pageCount} className="btn-ghost px-3 disabled:opacity-50">
                   Next
                 </button>
               </div>
