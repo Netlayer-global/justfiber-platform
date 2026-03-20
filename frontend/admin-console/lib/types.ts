@@ -228,16 +228,26 @@ export interface Franchise {
 
 // Audit Log types
 export interface AuditLog {
-  id: string
-  timestamp: string
-  userId: string
-  userEmail: string
+  _id?: string
+  id?: string
+  createdAt: string
+  actorType?: string
+  actorId?: string
+  actorName?: string
   action: string
-  module: string
-  resourceId: string
-  resourceType: string
-  changes: Record<string, any>
-  status: 'success' | 'failure'
+  entityType: string
+  entityId: string
+  metadata?: Record<string, any>
+  before?: Record<string, any>
+  after?: Record<string, any>
+  result: 'success' | 'failure' | string
+}
+
+export interface AuditLogsResponse {
+  items: AuditLog[]
+  total: number
+  page: number
+  limit: number
 }
 
 // Integration types
