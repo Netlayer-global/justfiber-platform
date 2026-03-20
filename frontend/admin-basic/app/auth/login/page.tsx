@@ -21,8 +21,8 @@ export default function LoginPage() {
     try {
       setIsLoading(true)
       const res = await adminAPI.login(login, password)
-      if (res.success && res.data?.token) {
-        setAuthToken(res.data.token)
+      if (res.success && res.data?.accessToken) {
+        setAuthToken(res.data.accessToken)
         toast.success('Logged in')
         router.push('/dashboard')
       } else {

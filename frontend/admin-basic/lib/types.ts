@@ -11,8 +11,8 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token: string
-  user: { id: string; name: string; email: string; role: string }
+  accessToken: string
+  refreshToken?: string
 }
 
 export interface Plan {
