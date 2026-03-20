@@ -11,8 +11,11 @@ import { InstallerLeaveLog } from "../../models/InstallerLeaveLog.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { DeviceReplacementLog } from "../../models/DeviceReplacementLog.js";
 import { OtpEvent } from "../../models/OtpEvent.js";
+import { ConnectionBooking } from "../../models/ConnectionBooking.js";
 import { Customer } from "../../models/Customer.js";
+import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
+import { SupportTicket } from "../../models/SupportTicket.js";
 import { buildPagination } from "../../common/pagination.js";
 import {
   buildPppoeCredentials,
@@ -96,6 +99,48 @@ async function getInstallerJobOrThrow(jobId, installerId) {
     throw new ApiError(404, "Installer job not found");
   }
   return job;
+}
+
+async function getRelatedBooking(job) {
+  return ConnectionBooking.findOne({
+    $or: [
+      { bookingNumber: job.customerId },
+      { bookingNumber: job.serviceId },
+      { "assignment.installerId": job.installerId, "assignment.provisionedIds.customerId": job.customerId }
+    ]
+  });
+}
+
+async function updateBookingProgress(job, update) {
+  const booking = await getRelatedBooking(job);
+  if (!booking) {
+    return null;
+  }
+  Object.assign(booking, update);
+  await booking.save();
+  return booking;
+}
+
+async function notifyBookingCustomer(booking, type, title, body, payload = {}) {
+  if (!booking?.customerUserId) {
+    return;
+  }
+  await CustomerNotification.create({
+    customerUserId: booking.customerUserId,
+    type,
+    title,
+    body,
+    payload
+  });
+}
+
+function buildTicketLookup(ticketId) {
+  return {
+    $or: [
+      { _id: ticketId },
+      { ticketNumber: ticketId }
+    ]
+  };
 }
 
 installerAppRouter.get(
@@ -229,6 +274,18 @@ installerAppRouter.post(
     job.status = "accepted";
     pushTimeline(job, "job.accepted", req.installer._id, "Installer accepted the job");
     await job.save();
+    if (job.type === "installation") {
+      const booking = await updateBookingProgress(job, { status: "assigned" });
+      if (booking) {
+        await notifyBookingCustomer(
+          booking,
+          "job_accepted",
+          "Installer accepted the job",
+          `Installer accepted booking ${booking.bookingNumber}.`,
+          { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+        );
+      }
+    }
     return ok(res, job);
   })
 );
@@ -240,6 +297,29 @@ installerAppRouter.post(
     job.status = "enroute";
     pushTimeline(job, "job.enroute", req.installer._id, "Installer started travel");
     await job.save();
+    if (job.type === "installation") {
+      const booking = await updateBookingProgress(job, {
+        status: "in_progress",
+        tracking: {
+          currentStep: "installer_enroute",
+          steps: [
+            { code: "booking_placed", status: "done", at: job.createdAt || new Date() },
+            { code: "payment_confirmed", status: "done", at: job.createdAt || new Date() },
+            { code: "installer_assigned", status: "done", at: job.assignment?.assignedAt || job.createdAt || new Date() },
+            { code: "installer_enroute", status: "done", at: new Date() }
+          ]
+        }
+      });
+      if (booking) {
+        await notifyBookingCustomer(
+          booking,
+          "installer_enroute",
+          "Installer is on the way",
+          `Installer is travelling for booking ${booking.bookingNumber}.`,
+          { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+        );
+      }
+    }
     return ok(res, job);
   })
 );
@@ -252,6 +332,29 @@ installerAppRouter.post(
     req.installer.availabilityStatus = "busy";
     pushTimeline(job, "job.onsite", req.installer._id, "Installer reached customer location");
     await Promise.all([job.save(), req.installer.save()]);
+    if (job.type === "installation") {
+      const booking = await updateBookingProgress(job, {
+        status: "in_progress",
+        tracking: {
+          currentStep: "installer_onsite",
+          steps: [
+            { code: "booking_placed", status: "done", at: job.createdAt || new Date() },
+            { code: "payment_confirmed", status: "done", at: job.createdAt || new Date() },
+            { code: "installer_assigned", status: "done", at: job.assignment?.assignedAt || job.createdAt || new Date() },
+            { code: "installer_onsite", status: "done", at: new Date() }
+          ]
+        }
+      });
+      if (booking) {
+        await notifyBookingCustomer(
+          booking,
+          "installer_onsite",
+          "Installer reached your location",
+          `Installer reached site for booking ${booking.bookingNumber}.`,
+          { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+        );
+      }
+    }
     return ok(res, job);
   })
 );
@@ -547,6 +650,27 @@ installerAppRouter.post(
     req.installer.availabilityStatus = "available";
     pushTimeline(job, "job.completed", req.installer._id, "Installation completed");
     await Promise.all([job.save(), req.installer.save()]);
+    const booking = await updateBookingProgress(job, {
+      status: "installed",
+      tracking: {
+        currentStep: "service_live",
+        steps: [
+          { code: "booking_placed", status: "done", at: job.createdAt || new Date() },
+          { code: "payment_confirmed", status: "done", at: job.createdAt || new Date() },
+          { code: "installer_assigned", status: "done", at: job.assignment?.assignedAt || job.createdAt || new Date() },
+          { code: "service_live", status: "done", at: new Date() }
+        ]
+      }
+    });
+    if (booking) {
+      await notifyBookingCustomer(
+        booking,
+        "installation_completed",
+        "Installation completed",
+        `Booking ${booking.bookingNumber} installation completed successfully.`,
+        { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+      );
+    }
     const [customer, subscriberService] = await Promise.all([
       Customer.findOne({ customerId: job.customerId }).lean(),
       SubscriberService.findOne({ serviceId: job.serviceId }).lean()
@@ -588,6 +712,22 @@ installerAppRouter.post(
     };
     pushTimeline(job, "complaint.started", req.installer._id, payload.note || "Complaint started");
     await job.save();
+    if (job.ticketId) {
+      await SupportTicket.updateOne(
+        buildTicketLookup(job.ticketId),
+        {
+          $set: { status: "in_progress" },
+          $push: {
+            timeline: {
+              type: "complaint_in_progress",
+              actorType: "installer",
+              actorId: req.installer._id,
+              note: payload.note || "Complaint attended by installer"
+            }
+          }
+        }
+      );
+    }
     return ok(res, job);
   })
 );
@@ -659,6 +799,25 @@ installerAppRouter.post(
     req.installer.availabilityStatus = "available";
     pushTimeline(job, "complaint.completed", req.installer._id, "Complaint resolved");
     await Promise.all([job.save(), req.installer.save()]);
+    if (job.ticketId) {
+      await SupportTicket.updateOne(
+        buildTicketLookup(job.ticketId),
+        {
+          $set: {
+            status: "resolved",
+            resolutionSummary: job.complaint?.note || "Resolved by installer"
+          },
+          $push: {
+            timeline: {
+              type: "resolved",
+              actorType: "installer",
+              actorId: req.installer._id,
+              note: job.complaint?.note || "Complaint resolved by installer"
+            }
+          }
+        }
+      );
+    }
     const subscriberService = await SubscriberService.findOne({ serviceId: job.serviceId }).lean();
     return ok(res, {
       job,

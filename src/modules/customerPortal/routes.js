@@ -17,6 +17,7 @@ import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { BillingLedgerEntry } from "../../models/BillingLedgerEntry.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
+import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
@@ -50,6 +51,97 @@ export const customerPortalRouter = Router();
 
 function computeBalanceAfter({ currentBalance, direction, amount }) {
   return currentBalance + (direction === "debit" ? amount : -amount);
+}
+
+function normalizeCode(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function toLower(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function pointInRing(point, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersects = yi > point[1] !== yj > point[1]
+      && point[0] < ((xj - xi) * (point[1] - yi)) / ((yj - yi) || Number.EPSILON) + xi;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function zoneContainsPoint(zone, lat, lng) {
+  const geometry = zone?.polygonGeoJson;
+  if (!geometry?.type || !Array.isArray(geometry.coordinates)) {
+    return false;
+  }
+  const point = [lng, lat];
+  if (geometry.type === "Polygon") {
+    const [outerRing] = geometry.coordinates;
+    return Array.isArray(outerRing) ? pointInRing(point, outerRing) : false;
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.some((polygon) => Array.isArray(polygon?.[0]) && pointInRing(point, polygon[0]));
+  }
+  return false;
+}
+
+function zoneMatchesAddress(zone, address, pinCode) {
+  const haystack = toLower(address);
+  const areaMatch = zone.area && haystack.includes(toLower(zone.area));
+  const cityMatch = zone.city && haystack.includes(toLower(zone.city));
+  const nameMatch = zone.zoneName && haystack.includes(toLower(zone.zoneName));
+  const pinMatch = pinCode && Array.isArray(zone.pinCodes) && zone.pinCodes.includes(String(pinCode));
+  return Boolean(pinMatch || areaMatch || nameMatch || cityMatch);
+}
+
+async function evaluateFeasibility({ lat, lng, address, pinCode }) {
+  const zones = await ServiceabilityZone.find({}).sort({ priority: 1, createdAt: -1 }).lean();
+  const exactZone = zones.find((zone) => zoneContainsPoint(zone, lat, lng))
+    || zones.find((zone) => zoneMatchesAddress(zone, address, pinCode));
+
+  if (!exactZone) {
+    return {
+      feasible: false,
+      serviceStatus: "coming_soon",
+      message: "No mapped serviceability zone found for this address.",
+      matchedZone: null
+    };
+  }
+
+  const matchedZone = {
+    zoneCode: exactZone.zoneCode || normalizeCode(exactZone.zoneName),
+    zoneName: exactZone.zoneName,
+    city: exactZone.city,
+    area: exactZone.area,
+    status: exactZone.status,
+    serviceType: exactZone.serviceType
+  };
+
+  if (exactZone.status !== "active") {
+    return {
+      feasible: false,
+      serviceStatus: exactZone.status,
+      message: exactZone.status === "planned"
+        ? "Area is marked for planned expansion."
+        : "Area is not currently serviceable.",
+      matchedZone
+    };
+  }
+
+  return {
+    feasible: true,
+    serviceStatus: "active",
+    message: "Area serviceable",
+    matchedZone
+  };
 }
 
 async function createLedgerEntry({
@@ -255,12 +347,26 @@ async function finalizeSuccessfulBillingPayment({
   };
 }
 
-async function assignInstallerIfAvailable({ booking, payload, plan }) {
+async function assignInstallerIfAvailable({ booking, payload, plan, feasibility }) {
   if (booking.assignment?.installerId || booking.status === "assigned") {
     return booking;
   }
 
-  const installer = await Installer.findOne({ availabilityStatus: "available", status: "active" }).sort({ updatedAt: 1 });
+  const targetZoneCode = normalizeCode(
+    feasibility?.matchedZone?.zoneCode
+    || feasibility?.matchedZone?.zoneName
+    || booking.feasibility?.matchedZone?.zoneCode
+    || booking.feasibility?.matchedZone?.zoneName
+  );
+  const targetCity = toLower(feasibility?.matchedZone?.city || payload.city || "");
+  const installers = await Installer.find({ status: "active", availabilityStatus: { $ne: "on_leave" } })
+    .sort({ availabilityStatus: 1, updatedAt: 1 })
+    .lean();
+  const installer = installers.find((item) =>
+    targetZoneCode && item.assignedZones?.some((zone) => normalizeCode(zone) === targetZoneCode)
+  ) || installers.find((item) =>
+    targetCity && toLower(item.assignedCity) === targetCity
+  ) || installers[0];
   if (!installer) {
     booking.status = "awaiting_assignment";
     booking.tracking = {
@@ -304,7 +410,8 @@ async function assignInstallerIfAvailable({ booking, payload, plan }) {
   booking.assignment = {
     installerId: installer._id,
     assignedAt: new Date(),
-    autoAssigned: true
+    autoAssigned: true,
+    zone: targetZoneCode || installer.assignedZones?.[0] || null
   };
   booking.tracking = {
     currentStep: "installer_assigned",
@@ -315,6 +422,7 @@ async function assignInstallerIfAvailable({ booking, payload, plan }) {
     ]
   };
   await booking.save();
+  await Installer.updateOne({ _id: installer._id }, { $set: { availabilityStatus: "busy" } });
 
   await InstallerNotification.create({
     installerId: installer._id,
@@ -323,6 +431,19 @@ async function assignInstallerIfAvailable({ booking, payload, plan }) {
     body: `${payload.fullName} installation has been assigned.`,
     payload: { bookingNumber: booking.bookingNumber, installerJobId: installerJob._id }
   });
+  if (booking.customerUserId) {
+    await CustomerNotification.create({
+      customerUserId: booking.customerUserId,
+      type: "installer_assigned",
+      title: "Installer assigned",
+      body: `Installer has been assigned for booking ${booking.bookingNumber}.`,
+      payload: {
+        bookingNumber: booking.bookingNumber,
+        installerJobId: installerJob._id,
+        installerId: installer._id
+      }
+    });
+  }
 
   return booking;
 }
@@ -399,12 +520,8 @@ customerPortalRouter.post(
   "/feasibility/check",
   asyncHandler(async (req, res) => {
     const payload = feasibilitySchema.parse(req.body);
-    const feasible = payload.lat > 0 && payload.lng > 0;
-    return ok(res, {
-      feasible,
-      serviceStatus: feasible ? "active" : "coming_soon",
-      message: feasible ? "Area serviceable" : "We are not available here yet. Coming soon."
-    });
+    const result = await evaluateFeasibility(payload);
+    return ok(res, result);
   })
 );
 
@@ -416,6 +533,15 @@ customerPortalRouter.post(
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode });
     if (!plan) {
       throw new ApiError(404, "Plan not found");
+    }
+    const feasibility = await evaluateFeasibility({
+      lat: payload.lat,
+      lng: payload.lng,
+      address: payload.fullAddress,
+      pinCode: payload.pinCode
+    });
+    if (!feasibility.feasible) {
+      throw new ApiError(409, feasibility.message || "Selected address is not serviceable");
     }
     const amount = (plan.monthlyPrice || 0) + (plan.otcCharge || 0);
     const isOfflinePayment = payload.paymentMode === "cash";
@@ -432,7 +558,7 @@ customerPortalRouter.post(
         totalAmount: amount
       },
       feasibility: {
-        feasible: true,
+        ...feasibility,
         gps: { lat: payload.lat, lng: payload.lng }
       },
       personalDetails: {
@@ -463,7 +589,7 @@ customerPortalRouter.post(
     });
 
     if (isOfflinePayment) {
-      await assignInstallerIfAvailable({ booking, payload, plan });
+      await assignInstallerIfAvailable({ booking, payload, plan, feasibility });
     }
 
     req.customerUser.state = "booking_in_progress";
@@ -478,6 +604,23 @@ customerPortalRouter.post(
       },
       { created: true }
     );
+  })
+);
+
+customerPortalRouter.get(
+  "/bookings",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const { page, limit, skip } = buildPagination(req.query);
+    const filter = { customerUserId: req.customerUser._id };
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+    const [items, total] = await Promise.all([
+      ConnectionBooking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      ConnectionBooking.countDocuments(filter)
+    ]);
+    return ok(res, items, { page, limit, total });
   })
 );
 
@@ -578,7 +721,8 @@ customerPortalRouter.post(
         lat: booking.feasibility?.gps?.lat,
         lng: booking.feasibility?.gps?.lng
       },
-      plan
+      plan,
+      feasibility: booking.feasibility
     });
 
     return ok(res, {

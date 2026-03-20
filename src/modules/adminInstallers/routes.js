@@ -22,6 +22,21 @@ const createInstallerSchema = z.object({
   skills: z.array(z.string()).optional()
 });
 
+const updateInstallerSchema = z.object({
+  fullName: z.string().min(2).optional(),
+  phone: z.string().min(8).optional(),
+  email: z.string().email().nullable().optional(),
+  assignedCity: z.string().nullable().optional(),
+  assignedZones: z.array(z.string()).optional(),
+  skills: z.array(z.string()).optional(),
+  status: z.enum(["active", "disabled", "locked"]).optional(),
+  availabilityStatus: z.enum(["available", "on_leave", "busy"]).optional()
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(8)
+});
+
 const assignJobSchema = z.object({
   type: z.enum(["installation", "complaint"]),
   customerId: z.string().min(2),
@@ -42,6 +57,11 @@ const assignJobSchema = z.object({
     planName: z.string().optional()
   }),
   complaint: z.any().optional()
+});
+
+const reassignJobSchema = z.object({
+  installerId: z.string().min(2),
+  note: z.string().optional()
 });
 
 export const adminInstallersRouter = Router();
@@ -76,6 +96,70 @@ adminInstallersRouter.post(
       createdByAdminId: req.admin._id
     });
     return ok(res, installer, { created: true });
+  })
+);
+
+adminInstallersRouter.get(
+  "/installers/:installerId",
+  requirePermission(permissions.installerRead),
+  asyncHandler(async (req, res) => {
+    const installer = await Installer.findById(req.params.installerId).lean();
+    if (!installer) {
+      throw new ApiError(404, "Installer not found");
+    }
+    return ok(res, installer);
+  })
+);
+
+adminInstallersRouter.patch(
+  "/installers/:installerId",
+  requirePermission(permissions.installerManage),
+  asyncHandler(async (req, res) => {
+    const payload = updateInstallerSchema.parse(req.body || {});
+    const installer = await Installer.findByIdAndUpdate(
+      req.params.installerId,
+      { $set: payload },
+      { new: true }
+    ).lean();
+    if (!installer) {
+      throw new ApiError(404, "Installer not found");
+    }
+    return ok(res, installer);
+  })
+);
+
+adminInstallersRouter.post(
+  "/installers/:installerId/reset-password",
+  requirePermission(permissions.installerManage),
+  asyncHandler(async (req, res) => {
+    const payload = resetPasswordSchema.parse(req.body || {});
+    const passwordHash = await argon2.hash(payload.password);
+    const installer = await Installer.findByIdAndUpdate(
+      req.params.installerId,
+      { $set: { passwordHash } },
+      { new: true }
+    ).lean();
+    if (!installer) {
+      throw new ApiError(404, "Installer not found");
+    }
+    return ok(res, { updated: true, installerId: installer._id });
+  })
+);
+
+adminInstallersRouter.get(
+  "/installer-jobs",
+  requirePermission(permissions.installerJobRead),
+  asyncHandler(async (req, res) => {
+    const { page, limit, skip } = buildPagination(req.query);
+    const filter = {};
+    if (req.query.installerId) filter.installerId = req.query.installerId;
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.type) filter.type = req.query.type;
+    const [items, total] = await Promise.all([
+      InstallerJob.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      InstallerJob.countDocuments(filter)
+    ]);
+    return ok(res, items, { page, limit, total });
   })
 );
 
@@ -124,6 +208,7 @@ adminInstallersRouter.post(
         }
       ]
     });
+    await Installer.updateOne({ _id: installer._id }, { $set: { availabilityStatus: "busy" } });
     await InstallerNotification.create({
       installerId: installer._id,
       type: payload.type === "installation" ? "new_job" : "complaint_assigned",
@@ -132,5 +217,43 @@ adminInstallersRouter.post(
       payload: { jobId: job._id, jobNumber: job.jobNumber }
     });
     return ok(res, job, { created: true });
+  })
+);
+
+adminInstallersRouter.post(
+  "/installer-jobs/:jobId/reassign",
+  requirePermission(permissions.installerJobManage),
+  asyncHandler(async (req, res) => {
+    const payload = reassignJobSchema.parse(req.body || {});
+    const [job, installer] = await Promise.all([
+      InstallerJob.findById(req.params.jobId),
+      Installer.findById(payload.installerId)
+    ]);
+    if (!job) {
+      throw new ApiError(404, "Installer job not found");
+    }
+    if (!installer) {
+      throw new ApiError(404, "Installer not found");
+    }
+    if (installer.status !== "active" || installer.availabilityStatus === "on_leave") {
+      throw new ApiError(409, "Installer cannot be assigned");
+    }
+    job.installerId = installer._id;
+    job.assignment = {
+      ...(job.assignment || {}),
+      assignedAt: new Date(),
+      assignedBy: req.admin._id,
+      autoAssigned: false,
+      zone: installer.assignedZones?.[0]
+    };
+    job.timeline.push({
+      event: "job.reassigned",
+      actorType: "admin",
+      actorId: req.admin._id,
+      note: payload.note || "Installer reassigned from admin panel"
+    });
+    await job.save();
+    await Installer.updateOne({ _id: installer._id }, { $set: { availabilityStatus: "busy" } });
+    return ok(res, job);
   })
 );

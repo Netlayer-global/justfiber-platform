@@ -10,6 +10,7 @@ import { applyPresetSchema } from "./schemas.js";
 import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
 import { auditFromRequest } from "../../common/audit.js";
+import { genieacsClient } from "../../integrations/genieacsClient.js";
 
 export const devicesRouter = Router();
 
@@ -21,8 +22,22 @@ devicesRouter.get(
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = buildPagination(req.query);
     const filter = {};
+    if (req.query.search) {
+      filter.$or = [
+        { deviceId: req.query.search },
+        { serialNumber: req.query.search },
+        { customerId: req.query.search },
+        { serviceId: req.query.search }
+      ];
+    }
     if (req.query.customerId) {
       filter.customerId = req.query.customerId;
+    }
+    if (req.query.onlineStatus) {
+      filter.onlineStatus = req.query.onlineStatus;
+    }
+    if (req.query.provisioningState) {
+      filter.provisioningState = req.query.provisioningState;
     }
     const [items, total] = await Promise.all([
       DeviceOperationalCache.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
@@ -84,5 +99,34 @@ devicesRouter.post(
       metadata: payload
     });
     return ok(res, { actionRequestId: request._id, status: request.status });
+  })
+);
+
+devicesRouter.post(
+  "/:deviceId/reboot",
+  requirePermission(permissions.deviceApplyPreset),
+  asyncHandler(async (req, res) => {
+    const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId });
+    if (!device) {
+      throw new ApiError(404, "Device not found");
+    }
+    const request = await AdminActionRequest.create({
+      actionType: "device_reboot",
+      targetType: "device",
+      targetId: device.deviceId,
+      payload: { reason: req.body?.reason || "Manual reboot from admin" },
+      requestedBy: req.admin._id,
+      status: "approved"
+    });
+    await genieacsClient.rebootDevice(device.deviceId);
+    request.status = "executed";
+    await request.save();
+    await auditFromRequest(req, {
+      action: "device.reboot.requested",
+      entityType: "device",
+      entityId: device.deviceId,
+      metadata: request.payload
+    });
+    return ok(res, { actionRequestId: request._id, status: request.status, queued: true, deviceId: device.deviceId });
   })
 );
