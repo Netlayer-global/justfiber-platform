@@ -1,6 +1,5 @@
 import type {
   ApiResponse,
-  LoginRequest,
   LoginResponse,
   Plan,
   Customer,
@@ -64,6 +63,148 @@ async function request<T>(
   return data
 }
 
+function mapPlan(plan: any): Plan {
+  return {
+    id: plan.planCode || plan._id || '',
+    name: plan.name || plan.planCode || 'Unnamed plan',
+    speed: Number(plan.speedMbps || 0),
+    price: Number(plan.monthlyPrice || 0),
+    type: plan.serviceType || 'fiber',
+    status: plan.active === false ? 'inactive' : 'active',
+    createdAt: plan.createdAt || new Date().toISOString(),
+  }
+}
+
+function mapCustomer(customer: any): Customer {
+  const address =
+    typeof customer.address === 'string'
+      ? customer.address
+      : [
+          customer.address?.line1,
+          customer.address?.line2,
+          customer.address?.area,
+          customer.address?.city,
+          customer.address?.state,
+          customer.address?.pincode,
+        ]
+          .filter(Boolean)
+          .join(', ')
+
+  return {
+    id: customer.customerId || customer._id || '',
+    name: customer.fullName || customer.name || customer.customerId || 'Unknown customer',
+    email: customer.email || '-',
+    phone: customer.phone || '-',
+    address: address || '-',
+    plan: {
+      id: customer.planCode || customer.plan?.id || '',
+      name: customer.plan?.name || customer.planCode || 'Unassigned',
+    },
+    status:
+      customer.operationalStatus === 'suspended'
+        ? 'suspended'
+        : customer.operationalStatus === 'inactive'
+          ? 'inactive'
+          : 'active',
+    createdAt: customer.createdAt || new Date().toISOString(),
+  }
+}
+
+function mapDevice(device: any): Device {
+  return {
+    id: device.deviceId || device._id || '',
+    name: device.deviceId || device.serialNumber || device.productClass || 'Unknown device',
+    type: device.productClass || device.ontBrand || 'ONT',
+    ip: device.ipAddress || device.wanInfo?.ipAddress || device.lastKnownIp,
+    status:
+      device.onlineStatus === 'online'
+        ? 'online'
+        : device.onlineStatus === 'offline'
+          ? 'offline'
+          : 'error',
+    customerId: device.customerId,
+    location: device.locationName || device.address,
+  }
+}
+
+function mapTicket(ticket: any): Ticket {
+  return {
+    id: ticket._id || ticket.ticketNumber || '',
+    subject: ticket.subject || ticket.title || ticket.category || ticket.ticketNumber || 'Ticket',
+    description: ticket.description || ticket.resolutionSummary || '',
+    status: ticket.status || 'open',
+    priority: ticket.priority || 'medium',
+    customerId: ticket.customerId || '',
+    assignedTo: ticket.assignedToAdminId || ticket.assignedTeam,
+    createdAt: ticket.createdAt || new Date().toISOString(),
+  }
+}
+
+function mapInstaller(installer: any): Installer {
+  return {
+    id: installer._id || installer.installerCode || '',
+    name: installer.fullName || installer.name || installer.installerCode || 'Installer',
+    email: installer.email || '-',
+    phone: installer.phone || '-',
+    status: installer.status === 'active' ? 'active' : 'inactive',
+    jobsCompleted: Number(installer.jobsCompleted || 0),
+    rating: Number(installer.rating || 0),
+  }
+}
+
+function mapJob(job: any): Job {
+  return {
+    id: job._id || job.jobNumber || '',
+    type: job.type || 'installation',
+    status:
+      job.status === 'assigned' ? 'pending' :
+      job.status === 'accepted' || job.status === 'travel_started' || job.status === 'onsite_started'
+        ? 'in_progress'
+        : job.status === 'completed'
+          ? 'completed'
+          : job.status === 'cancelled'
+            ? 'cancelled'
+            : 'pending',
+    customerId: job.customerId || '',
+    installerId: job.installerId || undefined,
+    scheduledDate: job.scheduledDate || job.assignment?.assignedAt,
+    completedDate: job.completedAt,
+  }
+}
+
+function mapServiceZone(zone: any): ServiceZone {
+  const polygon = Array.isArray(zone.polygonGeoJson?.coordinates?.[0])
+    ? zone.polygonGeoJson.coordinates[0].map((point: any[]) => ({
+        lng: Number(point[0]),
+        lat: Number(point[1]),
+      }))
+    : []
+
+  return {
+    id: zone._id || zone.zoneCode || '',
+    name: zone.zoneName || zone.zoneCode || 'Zone',
+    polygon,
+    coverage: zone.coverage ?? 0,
+    status: zone.status === 'active' ? 'active' : 'inactive',
+  }
+}
+
+function mapBillingItem(invoice: any): BillingData {
+  return {
+    id: invoice._id || invoice.invoiceId || '',
+    customerId: invoice.customerId || '',
+    amount: Number(invoice.totalAmount || invoice.amount || 0),
+    dueDate: invoice.dueDate || invoice.generatedAt || new Date().toISOString(),
+    status:
+      invoice.paymentStatus === 'paid'
+        ? 'paid'
+        : invoice.paymentStatus === 'overdue'
+          ? 'overdue'
+          : 'pending',
+    invoiceId: invoice.invoiceId || invoice._id || '',
+  }
+}
+
 export const adminAPI = {
   // Auth
   login: (login: string, password: string) =>
@@ -73,96 +214,182 @@ export const adminAPI = {
     }),
 
   // Dashboard
-  getDashboardStats: () =>
-    request<DashboardStats>('/api/v1/admin/foundation/dashboard/stats'),
+  getDashboardStats: async () => {
+    const res = await request<any>('/api/v1/admin/dashboard/executive')
+    return {
+      ...res,
+      data: res.data
+        ? {
+            totalCustomers: Number(res.data.totalCustomers || 0),
+            activeConnections: Number(
+              (res.data.totalCustomers || 0) - (res.data.suspendedCustomers || 0)
+            ),
+            monthlyRevenue: Number(res.data.collectedAmount || 0),
+            systemHealth: 100,
+          }
+        : undefined,
+    }
+  },
 
   // Plans
-  getPlans: (page = 1, limit = 20) =>
-    request<{ items: Plan[]; total: number }>(
-      `/api/v1/admin/foundation/plans?page=${page}&limit=${limit}`
-    ),
+  getPlans: async () => {
+    const res = await request<any[]>('/api/v1/admin/catalog/plans')
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapPlan) : [],
+        total: Array.isArray(res.data) ? res.data.length : 0,
+      },
+    }
+  },
   createPlan: (data: Partial<Plan>) =>
-    request<Plan>('/api/v1/admin/foundation/plans', {
+    request<Plan>('/api/v1/admin/catalog/plans', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   updatePlan: (id: string, data: Partial<Plan>) =>
-    request<Plan>(`/api/v1/admin/foundation/plans/${id}`, {
+    request<Plan>(`/api/v1/admin/catalog/plans/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
   deletePlan: (id: string) =>
-    request(`/api/v1/admin/foundation/plans/${id}`, { method: 'DELETE' }),
+    request(`/api/v1/admin/catalog/plans/${id}`, { method: 'DELETE' }),
 
   // Customers
-  getCustomers: (page = 1, limit = 20) =>
-    request<{ items: Customer[]; total: number }>(
-      `/api/v1/admin/foundation/customers?page=${page}&limit=${limit}`
-    ),
-  getCustomer: (id: string) =>
-    request<Customer>(`/api/v1/admin/foundation/customers/${id}`),
+  getCustomers: async (page = 1, limit = 20) => {
+    const res = await request<any[]>(`/api/v1/admin/customers?page=${page}&limit=${limit}`)
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapCustomer) : [],
+        total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
+      },
+    }
+  },
+  getCustomer: async (id: string) => {
+    const res = await request<any>(`/api/v1/admin/customers/${id}`)
+    return {
+      ...res,
+      data: res.data ? mapCustomer(res.data) : undefined,
+    }
+  },
   createCustomer: (data: Partial<Customer>) =>
-    request<Customer>('/api/v1/admin/foundation/customers', {
+    request<Customer>('/api/v1/admin/customers', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   updateCustomer: (id: string, data: Partial<Customer>) =>
-    request<Customer>(`/api/v1/admin/foundation/customers/${id}`, {
+    request<Customer>(`/api/v1/admin/customers/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
   deleteCustomer: (id: string) =>
-    request(`/api/v1/admin/foundation/customers/${id}`, { method: 'DELETE' }),
+    request(`/api/v1/admin/customers/${id}`, { method: 'DELETE' }),
 
   // Devices
-  getDevices: (page = 1, limit = 20) =>
-    request<{ items: Device[]; total: number }>(
-      `/api/v1/admin/foundation/devices?page=${page}&limit=${limit}`
-    ),
-  getDevice: (id: string) =>
-    request<Device>(`/api/v1/admin/foundation/devices/${id}`),
+  getDevices: async (page = 1, limit = 20) => {
+    const res = await request<any[]>(`/api/v1/admin/devices?page=${page}&limit=${limit}`)
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapDevice) : [],
+        total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
+      },
+    }
+  },
+  getDevice: async (id: string) => {
+    const res = await request<any>(`/api/v1/admin/devices/${id}`)
+    return {
+      ...res,
+      data: res.data ? mapDevice(res.data) : undefined,
+    }
+  },
 
   // Tickets
-  getTickets: (page = 1, limit = 20) =>
-    request<{ items: Ticket[]; total: number }>(
-      `/api/v1/admin/foundation/tickets?page=${page}&limit=${limit}`
-    ),
-  getTicket: (id: string) =>
-    request<Ticket>(`/api/v1/admin/foundation/tickets/${id}`),
+  getTickets: async (page = 1, limit = 20) => {
+    const res = await request<any[]>(`/api/v1/admin/tickets?page=${page}&limit=${limit}`)
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapTicket) : [],
+        total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
+      },
+    }
+  },
+  getTicket: async (id: string) => {
+    const res = await request<any>(`/api/v1/admin/tickets/${id}`)
+    return {
+      ...res,
+      data: res.data ? mapTicket(res.data) : undefined,
+    }
+  },
   updateTicket: (id: string, data: Partial<Ticket>) =>
-    request<Ticket>(`/api/v1/admin/foundation/tickets/${id}`, {
+    request<Ticket>(`/api/v1/admin/tickets/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
 
   // Installers
-  getInstallers: (page = 1, limit = 20) =>
-    request<{ items: Installer[]; total: number }>(
-      `/api/v1/admin/foundation/installers?page=${page}&limit=${limit}`
-    ),
-  getInstaller: (id: string) =>
-    request<Installer>(`/api/v1/admin/foundation/installers/${id}`),
+  getInstallers: async (page = 1, limit = 20) => {
+    const res = await request<any[]>(`/api/v1/admin/installers?page=${page}&limit=${limit}`)
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapInstaller) : [],
+        total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
+      },
+    }
+  },
+  getInstaller: async (id: string) => {
+    const res = await request<any>(`/api/v1/admin/installers/${id}`)
+    return {
+      ...res,
+      data: res.data ? mapInstaller(res.data) : undefined,
+    }
+  },
 
   // Jobs
-  getJobs: (page = 1, limit = 20) =>
-    request<{ items: Job[]; total: number }>(
-      `/api/v1/admin/foundation/jobs?page=${page}&limit=${limit}`
-    ),
-  getJob: (id: string) =>
-    request<Job>(`/api/v1/admin/foundation/jobs/${id}`),
+  getJobs: async (page = 1, limit = 20) => {
+    const res = await request<any[]>(`/api/v1/admin/installer-jobs?page=${page}&limit=${limit}`)
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapJob) : [],
+        total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
+      },
+    }
+  },
+  getJob: async (id: string) => {
+    const res = await request<any>(`/api/v1/admin/installer-jobs/${id}`)
+    return {
+      ...res,
+      data: res.data ? mapJob(res.data) : undefined,
+    }
+  },
   updateJob: (id: string, data: Partial<Job>) =>
-    request<Job>(`/api/v1/admin/foundation/jobs/${id}`, {
+    request<Job>(`/api/v1/admin/installer-jobs/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
 
   // Serviceability
-  getServiceZones: () =>
-    request<ServiceZone[]>('/api/v1/admin/foundation/service-zones'),
+  getServiceZones: async () => {
+    const res = await request<any[]>('/api/v1/admin/serviceability/zones')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapServiceZone) : [],
+    }
+  },
 
   // Billing
-  getBillingData: (page = 1, limit = 20) =>
-    request<{ items: BillingData[]; total: number }>(
-      `/api/v1/admin/foundation/billing?page=${page}&limit=${limit}`
-    ),
+  getBillingData: async (page = 1, limit = 20) => {
+    const res = await request<any[]>(`/api/v1/admin/billing/invoices?page=${page}&limit=${limit}`)
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapBillingItem) : [],
+        total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
+      },
+    }
+  },
 }
