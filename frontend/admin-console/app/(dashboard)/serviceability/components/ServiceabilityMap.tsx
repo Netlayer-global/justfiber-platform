@@ -2,22 +2,13 @@
 
 import { useEffect, useRef } from 'react'
 import { MapPin, AlertCircle } from 'lucide-react'
-
-interface Zone {
-  id: string
-  zoneName: string
-  city: string
-  latitude?: number
-  longitude?: number
-  polygon?: Array<{ latitude: number; longitude: number }>
-  areaType: string
-}
+import type { AreaType, ServiceabilityZone } from '@/lib/types'
 
 interface ServiceabilityMapProps {
-  zones: Zone[]
+  zones: ServiceabilityZone[]
   isLoading: boolean
-  onZoneSelect: (zone: Zone) => void
-  areaTypeConfig?: Record<string, { color: string }>
+  onZoneSelect: (zone: ServiceabilityZone) => void
+  areaTypeConfig?: Record<AreaType, { color: string }>
 }
 
 export default function ServiceabilityMap({
@@ -89,7 +80,7 @@ export default function ServiceabilityMap({
             <div className="space-y-1">
               {zones.slice(0, 5).map((zone) => (
                 <button
-                  key={zone.id}
+                  key={zone.zoneId}
                   onClick={() => onZoneSelect(zone)}
                   className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-primary/20 transition-colors text-muted-foreground hover:text-foreground"
                 >
