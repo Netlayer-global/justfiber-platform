@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, X } from 'lucide-react'
 
@@ -13,6 +14,7 @@ interface ActionModalProps {
   cancelText?: string
   isDestructive?: boolean
   isLoading?: boolean
+  children?: ReactNode
 }
 
 export function ActionModal({
@@ -25,6 +27,7 @@ export function ActionModal({
   cancelText = 'Cancel',
   isDestructive = false,
   isLoading = false,
+  children,
 }: ActionModalProps) {
   return (
     <AnimatePresence>
@@ -72,6 +75,12 @@ export function ActionModal({
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {children && (
+                <div className="px-6 py-4 border-b border-border">
+                  {children}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3 px-6 py-4">
