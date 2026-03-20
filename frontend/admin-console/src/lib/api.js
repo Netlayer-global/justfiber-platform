@@ -180,3 +180,235 @@ export async function runCustomerAction({ token, apiBase, customerId, action, bo
     body
   });
 }
+
+// Billing operations
+export async function fetchBillingLedger({ token, apiBase, page = 1, limit = 20 }) {
+  return request(`/api/v1/admin/billing/ledger?page=${page}&limit=${limit}`, { token, apiBase });
+}
+
+export async function createLedgerAdjustment({ token, apiBase, body }) {
+  return request("/api/v1/admin/billing/ledger/adjustment", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function createRefund({ token, apiBase, body }) {
+  return request("/api/v1/admin/billing/refunds", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+// Customer actions (suspend/resume)
+export async function suspendCustomer({ token, apiBase, customerId }) {
+  return request(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/suspend`, {
+    method: "POST",
+    token,
+    apiBase
+  });
+}
+
+export async function resumeCustomer({ token, apiBase, customerId }) {
+  return request(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/resume`, {
+    method: "POST",
+    token,
+    apiBase
+  });
+}
+
+// Device management (ACS)
+export async function updateDeviceWiFi({ token, apiBase, deviceId, body }) {
+  return request(`/api/v1/admin/network/device-management/${encodeURIComponent(deviceId)}/wifi`, {
+    method: "PATCH",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function rebootDevice({ token, apiBase, deviceId }) {
+  return request(`/api/v1/admin/network/device-management/${encodeURIComponent(deviceId)}/reboot`, {
+    method: "POST",
+    token,
+    apiBase
+  });
+}
+
+export async function updateDevicePPPoE({ token, apiBase, deviceId, body }) {
+  return request(`/api/v1/admin/network/device-management/${encodeURIComponent(deviceId)}/pppoe`, {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+// Ticket actions
+export async function assignTicket({ token, apiBase, ticketId, body }) {
+  return request(`/api/v1/admin/tickets/${encodeURIComponent(ticketId)}/assign`, {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function resolveTicket({ token, apiBase, ticketId, body }) {
+  return request(`/api/v1/admin/tickets/${encodeURIComponent(ticketId)}/resolve`, {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+// NAT trace and foundation
+export async function fetchNATLogs({ token, apiBase, page = 1, limit = 20 }) {
+  return request(`/api/v1/admin/foundation/nat-logs?page=${page}&limit=${limit}`, { token, apiBase });
+}
+
+export async function fetchBNGNodes({ token, apiBase }) {
+  return request("/api/v1/admin/foundation/bng-nodes", { token, apiBase });
+}
+
+export async function fetchSubscriberServices({ token, apiBase }) {
+  return request("/api/v1/admin/foundation/subscriber-services", { token, apiBase });
+}
+
+// Collections and franchises
+export async function fetchCollections({ token, apiBase, page = 1, limit = 20 }) {
+  return request(`/api/v1/admin/foundation/collections?page=${page}&limit=${limit}`, { token, apiBase });
+}
+
+export async function createCollection({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/collections", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function approveCollection({ token, apiBase, requestNumber }) {
+  return request(`/api/v1/admin/foundation/collections/${encodeURIComponent(requestNumber)}/approve`, {
+    method: "POST",
+    token,
+    apiBase
+  });
+}
+
+export async function rejectCollection({ token, apiBase, requestNumber, body }) {
+  return request(`/api/v1/admin/foundation/collections/${encodeURIComponent(requestNumber)}/reject`, {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+// Inventory
+export async function fetchInventoryOverview({ token, apiBase }) {
+  return request("/api/v1/admin/foundation/inventory/overview", { token, apiBase });
+}
+
+export async function fetchVendors({ token, apiBase }) {
+  return request("/api/v1/admin/foundation/vendors", { token, apiBase });
+}
+
+export async function createVendor({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/vendors", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function fetchInventoryLocations({ token, apiBase }) {
+  return request("/api/v1/admin/foundation/inventory/locations", { token, apiBase });
+}
+
+export async function createLocation({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/inventory/locations", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function fetchInventoryItems({ token, apiBase, page = 1, limit = 20 }) {
+  return request(`/api/v1/admin/foundation/inventory/items?page=${page}&limit=${limit}`, { token, apiBase });
+}
+
+export async function createInventoryItem({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/inventory/items", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function moveInventoryItem({ token, apiBase, itemCode, body }) {
+  return request(`/api/v1/admin/foundation/inventory/items/${encodeURIComponent(itemCode)}/move`, {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+// Logs and integration events
+export async function fetchIntegrationLogs({ token, apiBase, page = 1, limit = 20 }) {
+  return request(`/api/v1/admin/foundation/logs/integration-events?page=${page}&limit=${limit}`, { token, apiBase });
+}
+
+export async function createIntegrationLog({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/logs/integration-events", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+export async function testDispatch({ token, apiBase, body }) {
+  return request("/api/v1/admin/foundation/dispatch/test-message", {
+    method: "POST",
+    token,
+    apiBase,
+    body
+  });
+}
+
+// Helpdesk SLA and rules
+export async function fetchHelpdeskOverview({ token, apiBase }) {
+  return request("/api/v1/admin/foundation/helpdesk/overview", { token, apiBase });
+}
+
+export async function runSLAScan({ token, apiBase }) {
+  return request("/api/v1/admin/foundation/helpdesk/run-sla-scan", {
+    method: "POST",
+    token,
+    apiBase
+  });
+}
+
+export async function fetchHelpdeskSLAConfig({ token, apiBase }) {
+  return request("/api/v1/admin/configs/settings/helpdesk_sla", { token, apiBase });
+}
+
+export async function updateHelpdeskSLAConfig({ token, apiBase, body }) {
+  return request("/api/v1/admin/configs/settings/helpdesk_sla", {
+    method: "PUT",
+    token,
+    apiBase,
+    body
+  });
+}
