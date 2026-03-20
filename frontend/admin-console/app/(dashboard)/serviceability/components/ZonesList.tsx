@@ -2,26 +2,16 @@
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { MapPin, AlertCircle, Zap } from 'lucide-react'
-
-interface Zone {
-  id: string
-  zoneName: string
-  city: string
-  state: string
-  areaType: string
-  status: string
-  technologyType: string
-  pinCodes: string[]
-}
+import type { AreaType, ServiceabilityZone } from '@/lib/types'
 
 interface ZonesListProps {
-  zones: Zone[]
+  zones: ServiceabilityZone[]
   isLoading: boolean
-  selectedZone: Zone | null
-  onSelectZone: (zone: Zone) => void
-  onEditZone: (zone: Zone) => void
+  selectedZone: ServiceabilityZone | null
+  onSelectZone: (zone: ServiceabilityZone) => void
+  onEditZone: (zone: ServiceabilityZone) => void
   onDeleteZone: (zoneId: string) => void
-  areaTypeConfig: Record<string, { label: string; color: string; bgColor: string }>
+  areaTypeConfig: Record<AreaType, { label: string; color: string; bgColor: string }>
 }
 
 export default function ZonesList({
@@ -56,10 +46,10 @@ export default function ZonesList({
     <div className="space-y-2">
       {zones.map((zone) => (
         <button
-          key={zone.id}
+          key={zone.zoneId}
           onClick={() => onSelectZone(zone)}
           className={`w-full text-left px-3 py-2.5 rounded transition-colors border ${
-            selectedZone?.id === zone.id
+            selectedZone?.zoneId === zone.zoneId
               ? 'bg-primary/20 border-primary/40 shadow-sm'
               : 'bg-muted/20 border-border hover:bg-muted/40'
           }`}
