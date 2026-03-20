@@ -260,6 +260,7 @@ export interface Integration {
   status: 'active' | 'inactive' | 'error'
   config: Record<string, any>
   createdAt: string
+  isConfigured?: boolean
 }
 
 export interface IntegrationEvent {
