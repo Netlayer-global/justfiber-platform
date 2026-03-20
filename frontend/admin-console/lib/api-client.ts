@@ -100,6 +100,10 @@ class ApiClient {
     return this.client.get('/api/v1/admin/customers', { params })
   }
 
+  async getSubscribers(params: PaginationParams): Promise<ApiResponse> {
+    return this.getCustomers(params)
+  }
+
   async getCustomer(customerId: string): Promise<ApiResponse> {
     return this.client.get(`/api/v1/admin/customers/${customerId}`)
   }
@@ -108,8 +112,16 @@ class ApiClient {
     return this.client.post(`/api/v1/admin/customers/${customerId}/suspend`)
   }
 
+  async suspendSubscriber(customerId: string): Promise<ApiResponse> {
+    return this.suspendCustomer(customerId)
+  }
+
   async resumeCustomer(customerId: string): Promise<ApiResponse> {
     return this.client.post(`/api/v1/admin/customers/${customerId}/resume`)
+  }
+
+  async resumeSubscriber(customerId: string): Promise<ApiResponse> {
+    return this.resumeCustomer(customerId)
   }
 
   async retryProvisioning(customerId: string): Promise<ApiResponse> {
