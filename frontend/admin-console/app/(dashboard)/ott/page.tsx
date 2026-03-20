@@ -10,8 +10,6 @@ import { OTTSubscription } from '@/lib/types'
 import { toast } from 'sonner'
 import {
   createColumnHelper,
-  getCoreRowModel,
-  useReactTable,
 } from '@tanstack/react-table'
 
 const columnHelper = createColumnHelper<OTTSubscription>()
@@ -127,12 +125,6 @@ export default function OTTPage() {
     }),
   ]
 
-  const table = useReactTable({
-    data: subscriptions,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -172,7 +164,7 @@ export default function OTTPage() {
 
       {/* Table */}
       <div className="card overflow-hidden">
-        <DataTable table={table} isLoading={isLoading} />
+        <DataTable columns={columns} data={subscriptions} isLoading={isLoading} />
       </div>
 
       {/* Detail Drawer */}

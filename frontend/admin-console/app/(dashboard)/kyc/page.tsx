@@ -10,9 +10,6 @@ import { KYCRequest } from '@/lib/types'
 import { toast } from 'sonner'
 import {
   createColumnHelper,
-  getCoreRowModel,
-  useReactTable,
-  flexRender,
 } from '@tanstack/react-table'
 
 const columnHelper = createColumnHelper<KYCRequest>()
@@ -121,12 +118,6 @@ export default function KYCPage() {
     }),
   ]
 
-  const table = useReactTable({
-    data: kycRequests,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -166,7 +157,7 @@ export default function KYCPage() {
 
       {/* Table */}
       <div className="card overflow-hidden">
-        <DataTable table={table} isLoading={isLoading} />
+        <DataTable columns={columns} data={kycRequests} isLoading={isLoading} />
       </div>
 
       {/* Detail Drawer */}
