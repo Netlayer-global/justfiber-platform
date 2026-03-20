@@ -76,7 +76,7 @@ export default function ServiceabilityPage() {
   async function handleUpdateZone(zoneData: any) {
     if (!editingZone) return
     try {
-      const response = await adminAPI.updateServiceabilityZone(editingZone.id, zoneData)
+      const response = await adminAPI.updateServiceabilityZone(editingZone.zoneId, zoneData)
       if (response.data.success) {
         toast.success('Zone updated successfully')
         loadData()
@@ -343,7 +343,7 @@ export default function ServiceabilityPage() {
                     </button>
                     <button
                       onClick={() => {
-                        handleDeleteZone(selectedZone.id)
+                        handleDeleteZone(selectedZone.zoneId)
                         setSelectedZone(null)
                       }}
                       className="btn-destructive flex items-center gap-2 text-sm flex-1"
