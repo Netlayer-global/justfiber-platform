@@ -51,27 +51,27 @@ export function getApiClient(): AxiosInstance {
 }
 
 // Convenience methods
-export async function apiGet<T>(url: string, config?: any) {
+export async function apiGet<T = any>(url: string, config?: any) {
   const client = getApiClient()
   return client.get<T>(url, config)
 }
 
-export async function apiPost<T>(url: string, data?: any, config?: any) {
+export async function apiPost<T = any>(url: string, data?: any, config?: any) {
   const client = getApiClient()
   return client.post<T>(url, data, config)
 }
 
-export async function apiPatch<T>(url: string, data?: any, config?: any) {
+export async function apiPatch<T = any>(url: string, data?: any, config?: any) {
   const client = getApiClient()
   return client.patch<T>(url, data, config)
 }
 
-export async function apiPut<T>(url: string, data?: any, config?: any) {
+export async function apiPut<T = any>(url: string, data?: any, config?: any) {
   const client = getApiClient()
   return client.put<T>(url, data, config)
 }
 
-export async function apiDelete<T>(url: string, config?: any) {
+export async function apiDelete<T = any>(url: string, config?: any) {
   const client = getApiClient()
   return client.delete<T>(url, config)
 }
