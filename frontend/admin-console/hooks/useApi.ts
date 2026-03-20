@@ -2,6 +2,12 @@ import { useState, useCallback } from 'react'
 import { AxiosError } from 'axios'
 import { apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api'
 
+type ApiErrorPayload = {
+  error?: {
+    message?: string
+  }
+}
+
 export function useApi() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +44,7 @@ export function useApi() {
 
         return response.data
       } catch (err) {
-        const axiosError = err as AxiosError
+        const axiosError = err as AxiosError<ApiErrorPayload>
         const errorMessage =
           axiosError.response?.data?.error?.message || axiosError.message || 'An error occurred'
         setError(errorMessage)
