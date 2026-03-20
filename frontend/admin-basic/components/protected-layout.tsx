@@ -2,13 +2,13 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { getAuthToken } from '@/lib/api'
 
 export function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    const token = api.getToken()
+    const token = getAuthToken()
     if (!token) {
       router.push('/auth/login')
     }
