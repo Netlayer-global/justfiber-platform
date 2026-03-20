@@ -2,19 +2,21 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { useAuth } from '@/lib/auth-context'
 
 export default function Home() {
   const router = useRouter()
+  const { isAuthenticated, isLoading } = useAuth()
 
   useEffect(() => {
-    const session = getSession()
-    if (session && Date.now() < session.expiresAt) {
-      router.push('/dashboard')
-    } else {
-      router.push('/auth/login')
+    if (!isLoading) {
+      if (isAuthenticated) {
+        router.push('/dashboard')
+      } else {
+        router.push('/auth/login')
+      }
     }
-  }, [router])
+  }, [isAuthenticated, isLoading, router])
 
   return null
 }

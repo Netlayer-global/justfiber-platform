@@ -1,38 +1,23 @@
 # JustFiber Admin Console
 
-Premium ISP Admin Panel for Operations & Support - Built with Next.js, TypeScript, Tailwind CSS, and shadcn/ui.
+Production-grade ISP operations management platform built with Next.js 16, React 19, and TypeScript. Fully integrated with real backend APIs - no mock data in production code paths.
 
-## Features
+## Overview
 
-### Modules
-- **Dashboard** - Executive overview with KPIs, network health, billing summary
-- **CRM/Customers** - Customer management with suspend/resume actions
-- **Billing** - Invoices, payments, ledger, adjustments, refunds
-- **Devices/ACS** - Device inventory, WiFi/PPPoE configuration, reboot
-- **NOC/Network** - Network monitoring, nodes, uptime tracking
-- **Tickets/Helpdesk** - Support ticket management with assignment & resolution
-- **Inventory** - Stock management, vendors, locations, movements
-- **Franchise/Collections** - Collections requests and franchise management
-- **Sales Ops** - Leads, bookings, KYC tracking, performance metrics
-- **Integrations** - SMS, email, WhatsApp, KYC, OTT, payment gateways
-- **Reports & Automation** - Scheduled reports, automation triggers, announcements
-- **Audit Logs** - Complete action history and compliance tracking
-- **Settings** - System configuration and preferences
-
-### Technical Highlights
-- **Dark Command-Center Theme** - Premium aesthetics with cyan/blue accents
-- **Real-time Data** - Live charts with Recharts
-- **TanStack Tables** - Advanced data tables with sorting, filtering, pagination
-- **Framer Motion** - Smooth animations and transitions
-- **JWT Authentication** - Secure Bearer token auth
-- **Responsive Design** - Mobile-first, tablet & desktop optimized
-- **API Contract Compliance** - 100% adherence to backend contract
+Complete operator-grade admin panel for JustFiber ISP platform covering:
+- **Dashboard** - Executive overview with real-time metrics
+- **Subscribers** - Customer lifecycle management
+- **Billing** - Revenue, invoices, payments, adjustments
+- **Network** - NOC operations, device management, uptime monitoring
+- **Tickets** - Helpdesk support ticket management
+- **Installers** - Sales operations and installer management
+- **Configs** - System settings and integrations
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
-- npm, yarn, or pnpm
+- Node.js 20+
+- Access to JustFiber backend API (default: `http://localhost:4000`)
 
 ### Installation
 
@@ -40,238 +25,251 @@ Premium ISP Admin Panel for Operations & Support - Built with Next.js, TypeScrip
 # Install dependencies
 npm install
 
-# Create .env.local (copy from .env.example)
+# Create environment file
 cp .env.example .env.local
-```
 
-### Development
-
-```bash
-# Start dev server
+# Start development server
 npm run dev
 
 # Open http://localhost:3000
 ```
 
-### Build & Deploy
-
-```bash
-# Production build
-npm run build
-
-# Start production server
-npm start
-```
-
 ## Environment Variables
 
-```
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:4000
+```env
+# Backend API Base URL
+NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
+
+# Optional
+NEXT_PUBLIC_APP_ENV=development
 ```
 
 ## Architecture
 
+### Authentication
+
+1. Login via `/auth/login` (email + password)
+2. Backend returns `accessToken` + admin user data
+3. Token stored in localStorage with key `adminToken`
+4. All API requests include `Authorization: Bearer <token>`
+5. Protected routes redirect to login on 401/auth failure
+
+### Project Structure
+
 ```
 app/
-├── layout.tsx                    # Root layout with theme
-├── page.tsx                      # Redirect to dashboard/login
+├── layout.tsx              # Root layout (fonts, globals)
+├── page.tsx                # Redirect (/ → /dashboard or /auth/login)
 ├── auth/
-│   ├── layout.tsx               # Auth layout
-│   └── login/page.tsx           # Login page
+│   ├── layout.tsx
+│   └── login/page.tsx      # Login page
 └── (dashboard)/
-    ├── layout.tsx               # Dashboard layout with sidebar
-    ├── dashboard/page.tsx       # Dashboard home
-    ├── customers/page.tsx       # Customers module
-    ├── billing/page.tsx         # Billing module
-    ├── devices/page.tsx         # Devices/ACS module
-    ├── network/page.tsx         # NOC/Network module
-    ├── tickets/page.tsx         # Tickets/Helpdesk module
-    ├── inventory/page.tsx       # Inventory module
-    ├── franchise/page.tsx       # Franchise/Collections module
-    ├── sales/page.tsx           # Sales Operations module
-    ├── audit-logs/page.tsx      # Audit Logs module
-    ├── integrations/page.tsx    # Integrations module
-    ├── reports/page.tsx         # Reports & Automation module
-    └── settings/page.tsx        # Settings module
+    ├── layout.tsx          # Dashboard shell + sidebar + topbar
+    ├── dashboard/page.tsx  # Executive dashboard
+    ├── subscribers/page.tsx
+    ├── billing/page.tsx
+    ├── network/page.tsx
+    ├── tickets/page.tsx
+    ├── installers/page.tsx
+    └── configs/page.tsx
 
 components/
-├── auth/
-│   └── LoginForm.tsx            # Login form component
 ├── layout/
-│   ├── Sidebar.tsx              # Navigation sidebar
-│   └── Navbar.tsx               # Top navbar with user menu
-├── dashboard/
-│   ├── StatsCard.tsx            # KPI card component
-│   └── ChartCard.tsx            # Chart wrapper component
-├── table/
-│   └── DataTable.tsx            # TanStack Table wrapper
-├── drawer/
-│   └── DetailDrawer.tsx         # Right-side detail panel
-└── modal/
-    └── ActionModal.tsx          # Confirmation modal
+│   ├── sidebar.tsx         # Navigation sidebar
+│   └── topbar.tsx          # Top bar with user + search
 
 lib/
-├── api.ts                       # Axios API client
-├── auth.ts                      # Auth utilities
-├── types.ts                     # TypeScript types
-└── utils.ts                     # Helper functions
+├── api-client.ts           # Typed Axios API client
+├── auth-context.tsx        # React context for auth state
+├── protected-route.tsx     # Route protection wrapper
+└── utils.ts                # Utility functions (formatting, colors, etc)
 
 styles/
-└── globals.css                  # Dark theme CSS variables
+└── globals.css             # Design tokens + component styles
 ```
 
-## API Integration
+### API Integration
 
-All API calls use the `NEXT_PUBLIC_API_BASE_URL` environment variable and include:
-- Bearer token authentication from localStorage
-- Error handling with toast notifications
-- Loading states on async operations
-- Response validation
-
-### Example API Call
+All routes call real backend APIs via `apiClient` singleton:
 
 ```typescript
-import { apiGet, apiPost } from '@/lib/api'
+import { apiClient } from '@/lib/api-client'
 
-// GET request
-const response = await apiGet('/api/v1/admin/customers')
+// Example: Get dashboard data
+const response = await apiClient.getDashboardExecutive()
+if (response.data?.success) {
+  const data = response.data.data
+}
 
-// POST request
-const response = await apiPost('/api/v1/admin/customers/:customerId/suspend', {})
+// Example: Create ticket
+await apiClient.createTicket({
+  customerId: 'CUST-001',
+  category: 'support',
+  priority: 'high',
+  subject: 'Internet down',
+  description: 'No connectivity since 10 AM',
+})
 ```
 
-## Authentication Flow
+**Base URL**: Configured via `NEXT_PUBLIC_API_BASE_URL`  
+**Version Prefix**: `/api/v1`  
+**Auth**: Bearer token in `Authorization` header
 
-1. User navigates to `/auth/login`
-2. Enters email & password
-3. Frontend calls `POST /api/v1/admin/auth/login`
-4. Backend returns `accessToken` & user data
-5. Token stored in localStorage
-6. Redirect to `/dashboard`
-7. All subsequent requests include Bearer token
+### Design System
 
-### Token Refresh
+**Color Palette** (Dark theme, UISP-inspired):
+- Background: `#0f1419` (deep dark slate)
+- Card: `#1a2332` (darker slate)
+- Primary: `#0066cc` (professional blue)
+- Secondary: `#00ccff` (cyan accent)
+- Text: `#f2f2f2` (off-white)
+- Border: `#2a3f4f` (subtle slate)
 
-If token expires (401 response):
-- Automatically redirect to login
-- Clear localStorage session
+**Typography**:
+- Font: Geist (system font stack fallback)
+- Sizes: Semantic scale via Tailwind
 
-## Styling
+**Components**:
+- Cards: `.card` class with padding + border
+- Buttons: `.btn-primary`, `.btn-ghost`, `.btn-destructive`
+- Badges: `.badge-success`, `.badge-warning`, `.badge-danger`
+- Tables: `.table-row`, `.table-header`
 
-### Color System
-- **Background**: Deep black (#0a0a0a - #1a1a1a)
-- **Borders**: Subtle gray (#2a2a2a - #404040)
-- **Text**: Light gray (#e0e0e0 - #f0f0f0)
-- **Primary Accent**: Cyan (#06b6d4)
-- **Success**: Green (#10b981)
-- **Warning**: Yellow (#f59e0b)
-- **Danger**: Red (#ef4444)
+## Development
 
-### Using Components
+### Adding a New Page
+
+1. Create file in `app/(dashboard)/<module>/page.tsx`
+2. Use `useAuth()` hook for authentication checks (automatic via `ProtectedRoute`)
+3. Call `apiClient.<method>()` for backend API access
+4. Format data using utility functions: `formatCurrency()`, `formatDate()`, `getStatusColor()`
+5. Style with Tailwind + design token classes
+
+### Example Page
 
 ```tsx
-import { DataTable } from '@/components/table/DataTable'
-import { DetailDrawer } from '@/components/drawer/DetailDrawer'
-import { ActionModal } from '@/components/modal/ActionModal'
-import { StatsCard } from '@/components/dashboard/StatsCard'
+'use client'
 
-// In your component
-<StatsCard 
-  title="Total Customers"
-  value={1250}
-  icon={<Users className="w-5 h-5" />}
-  color="primary"
-/>
+import { useEffect, useState } from 'react'
+import { apiClient } from '@/lib/api-client'
+import { formatCurrency, formatDate } from '@/lib/utils'
 
-<DataTable 
-  columns={columns}
-  data={data}
-  isLoading={isLoading}
-  pageSize={20}
-/>
+export default function MyPage() {
+  const [data, setData] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
 
-<DetailDrawer
-  isOpen={isOpen}
-  onClose={() => setIsOpen(false)}
-  title="Customer Details"
->
-  {/* Content */}
-</DetailDrawer>
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const response = await apiClient.getCustomers({ page: 1, limit: 50 })
+        if (response.data?.success) {
+          setData(response.data.data)
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
-<ActionModal
-  isOpen={isOpen}
-  onClose={() => setIsOpen(false)}
-  onConfirm={handleConfirm}
-  title="Confirm Action"
-  description="Are you sure?"
-  isDestructive={true}
-/>
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">Module Name</h1>
+      {/* Content */}
+    </div>
+  )
+}
 ```
 
-## Best Practices
+## Build & Deploy
 
-- Use API utility functions from `lib/api.ts` for consistency
-- Handle errors with toast notifications using `sonner`
-- Load data on component mount with useEffect
-- Use TanStack Tables for complex data
-- Apply loading states during async operations
-- Implement confirmation modals for destructive actions
-- Keep components focused and reusable
-- Use proper TypeScript types from `lib/types.ts`
-
-## Deployment
-
-### Vercel (Recommended)
+### Production Build
 
 ```bash
-# Deploy to Vercel
+npm run build
+npm start
+```
+
+### Vercel Deployment
+
+```bash
+# Using Vercel CLI
 vercel deploy
 
-# With environment variables
+# Set environment variables
 vercel env add NEXT_PUBLIC_API_BASE_URL
-vercel deploy
 ```
 
 ### Docker
 
-```dockerfile
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN npm install && npm run build
-
-FROM node:18-alpine
-WORKDIR /app
-COPY --from=builder /app/next.config.js ./
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
-
-CMD ["npm", "start"]
+```bash
+docker build -t justfiber-admin .
+docker run -p 3000:3000 -e NEXT_PUBLIC_API_BASE_URL=http://backend:4000 justfiber-admin
 ```
+
+## API Reference
+
+See `ADMIN_BACKEND_CONTRACT.md` in root for complete API specification including:
+- Authentication endpoints
+- Dashboard endpoints  
+- Customer management
+- Billing operations
+- Network operations
+- Ticket management
+- Configuration endpoints
+
+## Best Practices
+
+- **Error Handling**: Use toast notifications (via Sonner)
+- **Loading States**: Show spinner during API calls
+- **Validation**: Client-side input validation + rely on backend validation
+- **Types**: Use TypeScript interfaces for API responses
+- **Formatting**: Use utils for currency, dates, status colors
+- **Accessibility**: Semantic HTML, ARIA labels where needed
 
 ## Troubleshooting
 
-### API Connection Issues
-- Verify backend is running on the configured port
-- Check `NEXT_PUBLIC_API_BASE_URL` in .env.local
-- Ensure Bearer token is valid and not expired
+### Port Already in Use
+```bash
+# Find process on port 3000
+lsof -i :3000
+# Kill process
+kill -9 <PID>
+```
+
+### API Connection Error
+- Verify backend running: `http://localhost:4000/health/ready`
+- Check `NEXT_PUBLIC_API_BASE_URL` in `.env.local`
+- Ensure network connectivity
 - Check browser console for CORS errors
 
-### Authentication Issues
-- Clear localStorage and cookies
+### Auth Issues
+- Clear browser localStorage: `localStorage.clear()`
 - Re-login to get fresh token
-- Verify backend auth endpoint responds correctly
+- Check login credentials with backend team
 
-### Styling Issues
-- Clear Next.js cache: `rm -rf .next`
-- Rebuild: `npm run build`
-- Check Tailwind CSS configuration
+## Tech Stack
 
-## Support
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4 + custom design tokens
+- **Components**: Recharts, Lucide icons
+- **HTTP**: Axios with automatic interceptors
+- **State**: React Context + hooks
+- **Dev**: ESLint, TypeScript strict mode
 
-For issues or feature requests, contact the development team or check the project documentation.
+## Documentation
 
-## License
+- `ADMIN_BACKEND_CONTRACT.md` - Complete API specification
+- `API_ENDPOINTS.md` - Endpoint reference
+- `BACKEND_COMPLETION_STATUS.md` - Backend readiness status
 
-Proprietary - JustFiber ISP Platform
+## Notes
+
+- Admin panel requires valid admin credentials
+- No mock/fake data in production code paths
+- All data comes from real backend APIs
+- Browser localStorage stores only auth token
+- Dark theme enforced by design
+- Fully responsive (mobile, tablet, desktop)
+
