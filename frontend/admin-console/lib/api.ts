@@ -135,8 +135,10 @@ export const adminAPI = {
   // Network
   getNetworkOverview: () =>
     apiGet('/api/v1/admin/network/overview'),
-  getNetworkNodes: () =>
-    apiGet('/api/v1/admin/network/nodes'),
+  getNetworkNodes: (page = 1, limit = 20) =>
+    apiGet(`/api/v1/admin/network/nodes?page=${page}&limit=${limit}`),
+  getNetworkAlerts: (page = 1, limit = 20) =>
+    apiGet(`/api/v1/admin/network/alerts?page=${page}&limit=${limit}`),
 
   // Tickets
   getTickets: (page = 1, limit = 20) =>
