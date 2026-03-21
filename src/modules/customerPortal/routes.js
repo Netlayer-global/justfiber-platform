@@ -504,6 +504,49 @@ async function markLatestInvoicePaid({ customerId, paymentId, amount, source }) 
   return invoice;
 }
 
+function buildInstallerVisitSummary(job) {
+  const timeline = Array.isArray(job.timeline) ? [...job.timeline] : [];
+  const latestTimeline = timeline
+    .filter((item) => item?.at)
+    .sort((a, b) => new Date(b.at) - new Date(a.at))[0];
+  const installerName = job.installerId && typeof job.installerId === "object"
+    ? (job.installerId.fullName || job.installerId.username || "")
+    : "";
+  const locationMapUrl = job.customerSnapshot?.location?.mapUrl
+    || (job.customerSnapshot?.location?.lat != null && job.customerSnapshot?.location?.lng != null
+      ? `https://maps.google.com/?q=${job.customerSnapshot.location.lat},${job.customerSnapshot.location.lng}`
+      : "");
+
+  const etaTextByStatus = {
+    assigned: "Installer will contact you soon.",
+    accepted: "Installer accepted the job.",
+    enroute: "Installer is on the way.",
+    onsite: "Installer has reached your location.",
+    ont_scanned: "ONT scanned. Activation is in progress.",
+    activation_in_progress: "PPPoE and activation are being processed.",
+    active: "Connection is active.",
+    complaint_in_progress: "Complaint work is in progress.",
+    completed: "Visit completed.",
+    failed: "Visit could not be completed.",
+    cancelled: "Visit was cancelled."
+  };
+
+  return {
+    jobNumber: job.jobNumber,
+    type: job.type,
+    status: job.status,
+    priority: job.priority,
+    createdAt: job.createdAt,
+    completedAt: job.completedAt,
+    installerName,
+    lastUpdateAt: latestTimeline?.at || job.updatedAt || job.createdAt,
+    lastUpdateNote: latestTimeline?.note || latestTimeline?.event || "",
+    latestEventCode: latestTimeline?.event || "",
+    mapUrl: locationMapUrl,
+    etaText: etaTextByStatus[job.status] || "Installation team update pending."
+  };
+}
+
 function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMode }) {
   const currentPrice = Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0);
   const nextPrice = Number(nextPlan?.monthlyPrice || 0);
@@ -1141,8 +1184,12 @@ customerPortalRouter.get(
   asyncHandler(async (req, res) => {
     const jobs = await InstallerJob.find({
       customerId: { $in: req.customerUser.linkedCustomerIds || [] }
-    }).sort({ createdAt: -1 }).limit(20).lean();
-    return ok(res, jobs);
+    })
+      .populate("installerId", "fullName username phone")
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean();
+    return ok(res, jobs.map(buildInstallerVisitSummary));
   })
 );
 

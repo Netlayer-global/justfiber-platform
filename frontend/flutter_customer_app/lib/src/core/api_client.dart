@@ -335,6 +335,12 @@ class ApiClient {
         priority: (map['priority'] ?? 'medium').toString(),
         createdAt: (map['createdAt'] ?? '').toString(),
         completedAt: (map['completedAt'] ?? '').toString(),
+        installerName: (map['installerName'] ?? '').toString(),
+        lastUpdateAt: (map['lastUpdateAt'] ?? '').toString(),
+        lastUpdateNote: (map['lastUpdateNote'] ?? '').toString(),
+        latestEventCode: (map['latestEventCode'] ?? '').toString(),
+        mapUrl: (map['mapUrl'] ?? '').toString(),
+        etaText: (map['etaText'] ?? '').toString(),
       );
     }).toList();
   }

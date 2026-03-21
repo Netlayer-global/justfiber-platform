@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_state.dart';
 import '../widgets/app_card.dart';
@@ -100,30 +101,54 @@ class ServiceTrackingScreen extends StatelessWidget {
                 else
                   ...visits.map((visit) => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(visit.jobNumber, style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${visit.type} | ${visit.priority} | ${visit.createdAt.isEmpty ? '-' : visit.createdAt}',
-                                    style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(visit.jobNumber, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${visit.type} | ${visit.priority} | ${visit.createdAt.isEmpty ? '-' : visit.createdAt}',
+                                          style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(visit.status, style: TextStyle(color: _stepColor(visit.status), fontWeight: FontWeight.w600)),
+                                      if (visit.completedAt.isNotEmpty)
+                                        Text(visit.completedAt, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(visit.status, style: TextStyle(color: _stepColor(visit.status), fontWeight: FontWeight.w600)),
-                                if (visit.completedAt.isNotEmpty)
-                                  Text(visit.completedAt, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                              const SizedBox(height: 10),
+                              _visitInfo('Installer', visit.installerName.isEmpty ? 'Assigned team' : visit.installerName),
+                              _visitInfo('ETA', visit.etaText.isEmpty ? '-' : visit.etaText),
+                              _visitInfo('Latest update', visit.lastUpdateNote.isEmpty ? visit.latestEventCode : visit.lastUpdateNote),
+                              _visitInfo('Updated at', visit.lastUpdateAt.isEmpty ? '-' : visit.lastUpdateAt),
+                              if (visit.mapUrl.isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                OutlinedButton(
+                                  onPressed: () => _openMap(visit.mapUrl),
+                                  child: const Text('Open location'),
+                                ),
                               ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       )),
               ],
@@ -160,5 +185,26 @@ class ServiceTrackingScreen extends StatelessWidget {
       return const Color(0xFFF59E0B);
     }
     return const Color(0xFFD81F26);
+  }
+
+  Widget _visitInfo(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+          children: [
+            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700)),
+            TextSpan(text: value),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openMap(String mapUrl) async {
+    final uri = Uri.tryParse(mapUrl);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

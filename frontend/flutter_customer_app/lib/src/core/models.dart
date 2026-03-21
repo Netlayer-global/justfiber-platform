@@ -334,6 +334,12 @@ class InstallerVisitItem {
     required this.priority,
     required this.createdAt,
     required this.completedAt,
+    required this.installerName,
+    required this.lastUpdateAt,
+    required this.lastUpdateNote,
+    required this.latestEventCode,
+    required this.mapUrl,
+    required this.etaText,
   });
 
   final String jobNumber;
@@ -342,6 +348,12 @@ class InstallerVisitItem {
   final String priority;
   final String createdAt;
   final String completedAt;
+  final String installerName;
+  final String lastUpdateAt;
+  final String lastUpdateNote;
+  final String latestEventCode;
+  final String mapUrl;
+  final String etaText;
 }
 
 class ConnectedDevice {
