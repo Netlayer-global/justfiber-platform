@@ -535,6 +535,7 @@ function mapRazorpaySettlementItem(item: any): RazorpaySettlementItem {
     createdAt: item.createdAt,
     orderExists: item.orderExists === true,
     orderStatus: item.orderStatus || '',
+    stale: item.stale === true,
   }
 }
 
@@ -1044,6 +1045,10 @@ export const adminAPI = {
       data: res.data ? mapRazorpayOverview(res.data) : undefined,
     }
   },
+  markRazorpayOrderStale: (orderId: string) =>
+    request(`/api/v1/admin/billing/razorpay/orders/${orderId}/mark-stale`, {
+      method: 'POST',
+    }),
   assignBillingCollectionOwner: (customerId: string, adminId?: string) =>
     request(`/api/v1/admin/billing/collections/${customerId}/assign`, {
       method: 'POST',

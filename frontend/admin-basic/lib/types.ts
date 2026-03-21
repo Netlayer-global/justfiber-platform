@@ -438,6 +438,7 @@ export interface RazorpaySettlementItem {
   createdAt?: string
   orderExists?: boolean
   orderStatus?: string
+  stale?: boolean
 }
 
 export interface RazorpayOverview {

@@ -524,6 +524,7 @@ adminOpsRouter.get(
   "/billing/razorpay/overview",
   requirePermission(permissions.billingRead),
   asyncHandler(async (_req, res) => {
+    const staleCutoff = Date.now() - 30 * 60 * 1000;
     const [orders, payments] = await Promise.all([
       PaymentTransaction.find({ provider: "razorpay", status: "pending" })
         .sort({ createdAt: -1 })
@@ -543,6 +544,7 @@ adminOpsRouter.get(
       .map((payment) => {
         const orderId = payment.metadata?.orderId || payment.reference;
         const order = orderId ? orderMap.get(orderId) : null;
+        const baseTime = payment.createdAt ? new Date(payment.createdAt).getTime() : 0;
         return {
           transactionId: payment.transactionId,
           customerId: payment.customerId,
@@ -554,7 +556,8 @@ adminOpsRouter.get(
           paidAt: payment.paidAt,
           createdAt: payment.createdAt,
           orderExists: Boolean(order),
-          orderStatus: order?.status || ""
+          orderStatus: order?.status || "",
+          stale: Boolean(order && order.status === "pending" && baseTime > 0 && baseTime < staleCutoff)
         };
       });
 
@@ -566,6 +569,34 @@ adminOpsRouter.get(
       webhookCaptured: payments.filter((item) => item.metadata?.source === "razorpay_webhook").length,
       verifyCaptured: payments.filter((item) => item.metadata?.source === "customer_billing_verify").length,
       settlementItems
+    });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/razorpay/orders/:orderId/mark-stale",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const order = await PaymentTransaction.findOne({
+      provider: "razorpay",
+      transactionId: req.params.orderId,
+      status: "pending"
+    });
+    if (!order) {
+      throw new ApiError(404, "Pending Razorpay order not found");
+    }
+    order.status = "expired";
+    order.metadata = {
+      ...(order.metadata || {}),
+      staleMarkedAt: new Date(),
+      staleMarkedByAdminId: req.admin?._id,
+      staleMarkSource: "admin_billing_dashboard"
+    };
+    await order.save();
+    return ok(res, {
+      updated: true,
+      orderId: order.transactionId,
+      status: order.status
     });
   })
 );

@@ -379,6 +379,21 @@ export default function BillingPage() {
     await loadBilling()
   }
 
+  async function markRazorpayOrderStale(orderId: string) {
+    try {
+      const res = await adminAPI.markRazorpayOrderStale(orderId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to mark Razorpay order stale')
+        return
+      }
+      toast.success('Razorpay order marked stale')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to mark Razorpay order stale:', error)
+      toast.error('Failed to mark Razorpay order stale')
+    }
+  }
+
   async function setPromiseToPay(item: BillingCollectionItem) {
     const promisedAt = window.prompt('Promise to pay date (YYYY-MM-DD)', item.promiseToPayAt ? item.promiseToPayAt.slice(0, 10) : '')
     if (!promisedAt) return
@@ -483,6 +498,64 @@ export default function BillingPage() {
                 {!(razorpayOverview?.settlementItems || []).length ? (
                   <tr className="border-t border-[#2a2f4a]">
                     <td className="table-cell text-slate-500" colSpan={6}>No unreconciled Razorpay settlements.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Recovery Queue</div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0e27]">
+                  <th className="table-header">Order/Payment</th>
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">State</th>
+                  <th className="table-header">Amount</th>
+                  <th className="table-header">Time</th>
+                  <th className="table-header text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(razorpayOverview?.settlementItems || [])
+                  .filter((item) => item.stale || item.reconciliationStatus === 'manual_review')
+                  .slice(0, 15)
+                  .map((item) => (
+                    <tr key={`recovery-${item.transactionId}`} className="border-t border-[#2a2f4a]">
+                      <td className="table-cell">
+                        <div className="font-mono text-xs">{item.orderId || item.transactionId}</div>
+                        <div className="text-xs text-slate-500 mt-1">{item.source || '-'} </div>
+                      </td>
+                      <td className="table-cell">{item.customerId}</td>
+                      <td className="table-cell">
+                        <div>{item.stale ? 'stale_pending_order' : item.reconciliationStatus || 'pending'}</div>
+                        <div className="text-xs text-slate-500 mt-1">{item.status}</div>
+                      </td>
+                      <td className="table-cell">Rs {Number(item.amount || 0).toFixed(2)}</td>
+                      <td className="table-cell">{item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</td>
+                      <td className="table-cell text-right">
+                        {item.stale && item.orderId ? (
+                          <button
+                            className="btn-secondary"
+                            onClick={() => void markRazorpayOrderStale(item.orderId!)}
+                          >
+                            Mark Stale
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-secondary"
+                            onClick={() => void reconcilePayment(item.transactionId)}
+                          >
+                            Review/Reconcile
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                {!((razorpayOverview?.settlementItems || []).filter((item) => item.stale || item.reconciliationStatus === 'manual_review').length) ? (
+                  <tr className="border-t border-[#2a2f4a]">
+                    <td className="table-cell text-slate-500" colSpan={6}>No stale pending orders or manual-review Razorpay items.</td>
                   </tr>
                 ) : null}
               </tbody>
