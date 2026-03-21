@@ -49,12 +49,20 @@ const billingProfileSchema = z.object({
   code: z.string().min(2),
   name: z.string().min(2),
   billMode: z.enum(["prepaid", "postpaid"]).default("prepaid"),
+  defaultHomeBillMode: z.enum(["prepaid", "postpaid"]).default("prepaid"),
+  defaultBusinessBillMode: z.enum(["prepaid", "postpaid"]).default("postpaid"),
   cycle: z.enum(["monthly", "quarterly", "annual"]).default("monthly"),
   invoiceDay: z.number().min(1).max(31).default(1),
   dueDays: z.number().min(0).default(0),
   graceDays: z.number().min(0).default(0),
   autoSuspend: z.boolean().default(true),
   currency: z.string().default("INR"),
+  companyLegalName: z.string().optional(),
+  companyAddress: z.string().optional(),
+  supportPhone: z.string().optional(),
+  supportEmail: z.string().email().optional(),
+  invoicePrefix: z.string().default("JF"),
+  activationInvoiceTiming: z.enum(["before_payment", "after_payment"]).default("before_payment"),
   taxPercent: z.number().min(0).default(18),
   companyStateCode: z.string().default("UP"),
   companyStateName: z.string().default("Uttar Pradesh"),
@@ -71,6 +79,16 @@ const billingProfileSchema = z.object({
       cgstPercent: z.number().min(0).optional(),
       sgstPercent: z.number().min(0).optional(),
       unionTerritory: z.boolean().optional()
+    })
+  ).default([]),
+  zoneMappings: z.array(
+    z.object({
+      zoneCode: z.string().min(1),
+      zoneName: z.string().optional(),
+      stateCode: z.string().min(2),
+      stateName: z.string().optional(),
+      invoicePrefix: z.string().optional(),
+      defaultBillMode: z.enum(["prepaid", "postpaid"]).optional()
     })
   ).default([]),
   razorpayEnabled: z.boolean().default(true),

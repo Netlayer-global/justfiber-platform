@@ -264,6 +264,17 @@ export interface BillingProfile {
   id: string
   code: string
   name: string
+  billMode?: 'prepaid' | 'postpaid'
+  defaultHomeBillMode?: 'prepaid' | 'postpaid'
+  defaultBusinessBillMode?: 'prepaid' | 'postpaid'
+  dueDays?: number
+  graceDays?: number
+  companyLegalName?: string
+  companyAddress?: string
+  supportPhone?: string
+  supportEmail?: string
+  invoicePrefix?: string
+  activationInvoiceTiming?: 'before_payment' | 'after_payment'
   companyStateCode?: string
   companyStateName?: string
   gstNumber?: string
@@ -279,6 +290,14 @@ export interface BillingProfile {
     cgstPercent?: number
     sgstPercent?: number
     unionTerritory?: boolean
+  }>
+  zoneMappings?: Array<{
+    zoneCode: string
+    zoneName?: string
+    stateCode: string
+    stateName?: string
+    invoicePrefix?: string
+    defaultBillMode?: 'prepaid' | 'postpaid'
   }>
   active?: boolean
 }

@@ -9,6 +9,16 @@ import { toast } from 'sonner'
 type BillingProfileForm = {
   code: string
   name: string
+  defaultHomeBillMode: 'prepaid' | 'postpaid'
+  defaultBusinessBillMode: 'prepaid' | 'postpaid'
+  dueDays: string
+  graceDays: string
+  companyLegalName: string
+  companyAddress: string
+  supportPhone: string
+  supportEmail: string
+  invoicePrefix: string
+  activationInvoiceTiming: 'before_payment' | 'after_payment'
   companyStateCode: string
   companyStateName: string
   gstNumber: string
@@ -18,11 +28,22 @@ type BillingProfileForm = {
   intrastateCgstPercent: string
   intrastateSgstPercent: string
   stateOverridesJson: string
+  zoneMappingsJson: string
 }
 
 const emptyProfileForm: BillingProfileForm = {
   code: 'DEFAULT',
   name: 'Default Billing Profile',
+  defaultHomeBillMode: 'prepaid',
+  defaultBusinessBillMode: 'postpaid',
+  dueDays: '0',
+  graceDays: '0',
+  companyLegalName: 'JustFiber Networks Private Limited',
+  companyAddress: '',
+  supportPhone: '',
+  supportEmail: '',
+  invoicePrefix: 'JF',
+  activationInvoiceTiming: 'before_payment',
   companyStateCode: 'UP',
   companyStateName: 'Uttar Pradesh',
   gstNumber: '',
@@ -32,6 +53,7 @@ const emptyProfileForm: BillingProfileForm = {
   intrastateCgstPercent: '9',
   intrastateSgstPercent: '9',
   stateOverridesJson: '[]',
+  zoneMappingsJson: '[]',
 }
 
 export default function BillingPage() {
@@ -84,6 +106,16 @@ export default function BillingPage() {
           setProfileForm({
             code: activeProfile.code,
             name: activeProfile.name,
+            defaultHomeBillMode: activeProfile.defaultHomeBillMode || 'prepaid',
+            defaultBusinessBillMode: activeProfile.defaultBusinessBillMode || 'postpaid',
+            dueDays: String(activeProfile.dueDays || 0),
+            graceDays: String(activeProfile.graceDays || 0),
+            companyLegalName: activeProfile.companyLegalName || 'JustFiber Networks Private Limited',
+            companyAddress: activeProfile.companyAddress || '',
+            supportPhone: activeProfile.supportPhone || '',
+            supportEmail: activeProfile.supportEmail || '',
+            invoicePrefix: activeProfile.invoicePrefix || 'JF',
+            activationInvoiceTiming: activeProfile.activationInvoiceTiming || 'before_payment',
             companyStateCode: activeProfile.companyStateCode || 'UP',
             companyStateName: activeProfile.companyStateName || 'Uttar Pradesh',
             gstNumber: activeProfile.gstNumber || '',
@@ -93,6 +125,7 @@ export default function BillingPage() {
             intrastateCgstPercent: String(activeProfile.intrastateCgstPercent || 9),
             intrastateSgstPercent: String(activeProfile.intrastateSgstPercent || 9),
             stateOverridesJson: JSON.stringify(activeProfile.stateOverrides || [], null, 2),
+            zoneMappingsJson: JSON.stringify(activeProfile.zoneMappings || [], null, 2),
           })
         }
       }
@@ -117,9 +150,20 @@ export default function BillingPage() {
     try {
       setIsSavingProfile(true)
       const stateOverrides = JSON.parse(profileForm.stateOverridesJson || '[]')
+      const zoneMappings = JSON.parse(profileForm.zoneMappingsJson || '[]')
       const res = await adminAPI.saveBillingProfile({
         code: profileForm.code.trim(),
         name: profileForm.name.trim(),
+        defaultHomeBillMode: profileForm.defaultHomeBillMode,
+        defaultBusinessBillMode: profileForm.defaultBusinessBillMode,
+        dueDays: Number(profileForm.dueDays || 0),
+        graceDays: Number(profileForm.graceDays || 0),
+        companyLegalName: profileForm.companyLegalName.trim(),
+        companyAddress: profileForm.companyAddress.trim(),
+        supportPhone: profileForm.supportPhone.trim(),
+        supportEmail: profileForm.supportEmail.trim() || undefined,
+        invoicePrefix: profileForm.invoicePrefix.trim().toUpperCase(),
+        activationInvoiceTiming: profileForm.activationInvoiceTiming,
         companyStateCode: profileForm.companyStateCode.trim().toUpperCase(),
         companyStateName: profileForm.companyStateName.trim(),
         gstNumber: profileForm.gstNumber.trim(),
@@ -129,6 +173,7 @@ export default function BillingPage() {
         intrastateCgstPercent: Number(profileForm.intrastateCgstPercent || 0),
         intrastateSgstPercent: Number(profileForm.intrastateSgstPercent || 0),
         stateOverrides,
+        zoneMappings,
         active: true,
       })
       if (!res.success) {
@@ -139,7 +184,7 @@ export default function BillingPage() {
       await loadBilling()
     } catch (error) {
       console.error('[v0] Failed to save billing profile:', error)
-      toast.error('Invalid GST override JSON or save failed')
+      toast.error('Invalid GST or zone mapping JSON')
     } finally {
       setIsSavingProfile(false)
     }
@@ -321,6 +366,24 @@ export default function BillingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input className="input" placeholder="Profile code" value={profileForm.code} onChange={(e) => setProfileForm({ ...profileForm, code: e.target.value.toUpperCase() })} />
                   <input className="input" placeholder="Profile name" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
+                  <select className="input" value={profileForm.defaultHomeBillMode} onChange={(e) => setProfileForm({ ...profileForm, defaultHomeBillMode: e.target.value as BillingProfileForm['defaultHomeBillMode'] })}>
+                    <option value="prepaid">Home users: Prepaid</option>
+                    <option value="postpaid">Home users: Postpaid</option>
+                  </select>
+                  <select className="input" value={profileForm.defaultBusinessBillMode} onChange={(e) => setProfileForm({ ...profileForm, defaultBusinessBillMode: e.target.value as BillingProfileForm['defaultBusinessBillMode'] })}>
+                    <option value="postpaid">Business users: Postpaid</option>
+                    <option value="prepaid">Business users: Prepaid</option>
+                  </select>
+                  <input className="input" placeholder="Company legal name" value={profileForm.companyLegalName} onChange={(e) => setProfileForm({ ...profileForm, companyLegalName: e.target.value })} />
+                  <input className="input" placeholder="Invoice prefix" value={profileForm.invoicePrefix} onChange={(e) => setProfileForm({ ...profileForm, invoicePrefix: e.target.value.toUpperCase() })} />
+                  <input className="input" placeholder="Support phone" value={profileForm.supportPhone} onChange={(e) => setProfileForm({ ...profileForm, supportPhone: e.target.value })} />
+                  <input className="input" placeholder="Support email" value={profileForm.supportEmail} onChange={(e) => setProfileForm({ ...profileForm, supportEmail: e.target.value })} />
+                  <input className="input" placeholder="Due days" type="number" value={profileForm.dueDays} onChange={(e) => setProfileForm({ ...profileForm, dueDays: e.target.value })} />
+                  <input className="input" placeholder="Grace days" type="number" value={profileForm.graceDays} onChange={(e) => setProfileForm({ ...profileForm, graceDays: e.target.value })} />
+                  <select className="input" value={profileForm.activationInvoiceTiming} onChange={(e) => setProfileForm({ ...profileForm, activationInvoiceTiming: e.target.value as BillingProfileForm['activationInvoiceTiming'] })}>
+                    <option value="before_payment">Activation invoice before payment</option>
+                    <option value="after_payment">Activation invoice after payment</option>
+                  </select>
                   <input className="input" placeholder="Company state code" value={profileForm.companyStateCode} onChange={(e) => setProfileForm({ ...profileForm, companyStateCode: e.target.value.toUpperCase() })} />
                   <input className="input" placeholder="Company state name" value={profileForm.companyStateName} onChange={(e) => setProfileForm({ ...profileForm, companyStateName: e.target.value })} />
                   <input className="input" placeholder="GST Number" value={profileForm.gstNumber} onChange={(e) => setProfileForm({ ...profileForm, gstNumber: e.target.value })} />
@@ -333,8 +396,11 @@ export default function BillingPage() {
                   <input className="input" placeholder="SGST %" type="number" value={profileForm.intrastateSgstPercent} onChange={(e) => setProfileForm({ ...profileForm, intrastateSgstPercent: e.target.value })} />
                   <input className="input" placeholder="Flat tax %" type="number" value={profileForm.taxPercent} onChange={(e) => setProfileForm({ ...profileForm, taxPercent: e.target.value })} />
                 </div>
+                <textarea className="input min-h-24" placeholder="Company billing address" value={profileForm.companyAddress} onChange={(e) => setProfileForm({ ...profileForm, companyAddress: e.target.value })} />
                 <textarea className="input min-h-36 font-mono text-xs" value={profileForm.stateOverridesJson} onChange={(e) => setProfileForm({ ...profileForm, stateOverridesJson: e.target.value })} />
                 <p className="text-xs text-slate-500">Override example: [{`{"stateCode":"MH","stateName":"Maharashtra","igstPercent":18}`}]</p>
+                <textarea className="input min-h-36 font-mono text-xs" value={profileForm.zoneMappingsJson} onChange={(e) => setProfileForm({ ...profileForm, zoneMappingsJson: e.target.value })} />
+                <p className="text-xs text-slate-500">Zone example: [{`{"zoneCode":"NCR","zoneName":"Noida Cluster","stateCode":"UP","stateName":"Uttar Pradesh","invoicePrefix":"NCR","defaultBillMode":"prepaid"}`}]</p>
                 <button type="submit" disabled={isSavingProfile} className="btn-primary">
                   {isSavingProfile ? 'Saving...' : 'Save GST Profile'}
                 </button>
@@ -354,6 +420,7 @@ export default function BillingPage() {
                   <div className="text-sm text-slate-300">
                     Company state: {profile.companyStateName || '-'} {profile.companyStateCode ? `(${profile.companyStateCode})` : ''}
                   </div>
+                  <div className="text-sm text-slate-300">Home: {profile.defaultHomeBillMode || 'prepaid'} | Business: {profile.defaultBusinessBillMode || 'postpaid'}</div>
                   <div className="text-sm text-slate-300">GSTIN: {profile.gstNumber || '-'}</div>
                   <div className="grid grid-cols-3 gap-3 text-sm">
                     <div className="rounded bg-[#0a0e27] px-3 py-2">IGST {Number(profile.interstateIgstPercent || 0)}%</div>
@@ -363,6 +430,11 @@ export default function BillingPage() {
                   {(profile.stateOverrides || []).length ? (
                     <div className="text-xs text-slate-400">
                       Overrides: {(profile.stateOverrides || []).map((item) => `${item.stateCode}:${item.igstPercent ?? `${item.cgstPercent || 0}+${item.sgstPercent || 0}`}%`).join(' | ')}
+                    </div>
+                  ) : null}
+                  {(profile.zoneMappings || []).length ? (
+                    <div className="text-xs text-slate-400">
+                      Zones: {(profile.zoneMappings || []).map((item) => `${item.zoneCode}->${item.stateCode}${item.defaultBillMode ? ` (${item.defaultBillMode})` : ''}`).join(' | ')}
                     </div>
                   ) : null}
                 </div>

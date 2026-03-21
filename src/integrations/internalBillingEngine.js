@@ -23,6 +23,33 @@ function normalizeStateCode(value) {
   return String(value || "").trim().toUpperCase();
 }
 
+function normalizeZoneCode(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-");
+}
+
+function resolveZoneMapping(billingProfile, customer) {
+  const zoneCode = normalizeZoneCode(customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode);
+  if (!zoneCode) return null;
+  return (billingProfile?.zoneMappings || []).find((item) => normalizeZoneCode(item.zoneCode) === zoneCode) || null;
+}
+
+function resolveBillMode(service, billingProfile, customer, zoneMapping) {
+  if (service?.metadata?.billMode === "prepaid" || service?.metadata?.billMode === "postpaid") {
+    return service.metadata.billMode;
+  }
+  if (zoneMapping?.defaultBillMode) {
+    return zoneMapping.defaultBillMode;
+  }
+  const customerType = customer?.customerType || service?.metadata?.customerType || "home";
+  if (customerType === "business") {
+    return billingProfile?.defaultBusinessBillMode || billingProfile?.billMode || "postpaid";
+  }
+  return billingProfile?.defaultHomeBillMode || billingProfile?.billMode || "prepaid";
+}
+
 function buildInvoiceAmounts(totalAmount, taxPercent) {
   const safeTotal = Number(totalAmount || 0);
   const safeTaxPercent = Number(taxPercent || 0);
@@ -50,8 +77,9 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
     };
   }
 
-  const customerStateName = customer?.address?.state || customer?.billingSnapshot?.billingStateName || "";
-  const customerStateCode = normalizeStateCode(customer?.address?.stateCode || customer?.billingSnapshot?.billingStateCode);
+  const zoneMapping = resolveZoneMapping(billingProfile, customer);
+  const customerStateName = zoneMapping?.stateName || customer?.billingStateName || customer?.address?.state || customer?.billingSnapshot?.billingStateName || "";
+  const customerStateCode = normalizeStateCode(zoneMapping?.stateCode || customer?.billingStateCode || customer?.address?.stateCode || customer?.billingSnapshot?.billingStateCode);
   const companyStateCode = normalizeStateCode(billingProfile?.companyStateCode || "UP");
   const override = (billingProfile?.stateOverrides || []).find((item) => normalizeStateCode(item.stateCode) === customerStateCode);
 
@@ -94,7 +122,7 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
   };
 }
 
-async function syncCustomerBillingSnapshot({ customerId, totalAmount, dueDate, paymentStatus, billCycle, invoiceNumber }) {
+async function syncCustomerBillingSnapshot({ customerId, totalAmount, dueDate, paymentStatus, billCycle, invoiceNumber, billMode, billingStateCode, billingStateName, billingZoneCode, billingZoneName }) {
   const customer = await Customer.findOne({ customerId });
   if (!customer) {
     return null;
@@ -104,12 +132,17 @@ async function syncCustomerBillingSnapshot({ customerId, totalAmount, dueDate, p
     lastInvoiceAmount: totalAmount,
     dueAmount: paymentStatus === "paid" ? 0 : totalAmount,
     lastPaymentStatus: paymentStatus,
+    billMode: billMode || customer.billingSnapshot?.billMode || "prepaid",
+    billingStateCode: billingStateCode || customer.billingSnapshot?.billingStateCode,
+    billingStateName: billingStateName || customer.billingSnapshot?.billingStateName,
+    billingZoneCode: billingZoneCode || customer.billingSnapshot?.billingZoneCode,
+    billingZoneName: billingZoneName || customer.billingSnapshot?.billingZoneName,
     remainingDays: Math.max(0, Math.ceil((new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
   };
   customer.invoiceSummary = {
     ...(customer.invoiceSummary || {}),
     billCycle: billCycle || "Monthly",
-    billMode: "Prepaid",
+    billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid",
     lastInvoiceNumber: invoiceNumber,
     lastInvoiceDate: new Date()
   };
@@ -165,15 +198,18 @@ export class InternalBillingEngine {
 
     const dueDate = addDays(generatedAt, billingProfile?.dueDays ?? 0);
     const customer = await Customer.findOne({ customerId: service.customerId }).lean();
+    const zoneMapping = resolveZoneMapping(billingProfile, customer);
+    const billMode = resolveBillMode(service, billingProfile, customer, zoneMapping);
     const amounts =
       billingProfile?.taxMode === "india_gst"
         ? buildGstAmounts(totalAmount, billingProfile, customer)
         : buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
+    const invoicePrefix = zoneMapping?.invoicePrefix || billingProfile?.invoicePrefix || "JF";
     const invoice = await BillingInvoice.create({
       invoiceId: `INV-${service.customerId}-${billCycle}`,
       customerId: service.customerId,
       serviceId: service.serviceId,
-      invoiceNumber: `JF-INV-${service.customerId}-${Date.now().toString().slice(-4)}`,
+      invoiceNumber: `${invoicePrefix}-INV-${service.customerId}-${Date.now().toString().slice(-4)}`,
       billCycle,
       generatedAt,
       dueDate,
@@ -193,7 +229,10 @@ export class InternalBillingEngine {
       metadata: {
         accessProfileCode: service.accessProfileCode,
         billingProfileCode: service.billingProfileCode,
-        bngNodeCode: service.bngNodeCode
+        bngNodeCode: service.bngNodeCode,
+        billMode,
+        billingZoneCode: customer?.billingZoneCode || zoneMapping?.zoneCode || "",
+        billingZoneName: customer?.billingZoneName || zoneMapping?.zoneName || ""
       }
     });
 
@@ -205,7 +244,12 @@ export class InternalBillingEngine {
       dueDate: invoice.dueDate,
       paymentStatus: invoice.paymentStatus,
       billCycle,
-      invoiceNumber: invoice.invoiceNumber
+      invoiceNumber: invoice.invoiceNumber,
+      billMode,
+      billingStateCode: amounts.billingStateCode,
+      billingStateName: amounts.billingStateName,
+      billingZoneCode: customer?.billingZoneCode || zoneMapping?.zoneCode || "",
+      billingZoneName: customer?.billingZoneName || zoneMapping?.zoneName || ""
     });
 
     return { skipped: false, invoice };

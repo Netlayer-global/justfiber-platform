@@ -8,6 +8,7 @@ import { CustomerUser } from "../models/CustomerUser.js";
 import { PlanCatalog } from "../models/PlanCatalog.js";
 import { SubscriberService } from "../models/SubscriberService.js";
 import { buildPppoeCredentials } from "../common/networkProvisioning.js";
+import { internalBillingEngine } from "./internalBillingEngine.js";
 
 function deriveNumericSuffix(value) {
   const digits = String(value || "").replace(/\D/g, "");
@@ -44,6 +45,18 @@ async function pickAccessProfile(plan) {
 
 async function pickBillingProfile() {
   return BillingProfile.findOne({ active: true }).sort({ createdAt: 1 }).lean();
+}
+
+function resolveCustomerType(plan) {
+  return plan?.category === "business" || plan?.category === "enterprise" ? "business" : "home";
+}
+
+function resolveBillModeForPlan({ billingProfile, plan }) {
+  const customerType = resolveCustomerType(plan);
+  if (customerType === "business") {
+    return billingProfile?.defaultBusinessBillMode || billingProfile?.billMode || "postpaid";
+  }
+  return billingProfile?.defaultHomeBillMode || billingProfile?.billMode || "prepaid";
 }
 
 async function pickBngNode() {
@@ -106,6 +119,8 @@ export class InternalSubscriberPlatform {
       pickBillingProfile(),
       pickBngNode()
     ]);
+    const customerType = resolveCustomerType(plan);
+    const billMode = resolveBillModeForPlan({ billingProfile, plan });
     const provisionalPppoe = jobRecord.activation?.preparedCredentials?.pppoe || buildPppoeCredentials(identifiers.customerId);
 
     const customer = await Customer.findOneAndUpdate(
@@ -119,13 +134,20 @@ export class InternalSubscriberPlatform {
           serviceId: identifiers.serviceId,
           planCode: plan?.planCode || booking.selectedPlan?.planCode,
           planName: plan?.name || booking.selectedPlan?.planName,
+          customerType,
           jazeStatus: "internal_platform",
           operationalStatus: "activation_in_progress",
           expiryAt: addDays(new Date(), 30),
           address: {
             ...(booking.personalDetails?.fullAddress ? { fullAddress: booking.personalDetails.fullAddress } : {}),
-            ...(booking.personalDetails?.pinCode ? { pinCode: booking.personalDetails.pinCode } : {})
+            ...(booking.personalDetails?.pinCode ? { pinCode: booking.personalDetails.pinCode } : {}),
+            ...(booking.personalDetails?.city ? { city: booking.personalDetails.city } : {}),
+            ...(booking.personalDetails?.state ? { state: booking.personalDetails.state } : {})
           },
+          billingZoneCode: booking.feasibility?.matchedZone?.zoneCode || booking.feasibility?.matchedZone?.zoneName,
+          billingZoneName: booking.feasibility?.matchedZone?.zoneName,
+          billingStateCode: booking.personalDetails?.stateCode,
+          billingStateName: booking.personalDetails?.state,
           lastSyncedAt: new Date()
         },
         $setOnInsert: {
@@ -134,11 +156,16 @@ export class InternalSubscriberPlatform {
             currency: "INR",
             lastPaymentStatus: booking.payment?.status === "paid" ? "paid" : "pending",
             dueAmount: booking.payment?.status === "paid" ? 0 : Number(plan?.monthlyPrice || booking.selectedPlan?.monthlyPrice || 0),
-            remainingDays: 30
+            remainingDays: 30,
+            billMode,
+            billingZoneCode: booking.feasibility?.matchedZone?.zoneCode || booking.feasibility?.matchedZone?.zoneName,
+            billingZoneName: booking.feasibility?.matchedZone?.zoneName,
+            billingStateCode: booking.personalDetails?.stateCode,
+            billingStateName: booking.personalDetails?.state
           },
           invoiceSummary: {
             billCycle: "Monthly",
-            billMode: "Prepaid"
+            billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid"
           }
         }
       },
@@ -162,6 +189,8 @@ export class InternalSubscriberPlatform {
           metadata: {
             bookingNumber: booking.bookingNumber,
             planCode: plan?.planCode || booking.selectedPlan?.planCode,
+            customerType,
+            billMode,
             installerJobId: jobRecord._id.toString()
           }
         }
@@ -188,14 +217,6 @@ export class InternalSubscriberPlatform {
       await booking.save();
     }
 
-    const existingInvoice = await BillingInvoice.findOne({
-      customerId: identifiers.customerId,
-      billCycle: buildBillCycle()
-    }).lean();
-    if (!existingInvoice) {
-      await BillingInvoice.create(buildInvoicePayload({ customer, plan, booking, serviceId: identifiers.serviceId }));
-    }
-
     return {
       booking,
       customer,
@@ -218,6 +239,12 @@ export class InternalSubscriberPlatform {
       (await ConnectionBooking.findOne({ bookingNumber: installerJob.customerId })) ||
       (await ConnectionBooking.findOne({ bookingNumber: installerJob.activation?.bookingNumber }));
     const identifiers = booking?.assignment?.provisionedIds || buildIdentifiers(installerJob.customerId);
+    const subscriberService = await SubscriberService.findOne({ serviceId: identifiers.serviceId });
+    const billingProfile = subscriberService?.billingProfileCode
+      ? await BillingProfile.findOne({ code: subscriberService.billingProfileCode, active: true }).lean()
+      : await pickBillingProfile();
+    const customerType = resolveCustomerType({ category: installerJob.customerSnapshot?.category || (booking?.selectedPlan?.category) });
+    const billMode = resolveBillModeForPlan({ billingProfile, plan: { category: customerType } });
 
     const customer = await Customer.findOneAndUpdate(
       { customerId: identifiers.customerId },
@@ -228,6 +255,7 @@ export class InternalSubscriberPlatform {
           operationalStatus: "active",
           jazeStatus: "internal_platform",
           expiryAt: addDays(new Date(), 30),
+          customerType,
           billingSnapshot: {
             lastInvoiceAmount: installerJob.customerSnapshot?.monthlyPrice || installerJob.customerSnapshot?.totalAmount || 0,
             currency: "INR",
@@ -235,12 +263,21 @@ export class InternalSubscriberPlatform {
             dueAmount: booking?.payment?.status === "paid" ? 0 : installerJob.customerSnapshot?.monthlyPrice || 0,
             remainingDays: 30,
             speedMbps: installerJob.customerSnapshot?.speedMbps,
-            lastPaymentProvider: booking?.payment?.provider || "internal_platform"
+            lastPaymentProvider: booking?.payment?.provider || "internal_platform",
+            billMode,
+            billingZoneCode: booking?.feasibility?.matchedZone?.zoneCode || booking?.feasibility?.matchedZone?.zoneName,
+            billingZoneName: booking?.feasibility?.matchedZone?.zoneName,
+            billingStateCode: booking?.personalDetails?.stateCode,
+            billingStateName: booking?.personalDetails?.state
           },
           invoiceSummary: {
             billCycle: "Monthly",
-            billMode: "Prepaid"
+            billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid"
           },
+          billingZoneCode: booking?.feasibility?.matchedZone?.zoneCode || booking?.feasibility?.matchedZone?.zoneName,
+          billingZoneName: booking?.feasibility?.matchedZone?.zoneName,
+          billingStateCode: booking?.personalDetails?.stateCode,
+          billingStateName: booking?.personalDetails?.state,
           lastSyncedAt: new Date()
         }
       },
@@ -264,11 +301,29 @@ export class InternalSubscriberPlatform {
             wifi,
             pppoe,
             deviceId,
-            vlanId
+            vlanId,
+            customerType,
+            billMode
           }
         }
       }
     );
+
+    if (
+      subscriberService &&
+      billMode === "prepaid" &&
+      ((billingProfile?.activationInvoiceTiming || "before_payment") === "before_payment" || booking?.payment?.status === "paid")
+    ) {
+      await internalBillingEngine.generateInvoiceForService(
+        subscriberService.toObject ? subscriberService.toObject() : subscriberService,
+        {
+          billCycle: buildBillCycle(),
+          totalAmount: installerJob.customerSnapshot?.monthlyPrice || installerJob.customerSnapshot?.totalAmount || 0,
+          paymentStatus: booking?.payment?.status === "paid" ? "paid" : "pending",
+          sourceEvent: "activation"
+        }
+      );
+    }
 
     if (booking) {
       booking.status = "installed";

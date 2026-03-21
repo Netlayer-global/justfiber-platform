@@ -16,13 +16,16 @@ import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { BillingLedgerEntry } from "../../models/BillingLedgerEntry.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
+import { BillingProfile } from "../../models/BillingProfile.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
+import { SubscriberService } from "../../models/SubscriberService.js";
 import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
+import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
 import { env } from "../../config/env.js";
 import {
@@ -314,6 +317,19 @@ async function finalizeSuccessfulBillingPayment({
       amount,
       source: provider
     });
+    if (!invoice && customer.billingSnapshot?.billMode === "prepaid") {
+      const service = await SubscriberService.findOne({ customerId: customer.customerId }).lean();
+      const billingProfile = service?.billingProfileCode
+        ? await BillingProfile.findOne({ code: service.billingProfileCode, active: true }).lean()
+        : await BillingProfile.findOne({ active: true }).sort({ createdAt: 1 }).lean();
+      if (service && (billingProfile?.activationInvoiceTiming || "before_payment") === "after_payment") {
+        await internalBillingEngine.generateInvoiceForService(service, {
+          totalAmount: amount,
+          paymentStatus: "paid",
+          sourceEvent: "post_payment_activation"
+        });
+      }
+    }
     createdLedgerEntry = await createLedgerEntry({
       customerId: customer.customerId,
       serviceId: customer.serviceId,
@@ -1031,7 +1047,7 @@ customerPortalRouter.get(
         currentPlan: customer.planName,
         dueDate: customer.expiryAt,
         billCycle: "Monthly",
-        billMode: "Prepaid",
+        billMode: customer.billingSnapshot?.billMode === "postpaid" ? "Postpaid" : "Prepaid",
         generatedDate: customer.updatedAt,
         amount: customer.billingSnapshot?.lastInvoiceAmount || 0,
         dueAmount: customer.billingSnapshot?.dueAmount || 0,
@@ -1544,11 +1560,18 @@ customerPortalRouter.post(
     if (!plan) {
       throw new ApiError(404, "Plan not found");
     }
+    const currentPlan = customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null;
+    const nextBillMode = plan.category === "business" || plan.category === "enterprise" ? "postpaid" : "prepaid";
     customer.planCode = plan.planCode;
     customer.planName = plan.name;
+    customer.customerType = nextBillMode === "postpaid" ? "business" : "home";
     customer.billingSnapshot = {
       ...(customer.billingSnapshot || {}),
       speedMbps: plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+      billMode: nextBillMode,
+      lastPlanPrice: Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0),
+      nextPlanPrice: Number(plan.monthlyPrice || 0),
+      adjustmentPreview: Number((Number(plan.monthlyPrice || 0) - Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0)).toFixed(2)),
       nextPlanChangeMode: payload.effectiveMode
     };
     await customer.save();
