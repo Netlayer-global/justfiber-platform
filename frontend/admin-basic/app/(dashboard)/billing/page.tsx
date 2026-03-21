@@ -73,6 +73,12 @@ export default function BillingPage() {
   const [razorpayWebhookLogs, setRazorpayWebhookLogs] = useState<RazorpayWebhookLog[]>([])
   const [recoveryItems, setRecoveryItems] = useState<BillingRecoveryItem[]>([])
   const [collectionBucket, setCollectionBucket] = useState('')
+  const [exportFilters, setExportFilters] = useState({
+    fromDate: '',
+    toDate: '',
+    stateCode: '',
+    zoneCode: '',
+  })
   const [csvImportText, setCsvImportText] = useState('')
   const [csvImportResult, setCsvImportResult] = useState<BillingImportResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -97,6 +103,13 @@ export default function BillingPage() {
     { label: '61-90 Days', value: overview?.agingBuckets?.days61to90 },
     { label: '90+ Days', value: overview?.agingBuckets?.days90plus },
   ]
+  const exportBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
+  const exportQuery = new URLSearchParams(
+    Object.entries(exportFilters).filter(([, value]) => value.trim() !== '')
+  ).toString()
+  const invoiceExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/invoices.csv${exportQuery ? `?${exportQuery}` : ''}`
+  const paymentExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/payments.csv${exportQuery ? `?${exportQuery}` : ''}`
+  const gstExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/gst-summary?format=csv${exportQuery ? `&${exportQuery}` : ''}`
 
   useEffect(() => {
     void loadBilling()
@@ -524,7 +537,7 @@ export default function BillingPage() {
         <div className="flex flex-wrap items-center gap-2">
           <a
             className="btn-secondary"
-            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/exports/invoices.csv`}
+            href={invoiceExportUrl}
             target="_blank"
             rel="noreferrer"
           >
@@ -532,7 +545,7 @@ export default function BillingPage() {
           </a>
           <a
             className="btn-secondary"
-            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/exports/payments.csv`}
+            href={paymentExportUrl}
             target="_blank"
             rel="noreferrer"
           >
@@ -540,7 +553,7 @@ export default function BillingPage() {
           </a>
           <a
             className="btn-secondary"
-            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/exports/gst-summary?format=csv`}
+            href={gstExportUrl}
             target="_blank"
             rel="noreferrer"
           >
@@ -553,6 +566,36 @@ export default function BillingPage() {
           <button onClick={() => void runBillingCycle()} disabled={isRunningCycle} className="btn-primary">
             {isRunningCycle ? 'Running...' : 'Run Billing Cycle'}
           </button>
+        </div>
+      </div>
+
+      <div className="card p-5">
+        <div className="font-semibold mb-3">Export Filters</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <input
+            className="input"
+            type="date"
+            value={exportFilters.fromDate}
+            onChange={(e) => setExportFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
+          />
+          <input
+            className="input"
+            type="date"
+            value={exportFilters.toDate}
+            onChange={(e) => setExportFilters((prev) => ({ ...prev, toDate: e.target.value }))}
+          />
+          <input
+            className="input"
+            placeholder="State code (UP, MH)"
+            value={exportFilters.stateCode}
+            onChange={(e) => setExportFilters((prev) => ({ ...prev, stateCode: e.target.value.toUpperCase() }))}
+          />
+          <input
+            className="input"
+            placeholder="Zone code (NCR, LKO)"
+            value={exportFilters.zoneCode}
+            onChange={(e) => setExportFilters((prev) => ({ ...prev, zoneCode: e.target.value.toUpperCase() }))}
+          />
         </div>
       </div>
 

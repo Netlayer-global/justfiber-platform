@@ -306,6 +306,76 @@ function buildCsv(rows = []) {
   return lines.join("\n");
 }
 
+function normalizeFilterValue(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+async function buildBillingExportFilters(query = {}) {
+  const invoiceFilter = {};
+  const paymentFilter = {};
+
+  if (query.fromDate || query.toDate) {
+    const generatedAt = {};
+    const paidAt = {};
+    if (query.fromDate) {
+      const from = new Date(`${query.fromDate}T00:00:00.000Z`);
+      if (!Number.isNaN(from.getTime())) {
+        generatedAt.$gte = from;
+        paidAt.$gte = from;
+      }
+    }
+    if (query.toDate) {
+      const to = new Date(`${query.toDate}T23:59:59.999Z`);
+      if (!Number.isNaN(to.getTime())) {
+        generatedAt.$lte = to;
+        paidAt.$lte = to;
+      }
+    }
+    if (Object.keys(generatedAt).length) {
+      invoiceFilter.generatedAt = generatedAt;
+    }
+    if (Object.keys(paidAt).length) {
+      paymentFilter.paidAt = paidAt;
+    }
+  }
+
+  const stateCode = normalizeFilterValue(query.stateCode);
+  if (stateCode) {
+    invoiceFilter.billingStateCode = stateCode;
+  }
+
+  const zoneCode = normalizeFilterValue(query.zoneCode);
+  if (zoneCode) {
+    invoiceFilter["metadata.billingZoneCode"] = zoneCode;
+  }
+
+  if (stateCode || zoneCode) {
+    const customerQuery = {};
+    if (stateCode) {
+      customerQuery.$or = [
+        { billingStateCode: stateCode },
+        { "billingSnapshot.billingStateCode": stateCode }
+      ];
+    }
+    if (zoneCode) {
+      const zoneClause = [
+        { billingZoneCode: zoneCode },
+        { "billingSnapshot.billingZoneCode": zoneCode }
+      ];
+      if (customerQuery.$or) {
+        customerQuery.$and = [{ $or: customerQuery.$or }, { $or: zoneClause }];
+        delete customerQuery.$or;
+      } else {
+        customerQuery.$or = zoneClause;
+      }
+    }
+    const customers = await Customer.find(customerQuery, { customerId: 1 }).lean();
+    paymentFilter.customerId = { $in: customers.map((customer) => customer.customerId) };
+  }
+
+  return { invoiceFilter, paymentFilter };
+}
+
 function buildCustomerPortalRetryUrl(customerId) {
   const configuredBase = String(env.USER_DOMAIN || "").trim();
   if (!configuredBase) return "";
@@ -587,8 +657,9 @@ adminOpsRouter.get(
 adminOpsRouter.get(
   "/billing/exports/invoices.csv",
   requirePermission(permissions.billingRead),
-  asyncHandler(async (_req, res) => {
-    const invoices = await BillingInvoice.find({})
+  asyncHandler(async (req, res) => {
+    const { invoiceFilter } = await buildBillingExportFilters(req.query || {});
+    const invoices = await BillingInvoice.find(invoiceFilter)
       .sort({ generatedAt: -1, createdAt: -1 })
       .limit(5000)
       .lean();
@@ -605,7 +676,9 @@ adminOpsRouter.get(
         totalAmount: Number(invoice.totalAmount || 0).toFixed(2),
         billingStateCode: invoice.billingStateCode || "",
         billingStateName: invoice.billingStateName || "",
-        placeOfSupply: invoice.placeOfSupply || ""
+        placeOfSupply: invoice.placeOfSupply || "",
+        billingZoneCode: invoice.metadata?.billingZoneCode || "",
+        billingZoneName: invoice.metadata?.billingZoneName || ""
       }))
     );
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -617,8 +690,9 @@ adminOpsRouter.get(
 adminOpsRouter.get(
   "/billing/exports/payments.csv",
   requirePermission(permissions.billingRead),
-  asyncHandler(async (_req, res) => {
-    const payments = await PaymentTransaction.find({})
+  asyncHandler(async (req, res) => {
+    const { paymentFilter } = await buildBillingExportFilters(req.query || {});
+    const payments = await PaymentTransaction.find(paymentFilter)
       .sort({ paidAt: -1, createdAt: -1 })
       .limit(5000)
       .lean();
@@ -646,8 +720,10 @@ adminOpsRouter.get(
 adminOpsRouter.get(
   "/billing/exports/gst-summary",
   requirePermission(permissions.billingRead),
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const { invoiceFilter } = await buildBillingExportFilters(req.query || {});
     const stateWiseGst = await BillingInvoice.aggregate([
+      Object.keys(invoiceFilter).length ? { $match: invoiceFilter } : null,
       {
         $group: {
           _id: { stateCode: "$billingStateCode", stateName: "$billingStateName" },
@@ -658,7 +734,7 @@ adminOpsRouter.get(
         }
       },
       { $sort: { totalAmount: -1 } }
-    ]);
+    ].filter(Boolean));
     const items = stateWiseGst.map((item) => ({
       stateCode: item._id?.stateCode || "",
       stateName: item._id?.stateName || "Unknown",
@@ -667,7 +743,7 @@ adminOpsRouter.get(
       taxAmount: Number(item.taxAmount || 0),
       totalAmount: Number(item.totalAmount || 0)
     }));
-    if (String(_req.query.format || "").toLowerCase() === "csv") {
+    if (String(req.query.format || "").toLowerCase() === "csv") {
       const csv = buildCsv(items.map((item) => ({
         stateCode: item.stateCode,
         stateName: item.stateName,
