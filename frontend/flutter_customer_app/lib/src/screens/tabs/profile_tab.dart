@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../widgets/app_card.dart';
+import '../document_viewer_screen.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -173,6 +174,11 @@ class _ProfileTabState extends State<ProfileTab> {
                                     'Generated ${item.generatedAt.isEmpty ? '-' : item.generatedAt}',
                                     style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12),
                                   ),
+                                  if (item.viewUrl.isNotEmpty)
+                                    TextButton(
+                                      onPressed: () => _openDocument(context, appState, item.invoiceNumber.isEmpty ? 'Invoice' : item.invoiceNumber, item.viewUrl),
+                                      child: const Text('View invoice'),
+                                    ),
                                 ],
                               ),
                             ),
@@ -349,6 +355,11 @@ class _ProfileTabState extends State<ProfileTab> {
                             Text(item.noteNumber, style: const TextStyle(fontWeight: FontWeight.w600)),
                             const SizedBox(height: 4),
                             Text(item.reason.isEmpty ? item.type : item.reason, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                            if (item.viewUrl.isNotEmpty)
+                              TextButton(
+                                onPressed: () => _openDocument(context, appState, item.noteNumber, item.viewUrl),
+                                child: const Text('View note'),
+                              ),
                           ],
                         ),
                       ),
@@ -395,6 +406,22 @@ class _ProfileTabState extends State<ProfileTab> {
           const Spacer(),
           Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600))),
         ],
+      ),
+    );
+  }
+
+  Future<void> _openDocument(BuildContext context, AppState appState, String title, String relativeUrl) async {
+    final session = appState.session;
+    if (session == null) return;
+    final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
+    final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DocumentViewerScreen(
+          title: title,
+          url: fullUrl,
+          accessToken: session.accessToken,
+        ),
       ),
     );
   }

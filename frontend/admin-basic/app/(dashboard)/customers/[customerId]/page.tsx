@@ -125,6 +125,7 @@ export default function CustomerDetailPage() {
     [customer]
   )
   const pendingPlanChange = billingSummary.pendingPlanChange as Record<string, any> | undefined
+  const adminApiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
 
   async function handleCustomerUpdate(patch: Partial<Customer>) {
     if (!customer) return
@@ -589,7 +590,15 @@ export default function CustomerDetailPage() {
                     <div className="space-y-2">
                       {customer.invoices?.map((invoice) => (
                         <div key={invoice.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
-                          {invoice.invoiceNumber || invoice.invoiceId} | Rs {invoice.amount} | {invoice.paymentStatus || 'pending'}
+                          <div className="flex items-center justify-between gap-3">
+                            <span>{invoice.invoiceNumber || invoice.invoiceId} | Rs {invoice.amount} | {invoice.paymentStatus || 'pending'}</span>
+                            <button
+                              className="btn-secondary"
+                              onClick={() => window.open(`${adminApiBase}/api/v1/admin/billing/invoices/${encodeURIComponent(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}/pdf`, '_blank')}
+                            >
+                              Open PDF
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -613,7 +622,15 @@ export default function CustomerDetailPage() {
                     <div className="space-y-2">
                       {customer.billingNotes?.map((note) => (
                         <div key={note.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
-                          {note.noteNumber} | {note.type} | Rs {note.totalAmount} | {note.reasonCode || note.note || '-'}
+                          <div className="flex items-center justify-between gap-3">
+                            <span>{note.noteNumber} | {note.type} | Rs {note.totalAmount} | {note.reasonCode || note.note || '-'}</span>
+                            <button
+                              className="btn-secondary"
+                              onClick={() => window.open(`${adminApiBase}/api/v1/admin/billing/notes/${encodeURIComponent(note.noteNumber)}/pdf`, '_blank')}
+                            >
+                              Open PDF
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

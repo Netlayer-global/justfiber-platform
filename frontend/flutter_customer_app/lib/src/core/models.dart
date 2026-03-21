@@ -95,6 +95,7 @@ class BillingInvoiceItem {
     required this.generatedAt,
     required this.dueDate,
     required this.paymentStatus,
+    required this.viewUrl,
   });
 
   final String invoiceNumber;
@@ -102,6 +103,7 @@ class BillingInvoiceItem {
   final String generatedAt;
   final String dueDate;
   final String paymentStatus;
+  final String viewUrl;
 }
 
 class BillingPaymentItem {
@@ -127,6 +129,7 @@ class BillingNoteItem {
     required this.totalAmount,
     required this.reason,
     required this.issuedAt,
+    required this.viewUrl,
   });
 
   final String noteNumber;
@@ -134,6 +137,7 @@ class BillingNoteItem {
   final double totalAmount;
   final String reason;
   final String issuedAt;
+  final String viewUrl;
 }
 
 class RequestItem {

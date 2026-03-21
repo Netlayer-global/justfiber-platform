@@ -99,6 +99,7 @@ class ApiClient {
         generatedAt: (map['generatedAt'] ?? '').toString(),
         dueDate: (map['dueDate'] ?? '').toString(),
         paymentStatus: (map['paymentStatus'] ?? 'unknown').toString(),
+        viewUrl: (map['viewUrl'] ?? '').toString(),
       );
     }).toList();
     final payments = _asList(details['payments']).map((item) {
@@ -119,6 +120,7 @@ class ApiClient {
         totalAmount: double.tryParse('${map['totalAmount'] ?? map['amount'] ?? 0}') ?? 0,
         reason: (map['reasonCode'] ?? map['note'] ?? '').toString(),
         issuedAt: (map['issuedAt'] ?? '').toString(),
+        viewUrl: (map['viewUrl'] ?? '').toString(),
       );
     }).toList();
     final pendingPlanChangeMap = _asMap(data['pendingPlanChange']);

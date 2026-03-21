@@ -29,6 +29,7 @@ import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
 import { env } from "../../config/env.js";
+import PDFDocument from "pdfkit";
 import {
   addonRequestSchema,
   bookingSchema,
@@ -56,6 +57,177 @@ export const customerPortalRouter = Router();
 
 function computeBalanceAfter({ currentBalance, direction, amount }) {
   return currentBalance + (direction === "debit" ? amount : -amount);
+}
+
+function buildInvoiceHtml(invoice) {
+  const taxRows = (invoice.taxBreakdown || [])
+    .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.label} (${part.rate || 0}%)</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
+    .join("");
+  return `<!doctype html>
+  <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber || invoice.invoiceId}</title></head>
+  <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
+    <h1>Invoice ${invoice.invoiceNumber || invoice.invoiceId}</h1>
+    <p>Customer: ${invoice.customerId}</p>
+    <p>Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</p>
+    <table style="border-collapse:collapse;width:420px;margin-top:16px">
+      <tr><td style="padding:8px;border:1px solid #ccc;">Taxable Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(invoice.amount || 0).toFixed(2)}</td></tr>
+      ${taxRows}
+      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
+    </table>
+  </body></html>`;
+}
+
+function buildBillingNoteHtml(note) {
+  const taxRows = (note.taxBreakdown || [])
+    .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.label} (${part.rate || 0}%)</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
+    .join("");
+  return `<!doctype html>
+  <html><head><meta charset="utf-8"/><title>${note.noteNumber}</title></head>
+  <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
+    <h1>${note.type === "credit" ? "Credit Note" : "Debit Note"} ${note.noteNumber}</h1>
+    <p>Customer: ${note.customerId}</p>
+    <p>Reason: ${note.reasonCode || "-"}</p>
+    <table style="border-collapse:collapse;width:420px;margin-top:16px">
+      <tr><td style="padding:8px;border:1px solid #ccc;">Base Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(note.amount || 0).toFixed(2)}</td></tr>
+      ${taxRows}
+      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(note.totalAmount || 0).toFixed(2)}</td></tr>
+    </table>
+  </body></html>`;
+}
+
+function pickBillingBranding(profile) {
+  return {
+    companyName: "JustFiber",
+    accent: "#0f6cbd",
+    text: "#0f172a",
+    muted: "#64748b",
+    gstNumber: profile?.gstNumber || "",
+    companyState: profile?.companyStateName || profile?.companyStateCode || ""
+  };
+}
+
+function drawPdfHeader(doc, branding, title, identifier) {
+  doc.roundedRect(40, 36, 515, 72, 12).fillAndStroke(branding.accent, branding.accent);
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(24).text(branding.companyName, 56, 56);
+  doc.font("Helvetica").fontSize(11).text(title, 390, 55, { width: 145, align: "right" });
+  doc.font("Helvetica-Bold").fontSize(16).text(identifier, 360, 74, { width: 175, align: "right" });
+  doc.fillColor(branding.text);
+}
+
+function drawKeyValueGrid(doc, startY, rows) {
+  let y = startY;
+  rows.forEach(([label, value], index) => {
+    const fill = index % 2 === 0 ? "#f8fafc" : "#ffffff";
+    doc.rect(40, y, 250, 28).fill(fill).stroke("#dbe4ee");
+    doc.rect(290, y, 265, 28).fill(fill).stroke("#dbe4ee");
+    doc.fillColor("#475569").font("Helvetica").fontSize(10).text(label, 52, y + 9);
+    doc.fillColor("#0f172a").font("Helvetica-Bold").text(String(value || "-"), 302, y + 9, { width: 240, align: "right" });
+    y += 28;
+  });
+  return y;
+}
+
+function drawBreakdownTable(doc, startY, rows, totalLabel, totalAmount) {
+  let y = startY;
+  doc.rect(40, y, 360, 26).fill("#0f172a");
+  doc.rect(400, y, 155, 26).fill("#0f172a");
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(10);
+  doc.text("Charge", 52, y + 8);
+  doc.text("Amount", 412, y + 8, { width: 130, align: "right" });
+  y += 26;
+  rows.forEach((row, index) => {
+    const fill = index % 2 === 0 ? "#f8fafc" : "#ffffff";
+    doc.rect(40, y, 360, 24).fill(fill).stroke("#dbe4ee");
+    doc.rect(400, y, 155, 24).fill(fill).stroke("#dbe4ee");
+    doc.fillColor("#0f172a").font("Helvetica").fontSize(10).text(row.label, 52, y + 7, { width: 330 });
+    doc.text(`Rs ${Number(row.amount || 0).toFixed(2)}`, 412, y + 7, { width: 130, align: "right" });
+    y += 24;
+  });
+  doc.rect(40, y, 360, 28).fill("#e2e8f0").stroke("#cbd5e1");
+  doc.rect(400, y, 155, 28).fill("#e2e8f0").stroke("#cbd5e1");
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(11).text(totalLabel, 52, y + 9);
+  doc.text(`Rs ${Number(totalAmount || 0).toFixed(2)}`, 412, y + 9, { width: 130, align: "right" });
+  return y + 28;
+}
+
+function drawPdfFooter(doc, branding, generatedText) {
+  doc.moveTo(40, 760).lineTo(555, 760).stroke("#dbe4ee");
+  doc.fillColor(branding.muted).font("Helvetica").fontSize(9);
+  doc.text(generatedText, 40, 772);
+  doc.text(
+    [branding.gstNumber ? `GSTIN: ${branding.gstNumber}` : "", branding.companyState ? `State: ${branding.companyState}` : ""]
+      .filter(Boolean)
+      .join(" | "),
+    40,
+    786,
+    { width: 515, align: "right" }
+  );
+}
+
+function renderInvoicePdf(invoice, profile, customer) {
+  const branding = pickBillingBranding(profile);
+  const doc = new PDFDocument({ margin: 40, size: "A4" });
+  drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
+  let y = drawKeyValueGrid(doc, 130, [
+    ["Customer", customer?.fullName || invoice.customerId],
+    ["Customer ID", invoice.customerId],
+    ["Bill Cycle", invoice.billCycle || "-"],
+    ["Due Date", invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"],
+    ["Place of Supply", invoice.placeOfSupply || invoice.billingStateName || "-"],
+    ["Status", invoice.paymentStatus || "-"]
+  ]);
+  y += 18;
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Invoice Summary", 40, y);
+  y += 20;
+  drawBreakdownTable(
+    doc,
+    y,
+    [
+      { label: "Taxable Amount", amount: Number(invoice.amount || 0) },
+      ...(invoice.taxBreakdown || []).map((part) => ({
+        label: `${part.label} (${part.rate || 0}%)`,
+        amount: Number(part.amount || 0)
+      }))
+    ],
+    "Grand Total",
+    Number(invoice.totalAmount || 0)
+  );
+  drawPdfFooter(doc, branding, `Generated on ${new Date(invoice.generatedAt || Date.now()).toLocaleString("en-IN")}`);
+  doc.end();
+  return doc;
+}
+
+function renderBillingNotePdf(note, profile, customer) {
+  const branding = pickBillingBranding(profile);
+  const doc = new PDFDocument({ margin: 40, size: "A4" });
+  drawPdfHeader(doc, branding, note.type === "credit" ? "Credit Note" : "Debit Note", note.noteNumber);
+  let y = drawKeyValueGrid(doc, 130, [
+    ["Customer", customer?.fullName || note.customerId],
+    ["Customer ID", note.customerId],
+    ["Reason Code", note.reasonCode || "-"],
+    ["Linked Invoice", note.invoiceId || "-"],
+    ["Status", note.status || "-"],
+    ["Issued At", note.issuedAt ? new Date(note.issuedAt).toLocaleDateString("en-IN") : "-"]
+  ]);
+  y += 18;
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Note Summary", 40, y);
+  y += 20;
+  drawBreakdownTable(
+    doc,
+    y,
+    [
+      { label: "Base Amount", amount: Number(note.amount || 0) },
+      ...(note.taxBreakdown || []).map((part) => ({
+        label: `${part.label} (${part.rate || 0}%)`,
+        amount: Number(part.amount || 0)
+      }))
+    ],
+    "Net Total",
+    Number(note.totalAmount || 0)
+  );
+  drawPdfFooter(doc, branding, `Generated on ${new Date(note.issuedAt || note.createdAt || Date.now()).toLocaleString("en-IN")}`);
+  doc.end();
+  return doc;
 }
 
 function normalizeCode(value) {
@@ -1193,12 +1365,66 @@ customerPortalRouter.get(
         pendingPlanChange: customer.billingSnapshot?.pendingPlanChange || null,
         adjustmentPreview: customer.billingSnapshot?.adjustmentPreview || 0
       },
-      invoices,
+      invoices: invoices.map((invoice) => ({
+        ...invoice,
+        viewUrl: `/api/v1/customer/billing/invoices/${encodeURIComponent(invoice.invoiceId || invoice.invoiceNumber)}/pdf?format=html`,
+        pdfUrl: `/api/v1/customer/billing/invoices/${encodeURIComponent(invoice.invoiceId || invoice.invoiceNumber)}/pdf`
+      })),
       payments,
       ledger,
-      notes,
+      notes: notes.map((note) => ({
+        ...note,
+        viewUrl: `/api/v1/customer/billing/notes/${encodeURIComponent(note.noteNumber)}/pdf?format=html`,
+        pdfUrl: `/api/v1/customer/billing/notes/${encodeURIComponent(note.noteNumber)}/pdf`
+      })),
       requests
     });
+  })
+);
+
+customerPortalRouter.get(
+  "/billing/invoices/:invoiceId/pdf",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await getOwnedLinkedCustomer({ customerUser: req.customerUser });
+    const invoice = await BillingInvoice.findOne({
+      customerId: customer.customerId,
+      $or: [{ invoiceId: req.params.invoiceId }, { invoiceNumber: req.params.invoiceId }]
+    }).lean();
+    if (!invoice) {
+      throw new ApiError(404, "Invoice not found");
+    }
+    const profile = await BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean();
+    if (String(req.query.format || "").toLowerCase() === "html") {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.send(buildInvoiceHtml(invoice));
+    }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=\"${invoice.invoiceNumber || invoice.invoiceId}.pdf\"`);
+    return renderInvoicePdf(invoice, profile, customer).pipe(res);
+  })
+);
+
+customerPortalRouter.get(
+  "/billing/notes/:noteNumber/pdf",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await getOwnedLinkedCustomer({ customerUser: req.customerUser });
+    const note = await BillingNote.findOne({
+      customerId: customer.customerId,
+      noteNumber: req.params.noteNumber
+    }).lean();
+    if (!note) {
+      throw new ApiError(404, "Billing note not found");
+    }
+    const profile = await BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean();
+    if (String(req.query.format || "").toLowerCase() === "html") {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.send(buildBillingNoteHtml(note));
+    }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=\"${note.noteNumber}.pdf\"`);
+    return renderBillingNotePdf(note, profile, customer).pipe(res);
   })
 );
 
