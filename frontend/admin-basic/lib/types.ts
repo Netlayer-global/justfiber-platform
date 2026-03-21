@@ -59,20 +59,30 @@ export interface Ticket {
 
 export interface Installer {
   id: string
+  installerCode?: string
   name: string
   email: string
   phone: string
   status: 'active' | 'inactive'
+  availabilityStatus?: 'available' | 'busy' | 'on_leave'
+  assignedCity?: string
+  assignedZones?: string[]
+  skills?: string[]
   jobsCompleted: number
   rating: number
 }
 
 export interface Job {
   id: string
+  jobNumber?: string
   type: string
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
   customerId: string
+  customerName?: string
   installerId?: string
+  installerName?: string
+  priority?: 'low' | 'medium' | 'high' | 'urgent'
+  address?: string
   scheduledDate?: string
   completedDate?: string
 }

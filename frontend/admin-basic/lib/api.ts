@@ -143,10 +143,15 @@ function mapTicket(ticket: any): Ticket {
 function mapInstaller(installer: any): Installer {
   return {
     id: installer._id || installer.installerCode || '',
+    installerCode: installer.installerCode || installer._id || '',
     name: installer.fullName || installer.name || installer.installerCode || 'Installer',
     email: installer.email || '-',
     phone: installer.phone || '-',
     status: installer.status === 'active' ? 'active' : 'inactive',
+    availabilityStatus: installer.availabilityStatus || 'available',
+    assignedCity: installer.assignedCity || '',
+    assignedZones: Array.isArray(installer.assignedZones) ? installer.assignedZones : [],
+    skills: Array.isArray(installer.skills) ? installer.skills : [],
     jobsCompleted: Number(installer.jobsCompleted || 0),
     rating: Number(installer.rating || 0),
   }
@@ -155,6 +160,7 @@ function mapInstaller(installer: any): Installer {
 function mapJob(job: any): Job {
   return {
     id: job._id || job.jobNumber || '',
+    jobNumber: job.jobNumber || job._id || '',
     type: job.type || 'installation',
     status:
       job.status === 'assigned' ? 'pending' :
@@ -166,7 +172,11 @@ function mapJob(job: any): Job {
             ? 'cancelled'
             : 'pending',
     customerId: job.customerId || '',
+    customerName: job.customerSnapshot?.fullName || '',
     installerId: job.installerId || undefined,
+    installerName: job.installerName || '',
+    priority: job.priority || 'medium',
+    address: job.customerSnapshot?.address || '',
     scheduledDate: job.scheduledDate || job.assignment?.assignedAt,
     completedDate: job.completedAt,
   }
@@ -347,6 +357,52 @@ export const adminAPI = {
       data: res.data ? mapInstaller(res.data) : undefined,
     }
   },
+  createInstaller: async (data: {
+    installerCode: string
+    fullName: string
+    phone: string
+    email?: string
+    password: string
+    assignedCity?: string
+    assignedZones?: string[]
+    skills?: string[]
+  }) => {
+    const res = await request<any>('/api/v1/admin/installers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapInstaller(res.data) : undefined,
+    }
+  },
+  updateInstaller: async (
+    id: string,
+    data: {
+      fullName?: string
+      phone?: string
+      email?: string | null
+      assignedCity?: string | null
+      assignedZones?: string[]
+      skills?: string[]
+      status?: 'active' | 'disabled' | 'locked'
+      availabilityStatus?: 'available' | 'on_leave' | 'busy'
+    }
+  ) => {
+    const res = await request<any>(`/api/v1/admin/installers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapInstaller(res.data) : undefined,
+    }
+  },
+  resetInstallerPassword: (id: string, password: string) =>
+    request<{ updated: boolean; installerId: string }>(`/api/v1/admin/installers/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
 
   // Jobs
   getJobs: async (page = 1, limit = 20) => {
@@ -366,11 +422,43 @@ export const adminAPI = {
       data: res.data ? mapJob(res.data) : undefined,
     }
   },
-  updateJob: (id: string, data: Partial<Job>) =>
-    request<Job>(`/api/v1/admin/installer-jobs/${id}`, {
-      method: 'PATCH',
+  assignInstallerJob: async (
+    installerId: string,
+    data: {
+      type: 'installation' | 'complaint'
+      customerId: string
+      serviceId?: string
+      priority?: 'low' | 'medium' | 'high' | 'urgent'
+      customerSnapshot: {
+        fullName: string
+        phone: string
+        alternatePhone?: string
+        address: string
+        location?: { lat?: number; lng?: number; mapUrl?: string }
+        planName?: string
+      }
+      complaint?: Record<string, unknown>
+    }
+  ) => {
+    const res = await request<any>(`/api/v1/admin/installers/${installerId}/jobs`, {
+      method: 'POST',
       body: JSON.stringify(data),
-    }),
+    })
+    return {
+      ...res,
+      data: res.data ? mapJob(res.data) : undefined,
+    }
+  },
+  reassignInstallerJob: async (jobId: string, installerId: string, note?: string) => {
+    const res = await request<any>(`/api/v1/admin/installer-jobs/${jobId}/reassign`, {
+      method: 'POST',
+      body: JSON.stringify({ installerId, note }),
+    })
+    return {
+      ...res,
+      data: res.data ? mapJob(res.data) : undefined,
+    }
+  },
 
   // Serviceability
   getServiceZones: async () => {
