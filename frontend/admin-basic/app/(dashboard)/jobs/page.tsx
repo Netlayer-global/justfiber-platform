@@ -31,9 +31,18 @@ export default function JobsPage() {
   const [form, setForm] = useState<AssignForm>(initialAssignForm)
   const [reassignJobId, setReassignJobId] = useState('')
   const [reassignInstallerId, setReassignInstallerId] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | Job['status']>('all')
+  const [typeFilter, setTypeFilter] = useState<'all' | AssignForm['type']>('all')
 
   useEffect(() => {
     void loadData()
+  }, [])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void loadData()
+    }, 30000)
+    return () => window.clearInterval(interval)
   }, [])
 
   async function loadData() {
@@ -65,6 +74,15 @@ export default function JobsPage() {
   const selectedCustomer = useMemo(
     () => customers.find((customer) => customer.id === form.customerId),
     [customers, form.customerId]
+  )
+  const filteredJobs = useMemo(
+    () =>
+      jobs.filter((job) => {
+        if (statusFilter !== 'all' && job.status !== statusFilter) return false
+        if (typeFilter !== 'all' && job.type !== typeFilter) return false
+        return true
+      }),
+    [jobs, statusFilter, typeFilter]
   )
 
   async function handleAssignJob(e: React.FormEvent) {
@@ -190,13 +208,31 @@ export default function JobsPage() {
         ) : null}
       </form>
 
+      <div className="card p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+          <option value="all">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <select className="input" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+          <option value="all">All job types</option>
+          <option value="installation">Installation</option>
+          <option value="complaint">Complaint</option>
+        </select>
+        <div className="text-sm text-slate-500 flex items-center">
+          Auto refresh every 30 seconds. Showing {filteredJobs.length} of {jobs.length} jobs.
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="card p-6 text-center">
           <Loader className="w-6 h-6 animate-spin mx-auto text-[#0066cc]" />
         </div>
       ) : (
         <div className="space-y-4">
-          {jobs.map((job) => (
+          {filteredJobs.map((job) => (
             <div key={job.id} className="card p-5 space-y-4">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                 <div>
@@ -269,7 +305,7 @@ export default function JobsPage() {
             </div>
           ))}
 
-          {jobs.length === 0 ? (
+          {filteredJobs.length === 0 ? (
             <div className="card p-6 text-center text-slate-500">No installer jobs found</div>
           ) : null}
         </div>

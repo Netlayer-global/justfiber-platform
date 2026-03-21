@@ -66,9 +66,19 @@ async function request<T>(
 function mapPlan(plan: any): Plan {
   return {
     id: plan.planCode || plan._id || '',
+    planCode: plan.planCode || plan._id || '',
     name: plan.name || plan.planCode || 'Unnamed plan',
     speed: Number(plan.speedMbps || 0),
     price: Number(plan.monthlyPrice || 0),
+    otcCharge: Number(plan.otcCharge || 0),
+    taxIncluded: Boolean(plan.taxIncluded),
+    tags: Array.isArray(plan.tags) ? plan.tags : [],
+    staticBenefits: Array.isArray(plan.staticBenefits) ? plan.staticBenefits : [],
+    features: Array.isArray(plan.features)
+      ? plan.features.filter(Boolean)
+      : typeof plan.features === 'string'
+        ? [plan.features]
+        : [],
     type: plan.serviceType || 'fiber',
     status: plan.active === false ? 'inactive' : 'active',
     createdAt: plan.createdAt || new Date().toISOString(),
@@ -154,6 +164,7 @@ function mapInstaller(installer: any): Installer {
     skills: Array.isArray(installer.skills) ? installer.skills : [],
     jobsCompleted: Number(installer.jobsCompleted || 0),
     rating: Number(installer.rating || 0),
+    activeJobCount: Number(installer.activeJobCount || 0),
   }
 }
 
@@ -171,6 +182,7 @@ function mapJob(job: any): Job {
           : job.status === 'cancelled'
             ? 'cancelled'
             : 'pending',
+    rawStatus: job.status || 'assigned',
     customerId: job.customerId || '',
     customerName: job.customerSnapshot?.fullName || '',
     installerId: job.installerId || undefined,
@@ -255,12 +267,33 @@ export const adminAPI = {
   createPlan: (data: Partial<Plan>) =>
     request<Plan>('/api/v1/admin/catalog/plans', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        planCode: data.planCode || data.id,
+        name: data.name,
+        speedMbps: data.speed,
+        monthlyPrice: data.price,
+        otcCharge: data.otcCharge,
+        taxIncluded: data.taxIncluded,
+        features: data.features,
+        tags: data.tags,
+        staticBenefits: data.staticBenefits,
+        active: data.status !== 'inactive',
+      }),
     }),
   updatePlan: (id: string, data: Partial<Plan>) =>
     request<Plan>(`/api/v1/admin/catalog/plans/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        name: data.name,
+        speedMbps: data.speed,
+        monthlyPrice: data.price,
+        otcCharge: data.otcCharge,
+        taxIncluded: data.taxIncluded,
+        features: data.features,
+        tags: data.tags,
+        staticBenefits: data.staticBenefits,
+        active: data.status ? data.status !== 'inactive' : undefined,
+      }),
     }),
   deletePlan: (id: string) =>
     request(`/api/v1/admin/catalog/plans/${id}`, { method: 'DELETE' }),
@@ -413,6 +446,13 @@ export const adminAPI = {
         items: Array.isArray(res.data) ? res.data.map(mapJob) : [],
         total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
       },
+    }
+  },
+  getInstallerJobs: async (installerId: string) => {
+    const res = await request<any[]>(`/api/v1/admin/installers/${installerId}/jobs`)
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapJob) : [],
     }
   },
   getJob: async (id: string) => {

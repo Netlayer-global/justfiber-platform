@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import { Installer } from '@/lib/types'
+import { Installer, Job } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -30,6 +30,7 @@ const initialForm: InstallerFormState = {
 
 export default function InstallersPage() {
   const [installers, setInstallers] = useState<Installer[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [form, setForm] = useState<InstallerFormState>(initialForm)
@@ -43,9 +44,15 @@ export default function InstallersPage() {
   async function loadInstallers() {
     try {
       setIsLoading(true)
-      const response = await adminAPI.getInstallers()
-      if (response.success && response.data) {
-        setInstallers(response.data.items)
+      const [installerResponse, jobsResponse] = await Promise.all([
+        adminAPI.getInstallers(),
+        adminAPI.getJobs(1, 200),
+      ])
+      if (installerResponse.success && installerResponse.data) {
+        setInstallers(installerResponse.data.items)
+      }
+      if (jobsResponse.success && jobsResponse.data) {
+        setJobs(jobsResponse.data.items)
       }
     } catch (error) {
       console.error('[v0] Failed to load installers:', error)
@@ -191,6 +198,11 @@ export default function InstallersPage() {
         <div className="space-y-4">
           {installers.map((installer) => (
             <div key={installer.id} className="card p-5 space-y-4">
+              {(() => {
+                const installerJobs = jobs.filter((job) => job.installerId === installer.id)
+                const liveJobs = installerJobs.filter((job) => job.status === 'pending' || job.status === 'in_progress')
+                return (
+                  <>
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -217,6 +229,10 @@ export default function InstallersPage() {
                   <div>
                     <p className="text-slate-500 text-xs">Jobs Completed</p>
                     <p className="font-semibold">{installer.jobsCompleted}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Live Jobs</p>
+                    <p className="font-semibold">{liveJobs.length}</p>
                   </div>
                   <div>
                     <p className="text-slate-500 text-xs">Rating</p>
@@ -266,6 +282,34 @@ export default function InstallersPage() {
                   Skills: {installer.skills.join(', ')}
                 </div>
               ) : null}
+              <div className="rounded border border-[#2a2f4a] p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-sm font-medium">Current Jobs</p>
+                  <p className="text-xs text-slate-500">Pending + in-progress only</p>
+                </div>
+                {liveJobs.length ? (
+                  <div className="space-y-2">
+                    {liveJobs.slice(0, 4).map((job) => (
+                      <div key={job.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded bg-[#0f172a] px-3 py-2 text-sm">
+                        <div>
+                          <div className="font-medium">{job.jobNumber || job.id}</div>
+                          <div className="text-slate-400">{job.customerName || job.customerId}</div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="rounded bg-[#1e293b] px-2 py-1">{job.type}</span>
+                          <span className="rounded bg-[#1e293b] px-2 py-1">{job.rawStatus || job.status}</span>
+                          <span className="rounded bg-[#1e293b] px-2 py-1">{job.priority || 'medium'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No active jobs assigned.</p>
+                )}
+              </div>
+                  </>
+                )
+              })()}
             </div>
           ))}
         </div>

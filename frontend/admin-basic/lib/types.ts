@@ -17,9 +17,15 @@ export interface LoginResponse {
 
 export interface Plan {
   id: string
+  planCode?: string
   name: string
   speed: number
   price: number
+  otcCharge?: number
+  taxIncluded?: boolean
+  tags?: string[]
+  staticBenefits?: string[]
+  features?: string[]
   type: string
   status: 'active' | 'inactive'
   createdAt: string
@@ -70,6 +76,7 @@ export interface Installer {
   skills?: string[]
   jobsCompleted: number
   rating: number
+  activeJobCount?: number
 }
 
 export interface Job {
@@ -77,6 +84,7 @@ export interface Job {
   jobNumber?: string
   type: string
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+  rawStatus?: string
   customerId: string
   customerName?: string
   installerId?: string
