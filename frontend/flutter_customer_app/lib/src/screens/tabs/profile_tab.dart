@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../widgets/app_card.dart';
+import '../billing_payment_screen.dart';
 import '../document_viewer_screen.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -69,6 +70,24 @@ class _ProfileTabState extends State<ProfileTab> {
               _row('Generated date', billing.generatedDate.isEmpty ? '-' : billing.generatedDate),
               _row('Last paid on', billing.lastPaymentDate.isEmpty ? '-' : billing.lastPaymentDate),
               if (billing.adjustmentPreview != 0) _row('Adjustment preview', 'Rs ${billing.adjustmentPreview.toStringAsFixed(0)}'),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: appState.busy || billing.dueAmount <= 0
+                          ? null
+                          : () => _payNow(context, appState, amount: billing.dueAmount),
+                      child: Text(billing.pendingPlanChange != null ? 'Pay to switch plan' : 'Pay / Renew now'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton(
+                    onPressed: appState.busy ? null : () => appState.refresh(),
+                    child: const Text('Refresh'),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -99,6 +118,16 @@ class _ProfileTabState extends State<ProfileTab> {
                       : 'This change is queued and will apply automatically.',
                   style: const TextStyle(color: Color(0xFF7B625A)),
                 ),
+                if (billing.dueAmount > 0) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: appState.busy ? null : () => _payNow(context, appState, amount: billing.dueAmount),
+                      child: Text('Pay Rs ${billing.dueAmount.toStringAsFixed(0)} now'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -303,6 +332,9 @@ class _ProfileTabState extends State<ProfileTab> {
                                 content: Text(requestNumber != null && requestNumber.isNotEmpty ? message : (appState.error ?? 'Plan change failed')),
                               ),
                             );
+                            if (result != null && result.paymentRequired && result.payableNow > 0) {
+                              await _payNow(context, appState, amount: result.payableNow);
+                            }
                           },
                     child: const Text('Apply plan change'),
                   ),
@@ -427,6 +459,23 @@ class _ProfileTabState extends State<ProfileTab> {
           url: fullUrl,
           accessToken: session.accessToken,
         ),
+      ),
+    );
+  }
+
+  Future<void> _payNow(BuildContext context, AppState appState, {double? amount}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final paymentOrder = await appState.loadBillingPaymentOrder(amount: amount);
+    if (!context.mounted) return;
+    if (paymentOrder == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(appState.error ?? 'Unable to create payment order')),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder),
       ),
     );
   }

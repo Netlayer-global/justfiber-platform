@@ -295,14 +295,14 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<BillingPaymentOrder?> loadBillingPaymentOrder() async {
+  Future<BillingPaymentOrder?> loadBillingPaymentOrder({double? amount}) async {
     final current = session;
     if (current == null) return null;
     busy = true;
     error = null;
     notifyListeners();
     try {
-      billingPaymentOrder = await api.createBillingPaymentOrder(current);
+      billingPaymentOrder = await api.createBillingPaymentOrder(current, amount: amount);
       return billingPaymentOrder;
     } catch (e) {
       error = e.toString();

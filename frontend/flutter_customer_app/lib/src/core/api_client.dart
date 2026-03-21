@@ -321,13 +321,13 @@ class ApiClient {
     );
   }
 
-  Future<BillingPaymentOrder> createBillingPaymentOrder(CustomerSession session) async {
+  Future<BillingPaymentOrder> createBillingPaymentOrder(CustomerSession session, {double? amount}) async {
     final data = _asMap(
       await _request(
         '/api/v1/customer/billing/payment/order',
         method: 'POST',
         token: session.accessToken,
-        body: const {},
+        body: amount != null ? {'amount': amount} : const {},
       ),
     );
     final prefill = _asMap(data['prefill']);
