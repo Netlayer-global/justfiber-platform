@@ -425,3 +425,27 @@ export interface BillingCollectionAgent {
   fullName: string
   email?: string
 }
+
+export interface RazorpaySettlementItem {
+  transactionId: string
+  customerId: string
+  amount: number
+  status: string
+  reconciliationStatus?: string
+  source?: string
+  orderId?: string
+  paidAt?: string
+  createdAt?: string
+  orderExists?: boolean
+  orderStatus?: string
+}
+
+export interface RazorpayOverview {
+  totalOrders: number
+  pendingOrders: number
+  capturedPayments: number
+  unreconciledPayments: number
+  webhookCaptured: number
+  verifyCaptured: number
+  settlementItems: RazorpaySettlementItem[]
+}

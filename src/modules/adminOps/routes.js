@@ -521,6 +521,56 @@ adminOpsRouter.get(
 );
 
 adminOpsRouter.get(
+  "/billing/razorpay/overview",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const [orders, payments] = await Promise.all([
+      PaymentTransaction.find({ provider: "razorpay", status: "pending" })
+        .sort({ createdAt: -1 })
+        .lean(),
+      PaymentTransaction.find({
+        provider: "razorpay",
+        status: { $in: ["captured", "success"] }
+      })
+        .sort({ paidAt: -1, createdAt: -1 })
+        .limit(100)
+        .lean()
+    ]);
+
+    const orderMap = new Map(orders.map((item) => [item.transactionId, item]));
+    const settlementItems = payments
+      .filter((payment) => payment.reconciliationStatus !== "reconciled")
+      .map((payment) => {
+        const orderId = payment.metadata?.orderId || payment.reference;
+        const order = orderId ? orderMap.get(orderId) : null;
+        return {
+          transactionId: payment.transactionId,
+          customerId: payment.customerId,
+          amount: Number(payment.amount || 0),
+          status: payment.status,
+          reconciliationStatus: payment.reconciliationStatus || "pending",
+          source: payment.metadata?.source || "",
+          orderId: orderId || "",
+          paidAt: payment.paidAt,
+          createdAt: payment.createdAt,
+          orderExists: Boolean(order),
+          orderStatus: order?.status || ""
+        };
+      });
+
+    return ok(res, {
+      totalOrders: orders.length,
+      pendingOrders: orders.filter((item) => item.status === "pending").length,
+      capturedPayments: payments.length,
+      unreconciledPayments: settlementItems.length,
+      webhookCaptured: payments.filter((item) => item.metadata?.source === "razorpay_webhook").length,
+      verifyCaptured: payments.filter((item) => item.metadata?.source === "customer_billing_verify").length,
+      settlementItems
+    });
+  })
+);
+
+adminOpsRouter.get(
   "/billing/collections/agents",
   requirePermission(permissions.billingRead),
   asyncHandler(async (_req, res) => {

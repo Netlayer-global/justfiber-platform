@@ -16,6 +16,8 @@ import type {
   BillingPayment,
   BillingCollectionItem,
   BillingCollectionAgent,
+  RazorpayOverview,
+  RazorpaySettlementItem,
   BillingProfile,
   AdminPlanChangePreview,
   AdminPlanChangeResult,
@@ -520,6 +522,34 @@ function mapBillingCollectionAgent(item: any): BillingCollectionAgent {
   }
 }
 
+function mapRazorpaySettlementItem(item: any): RazorpaySettlementItem {
+  return {
+    transactionId: item.transactionId || '',
+    customerId: item.customerId || '',
+    amount: Number(item.amount || 0),
+    status: item.status || '',
+    reconciliationStatus: item.reconciliationStatus || '',
+    source: item.source || '',
+    orderId: item.orderId || '',
+    paidAt: item.paidAt,
+    createdAt: item.createdAt,
+    orderExists: item.orderExists === true,
+    orderStatus: item.orderStatus || '',
+  }
+}
+
+function mapRazorpayOverview(item: any): RazorpayOverview {
+  return {
+    totalOrders: Number(item?.totalOrders || 0),
+    pendingOrders: Number(item?.pendingOrders || 0),
+    capturedPayments: Number(item?.capturedPayments || 0),
+    unreconciledPayments: Number(item?.unreconciledPayments || 0),
+    webhookCaptured: Number(item?.webhookCaptured || 0),
+    verifyCaptured: Number(item?.verifyCaptured || 0),
+    settlementItems: Array.isArray(item?.settlementItems) ? item.settlementItems.map(mapRazorpaySettlementItem) : [],
+  }
+}
+
 export const adminAPI = {
   // Auth
   login: (login: string, password: string) =>
@@ -1005,6 +1035,13 @@ export const adminAPI = {
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapBillingCollectionAgent) : [],
+    }
+  },
+  getRazorpayOverview: async () => {
+    const res = await request<any>('/api/v1/admin/billing/razorpay/overview')
+    return {
+      ...res,
+      data: res.data ? mapRazorpayOverview(res.data) : undefined,
     }
   },
   assignBillingCollectionOwner: (customerId: string, adminId?: string) =>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment, RazorpayOverview } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -65,6 +65,7 @@ export default function BillingPage() {
   const [payments, setPayments] = useState<BillingPayment[]>([])
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
+  const [razorpayOverview, setRazorpayOverview] = useState<RazorpayOverview | null>(null)
   const [collectionBucket, setCollectionBucket] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -88,7 +89,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes] = await Promise.all([
         adminAPI.getBillingData(),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -97,6 +98,7 @@ export default function BillingPage() {
         adminAPI.getBillingPayments(),
         adminAPI.getBillingCollections(collectionBucket || undefined),
         adminAPI.getBillingCollectionAgents(),
+        adminAPI.getRazorpayOverview(),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -148,6 +150,9 @@ export default function BillingPage() {
       }
       if (collectionAgentRes.success && collectionAgentRes.data) {
         setCollectionAgents(collectionAgentRes.data)
+      }
+      if (razorpayOverviewRes.success && razorpayOverviewRes.data) {
+        setRazorpayOverview(razorpayOverviewRes.data)
       }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
@@ -425,6 +430,63 @@ export default function BillingPage() {
             <div className="card p-5"><p className="text-sm text-slate-500">Overdue</p><p className="text-2xl font-semibold mt-2">{overview?.overdueInvoices || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.collectedAmount || 0).toFixed(2)}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">GST Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.taxCollected || 0).toFixed(2)}</p></div>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Settlement Overview</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 p-4">
+              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Orders</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.totalOrders || 0}</div></div>
+              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Pending Orders</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.pendingOrders || 0}</div></div>
+              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Captured</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.capturedPayments || 0}</div></div>
+              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Unreconciled</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.unreconciledPayments || 0}</div></div>
+              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Webhook Captured</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.webhookCaptured || 0}</div></div>
+              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Verify Captured</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.verifyCaptured || 0}</div></div>
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0e27]">
+                  <th className="table-header">Payment</th>
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">Order</th>
+                  <th className="table-header">Amount</th>
+                  <th className="table-header">Source</th>
+                  <th className="table-header text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(razorpayOverview?.settlementItems || []).slice(0, 15).map((item) => (
+                  <tr key={item.transactionId} className="border-t border-[#2a2f4a]">
+                    <td className="table-cell">
+                      <div className="font-mono text-xs">{item.transactionId}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.status} | {item.reconciliationStatus || 'pending'}</div>
+                    </td>
+                    <td className="table-cell">{item.customerId}</td>
+                    <td className="table-cell">
+                      <div className="font-mono text-xs">{item.orderId || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.orderExists ? item.orderStatus || 'order found' : 'order missing'}</div>
+                    </td>
+                    <td className="table-cell">Rs {Number(item.amount || 0).toFixed(2)}</td>
+                    <td className="table-cell">
+                      <div>{item.source || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.paidAt ? new Date(item.paidAt).toLocaleString() : item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</div>
+                    </td>
+                    <td className="table-cell text-right">
+                      <button
+                        className="btn-secondary"
+                        onClick={() => void reconcilePayment(item.transactionId)}
+                      >
+                        Reconcile
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!(razorpayOverview?.settlementItems || []).length ? (
+                  <tr className="border-t border-[#2a2f4a]">
+                    <td className="table-cell text-slate-500" colSpan={6}>No unreconciled Razorpay settlements.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
 
           <div className="card overflow-hidden">
