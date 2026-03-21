@@ -100,6 +100,7 @@ class ApiClient {
         dueDate: (map['dueDate'] ?? '').toString(),
         paymentStatus: (map['paymentStatus'] ?? 'unknown').toString(),
         viewUrl: (map['viewUrl'] ?? '').toString(),
+        pdfUrl: (map['pdfUrl'] ?? '').toString(),
       );
     }).toList();
     final payments = _asList(details['payments']).map((item) {
@@ -111,6 +112,7 @@ class ApiClient {
         provider: (map['provider'] ?? '').toString(),
         reference: (map['reference'] ?? '').toString(),
         viewUrl: (map['viewUrl'] ?? '').toString(),
+        pdfUrl: (map['pdfUrl'] ?? '').toString(),
       );
     }).toList();
     final notes = _asList(details['notes']).map((item) {
@@ -122,6 +124,7 @@ class ApiClient {
         reason: (map['reasonCode'] ?? map['note'] ?? '').toString(),
         issuedAt: (map['issuedAt'] ?? '').toString(),
         viewUrl: (map['viewUrl'] ?? '').toString(),
+        pdfUrl: (map['pdfUrl'] ?? '').toString(),
       );
     }).toList();
     final pendingPlanChangeMap = _asMap(data['pendingPlanChange']);

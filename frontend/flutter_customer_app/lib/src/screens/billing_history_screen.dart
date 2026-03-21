@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/app_state.dart';
 import '../widgets/app_card.dart';
@@ -80,6 +81,7 @@ class BillingHistoryScreen extends StatelessWidget {
                           amount: 'Rs ${item.totalAmount.toStringAsFixed(0)}',
                           trailing: item.paymentStatus,
                           viewUrl: item.viewUrl,
+                          pdfUrl: item.pdfUrl,
                         ),
                       )),
               ],
@@ -105,6 +107,7 @@ class BillingHistoryScreen extends StatelessWidget {
                           amount: 'Rs ${item.amount.toStringAsFixed(0)}',
                           trailing: item.reference.isEmpty ? 'receipt' : item.reference,
                           viewUrl: item.viewUrl,
+                          pdfUrl: item.pdfUrl,
                         ),
                       )),
               ],
@@ -130,6 +133,7 @@ class BillingHistoryScreen extends StatelessWidget {
                           amount: 'Rs ${item.totalAmount.toStringAsFixed(0)}',
                           trailing: item.issuedAt.isEmpty ? item.type : item.issuedAt,
                           viewUrl: item.viewUrl,
+                          pdfUrl: item.pdfUrl,
                         ),
                       )),
               ],
@@ -148,6 +152,7 @@ class BillingHistoryScreen extends StatelessWidget {
     required String amount,
     required String trailing,
     required String viewUrl,
+    required String pdfUrl,
   }) {
     return Row(
       children: [
@@ -158,11 +163,26 @@ class BillingHistoryScreen extends StatelessWidget {
               Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
               Text(subtitle, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
-              if (viewUrl.isNotEmpty)
-                TextButton(
-                  onPressed: () => _openDocument(context, appState, title, viewUrl),
-                  child: const Text('Open'),
-                ),
+              Wrap(
+                spacing: 8,
+                children: [
+                  if (viewUrl.isNotEmpty)
+                    TextButton(
+                      onPressed: () => _openDocument(context, appState, title, viewUrl),
+                      child: const Text('Open'),
+                    ),
+                  if (pdfUrl.isNotEmpty)
+                    TextButton(
+                      onPressed: () => _openDocument(context, appState, '$title PDF', pdfUrl),
+                      child: const Text('Open PDF'),
+                    ),
+                  if (pdfUrl.isNotEmpty || viewUrl.isNotEmpty)
+                    TextButton(
+                      onPressed: () => _shareDocument(appState, pdfUrl.isNotEmpty ? pdfUrl : viewUrl),
+                      child: const Text('Share'),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -226,6 +246,17 @@ class BillingHistoryScreen extends StatelessWidget {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder),
+      ),
+    );
+  }
+
+  Future<void> _shareDocument(AppState appState, String relativeUrl) async {
+    if (relativeUrl.isEmpty) return;
+    final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
+    final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
+    await SharePlus.instance.share(
+      ShareParams(
+        text: fullUrl,
       ),
     );
   }

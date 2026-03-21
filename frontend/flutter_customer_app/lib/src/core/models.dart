@@ -96,6 +96,7 @@ class BillingInvoiceItem {
     required this.dueDate,
     required this.paymentStatus,
     required this.viewUrl,
+    required this.pdfUrl,
   });
 
   final String invoiceNumber;
@@ -104,6 +105,7 @@ class BillingInvoiceItem {
   final String dueDate;
   final String paymentStatus;
   final String viewUrl;
+  final String pdfUrl;
 }
 
 class BillingPaymentItem {
@@ -114,6 +116,7 @@ class BillingPaymentItem {
     required this.provider,
     required this.reference,
     required this.viewUrl,
+    required this.pdfUrl,
   });
 
   final String transactionId;
@@ -122,6 +125,7 @@ class BillingPaymentItem {
   final String provider;
   final String reference;
   final String viewUrl;
+  final String pdfUrl;
 }
 
 class BillingNoteItem {
@@ -132,6 +136,7 @@ class BillingNoteItem {
     required this.reason,
     required this.issuedAt,
     required this.viewUrl,
+    required this.pdfUrl,
   });
 
   final String noteNumber;
@@ -140,6 +145,7 @@ class BillingNoteItem {
   final String reason;
   final String issuedAt;
   final String viewUrl;
+  final String pdfUrl;
 }
 
 class RequestItem {
