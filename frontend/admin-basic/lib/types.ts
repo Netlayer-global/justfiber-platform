@@ -282,3 +282,36 @@ export interface BillingProfile {
   }>
   active?: boolean
 }
+
+export interface BillingRun {
+  id: string
+  runId: string
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  billCycle?: string
+  triggerMode?: string
+  totals?: {
+    processed: number
+    created: number
+    skipped: number
+    failed: number
+    billedAmount: number
+    taxAmount: number
+  }
+  startedAt?: string
+  completedAt?: string
+}
+
+export interface BillingNote {
+  id: string
+  noteNumber: string
+  type: 'credit' | 'debit'
+  customerId: string
+  invoiceId?: string
+  reasonCode?: string
+  note?: string
+  amount: number
+  taxAmount?: number
+  totalAmount: number
+  status?: string
+  issuedAt?: string
+}

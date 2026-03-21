@@ -4,7 +4,9 @@ import { ok } from "../../common/response.js";
 import { requireAuth, requirePermission } from "../../common/auth.js";
 import { permissions } from "../../config/permissions.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
+import { BillingNote } from "../../models/BillingNote.js";
 import { BillingLedgerEntry } from "../../models/BillingLedgerEntry.js";
+import { BillingRun } from "../../models/BillingRun.js";
 import { IntegrationConnection } from "../../models/IntegrationConnection.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
@@ -159,11 +161,40 @@ adminOpsRouter.get(
 );
 
 adminOpsRouter.get(
+  "/billing/runs",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const { page, limit, skip } = buildPagination(req.query);
+    const [items, total] = await Promise.all([
+      BillingRun.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      BillingRun.countDocuments({})
+    ]);
+    return ok(res, items, { page, limit, total });
+  })
+);
+
+adminOpsRouter.get(
   "/billing/gst-profiles",
   requirePermission(permissions.billingRead),
   asyncHandler(async (_req, res) => {
     const profiles = await BillingProfile.find({}).sort({ active: -1, code: 1 }).lean();
     return ok(res, profiles);
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/notes",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const { page, limit, skip } = buildPagination(req.query);
+    const filter = {};
+    if (req.query.customerId) filter.customerId = req.query.customerId;
+    if (req.query.type) filter.type = req.query.type;
+    const [items, total] = await Promise.all([
+      BillingNote.find(filter).sort({ issuedAt: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
+      BillingNote.countDocuments(filter)
+    ]);
+    return ok(res, items, { page, limit, total });
   })
 );
 
@@ -466,19 +497,114 @@ adminOpsRouter.post(
   "/billing/run-cycle",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
+    const run = await BillingRun.create({
+      runId: `BR-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+      triggerMode: "manual",
+      billCycle: req.body?.billCycle,
+      status: "running",
+      scope: {
+        customerId: req.body?.customerId,
+        serviceId: req.body?.serviceId
+      },
+      filters: req.body || {},
+      startedAt: new Date(),
+      createdByAdminId: req.admin?._id
+    });
     const result = await internalBillingEngine.runBillingCycle({
       customerId: req.body?.customerId,
       serviceId: req.body?.serviceId,
       totalAmount: req.body?.totalAmount,
       paymentStatus: req.body?.paymentStatus
     });
+    run.status = "completed";
+    run.completedAt = new Date();
+    run.totals = {
+      processed: result.processed || 0,
+      created: result.created || 0,
+      skipped: result.skipped || 0,
+      failed: result.results?.filter((item) => item?.error).length || 0,
+      billedAmount: result.results?.filter((item) => !item.skipped).reduce((sum, item) => sum + Number(item.invoice?.totalAmount || 0), 0) || 0,
+      taxAmount: result.results?.filter((item) => !item.skipped).reduce((sum, item) => sum + Number(item.invoice?.taxAmount || 0), 0) || 0
+    };
+    run.results = result.results || [];
+    await run.save();
     await auditFromRequest(req, {
       action: "billing.cycle.run",
       entityType: "billing_cycle",
       entityId: req.body?.customerId || req.body?.serviceId || "all",
       metadata: { processed: result.processed, created: result.created, skipped: result.skipped }
     });
-    return ok(res, result);
+    return ok(res, { ...result, runId: run.runId });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/notes",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.body?.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const amount = Number(req.body?.amount);
+    const taxAmount = Number(req.body?.taxAmount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ApiError(400, "Valid positive amount is required");
+    }
+    const type = req.body?.type === "debit" ? "debit" : "credit";
+    const totalAmount = Number((amount + taxAmount).toFixed(2));
+    const note = await BillingNote.create({
+      noteNumber: `${type === "credit" ? "CN" : "DN"}-${Date.now()}`,
+      type,
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      invoiceId: req.body?.invoiceId,
+      reasonCode: req.body?.reasonCode || (type === "credit" ? "credit_adjustment" : "debit_adjustment"),
+      note: req.body?.note,
+      amount,
+      taxAmount,
+      totalAmount,
+      taxMode: req.body?.taxMode || "india_gst",
+      taxBreakdown: Array.isArray(req.body?.taxBreakdown) ? req.body.taxBreakdown : [],
+      createdByAdminId: req.admin?._id,
+      metadata: req.body?.metadata || {},
+      appliedAt: new Date()
+    });
+
+    const direction = type === "credit" ? "credit" : "debit";
+    const category = type === "credit" ? "credit_adjustment" : "debit_adjustment";
+    const entry = await createLedgerEntry({
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      invoiceId: req.body?.invoiceId,
+      category,
+      direction,
+      amount: totalAmount,
+      reference: note.noteNumber,
+      note: note.note || `${type} note issued`,
+      source: "admin_billing_note",
+      createdByAdminId: req.admin?._id,
+      metadata: {
+        noteNumber: note.noteNumber,
+        reasonCode: note.reasonCode
+      }
+    });
+
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      dueAmount: Math.max(0, entry.balanceAfter),
+      lastBillingNoteNumber: note.noteNumber,
+      lastBillingNoteType: type,
+      lastBillingNoteAt: new Date()
+    };
+    await customer.save();
+    await auditFromRequest(req, {
+      action: `billing.${type}_note.created`,
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: { noteNumber: note.noteNumber, totalAmount }
+    });
+    return ok(res, { note, ledgerEntry: entry }, { created: true });
   })
 );
 

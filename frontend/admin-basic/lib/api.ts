@@ -11,6 +11,8 @@ import type {
   DashboardStats,
   BillingData,
   BillingOverview,
+  BillingRun,
+  BillingNote,
   BillingProfile,
   CustomerAction,
   CustomerDevice,
@@ -386,6 +388,43 @@ function mapBillingProfile(profile: any): BillingProfile {
     intrastateSgstPercent: Number(profile.intrastateSgstPercent || 0),
     stateOverrides: Array.isArray(profile.stateOverrides) ? profile.stateOverrides : [],
     active: profile.active !== false,
+  }
+}
+
+function mapBillingRun(run: any): BillingRun {
+  return {
+    id: run._id || run.runId || '',
+    runId: run.runId || run._id || '',
+    status: run.status || 'queued',
+    billCycle: run.billCycle,
+    triggerMode: run.triggerMode,
+    totals: run.totals || {
+      processed: 0,
+      created: 0,
+      skipped: 0,
+      failed: 0,
+      billedAmount: 0,
+      taxAmount: 0,
+    },
+    startedAt: run.startedAt,
+    completedAt: run.completedAt,
+  }
+}
+
+function mapBillingNote(note: any): BillingNote {
+  return {
+    id: note._id || note.noteNumber || '',
+    noteNumber: note.noteNumber || note._id || '',
+    type: note.type || 'credit',
+    customerId: note.customerId || '',
+    invoiceId: note.invoiceId,
+    reasonCode: note.reasonCode,
+    note: note.note,
+    amount: Number(note.amount || 0),
+    taxAmount: Number(note.taxAmount || 0),
+    totalAmount: Number(note.totalAmount || 0),
+    status: note.status || 'issued',
+    issuedAt: note.issuedAt || note.createdAt,
   }
 }
 
@@ -831,6 +870,38 @@ export const adminAPI = {
         stateOverrides: data.stateOverrides || [],
         active: data.active !== false,
       }),
+    }),
+  getBillingRuns: async () => {
+    const res = await request<any[]>('/api/v1/admin/billing/runs')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapBillingRun) : [],
+    }
+  },
+  runBillingCycle: async (data?: { customerId?: string; serviceId?: string; totalAmount?: number; paymentStatus?: string; billCycle?: string }) =>
+    request('/api/v1/admin/billing/run-cycle', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+  getBillingNotes: async () => {
+    const res = await request<any[]>('/api/v1/admin/billing/notes')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapBillingNote) : [],
+    }
+  },
+  createBillingNote: async (data: {
+    customerId: string
+    type: 'credit' | 'debit'
+    amount: number
+    taxAmount?: number
+    invoiceId?: string
+    reasonCode?: string
+    note?: string
+  }) =>
+    request('/api/v1/admin/billing/notes', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
   getCustomerBilling: async (customerId: string) =>
     request<{

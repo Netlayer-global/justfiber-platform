@@ -1,4 +1,5 @@
 import { BillingInvoice } from "../models/BillingInvoice.js";
+import { BillingLedgerEntry } from "../models/BillingLedgerEntry.js";
 import { BillingProfile } from "../models/BillingProfile.js";
 import { Customer } from "../models/Customer.js";
 import { SubscriberService } from "../models/SubscriberService.js";
@@ -118,6 +119,33 @@ async function syncCustomerBillingSnapshot({ customerId, totalAmount, dueDate, p
   return customer.toObject();
 }
 
+async function createInvoiceLedgerEntry(invoice) {
+  const latestEntry = await BillingLedgerEntry.findOne({ customerId: invoice.customerId })
+    .sort({ postedAt: -1, createdAt: -1 })
+    .lean();
+  const currentBalance = latestEntry?.balanceAfter || 0;
+  const balanceAfter = currentBalance + Number(invoice.totalAmount || 0);
+  await BillingLedgerEntry.create({
+    entryId: `BL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    customerId: invoice.customerId,
+    serviceId: invoice.serviceId,
+    invoiceId: invoice.invoiceId,
+    category: "invoice",
+    direction: "debit",
+    amount: Number(invoice.totalAmount || 0),
+    currency: invoice.currency || "INR",
+    balanceAfter,
+    reference: invoice.invoiceNumber,
+    note: `Invoice generated for ${invoice.billCycle}`,
+    source: "internal_billing_engine",
+    postedAt: invoice.generatedAt || new Date(),
+    metadata: {
+      taxAmount: invoice.taxAmount || 0,
+      billCycle: invoice.billCycle
+    }
+  });
+}
+
 export class InternalBillingEngine {
   async generateInvoiceForService(service, options = {}) {
     const generatedAt = options.generatedAt ? new Date(options.generatedAt) : new Date();
@@ -168,6 +196,8 @@ export class InternalBillingEngine {
         bngNodeCode: service.bngNodeCode
       }
     });
+
+    await createInvoiceLedgerEntry(invoice);
 
     await syncCustomerBillingSnapshot({
       customerId: service.customerId,
