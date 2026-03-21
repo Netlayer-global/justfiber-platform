@@ -481,6 +481,9 @@ function mapBillingPayment(payment: any): BillingPayment {
     reconciliationConfidence: Number(payment.metadata?.reconciliationConfidence || 0),
     reconciliationMatchReason: payment.metadata?.reconciliationMatchReason || '',
     reconciliationMatchedBy: payment.metadata?.reconciliationMatchedBy || '',
+    originalPaymentId: payment.metadata?.originalPaymentId || '',
+    refundStatus: payment.metadata?.refundStatus || '',
+    razorpayRefundId: payment.metadata?.razorpayRefundId || '',
   }
 }
 

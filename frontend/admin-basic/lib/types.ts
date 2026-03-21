@@ -389,6 +389,9 @@ export interface BillingPayment {
   reconciliationConfidence?: number
   reconciliationMatchReason?: string
   reconciliationMatchedBy?: string
+  originalPaymentId?: string
+  refundStatus?: string
+  razorpayRefundId?: string
 }
 
 export interface BillingCollectionItem {

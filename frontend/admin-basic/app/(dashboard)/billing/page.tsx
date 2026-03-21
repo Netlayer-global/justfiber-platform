@@ -82,6 +82,7 @@ export default function BillingPage() {
     reasonCode: '',
     note: '',
   })
+  const refundPayments = payments.filter((payment) => payment.method === 'refund' || (payment.provider || '').includes('refund'))
 
   useEffect(() => {
     void loadBilling()
@@ -1005,6 +1006,45 @@ export default function BillingPage() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Refund History</div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0e27]">
+                  <th className="table-header">Refund</th>
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">Amount</th>
+                  <th className="table-header">Original Payment</th>
+                  <th className="table-header">Status</th>
+                  <th className="table-header">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {refundPayments.map((payment) => (
+                  <tr key={`refund-${payment.id}`} className="border-t border-[#2a2f4a]">
+                    <td className="table-cell">
+                      <div className="font-mono text-xs">{payment.transactionId}</div>
+                      <div className="text-xs text-slate-500 mt-1">{payment.provider || '-'} | {payment.razorpayRefundId || '-'}</div>
+                    </td>
+                    <td className="table-cell">{payment.customerId}</td>
+                    <td className="table-cell">Rs {payment.amount.toFixed(2)}</td>
+                    <td className="table-cell">
+                      <div className="font-mono text-xs">{payment.originalPaymentId || payment.reference || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{payment.invoiceId || '-'}</div>
+                    </td>
+                    <td className="table-cell">{payment.refundStatus || payment.status || '-'}</td>
+                    <td className="table-cell">{payment.paidAt ? new Date(payment.paidAt).toLocaleString() : '-'}</td>
+                  </tr>
+                ))}
+                {!refundPayments.length ? (
+                  <tr className="border-t border-[#2a2f4a]">
+                    <td className="table-cell text-slate-500" colSpan={6}>No refunds recorded yet.</td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
