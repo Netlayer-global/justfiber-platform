@@ -9,27 +9,69 @@ import { toast } from 'sonner'
 type PlanFormState = {
   planCode: string
   name: string
+  category: 'home' | 'business' | 'enterprise'
   speed: string
   price: string
+  quarterlyPrice: string
+  halfYearlyPrice: string
+  yearlyPrice: string
   otcCharge: string
+  installationCharge: string
   taxIncluded: boolean
+  gstRate: string
+  pricesExcludeGst: boolean
   status: 'active' | 'inactive'
   tags: string
   staticBenefits: string
   features: string
+  validityMonthly: boolean
+  validityQuarterly: boolean
+  validityHalfYearly: boolean
+  validityYearly: boolean
+  staticIpEnabled: boolean
+  staticIpIncludedCount: string
+  staticIpExtraPrice: string
+  ottEnabled: boolean
+  ottPackageName: string
+  ottExtraPrice: string
+  voiceEnabled: boolean
+  voicePackageName: string
+  voiceChannels: string
+  voiceExtraPrice: string
 }
 
 const initialForm: PlanFormState = {
   planCode: '',
   name: '',
+  category: 'home',
   speed: '',
   price: '',
+  quarterlyPrice: '',
+  halfYearlyPrice: '',
+  yearlyPrice: '',
   otcCharge: '',
+  installationCharge: '',
   taxIncluded: true,
+  gstRate: '18',
+  pricesExcludeGst: false,
   status: 'active',
   tags: '',
   staticBenefits: '',
   features: '',
+  validityMonthly: true,
+  validityQuarterly: false,
+  validityHalfYearly: false,
+  validityYearly: false,
+  staticIpEnabled: false,
+  staticIpIncludedCount: '',
+  staticIpExtraPrice: '',
+  ottEnabled: false,
+  ottPackageName: '',
+  ottExtraPrice: '',
+  voiceEnabled: false,
+  voicePackageName: '',
+  voiceChannels: '',
+  voiceExtraPrice: '',
 }
 
 function toForm(plan?: Plan | null): PlanFormState {
@@ -37,14 +79,35 @@ function toForm(plan?: Plan | null): PlanFormState {
   return {
     planCode: plan.planCode || plan.id,
     name: plan.name,
+    category: plan.category || 'home',
     speed: String(plan.speed || ''),
     price: String(plan.price || ''),
+    quarterlyPrice: String(plan.quarterlyPrice || ''),
+    halfYearlyPrice: String(plan.halfYearlyPrice || ''),
+    yearlyPrice: String(plan.yearlyPrice || ''),
     otcCharge: String(plan.otcCharge || ''),
+    installationCharge: String(plan.installationCharge || ''),
     taxIncluded: Boolean(plan.taxIncluded),
+    gstRate: String(plan.gstRate || 18),
+    pricesExcludeGst: Boolean(plan.pricesExcludeGst),
     status: plan.status,
     tags: (plan.tags || []).join(', '),
     staticBenefits: (plan.staticBenefits || []).join(', '),
     features: (plan.features || []).join('\n'),
+    validityMonthly: plan.validityOptions?.monthly !== false,
+    validityQuarterly: Boolean(plan.validityOptions?.quarterly),
+    validityHalfYearly: Boolean(plan.validityOptions?.halfYearly),
+    validityYearly: Boolean(plan.validityOptions?.yearly),
+    staticIpEnabled: Boolean(plan.addons?.staticIp?.enabled),
+    staticIpIncludedCount: String(plan.addons?.staticIp?.includedCount || ''),
+    staticIpExtraPrice: String(plan.addons?.staticIp?.extraPrice || ''),
+    ottEnabled: Boolean(plan.addons?.ott?.enabled),
+    ottPackageName: plan.addons?.ott?.packageName || '',
+    ottExtraPrice: String(plan.addons?.ott?.extraPrice || ''),
+    voiceEnabled: Boolean(plan.addons?.voice?.enabled),
+    voicePackageName: plan.addons?.voice?.packageName || '',
+    voiceChannels: String(plan.addons?.voice?.channels || ''),
+    voiceExtraPrice: String(plan.addons?.voice?.extraPrice || ''),
   }
 }
 
@@ -113,14 +176,45 @@ export default function PlansPage() {
       id: form.planCode.trim(),
       planCode: form.planCode.trim(),
       name: form.name.trim(),
+      category: form.category,
       speed: Number(form.speed || 0),
       price: Number(form.price || 0),
+      quarterlyPrice: Number(form.quarterlyPrice || 0),
+      halfYearlyPrice: Number(form.halfYearlyPrice || 0),
+      yearlyPrice: Number(form.yearlyPrice || 0),
       otcCharge: Number(form.otcCharge || 0),
+      installationCharge: Number(form.installationCharge || 0),
       taxIncluded: form.taxIncluded,
+      gstRate: Number(form.gstRate || 0),
+      pricesExcludeGst: form.pricesExcludeGst,
       status: form.status,
       tags: form.tags.split(',').map((item) => item.trim()).filter(Boolean),
       staticBenefits: form.staticBenefits.split(',').map((item) => item.trim()).filter(Boolean),
       features: form.features.split('\n').map((item) => item.trim()).filter(Boolean),
+      validityOptions: {
+        monthly: form.validityMonthly,
+        quarterly: form.validityQuarterly,
+        halfYearly: form.validityHalfYearly,
+        yearly: form.validityYearly,
+      },
+      addons: {
+        staticIp: {
+          enabled: form.staticIpEnabled,
+          includedCount: Number(form.staticIpIncludedCount || 0),
+          extraPrice: Number(form.staticIpExtraPrice || 0),
+        },
+        ott: {
+          enabled: form.ottEnabled,
+          packageName: form.ottPackageName.trim(),
+          extraPrice: Number(form.ottExtraPrice || 0),
+        },
+        voice: {
+          enabled: form.voiceEnabled,
+          packageName: form.voicePackageName.trim(),
+          channels: Number(form.voiceChannels || 0),
+          extraPrice: Number(form.voiceExtraPrice || 0),
+        },
+      },
     }
 
     try {
@@ -187,7 +281,7 @@ export default function PlansPage() {
           <div>
             <h2 className="text-lg font-semibold">{editingPlanId ? 'Edit Plan' : 'Create Plan'}</h2>
             <p className="text-sm text-slate-600 mt-1">
-              Current backend supports core catalog fields: speed, price, OTC, tags, benefits and active visibility.
+              Build monthly, quarterly, half-yearly and yearly plans with GST behaviour and optional static IP, OTT and voice add-ons.
             </p>
           </div>
           {editingPlanId ? (
@@ -201,9 +295,19 @@ export default function PlansPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <input className="input" placeholder="Plan code" value={form.planCode} onChange={(e) => setForm({ ...form, planCode: e.target.value.toUpperCase() })} disabled={Boolean(editingPlanId)} />
           <input className="input" placeholder="Plan name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as PlanFormState['category'] })}>
+            <option value="home">Home Broadband</option>
+            <option value="business">Business Broadband</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
           <input className="input" placeholder="Speed (Mbps)" type="number" value={form.speed} onChange={(e) => setForm({ ...form, speed: e.target.value })} />
           <input className="input" placeholder="Monthly price" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-          <input className="input" placeholder="OTC / install charge" type="number" value={form.otcCharge} onChange={(e) => setForm({ ...form, otcCharge: e.target.value })} />
+          <input className="input" placeholder="Quarterly price" type="number" value={form.quarterlyPrice} onChange={(e) => setForm({ ...form, quarterlyPrice: e.target.value })} />
+          <input className="input" placeholder="Half-yearly price" type="number" value={form.halfYearlyPrice} onChange={(e) => setForm({ ...form, halfYearlyPrice: e.target.value })} />
+          <input className="input" placeholder="Yearly price" type="number" value={form.yearlyPrice} onChange={(e) => setForm({ ...form, yearlyPrice: e.target.value })} />
+          <input className="input" placeholder="OTC charge" type="number" value={form.otcCharge} onChange={(e) => setForm({ ...form, otcCharge: e.target.value })} />
+          <input className="input" placeholder="Installation charge" type="number" value={form.installationCharge} onChange={(e) => setForm({ ...form, installationCharge: e.target.value })} />
+          <input className="input" placeholder="GST rate %" type="number" value={form.gstRate} onChange={(e) => setForm({ ...form, gstRate: e.target.value })} />
           <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as PlanFormState['status'] })}>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -212,7 +316,40 @@ export default function PlansPage() {
             <input type="checkbox" checked={form.taxIncluded} onChange={(e) => setForm({ ...form, taxIncluded: e.target.checked })} />
             Tax Included
           </label>
+          <label className="flex items-center gap-3 rounded border border-[#2a2f4a] px-3 py-2 text-sm">
+            <input type="checkbox" checked={form.pricesExcludeGst} onChange={(e) => setForm({ ...form, pricesExcludeGst: e.target.checked })} />
+            Prices Excluding GST
+          </label>
           <input className="input" placeholder="Tags (home, business, static-ip)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div className="rounded border border-[#2a2f4a] p-4 space-y-3">
+            <div className="font-semibold">Validity Options</div>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.validityMonthly} onChange={(e) => setForm({ ...form, validityMonthly: e.target.checked })} /> Monthly</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.validityQuarterly} onChange={(e) => setForm({ ...form, validityQuarterly: e.target.checked })} /> Quarterly</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.validityHalfYearly} onChange={(e) => setForm({ ...form, validityHalfYearly: e.target.checked })} /> Half Yearly</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.validityYearly} onChange={(e) => setForm({ ...form, validityYearly: e.target.checked })} /> Yearly</label>
+          </div>
+
+          <div className="rounded border border-[#2a2f4a] p-4 space-y-3">
+            <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={form.staticIpEnabled} onChange={(e) => setForm({ ...form, staticIpEnabled: e.target.checked })} /> Static IP Add-on</label>
+            <input className="input" placeholder="Included static IP count" type="number" value={form.staticIpIncludedCount} onChange={(e) => setForm({ ...form, staticIpIncludedCount: e.target.value })} />
+            <input className="input" placeholder="Extra static IP price" type="number" value={form.staticIpExtraPrice} onChange={(e) => setForm({ ...form, staticIpExtraPrice: e.target.value })} />
+          </div>
+
+          <div className="rounded border border-[#2a2f4a] p-4 space-y-3">
+            <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={form.ottEnabled} onChange={(e) => setForm({ ...form, ottEnabled: e.target.checked })} /> OTT Add-on</label>
+            <input className="input" placeholder="OTT package name" value={form.ottPackageName} onChange={(e) => setForm({ ...form, ottPackageName: e.target.value })} />
+            <input className="input" placeholder="OTT extra price" type="number" value={form.ottExtraPrice} onChange={(e) => setForm({ ...form, ottExtraPrice: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="rounded border border-[#2a2f4a] p-4 grid grid-cols-1 xl:grid-cols-4 gap-4">
+          <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={form.voiceEnabled} onChange={(e) => setForm({ ...form, voiceEnabled: e.target.checked })} /> Voice Add-on</label>
+          <input className="input" placeholder="Voice package name" value={form.voicePackageName} onChange={(e) => setForm({ ...form, voicePackageName: e.target.value })} />
+          <input className="input" placeholder="Voice channels" type="number" value={form.voiceChannels} onChange={(e) => setForm({ ...form, voiceChannels: e.target.value })} />
+          <input className="input" placeholder="Voice extra price" type="number" value={form.voiceExtraPrice} onChange={(e) => setForm({ ...form, voiceExtraPrice: e.target.value })} />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -258,7 +395,7 @@ export default function PlansPage() {
                 <th className="table-header">Plan</th>
                 <th className="table-header">Speed</th>
                 <th className="table-header">Monthly</th>
-                <th className="table-header">OTC</th>
+                <th className="table-header">Validity / GST</th>
                 <th className="table-header">Tags</th>
                 <th className="table-header">Visibility</th>
                 <th className="table-header text-right">Actions</th>
@@ -276,7 +413,20 @@ export default function PlansPage() {
                   </td>
                   <td className="table-cell">{plan.speed} Mbps</td>
                   <td className="table-cell">Rs {plan.price}</td>
-                  <td className="table-cell">Rs {plan.otcCharge || 0}</td>
+                  <td className="table-cell">
+                    <div>OTC Rs {plan.otcCharge || 0}</div>
+                    <div>Install Rs {plan.installationCharge || 0}</div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      {[
+                        plan.validityOptions?.monthly ? 'M' : null,
+                        plan.validityOptions?.quarterly ? 'Q' : null,
+                        plan.validityOptions?.halfYearly ? 'H' : null,
+                        plan.validityOptions?.yearly ? 'Y' : null,
+                      ].filter(Boolean).join(' / ') || 'Monthly'}
+                      {' · '}
+                      {plan.pricesExcludeGst ? `+GST ${plan.gstRate || 0}%` : plan.taxIncluded ? 'GST included' : 'GST extra'}
+                    </div>
+                  </td>
                   <td className="table-cell">{plan.tags?.length ? plan.tags.join(', ') : '-'}</td>
                   <td className="table-cell">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${plan.status === 'active' ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'}`}>

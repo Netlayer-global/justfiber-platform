@@ -19,13 +19,44 @@ export interface Plan {
   id: string
   planCode?: string
   name: string
+  category?: 'home' | 'business' | 'enterprise'
   speed: number
   price: number
+  quarterlyPrice?: number
+  halfYearlyPrice?: number
+  yearlyPrice?: number
   otcCharge?: number
+  installationCharge?: number
   taxIncluded?: boolean
+  gstRate?: number
+  pricesExcludeGst?: boolean
   tags?: string[]
   staticBenefits?: string[]
   features?: string[]
+  validityOptions?: {
+    monthly: boolean
+    quarterly: boolean
+    halfYearly: boolean
+    yearly: boolean
+  }
+  addons?: {
+    staticIp?: {
+      enabled: boolean
+      includedCount?: number
+      extraPrice?: number
+    }
+    ott?: {
+      enabled: boolean
+      packageName?: string
+      extraPrice?: number
+    }
+    voice?: {
+      enabled: boolean
+      packageName?: string
+      channels?: number
+      extraPrice?: number
+    }
+  }
   type: string
   status: 'active' | 'inactive'
   createdAt: string

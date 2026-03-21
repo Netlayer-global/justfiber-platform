@@ -42,13 +42,44 @@ const zoneSchema = z.object({
 const planSchema = z.object({
   planCode: z.string().min(2),
   name: z.string().min(2),
+  category: z.enum(["home", "business", "enterprise"]).optional(),
   speedMbps: z.number().optional(),
   monthlyPrice: z.number().optional(),
+  quarterlyPrice: z.number().optional(),
+  halfYearlyPrice: z.number().optional(),
+  yearlyPrice: z.number().optional(),
   otcCharge: z.number().optional(),
+  installationCharge: z.number().optional(),
   taxIncluded: z.boolean().optional(),
+  gstRate: z.number().optional(),
+  pricesExcludeGst: z.boolean().optional(),
   features: z.any().optional(),
   tags: z.array(z.string()).optional(),
   staticBenefits: z.array(z.string()).optional(),
+  validityOptions: z.object({
+    monthly: z.boolean().optional(),
+    quarterly: z.boolean().optional(),
+    halfYearly: z.boolean().optional(),
+    yearly: z.boolean().optional()
+  }).optional(),
+  addons: z.object({
+    staticIp: z.object({
+      enabled: z.boolean().optional(),
+      includedCount: z.number().optional(),
+      extraPrice: z.number().optional()
+    }).optional(),
+    ott: z.object({
+      enabled: z.boolean().optional(),
+      packageName: z.string().optional(),
+      extraPrice: z.number().optional()
+    }).optional(),
+    voice: z.object({
+      enabled: z.boolean().optional(),
+      packageName: z.string().optional(),
+      channels: z.number().optional(),
+      extraPrice: z.number().optional()
+    }).optional()
+  }).optional(),
   active: z.boolean().optional(),
   sortOrder: z.number().optional()
 });
