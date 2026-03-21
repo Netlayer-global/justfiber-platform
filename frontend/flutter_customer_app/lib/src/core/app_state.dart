@@ -60,6 +60,7 @@ class AppState extends ChangeNotifier {
   List<PlanItem> plans = const [];
   BookingQuote? latestBooking;
   BookingTrackingData? bookingTracking;
+  List<InstallerVisitItem> installerVisits = const [];
   FeasibilityResult? feasibility;
   BillingPaymentOrder? billingPaymentOrder;
   SpeedTestData speedTest = const SpeedTestData(
@@ -138,6 +139,7 @@ class AppState extends ChangeNotifier {
       faqs = await api.fetchFaqs();
       addons = await api.fetchAddons(current);
       connectedDevices = await api.fetchConnectedDevices(current);
+      installerVisits = await api.fetchServiceVisits(current);
       parentalRules = await api.fetchParentalRules(current);
       speedTest = await api.fetchSpeedTest(current);
       networkQuality = await api.fetchNetworkQuality(current);
@@ -184,6 +186,7 @@ class AppState extends ChangeNotifier {
         pinCode: pinCode,
       );
       bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
+      installerVisits = await api.fetchServiceVisits(current);
       return true;
     } catch (e) {
       bookingError = e.toString();
@@ -259,6 +262,7 @@ class AppState extends ChangeNotifier {
     if (current == null || bookingNumber == null || bookingNumber.isEmpty) return;
     try {
       bookingTracking = await api.fetchBookingTracking(current, bookingNumber);
+      installerVisits = await api.fetchServiceVisits(current);
       notifyListeners();
     } catch (_) {
       // keep current state
@@ -531,6 +535,7 @@ class AppState extends ChangeNotifier {
     error = null;
     latestBooking = null;
     bookingTracking = null;
+    installerVisits = const [];
     feasibility = null;
     billingPaymentOrder = null;
     planChangePreview = null;

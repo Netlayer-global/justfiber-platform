@@ -326,6 +326,24 @@ class BookingTrackingData {
   final List<BookingTrackingItem> steps;
 }
 
+class InstallerVisitItem {
+  const InstallerVisitItem({
+    required this.jobNumber,
+    required this.type,
+    required this.status,
+    required this.priority,
+    required this.createdAt,
+    required this.completedAt,
+  });
+
+  final String jobNumber;
+  final String type;
+  final String status;
+  final String priority;
+  final String createdAt;
+  final String completedAt;
+}
+
 class ConnectedDevice {
   const ConnectedDevice({
     required this.clientId,

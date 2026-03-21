@@ -324,6 +324,21 @@ class ApiClient {
     );
   }
 
+  Future<List<InstallerVisitItem>> fetchServiceVisits(CustomerSession session) async {
+    final list = _asList(await _request('/api/v1/customer/services/track', token: session.accessToken));
+    return list.map((item) {
+      final map = item as Map<String, dynamic>;
+      return InstallerVisitItem(
+        jobNumber: (map['jobNumber'] ?? '').toString(),
+        type: (map['type'] ?? '').toString(),
+        status: (map['status'] ?? '').toString(),
+        priority: (map['priority'] ?? 'medium').toString(),
+        createdAt: (map['createdAt'] ?? '').toString(),
+        completedAt: (map['completedAt'] ?? '').toString(),
+      );
+    }).toList();
+  }
+
   Future<BillingPaymentOrder> createBillingPaymentOrder(CustomerSession session, {double? amount}) async {
     final data = _asMap(
       await _request(
