@@ -16,6 +16,7 @@ import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { BillingLedgerEntry } from "../../models/BillingLedgerEntry.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
+import { BillingNote } from "../../models/BillingNote.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
@@ -283,8 +284,135 @@ async function markLatestInvoicePaid({ customerId, paymentId, amount, source }) 
   return invoice;
 }
 
+function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMode }) {
+  const currentPrice = Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0);
+  const nextPrice = Number(nextPlan?.monthlyPrice || 0);
+  const remainingDays = Math.max(0, Number(customer.billingSnapshot?.remainingDays || 0));
+  const billMode =
+    customer.billingSnapshot?.billMode ||
+    (customer.customerType === "business" ? "postpaid" : "prepaid");
+
+  if (effectiveMode === "next_cycle") {
+    return {
+      billMode,
+      currentPrice,
+      nextPrice,
+      proratedCurrentCredit: 0,
+      proratedNextCharge: 0,
+      adjustmentAmount: 0,
+      payableNow: 0,
+      creditAmount: 0,
+      mode: "scheduled"
+    };
+  }
+
+  if (billMode === "prepaid") {
+    const ratio = Math.min(1, Math.max(0, remainingDays / 30));
+    const proratedCurrentCredit = Number((currentPrice * ratio).toFixed(2));
+    const proratedNextCharge = Number((nextPrice * ratio).toFixed(2));
+    const adjustmentAmount = Number((proratedNextCharge - proratedCurrentCredit).toFixed(2));
+    return {
+      billMode,
+      currentPrice,
+      nextPrice,
+      remainingDays,
+      proratedCurrentCredit,
+      proratedNextCharge,
+      adjustmentAmount,
+      payableNow: adjustmentAmount > 0 ? adjustmentAmount : 0,
+      creditAmount: adjustmentAmount < 0 ? Math.abs(adjustmentAmount) : 0,
+      mode: "immediate"
+    };
+  }
+
+  const adjustmentAmount = Number((nextPrice - currentPrice).toFixed(2));
+  return {
+    billMode,
+    currentPrice,
+    nextPrice,
+    remainingDays,
+    proratedCurrentCredit: 0,
+    proratedNextCharge: nextPrice,
+    adjustmentAmount,
+    payableNow: adjustmentAmount > 0 ? adjustmentAmount : 0,
+    creditAmount: adjustmentAmount < 0 ? Math.abs(adjustmentAmount) : 0,
+    mode: "immediate"
+  };
+}
+
+async function createPlanChangeBillingNote({ customer, type, amount, reasonCode, note, metadata }) {
+  const safeAmount = Number(amount || 0);
+  if (!(safeAmount > 0)) return null;
+  return BillingNote.create({
+    noteNumber: `${type === "credit" ? "CN" : "DN"}-${Date.now()}`,
+    type,
+    customerId: customer.customerId,
+    serviceId: customer.serviceId,
+    reasonCode,
+    note,
+    amount: safeAmount,
+    taxAmount: 0,
+    totalAmount: safeAmount,
+    taxMode: "flat_tax",
+    status: "applied",
+    metadata,
+    appliedAt: new Date()
+  });
+}
+
+async function finalizePendingPlanChange(customer, customerUserId) {
+  const pending = customer.billingSnapshot?.pendingPlanChange;
+  if (!pending?.planCode || Number(customer.billingSnapshot?.dueAmount || 0) > 0) {
+    return null;
+  }
+  const plan = await PlanCatalog.findOne({ planCode: pending.planCode, active: true }).lean();
+  if (!plan) return null;
+  customer.planCode = plan.planCode;
+  customer.planName = plan.name;
+  customer.customerType = pending.billMode === "postpaid" ? "business" : "home";
+  customer.billingSnapshot = {
+    ...(customer.billingSnapshot || {}),
+    speedMbps: plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+    billMode: pending.billMode || customer.billingSnapshot?.billMode,
+    pendingPlanChange: null,
+    adjustmentPreview: 0,
+    lastPlanPrice: Number(pending.currentPrice || customer.billingSnapshot?.lastPlanPrice || 0),
+    nextPlanPrice: Number(plan.monthlyPrice || 0),
+    nextPlanChangeMode: pending.effectiveMode || "immediate"
+  };
+  await customer.save();
+  const request = await ServiceRequest.create({
+    requestNumber: `SR${Date.now().toString().slice(-6)}`,
+    customerUserId,
+    customerId: customer.customerId,
+    serviceId: customer.serviceId,
+    type: "plan_change",
+    status: "completed",
+    payload: {
+      planCode: plan.planCode,
+      planName: plan.name,
+      effectiveMode: pending.effectiveMode || "immediate",
+      appliedDirectly: false,
+      settledByPayment: true
+    },
+    timeline: [
+      { event: "request.created", actorType: "system", actorId: "billing-engine", at: new Date() },
+      { event: "request.completed", actorType: "system", actorId: "billing-engine", at: new Date() }
+    ]
+  });
+  await notifyCustomerAction(
+    customerUserId,
+    "plan_changed",
+    "Plan updated",
+    `Plan changed to ${plan.name} after payment settlement.`,
+    { planCode: plan.planCode, effectiveMode: pending.effectiveMode || "immediate" }
+  );
+  return request;
+}
+
 async function finalizeSuccessfulBillingPayment({
   customer,
+  customerUserId,
   provider,
   transactionId,
   amount,
@@ -355,12 +483,16 @@ async function finalizeSuccessfulBillingPayment({
   };
   await customer.save();
 
+  const planChangeRequest = customerUserId ? await finalizePendingPlanChange(customer, customerUserId) : null;
+
   return {
     amount,
     dueAmount: 0,
     paymentStatus: "paid",
     idempotentReplay: Boolean(existingPayment),
-    ledgerEntryId: createdLedgerEntry?.entryId
+    ledgerEntryId: createdLedgerEntry?.entryId,
+    planChangeApplied: Boolean(planChangeRequest),
+    requestNumber: planChangeRequest?.requestNumber
   };
 }
 
@@ -881,6 +1013,7 @@ customerPortalRouter.post(
     const amount = payload.amount || pendingOrder?.amount || customer.billingSnapshot?.dueAmount || customer.billingSnapshot?.lastInvoiceAmount || 0;
     const result = await finalizeSuccessfulBillingPayment({
       customer,
+      customerUserId: req.customerUser._id,
       provider: "razorpay",
       transactionId: payload.razorpayPaymentId,
       amount,
@@ -1008,6 +1141,7 @@ customerPortalRouter.post(
 
     const result = await finalizeSuccessfulBillingPayment({
       customer,
+      customerUserId: req.customerUser._id,
       provider: "internal_platform",
       transactionId: payload.paymentId || `BILL-${customer.customerId}-${Date.now()}`,
       amount,
@@ -1551,6 +1685,28 @@ customerPortalRouter.get(
 );
 
 customerPortalRouter.post(
+  "/plan/change/preview",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = planChangeSchema.parse(req.body);
+    const customer = await getOwnedLinkedCustomer({ customerUser: req.customerUser });
+    const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
+    if (!plan) {
+      throw new ApiError(404, "Plan not found");
+    }
+    const currentPlan = customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null;
+    const preview = computePlanChangePreview({ customer, currentPlan, nextPlan: plan, effectiveMode: payload.effectiveMode });
+    return ok(res, {
+      customerId: customer.customerId,
+      currentPlanCode: currentPlan?.planCode || customer.planCode,
+      nextPlanCode: plan.planCode,
+      nextPlanName: plan.name,
+      ...preview
+    });
+  })
+);
+
+customerPortalRouter.post(
   "/plan/change/apply",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
@@ -1562,6 +1718,126 @@ customerPortalRouter.post(
     }
     const currentPlan = customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null;
     const nextBillMode = plan.category === "business" || plan.category === "enterprise" ? "postpaid" : "prepaid";
+    const preview = computePlanChangePreview({ customer, currentPlan, nextPlan: plan, effectiveMode: payload.effectiveMode });
+
+    if (payload.effectiveMode === "next_cycle") {
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        pendingPlanChange: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          effectiveMode: payload.effectiveMode,
+          billMode: nextBillMode,
+          customerType: nextBillMode === "postpaid" ? "business" : "home",
+          currentPrice: preview.currentPrice,
+          nextPrice: preview.nextPrice,
+          requestedAt: new Date().toISOString()
+        },
+        nextPlanChangeMode: payload.effectiveMode,
+        adjustmentPreview: 0
+      };
+      await customer.save();
+      const request = await ServiceRequest.create({
+        requestNumber: `SR${Date.now().toString().slice(-6)}`,
+        customerUserId: req.customerUser._id,
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        type: "plan_change",
+        status: "scheduled",
+        payload: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          effectiveMode: payload.effectiveMode,
+          adjustmentPreview: 0
+        },
+        timeline: [
+          { event: "request.created", actorType: "customer", actorId: req.customerUser._id.toString(), at: new Date() },
+          { event: "request.scheduled", actorType: "system", actorId: "customer-plan-engine", at: new Date() }
+        ]
+      });
+      return ok(res, {
+        updated: false,
+        scheduled: true,
+        customerId: customer.customerId,
+        planCode: plan.planCode,
+        requestNumber: request.requestNumber
+      });
+    }
+
+    if (preview.payableNow > 0) {
+      const note = await createPlanChangeBillingNote({
+        customer,
+        type: "debit",
+        amount: preview.payableNow,
+        reasonCode: "plan_upgrade_adjustment",
+        note: `Additional amount payable for plan change to ${plan.name}`,
+        metadata: {
+          currentPlanCode: currentPlan?.planCode,
+          nextPlanCode: plan.planCode,
+          effectiveMode: payload.effectiveMode
+        }
+      });
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        dueAmount: Number((Number(customer.billingSnapshot?.dueAmount || 0) + preview.payableNow).toFixed(2)),
+        adjustmentPreview: preview.adjustmentAmount,
+        pendingPlanChange: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          effectiveMode: payload.effectiveMode,
+          billMode: nextBillMode,
+          customerType: nextBillMode === "postpaid" ? "business" : "home",
+          currentPrice: preview.currentPrice,
+          nextPrice: preview.nextPrice,
+          noteNumber: note?.noteNumber,
+          requestedAt: new Date().toISOString()
+        }
+      };
+      await customer.save();
+      const request = await ServiceRequest.create({
+        requestNumber: `SR${Date.now().toString().slice(-6)}`,
+        customerUserId: req.customerUser._id,
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        type: "plan_change",
+        status: "pending_payment",
+        payload: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          effectiveMode: payload.effectiveMode,
+          payableNow: preview.payableNow,
+          noteNumber: note?.noteNumber
+        },
+        timeline: [
+          { event: "request.created", actorType: "customer", actorId: req.customerUser._id.toString(), at: new Date() },
+          { event: "request.payment_required", actorType: "system", actorId: "customer-plan-engine", at: new Date(), note: `Pay Rs ${preview.payableNow.toFixed(2)} to complete plan change` }
+        ]
+      });
+      return ok(res, {
+        updated: false,
+        paymentRequired: true,
+        customerId: customer.customerId,
+        planCode: plan.planCode,
+        requestNumber: request.requestNumber,
+        payableNow: preview.payableNow
+      });
+    }
+
+    if (preview.creditAmount > 0) {
+      await createPlanChangeBillingNote({
+        customer,
+        type: "credit",
+        amount: preview.creditAmount,
+        reasonCode: "plan_downgrade_adjustment",
+        note: `Credit adjustment applied for plan change to ${plan.name}`,
+        metadata: {
+          currentPlanCode: currentPlan?.planCode,
+          nextPlanCode: plan.planCode,
+          effectiveMode: payload.effectiveMode
+        }
+      });
+    }
+
     customer.planCode = plan.planCode;
     customer.planName = plan.name;
     customer.customerType = nextBillMode === "postpaid" ? "business" : "home";
@@ -1571,7 +1847,8 @@ customerPortalRouter.post(
       billMode: nextBillMode,
       lastPlanPrice: Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0),
       nextPlanPrice: Number(plan.monthlyPrice || 0),
-      adjustmentPreview: Number((Number(plan.monthlyPrice || 0) - Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0)).toFixed(2)),
+      adjustmentPreview: preview.adjustmentAmount,
+      pendingPlanChange: null,
       nextPlanChangeMode: payload.effectiveMode
     };
     await customer.save();
@@ -1586,7 +1863,8 @@ customerPortalRouter.post(
         planCode: plan.planCode,
         planName: plan.name,
         effectiveMode: payload.effectiveMode,
-        appliedDirectly: true
+        appliedDirectly: true,
+        creditAmount: preview.creditAmount || 0
       },
       timeline: [
         { event: "request.created", actorType: "customer", actorId: req.customerUser._id.toString(), at: new Date() },
