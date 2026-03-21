@@ -1416,6 +1416,41 @@ adminOpsRouter.post(
 );
 
 adminOpsRouter.post(
+  "/billing/payments/:transactionId/dispatch-receipt",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const payment = await PaymentTransaction.findOne({ transactionId: req.params.transactionId }).lean();
+    if (!payment) {
+      throw new ApiError(404, "Payment transaction not found");
+    }
+    const customer = await Customer.findOne({ customerId: payment.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const receiptUrl = `${req.protocol}://${req.get("host")}/api/v1/admin/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`;
+    const attachments = buildBillingAttachment({
+      title: `Receipt ${payment.transactionId}`,
+      url: receiptUrl,
+      reference: payment.reference || payment.transactionId
+    });
+    await notificationDispatcher.dispatchEvent({
+      eventKey: "paid_invoice",
+      recipients: {
+        email: customer.email,
+        sms: customer.phone
+      },
+      subject: `Payment receipt ${payment.transactionId}`,
+      body: `Dear ${customer.fullName}, we received Rs ${Number(payment.amount || 0).toFixed(2)}. Receipt: ${receiptUrl}`,
+      attachments,
+      entityType: "billing_receipt",
+      entityId: payment.transactionId,
+      metadata: { transactionId: payment.transactionId, receiptUrl, attachments }
+    });
+    return ok(res, { dispatched: true, transactionId: payment.transactionId, receiptUrl, attachments });
+  })
+);
+
+adminOpsRouter.post(
   "/billing/payments/:transactionId/reconcile",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {

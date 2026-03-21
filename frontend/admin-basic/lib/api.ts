@@ -1142,6 +1142,10 @@ export const adminAPI = {
     request(`/api/v1/admin/billing/notes/${noteNumber}/dispatch`, {
       method: 'POST',
     }),
+  dispatchPaymentReceipt: async (transactionId: string) =>
+    request(`/api/v1/admin/billing/payments/${transactionId}/dispatch-receipt`, {
+      method: 'POST',
+    }),
   createBillingNote: async (data: {
     customerId: string
     type: 'credit' | 'debit'

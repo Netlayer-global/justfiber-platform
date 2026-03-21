@@ -96,6 +96,24 @@ function buildBillingNoteHtml(note) {
   </body></html>`;
 }
 
+function buildPaymentReceiptHtml(payment, customer) {
+  return `<!doctype html>
+  <html><head><meta charset="utf-8"/><title>${payment.transactionId}</title></head>
+  <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
+    <h1>Payment Receipt ${payment.transactionId}</h1>
+    <p>Customer: ${customer?.fullName || payment.customerId}</p>
+    <p>Customer ID: ${payment.customerId}</p>
+    <p>Provider: ${payment.provider || "-"}</p>
+    <p>Method: ${payment.method || "-"}</p>
+    <table style="border-collapse:collapse;width:420px;margin-top:16px">
+      <tr><td style="padding:8px;border:1px solid #ccc;">Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(payment.amount || 0).toFixed(2)}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;">Status</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">${payment.status || "-"}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;">Reference</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">${payment.reference || "-"}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #ccc;">Paid At</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">${payment.paidAt ? new Date(payment.paidAt).toLocaleString("en-IN") : "-"}</td></tr>
+    </table>
+  </body></html>`;
+}
+
 function pickBillingBranding(profile) {
   return {
     companyName: "JustFiber",
@@ -227,6 +245,35 @@ function renderBillingNotePdf(note, profile, customer) {
     Number(note.totalAmount || 0)
   );
   drawPdfFooter(doc, branding, `Generated on ${new Date(note.issuedAt || note.createdAt || Date.now()).toLocaleString("en-IN")}`);
+  doc.end();
+  return doc;
+}
+
+function renderPaymentReceiptPdf(payment, profile, customer) {
+  const branding = pickBillingBranding(profile);
+  const doc = new PDFDocument({ margin: 40, size: "A4" });
+  drawPdfHeader(doc, branding, "Payment Receipt", payment.transactionId);
+  let y = drawKeyValueGrid(doc, 130, [
+    ["Customer", customer?.fullName || payment.customerId],
+    ["Customer ID", payment.customerId],
+    ["Provider", payment.provider || "-"],
+    ["Method", payment.method || "-"],
+    ["Reference", payment.reference || "-"],
+    ["Paid At", payment.paidAt ? new Date(payment.paidAt).toLocaleDateString("en-IN") : "-"]
+  ]);
+  y += 18;
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Payment Summary", 40, y);
+  y += 20;
+  drawBreakdownTable(
+    doc,
+    y,
+    [
+      { label: "Received Amount", amount: Number(payment.amount || 0) }
+    ],
+    "Total Received",
+    Number(payment.amount || 0)
+  );
+  drawPdfFooter(doc, branding, `Generated on ${new Date(payment.paidAt || payment.createdAt || Date.now()).toLocaleString("en-IN")}`);
   doc.end();
   return doc;
 }
@@ -1420,7 +1467,11 @@ customerPortalRouter.get(
         viewUrl: `/api/v1/customer/billing/invoices/${encodeURIComponent(invoice.invoiceId || invoice.invoiceNumber)}/pdf?format=html`,
         pdfUrl: `/api/v1/customer/billing/invoices/${encodeURIComponent(invoice.invoiceId || invoice.invoiceNumber)}/pdf`
       })),
-      payments,
+      payments: payments.map((payment) => ({
+        ...payment,
+        viewUrl: `/api/v1/customer/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt?format=html`,
+        pdfUrl: `/api/v1/customer/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`
+      })),
       ledger,
       notes: notes.map((note) => ({
         ...note,
@@ -1429,6 +1480,29 @@ customerPortalRouter.get(
       })),
       requests
     });
+  })
+);
+
+customerPortalRouter.get(
+  "/billing/payments/:transactionId/receipt",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await getOwnedLinkedCustomer({ customerUser: req.customerUser });
+    const payment = await PaymentTransaction.findOne({
+      customerId: customer.customerId,
+      transactionId: req.params.transactionId
+    }).lean();
+    if (!payment) {
+      throw new ApiError(404, "Payment receipt not found");
+    }
+    const profile = await BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean();
+    if (String(req.query.format || "").toLowerCase() === "html") {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.send(buildPaymentReceiptHtml(payment, customer));
+    }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=\"${payment.transactionId}.pdf\"`);
+    return renderPaymentReceiptPdf(payment, profile, customer).pipe(res);
   })
 );
 

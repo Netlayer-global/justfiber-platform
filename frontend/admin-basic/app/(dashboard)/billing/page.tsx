@@ -311,6 +311,20 @@ export default function BillingPage() {
     }
   }
 
+  async function dispatchPaymentReceipt(transactionId: string) {
+    try {
+      const res = await adminAPI.dispatchPaymentReceipt(transactionId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to dispatch receipt')
+        return
+      }
+      toast.success('Receipt dispatched')
+    } catch (error) {
+      console.error('[v0] Failed to dispatch receipt:', error)
+      toast.error('Failed to dispatch receipt')
+    }
+  }
+
   async function suspendFromCollection(customerId: string) {
     try {
       const res = await adminAPI.suspendCustomer(customerId, 'Collections due suspension')
@@ -1025,6 +1039,12 @@ export default function BillingPage() {
                       >
                         Open Receipt
                       </a>
+                      <button
+                        className="text-xs text-[#4da3ff] mt-1 block"
+                        onClick={() => void dispatchPaymentReceipt(payment.transactionId)}
+                      >
+                        Dispatch Receipt
+                      </button>
                     </td>
                     <td className="table-cell">
                       <div>{payment.customerId}</div>
@@ -1088,6 +1108,12 @@ export default function BillingPage() {
                       >
                         Open Receipt
                       </a>
+                      <button
+                        className="text-xs text-[#4da3ff] mt-1 block"
+                        onClick={() => void dispatchPaymentReceipt(payment.transactionId)}
+                      >
+                        Dispatch Receipt
+                      </button>
                     </td>
                     <td className="table-cell">{payment.customerId}</td>
                     <td className="table-cell">Rs {payment.amount.toFixed(2)}</td>

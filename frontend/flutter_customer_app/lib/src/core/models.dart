@@ -113,6 +113,7 @@ class BillingPaymentItem {
     required this.paidAt,
     required this.provider,
     required this.reference,
+    required this.viewUrl,
   });
 
   final String transactionId;
@@ -120,6 +121,7 @@ class BillingPaymentItem {
   final String paidAt;
   final String provider;
   final String reference;
+  final String viewUrl;
 }
 
 class BillingNoteItem {

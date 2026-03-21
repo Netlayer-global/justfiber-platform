@@ -110,6 +110,7 @@ class ApiClient {
         paidAt: (map['paidAt'] ?? '').toString(),
         provider: (map['provider'] ?? '').toString(),
         reference: (map['reference'] ?? '').toString(),
+        viewUrl: (map['viewUrl'] ?? '').toString(),
       );
     }).toList();
     final notes = _asList(details['notes']).map((item) {

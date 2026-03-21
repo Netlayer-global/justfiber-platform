@@ -130,6 +130,11 @@ class _ProfileTabState extends State<ProfileTab> {
                                     '${item.provider.toUpperCase()}  ${item.paidAt}',
                                     style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12),
                                   ),
+                                  if (item.viewUrl.isNotEmpty)
+                                    TextButton(
+                                      onPressed: () => _openDocument(context, appState, item.transactionId, item.viewUrl),
+                                      child: const Text('View receipt'),
+                                    ),
                                 ],
                               ),
                             ),
