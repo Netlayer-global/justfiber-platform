@@ -412,4 +412,16 @@ export interface BillingCollectionItem {
   promiseToPayAt?: string
   promiseAmount?: number
   promiseNote?: string
+  assignedAdminId?: string
+  assignedAdminName?: string
+  latestFollowUpNote?: string
+  latestFollowUpAt?: string
+  followUpCount?: number
+}
+
+export interface BillingCollectionAgent {
+  id: string
+  username: string
+  fullName: string
+  email?: string
 }

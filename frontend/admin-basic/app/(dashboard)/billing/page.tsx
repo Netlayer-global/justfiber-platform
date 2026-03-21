@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -64,6 +64,7 @@ export default function BillingPage() {
   const [notes, setNotes] = useState<BillingNote[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
+  const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [collectionBucket, setCollectionBucket] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -87,7 +88,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes] = await Promise.all([
         adminAPI.getBillingData(),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -95,6 +96,7 @@ export default function BillingPage() {
         adminAPI.getBillingNotes(),
         adminAPI.getBillingPayments(),
         adminAPI.getBillingCollections(collectionBucket || undefined),
+        adminAPI.getBillingCollectionAgents(),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -143,6 +145,9 @@ export default function BillingPage() {
       }
       if (collectionRes.success && collectionRes.data) {
         setCollections(collectionRes.data)
+      }
+      if (collectionAgentRes.success && collectionAgentRes.data) {
+        setCollectionAgents(collectionAgentRes.data)
       }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
@@ -338,6 +343,37 @@ export default function BillingPage() {
     }
   }
 
+  async function assignCollection(item: BillingCollectionItem) {
+    const defaultAgent = collectionAgents.find((agent) => agent.id === item.assignedAdminId)
+    const selected = window.prompt(
+      `Assign collection owner. Available: ${collectionAgents.map((agent) => `${agent.username} (${agent.fullName})`).join(', ')}`,
+      defaultAgent?.username || ''
+    )
+    if (selected === null) return
+    const agent = collectionAgents.find(
+      (entry) => entry.username.toLowerCase() === selected.trim().toLowerCase() || entry.id === selected.trim()
+    )
+    const res = await adminAPI.assignBillingCollectionOwner(item.customerId, agent?.id)
+    if (!res.success) {
+      toast.error(res.error || 'Failed to assign collection owner')
+      return
+    }
+    toast.success(`Assigned to ${agent?.fullName || 'current admin'}`)
+    await loadBilling()
+  }
+
+  async function addFollowUp(item: BillingCollectionItem) {
+    const note = window.prompt('Follow-up note', item.latestFollowUpNote || '')
+    if (!note) return
+    const res = await adminAPI.addBillingCollectionFollowUp(item.customerId, note)
+    if (!res.success) {
+      toast.error(res.error || 'Failed to save follow-up note')
+      return
+    }
+    toast.success('Follow-up note added')
+    await loadBilling()
+  }
+
   async function setPromiseToPay(item: BillingCollectionItem) {
     const promisedAt = window.prompt('Promise to pay date (YYYY-MM-DD)', item.promiseToPayAt ? item.promiseToPayAt.slice(0, 10) : '')
     if (!promisedAt) return
@@ -440,6 +476,9 @@ export default function BillingPage() {
                     <td className="table-cell">
                       <div>{item.pendingPlanName || '-'}</div>
                       <div className="text-xs text-slate-500 mt-1">{item.pendingPlanMode || '-'}</div>
+                      {item.assignedAdminName ? (
+                        <div className="text-xs text-sky-300 mt-1">Owner {item.assignedAdminName}</div>
+                      ) : null}
                       {item.adjustmentPreview ? (
                         <div className="text-xs text-slate-500 mt-1">Adj Rs {Number(item.adjustmentPreview).toFixed(2)}</div>
                       ) : null}
@@ -450,6 +489,11 @@ export default function BillingPage() {
                       ) : null}
                       {item.lastReminderAt ? (
                         <div className="text-xs text-slate-500 mt-1">Reminded {new Date(item.lastReminderAt).toLocaleString()}</div>
+                      ) : null}
+                      {item.latestFollowUpNote ? (
+                        <div className="text-xs text-slate-400 mt-1">
+                          Note: {item.latestFollowUpNote} {item.followUpCount ? `(${item.followUpCount})` : ''}
+                        </div>
                       ) : null}
                     </td>
                     <td className="table-cell text-right">
@@ -468,6 +512,18 @@ export default function BillingPage() {
                         onClick={() => void sendReminder(item)}
                       >
                         Send Reminder
+                      </button>
+                      <button
+                        className="text-xs text-[#4da3ff] mt-2 block ml-auto"
+                        onClick={() => void assignCollection(item)}
+                      >
+                        Assign
+                      </button>
+                      <button
+                        className="text-xs text-[#4da3ff] mt-2 block ml-auto"
+                        onClick={() => void addFollowUp(item)}
+                      >
+                        Add Note
                       </button>
                       <button
                         className="text-xs text-[#4da3ff] mt-2 block ml-auto"

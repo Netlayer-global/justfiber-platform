@@ -12,6 +12,7 @@ import { IntegrationConnection } from "../../models/IntegrationConnection.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { Customer } from "../../models/Customer.js";
+import { AdminUser } from "../../models/AdminUser.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
@@ -456,6 +457,11 @@ adminOpsRouter.get(
         promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
         promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
         promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
+        assignedAdminId: customer.billingSnapshot?.collections?.assignedToAdminId || "",
+        assignedAdminName: customer.billingSnapshot?.collections?.assignedToName || "",
+        latestFollowUpNote: customer.billingSnapshot?.collections?.latestFollowUpNote || "",
+        latestFollowUpAt: customer.billingSnapshot?.collections?.latestFollowUpAt,
+        followUpCount: Number(customer.billingSnapshot?.collections?.followUpCount || 0),
       };
 
       items.push({
@@ -501,11 +507,69 @@ adminOpsRouter.get(
         promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
         promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
         promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
+        assignedAdminId: customer.billingSnapshot?.collections?.assignedToAdminId || "",
+        assignedAdminName: customer.billingSnapshot?.collections?.assignedToName || "",
+        latestFollowUpNote: customer.billingSnapshot?.collections?.latestFollowUpNote || "",
+        latestFollowUpAt: customer.billingSnapshot?.collections?.latestFollowUpAt,
+        followUpCount: Number(customer.billingSnapshot?.collections?.followUpCount || 0),
       });
     }
 
     const filtered = bucketFilter ? items.filter((item) => item.bucket === bucketFilter) : items;
     return ok(res, filtered);
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/collections/agents",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const agents = await AdminUser.find({ status: "active" })
+      .sort({ fullName: 1, username: 1 })
+      .select("_id username fullName email")
+      .lean();
+    return ok(
+      res,
+      agents.map((agent) => ({
+        id: String(agent._id),
+        username: agent.username,
+        fullName: agent.fullName,
+        email: agent.email
+      }))
+    );
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/collections/:customerId/assign",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const targetAdminId = String(req.body?.adminId || req.admin?._id || "");
+    const targetAdmin = await AdminUser.findById(targetAdminId).lean();
+    if (!targetAdmin) {
+      throw new ApiError(404, "Admin user not found");
+    }
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      collections: {
+        ...(customer.billingSnapshot?.collections || {}),
+        assignedToAdminId: String(targetAdmin._id),
+        assignedToName: targetAdmin.fullName || targetAdmin.username,
+        assignedAt: new Date(),
+        assignedByAdminId: req.admin?._id
+      }
+    };
+    await customer.save();
+    return ok(res, {
+      assigned: true,
+      customerId: customer.customerId,
+      assignedAdminId: String(targetAdmin._id),
+      assignedAdminName: targetAdmin.fullName || targetAdmin.username
+    });
   })
 );
 
@@ -562,6 +626,48 @@ adminOpsRouter.post(
     };
     await customer.save();
     return ok(res, { reminded: true, customerId: customer.customerId, invoiceId: invoice?.invoiceId || null });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/collections/:customerId/follow-up",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const note = String(req.body?.note || "").trim();
+    if (!note) {
+      throw new ApiError(400, "Follow-up note is required");
+    }
+    const current = customer.billingSnapshot?.collections || {};
+    const followUps = Array.isArray(current.followUps) ? current.followUps.slice(-19) : [];
+    const entry = {
+      note,
+      createdAt: new Date(),
+      adminId: req.admin?._id,
+      adminName: req.admin?.fullName || req.admin?.username || "Admin"
+    };
+    followUps.push(entry);
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      collections: {
+        ...current,
+        followUps,
+        latestFollowUpNote: entry.note,
+        latestFollowUpAt: entry.createdAt,
+        followUpCount: Number(current.followUpCount || 0) + 1
+      }
+    };
+    await customer.save();
+    return ok(res, {
+      saved: true,
+      customerId: customer.customerId,
+      latestFollowUpNote: entry.note,
+      latestFollowUpAt: entry.createdAt,
+      followUpCount: customer.billingSnapshot?.collections?.followUpCount || followUps.length
+    });
   })
 );
 

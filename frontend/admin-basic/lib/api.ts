@@ -15,6 +15,7 @@ import type {
   BillingNote,
   BillingPayment,
   BillingCollectionItem,
+  BillingCollectionAgent,
   BillingProfile,
   AdminPlanChangePreview,
   AdminPlanChangeResult,
@@ -502,6 +503,20 @@ function mapBillingCollectionItem(item: any): BillingCollectionItem {
     promiseToPayAt: item.promiseToPayAt,
     promiseAmount: Number(item.promiseAmount || 0),
     promiseNote: item.promiseNote,
+    assignedAdminId: item.assignedAdminId,
+    assignedAdminName: item.assignedAdminName,
+    latestFollowUpNote: item.latestFollowUpNote,
+    latestFollowUpAt: item.latestFollowUpAt,
+    followUpCount: Number(item.followUpCount || 0),
+  }
+}
+
+function mapBillingCollectionAgent(item: any): BillingCollectionAgent {
+  return {
+    id: item.id || item._id || '',
+    username: item.username || '',
+    fullName: item.fullName || item.username || 'Admin',
+    email: item.email || '',
   }
 }
 
@@ -985,10 +1000,27 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapBillingCollectionItem) : [],
     }
   },
+  getBillingCollectionAgents: async () => {
+    const res = await request<any[]>('/api/v1/admin/billing/collections/agents')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapBillingCollectionAgent) : [],
+    }
+  },
+  assignBillingCollectionOwner: (customerId: string, adminId?: string) =>
+    request(`/api/v1/admin/billing/collections/${customerId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ adminId }),
+    }),
   sendBillingCollectionReminder: (customerId: string, invoiceId?: string) =>
     request(`/api/v1/admin/billing/collections/${customerId}/remind`, {
       method: 'POST',
       body: JSON.stringify({ invoiceId }),
+    }),
+  addBillingCollectionFollowUp: (customerId: string, note: string) =>
+    request(`/api/v1/admin/billing/collections/${customerId}/follow-up`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
     }),
   setBillingPromiseToPay: (customerId: string, data: { promisedAt: string; amount?: number; note?: string }) =>
     request(`/api/v1/admin/billing/collections/${customerId}/promise-to-pay`, {
