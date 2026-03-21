@@ -1071,6 +1071,11 @@ export const adminAPI = {
     request(`/api/v1/admin/billing/razorpay/orders/${orderId}/mark-stale`, {
       method: 'POST',
     }),
+  createRazorpayRefund: (paymentId: string, data?: { amount?: number; reason?: string; note?: string }) =>
+    request(`/api/v1/admin/billing/razorpay/payments/${paymentId}/refund`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
   assignBillingCollectionOwner: (customerId: string, adminId?: string) =>
     request(`/api/v1/admin/billing/collections/${customerId}/assign`, {
       method: 'POST',

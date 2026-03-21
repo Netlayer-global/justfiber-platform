@@ -22,6 +22,7 @@ import { internalBillingEngine } from "../../integrations/internalBillingEngine.
 import { detectOntBrand } from "../../common/networkProvisioning.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
+import { razorpayClient } from "../../integrations/razorpayClient.js";
 
 export const adminOpsRouter = Router();
 
@@ -1579,6 +1580,108 @@ adminOpsRouter.post(
       metadata: { ledgerEntryId: entry.entryId, refundId, amount }
     });
     return ok(res, entry, { created: true });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/razorpay/payments/:paymentId/refund",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const payment = await PaymentTransaction.findOne({
+      transactionId: req.params.paymentId,
+      provider: "razorpay"
+    });
+    if (!payment) {
+      throw new ApiError(404, "Razorpay payment not found");
+    }
+    const customer = await Customer.findOne({ customerId: payment.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const requestedAmount = req.body?.amount !== undefined ? Number(req.body.amount) : Number(payment.amount || 0);
+    if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+      throw new ApiError(400, "Valid positive refund amount is required");
+    }
+    if (requestedAmount > Number(payment.amount || 0)) {
+      throw new ApiError(400, "Refund amount cannot exceed payment amount");
+    }
+    const refund = await razorpayClient.createRefund(payment.transactionId, {
+      amount: requestedAmount,
+      notes: {
+        customerId: customer.customerId,
+        reason: String(req.body?.reason || "admin_refund"),
+        note: String(req.body?.note || "")
+      }
+    });
+    const refundId = refund.id || `RZP-REF-${Date.now()}`;
+    const entry = await createLedgerEntry({
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      paymentId: payment.transactionId,
+      category: "refund",
+      direction: "credit",
+      amount: requestedAmount,
+      reference: refundId,
+      note: req.body?.note || "Razorpay refund issued",
+      source: "razorpay_refund",
+      createdByAdminId: req.admin?._id,
+      metadata: {
+        requestId: req.requestId,
+        paymentId: payment.transactionId,
+        razorpayRefundId: refund.id
+      }
+    });
+    await PaymentTransaction.create({
+      transactionId: refundId,
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      provider: "razorpay_refund",
+      amount: requestedAmount,
+      status: refund.status || "processed",
+      paidAt: new Date(),
+      method: "refund",
+      reference: payment.transactionId,
+      metadata: {
+        source: "admin_razorpay_refund",
+        originalPaymentId: payment.transactionId,
+        razorpayRefundId: refund.id,
+        refundStatus: refund.status,
+        raw: refund
+      }
+    });
+    payment.metadata = {
+      ...(payment.metadata || {}),
+      refunds: [
+        ...((payment.metadata?.refunds || []).slice(-9)),
+        {
+          refundId,
+          razorpayRefundId: refund.id,
+          amount: requestedAmount,
+          createdAt: new Date(),
+          adminId: req.admin?._id
+        }
+      ]
+    };
+    await payment.save();
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      dueAmount: Math.max(0, entry.balanceAfter),
+      lastRefundAt: new Date()
+    };
+    await customer.save();
+    await auditFromRequest(req, {
+      action: "billing.razorpay_refund.created",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: { ledgerEntryId: entry.entryId, refundId, amount: requestedAmount, paymentId: payment.transactionId }
+    });
+    return ok(res, {
+      created: true,
+      refundId,
+      razorpayRefundId: refund.id,
+      amount: requestedAmount,
+      status: refund.status || "processed"
+    });
   })
 );
 

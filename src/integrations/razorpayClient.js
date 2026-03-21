@@ -52,6 +52,17 @@ export const razorpayClient = {
     });
   },
 
+  createRefund(paymentId, { amount, notes = {}, speed = "normal" } = {}) {
+    return request(`/payments/${paymentId}/refund`, {
+      method: "POST",
+      body: {
+        ...(amount ? { amount: normalizePaise(amount) } : {}),
+        speed,
+        notes
+      }
+    });
+  },
+
   verifyCheckoutSignature({ orderId, paymentId, signature }) {
     if (!env.RAZORPAY_KEY_SECRET) {
       throw new ApiError(503, "Razorpay credentials are not configured");

@@ -399,6 +399,29 @@ export default function BillingPage() {
     }
   }
 
+  async function createRazorpayRefund(paymentId: string, currentAmount: number) {
+    const amountInput = window.prompt('Refund amount', String(currentAmount || 0))
+    if (amountInput === null) return
+    const reason = window.prompt('Refund reason', 'customer_request') || 'customer_request'
+    const note = window.prompt('Refund note', '') || ''
+    try {
+      const res = await adminAPI.createRazorpayRefund(paymentId, {
+        amount: Number(amountInput || 0),
+        reason,
+        note,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to create Razorpay refund')
+        return
+      }
+      toast.success('Razorpay refund created')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to create Razorpay refund:', error)
+      toast.error('Failed to create Razorpay refund')
+    }
+  }
+
   async function setPromiseToPay(item: BillingCollectionItem) {
     const promisedAt = window.prompt('Promise to pay date (YYYY-MM-DD)', item.promiseToPayAt ? item.promiseToPayAt.slice(0, 10) : '')
     if (!promisedAt) return
@@ -967,9 +990,18 @@ export default function BillingPage() {
                         <button className="btn-secondary" onClick={() => void reconcilePayment(payment.transactionId, payment.invoiceId)}>
                           Reconcile
                         </button>
-                      ) : (
-                        <span className="text-xs text-green-400">Done</span>
-                      )}
+                      ) : null}
+                      {(payment.provider === 'razorpay' && (payment.status === 'captured' || payment.status === 'success')) ? (
+                        <button
+                          className="btn-secondary mt-2"
+                          onClick={() => void createRazorpayRefund(payment.transactionId, payment.amount)}
+                        >
+                          Refund
+                        </button>
+                      ) : null}
+                      {payment.reconciliationStatus === 'reconciled' ? (
+                        <span className="text-xs text-green-400 block mt-2">Done</span>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
