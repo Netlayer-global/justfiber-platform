@@ -91,6 +91,40 @@ class _ProfileTabState extends State<ProfileTab> {
             ],
           ),
         ),
+        if (billing.paymentStatus.toLowerCase() == 'overdue' || billing.dueAmount > 0) ...[
+          const SizedBox(height: 18),
+          AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF5B132A), Color(0xFF9A3412)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Billing attention needed', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                Text(
+                  billing.paymentStatus.toLowerCase() == 'overdue'
+                      ? 'Your account has overdue billing. Pay soon to avoid service interruption.'
+                      : 'A payable amount is pending on your account.',
+                  style: const TextStyle(color: Color(0xFFF5DAD3)),
+                ),
+                const SizedBox(height: 12),
+                _row('Pending amount', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
+                if (billing.nextBillDate.isNotEmpty) _row('Bill date', billing.nextBillDate),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: appState.busy ? null : () => _payNow(context, appState, amount: billing.dueAmount),
+                    child: const Text('Clear dues now'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (pendingPlanChange != null) ...[
           const SizedBox(height: 18),
           AppCard(

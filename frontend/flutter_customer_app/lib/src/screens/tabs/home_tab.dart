@@ -100,6 +100,41 @@ class HomeTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
+        if (billing.dueAmount > 0)
+          AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFD81F26), Color(0xFF8A1C4A)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  billing.pendingPlanChange != null ? 'Plan change payment pending' : 'Payment reminder',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  billing.pendingPlanChange != null
+                      ? 'Pay Rs ${billing.dueAmount.toStringAsFixed(0)} to complete your plan switch.'
+                      : 'Rs ${billing.dueAmount.toStringAsFixed(0)} is due. Pay now to keep service active.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: appState.busy ? null : () => _payBill(context, appState),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF161B33),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: Text(billing.pendingPlanChange != null ? 'Pay to switch plan' : 'Pay now'),
+                ),
+              ],
+            ),
+          ),
+        if (billing.dueAmount > 0) const SizedBox(height: 18),
         Row(
           children: [
             Expanded(
@@ -147,6 +182,8 @@ class HomeTab extends StatelessWidget {
               _infoRow('Plan', billing.currentPlan),
               _infoRow('Next bill', billing.nextBillDate),
               _infoRow('Due amount', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
+              if (billing.pendingPlanChange != null)
+                _infoRow('Pending switch', billing.pendingPlanChange!.planName),
             ],
           ),
         ),
