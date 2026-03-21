@@ -10,6 +10,11 @@ import type {
   ServiceZone,
   DashboardStats,
   BillingData,
+  CustomerAction,
+  CustomerDevice,
+  CustomerInvoice,
+  CustomerPayment,
+  CustomerTicket,
 } from './types'
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
@@ -102,6 +107,9 @@ function mapCustomer(customer: any): Customer {
 
   return {
     id: customer.customerId || customer._id || '',
+    customerId: customer.customerId || customer._id || '',
+    accountNumber: customer.accountNumber || '',
+    serviceId: customer.serviceId || '',
     name: customer.fullName || customer.name || customer.customerId || 'Unknown customer',
     email: customer.email || '-',
     phone: customer.phone || '-',
@@ -117,6 +125,91 @@ function mapCustomer(customer: any): Customer {
           ? 'inactive'
           : 'active',
     createdAt: customer.createdAt || new Date().toISOString(),
+    installationDate: customer.installationDate || customer.lastSyncedAt,
+    expiryAt: customer.expiryAt,
+    pppoeUsername:
+      customer.pppoeUsername ||
+      customer.devices?.[0]?.wanInfo?.pppoeUsernameMasked ||
+      customer.devices?.[0]?.wanInfo?.pppoeUsername,
+    billingSnapshot: customer.billingSnapshot || {},
+    invoiceSummary: customer.invoiceSummary || {},
+    devices: Array.isArray(customer.devices) ? customer.devices.map(mapCustomerDevice) : undefined,
+    tickets: Array.isArray(customer.tickets) ? customer.tickets.map(mapCustomerTicket) : undefined,
+    invoices: Array.isArray(customer.invoices) ? customer.invoices.map(mapCustomerInvoice) : undefined,
+    payments: Array.isArray(customer.payments) ? customer.payments.map(mapCustomerPayment) : undefined,
+    actions: Array.isArray(customer.actions) ? customer.actions.map(mapCustomerAction) : undefined,
+    rawAddress: customer.address && typeof customer.address === 'object'
+      ? {
+          line1: customer.address.line1,
+          line2: customer.address.line2,
+          area: customer.address.area,
+          city: customer.address.city,
+          state: customer.address.state,
+          pinCode: customer.address.pinCode || customer.address.pincode,
+        }
+      : undefined,
+  }
+}
+
+function mapCustomerDevice(device: any): CustomerDevice {
+  return {
+    id: device._id || device.deviceId || '',
+    deviceId: device.deviceId || '',
+    serialNumber: device.serialNumber,
+    onlineStatus: device.onlineStatus,
+    provisioningState: device.provisioningState,
+    productClass: device.productClass,
+    wifiInfo: device.wifiInfo || {},
+    wanInfo: device.wanInfo || {},
+    lanInfo: device.lanInfo || {},
+    opticalInfo: device.opticalInfo || {},
+  }
+}
+
+function mapCustomerTicket(ticket: any): CustomerTicket {
+  return {
+    id: ticket._id || ticket.ticketNumber || '',
+    ticketNumber: ticket.ticketNumber,
+    subject: ticket.subject || ticket.title || ticket.category || 'Ticket',
+    status: ticket.status || 'open',
+    priority: ticket.priority || 'medium',
+    category: ticket.category,
+    createdAt: ticket.createdAt,
+  }
+}
+
+function mapCustomerInvoice(invoice: any): CustomerInvoice {
+  return {
+    id: invoice._id || invoice.invoiceId || '',
+    invoiceId: invoice.invoiceId || invoice._id || '',
+    invoiceNumber: invoice.invoiceNumber,
+    amount: Number(invoice.totalAmount || invoice.amount || 0),
+    paymentStatus: invoice.paymentStatus || invoice.status,
+    generatedAt: invoice.generatedAt,
+    dueDate: invoice.dueDate,
+  }
+}
+
+function mapCustomerPayment(payment: any): CustomerPayment {
+  return {
+    id: payment._id || payment.transactionId || '',
+    transactionId: payment.transactionId || payment._id || '',
+    amount: Number(payment.amount || 0),
+    status: payment.status,
+    provider: payment.provider,
+    method: payment.method,
+    paidAt: payment.paidAt || payment.createdAt,
+    invoiceId: payment.invoiceId,
+  }
+}
+
+function mapCustomerAction(action: any): CustomerAction {
+  return {
+    id: action._id || '',
+    actionType: action.actionType || 'action',
+    status: action.status || 'pending',
+    createdAt: action.createdAt,
+    payload: action.payload || {},
   }
 }
 
@@ -309,8 +402,20 @@ export const adminAPI = {
     request(`/api/v1/admin/catalog/plans/${id}`, { method: 'DELETE' }),
 
   // Customers
-  getCustomers: async (page = 1, limit = 20) => {
-    const res = await request<any[]>(`/api/v1/admin/customers?page=${page}&limit=${limit}`)
+  getCustomers: async (
+    page = 1,
+    limit = 20,
+    filters?: { search?: string; status?: string; planCode?: string; city?: string }
+  ) => {
+    const search = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    })
+    if (filters?.search) search.set('search', filters.search)
+    if (filters?.status) search.set('status', filters.status)
+    if (filters?.planCode) search.set('planCode', filters.planCode)
+    if (filters?.city) search.set('city', filters.city)
+    const res = await request<any[]>(`/api/v1/admin/customers?${search.toString()}`)
     return {
       ...res,
       data: {
@@ -334,10 +439,38 @@ export const adminAPI = {
   updateCustomer: (id: string, data: Partial<Customer>) =>
     request<Customer>(`/api/v1/admin/customers/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        fullName: data.name,
+        phone: data.phone,
+        email: data.email === '-' ? null : data.email,
+        planCode: data.plan?.id,
+        planName: data.plan?.name,
+        operationalStatus:
+          data.status === 'suspended'
+            ? 'suspended'
+            : data.status === 'inactive'
+              ? 'inactive'
+              : 'active',
+        address: data.rawAddress,
+        billingSnapshot: data.billingSnapshot,
+        invoiceSummary: data.invoiceSummary,
+      }),
     }),
-  deleteCustomer: (id: string) =>
-    request(`/api/v1/admin/customers/${id}`, { method: 'DELETE' }),
+  suspendCustomer: (id: string, reason: string) =>
+    request(`/api/v1/admin/customers/${id}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  resumeCustomer: (id: string, reason: string) =>
+    request(`/api/v1/admin/customers/${id}/resume`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  retryCustomerProvisioning: (id: string, presetName = 'SERVICE_ACTIVATE') =>
+    request(`/api/v1/admin/customers/${id}/retry-provisioning`, {
+      method: 'POST',
+      body: JSON.stringify({ presetName }),
+    }),
 
   // Devices
   getDevices: async (page = 1, limit = 20) => {
@@ -357,6 +490,20 @@ export const adminAPI = {
       data: res.data ? mapDevice(res.data) : undefined,
     }
   },
+  updateDeviceWifi: (deviceId: string, data: {
+    ssid24?: string
+    ssid5?: string
+    password24?: string
+    password5?: string
+    password?: string
+    pppoeUsername?: string
+    pppoePassword?: string
+    natEnabled?: boolean
+  }) =>
+    request(`/api/v1/admin/network/device-management/${deviceId}/wifi`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   // Tickets
   getTickets: async (page = 1, limit = 20) => {
@@ -571,4 +718,19 @@ export const adminAPI = {
       },
     }
   },
+  getCustomerBilling: async (customerId: string) =>
+    request<{
+      summary: Record<string, unknown>
+      invoices: any[]
+      payments: any[]
+      ledger: any[]
+    }>(`/api/v1/admin/customers/${customerId}/billing`),
+  confirmCustomerPayment: async (
+    customerId: string,
+    data: { amount: number; method?: string; reference?: string; paymentId?: string }
+  ) =>
+    request(`/api/v1/admin/customers/${customerId}/billing/payment/confirm`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }

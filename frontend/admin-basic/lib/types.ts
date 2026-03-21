@@ -33,6 +33,9 @@ export interface Plan {
 
 export interface Customer {
   id: string
+  customerId?: string
+  accountNumber?: string
+  serviceId?: string
   name: string
   email: string
   phone: string
@@ -40,6 +43,24 @@ export interface Customer {
   plan: { id: string; name: string }
   status: 'active' | 'inactive' | 'suspended'
   createdAt: string
+  installationDate?: string
+  expiryAt?: string
+  pppoeUsername?: string
+  billingSnapshot?: Record<string, any>
+  invoiceSummary?: Record<string, any>
+  devices?: CustomerDevice[]
+  tickets?: CustomerTicket[]
+  invoices?: CustomerInvoice[]
+  payments?: CustomerPayment[]
+  actions?: CustomerAction[]
+  rawAddress?: {
+    line1?: string
+    line2?: string
+    area?: string
+    city?: string
+    state?: string
+    pinCode?: string
+  }
 }
 
 export interface Device {
@@ -50,6 +71,58 @@ export interface Device {
   status: 'online' | 'offline' | 'error'
   customerId?: string
   location?: string
+}
+
+export interface CustomerDevice {
+  id: string
+  deviceId: string
+  serialNumber?: string
+  onlineStatus?: string
+  provisioningState?: string
+  productClass?: string
+  wifiInfo?: Record<string, any>
+  wanInfo?: Record<string, any>
+  lanInfo?: Record<string, any>
+  opticalInfo?: Record<string, any>
+}
+
+export interface CustomerTicket {
+  id: string
+  ticketNumber?: string
+  subject: string
+  status: string
+  priority: string
+  category?: string
+  createdAt?: string
+}
+
+export interface CustomerInvoice {
+  id: string
+  invoiceId: string
+  invoiceNumber?: string
+  amount: number
+  paymentStatus?: string
+  generatedAt?: string
+  dueDate?: string
+}
+
+export interface CustomerPayment {
+  id: string
+  transactionId: string
+  amount: number
+  status?: string
+  provider?: string
+  method?: string
+  paidAt?: string
+  invoiceId?: string
+}
+
+export interface CustomerAction {
+  id: string
+  actionType: string
+  status: string
+  createdAt?: string
+  payload?: Record<string, any>
 }
 
 export interface Ticket {

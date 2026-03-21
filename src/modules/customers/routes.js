@@ -27,11 +27,23 @@ customersRouter.get(
     const { page, limit, skip } = buildPagination(req.query);
     const filter = {};
     if (req.query.search) {
+      const searchValue = String(req.query.search).trim();
+      const searchRegex = { $regex: searchValue, $options: "i" };
+      const matchingDeviceCustomerIds = await DeviceOperationalCache.distinct("customerId", {
+        $or: [
+          { "wanInfo.pppoeUsernameMasked": searchRegex },
+          { "wanInfo.pppoeUsername": searchRegex },
+          { deviceId: searchRegex },
+          { serialNumber: searchRegex }
+        ]
+      });
       filter.$or = [
-        { customerId: req.query.search },
-        { accountNumber: req.query.search },
-        { phone: req.query.search },
-        { fullName: { $regex: req.query.search, $options: "i" } }
+        { customerId: searchValue },
+        { accountNumber: searchValue },
+        { phone: searchValue },
+        { email: searchRegex },
+        { fullName: searchRegex },
+        ...(matchingDeviceCustomerIds.length ? [{ customerId: { $in: matchingDeviceCustomerIds } }] : [])
       ];
     }
     if (req.query.status) {
