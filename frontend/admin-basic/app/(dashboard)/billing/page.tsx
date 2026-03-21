@@ -1017,6 +1017,14 @@ export default function BillingPage() {
                     <td className="table-cell">
                       <div className="font-mono text-xs">{payment.transactionId}</div>
                       <div className="text-xs text-slate-500 mt-1">{payment.provider || '-'} | {payment.method || '-'}</div>
+                      <a
+                        className="text-xs text-[#4da3ff] mt-1 inline-block"
+                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open Receipt
+                      </a>
                     </td>
                     <td className="table-cell">
                       <div>{payment.customerId}</div>
@@ -1072,6 +1080,14 @@ export default function BillingPage() {
                     <td className="table-cell">
                       <div className="font-mono text-xs">{payment.transactionId}</div>
                       <div className="text-xs text-slate-500 mt-1">{payment.provider || '-'} | {payment.razorpayRefundId || '-'}</div>
+                      <a
+                        className="text-xs text-[#4da3ff] mt-1 inline-block"
+                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open Receipt
+                      </a>
                     </td>
                     <td className="table-cell">{payment.customerId}</td>
                     <td className="table-cell">Rs {payment.amount.toFixed(2)}</td>
