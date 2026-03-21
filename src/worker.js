@@ -88,6 +88,46 @@ function computeNextRun(frequency, from = new Date()) {
   return next;
 }
 
+async function applyAutomatedCustomerStatusChange(customer, nextStatus, reason) {
+  if (!customer?.serviceId || customer.operationalStatus === nextStatus) {
+    return false;
+  }
+  if (nextStatus === "suspended") {
+    await radiusServiceManager.suspendSubscriberAccess({
+      serviceId: customer.serviceId,
+      reason
+    });
+  } else if (nextStatus === "active") {
+    await radiusServiceManager.resumeSubscriberAccess({
+      serviceId: customer.serviceId
+    });
+  } else {
+    return false;
+  }
+
+  const device = await DeviceOperationalCache.findOne({ customerId: customer.customerId });
+  if (device) {
+    await genieacsClient.applyPreset({
+      deviceId: device.deviceId,
+      presetName: nextStatus === "suspended" ? "SERVICE_SUSPEND" : "SERVICE_RESUME",
+      correlationId: `billing-${customer.customerId}-${nextStatus}`
+    }).catch(() => null);
+  }
+
+  customer.operationalStatus = nextStatus;
+  await customer.save();
+  await writeAuditLog({
+    actorType: "system",
+    actorId: "worker",
+    actorName: "billing-scheduler",
+    action: `customer.${nextStatus}.automated`,
+    entityType: "customer",
+    entityId: customer.customerId,
+    metadata: { reason }
+  });
+  return true;
+}
+
 const worker = new Worker(
   "admin-actions",
   async (job) => {
@@ -840,7 +880,7 @@ async function runRecurringBillingTasks() {
           }
         }
       );
-      const customer = await Customer.findOne({ customerId: invoice.customerId }).lean();
+      const customer = await Customer.findOne({ customerId: invoice.customerId });
       if (customer?.phone || customer?.email) {
         await notificationDispatcher.dispatchEvent({
           eventKey: "invoice_due_date",
@@ -854,6 +894,44 @@ async function runRecurringBillingTasks() {
           entityId: invoice.invoiceId,
           metadata: { invoiceId: invoice.invoiceId, stage: "overdue" }
         }).catch(() => null);
+      }
+      if (customer) {
+        const graceDays = Number(customer.billingSnapshot?.graceDays || 0);
+        const overdueDays = invoice.dueDate
+          ? Math.max(0, Math.floor((now.getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+          : 0;
+        const promiseToPayAt = customer.billingSnapshot?.collections?.promiseToPayAt
+          ? new Date(customer.billingSnapshot.collections.promiseToPayAt)
+          : null;
+        const hasValidPromise =
+          promiseToPayAt &&
+          !Number.isNaN(promiseToPayAt.getTime()) &&
+          promiseToPayAt.getTime() >= now.getTime();
+        if (
+          customer.operationalStatus === "active" &&
+          overdueDays > graceDays &&
+          !hasValidPromise
+        ) {
+          const suspended = await applyAutomatedCustomerStatusChange(
+            customer,
+            "suspended",
+            `Auto collections suspension for overdue invoice ${invoice.invoiceNumber || invoice.invoiceId}`
+          );
+          if (suspended && (customer.phone || customer.email)) {
+            await notificationDispatcher.dispatchEvent({
+              eventKey: "account_suspension",
+              recipients: {
+                email: customer.email,
+                sms: customer.phone
+              },
+              subject: `Service suspended for ${customer.customerId}`,
+              body: `Dear ${customer.fullName}, your service has been temporarily suspended due to overdue billing amount of Rs ${Number(invoice.totalAmount || 0).toFixed(2)}.`,
+              entityType: "customer",
+              entityId: customer.customerId,
+              metadata: { invoiceId: invoice.invoiceId, automation: "collections_suspend" }
+            }).catch(() => null);
+          }
+        }
       }
     }
 
@@ -927,8 +1005,47 @@ async function runRecurringBillingTasks() {
         });
       }
 
-      const customer = await Customer.findOne({ customerId: payment.customerId }).lean();
-      if (customer?.phone || customer?.email) {
+      const customer = await Customer.findOne({ customerId: payment.customerId });
+      let resumed = false;
+      if (customer) {
+        customer.billingSnapshot = {
+          ...(customer.billingSnapshot || {}),
+          dueAmount: 0,
+          lastPaymentStatus: "paid",
+          lastPaidAt: payment.paidAt || new Date(),
+          lastReconciledPaymentId: payment.transactionId,
+          collections: {
+            ...(customer.billingSnapshot?.collections || {}),
+            lastSettledAt: new Date(),
+            promiseToPayAt: null,
+            promiseAmount: 0,
+            promiseNote: ""
+          }
+        };
+        resumed =
+          customer.operationalStatus === "suspended"
+            ? await applyAutomatedCustomerStatusChange(
+                customer,
+                "active",
+                `Auto resume after payment reconciliation ${payment.transactionId}`
+              )
+            : (await customer.save(), false);
+        if ((customer.phone || customer.email) && resumed) {
+          await notificationDispatcher.dispatchEvent({
+            eventKey: "paid_invoice",
+            recipients: {
+              email: customer.email,
+              sms: customer.phone
+            },
+            subject: `Service resumed for ${customer.customerId}`,
+            body: `Dear ${customer.fullName}, payment of Rs ${Number(payment.amount || 0).toFixed(2)} was received and your service has been resumed.`,
+            entityType: "customer",
+            entityId: customer.customerId,
+            metadata: { invoiceId: invoice.invoiceId, paymentId: payment.transactionId, automation: "collections_resume" }
+          }).catch(() => null);
+        }
+      }
+      if ((customer?.phone || customer?.email) && !resumed) {
         await notificationDispatcher.dispatchEvent({
           eventKey: "paid_invoice",
           recipients: {
