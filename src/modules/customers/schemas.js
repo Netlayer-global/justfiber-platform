@@ -8,6 +8,13 @@ export const retryProvisioningSchema = z.object({
   presetName: z.enum(["SERVICE_PREPARE", "SERVICE_ACTIVATE", "SERVICE_SUSPEND", "SERVICE_RESUME"])
 });
 
+export const adminPlanChangeSchema = z.object({
+  planCode: z.string().min(2),
+  effectiveMode: z.enum(["immediate", "next_cycle"]).default("immediate"),
+  forceApply: z.boolean().optional(),
+  note: z.string().max(300).optional()
+});
+
 export const updateCustomerSchema = z.object({
   fullName: z.string().min(2).max(200).optional(),
   phone: z.string().min(8).max(20).optional(),

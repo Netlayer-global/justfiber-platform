@@ -8,7 +8,7 @@ import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
-import { statusActionSchema, retryProvisioningSchema, updateCustomerSchema } from "./schemas.js";
+import { statusActionSchema, retryProvisioningSchema, updateCustomerSchema, adminPlanChangeSchema } from "./schemas.js";
 import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { allowedPresets } from "../../integrations/genieacsClient.js";
@@ -17,10 +17,89 @@ import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { BillingNote } from "../../models/BillingNote.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
+import { PlanCatalog } from "../../models/PlanCatalog.js";
 
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
+
+function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMode }) {
+  const currentPrice = Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0);
+  const nextPrice = Number(nextPlan?.monthlyPrice || 0);
+  const remainingDays = Math.max(0, Number(customer.billingSnapshot?.remainingDays || 0));
+  const billMode =
+    customer.billingSnapshot?.billMode ||
+    (customer.customerType === "business" ? "postpaid" : "prepaid");
+
+  if (effectiveMode === "next_cycle") {
+    return {
+      billMode,
+      currentPrice,
+      nextPrice,
+      remainingDays,
+      proratedCurrentCredit: 0,
+      proratedNextCharge: 0,
+      adjustmentAmount: 0,
+      payableNow: 0,
+      creditAmount: 0,
+      mode: "scheduled"
+    };
+  }
+
+  if (billMode === "prepaid") {
+    const ratio = Math.min(1, Math.max(0, remainingDays / 30));
+    const proratedCurrentCredit = Number((currentPrice * ratio).toFixed(2));
+    const proratedNextCharge = Number((nextPrice * ratio).toFixed(2));
+    const adjustmentAmount = Number((proratedNextCharge - proratedCurrentCredit).toFixed(2));
+    return {
+      billMode,
+      currentPrice,
+      nextPrice,
+      remainingDays,
+      proratedCurrentCredit,
+      proratedNextCharge,
+      adjustmentAmount,
+      payableNow: adjustmentAmount > 0 ? adjustmentAmount : 0,
+      creditAmount: adjustmentAmount < 0 ? Math.abs(adjustmentAmount) : 0,
+      mode: "immediate"
+    };
+  }
+
+  const adjustmentAmount = Number((nextPrice - currentPrice).toFixed(2));
+  return {
+    billMode,
+    currentPrice,
+    nextPrice,
+    remainingDays,
+    proratedCurrentCredit: 0,
+    proratedNextCharge: nextPrice,
+    adjustmentAmount,
+    payableNow: adjustmentAmount > 0 ? adjustmentAmount : 0,
+    creditAmount: adjustmentAmount < 0 ? Math.abs(adjustmentAmount) : 0,
+    mode: "immediate"
+  };
+}
+
+async function createPlanChangeBillingNote({ customer, type, amount, reasonCode, note, metadata, createdByAdminId }) {
+  const safeAmount = Number(amount || 0);
+  if (!(safeAmount > 0)) return null;
+  return BillingNote.create({
+    noteNumber: `${type === "credit" ? "CN" : "DN"}-${Date.now()}`,
+    type,
+    customerId: customer.customerId,
+    serviceId: customer.serviceId,
+    reasonCode,
+    note,
+    amount: safeAmount,
+    taxAmount: 0,
+    totalAmount: safeAmount,
+    taxMode: "flat_tax",
+    status: "applied",
+    metadata,
+    createdByAdminId,
+    appliedAt: new Date()
+  });
+}
 
 customersRouter.get(
   "/",
@@ -169,6 +248,260 @@ async function createActionRequest(req, res, actionType) {
     status: request.status
   });
 }
+
+customersRouter.post(
+  "/:customerId/plan-change/preview",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = adminPlanChangeSchema.parse(req.body || {});
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
+    if (!plan) {
+      throw new ApiError(404, "Plan not found");
+    }
+    const currentPlan = customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null;
+    const preview = computePlanChangePreview({ customer, currentPlan, nextPlan: plan, effectiveMode: payload.effectiveMode });
+    return ok(res, {
+      customerId: customer.customerId,
+      currentPlanCode: currentPlan?.planCode || customer.planCode,
+      nextPlanCode: plan.planCode,
+      nextPlanName: plan.name,
+      effectiveMode: payload.effectiveMode,
+      ...preview
+    });
+  })
+);
+
+customersRouter.post(
+  "/:customerId/plan-change/apply",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = adminPlanChangeSchema.parse(req.body || {});
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
+    if (!plan) {
+      throw new ApiError(404, "Plan not found");
+    }
+    const currentPlan = customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null;
+    const nextBillMode = plan.category === "business" || plan.category === "enterprise" ? "postpaid" : "prepaid";
+    const preview = computePlanChangePreview({ customer, currentPlan, nextPlan: plan, effectiveMode: payload.effectiveMode });
+    const actorId = req.admin?._id?.toString?.() || "admin";
+
+    if (payload.effectiveMode === "next_cycle") {
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        pendingPlanChange: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          effectiveMode: payload.effectiveMode,
+          billMode: nextBillMode,
+          customerType: nextBillMode === "postpaid" ? "business" : "home",
+          currentPrice: preview.currentPrice,
+          nextPrice: preview.nextPrice,
+          requestedAt: new Date().toISOString(),
+          requestedByAdminId: actorId
+        },
+        nextPlanChangeMode: payload.effectiveMode,
+        adjustmentPreview: 0
+      };
+      await customer.save();
+      const request = await ServiceRequest.create({
+        requestNumber: `SR${Date.now().toString().slice(-6)}`,
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        type: "plan_change",
+        status: "scheduled",
+        payload: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          effectiveMode: payload.effectiveMode,
+          adjustmentPreview: 0,
+          requestedByAdminId: actorId,
+          note: payload.note
+        },
+        timeline: [
+          { event: "request.created", actorType: "admin", actorId, at: new Date(), note: payload.note },
+          { event: "request.scheduled", actorType: "system", actorId: "admin-plan-engine", at: new Date() }
+        ]
+      });
+      return ok(res, {
+        updated: false,
+        scheduled: true,
+        paymentRequired: false,
+        forceApplied: false,
+        customerId: customer.customerId,
+        planCode: plan.planCode,
+        requestNumber: request.requestNumber,
+        payableNow: 0
+      });
+    }
+
+    if (preview.payableNow > 0 && !payload.forceApply) {
+      const note = await createPlanChangeBillingNote({
+        customer,
+        type: "debit",
+        amount: preview.payableNow,
+        reasonCode: "plan_upgrade_adjustment",
+        note: payload.note || `Additional amount payable for plan change to ${plan.name}`,
+        metadata: {
+          currentPlanCode: currentPlan?.planCode,
+          nextPlanCode: plan.planCode,
+          effectiveMode: payload.effectiveMode,
+          requestedByAdminId: actorId
+        },
+        createdByAdminId: req.admin?._id
+      });
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        dueAmount: Number((Number(customer.billingSnapshot?.dueAmount || 0) + preview.payableNow).toFixed(2)),
+        adjustmentPreview: preview.adjustmentAmount,
+        pendingPlanChange: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          effectiveMode: payload.effectiveMode,
+          billMode: nextBillMode,
+          customerType: nextBillMode === "postpaid" ? "business" : "home",
+          currentPrice: preview.currentPrice,
+          nextPrice: preview.nextPrice,
+          noteNumber: note?.noteNumber,
+          requestedAt: new Date().toISOString(),
+          requestedByAdminId: actorId
+        }
+      };
+      await customer.save();
+      const request = await ServiceRequest.create({
+        requestNumber: `SR${Date.now().toString().slice(-6)}`,
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        type: "plan_change",
+        status: "pending_payment",
+        payload: {
+          planCode: plan.planCode,
+          planName: plan.name,
+          effectiveMode: payload.effectiveMode,
+          payableNow: preview.payableNow,
+          noteNumber: note?.noteNumber,
+          requestedByAdminId: actorId,
+          note: payload.note
+        },
+        timeline: [
+          { event: "request.created", actorType: "admin", actorId, at: new Date(), note: payload.note },
+          { event: "request.payment_required", actorType: "system", actorId: "admin-plan-engine", at: new Date(), note: `Pay Rs ${preview.payableNow.toFixed(2)} to complete plan change` }
+        ]
+      });
+      return ok(res, {
+        updated: false,
+        scheduled: false,
+        paymentRequired: true,
+        forceApplied: false,
+        customerId: customer.customerId,
+        planCode: plan.planCode,
+        requestNumber: request.requestNumber,
+        payableNow: preview.payableNow
+      });
+    }
+
+    if (preview.payableNow > 0 && payload.forceApply) {
+      await createPlanChangeBillingNote({
+        customer,
+        type: "debit",
+        amount: preview.payableNow,
+        reasonCode: "plan_upgrade_adjustment",
+        note: payload.note || `Forced admin plan change to ${plan.name}`,
+        metadata: {
+          currentPlanCode: currentPlan?.planCode,
+          nextPlanCode: plan.planCode,
+          effectiveMode: payload.effectiveMode,
+          forcedByAdminId: actorId
+        },
+        createdByAdminId: req.admin?._id
+      });
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        dueAmount: Number((Number(customer.billingSnapshot?.dueAmount || 0) + preview.payableNow).toFixed(2)),
+      };
+    } else if (preview.creditAmount > 0) {
+      await createPlanChangeBillingNote({
+        customer,
+        type: "credit",
+        amount: preview.creditAmount,
+        reasonCode: "plan_downgrade_adjustment",
+        note: payload.note || `Credit adjustment applied for plan change to ${plan.name}`,
+        metadata: {
+          currentPlanCode: currentPlan?.planCode,
+          nextPlanCode: plan.planCode,
+          effectiveMode: payload.effectiveMode,
+          requestedByAdminId: actorId
+        },
+        createdByAdminId: req.admin?._id
+      });
+    }
+
+    customer.planCode = plan.planCode;
+    customer.planName = plan.name;
+    customer.customerType = nextBillMode === "postpaid" ? "business" : "home";
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      speedMbps: plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+      billMode: nextBillMode,
+      lastPlanPrice: Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0),
+      nextPlanPrice: Number(plan.monthlyPrice || 0),
+      adjustmentPreview: preview.adjustmentAmount,
+      pendingPlanChange: null,
+      nextPlanChangeMode: payload.effectiveMode
+    };
+    await customer.save();
+    const request = await ServiceRequest.create({
+      requestNumber: `SR${Date.now().toString().slice(-6)}`,
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      type: "plan_change",
+      status: "completed",
+      payload: {
+        planCode: plan.planCode,
+        planName: plan.name,
+        effectiveMode: payload.effectiveMode,
+        appliedDirectly: true,
+        adminForceApplied: Boolean(payload.forceApply && preview.payableNow > 0),
+        requestedByAdminId: actorId,
+        payableNow: preview.payableNow
+      },
+      timeline: [
+        { event: "request.created", actorType: "admin", actorId, at: new Date(), note: payload.note },
+        { event: "request.completed", actorType: "admin", actorId, at: new Date(), note: payload.forceApply ? "Force applied" : "Applied directly" }
+      ]
+    });
+    await auditFromRequest(req, {
+      action: "customer.plan_change.applied",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: {
+        currentPlanCode: currentPlan?.planCode,
+        nextPlanCode: plan.planCode,
+        effectiveMode: payload.effectiveMode,
+        forceApply: Boolean(payload.forceApply),
+        payableNow: preview.payableNow,
+        creditAmount: preview.creditAmount
+      }
+    });
+    return ok(res, {
+      updated: true,
+      scheduled: false,
+      paymentRequired: false,
+      forceApplied: Boolean(payload.forceApply && preview.payableNow > 0),
+      customerId: customer.customerId,
+      planCode: plan.planCode,
+      requestNumber: request.requestNumber,
+      payableNow: preview.payableNow
+    });
+  })
+);
 
 customersRouter.post(
   "/:customerId/suspend",

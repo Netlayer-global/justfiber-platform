@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
-import type { Customer, CustomerDevice } from '@/lib/types'
+import type { AdminPlanChangePreview, Customer, CustomerDevice, Plan } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -27,6 +27,12 @@ export default function CustomerDetailPage() {
   const [reason, setReason] = useState('Admin action')
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentReference, setPaymentReference] = useState('')
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([])
+  const [planCode, setPlanCode] = useState('')
+  const [planChangeMode, setPlanChangeMode] = useState<'immediate' | 'next_cycle'>('immediate')
+  const [planChangeNote, setPlanChangeNote] = useState('')
+  const [forceApply, setForceApply] = useState(false)
+  const [planChangePreview, setPlanChangePreview] = useState<AdminPlanChangePreview | null>(null)
   const [profileForm, setProfileForm] = useState({
     name: '',
     phone: '',
@@ -51,6 +57,7 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     if (!customerId) return
     void loadCustomer()
+    void loadPlans()
   }, [customerId])
 
   async function loadCustomer() {
@@ -99,6 +106,17 @@ export default function CustomerDetailPage() {
       toast.error('Failed to load customer')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function loadPlans() {
+    try {
+      const res = await adminAPI.getPlans()
+      if (res.success && res.data) {
+        setAvailablePlans(res.data.items || [])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to load plans:', error)
     }
   }
 
@@ -224,6 +242,66 @@ export default function CustomerDetailPage() {
     } catch (error) {
       console.error('[v0] Failed to confirm payment:', error)
       toast.error('Failed to confirm payment')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handlePreviewPlanChange() {
+    if (!customer || !planCode) {
+      toast.error('Select a target plan')
+      return
+    }
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.previewCustomerPlanChange(customer.id, {
+        planCode,
+        effectiveMode: planChangeMode,
+      })
+      if (!res.success || !res.data) {
+        toast.error(res.error || 'Failed to preview plan change')
+        return
+      }
+      setPlanChangePreview(res.data)
+      toast.success('Plan change preview ready')
+    } catch (error) {
+      console.error('[v0] Failed to preview plan change:', error)
+      toast.error('Failed to preview plan change')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleApplyPlanChange() {
+    if (!customer || !planCode) {
+      toast.error('Select a target plan')
+      return
+    }
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.applyCustomerPlanChange(customer.id, {
+        planCode,
+        effectiveMode: planChangeMode,
+        forceApply,
+        note: planChangeNote || undefined,
+      })
+      if (!res.success || !res.data) {
+        toast.error(res.error || 'Failed to apply plan change')
+        return
+      }
+      const message = res.data.paymentRequired
+        ? `Pending payment created for Rs ${Number(res.data.payableNow || 0).toFixed(2)}`
+        : res.data.scheduled
+          ? 'Plan change scheduled for next cycle'
+          : res.data.forceApplied
+            ? 'Plan force-applied with due adjustment'
+            : 'Plan change applied'
+      toast.success(message)
+      setPlanChangePreview(null)
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to apply plan change:', error)
+      toast.error('Failed to apply plan change')
     } finally {
       setIsSaving(false)
     }
@@ -462,6 +540,48 @@ export default function CustomerDetailPage() {
                     <input className="input" placeholder="Reference / transaction id" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} />
                   </div>
                   <button className="btn-primary" onClick={() => void handleConfirmPayment()} disabled={isSaving}>Confirm Payment / Renew</button>
+                </div>
+                <div className="card p-5 space-y-4">
+                  <h2 className="text-lg font-semibold">Admin Plan Change Control</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <select className="input" value={planCode} onChange={(e) => setPlanCode(e.target.value)}>
+                      <option value="">Select target plan</option>
+                      {availablePlans
+                        .filter((plan) => plan.planCode !== customer.plan.id)
+                        .map((plan) => (
+                          <option key={plan.id} value={plan.planCode || plan.id}>
+                            {plan.name} | {plan.speed} Mbps | Rs {plan.price}
+                          </option>
+                        ))}
+                    </select>
+                    <select className="input" value={planChangeMode} onChange={(e) => setPlanChangeMode(e.target.value as 'immediate' | 'next_cycle')}>
+                      <option value="immediate">Immediate</option>
+                      <option value="next_cycle">Next cycle</option>
+                    </select>
+                    <input className="input md:col-span-2" placeholder="Admin note / reason" value={planChangeNote} onChange={(e) => setPlanChangeNote(e.target.value)} />
+                  </div>
+                  <label className="flex items-center gap-3 text-sm">
+                    <input type="checkbox" checked={forceApply} onChange={(e) => setForceApply(e.target.checked)} />
+                    Force apply even if additional payment is required
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="btn-secondary" onClick={() => void handlePreviewPlanChange()} disabled={isSaving || !planCode}>Preview</button>
+                    <button className="btn-primary" onClick={() => void handleApplyPlanChange()} disabled={isSaving || !planCode}>Apply</button>
+                  </div>
+                  {planChangePreview ? (
+                    <div className="rounded bg-[#0a0e27] p-4 text-sm space-y-2">
+                      <p>Current: {planChangePreview.currentPlanCode || customer.plan.id}</p>
+                      <p>Target: {planChangePreview.nextPlanName} ({planChangePreview.nextPlanCode})</p>
+                      <p>Mode: {planChangePreview.effectiveMode}</p>
+                      <p>Billing: {planChangePreview.billMode || '-'}</p>
+                      <p>Current price: Rs {Number(planChangePreview.currentPrice || 0).toFixed(2)}</p>
+                      <p>Next price: Rs {Number(planChangePreview.nextPrice || 0).toFixed(2)}</p>
+                      <p>Adjustment: Rs {Number(planChangePreview.adjustmentAmount || 0).toFixed(2)}</p>
+                      <p>Payable now: Rs {Number(planChangePreview.payableNow || 0).toFixed(2)}</p>
+                      <p>Credit amount: Rs {Number(planChangePreview.creditAmount || 0).toFixed(2)}</p>
+                      <p>Remaining days: {Number(planChangePreview.remainingDays || 0)}</p>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="card p-5 space-y-3">
                   <h2 className="text-lg font-semibold">Invoices</h2>

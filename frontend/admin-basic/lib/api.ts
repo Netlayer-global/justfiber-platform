@@ -15,6 +15,8 @@ import type {
   BillingNote,
   BillingPayment,
   BillingProfile,
+  AdminPlanChangePreview,
+  AdminPlanChangeResult,
   CustomerAction,
   CustomerServiceRequest,
   CustomerDevice,
@@ -987,6 +989,22 @@ export const adminAPI = {
     data: { amount: number; method?: string; reference?: string; paymentId?: string }
   ) =>
     request(`/api/v1/admin/customers/${customerId}/billing/payment/confirm`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  previewCustomerPlanChange: (
+    customerId: string,
+    data: { planCode: string; effectiveMode: 'immediate' | 'next_cycle' }
+  ) =>
+    request<AdminPlanChangePreview>(`/api/v1/admin/customers/${customerId}/plan-change/preview`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  applyCustomerPlanChange: (
+    customerId: string,
+    data: { planCode: string; effectiveMode: 'immediate' | 'next_cycle'; forceApply?: boolean; note?: string }
+  ) =>
+    request<AdminPlanChangeResult>(`/api/v1/admin/customers/${customerId}/plan-change/apply`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),

@@ -167,6 +167,33 @@ export interface CustomerServiceRequest {
   payload?: Record<string, any>
 }
 
+export interface AdminPlanChangePreview {
+  customerId: string
+  currentPlanCode?: string
+  nextPlanCode: string
+  nextPlanName: string
+  effectiveMode: 'immediate' | 'next_cycle'
+  billMode?: 'prepaid' | 'postpaid'
+  currentPrice: number
+  nextPrice: number
+  remainingDays?: number
+  adjustmentAmount: number
+  payableNow: number
+  creditAmount: number
+  mode?: string
+}
+
+export interface AdminPlanChangeResult {
+  updated: boolean
+  scheduled: boolean
+  paymentRequired: boolean
+  forceApplied?: boolean
+  customerId: string
+  planCode: string
+  requestNumber?: string
+  payableNow?: number
+}
+
 export interface Ticket {
   id: string
   subject: string
