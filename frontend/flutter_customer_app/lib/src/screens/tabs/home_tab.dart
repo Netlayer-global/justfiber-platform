@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_state.dart';
 import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
+import '../support_history_screen.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/usage_bar.dart';
 
@@ -97,7 +98,14 @@ class HomeTab extends StatelessWidget {
             _feature(context, Icons.receipt_long_rounded, 'Bills', () => _payBill(context, appState)),
             _feature(context, Icons.wifi_tethering_rounded, 'Wi-Fi', () => onNavigate(3)),
             _feature(context, Icons.calendar_month_rounded, 'Booking', () => onNavigate(2)),
-            _feature(context, Icons.person_outline_rounded, 'Profile', () => onNavigate(4)),
+            _feature(
+              context,
+              Icons.support_agent_rounded,
+              'Support',
+              () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 18),

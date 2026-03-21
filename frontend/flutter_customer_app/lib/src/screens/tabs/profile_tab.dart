@@ -6,6 +6,7 @@ import '../../widgets/app_card.dart';
 import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
 import '../document_viewer_screen.dart';
+import '../support_history_screen.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -49,6 +50,34 @@ class _ProfileTabState extends State<ProfileTab> {
               _heroRow('Status', billing.paymentStatus),
               _heroRow('Due date', billing.nextBillDate),
               _heroRow('Billing mode', billing.billMode),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        AppCard(
+          child: Row(
+            children: [
+              const Icon(Icons.support_agent_rounded, color: Color(0xFFD81F26)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Support history', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${appState.requests.length} request(s) and ${appState.notifications.length} recent updates',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                ),
+                child: const Text('Open'),
+              ),
             ],
           ),
         ),
