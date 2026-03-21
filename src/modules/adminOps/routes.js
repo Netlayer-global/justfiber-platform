@@ -427,7 +427,7 @@ adminOpsRouter.get(
   "/billing/overview",
   requirePermission(permissions.billingRead),
   asyncHandler(async (_req, res) => {
-    const [totalInvoices, overdueInvoices, paidTransactions, dueAmount, collectedAmount, taxCollected, stateWiseGst] = await Promise.all([
+    const [totalInvoices, overdueInvoices, paidTransactions, dueAmount, collectedAmount, taxCollected, stateWiseGst, agingInvoices, customers] = await Promise.all([
       BillingInvoice.countDocuments(),
       BillingInvoice.countDocuments({ paymentStatus: "overdue" }),
       PaymentTransaction.countDocuments({ status: "success" }),
@@ -453,8 +453,89 @@ adminOpsRouter.get(
           }
         },
         { $sort: { totalAmount: -1 } }
-      ])
+      ]),
+      BillingInvoice.find({
+        paymentStatus: { $in: ["pending", "overdue"] }
+      }, {
+        invoiceId: 1,
+        customerId: 1,
+        dueDate: 1,
+        totalAmount: 1
+      }).lean(),
+      Customer.find({}, {
+        customerId: 1,
+        operationalStatus: 1,
+        customerType: 1,
+        billingSnapshot: 1
+      }).lean()
     ]);
+
+    const now = Date.now();
+    const agingBuckets = {
+      current: { count: 0, amount: 0 },
+      days1to30: { count: 0, amount: 0 },
+      days31to60: { count: 0, amount: 0 },
+      days61to90: { count: 0, amount: 0 },
+      days90plus: { count: 0, amount: 0 }
+    };
+
+    for (const invoice of agingInvoices) {
+      const amount = Number(invoice.totalAmount || 0);
+      const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
+      const overdueDays = dueDate ? Math.max(0, Math.floor((now - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+      let bucket = "current";
+      if (overdueDays >= 1 && overdueDays <= 30) bucket = "days1to30";
+      else if (overdueDays >= 31 && overdueDays <= 60) bucket = "days31to60";
+      else if (overdueDays >= 61 && overdueDays <= 90) bucket = "days61to90";
+      else if (overdueDays > 90) bucket = "days90plus";
+      agingBuckets[bucket].count += 1;
+      agingBuckets[bucket].amount += amount;
+    }
+
+    const collectionStats = {
+      pendingPlanChanges: 0,
+      promiseToPayActive: 0,
+      suspendReady: 0,
+      assignedCollections: 0,
+      followUpsLogged: 0,
+      activePrepaidCustomers: 0,
+      activePostpaidCustomers: 0,
+      suspendedCustomers: 0
+    };
+
+    for (const customer of customers) {
+      const snapshot = customer.billingSnapshot || {};
+      const collections = snapshot.collections || {};
+      const dueAmountValue = Number(snapshot.dueAmount || 0);
+      const graceDays = Number(snapshot.graceDays || 0);
+      const promiseToPayAt = collections.promiseToPayAt ? new Date(collections.promiseToPayAt) : null;
+      const promiseValid = promiseToPayAt && !Number.isNaN(promiseToPayAt.getTime()) && promiseToPayAt.getTime() >= now;
+
+      if (snapshot.pendingPlanChange) collectionStats.pendingPlanChanges += 1;
+      if (promiseValid) collectionStats.promiseToPayActive += 1;
+      if (collections.assignedToAdminId) collectionStats.assignedCollections += 1;
+      collectionStats.followUpsLogged += Number(collections.followUpCount || 0);
+      if (customer.operationalStatus === "suspended") collectionStats.suspendedCustomers += 1;
+
+      const billMode = snapshot.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid");
+      if (customer.operationalStatus === "active") {
+        if (billMode === "postpaid") collectionStats.activePostpaidCustomers += 1;
+        else collectionStats.activePrepaidCustomers += 1;
+      }
+
+      if (!dueAmountValue || dueAmountValue <= 0 || promiseValid || customer.operationalStatus !== "active") {
+        continue;
+      }
+      const latestDueInvoice = agingInvoices
+        .filter((invoice) => invoice.customerId === customer.customerId)
+        .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime())[0];
+      const overdueDays = latestDueInvoice?.dueDate
+        ? Math.max(0, Math.floor((now - new Date(latestDueInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      if (overdueDays > graceDays) {
+        collectionStats.suspendReady += 1;
+      }
+    }
 
     return ok(res, {
       totalInvoices,
@@ -470,7 +551,9 @@ adminOpsRouter.get(
         taxableAmount: item.taxableAmount || 0,
         taxAmount: item.taxAmount || 0,
         totalAmount: item.totalAmount || 0
-      }))
+      })),
+      agingBuckets,
+      collectionStats
     });
   })
 );

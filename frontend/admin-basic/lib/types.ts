@@ -288,6 +288,23 @@ export interface BillingOverview {
   dueAmount: number
   collectedAmount: number
   taxCollected: number
+  agingBuckets: {
+    current: { count: number; amount: number }
+    days1to30: { count: number; amount: number }
+    days31to60: { count: number; amount: number }
+    days61to90: { count: number; amount: number }
+    days90plus: { count: number; amount: number }
+  }
+  collectionStats: {
+    pendingPlanChanges: number
+    promiseToPayActive: number
+    suspendReady: number
+    assignedCollections: number
+    followUpsLogged: number
+    activePrepaidCustomers: number
+    activePostpaidCustomers: number
+    suspendedCustomers: number
+  }
   stateWiseGst: Array<{
     stateCode?: string
     stateName: string

@@ -85,6 +85,13 @@ export default function BillingPage() {
     note: '',
   })
   const refundPayments = payments.filter((payment) => payment.method === 'refund' || (payment.provider || '').includes('refund'))
+  const agingCards = [
+    { label: 'Current', value: overview?.agingBuckets?.current },
+    { label: '1-30 Days', value: overview?.agingBuckets?.days1to30 },
+    { label: '31-60 Days', value: overview?.agingBuckets?.days31to60 },
+    { label: '61-90 Days', value: overview?.agingBuckets?.days61to90 },
+    { label: '90+ Days', value: overview?.agingBuckets?.days90plus },
+  ]
 
   useEffect(() => {
     void loadBilling()
@@ -507,6 +514,33 @@ export default function BillingPage() {
             <div className="card p-5"><p className="text-sm text-slate-500">Overdue</p><p className="text-2xl font-semibold mt-2">{overview?.overdueInvoices || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.collectedAmount || 0).toFixed(2)}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">GST Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.taxCollected || 0).toFixed(2)}</p></div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="card p-5"><p className="text-sm text-slate-500">Active Prepaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePrepaidCustomers || 0}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Active Postpaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePostpaidCustomers || 0}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Promise To Pay</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.promiseToPayActive || 0}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Suspend Ready</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.suspendReady || 0}</p></div>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Aging Summary</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 p-4">
+              {agingCards.map((bucket) => (
+                <div key={bucket.label} className="rounded bg-[#0a0e27] p-4">
+                  <div className="text-xs text-slate-500">{bucket.label}</div>
+                  <div className="text-xl font-semibold mt-2">Rs {Number(bucket.value?.amount || 0).toFixed(2)}</div>
+                  <div className="text-xs text-slate-500 mt-2">{bucket.value?.count || 0} invoice(s)</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="card p-5"><p className="text-sm text-slate-500">Pending Plan Changes</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.pendingPlanChanges || 0}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Assigned Collections</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.assignedCollections || 0}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Follow-ups Logged</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.followUpsLogged || 0}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Suspended Customers</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.suspendedCustomers || 0}</p></div>
           </div>
 
           <div className="card overflow-hidden">
