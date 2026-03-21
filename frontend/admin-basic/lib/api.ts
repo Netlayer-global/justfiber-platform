@@ -18,6 +18,7 @@ import type {
   BillingCollectionAgent,
   RazorpayOverview,
   RazorpaySettlementItem,
+  RazorpayWebhookLog,
   BillingProfile,
   AdminPlanChangePreview,
   AdminPlanChangeResult,
@@ -551,6 +552,20 @@ function mapRazorpayOverview(item: any): RazorpayOverview {
   }
 }
 
+function mapRazorpayWebhookLog(item: any): RazorpayWebhookLog {
+  return {
+    id: item.id || '',
+    eventType: item.eventType || '',
+    status: item.status || '',
+    entityId: item.entityId || '',
+    paymentId: item.paymentId || '',
+    orderId: item.orderId || '',
+    customerId: item.customerId || '',
+    errorMessage: item.errorMessage || '',
+    createdAt: item.createdAt,
+  }
+}
+
 export const adminAPI = {
   // Auth
   login: (login: string, password: string) =>
@@ -1043,6 +1058,13 @@ export const adminAPI = {
     return {
       ...res,
       data: res.data ? mapRazorpayOverview(res.data) : undefined,
+    }
+  },
+  getRazorpayWebhookLogs: async () => {
+    const res = await request<any[]>('/api/v1/admin/billing/razorpay/webhooks')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapRazorpayWebhookLog) : [],
     }
   },
   markRazorpayOrderStale: (orderId: string) =>

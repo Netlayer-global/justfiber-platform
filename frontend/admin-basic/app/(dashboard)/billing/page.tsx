@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment, RazorpayOverview } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -66,6 +66,7 @@ export default function BillingPage() {
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [razorpayOverview, setRazorpayOverview] = useState<RazorpayOverview | null>(null)
+  const [razorpayWebhookLogs, setRazorpayWebhookLogs] = useState<RazorpayWebhookLog[]>([])
   const [collectionBucket, setCollectionBucket] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -89,7 +90,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes] = await Promise.all([
         adminAPI.getBillingData(),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -99,6 +100,7 @@ export default function BillingPage() {
         adminAPI.getBillingCollections(collectionBucket || undefined),
         adminAPI.getBillingCollectionAgents(),
         adminAPI.getRazorpayOverview(),
+        adminAPI.getRazorpayWebhookLogs(),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -153,6 +155,9 @@ export default function BillingPage() {
       }
       if (razorpayOverviewRes.success && razorpayOverviewRes.data) {
         setRazorpayOverview(razorpayOverviewRes.data)
+      }
+      if (razorpayWebhookRes.success && razorpayWebhookRes.data) {
+        setRazorpayWebhookLogs(razorpayWebhookRes.data)
       }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
@@ -556,6 +561,43 @@ export default function BillingPage() {
                 {!((razorpayOverview?.settlementItems || []).filter((item) => item.stale || item.reconciliationStatus === 'manual_review').length) ? (
                   <tr className="border-t border-[#2a2f4a]">
                     <td className="table-cell text-slate-500" colSpan={6}>No stale pending orders or manual-review Razorpay items.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Webhook Events</div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0e27]">
+                  <th className="table-header">Event</th>
+                  <th className="table-header">Status</th>
+                  <th className="table-header">Payment / Order</th>
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {razorpayWebhookLogs.slice(0, 20).map((log) => (
+                  <tr key={log.id} className="border-t border-[#2a2f4a]">
+                    <td className="table-cell">
+                      <div>{log.eventType}</div>
+                      {log.errorMessage ? <div className="text-xs text-red-300 mt-1">{log.errorMessage}</div> : null}
+                    </td>
+                    <td className="table-cell">{log.status}</td>
+                    <td className="table-cell">
+                      <div className="font-mono text-xs">{log.paymentId || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{log.orderId || '-'}</div>
+                    </td>
+                    <td className="table-cell">{log.customerId || '-'}</td>
+                    <td className="table-cell">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}</td>
+                  </tr>
+                ))}
+                {!razorpayWebhookLogs.length ? (
+                  <tr className="border-t border-[#2a2f4a]">
+                    <td className="table-cell text-slate-500" colSpan={5}>No Razorpay webhook logs yet.</td>
                   </tr>
                 ) : null}
               </tbody>

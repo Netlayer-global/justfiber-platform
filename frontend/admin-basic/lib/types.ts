@@ -450,3 +450,15 @@ export interface RazorpayOverview {
   verifyCaptured: number
   settlementItems: RazorpaySettlementItem[]
 }
+
+export interface RazorpayWebhookLog {
+  id: string
+  eventType: string
+  status: string
+  entityId?: string
+  paymentId?: string
+  orderId?: string
+  customerId?: string
+  errorMessage?: string
+  createdAt?: string
+}

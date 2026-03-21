@@ -14,6 +14,7 @@ import { Installer } from "../../models/Installer.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
+import { IntegrationEventLog } from "../../models/IntegrationEventLog.js";
 import { BillingLedgerEntry } from "../../models/BillingLedgerEntry.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { BillingNote } from "../../models/BillingNote.js";
@@ -1233,8 +1234,29 @@ customerPortalRouter.post(
 customerPortalRouter.post(
   "/webhooks/razorpay",
   asyncHandler(async (req, res) => {
+    const event = req.body || {};
+    const payment = event?.payload?.payment?.entity;
+    const baseLog = {
+      integrationKey: "razorpay",
+      category: "payment_gateway",
+      provider: "razorpay",
+      eventType: event?.event || "razorpay.webhook",
+      entityType: "billing_payment",
+      entityId: payment?.id || payment?.order_id || null,
+      payload: {
+        event: event?.event,
+        paymentId: payment?.id,
+        orderId: payment?.order_id,
+        customerId: payment?.notes?.customerId
+      }
+    };
     const signature = req.headers["x-razorpay-signature"];
     if (!signature || !req.rawBody) {
+      await IntegrationEventLog.create({
+        ...baseLog,
+        status: "failed",
+        errorMessage: "Missing Razorpay webhook signature"
+      });
       throw new ApiError(400, "Missing Razorpay webhook signature");
     }
     const valid = razorpayClient.verifyWebhookSignature({
@@ -1242,22 +1264,39 @@ customerPortalRouter.post(
       signature: String(signature)
     });
     if (!valid) {
+      await IntegrationEventLog.create({
+        ...baseLog,
+        status: "failed",
+        errorMessage: "Invalid Razorpay webhook signature"
+      });
       throw new ApiError(400, "Invalid Razorpay webhook signature");
     }
-
-    const event = req.body || {};
-    const payment = event?.payload?.payment?.entity;
     if (!payment || !["payment.captured", "order.paid"].includes(event.event)) {
+      await IntegrationEventLog.create({
+        ...baseLog,
+        status: "ignored",
+        response: { reason: "unsupported_event" }
+      });
       return ok(res, { acknowledged: true, ignored: true });
     }
 
     const customerId = payment.notes?.customerId;
     if (!customerId) {
+      await IntegrationEventLog.create({
+        ...baseLog,
+        status: "ignored",
+        response: { reason: "customer_id_missing" }
+      });
       return ok(res, { acknowledged: true, ignored: true, reason: "customer_id_missing" });
     }
 
     const customer = await Customer.findOne({ customerId });
     if (!customer) {
+      await IntegrationEventLog.create({
+        ...baseLog,
+        status: "ignored",
+        response: { reason: "customer_not_found", customerId }
+      });
       return ok(res, { acknowledged: true, ignored: true, reason: "customer_not_found" });
     }
 
@@ -1289,6 +1328,17 @@ customerPortalRouter.post(
         }
       }
     );
+
+    await IntegrationEventLog.create({
+      ...baseLog,
+      status: "success",
+      response: {
+        acknowledged: true,
+        customerId,
+        paymentId: payment.id,
+        orderId: payment.order_id
+      }
+    });
 
     return ok(res, {
       acknowledged: true,

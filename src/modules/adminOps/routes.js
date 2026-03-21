@@ -573,6 +573,34 @@ adminOpsRouter.get(
   })
 );
 
+adminOpsRouter.get(
+  "/billing/razorpay/webhooks",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const logs = await IntegrationEventLog.find({
+      provider: "razorpay",
+      category: "payment_gateway"
+    })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    return ok(
+      res,
+      logs.map((item) => ({
+        id: String(item._id),
+        eventType: item.eventType || "",
+        status: item.status || "",
+        entityId: item.entityId ? String(item.entityId) : "",
+        paymentId: item.payload?.paymentId || "",
+        orderId: item.payload?.orderId || "",
+        customerId: item.payload?.customerId || "",
+        errorMessage: item.errorMessage || "",
+        createdAt: item.createdAt
+      }))
+    );
+  })
+);
+
 adminOpsRouter.post(
   "/billing/razorpay/orders/:orderId/mark-stale",
   requirePermission(permissions.billingRead),
