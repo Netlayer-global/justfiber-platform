@@ -413,6 +413,8 @@ function mapBillingProfile(profile: any): BillingProfile {
     supportPhone: profile.supportPhone || '',
     supportEmail: profile.supportEmail || '',
     invoicePrefix: profile.invoicePrefix || 'JF',
+    invoiceSeriesCode: profile.invoiceSeriesCode || 'MAIN',
+    invoiceSequencePadding: Number(profile.invoiceSequencePadding || 4),
     activationInvoiceTiming: profile.activationInvoiceTiming || 'before_payment',
     companyStateCode: profile.companyStateCode || '',
     companyStateName: profile.companyStateName || '',

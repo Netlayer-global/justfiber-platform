@@ -18,6 +18,8 @@ type BillingProfileForm = {
   supportPhone: string
   supportEmail: string
   invoicePrefix: string
+  invoiceSeriesCode: string
+  invoiceSequencePadding: string
   activationInvoiceTiming: 'before_payment' | 'after_payment'
   companyStateCode: string
   companyStateName: string
@@ -43,6 +45,8 @@ const emptyProfileForm: BillingProfileForm = {
   supportPhone: '',
   supportEmail: '',
   invoicePrefix: 'JF',
+  invoiceSeriesCode: 'MAIN',
+  invoiceSequencePadding: '4',
   activationInvoiceTiming: 'before_payment',
   companyStateCode: 'UP',
   companyStateName: 'Uttar Pradesh',
@@ -136,6 +140,8 @@ export default function BillingPage() {
             supportPhone: activeProfile.supportPhone || '',
             supportEmail: activeProfile.supportEmail || '',
             invoicePrefix: activeProfile.invoicePrefix || 'JF',
+            invoiceSeriesCode: activeProfile.invoiceSeriesCode || 'MAIN',
+            invoiceSequencePadding: String(activeProfile.invoiceSequencePadding || 4),
             activationInvoiceTiming: activeProfile.activationInvoiceTiming || 'before_payment',
             companyStateCode: activeProfile.companyStateCode || 'UP',
             companyStateName: activeProfile.companyStateName || 'Uttar Pradesh',
@@ -199,6 +205,8 @@ export default function BillingPage() {
         supportPhone: profileForm.supportPhone.trim(),
         supportEmail: profileForm.supportEmail.trim() || undefined,
         invoicePrefix: profileForm.invoicePrefix.trim().toUpperCase(),
+        invoiceSeriesCode: profileForm.invoiceSeriesCode.trim().toUpperCase(),
+        invoiceSequencePadding: Number(profileForm.invoiceSequencePadding || 4),
         activationInvoiceTiming: profileForm.activationInvoiceTiming,
         companyStateCode: profileForm.companyStateCode.trim().toUpperCase(),
         companyStateName: profileForm.companyStateName.trim(),
@@ -996,6 +1004,8 @@ export default function BillingPage() {
                   </select>
                   <input className="input" placeholder="Company legal name" value={profileForm.companyLegalName} onChange={(e) => setProfileForm({ ...profileForm, companyLegalName: e.target.value })} />
                   <input className="input" placeholder="Invoice prefix" value={profileForm.invoicePrefix} onChange={(e) => setProfileForm({ ...profileForm, invoicePrefix: e.target.value.toUpperCase() })} />
+                  <input className="input" placeholder="Invoice series code" value={profileForm.invoiceSeriesCode} onChange={(e) => setProfileForm({ ...profileForm, invoiceSeriesCode: e.target.value.toUpperCase() })} />
+                  <input className="input" placeholder="Sequence padding" type="number" value={profileForm.invoiceSequencePadding} onChange={(e) => setProfileForm({ ...profileForm, invoiceSequencePadding: e.target.value })} />
                   <input className="input" placeholder="Support phone" value={profileForm.supportPhone} onChange={(e) => setProfileForm({ ...profileForm, supportPhone: e.target.value })} />
                   <input className="input" placeholder="Support email" value={profileForm.supportEmail} onChange={(e) => setProfileForm({ ...profileForm, supportEmail: e.target.value })} />
                   <input className="input" placeholder="Due days" type="number" value={profileForm.dueDays} onChange={(e) => setProfileForm({ ...profileForm, dueDays: e.target.value })} />
@@ -1020,7 +1030,7 @@ export default function BillingPage() {
                 <textarea className="input min-h-36 font-mono text-xs" value={profileForm.stateOverridesJson} onChange={(e) => setProfileForm({ ...profileForm, stateOverridesJson: e.target.value })} />
                 <p className="text-xs text-slate-500">Override example: [{`{"stateCode":"MH","stateName":"Maharashtra","igstPercent":18}`}]</p>
                 <textarea className="input min-h-36 font-mono text-xs" value={profileForm.zoneMappingsJson} onChange={(e) => setProfileForm({ ...profileForm, zoneMappingsJson: e.target.value })} />
-                <p className="text-xs text-slate-500">Zone example: [{`{"zoneCode":"NCR","zoneName":"Noida Cluster","stateCode":"UP","stateName":"Uttar Pradesh","invoicePrefix":"NCR","defaultBillMode":"prepaid"}`}]</p>
+                <p className="text-xs text-slate-500">Zone example: [{`{"zoneCode":"NCR","zoneName":"Noida Cluster","stateCode":"UP","stateName":"Uttar Pradesh","invoicePrefix":"NCR","invoiceSeriesCode":"NOIDA","defaultBillMode":"prepaid"}`}]</p>
                 <button type="submit" disabled={isSavingProfile} className="btn-primary">
                   {isSavingProfile ? 'Saving...' : 'Save GST Profile'}
                 </button>

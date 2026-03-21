@@ -30,6 +30,15 @@ function normalizeZoneCode(value) {
     .replace(/[^A-Z0-9]+/g, "-");
 }
 
+function normalizeSeriesCode(value, fallback = "MAIN") {
+  const normalized = String(value || fallback)
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || fallback;
+}
+
 function resolveZoneMapping(billingProfile, customer) {
   const zoneCode = normalizeZoneCode(customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode);
   if (!zoneCode) return null;
@@ -179,6 +188,20 @@ async function createInvoiceLedgerEntry(invoice) {
   });
 }
 
+async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle }) {
+  const prefix = normalizeSeriesCode(zoneMapping?.invoicePrefix || billingProfile?.invoicePrefix || "JF", "JF");
+  const zoneSeries = normalizeSeriesCode(zoneMapping?.invoiceSeriesCode || "", "");
+  const stateSeries = normalizeSeriesCode(customer?.billingStateCode || customer?.billingSnapshot?.billingStateCode || "", "");
+  const profileSeries = normalizeSeriesCode(billingProfile?.invoiceSeriesCode || "MAIN", "MAIN");
+  const seriesCode = zoneSeries || stateSeries || profileSeries;
+  const periodCode = String(billCycle || buildBillCycle()).replace(/[^0-9]+/g, "");
+  const padding = Math.max(3, Math.min(8, Number(billingProfile?.invoiceSequencePadding || 4)));
+  const invoiceRegex = new RegExp(`^${prefix}-${seriesCode}-${periodCode}-`);
+  const existingCount = await BillingInvoice.countDocuments({ invoiceNumber: invoiceRegex });
+  const sequence = String(existingCount + 1).padStart(padding, "0");
+  return `${prefix}-${seriesCode}-${periodCode}-${sequence}`;
+}
+
 export class InternalBillingEngine {
   async generateInvoiceForService(service, options = {}) {
     const generatedAt = options.generatedAt ? new Date(options.generatedAt) : new Date();
@@ -204,12 +227,12 @@ export class InternalBillingEngine {
       billingProfile?.taxMode === "india_gst"
         ? buildGstAmounts(totalAmount, billingProfile, customer)
         : buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
-    const invoicePrefix = zoneMapping?.invoicePrefix || billingProfile?.invoicePrefix || "JF";
+    const invoiceNumber = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle });
     const invoice = await BillingInvoice.create({
       invoiceId: `INV-${service.customerId}-${billCycle}`,
       customerId: service.customerId,
       serviceId: service.serviceId,
-      invoiceNumber: `${invoicePrefix}-INV-${service.customerId}-${Date.now().toString().slice(-4)}`,
+      invoiceNumber,
       billCycle,
       generatedAt,
       dueDate,

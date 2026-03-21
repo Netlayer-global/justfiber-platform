@@ -62,6 +62,8 @@ const billingProfileSchema = z.object({
   supportPhone: z.string().optional(),
   supportEmail: z.string().email().optional(),
   invoicePrefix: z.string().default("JF"),
+  invoiceSeriesCode: z.string().default("MAIN"),
+  invoiceSequencePadding: z.number().min(3).max(8).default(4),
   activationInvoiceTiming: z.enum(["before_payment", "after_payment"]).default("before_payment"),
   taxPercent: z.number().min(0).default(18),
   companyStateCode: z.string().default("UP"),
@@ -88,6 +90,7 @@ const billingProfileSchema = z.object({
       stateCode: z.string().min(2),
       stateName: z.string().optional(),
       invoicePrefix: z.string().optional(),
+      invoiceSeriesCode: z.string().optional(),
       defaultBillMode: z.enum(["prepaid", "postpaid"]).optional()
     })
   ).default([]),

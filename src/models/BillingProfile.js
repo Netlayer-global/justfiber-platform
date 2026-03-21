@@ -18,6 +18,8 @@ const billingProfileSchema = new mongoose.Schema(
     supportPhone: String,
     supportEmail: String,
     invoicePrefix: { type: String, default: "JF" },
+    invoiceSeriesCode: { type: String, default: "MAIN" },
+    invoiceSequencePadding: { type: Number, default: 4 },
     activationInvoiceTiming: { type: String, enum: ["before_payment", "after_payment"], default: "before_payment" },
     taxPercent: { type: Number, default: 18 },
     companyStateCode: { type: String, default: "UP" },
@@ -52,6 +54,7 @@ const billingProfileSchema = new mongoose.Schema(
             stateCode: String,
             stateName: String,
             invoicePrefix: String,
+            invoiceSeriesCode: String,
             defaultBillMode: { type: String, enum: ["prepaid", "postpaid"] }
           },
           { _id: false }

@@ -329,6 +329,8 @@ export interface BillingProfile {
   supportPhone?: string
   supportEmail?: string
   invoicePrefix?: string
+  invoiceSeriesCode?: string
+  invoiceSequencePadding?: number
   activationInvoiceTiming?: 'before_payment' | 'after_payment'
   companyStateCode?: string
   companyStateName?: string
@@ -352,6 +354,7 @@ export interface BillingProfile {
     stateCode: string
     stateName?: string
     invoicePrefix?: string
+    invoiceSeriesCode?: string
     defaultBillMode?: 'prepaid' | 'postpaid'
   }>
   active?: boolean
