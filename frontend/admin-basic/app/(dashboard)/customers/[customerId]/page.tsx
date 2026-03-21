@@ -106,6 +106,7 @@ export default function CustomerDetailPage() {
     () => customer?.billingSnapshot || {},
     [customer]
   )
+  const pendingPlanChange = billingSummary.pendingPlanChange as Record<string, any> | undefined
 
   async function handleCustomerUpdate(patch: Partial<Customer>) {
     if (!customer) return
@@ -420,6 +421,36 @@ export default function CustomerDetailPage() {
 
             {activeTab === 'billing' ? (
               <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="card p-4">
+                    <p className="text-xs text-slate-500">Billing mode</p>
+                    <p className="text-lg font-semibold">{String(billingSummary.billMode || 'prepaid')}</p>
+                  </div>
+                  <div className="card p-4">
+                    <p className="text-xs text-slate-500">Pending plan change</p>
+                    <p className="text-lg font-semibold">{pendingPlanChange?.planName || '-'}</p>
+                  </div>
+                  <div className="card p-4">
+                    <p className="text-xs text-slate-500">Adjustment / payable</p>
+                    <p className="text-lg font-semibold">Rs {Number(billingSummary.adjustmentPreview || billingSummary.dueAmount || 0)}</p>
+                  </div>
+                </div>
+                {pendingPlanChange ? (
+                  <div className="card p-5 space-y-3">
+                    <h2 className="text-lg font-semibold">Pending Plan Change</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div className="rounded bg-[#0a0e27] px-3 py-2">Target plan: {pendingPlanChange.planName || pendingPlanChange.planCode || '-'}</div>
+                      <div className="rounded bg-[#0a0e27] px-3 py-2">Mode: {pendingPlanChange.effectiveMode || '-'}</div>
+                      <div className="rounded bg-[#0a0e27] px-3 py-2">Bill mode: {pendingPlanChange.billMode || '-'}</div>
+                      <div className="rounded bg-[#0a0e27] px-3 py-2">Requested: {pendingPlanChange.requestedAt ? new Date(pendingPlanChange.requestedAt).toLocaleString() : '-'}</div>
+                      <div className="rounded bg-[#0a0e27] px-3 py-2">Current price: Rs {Number(pendingPlanChange.currentPrice || 0)}</div>
+                      <div className="rounded bg-[#0a0e27] px-3 py-2">Next price: Rs {Number(pendingPlanChange.nextPrice || 0)}</div>
+                    </div>
+                    <p className="text-sm text-slate-400">
+                      Positive adjustment remains payable before switch. On successful payment, pending plan change should auto-apply.
+                    </p>
+                  </div>
+                ) : null}
                 <div className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Billing Summary</h2>
                   <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-xs text-slate-300">{JSON.stringify(billingSummary, null, 2)}</pre>
@@ -455,6 +486,30 @@ export default function CustomerDetailPage() {
                       ))}
                     </div>
                   ) : <p className="text-slate-500 text-sm">No transactions found</p>}
+                </div>
+                <div className="card p-5 space-y-3">
+                  <h2 className="text-lg font-semibold">Billing Notes</h2>
+                  {(customer.billingNotes || []).length ? (
+                    <div className="space-y-2">
+                      {customer.billingNotes?.map((note) => (
+                        <div key={note.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
+                          {note.noteNumber} | {note.type} | Rs {note.totalAmount} | {note.reasonCode || note.note || '-'}
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-slate-500 text-sm">No credit/debit notes found</p>}
+                </div>
+                <div className="card p-5 space-y-3">
+                  <h2 className="text-lg font-semibold">Plan Change Requests</h2>
+                  {(customer.serviceRequests || []).length ? (
+                    <div className="space-y-2">
+                      {customer.serviceRequests?.map((request) => (
+                        <div key={request.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
+                          {request.requestNumber} | {request.type} | {request.status} | {(request.payload?.planName || request.payload?.planCode || '-')}
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-slate-500 text-sm">No plan/service requests found</p>}
                 </div>
               </>
             ) : null}

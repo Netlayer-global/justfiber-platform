@@ -111,17 +111,43 @@ class ApiClient {
         reference: (map['reference'] ?? '').toString(),
       );
     }).toList();
+    final notes = _asList(details['notes']).map((item) {
+      final map = item as Map<String, dynamic>;
+      return BillingNoteItem(
+        noteNumber: (map['noteNumber'] ?? '').toString(),
+        type: (map['type'] ?? '').toString(),
+        totalAmount: double.tryParse('${map['totalAmount'] ?? map['amount'] ?? 0}') ?? 0,
+        reason: (map['reasonCode'] ?? map['note'] ?? '').toString(),
+        issuedAt: (map['issuedAt'] ?? '').toString(),
+      );
+    }).toList();
+    final pendingPlanChangeMap = _asMap(data['pendingPlanChange']);
     return BillingData(
       currentPlan: (data['currentPlan'] ?? data['currentPlanName'] ?? 'JustFiber 100').toString(),
       dueAmount: double.tryParse('${data['dueAmount'] ?? data['amount'] ?? 0}') ?? 0,
       nextBillDate: (data['dueDate'] ?? data['nextBillDate'] ?? '05/05/2029').toString(),
       lastPaymentAmount: double.tryParse('${data['lastPaymentAmount'] ?? payments.firstOrNull?.amount ?? 0}') ?? 0,
       billCycle: (data['billCycle'] ?? 'Monthly').toString(),
+      billMode: (data['billMode'] ?? 'Prepaid').toString(),
       generatedDate: (data['generatedDate'] ?? '').toString(),
       paymentStatus: (data['paymentStatus'] ?? 'unknown').toString(),
       lastPaymentDate: (data['lastPaymentDate'] ?? payments.firstOrNull?.paidAt ?? '').toString(),
+      adjustmentPreview: double.tryParse('${data['adjustmentPreview'] ?? 0}') ?? 0,
+      pendingPlanChange: pendingPlanChangeMap.isEmpty
+          ? null
+          : PendingPlanChange(
+              planCode: (pendingPlanChangeMap['planCode'] ?? '').toString(),
+              planName: (pendingPlanChangeMap['planName'] ?? pendingPlanChangeMap['planCode'] ?? '').toString(),
+              effectiveMode: (pendingPlanChangeMap['effectiveMode'] ?? '').toString(),
+              billMode: (pendingPlanChangeMap['billMode'] ?? '').toString(),
+              currentPrice: double.tryParse('${pendingPlanChangeMap['currentPrice'] ?? 0}') ?? 0,
+              nextPrice: double.tryParse('${pendingPlanChangeMap['nextPrice'] ?? 0}') ?? 0,
+              requestedAt: (pendingPlanChangeMap['requestedAt'] ?? '').toString(),
+              noteNumber: (pendingPlanChangeMap['noteNumber'] ?? '').toString(),
+            ),
       invoices: invoices,
       payments: payments,
+      notes: notes,
     );
   }
 
@@ -488,6 +514,58 @@ class ApiClient {
       ),
     );
     return (data['requestNumber'] ?? '').toString();
+  }
+
+  Future<PlanChangePreview> previewPlanChange(
+    CustomerSession session, {
+    required String planCode,
+    required String effectiveMode,
+  }) async {
+    final data = _asMap(
+      await _request(
+        '/api/v1/customer/plan/change/preview',
+        method: 'POST',
+        token: session.accessToken,
+        body: {'planCode': planCode, 'effectiveMode': effectiveMode},
+      ),
+    );
+    return PlanChangePreview(
+      customerId: (data['customerId'] ?? '').toString(),
+      currentPlanCode: (data['currentPlanCode'] ?? '').toString(),
+      nextPlanCode: (data['nextPlanCode'] ?? planCode).toString(),
+      nextPlanName: (data['nextPlanName'] ?? planCode).toString(),
+      effectiveMode: (data['effectiveMode'] ?? effectiveMode).toString(),
+      currentPrice: double.tryParse('${data['currentPrice'] ?? 0}') ?? 0,
+      nextPrice: double.tryParse('${data['nextPrice'] ?? 0}') ?? 0,
+      adjustmentAmount: double.tryParse('${data['adjustmentAmount'] ?? 0}') ?? 0,
+      payableNow: double.tryParse('${data['payableNow'] ?? 0}') ?? 0,
+      creditAmount: double.tryParse('${data['creditAmount'] ?? 0}') ?? 0,
+      remainingDays: int.tryParse('${data['remainingDays'] ?? 0}') ?? 0,
+    );
+  }
+
+  Future<PlanChangeApplyResult> applyPlanChange(
+    CustomerSession session, {
+    required String planCode,
+    required String effectiveMode,
+  }) async {
+    final data = _asMap(
+      await _request(
+        '/api/v1/customer/plan/change/apply',
+        method: 'POST',
+        token: session.accessToken,
+        body: {'planCode': planCode, 'effectiveMode': effectiveMode},
+      ),
+    );
+    return PlanChangeApplyResult(
+      updated: data['updated'] == true,
+      scheduled: data['scheduled'] == true,
+      paymentRequired: data['paymentRequired'] == true,
+      customerId: (data['customerId'] ?? '').toString(),
+      planCode: (data['planCode'] ?? planCode).toString(),
+      requestNumber: (data['requestNumber'] ?? '').toString(),
+      payableNow: double.tryParse('${data['payableNow'] ?? 0}') ?? 0,
+    );
   }
 
   Future<SpeedTestData> fetchSpeedTest(CustomerSession session) async {

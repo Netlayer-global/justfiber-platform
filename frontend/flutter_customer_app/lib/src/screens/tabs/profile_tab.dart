@@ -13,6 +13,7 @@ class ProfileTab extends StatefulWidget {
 
 class _ProfileTabState extends State<ProfileTab> {
   String? selectedPlanCode;
+  String effectiveMode = 'next_cycle';
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +21,8 @@ class _ProfileTabState extends State<ProfileTab> {
     final billing = appState.billing;
     final dashboard = appState.dashboard;
     final planOptions = appState.planChangeOptions;
+    final preview = appState.planChangePreview;
+    final pendingPlanChange = billing.pendingPlanChange;
     selectedPlanCode ??= planOptions.firstOrNull?.planCode;
 
     return ListView(
@@ -42,6 +45,7 @@ class _ProfileTabState extends State<ProfileTab> {
               _heroRow('Current plan', billing.currentPlan),
               _heroRow('Status', billing.paymentStatus),
               _heroRow('Due date', billing.nextBillDate),
+              _heroRow('Billing mode', billing.billMode),
             ],
           ),
         ),
@@ -60,11 +64,44 @@ class _ProfileTabState extends State<ProfileTab> {
               _row('Last payment', 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'),
               _row('Payment status', billing.paymentStatus),
               _row('Bill cycle', billing.billCycle),
+              _row('Billing mode', billing.billMode),
               _row('Generated date', billing.generatedDate.isEmpty ? '-' : billing.generatedDate),
               _row('Last paid on', billing.lastPaymentDate.isEmpty ? '-' : billing.lastPaymentDate),
+              if (billing.adjustmentPreview != 0) _row('Adjustment preview', 'Rs ${billing.adjustmentPreview.toStringAsFixed(0)}'),
             ],
           ),
         ),
+        if (pendingPlanChange != null) ...[
+          const SizedBox(height: 18),
+          AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF121938), Color(0xFF1A2250)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Pending plan change', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                _row('Target plan', pendingPlanChange.planName),
+                _row('Mode', pendingPlanChange.effectiveMode),
+                _row('Bill mode', pendingPlanChange.billMode),
+                _row('Current price', 'Rs ${pendingPlanChange.currentPrice.toStringAsFixed(0)}'),
+                _row('Next price', 'Rs ${pendingPlanChange.nextPrice.toStringAsFixed(0)}'),
+                _row('Requested at', pendingPlanChange.requestedAt.isEmpty ? '-' : pendingPlanChange.requestedAt),
+                if (pendingPlanChange.noteNumber.isNotEmpty) _row('Adjustment note', pendingPlanChange.noteNumber),
+                const SizedBox(height: 8),
+                Text(
+                  billing.dueAmount > 0
+                      ? 'Pay the pending amount to complete this change.'
+                      : 'This change is queued and will apply automatically.',
+                  style: const TextStyle(color: Color(0xFF7B625A)),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 18),
         AppCard(
           child: Column(
@@ -184,6 +221,50 @@ class _ProfileTabState extends State<ProfileTab> {
                   decoration: const InputDecoration(labelText: 'Choose new plan'),
                 ),
                 const SizedBox(height: 12),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment<String>(value: 'next_cycle', label: Text('Next cycle')),
+                    ButtonSegment<String>(value: 'immediate', label: Text('Immediate')),
+                  ],
+                  selected: {effectiveMode},
+                  onSelectionChanged: (selection) => setState(() => effectiveMode = selection.first),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: appState.busy || selectedPlanCode == null
+                      ? null
+                      : () async {
+                          await appState.previewPlanChange(
+                            planCode: selectedPlanCode!,
+                            effectiveMode: effectiveMode,
+                          );
+                        },
+                  child: const Text('Preview adjustment'),
+                ),
+                if (preview != null && preview.nextPlanCode == selectedPlanCode && preview.effectiveMode == effectiveMode) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F1ED),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(preview.nextPlanName, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 8),
+                        _row('Current price', 'Rs ${preview.currentPrice.toStringAsFixed(0)}'),
+                        _row('Next price', 'Rs ${preview.nextPrice.toStringAsFixed(0)}'),
+                        _row('Remaining days', '${preview.remainingDays}'),
+                        _row('Adjustment', 'Rs ${preview.adjustmentAmount.toStringAsFixed(0)}'),
+                        if (preview.payableNow > 0) _row('Payable now', 'Rs ${preview.payableNow.toStringAsFixed(0)}'),
+                        if (preview.creditAmount > 0) _row('Credit amount', 'Rs ${preview.creditAmount.toStringAsFixed(0)}'),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
@@ -192,20 +273,27 @@ class _ProfileTabState extends State<ProfileTab> {
                         : () async {
                             final requestNumber = await appState.requestPlanChange(
                               planCode: selectedPlanCode!,
-                              effectiveMode: 'next_cycle',
+                              effectiveMode: effectiveMode,
                             );
                             if (!mounted) return;
+                            final result = appState.lastPlanChangeResult;
+                            final message =
+                                result == null
+                                    ? (appState.error ?? 'Plan change failed')
+                                    : result.paymentRequired
+                                        ? 'Pay Rs ${result.payableNow.toStringAsFixed(0)} to complete this plan change.'
+                                        : result.scheduled
+                                            ? 'Plan change scheduled: ${result.requestNumber}'
+                                            : result.updated
+                                                ? 'Plan updated successfully.'
+                                                : 'Plan change requested: ${result.requestNumber}';
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(
-                                  requestNumber != null && requestNumber.isNotEmpty
-                                      ? 'Plan change requested: $requestNumber'
-                                      : (appState.error ?? 'Plan change failed'),
-                                ),
+                                content: Text(requestNumber != null && requestNumber.isNotEmpty ? message : (appState.error ?? 'Plan change failed')),
                               ),
                             );
                           },
-                    child: const Text('Request plan change'),
+                    child: const Text('Apply plan change'),
                   ),
                 ),
               ],
@@ -242,6 +330,36 @@ class _ProfileTabState extends State<ProfileTab> {
             ],
           ),
         ),
+        if (billing.notes.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Billing notes', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                ...billing.notes.take(5).map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.noteNumber, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Text(item.reason.isEmpty ? item.type : item.reason, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      Text('Rs ${item.totalAmount.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFFD81F26))),
+                    ],
+                  ),
+                )),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 18),
         FilledButton.tonal(
           onPressed: appState.logout,

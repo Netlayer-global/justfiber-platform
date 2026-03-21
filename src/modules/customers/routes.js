@@ -15,6 +15,8 @@ import { allowedPresets } from "../../integrations/genieacsClient.js";
 import { buildPagination } from "../../common/pagination.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
+import { BillingNote } from "../../models/BillingNote.js";
+import { ServiceRequest } from "../../models/ServiceRequest.js";
 
 export const customersRouter = Router();
 
@@ -71,15 +73,17 @@ customersRouter.get(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
-    const [devices, tickets, invoices, payments, actions] = await Promise.all([
+    const [devices, tickets, invoices, payments, actions, billingNotes, serviceRequests] = await Promise.all([
       DeviceOperationalCache.find({ customerId: customer.customerId }).lean(),
       SupportTicket.find({ customerId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean()
       ,
       BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1 }).limit(12).lean(),
       PaymentTransaction.find({ customerId: customer.customerId }).sort({ paidAt: -1, createdAt: -1 }).limit(12).lean(),
-      AdminActionRequest.find({ targetType: "customer", targetId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean()
+      AdminActionRequest.find({ targetType: "customer", targetId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean(),
+      BillingNote.find({ customerId: customer.customerId }).sort({ issuedAt: -1, createdAt: -1 }).limit(12).lean(),
+      ServiceRequest.find({ customerId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean()
     ]);
-    return ok(res, { ...customer, devices, tickets, invoices, payments, actions });
+    return ok(res, { ...customer, devices, tickets, invoices, payments, actions, billingNotes, serviceRequests });
   })
 );
 

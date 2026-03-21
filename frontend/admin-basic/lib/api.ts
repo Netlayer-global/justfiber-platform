@@ -16,6 +16,7 @@ import type {
   BillingPayment,
   BillingProfile,
   CustomerAction,
+  CustomerServiceRequest,
   CustomerDevice,
   CustomerInvoice,
   CustomerPayment,
@@ -174,6 +175,10 @@ function mapCustomer(customer: any): Customer {
     invoices: Array.isArray(customer.invoices) ? customer.invoices.map(mapCustomerInvoice) : undefined,
     payments: Array.isArray(customer.payments) ? customer.payments.map(mapCustomerPayment) : undefined,
     actions: Array.isArray(customer.actions) ? customer.actions.map(mapCustomerAction) : undefined,
+    billingNotes: Array.isArray(customer.billingNotes) ? customer.billingNotes.map(mapBillingNote) : undefined,
+    serviceRequests: Array.isArray(customer.serviceRequests)
+      ? customer.serviceRequests.map(mapCustomerServiceRequest)
+      : undefined,
     rawAddress: customer.address && typeof customer.address === 'object'
       ? {
           line1: customer.address.line1,
@@ -246,6 +251,17 @@ function mapCustomerAction(action: any): CustomerAction {
     status: action.status || 'pending',
     createdAt: action.createdAt,
     payload: action.payload || {},
+  }
+}
+
+function mapCustomerServiceRequest(request: any): CustomerServiceRequest {
+  return {
+    id: request._id || request.requestNumber || '',
+    requestNumber: request.requestNumber || request._id || '',
+    type: request.type || 'request',
+    status: request.status || 'open',
+    createdAt: request.createdAt,
+    payload: request.payload || {},
   }
 }
 

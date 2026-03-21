@@ -42,11 +42,15 @@ class AppState extends ChangeNotifier {
     nextBillDate: '05/05/2029',
     lastPaymentAmount: 0,
     billCycle: 'Monthly',
+    billMode: 'Prepaid',
     generatedDate: '',
     paymentStatus: 'paid',
     lastPaymentDate: '',
+    adjustmentPreview: 0,
+    pendingPlanChange: null,
     invoices: [],
     payments: [],
+    notes: [],
   );
   List<RequestItem> requests = const [];
   List<NotificationItem> notifications = const [];
@@ -74,6 +78,8 @@ class AppState extends ChangeNotifier {
   );
   List<ParentalRule> parentalRules = const [];
   List<PlanItem> planChangeOptions = const [];
+  PlanChangePreview? planChangePreview;
+  PlanChangeApplyResult? lastPlanChangeResult;
   bool bookingBusy = false;
   String? bookingError;
 
@@ -472,13 +478,39 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final requestNumber = await api.submitPlanChangeRequest(
+      final result = await api.applyPlanChange(
         current,
         planCode: planCode,
         effectiveMode: effectiveMode,
       );
+      lastPlanChangeResult = result;
       await refresh();
-      return requestNumber;
+      return result.requestNumber;
+    } catch (e) {
+      error = e.toString();
+      return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<PlanChangePreview?> previewPlanChange({
+    required String planCode,
+    required String effectiveMode,
+  }) async {
+    final current = session;
+    if (current == null) return null;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      planChangePreview = await api.previewPlanChange(
+        current,
+        planCode: planCode,
+        effectiveMode: effectiveMode,
+      );
+      return planChangePreview;
     } catch (e) {
       error = e.toString();
       return null;
@@ -501,6 +533,8 @@ class AppState extends ChangeNotifier {
     bookingTracking = null;
     feasibility = null;
     billingPaymentOrder = null;
+    planChangePreview = null;
+    lastPlanChangeResult = null;
     bookingError = null;
     notifyListeners();
   }

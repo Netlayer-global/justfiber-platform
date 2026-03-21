@@ -61,11 +61,15 @@ class BillingData {
     required this.nextBillDate,
     required this.lastPaymentAmount,
     required this.billCycle,
+    required this.billMode,
     required this.generatedDate,
     required this.paymentStatus,
     required this.lastPaymentDate,
+    required this.adjustmentPreview,
+    required this.pendingPlanChange,
     required this.invoices,
     required this.payments,
+    required this.notes,
   });
 
   final String currentPlan;
@@ -73,11 +77,15 @@ class BillingData {
   final String nextBillDate;
   final double lastPaymentAmount;
   final String billCycle;
+  final String billMode;
   final String generatedDate;
   final String paymentStatus;
   final String lastPaymentDate;
+  final double adjustmentPreview;
+  final PendingPlanChange? pendingPlanChange;
   final List<BillingInvoiceItem> invoices;
   final List<BillingPaymentItem> payments;
+  final List<BillingNoteItem> notes;
 }
 
 class BillingInvoiceItem {
@@ -110,6 +118,22 @@ class BillingPaymentItem {
   final String paidAt;
   final String provider;
   final String reference;
+}
+
+class BillingNoteItem {
+  const BillingNoteItem({
+    required this.noteNumber,
+    required this.type,
+    required this.totalAmount,
+    required this.reason,
+    required this.issuedAt,
+  });
+
+  final String noteNumber;
+  final String type;
+  final double totalAmount;
+  final String reason;
+  final String issuedAt;
 }
 
 class RequestItem {
@@ -168,6 +192,76 @@ class PlanItem {
   final double speedMbps;
   final double monthlyPrice;
   final double otcCharge;
+}
+
+class PendingPlanChange {
+  const PendingPlanChange({
+    required this.planCode,
+    required this.planName,
+    required this.effectiveMode,
+    required this.billMode,
+    required this.currentPrice,
+    required this.nextPrice,
+    required this.requestedAt,
+    required this.noteNumber,
+  });
+
+  final String planCode;
+  final String planName;
+  final String effectiveMode;
+  final String billMode;
+  final double currentPrice;
+  final double nextPrice;
+  final String requestedAt;
+  final String noteNumber;
+}
+
+class PlanChangePreview {
+  const PlanChangePreview({
+    required this.customerId,
+    required this.currentPlanCode,
+    required this.nextPlanCode,
+    required this.nextPlanName,
+    required this.effectiveMode,
+    required this.currentPrice,
+    required this.nextPrice,
+    required this.adjustmentAmount,
+    required this.payableNow,
+    required this.creditAmount,
+    required this.remainingDays,
+  });
+
+  final String customerId;
+  final String currentPlanCode;
+  final String nextPlanCode;
+  final String nextPlanName;
+  final String effectiveMode;
+  final double currentPrice;
+  final double nextPrice;
+  final double adjustmentAmount;
+  final double payableNow;
+  final double creditAmount;
+  final int remainingDays;
+}
+
+class PlanChangeApplyResult {
+  const PlanChangeApplyResult({
+    required this.updated,
+    required this.scheduled,
+    required this.paymentRequired,
+    required this.customerId,
+    required this.planCode,
+    required this.requestNumber,
+    required this.payableNow,
+  });
+
+  final bool updated;
+  final bool scheduled;
+  final bool paymentRequired;
+  final String customerId;
+  final String planCode;
+  final String requestNumber;
+  final double payableNow;
 }
 
 class BookingQuote {

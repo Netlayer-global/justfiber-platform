@@ -84,6 +84,8 @@ export interface Customer {
   invoices?: CustomerInvoice[]
   payments?: CustomerPayment[]
   actions?: CustomerAction[]
+  billingNotes?: BillingNote[]
+  serviceRequests?: CustomerServiceRequest[]
   rawAddress?: {
     line1?: string
     line2?: string
@@ -151,6 +153,15 @@ export interface CustomerPayment {
 export interface CustomerAction {
   id: string
   actionType: string
+  status: string
+  createdAt?: string
+  payload?: Record<string, any>
+}
+
+export interface CustomerServiceRequest {
+  id: string
+  requestNumber: string
+  type: string
   status: string
   createdAt?: string
   payload?: Record<string, any>

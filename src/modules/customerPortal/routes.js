@@ -1169,10 +1169,12 @@ customerPortalRouter.get(
       throw new ApiError(404, "Billing details not available");
     }
 
-    const [invoices, payments, ledger] = await Promise.all([
+    const [invoices, payments, ledger, notes, requests] = await Promise.all([
       BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1, createdAt: -1 }).limit(6).lean(),
       PaymentTransaction.find({ customerId: customer.customerId, status: "success" }).sort({ paidAt: -1, createdAt: -1 }).limit(6).lean(),
-      BillingLedgerEntry.find({ customerId: customer.customerId }).sort({ postedAt: -1, createdAt: -1 }).limit(10).lean()
+      BillingLedgerEntry.find({ customerId: customer.customerId }).sort({ postedAt: -1, createdAt: -1 }).limit(10).lean(),
+      BillingNote.find({ customerId: customer.customerId }).sort({ issuedAt: -1, createdAt: -1 }).limit(6).lean(),
+      ServiceRequest.find({ customerId: customer.customerId, type: "plan_change" }).sort({ createdAt: -1 }).limit(6).lean()
     ]);
 
     return ok(res, {
@@ -1187,11 +1189,15 @@ customerPortalRouter.get(
         dueAmount: customer.billingSnapshot?.dueAmount || 0,
         paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown",
         lastPaymentAmount: payments[0]?.amount || 0,
-        lastPaymentDate: payments[0]?.paidAt || null
+        lastPaymentDate: payments[0]?.paidAt || null,
+        pendingPlanChange: customer.billingSnapshot?.pendingPlanChange || null,
+        adjustmentPreview: customer.billingSnapshot?.adjustmentPreview || 0
       },
       invoices,
       payments,
-      ledger
+      ledger,
+      notes,
+      requests
     });
   })
 );
@@ -1208,10 +1214,12 @@ customerPortalRouter.get(
       currentPlan: customer.planName,
       dueDate: customer.expiryAt,
       billCycle: "Monthly",
-      billMode: "Prepaid",
+      billMode: customer.billingSnapshot?.billMode === "postpaid" ? "Postpaid" : "Prepaid",
       generatedDate: customer.updatedAt,
       amount: customer.billingSnapshot?.lastInvoiceAmount || 0,
-      paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown"
+      paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown",
+      dueAmount: customer.billingSnapshot?.dueAmount || 0,
+      pendingPlanChange: customer.billingSnapshot?.pendingPlanChange || null
     });
   })
 );
