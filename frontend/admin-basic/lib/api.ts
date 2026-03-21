@@ -204,10 +204,20 @@ function mapServiceZone(zone: any): ServiceZone {
 
   return {
     id: zone._id || zone.zoneCode || '',
+    zoneCode: zone.zoneCode || zone._id || '',
     name: zone.zoneName || zone.zoneCode || 'Zone',
+    city: zone.city || '',
+    area: zone.area || '',
+    pinCodes: Array.isArray(zone.pinCodes) ? zone.pinCodes : [],
     polygon,
-    coverage: zone.coverage ?? 0,
-    status: zone.status === 'active' ? 'active' : 'inactive',
+    coverage: polygon.length ? 100 : 0,
+    status: zone.status || 'planned',
+    serviceType: zone.serviceType || 'fiber',
+    priority: Number(zone.priority || 1),
+    center: zone.center?.lat != null && zone.center?.lng != null
+      ? { lat: Number(zone.center.lat), lng: Number(zone.center.lng) }
+      : null,
+    notes: zone.notes || '',
   }
 }
 
@@ -508,6 +518,47 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapServiceZone) : [],
     }
   },
+  createServiceZone: async (data: {
+    zoneCode?: string
+    zoneName: string
+    city?: string
+    area?: string
+    pinCodes?: string[]
+    status?: 'active' | 'planned' | 'coming_soon'
+    serviceType?: string
+    priority?: number
+    center?: { lat: number; lng: number } | null
+    polygonGeoJson?: Record<string, unknown>
+    notes?: string
+  }) =>
+    request('/api/v1/admin/serviceability/zones', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateServiceZone: async (
+    zoneId: string,
+    data: {
+      zoneCode?: string
+      zoneName?: string
+      city?: string
+      area?: string
+      pinCodes?: string[]
+      status?: 'active' | 'planned' | 'coming_soon'
+      serviceType?: string
+      priority?: number
+      center?: { lat: number; lng: number } | null
+      polygonGeoJson?: Record<string, unknown>
+      notes?: string
+    }
+  ) =>
+    request(`/api/v1/admin/serviceability/zones/${zoneId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteServiceZone: async (zoneId: string) =>
+    request(`/api/v1/admin/serviceability/zones/${zoneId}`, {
+      method: 'DELETE',
+    }),
 
   // Billing
   getBillingData: async (page = 1, limit = 20) => {

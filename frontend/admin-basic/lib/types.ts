@@ -97,10 +97,18 @@ export interface Job {
 
 export interface ServiceZone {
   id: string
+  zoneCode?: string
   name: string
+  city?: string
+  area?: string
+  pinCodes?: string[]
   polygon: { lat: number; lng: number }[]
   coverage: number
-  status: 'active' | 'inactive'
+  status: 'active' | 'planned' | 'coming_soon'
+  serviceType?: string
+  priority?: number
+  center?: { lat: number; lng: number } | null
+  notes?: string
 }
 
 export interface DashboardStats {
