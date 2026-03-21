@@ -308,6 +308,60 @@ export default function BillingPage() {
     }
   }
 
+  async function resumeFromCollection(customerId: string) {
+    try {
+      const res = await adminAPI.resumeCustomer(customerId, 'Collections payment/resume')
+      if (!res.success) {
+        toast.error(res.error || 'Failed to resume customer')
+        return
+      }
+      toast.success('Customer resumed')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to resume customer from collection:', error)
+      toast.error('Failed to resume customer')
+    }
+  }
+
+  async function sendReminder(item: BillingCollectionItem) {
+    try {
+      const res = await adminAPI.sendBillingCollectionReminder(item.customerId, item.invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to send reminder')
+        return
+      }
+      toast.success('Reminder sent')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to send billing reminder:', error)
+      toast.error('Failed to send reminder')
+    }
+  }
+
+  async function setPromiseToPay(item: BillingCollectionItem) {
+    const promisedAt = window.prompt('Promise to pay date (YYYY-MM-DD)', item.promiseToPayAt ? item.promiseToPayAt.slice(0, 10) : '')
+    if (!promisedAt) return
+    const amountInput = window.prompt('Promise amount', item.promiseAmount ? String(item.promiseAmount) : String(item.dueAmount || 0))
+    if (amountInput === null) return
+    const note = window.prompt('Promise note', item.promiseNote || '') || ''
+    try {
+      const res = await adminAPI.setBillingPromiseToPay(item.customerId, {
+        promisedAt,
+        amount: Number(amountInput || 0),
+        note,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to save promise to pay')
+        return
+      }
+      toast.success('Promise to pay saved')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to save promise to pay:', error)
+      toast.error('Failed to save promise to pay')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -389,6 +443,14 @@ export default function BillingPage() {
                       {item.adjustmentPreview ? (
                         <div className="text-xs text-slate-500 mt-1">Adj Rs {Number(item.adjustmentPreview).toFixed(2)}</div>
                       ) : null}
+                      {item.promiseToPayAt ? (
+                        <div className="text-xs text-amber-300 mt-1">
+                          PTP {new Date(item.promiseToPayAt).toLocaleDateString()} {item.promiseAmount ? `| Rs ${Number(item.promiseAmount).toFixed(2)}` : ''}
+                        </div>
+                      ) : null}
+                      {item.lastReminderAt ? (
+                        <div className="text-xs text-slate-500 mt-1">Reminded {new Date(item.lastReminderAt).toLocaleString()}</div>
+                      ) : null}
                     </td>
                     <td className="table-cell text-right">
                       {item.invoiceId ? (
@@ -401,12 +463,32 @@ export default function BillingPage() {
                           Open Invoice
                         </a>
                       ) : null}
+                      <button
+                        className="text-xs text-[#4da3ff] mt-2 block ml-auto"
+                        onClick={() => void sendReminder(item)}
+                      >
+                        Send Reminder
+                      </button>
+                      <button
+                        className="text-xs text-[#4da3ff] mt-2 block ml-auto"
+                        onClick={() => void setPromiseToPay(item)}
+                      >
+                        Promise To Pay
+                      </button>
                       {item.suspendRecommended ? (
                         <button
                           className="btn-secondary mt-2"
                           onClick={() => void suspendFromCollection(item.customerId)}
                         >
                           Suspend
+                        </button>
+                      ) : null}
+                      {item.status === 'suspended' ? (
+                        <button
+                          className="btn-secondary mt-2"
+                          onClick={() => void resumeFromCollection(item.customerId)}
+                        >
+                          Resume
                         </button>
                       ) : null}
                     </td>

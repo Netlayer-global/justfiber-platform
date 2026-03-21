@@ -498,6 +498,10 @@ function mapBillingCollectionItem(item: any): BillingCollectionItem {
     pendingPlanMode: item.pendingPlanMode,
     adjustmentPreview: Number(item.adjustmentPreview || 0),
     suspendRecommended: item.suspendRecommended === true,
+    lastReminderAt: item.lastReminderAt,
+    promiseToPayAt: item.promiseToPayAt,
+    promiseAmount: Number(item.promiseAmount || 0),
+    promiseNote: item.promiseNote,
   }
 }
 
@@ -981,6 +985,16 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapBillingCollectionItem) : [],
     }
   },
+  sendBillingCollectionReminder: (customerId: string, invoiceId?: string) =>
+    request(`/api/v1/admin/billing/collections/${customerId}/remind`, {
+      method: 'POST',
+      body: JSON.stringify({ invoiceId }),
+    }),
+  setBillingPromiseToPay: (customerId: string, data: { promisedAt: string; amount?: number; note?: string }) =>
+    request(`/api/v1/admin/billing/collections/${customerId}/promise-to-pay`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   reconcileBillingPayment: async (transactionId: string, invoiceId?: string) =>
     request(`/api/v1/admin/billing/payments/${transactionId}/reconcile`, {
       method: 'POST',

@@ -452,6 +452,10 @@ adminOpsRouter.get(
         pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
         pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
         adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
+        lastReminderAt: customer.billingSnapshot?.collections?.lastReminderAt,
+        promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
+        promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
+        promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
       };
 
       items.push({
@@ -493,11 +497,104 @@ adminOpsRouter.get(
         pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
         adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
         suspendRecommended: false,
+        lastReminderAt: customer.billingSnapshot?.collections?.lastReminderAt,
+        promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
+        promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
+        promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
       });
     }
 
     const filtered = bucketFilter ? items.filter((item) => item.bucket === bucketFilter) : items;
     return ok(res, filtered);
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/collections/:customerId/remind",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const invoice = req.body?.invoiceId
+      ? await BillingInvoice.findOne({ invoiceId: req.body.invoiceId, customerId: customer.customerId }).lean()
+      : await BillingInvoice.findOne({
+          customerId: customer.customerId,
+          paymentStatus: { $in: ["pending", "overdue"] }
+        })
+          .sort({ dueDate: 1, generatedAt: -1 })
+          .lean();
+    const invoiceUrl = invoice
+      ? `${req.protocol}://${req.get("host")}/api/v1/admin/billing/invoices/${encodeURIComponent(invoice.invoiceId)}/pdf`
+      : undefined;
+    const amount = Number(customer.billingSnapshot?.dueAmount || invoice?.totalAmount || 0).toFixed(2);
+    await notificationDispatcher.dispatchEvent({
+      eventKey: invoice?.paymentStatus === "overdue" ? "unpaid_invoice" : "invoice_due_date",
+      recipients: {
+        email: customer.email,
+        sms: customer.phone
+      },
+      subject: `Payment reminder for ${customer.customerId}`,
+      body: `Dear ${customer.fullName}, your pending amount is Rs ${amount}.${invoiceUrl ? ` Invoice: ${invoiceUrl}` : ""}`,
+      attachments: invoice
+        ? buildBillingAttachment({
+            title: `Invoice ${invoice.invoiceNumber || invoice.invoiceId}`,
+            url: invoiceUrl,
+            reference: invoice.invoiceNumber || invoice.invoiceId
+          })
+        : [],
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: {
+        customerId: customer.customerId,
+        invoiceId: invoice?.invoiceId,
+        reminderSource: "billing_collection"
+      }
+    });
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      collections: {
+        ...(customer.billingSnapshot?.collections || {}),
+        lastReminderAt: new Date(),
+        lastReminderInvoiceId: invoice?.invoiceId || null
+      }
+    };
+    await customer.save();
+    return ok(res, { reminded: true, customerId: customer.customerId, invoiceId: invoice?.invoiceId || null });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/collections/:customerId/promise-to-pay",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const promisedAt = req.body?.promisedAt ? new Date(req.body.promisedAt) : null;
+    if (!promisedAt || Number.isNaN(promisedAt.getTime())) {
+      throw new ApiError(400, "Valid promise date is required");
+    }
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      collections: {
+        ...(customer.billingSnapshot?.collections || {}),
+        promiseToPayAt: promisedAt,
+        promiseAmount: Number(req.body?.amount || customer.billingSnapshot?.dueAmount || 0),
+        promiseNote: String(req.body?.note || "").trim(),
+        promiseSetAt: new Date(),
+        promiseSetByAdminId: req.admin?._id
+      }
+    };
+    await customer.save();
+    return ok(res, {
+      saved: true,
+      customerId: customer.customerId,
+      promiseToPayAt: promisedAt,
+      promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0)
+    });
   })
 );
 

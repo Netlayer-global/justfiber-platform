@@ -408,4 +408,8 @@ export interface BillingCollectionItem {
   pendingPlanMode?: string
   adjustmentPreview?: number
   suspendRecommended?: boolean
+  lastReminderAt?: string
+  promiseToPayAt?: string
+  promiseAmount?: number
+  promiseNote?: string
 }
