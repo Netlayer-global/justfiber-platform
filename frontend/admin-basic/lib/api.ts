@@ -1090,6 +1090,8 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapRazorpayWebhookLog) : [],
     }
   },
+  getBillingRecovery: async () =>
+    request<any[]>('/api/v1/admin/billing/recovery'),
   importBillingPaymentsCsv: async (csv: string) => {
     const res = await request<any>('/api/v1/admin/billing/payments/import-csv', {
       method: 'POST',
@@ -1108,6 +1110,10 @@ export const adminAPI = {
     request(`/api/v1/admin/billing/razorpay/payments/${paymentId}/refund`, {
       method: 'POST',
       body: JSON.stringify(data || {}),
+    }),
+  sendBillingRetryReminder: (transactionId: string) =>
+    request(`/api/v1/admin/billing/payments/${transactionId}/retry-reminder`, {
+      method: 'POST',
     }),
   assignBillingCollectionOwner: (customerId: string, adminId?: string) =>
     request(`/api/v1/admin/billing/collections/${customerId}/assign`, {

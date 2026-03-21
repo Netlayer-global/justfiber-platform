@@ -483,6 +483,28 @@ export interface RazorpayWebhookLog {
   createdAt?: string
 }
 
+export interface BillingRecoveryItem {
+  transactionId: string
+  customerId: string
+  customerName: string
+  phone?: string
+  email?: string
+  status: string
+  provider?: string
+  method?: string
+  amount: number
+  reference?: string
+  invoiceId?: string
+  source?: string
+  retryEligible: boolean
+  paymentAgeHours: number
+  retryUrl?: string
+  customerStatus?: string
+  dueAmount?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface BillingImportResultItem {
   transactionId: string
   customerId?: string

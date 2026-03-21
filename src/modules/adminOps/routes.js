@@ -23,6 +23,7 @@ import { detectOntBrand } from "../../common/networkProvisioning.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
+import { env } from "../../config/env.js";
 
 export const adminOpsRouter = Router();
 
@@ -285,6 +286,13 @@ function buildBillingAttachment({ title, url, reference }) {
     mimeType: "application/pdf",
     title
   }];
+}
+
+function buildCustomerPortalRetryUrl(customerId) {
+  const configuredBase = String(env.USER_DOMAIN || "").trim();
+  if (!configuredBase) return "";
+  const base = configuredBase.startsWith("http") ? configuredBase : `http://${configuredBase}`;
+  return `${base.replace(/\/$/, "")}/profile?tab=billing&customerId=${encodeURIComponent(customerId)}`;
 }
 
 async function findBestInvoiceForPayment(payment, explicitInvoiceId) {
@@ -745,6 +753,98 @@ adminOpsRouter.get(
         createdAt: item.createdAt
       }))
     );
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/recovery",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const items = await PaymentTransaction.find({
+      status: { $in: ["failed", "pending", "expired"] }
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    const customerIds = [...new Set(items.map((item) => item.customerId).filter(Boolean))];
+    const customers = await Customer.find({ customerId: { $in: customerIds } }, {
+      customerId: 1,
+      fullName: 1,
+      phone: 1,
+      email: 1,
+      operationalStatus: 1,
+      billingSnapshot: 1
+    }).lean();
+    const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
+
+    return ok(res, items.map((item) => {
+      const customer = customerMap.get(item.customerId);
+      const paymentAgeHours = item.createdAt
+        ? Math.max(0, Math.floor((Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60)))
+        : 0;
+      const retryEligible = item.status !== "captured" && item.status !== "success";
+      return {
+        transactionId: item.transactionId,
+        customerId: item.customerId,
+        customerName: customer?.fullName || item.customerId,
+        phone: customer?.phone || "",
+        email: customer?.email || "",
+        status: item.status || "",
+        provider: item.provider || "",
+        method: item.method || "",
+        amount: Number(item.amount || 0),
+        reference: item.reference || "",
+        invoiceId: item.invoiceId || item.reconciledInvoiceId || item.metadata?.invoiceId || "",
+        source: item.metadata?.source || "",
+        retryEligible,
+        paymentAgeHours,
+        retryUrl: retryEligible ? buildCustomerPortalRetryUrl(item.customerId) : "",
+        customerStatus: customer?.operationalStatus || "",
+        dueAmount: Number(customer?.billingSnapshot?.dueAmount || 0),
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt
+      };
+    }));
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/payments/:transactionId/retry-reminder",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const payment = await PaymentTransaction.findOne({ transactionId: req.params.transactionId }).lean();
+    if (!payment) {
+      throw new ApiError(404, "Payment transaction not found");
+    }
+    const customer = await Customer.findOne({ customerId: payment.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const retryUrl = buildCustomerPortalRetryUrl(customer.customerId);
+    await notificationDispatcher.dispatchEvent({
+      eventKey: "unpaid_invoice",
+      recipients: {
+        email: customer.email,
+        sms: customer.phone
+      },
+      subject: `Retry payment for ${customer.customerId}`,
+      body: `Dear ${customer.fullName}, your payment attempt of Rs ${Number(payment.amount || 0).toFixed(2)} was not completed. ${retryUrl ? `Retry here: ${retryUrl}` : "Please open the customer app and retry the payment."}`,
+      entityType: "payment_retry",
+      entityId: payment.transactionId,
+      metadata: {
+        customerId: customer.customerId,
+        transactionId: payment.transactionId,
+        retryUrl,
+        provider: payment.provider || "",
+        status: payment.status || ""
+      }
+    });
+    return ok(res, {
+      reminded: true,
+      transactionId: payment.transactionId,
+      retryUrl
+    });
   })
 );
 

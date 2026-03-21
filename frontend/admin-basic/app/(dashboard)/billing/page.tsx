@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -67,6 +67,7 @@ export default function BillingPage() {
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [razorpayOverview, setRazorpayOverview] = useState<RazorpayOverview | null>(null)
   const [razorpayWebhookLogs, setRazorpayWebhookLogs] = useState<RazorpayWebhookLog[]>([])
+  const [recoveryItems, setRecoveryItems] = useState<BillingRecoveryItem[]>([])
   const [collectionBucket, setCollectionBucket] = useState('')
   const [csvImportText, setCsvImportText] = useState('')
   const [csvImportResult, setCsvImportResult] = useState<BillingImportResult | null>(null)
@@ -100,7 +101,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes] = await Promise.all([
         adminAPI.getBillingData(),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -111,6 +112,7 @@ export default function BillingPage() {
         adminAPI.getBillingCollectionAgents(),
         adminAPI.getRazorpayOverview(),
         adminAPI.getRazorpayWebhookLogs(),
+        adminAPI.getBillingRecovery(),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -168,6 +170,9 @@ export default function BillingPage() {
       }
       if (razorpayWebhookRes.success && razorpayWebhookRes.data) {
         setRazorpayWebhookLogs(razorpayWebhookRes.data)
+      }
+      if (recoveryRes.success && recoveryRes.data) {
+        setRecoveryItems(recoveryRes.data as BillingRecoveryItem[])
       }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
@@ -329,6 +334,20 @@ export default function BillingPage() {
     } catch (error) {
       console.error('[v0] Failed to dispatch receipt:', error)
       toast.error('Failed to dispatch receipt')
+    }
+  }
+
+  async function sendRetryReminder(transactionId: string) {
+    try {
+      const res = await adminAPI.sendBillingRetryReminder(transactionId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to send retry reminder')
+        return
+      }
+      toast.success('Retry reminder sent')
+    } catch (error) {
+      console.error('[v0] Failed to send retry reminder:', error)
+      toast.error('Failed to send retry reminder')
     }
   }
 
@@ -652,6 +671,73 @@ export default function BillingPage() {
                 {!((razorpayOverview?.settlementItems || []).filter((item) => item.stale || item.reconciliationStatus === 'manual_review').length) ? (
                   <tr className="border-t border-[#2a2f4a]">
                     <td className="table-cell text-slate-500" colSpan={6}>No stale pending orders or manual-review Razorpay items.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Failed Payment Recovery</div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0e27]">
+                  <th className="table-header">Transaction</th>
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">Status</th>
+                  <th className="table-header">Amount</th>
+                  <th className="table-header">Source</th>
+                  <th className="table-header text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recoveryItems.slice(0, 20).map((item) => (
+                  <tr key={`payment-recovery-${item.transactionId}`} className="border-t border-[#2a2f4a]">
+                    <td className="table-cell">
+                      <div className="font-mono text-xs">{item.transactionId}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.provider || '-'} | {item.method || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.reference || item.invoiceId || '-'}</div>
+                    </td>
+                    <td className="table-cell">
+                      <div>{item.customerName}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.customerId}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.phone || '-'} | Due Rs {Number(item.dueAmount || 0).toFixed(2)}</div>
+                    </td>
+                    <td className="table-cell">
+                      <div>{item.status}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.customerStatus || '-'}</div>
+                    </td>
+                    <td className="table-cell">
+                      <div>Rs {Number(item.amount || 0).toFixed(2)}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.paymentAgeHours}h old</div>
+                    </td>
+                    <td className="table-cell">
+                      <div>{item.source || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</div>
+                    </td>
+                    <td className="table-cell text-right">
+                      <button
+                        className="btn-secondary"
+                        onClick={() => void sendRetryReminder(item.transactionId)}
+                      >
+                        Send Retry
+                      </button>
+                      {item.retryUrl ? (
+                        <a
+                          className="text-xs text-[#4da3ff] mt-2 inline-block"
+                          href={item.retryUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open Retry Link
+                        </a>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+                {!recoveryItems.length ? (
+                  <tr className="border-t border-[#2a2f4a]">
+                    <td className="table-cell text-slate-500" colSpan={6}>No failed or pending payment recovery items.</td>
                   </tr>
                 ) : null}
               </tbody>
