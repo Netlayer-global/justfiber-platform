@@ -504,6 +504,16 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  rebootDevice: (deviceId: string, reason?: string) =>
+    request(`/api/v1/admin/network/device-management/${deviceId}/reboot`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  applyDevicePreset: (deviceId: string, presetName: 'SERVICE_PREPARE' | 'SERVICE_ACTIVATE' | 'SERVICE_SUSPEND' | 'SERVICE_RESUME') =>
+    request(`/api/v1/admin/devices/${deviceId}/apply-preset`, {
+      method: 'POST',
+      body: JSON.stringify({ presetName }),
+    }),
 
   // Tickets
   getTickets: async (page = 1, limit = 20) => {

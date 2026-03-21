@@ -256,6 +256,68 @@ export default function CustomerDetailPage() {
     }
   }
 
+  async function handleDeviceWanUpdate(device: CustomerDevice) {
+    const form = wifiForms[device.deviceId]
+    if (!form) return
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.updateDeviceWifi(device.deviceId, {
+        pppoeUsername: form.pppoeUsername || undefined,
+        pppoePassword: form.pppoePassword || undefined,
+        natEnabled: form.natEnabled,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to update WAN')
+        return
+      }
+      toast.success('WAN config pushed')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to update WAN:', error)
+      toast.error('Failed to update WAN')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleDeviceReboot(device: CustomerDevice) {
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.rebootDevice(device.deviceId, 'Customer ops reboot')
+      if (!res.success) {
+        toast.error(res.error || 'Failed to queue reboot')
+        return
+      }
+      toast.success('Reboot queued')
+    } catch (error) {
+      console.error('[v0] Failed to reboot device:', error)
+      toast.error('Failed to reboot device')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleDevicePreset(
+    device: CustomerDevice,
+    presetName: 'SERVICE_PREPARE' | 'SERVICE_ACTIVATE' | 'SERVICE_SUSPEND' | 'SERVICE_RESUME'
+  ) {
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.applyDevicePreset(device.deviceId, presetName)
+      if (!res.success) {
+        toast.error(res.error || `Failed to apply ${presetName}`)
+        return
+      }
+      toast.success(`${presetName} queued`)
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to apply preset:', error)
+      toast.error('Failed to apply preset')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   function updateWifiForm(deviceId: string, patch: Partial<(typeof wifiForms)[string]>) {
     setWifiForms((current) => ({
       ...current,
@@ -401,6 +463,19 @@ export default function CustomerDetailPage() {
               <div className="space-y-4">
                 {(customer.devices || []).length ? customer.devices?.map((device) => {
                   const form = wifiForms[device.deviceId]
+                  const rxPower = Number(device.opticalInfo?.rxPower ?? NaN)
+                  const txPower = Number(device.opticalInfo?.txPower ?? NaN)
+                  const opticalHealth =
+                    Number.isFinite(rxPower)
+                      ? rxPower > -21
+                        ? 'good'
+                        : rxPower > -27
+                          ? 'warning'
+                          : 'critical'
+                      : 'unknown'
+                  const connectedClients = Array.isArray(device.lanInfo?.connectedDevices)
+                    ? device.lanInfo.connectedDevices.length
+                    : Number(device.lanInfo?.leasedClients || 0)
                   return (
                     <div key={device.id} className="card p-5 space-y-4">
                       <div>
@@ -409,27 +484,75 @@ export default function CustomerDetailPage() {
                         <p className="text-sm text-slate-500">Online: {device.onlineStatus || '-'} | Provisioning: {device.provisioningState || '-'}</p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        <input className="input" placeholder="SSID 2.4G" value={form?.ssid24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid24: e.target.value })} />
-                        <input className="input" placeholder="SSID 5G" value={form?.ssid5 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid5: e.target.value })} />
-                        <input className="input" placeholder="PPPoE Username" value={form?.pppoeUsername || ''} onChange={(e) => updateWifiForm(device.deviceId, { pppoeUsername: e.target.value })} />
-                        <input className="input" placeholder="Password 2.4G" type="password" value={form?.password24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { password24: e.target.value })} />
-                        <input className="input" placeholder="Password 5G" type="password" value={form?.password5 || ''} onChange={(e) => updateWifiForm(device.deviceId, { password5: e.target.value })} />
-                        <input className="input" placeholder="PPPoE Password" type="password" value={form?.pppoePassword || ''} onChange={(e) => updateWifiForm(device.deviceId, { pppoePassword: e.target.value })} />
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="rounded border border-[#2a2f4a] p-3">
+                          <p className="text-xs text-slate-500">Connected clients</p>
+                          <p className="text-lg font-semibold">{connectedClients}</p>
+                        </div>
+                        <div className="rounded border border-[#2a2f4a] p-3">
+                          <p className="text-xs text-slate-500">RX Power</p>
+                          <p className="text-lg font-semibold">{Number.isFinite(rxPower) ? `${rxPower} dBm` : '-'}</p>
+                        </div>
+                        <div className="rounded border border-[#2a2f4a] p-3">
+                          <p className="text-xs text-slate-500">TX Power</p>
+                          <p className="text-lg font-semibold">{Number.isFinite(txPower) ? `${txPower} dBm` : '-'}</p>
+                        </div>
+                        <div className="rounded border border-[#2a2f4a] p-3">
+                          <p className="text-xs text-slate-500">Optical health</p>
+                          <p className="text-lg font-semibold">{opticalHealth}</p>
+                        </div>
                       </div>
 
-                      <label className="flex items-center gap-3 text-sm">
-                        <input type="checkbox" checked={form?.natEnabled ?? true} onChange={(e) => updateWifiForm(device.deviceId, { natEnabled: e.target.checked })} />
-                        NAT Enabled
-                      </label>
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <div className="rounded border border-[#2a2f4a] p-4 space-y-4">
+                          <h3 className="font-semibold">Wi-Fi Management</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input className="input" placeholder="SSID 2.4G" value={form?.ssid24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid24: e.target.value })} />
+                            <input className="input" placeholder="SSID 5G" value={form?.ssid5 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid5: e.target.value })} />
+                            <input className="input" placeholder="Password 2.4G" type="password" value={form?.password24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { password24: e.target.value })} />
+                            <input className="input" placeholder="Password 5G" type="password" value={form?.password5 || ''} onChange={(e) => updateWifiForm(device.deviceId, { password5: e.target.value })} />
+                          </div>
+                          <button className="btn-primary" onClick={() => void handleDeviceWifiUpdate(device)} disabled={isSaving}>Apply Wi-Fi Only</button>
+                        </div>
 
-                      <div className="flex gap-2">
-                        <button className="btn-primary" onClick={() => void handleDeviceWifiUpdate(device)} disabled={isSaving}>Apply Wi-Fi / WAN</button>
+                        <div className="rounded border border-[#2a2f4a] p-4 space-y-4">
+                          <h3 className="font-semibold">WAN Management</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input className="input" placeholder="PPPoE Username" value={form?.pppoeUsername || ''} onChange={(e) => updateWifiForm(device.deviceId, { pppoeUsername: e.target.value })} />
+                            <input className="input" placeholder="PPPoE Password" type="password" value={form?.pppoePassword || ''} onChange={(e) => updateWifiForm(device.deviceId, { pppoePassword: e.target.value })} />
+                          </div>
+                          <label className="flex items-center gap-3 text-sm">
+                            <input type="checkbox" checked={form?.natEnabled ?? true} onChange={(e) => updateWifiForm(device.deviceId, { natEnabled: e.target.checked })} />
+                            NAT Enabled
+                          </label>
+                          <button className="btn-primary" onClick={() => void handleDeviceWanUpdate(device)} disabled={isSaving}>Apply WAN Only</button>
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
-                        <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.wifiInfo || {}, null, 2)}</pre>
-                        <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify({ wanInfo: device.wanInfo || {}, lanInfo: device.lanInfo || {}, opticalInfo: device.opticalInfo || {} }, null, 2)}</pre>
+                      <div className="rounded border border-[#2a2f4a] p-4 space-y-4">
+                        <h3 className="font-semibold">Device Actions</h3>
+                        <div className="flex flex-wrap gap-2">
+                          <button className="btn-secondary" onClick={() => void handleDeviceReboot(device)} disabled={isSaving}>Reboot</button>
+                          <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_PREPARE')} disabled={isSaving}>Prepare</button>
+                          <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_ACTIVATE')} disabled={isSaving}>Activate</button>
+                          <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_SUSPEND')} disabled={isSaving}>Suspend Service</button>
+                          <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_RESUME')} disabled={isSaving}>Resume Service</button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 text-sm">
+                        <div className="rounded border border-[#2a2f4a] p-4">
+                          <h3 className="font-semibold mb-3">Wi-Fi Snapshot</h3>
+                          <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.wifiInfo || {}, null, 2)}</pre>
+                        </div>
+                        <div className="rounded border border-[#2a2f4a] p-4">
+                          <h3 className="font-semibold mb-3">WAN / LAN Snapshot</h3>
+                          <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify({ wanInfo: device.wanInfo || {}, lanInfo: device.lanInfo || {} }, null, 2)}</pre>
+                        </div>
+                        <div className="rounded border border-[#2a2f4a] p-4">
+                          <h3 className="font-semibold mb-3">Optical / Diagnostics</h3>
+                          <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.opticalInfo || {}, null, 2)}</pre>
+                        </div>
                       </div>
                     </div>
                   )
