@@ -923,6 +923,14 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(invoiceId ? { invoiceId } : {}),
     }),
+  dispatchInvoice: async (invoiceId: string) =>
+    request(`/api/v1/admin/billing/invoices/${invoiceId}/dispatch`, {
+      method: 'POST',
+    }),
+  dispatchBillingNote: async (noteNumber: string) =>
+    request(`/api/v1/admin/billing/notes/${noteNumber}/dispatch`, {
+      method: 'POST',
+    }),
   createBillingNote: async (data: {
     customerId: string
     type: 'credit' | 'debit'

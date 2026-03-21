@@ -214,6 +214,34 @@ export default function BillingPage() {
     }
   }
 
+  async function dispatchInvoice(invoiceId: string) {
+    try {
+      const res = await adminAPI.dispatchInvoice(invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to dispatch invoice')
+        return
+      }
+      toast.success('Invoice dispatched')
+    } catch (error) {
+      console.error('[v0] Failed to dispatch invoice:', error)
+      toast.error('Failed to dispatch invoice')
+    }
+  }
+
+  async function dispatchBillingNote(noteNumber: string) {
+    try {
+      const res = await adminAPI.dispatchBillingNote(noteNumber)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to dispatch billing note')
+        return
+      }
+      toast.success('Billing note dispatched')
+    } catch (error) {
+      console.error('[v0] Failed to dispatch billing note:', error)
+      toast.error('Failed to dispatch billing note')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -395,6 +423,12 @@ export default function BillingPage() {
                         >
                           Open PDF
                         </a>
+                        <button
+                          className="text-xs text-[#4da3ff] mt-1 block"
+                          onClick={() => void dispatchBillingNote(item.noteNumber)}
+                        >
+                          Dispatch
+                        </button>
                       </td>
                       <td className="table-cell">{item.customerId}</td>
                       <td className="table-cell">{item.type}</td>
@@ -473,6 +507,12 @@ export default function BillingPage() {
                     >
                       Open PDF
                     </a>
+                    <button
+                      className="text-xs text-[#4da3ff] mt-1 block"
+                      onClick={() => void dispatchInvoice(item.invoiceId)}
+                    >
+                      Dispatch
+                    </button>
                   </td>
                   <td className="table-cell">{item.billingStateName || item.billingStateCode || '-'}</td>
                   <td className="table-cell">Rs {Number(item.amount || 0).toFixed(2)}</td>

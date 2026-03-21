@@ -1,4 +1,5 @@
 import { Router } from "express";
+import PDFDocument from "pdfkit";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
 import { requireAuth, requirePermission } from "../../common/auth.js";
@@ -19,6 +20,7 @@ import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
+import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 
 export const adminOpsRouter = Router();
 
@@ -69,6 +71,88 @@ function buildBillingNoteHtml(note) {
       <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(note.totalAmount || 0).toFixed(2)}</td></tr>
     </table>
   </body></html>`;
+}
+
+function renderInvoicePdf(invoice) {
+  const doc = new PDFDocument({ margin: 40, size: "A4" });
+  doc.fontSize(20).text(`Invoice ${invoice.invoiceNumber}`);
+  doc.moveDown(0.5);
+  doc.fontSize(11).text(`Customer: ${invoice.customerId}`);
+  doc.text(`Bill Cycle: ${invoice.billCycle || "-"}`);
+  doc.text(`Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`);
+  doc.text(`Status: ${invoice.paymentStatus || "-"}`);
+  doc.moveDown();
+  doc.fontSize(12).text(`Taxable Amount: Rs ${Number(invoice.amount || 0).toFixed(2)}`);
+  for (const part of invoice.taxBreakdown || []) {
+    doc.text(`${part.label} (${part.rate || 0}%): Rs ${Number(part.amount || 0).toFixed(2)}`);
+  }
+  doc.font("Helvetica-Bold").text(`Total: Rs ${Number(invoice.totalAmount || 0).toFixed(2)}`);
+  doc.end();
+  return doc;
+}
+
+function renderBillingNotePdf(note) {
+  const doc = new PDFDocument({ margin: 40, size: "A4" });
+  doc.fontSize(20).text(`${note.type === "credit" ? "Credit Note" : "Debit Note"} ${note.noteNumber}`);
+  doc.moveDown(0.5);
+  doc.fontSize(11).text(`Customer: ${note.customerId}`);
+  doc.text(`Reason: ${note.reasonCode || "-"}`);
+  doc.text(`Status: ${note.status || "-"}`);
+  doc.moveDown();
+  doc.fontSize(12).text(`Base Amount: Rs ${Number(note.amount || 0).toFixed(2)}`);
+  for (const part of note.taxBreakdown || []) {
+    doc.text(`${part.label} (${part.rate || 0}%): Rs ${Number(part.amount || 0).toFixed(2)}`);
+  }
+  doc.font("Helvetica-Bold").text(`Total: Rs ${Number(note.totalAmount || 0).toFixed(2)}`);
+  doc.end();
+  return doc;
+}
+
+async function findBestInvoiceForPayment(payment, explicitInvoiceId) {
+  if (explicitInvoiceId) {
+    return BillingInvoice.findOne({ $or: [{ invoiceId: explicitInvoiceId }, { invoiceNumber: explicitInvoiceId }] });
+  }
+
+  const exactRef = String(payment.reference || "").trim();
+  if (exactRef) {
+    const byReference = await BillingInvoice.findOne({
+      $or: [{ invoiceId: exactRef }, { invoiceNumber: exactRef }]
+    });
+    if (byReference) return byReference;
+  }
+
+  const amount = Number(payment.amount || 0);
+  const refTokens = [payment.reference, payment.transactionId, payment.metadata?.bankReference, payment.metadata?.upiTxnId]
+    .filter(Boolean)
+    .map((value) => String(value).trim().toLowerCase());
+
+  const candidates = await BillingInvoice.find({
+    customerId: payment.customerId,
+    paymentStatus: { $in: ["pending", "overdue"] }
+  }).sort({ dueDate: 1, generatedAt: 1 });
+
+  let best = null;
+  let bestScore = -1;
+  for (const invoice of candidates) {
+    let score = 0;
+    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 1) score += 4;
+    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 0.01) score += 2;
+    const invoiceTokens = [
+      invoice.invoiceId,
+      invoice.invoiceNumber,
+      invoice.metadata?.lastPaymentId,
+      ...(Array.isArray(invoice.metadata?.externalReferences) ? invoice.metadata.externalReferences : [])
+    ]
+      .filter(Boolean)
+      .map((value) => String(value).trim().toLowerCase());
+    if (refTokens.some((token) => invoiceTokens.includes(token))) score += 8;
+    if (score > bestScore) {
+      best = invoice;
+      bestScore = score;
+    }
+  }
+
+  return bestScore >= 4 ? best : null;
 }
 
 async function createLedgerEntry({
@@ -213,8 +297,13 @@ adminOpsRouter.get(
     if (!invoice) {
       throw new ApiError(404, "Invoice not found");
     }
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(buildInvoiceHtml(invoice));
+    if (String(req.query.format || "").toLowerCase() === "html") {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.send(buildInvoiceHtml(invoice));
+    }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=\"${invoice.invoiceNumber || invoice.invoiceId}.pdf\"`);
+    return renderInvoicePdf(invoice).pipe(res);
   })
 );
 
@@ -264,8 +353,13 @@ adminOpsRouter.get(
     if (!note) {
       throw new ApiError(404, "Billing note not found");
     }
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(buildBillingNoteHtml(note));
+    if (String(req.query.format || "").toLowerCase() === "html") {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.send(buildBillingNoteHtml(note));
+    }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=\"${note.noteNumber}.pdf\"`);
+    return renderBillingNotePdf(note).pipe(res);
   })
 );
 
@@ -610,6 +704,66 @@ adminOpsRouter.post(
 );
 
 adminOpsRouter.post(
+  "/billing/invoices/:invoiceId/dispatch",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const invoice = await BillingInvoice.findOne({
+      $or: [{ invoiceId: req.params.invoiceId }, { invoiceNumber: req.params.invoiceId }]
+    }).lean();
+    if (!invoice) {
+      throw new ApiError(404, "Invoice not found");
+    }
+    const customer = await Customer.findOne({ customerId: invoice.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const invoiceUrl = `${req.protocol}://${req.get("host")}/api/v1/admin/billing/invoices/${encodeURIComponent(invoice.invoiceId)}/pdf`;
+    await notificationDispatcher.dispatchEvent({
+      eventKey: "billing_invoice",
+      recipients: {
+        email: customer.email,
+        sms: customer.phone
+      },
+      subject: `Invoice ${invoice.invoiceNumber}`,
+      body: `Dear ${customer.fullName}, your invoice ${invoice.invoiceNumber} for Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is ready. Download: ${invoiceUrl}`,
+      entityType: "billing_invoice",
+      entityId: invoice.invoiceId,
+      metadata: { invoiceId: invoice.invoiceId, invoiceNumber: invoice.invoiceNumber, invoiceUrl }
+    });
+    return ok(res, { dispatched: true, invoiceId: invoice.invoiceId, invoiceUrl });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/notes/:noteNumber/dispatch",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const note = await BillingNote.findOne({ noteNumber: req.params.noteNumber }).lean();
+    if (!note) {
+      throw new ApiError(404, "Billing note not found");
+    }
+    const customer = await Customer.findOne({ customerId: note.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const noteUrl = `${req.protocol}://${req.get("host")}/api/v1/admin/billing/notes/${encodeURIComponent(note.noteNumber)}/pdf`;
+    await notificationDispatcher.dispatchEvent({
+      eventKey: note.type === "credit" ? "user_discount" : "user_penalty",
+      recipients: {
+        email: customer.email,
+        sms: customer.phone
+      },
+      subject: `${note.type === "credit" ? "Credit" : "Debit"} note ${note.noteNumber}`,
+      body: `Dear ${customer.fullName}, ${note.type} note ${note.noteNumber} of Rs ${Number(note.totalAmount || 0).toFixed(2)} is available. Download: ${noteUrl}`,
+      entityType: "billing_note",
+      entityId: note.noteNumber,
+      metadata: { noteNumber: note.noteNumber, noteUrl }
+    });
+    return ok(res, { dispatched: true, noteNumber: note.noteNumber, noteUrl });
+  })
+);
+
+adminOpsRouter.post(
   "/billing/payments/:transactionId/reconcile",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
@@ -617,12 +771,7 @@ adminOpsRouter.post(
     if (!payment) {
       throw new ApiError(404, "Payment transaction not found");
     }
-    const invoice = req.body?.invoiceId
-      ? await BillingInvoice.findOne({ $or: [{ invoiceId: req.body.invoiceId }, { invoiceNumber: req.body.invoiceId }] })
-      : await BillingInvoice.findOne({
-          customerId: payment.customerId,
-          paymentStatus: { $in: ["pending", "overdue"] }
-        }).sort({ dueDate: 1, generatedAt: 1 });
+    const invoice = await findBestInvoiceForPayment(payment, req.body?.invoiceId);
 
     if (!invoice) {
       throw new ApiError(404, "Matching invoice not found");
@@ -642,6 +791,10 @@ adminOpsRouter.post(
     payment.reconciledInvoiceId = invoice.invoiceId;
     payment.reconciledAt = new Date();
     payment.reconciledByAdminId = req.admin?._id;
+    payment.metadata = {
+      ...(payment.metadata || {}),
+      reconciliationMode: req.body?.invoiceId ? "manual_explicit" : "smart_match"
+    };
     await payment.save();
 
     const customer = await Customer.findOne({ customerId: payment.customerId });

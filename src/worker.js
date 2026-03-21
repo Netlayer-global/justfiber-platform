@@ -719,6 +719,48 @@ console.log("Admin worker started");
 
 let billingSchedulerRunning = false;
 
+async function findBestInvoiceForPayment(payment) {
+  const exactRef = String(payment.reference || "").trim();
+  if (exactRef) {
+    const byReference = await BillingInvoice.findOne({
+      $or: [{ invoiceId: exactRef }, { invoiceNumber: exactRef }]
+    });
+    if (byReference) return byReference;
+  }
+
+  const amount = Number(payment.amount || 0);
+  const refTokens = [payment.reference, payment.transactionId, payment.metadata?.bankReference, payment.metadata?.upiTxnId]
+    .filter(Boolean)
+    .map((value) => String(value).trim().toLowerCase());
+
+  const candidates = await BillingInvoice.find({
+    customerId: payment.customerId,
+    paymentStatus: { $in: ["pending", "overdue"] }
+  }).sort({ dueDate: 1, generatedAt: 1 });
+
+  let best = null;
+  let bestScore = -1;
+  for (const invoice of candidates) {
+    let score = 0;
+    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 1) score += 4;
+    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 0.01) score += 2;
+    const invoiceTokens = [
+      invoice.invoiceId,
+      invoice.invoiceNumber,
+      invoice.metadata?.lastPaymentId,
+      ...(Array.isArray(invoice.metadata?.externalReferences) ? invoice.metadata.externalReferences : [])
+    ]
+      .filter(Boolean)
+      .map((value) => String(value).trim().toLowerCase());
+    if (refTokens.some((token) => invoiceTokens.includes(token))) score += 8;
+    if (score > bestScore) {
+      best = invoice;
+      bestScore = score;
+    }
+  }
+  return bestScore >= 4 ? best : null;
+}
+
 async function runRecurringBillingTasks() {
   if (billingSchedulerRunning) return;
   billingSchedulerRunning = true;
@@ -772,6 +814,21 @@ async function runRecurringBillingTasks() {
           }
         }
       );
+      const customer = await Customer.findOne({ customerId: invoice.customerId }).lean();
+      if (customer?.phone || customer?.email) {
+        await notificationDispatcher.dispatchEvent({
+          eventKey: "invoice_due_date",
+          recipients: {
+            email: customer.email,
+            sms: customer.phone
+          },
+          subject: `Invoice overdue ${invoice.invoiceNumber}`,
+          body: `Dear ${customer.fullName}, invoice ${invoice.invoiceNumber} of Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is overdue.`,
+          entityType: "billing_invoice",
+          entityId: invoice.invoiceId,
+          metadata: { invoiceId: invoice.invoiceId, stage: "overdue" }
+        }).catch(() => null);
+      }
     }
 
     const pendingPayments = await PaymentTransaction.find({
@@ -780,11 +837,7 @@ async function runRecurringBillingTasks() {
     }).sort({ paidAt: -1, createdAt: -1 }).limit(50);
 
     for (const payment of pendingPayments) {
-      const invoice = await BillingInvoice.findOne({
-        customerId: payment.customerId,
-        paymentStatus: { $in: ["pending", "overdue"] },
-        totalAmount: { $gte: Number(payment.amount || 0) - 1, $lte: Number(payment.amount || 0) + 1 }
-      }).sort({ dueDate: 1, generatedAt: 1 });
+      const invoice = await findBestInvoiceForPayment(payment);
 
       if (!invoice) {
         payment.reconciliationStatus = "manual_review";
@@ -806,6 +859,10 @@ async function runRecurringBillingTasks() {
       payment.reconciliationStatus = "reconciled";
       payment.reconciledInvoiceId = invoice.invoiceId;
       payment.reconciledAt = new Date();
+      payment.metadata = {
+        ...(payment.metadata || {}),
+        reconciliationMode: "auto_worker"
+      };
       await payment.save();
 
       const existingLedger = await BillingLedgerEntry.findOne({ paymentId: payment.transactionId }).lean();
@@ -831,6 +888,22 @@ async function runRecurringBillingTasks() {
           source: "billing_scheduler",
           postedAt: payment.paidAt || new Date()
         });
+      }
+
+      const customer = await Customer.findOne({ customerId: payment.customerId }).lean();
+      if (customer?.phone || customer?.email) {
+        await notificationDispatcher.dispatchEvent({
+          eventKey: "paid_invoice",
+          recipients: {
+            email: customer.email,
+            sms: customer.phone
+          },
+          subject: `Payment received for ${invoice.invoiceNumber}`,
+          body: `Dear ${customer.fullName}, payment of Rs ${Number(payment.amount || 0).toFixed(2)} has been reconciled against invoice ${invoice.invoiceNumber}.`,
+          entityType: "billing_payment",
+          entityId: payment.transactionId,
+          metadata: { invoiceId: invoice.invoiceId, paymentId: payment.transactionId }
+        }).catch(() => null);
       }
     }
   } catch (error) {
