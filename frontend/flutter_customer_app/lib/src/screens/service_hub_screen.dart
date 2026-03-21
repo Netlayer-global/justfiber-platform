@@ -221,38 +221,44 @@ class ServiceHubScreen extends StatelessWidget {
             _lightCard(
               title: 'Get add-ons',
               child: Column(
-                children: appState.addons.take(2).map((addon) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(22)),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(color: const Color(0xFFF0EEFF), borderRadius: BorderRadius.circular(18)),
-                          child: const Icon(Icons.add_box_outlined, size: 34, color: Color(0xFF22252D)),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                children: appState.addons
+                    .take(2)
+                    .map(
+                      (addon) => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(22)),
+                          child: Row(
                             children: [
-                              Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
-                              const SizedBox(height: 4),
-                              Text(addon.description, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(color: const Color(0xFFF0EEFF), borderRadius: BorderRadius.circular(18)),
+                                child: const Icon(Icons.add_box_outlined, size: 34, color: Color(0xFF22252D)),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                                    const SizedBox(height: 4),
+                                    Text(addon.description, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                                  ],
+                                ),
+                              ),
+                              OutlinedButton(
+                                onPressed: () => _showAddonInterest(context, appState, addon.name),
+                                child: const Text('Buy'),
+                              ),
                             ],
                           ),
                         ),
-                        OutlinedButton(
-                          onPressed: () => _showAddonInterest(context, appState, addon.name),
-                          child: const Text('Buy'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )).toList(),
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
           if (appState.addons.isNotEmpty) const SizedBox(height: 18),
           Container(

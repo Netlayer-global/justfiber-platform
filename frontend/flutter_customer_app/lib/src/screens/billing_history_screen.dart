@@ -254,10 +254,6 @@ class BillingHistoryScreen extends StatelessWidget {
     if (relativeUrl.isEmpty) return;
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
-    await SharePlus.instance.share(
-      ShareParams(
-        text: fullUrl,
-      ),
-    );
+    await Share.share(fullUrl);
   }
 }

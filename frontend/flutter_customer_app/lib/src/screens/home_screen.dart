@@ -19,12 +19,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const pages = [
-      HomeTab(),
-      ServiceHubScreen(),
-      ShopTab(),
-      PointsTab(),
-      ProfileTab(),
+    final pages = [
+      HomeTab(onNavigate: (value) => setState(() => index = value)),
+      const ServiceHubScreen(),
+      const ShopTab(),
+      const PointsTab(),
+      const ProfileTab(),
     ];
     return Scaffold(
       body: GradientOrbBackground(

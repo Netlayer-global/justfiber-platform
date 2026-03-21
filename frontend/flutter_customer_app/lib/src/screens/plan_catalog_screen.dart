@@ -94,7 +94,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                         children: [
                           Expanded(child: _planMetric('Rs ${plan.monthlyPrice.toStringAsFixed(0)} /m + GST', 'Price')),
                           Expanded(child: _planMetric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
-                          const Expanded(child: _planMetric('Unlimited', 'Internet')),
+                          Expanded(child: _planMetric('Unlimited', 'Internet')),
                         ],
                       ),
                       const SizedBox(height: 14),
