@@ -17,8 +17,13 @@ import { genieacsClient } from "./integrations/genieacsClient.js";
 import { AutomationTrigger } from "./models/AutomationTrigger.js";
 import { ScheduledReport } from "./models/ScheduledReport.js";
 import { SupportTicket } from "./models/SupportTicket.js";
+import { BillingInvoice } from "./models/BillingInvoice.js";
+import { BillingRun } from "./models/BillingRun.js";
+import { PaymentTransaction } from "./models/PaymentTransaction.js";
+import { BillingLedgerEntry } from "./models/BillingLedgerEntry.js";
 import { radiusServiceManager } from "./integrations/radiusServiceManager.js";
 import { internalSubscriberPlatform } from "./integrations/internalSubscriberPlatform.js";
+import { internalBillingEngine } from "./integrations/internalBillingEngine.js";
 import { notificationDispatcher } from "./integrations/notificationDispatcher.js";
 import { providerAdapters } from "./integrations/providerAdapters.js";
 import { writeAuditLog } from "./common/audit.js";
@@ -711,3 +716,132 @@ worker.on("completed", (job) => {
 });
 
 console.log("Admin worker started");
+
+let billingSchedulerRunning = false;
+
+async function runRecurringBillingTasks() {
+  if (billingSchedulerRunning) return;
+  billingSchedulerRunning = true;
+  try {
+    const now = new Date();
+    const today = now.getUTCDate();
+
+    const existingRun = await BillingRun.findOne({
+      triggerMode: "scheduled",
+      billCycle: `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`,
+      createdAt: { $gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) }
+    }).lean();
+
+    if (!existingRun && today === 1) {
+      const run = await BillingRun.create({
+        runId: `BR-AUTO-${Date.now()}`,
+        triggerMode: "scheduled",
+        billCycle: `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`,
+        status: "running",
+        startedAt: now,
+        notes: "Automatic daily scheduler run"
+      });
+      const result = await internalBillingEngine.runBillingCycle({ billCycle: run.billCycle });
+      run.status = "completed";
+      run.completedAt = new Date();
+      run.totals = {
+        processed: result.processed || 0,
+        created: result.created || 0,
+        skipped: result.skipped || 0,
+        failed: result.results?.filter((item) => item?.error).length || 0,
+        billedAmount: result.results?.filter((item) => !item.skipped).reduce((sum, item) => sum + Number(item.invoice?.totalAmount || 0), 0) || 0,
+        taxAmount: result.results?.filter((item) => !item.skipped).reduce((sum, item) => sum + Number(item.invoice?.taxAmount || 0), 0) || 0
+      };
+      run.results = result.results || [];
+      await run.save();
+    }
+
+    const overdueInvoices = await BillingInvoice.find({
+      paymentStatus: "pending",
+      dueDate: { $lt: now }
+    });
+    for (const invoice of overdueInvoices) {
+      invoice.paymentStatus = "overdue";
+      await invoice.save();
+      await Customer.updateOne(
+        { customerId: invoice.customerId },
+        {
+          $set: {
+            "billingSnapshot.lastPaymentStatus": "overdue",
+            "billingSnapshot.dueAmount": invoice.totalAmount || 0
+          }
+        }
+      );
+    }
+
+    const pendingPayments = await PaymentTransaction.find({
+      reconciliationStatus: { $in: ["pending", "manual_review", null] },
+      status: "success"
+    }).sort({ paidAt: -1, createdAt: -1 }).limit(50);
+
+    for (const payment of pendingPayments) {
+      const invoice = await BillingInvoice.findOne({
+        customerId: payment.customerId,
+        paymentStatus: { $in: ["pending", "overdue"] },
+        totalAmount: { $gte: Number(payment.amount || 0) - 1, $lte: Number(payment.amount || 0) + 1 }
+      }).sort({ dueDate: 1, generatedAt: 1 });
+
+      if (!invoice) {
+        payment.reconciliationStatus = "manual_review";
+        await payment.save();
+        continue;
+      }
+
+      invoice.paymentStatus = "paid";
+      invoice.status = "settled";
+      invoice.metadata = {
+        ...(invoice.metadata || {}),
+        reconciledPaymentId: payment.transactionId,
+        reconciledAt: new Date(),
+        reconciliationSource: "auto_worker"
+      };
+      await invoice.save();
+
+      payment.invoiceId = invoice.invoiceId;
+      payment.reconciliationStatus = "reconciled";
+      payment.reconciledInvoiceId = invoice.invoiceId;
+      payment.reconciledAt = new Date();
+      await payment.save();
+
+      const existingLedger = await BillingLedgerEntry.findOne({ paymentId: payment.transactionId }).lean();
+      if (!existingLedger) {
+        const latestEntry = await BillingLedgerEntry.findOne({ customerId: payment.customerId })
+          .sort({ postedAt: -1, createdAt: -1 })
+          .lean();
+        const currentBalance = latestEntry?.balanceAfter || 0;
+        const balanceAfter = currentBalance - Number(payment.amount || 0);
+        await BillingLedgerEntry.create({
+          entryId: `BL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+          customerId: payment.customerId,
+          serviceId: payment.serviceId,
+          invoiceId: invoice.invoiceId,
+          paymentId: payment.transactionId,
+          category: "payment",
+          direction: "credit",
+          amount: Number(payment.amount || 0),
+          currency: payment.currency || "INR",
+          balanceAfter,
+          reference: payment.reference || payment.transactionId,
+          note: "Auto-reconciled payment",
+          source: "billing_scheduler",
+          postedAt: payment.paidAt || new Date()
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[worker] recurring billing task failed:", error.message);
+  } finally {
+    billingSchedulerRunning = false;
+  }
+}
+
+setInterval(() => {
+  void runRecurringBillingTasks();
+}, 15 * 60 * 1000);
+
+void runRecurringBillingTasks();

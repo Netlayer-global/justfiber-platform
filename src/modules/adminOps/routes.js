@@ -28,6 +28,49 @@ function computeBalanceAfter({ currentBalance, direction, amount }) {
   return currentBalance + (direction === "debit" ? amount : -amount);
 }
 
+function buildInvoiceHtml(invoice) {
+  const taxRows = (invoice.taxBreakdown || [])
+    .map(
+      (item) =>
+        `<tr><td style="padding:8px;border:1px solid #ccc;">${item.label} (${item.rate || 0}%)</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(item.amount || 0).toFixed(2)}</td></tr>`
+    )
+    .join("");
+  return `<!doctype html>
+  <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber}</title></head>
+  <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
+    <h1>Invoice ${invoice.invoiceNumber}</h1>
+    <p>Customer: ${invoice.customerId}</p>
+    <p>Bill Cycle: ${invoice.billCycle || "-"}</p>
+    <p>Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</p>
+    <table style="border-collapse:collapse;width:420px;margin-top:16px">
+      <tr><td style="padding:8px;border:1px solid #ccc;">Taxable Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(invoice.amount || 0).toFixed(2)}</td></tr>
+      ${taxRows}
+      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
+    </table>
+  </body></html>`;
+}
+
+function buildBillingNoteHtml(note) {
+  const taxRows = (note.taxBreakdown || [])
+    .map(
+      (item) =>
+        `<tr><td style="padding:8px;border:1px solid #ccc;">${item.label} (${item.rate || 0}%)</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(item.amount || 0).toFixed(2)}</td></tr>`
+    )
+    .join("");
+  return `<!doctype html>
+  <html><head><meta charset="utf-8"/><title>${note.noteNumber}</title></head>
+  <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
+    <h1>${note.type === "credit" ? "Credit Note" : "Debit Note"} ${note.noteNumber}</h1>
+    <p>Customer: ${note.customerId}</p>
+    <p>Reason: ${note.reasonCode || "-"}</p>
+    <table style="border-collapse:collapse;width:420px;margin-top:16px">
+      <tr><td style="padding:8px;border:1px solid #ccc;">Base Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(note.amount || 0).toFixed(2)}</td></tr>
+      ${taxRows}
+      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(note.totalAmount || 0).toFixed(2)}</td></tr>
+    </table>
+  </body></html>`;
+}
+
 async function createLedgerEntry({
   customerId,
   serviceId,
@@ -161,6 +204,21 @@ adminOpsRouter.get(
 );
 
 adminOpsRouter.get(
+  "/billing/invoices/:invoiceId/pdf",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const invoice = await BillingInvoice.findOne({
+      $or: [{ invoiceId: req.params.invoiceId }, { invoiceNumber: req.params.invoiceId }]
+    }).lean();
+    if (!invoice) {
+      throw new ApiError(404, "Invoice not found");
+    }
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.send(buildInvoiceHtml(invoice));
+  })
+);
+
+adminOpsRouter.get(
   "/billing/runs",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
@@ -195,6 +253,19 @@ adminOpsRouter.get(
       BillingNote.countDocuments(filter)
     ]);
     return ok(res, items, { page, limit, total });
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/notes/:noteNumber/pdf",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const note = await BillingNote.findOne({ noteNumber: req.params.noteNumber }).lean();
+    if (!note) {
+      throw new ApiError(404, "Billing note not found");
+    }
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.send(buildBillingNoteHtml(note));
   })
 );
 
@@ -535,6 +606,79 @@ adminOpsRouter.post(
       metadata: { processed: result.processed, created: result.created, skipped: result.skipped }
     });
     return ok(res, { ...result, runId: run.runId });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/payments/:transactionId/reconcile",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const payment = await PaymentTransaction.findOne({ transactionId: req.params.transactionId });
+    if (!payment) {
+      throw new ApiError(404, "Payment transaction not found");
+    }
+    const invoice = req.body?.invoiceId
+      ? await BillingInvoice.findOne({ $or: [{ invoiceId: req.body.invoiceId }, { invoiceNumber: req.body.invoiceId }] })
+      : await BillingInvoice.findOne({
+          customerId: payment.customerId,
+          paymentStatus: { $in: ["pending", "overdue"] }
+        }).sort({ dueDate: 1, generatedAt: 1 });
+
+    if (!invoice) {
+      throw new ApiError(404, "Matching invoice not found");
+    }
+
+    invoice.paymentStatus = "paid";
+    invoice.status = "settled";
+    invoice.metadata = {
+      ...(invoice.metadata || {}),
+      reconciledPaymentId: payment.transactionId,
+      reconciledAt: new Date()
+    };
+    await invoice.save();
+
+    payment.invoiceId = invoice.invoiceId;
+    payment.reconciliationStatus = "reconciled";
+    payment.reconciledInvoiceId = invoice.invoiceId;
+    payment.reconciledAt = new Date();
+    payment.reconciledByAdminId = req.admin?._id;
+    await payment.save();
+
+    const customer = await Customer.findOne({ customerId: payment.customerId });
+    if (customer) {
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        dueAmount: 0,
+        lastPaymentStatus: "paid",
+        lastPaidAt: payment.paidAt || new Date(),
+        lastReconciledPaymentId: payment.transactionId
+      };
+      await customer.save();
+    }
+
+    const existingLedger = await BillingLedgerEntry.findOne({ paymentId: payment.transactionId }).lean();
+    if (!existingLedger) {
+      await createLedgerEntry({
+        customerId: payment.customerId,
+        serviceId: payment.serviceId,
+        invoiceId: invoice.invoiceId,
+        paymentId: payment.transactionId,
+        category: "payment",
+        direction: "credit",
+        amount: Number(payment.amount || 0),
+        reference: payment.reference || payment.transactionId,
+        note: "Payment reconciled from billing console",
+        source: "admin_payment_reconciliation",
+        createdByAdminId: req.admin?._id,
+        metadata: { requestId: req.requestId }
+      });
+    }
+
+    return ok(res, {
+      transactionId: payment.transactionId,
+      invoiceId: invoice.invoiceId,
+      reconciliationStatus: payment.reconciliationStatus
+    });
   })
 );
 

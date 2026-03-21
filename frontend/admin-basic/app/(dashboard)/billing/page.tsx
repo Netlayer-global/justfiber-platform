@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote } from '@/lib/types'
+import { BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -40,6 +40,7 @@ export default function BillingPage() {
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
   const [runs, setRuns] = useState<BillingRun[]>([])
   const [notes, setNotes] = useState<BillingNote[]>([])
+  const [payments, setPayments] = useState<BillingPayment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isRunningCycle, setIsRunningCycle] = useState(false)
@@ -62,12 +63,13 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes] = await Promise.all([
         adminAPI.getBillingData(),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
         adminAPI.getBillingRuns(),
         adminAPI.getBillingNotes(),
+        adminAPI.getBillingPayments(),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -99,6 +101,9 @@ export default function BillingPage() {
       }
       if (noteRes.success && noteRes.data) {
         setNotes(noteRes.data)
+      }
+      if (paymentRes.success && paymentRes.data) {
+        setPayments(paymentRes.data.items)
       }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
@@ -191,6 +196,21 @@ export default function BillingPage() {
       toast.error('Failed to create billing note')
     } finally {
       setIsSavingNote(false)
+    }
+  }
+
+  async function reconcilePayment(transactionId: string, invoiceId?: string) {
+    try {
+      const res = await adminAPI.reconcileBillingPayment(transactionId, invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to reconcile payment')
+        return
+      }
+      toast.success('Payment reconciled')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to reconcile payment:', error)
+      toast.error('Failed to reconcile payment')
     }
   }
 
@@ -367,6 +387,14 @@ export default function BillingPage() {
                       <td className="table-cell">
                         <div className="font-mono text-xs">{item.noteNumber}</div>
                         <div className="text-xs text-slate-500 mt-1">{item.reasonCode || '-'}</div>
+                        <a
+                          className="text-xs text-[#4da3ff] mt-1 inline-block"
+                          href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/notes/${encodeURIComponent(item.noteNumber)}/pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open PDF
+                        </a>
                       </td>
                       <td className="table-cell">{item.customerId}</td>
                       <td className="table-cell">{item.type}</td>
@@ -376,6 +404,46 @@ export default function BillingPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Payment Reconciliation</div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0e27]">
+                  <th className="table-header">Transaction</th>
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">Amount</th>
+                  <th className="table-header">Reconciliation</th>
+                  <th className="table-header text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((payment) => (
+                  <tr key={payment.id} className="border-t border-[#2a2f4a]">
+                    <td className="table-cell">
+                      <div className="font-mono text-xs">{payment.transactionId}</div>
+                      <div className="text-xs text-slate-500 mt-1">{payment.provider || '-'} | {payment.method || '-'}</div>
+                    </td>
+                    <td className="table-cell">
+                      <div>{payment.customerId}</div>
+                      <div className="text-xs text-slate-500 mt-1">{payment.invoiceId || payment.reconciledInvoiceId || 'Unlinked'}</div>
+                    </td>
+                    <td className="table-cell">Rs {payment.amount.toFixed(2)}</td>
+                    <td className="table-cell">{payment.reconciliationStatus || 'pending'}</td>
+                    <td className="table-cell text-right">
+                      {payment.reconciliationStatus !== 'reconciled' ? (
+                        <button className="btn-secondary" onClick={() => void reconcilePayment(payment.transactionId, payment.invoiceId)}>
+                          Reconcile
+                        </button>
+                      ) : (
+                        <span className="text-xs text-green-400">Done</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <div className="overflow-x-auto card">
@@ -397,6 +465,14 @@ export default function BillingPage() {
                   <td className="table-cell">
                     <div className="font-mono text-sm">{item.invoiceNumber || item.invoiceId}</div>
                     <div className="text-xs text-slate-500 mt-1">{item.billCycle || '-'}</div>
+                    <a
+                      className="text-xs text-[#4da3ff] mt-1 inline-block"
+                      href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open PDF
+                    </a>
                   </td>
                   <td className="table-cell">{item.billingStateName || item.billingStateCode || '-'}</td>
                   <td className="table-cell">Rs {Number(item.amount || 0).toFixed(2)}</td>

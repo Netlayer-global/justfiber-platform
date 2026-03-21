@@ -13,6 +13,15 @@ const paymentTransactionSchema = new mongoose.Schema(
     paidAt: Date,
     method: String,
     reference: String,
+    reconciliationStatus: {
+      type: String,
+      enum: ["pending", "matched", "manual_review", "reconciled"],
+      default: "pending",
+      index: true
+    },
+    reconciledAt: Date,
+    reconciledInvoiceId: { type: String, index: true },
+    reconciledByAdminId: { type: mongoose.Schema.Types.ObjectId, ref: "AdminUser" },
     metadata: mongoose.Schema.Types.Mixed
   },
   { timestamps: true }

@@ -13,6 +13,7 @@ import type {
   BillingOverview,
   BillingRun,
   BillingNote,
+  BillingPayment,
   BillingProfile,
   CustomerAction,
   CustomerDevice,
@@ -425,6 +426,23 @@ function mapBillingNote(note: any): BillingNote {
     totalAmount: Number(note.totalAmount || 0),
     status: note.status || 'issued',
     issuedAt: note.issuedAt || note.createdAt,
+  }
+}
+
+function mapBillingPayment(payment: any): BillingPayment {
+  return {
+    id: payment._id || payment.transactionId || '',
+    transactionId: payment.transactionId || payment._id || '',
+    customerId: payment.customerId || '',
+    invoiceId: payment.invoiceId,
+    amount: Number(payment.amount || 0),
+    status: payment.status,
+    provider: payment.provider,
+    method: payment.method,
+    reference: payment.reference,
+    paidAt: payment.paidAt || payment.createdAt,
+    reconciliationStatus: payment.reconciliationStatus || 'pending',
+    reconciledInvoiceId: payment.reconciledInvoiceId,
   }
 }
 
@@ -890,6 +908,21 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapBillingNote) : [],
     }
   },
+  getBillingPayments: async () => {
+    const res = await request<any[]>('/api/v1/admin/billing/payments')
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapBillingPayment) : [],
+        total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
+      },
+    }
+  },
+  reconcileBillingPayment: async (transactionId: string, invoiceId?: string) =>
+    request(`/api/v1/admin/billing/payments/${transactionId}/reconcile`, {
+      method: 'POST',
+      body: JSON.stringify(invoiceId ? { invoiceId } : {}),
+    }),
   createBillingNote: async (data: {
     customerId: string
     type: 'credit' | 'debit'

@@ -315,3 +315,18 @@ export interface BillingNote {
   status?: string
   issuedAt?: string
 }
+
+export interface BillingPayment {
+  id: string
+  transactionId: string
+  customerId: string
+  invoiceId?: string
+  amount: number
+  status?: string
+  provider?: string
+  method?: string
+  reference?: string
+  paidAt?: string
+  reconciliationStatus?: 'pending' | 'matched' | 'manual_review' | 'reconciled'
+  reconciledInvoiceId?: string
+}
