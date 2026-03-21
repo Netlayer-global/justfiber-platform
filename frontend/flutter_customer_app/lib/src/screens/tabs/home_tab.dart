@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_state.dart';
 import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
+import '../service_hub_screen.dart';
 import '../service_tracking_screen.dart';
 import '../support_history_screen.dart';
 import '../../widgets/app_card.dart';
@@ -43,42 +44,49 @@ class HomeTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        AppCard(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF4C5DFF), Color(0xFF8D61FF), Color(0xFF2A347E)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        GestureDetector(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('My JustFiber', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white)),
-              const SizedBox(height: 10),
-              Text(
-                'Rs ${dashboard.walletBalance.toStringAsFixed(0)}',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${dashboard.planName} active now',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+          child: AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF4C5DFF), Color(0xFF8D61FF), Color(0xFF2A347E)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('My JustFiber', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white)),
+                const SizedBox(height: 10),
+                Text(
+                  'Rs ${dashboard.walletBalance.toStringAsFixed(0)}',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${dashboard.planName} active now',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                      ),
                     ),
-                  ),
-                  FilledButton(
-                    onPressed: appState.busy ? null : () => _payBill(context, appState),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF161B33),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    FilledButton(
+                      onPressed: appState.busy ? null : () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF161B33),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text('Open Service'),
                     ),
-                    child: const Text('Pay Bill'),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 18),
@@ -96,8 +104,12 @@ class HomeTab extends StatelessWidget {
           mainAxisSpacing: 14,
           crossAxisSpacing: 14,
           children: [
-            _feature(context, Icons.receipt_long_rounded, 'Bills', () => _payBill(context, appState)),
-            _feature(context, Icons.wifi_tethering_rounded, 'Wi-Fi', () => onNavigate(3)),
+            _feature(context, Icons.receipt_long_rounded, 'Bills', () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+            )),
+            _feature(context, Icons.wifi_tethering_rounded, 'Wi-Fi', () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
+            )),
             _feature(
               context,
               Icons.calendar_month_rounded,

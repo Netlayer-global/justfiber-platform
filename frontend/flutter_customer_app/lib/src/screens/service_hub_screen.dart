@@ -1,0 +1,634 @@
+import 'package:flutter/material.dart';
+
+import '../core/app_state.dart';
+import 'billing_history_screen.dart';
+import 'billing_payment_screen.dart';
+import 'payments_history_screen.dart';
+import 'plan_catalog_screen.dart';
+import 'service_tracking_screen.dart';
+import 'support_history_screen.dart';
+import 'wifi_settings_screen.dart';
+
+class ServiceHubScreen extends StatelessWidget {
+  const ServiceHubScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = AppStateScope.of(context);
+    final dashboard = appState.dashboard;
+    final billing = appState.billing;
+    final wifi = appState.wifi;
+    final session = appState.session;
+    final recentInvoices = billing.invoices.take(4).toList();
+    final recentPayments = billing.payments.take(4).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          children: [
+            Text('Wi‑Fi', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 2),
+            Text(
+              wifi.ssid24.isEmpty ? '${session?.mobile ?? ''}_wifi' : wifi.ssid24,
+              style: const TextStyle(fontSize: 18, color: Color(0xFF676B76)),
+            ),
+          ],
+        ),
+        centerTitle: true,
+        backgroundColor: const Color(0xFFF1F0FF),
+        foregroundColor: const Color(0xFF17181C),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: IconButton(
+                icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF1B1E26)),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen())),
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFFF1F0FF),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 34),
+        children: [
+          if (billing.dueAmount > 0)
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F1FF),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: const Icon(Icons.wifi_rounded, size: 34, color: Color(0xFFD81F26)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('WI‑FI · ${wifi.ssid24}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6D7280))),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Bill of Rs ${billing.dueAmount.toStringAsFixed(0)} due ${_daysHint(billing.nextBillDate)}',
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('Avoid late fee and service interruption', style: TextStyle(color: Color(0xFF6B7280))),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: appState.busy ? null : () => _payBill(context, appState),
+                    child: const Text('Pay Now'),
+                  ),
+                ],
+              ),
+            ),
+          if (billing.dueAmount > 0) const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('PLAN', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF7B7F87))),
+                const SizedBox(height: 10),
+                Text(billing.currentPlan, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    _metric('Speed', '${dashboard.planName.contains('200') ? '200' : '100'} Mbps'),
+                    _metric('Data', 'Unlimited'),
+                    _metric('Benefits', '${appState.addons.length + 2}+'),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen())),
+                        child: const Text('View Details'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => _openPlanChange(context),
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+                        child: const Text('Change Plan'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(child: Text('AMOUNT PAYABLE', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF7B7F87)))),
+                    if (billing.dueAmount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(color: const Color(0xFFFDE68A), borderRadius: BorderRadius.circular(14)),
+                        child: const Text('DUE', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF6B4F00))),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text('Rs ${billing.dueAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 34)),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(child: _detailPair('Bill Generated On', billing.generatedDate.isEmpty ? '-' : billing.generatedDate)),
+                    Expanded(child: _detailPair('Due Date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _detailPair('Bill Cycle', billing.billCycle)),
+                    Expanded(child: _detailPair('Bill Mode', billing.billMode)),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen())),
+                        child: const Text('View Bill'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: appState.busy ? null : () => _payBill(context, appState),
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+                        child: const Text('Pay Now'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          _lightCard(
+            title: 'QUICK ACTIONS',
+            child: Column(
+              children: [
+                _quickAction(context, Icons.support_agent_rounded, 'Internet Connectivity', 'Get instant support for your Wi‑Fi service', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()))),
+                _quickAction(context, Icons.router_outlined, 'Wi‑Fi Settings', 'Diagnose issues, optimise wi‑fi, manage devices & more', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen()))),
+                _quickAction(context, Icons.password_rounded, 'Set Wi‑Fi name & password', 'Add name & a strong password for secure usage', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen()))),
+                _quickAction(context, Icons.home_work_outlined, 'Shift Connection', 'Get your device moved to a new location free of cost', () => _showShiftConnectionSheet(context, appState)),
+                _quickAction(context, Icons.description_outlined, 'Bill Details', 'Get support on your last bill related queries', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()))),
+                _quickAction(context, Icons.history_rounded, 'Previous Bills', 'Easily view and download all your past bills in one place', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()))),
+                _quickAction(context, Icons.payments_outlined, 'Transactions', 'View all your past payments in a single tap', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()))),
+                _quickAction(context, Icons.track_changes_outlined, 'Track orders, complaints', 'Get update on the status of your orders & service request', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())), last: true),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          if (appState.addons.isNotEmpty)
+            _lightCard(
+              title: 'Get add-ons',
+              child: Column(
+                children: appState.addons.take(2).map((addon) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(22)),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(color: const Color(0xFFF0EEFF), borderRadius: BorderRadius.circular(18)),
+                          child: const Icon(Icons.add_box_outlined, size: 34, color: Color(0xFF22252D)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                              const SizedBox(height: 4),
+                              Text(addon.description, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                            ],
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => _showAddonInterest(context, appState, addon.name),
+                          child: const Text('Buy'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )).toList(),
+            ),
+          if (appState.addons.isNotEmpty) const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFD9F2FF), Color(0xFFF0EEFF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('get control with my wi‑fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF0F172A))),
+                SizedBox(height: 10),
+                Text('• solve for network problems\n• manage connected devices\n• update password, and more', style: TextStyle(color: Color(0xFF334155), height: 1.6)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          _lightCard(
+            title: 'ACCOUNT INFO.',
+            child: Column(
+              children: [
+                _accountRow(Icons.wifi_rounded, 'DSL NUMBER', wifi.ssid24.isEmpty ? '${session?.mobile ?? ''}_wifi' : wifi.ssid24),
+                _accountRow(Icons.phone_iphone_rounded, 'REGISTERED MOBILE', session?.mobile ?? '-'),
+                _accountRow(Icons.account_circle_outlined, 'ACCOUNT NAME', dashboard.customerName, last: true),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          _lightCard(
+            title: 'GET INSTANT SUPPORT',
+            child: Column(
+              children: [
+                _supportLink(context, 'I am having internet issues', () => _raiseSupport(context, appState, subject: 'Internet issue', description: 'I am having internet issues.')),
+                _supportLink(context, 'My Wi‑Fi is disconnecting frequently', () => _raiseSupport(context, appState, subject: 'Wi‑Fi disconnecting', description: 'My Wi‑Fi is disconnecting frequently.')),
+                _supportLink(context, 'I want to shift my Wi‑Fi', () => _showShiftConnectionSheet(context, appState)),
+                _supportLink(context, 'I need clarity on my bill', () => _raiseSupport(context, appState, subject: 'Billing clarification', description: 'I need clarity on my latest bill.')),
+                const Divider(height: 28),
+                Row(
+                  children: [
+                    const Expanded(child: Text('Need help for something else?', style: TextStyle(fontWeight: FontWeight.w700))),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen())),
+                      child: const Text('Chat Now'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (recentInvoices.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _lightCard(
+              title: 'BILL HISTORY',
+              child: Column(
+                children: [
+                  ...recentInvoices.map((invoice) => _historyRow(
+                    title: invoice.generatedAt.isEmpty ? invoice.invoiceNumber : invoice.generatedAt,
+                    subtitle: 'Rs ${invoice.totalAmount.toStringAsFixed(2)}',
+                    action: invoice.viewUrl.isEmpty ? null : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen())),
+                  )),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen())),
+                    child: const Text('View More'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (recentPayments.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _lightCard(
+              title: 'PAYMENTS',
+              child: Column(
+                children: [
+                  ...recentPayments.map((payment) => _historyRow(
+                    title: payment.paidAt.isEmpty ? payment.transactionId : payment.paidAt,
+                    subtitle: 'Rs ${payment.amount.toStringAsFixed(2)} · ${payment.provider.toUpperCase()}',
+                    action: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen())),
+                  )),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen())),
+                    child: const Text('View More'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _lightCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF7B7F87))),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _metric(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Color(0xFF7B7F87))),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailPair(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF7B7F87))),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
+        ],
+      ),
+    );
+  }
+
+  Widget _quickAction(BuildContext context, IconData icon, String title, String subtitle, VoidCallback onTap, {bool last = false}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1)))),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(color: const Color(0xFFF0EEFF), borderRadius: BorderRadius.circular(18)),
+              child: Icon(icon, color: const Color(0xFF1F2937)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF8A90A2)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _accountRow(IconData icon, String label, String value, {bool last = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1)))),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(color: const Color(0xFFF0EEFF), borderRadius: BorderRadius.circular(18)),
+            child: Icon(icon, color: const Color(0xFF1F2937)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(color: Color(0xFF7B7F87), fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _supportLink(BuildContext context, String text, VoidCallback onTap) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(text, style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
+    );
+  }
+
+  Widget _historyRow({required String title, required String subtitle, VoidCallback? action}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE8EAF1)))),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280))),
+              ],
+            ),
+          ),
+          IconButton(onPressed: action, icon: const Icon(Icons.description_outlined, color: Color(0xFF2563EB))),
+        ],
+      ),
+    );
+  }
+
+  static String _daysHint(String nextBillDate) {
+    if (nextBillDate.isEmpty) return 'soon';
+    return 'by $nextBillDate';
+  }
+
+  Future<void> _payBill(BuildContext context, AppState appState) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final paymentOrder = await appState.loadBillingPaymentOrder(amount: appState.billing.dueAmount);
+    if (!context.mounted) return;
+    if (paymentOrder == null) {
+      messenger.showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to create payment order')));
+      return;
+    }
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)));
+  }
+
+  void _openPlanChange(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
+  }
+
+  Future<void> _showAddonInterest(BuildContext context, AppState appState, String addonName) async {
+    final request = await appState.submitServiceRequest(type: 'addon_interest', note: 'Interested in $addonName');
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(request == null ? (appState.error ?? 'Unable to submit add-on request') : '$addonName request created')),
+    );
+  }
+
+  Future<void> _showShiftConnectionSheet(BuildContext context, AppState appState) async {
+    String shiftMode = 'new_address';
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setLocalState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
+                  const SizedBox(height: 18),
+                  const Text('Shift Wi‑Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
+                  const SizedBox(height: 14),
+                  _radioCard(
+                    title: 'New address',
+                    subtitle: 'Move your connection to your new location',
+                    value: 'new_address',
+                    groupValue: shiftMode,
+                    onChanged: (value) => setLocalState(() => shiftMode = value),
+                  ),
+                  const SizedBox(height: 12),
+                  _radioCard(
+                    title: 'Different spot at same address',
+                    subtitle: 'Move your Wi‑Fi setup within your house',
+                    value: 'same_address',
+                    groupValue: shiftMode,
+                    onChanged: (value) => setLocalState(() => shiftMode = value),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: const Color(0xFF2563EB), borderRadius: BorderRadius.circular(18)),
+                    child: const Text('Shift your Wi‑Fi connection for free!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: appState.busy
+                          ? null
+                          : () async {
+                              final request = await appState.submitServiceRequest(
+                                type: 'shift_connection',
+                                note: shiftMode == 'new_address'
+                                    ? 'Customer wants to shift Wi‑Fi to a new address.'
+                                    : 'Customer wants to shift Wi‑Fi within the same address.',
+                              );
+                              if (!context.mounted) return;
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(request == null ? (appState.error ?? 'Unable to create shift request') : 'Shift request submitted')),
+                              );
+                            },
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD81F26)),
+                      child: const Text('Proceed'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _radioCard({
+    required String title,
+    required String subtitle,
+    required String value,
+    required String groupValue,
+    required ValueChanged<String> onChanged,
+  }) {
+    final selected = value == groupValue;
+    return InkWell(
+      onTap: () => onChanged(value),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: selected ? const Color(0xFF2563EB) : const Color(0xFFE5E7EB), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280))),
+                ],
+              ),
+            ),
+            Radio<String>(value: value, groupValue: groupValue, onChanged: (next) => onChanged(next ?? value)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _raiseSupport(BuildContext context, AppState appState, {required String subject, required String description}) async {
+    final ticket = await appState.raiseComplaint(category: 'internet_issue', subject: subject, description: description);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(ticket == null ? (appState.error ?? 'Unable to create support request') : 'Support ticket created: $ticket')),
+    );
+  }
+}

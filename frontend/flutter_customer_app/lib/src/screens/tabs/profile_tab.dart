@@ -6,6 +6,8 @@ import '../../widgets/app_card.dart';
 import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
 import '../document_viewer_screen.dart';
+import '../payments_history_screen.dart';
+import '../service_hub_screen.dart';
 import '../service_tracking_screen.dart';
 import '../support_history_screen.dart';
 
@@ -51,6 +53,34 @@ class _ProfileTabState extends State<ProfileTab> {
               _heroRow('Status', billing.paymentStatus),
               _heroRow('Due date', billing.nextBillDate),
               _heroRow('Billing mode', billing.billMode),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        AppCard(
+          child: Row(
+            children: [
+              const Icon(Icons.wifi_rounded, color: Color(0xFF4C5DFF)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Wi‑Fi service hub', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Open billing, quick actions, Wi‑Fi settings, transactions and support in one flow',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
+                ),
+                child: const Text('Open'),
+              ),
             ],
           ),
         ),
@@ -142,8 +172,10 @@ class _ProfileTabState extends State<ProfileTab> {
                   ),
                   const SizedBox(width: 10),
                   OutlinedButton(
-                    onPressed: appState.busy ? null : () => appState.refresh(),
-                    child: const Text('Refresh'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
+                    ),
+                    child: const Text('Payments'),
                   ),
                 ],
               ),
