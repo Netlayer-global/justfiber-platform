@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../widgets/app_card.dart';
+import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
 import '../document_viewer_screen.dart';
 
@@ -87,6 +88,13 @@ class _ProfileTabState extends State<ProfileTab> {
                     child: const Text('Refresh'),
                   ),
                 ],
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+                ),
+                child: const Text('Open full billing history'),
               ),
             ],
           ),

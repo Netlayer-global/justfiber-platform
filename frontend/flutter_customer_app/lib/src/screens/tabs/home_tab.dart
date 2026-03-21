@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
+import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/usage_bar.dart';
@@ -135,6 +136,34 @@ class HomeTab extends StatelessWidget {
             ),
           ),
         if (billing.dueAmount > 0) const SizedBox(height: 18),
+        AppCard(
+          child: Row(
+            children: [
+              const Icon(Icons.receipt_long_rounded, color: Color(0xFF4C5DFF)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Billing documents', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${billing.invoices.length} invoices, ${billing.payments.length} receipts, ${billing.notes.length} notes',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+                ),
+                child: const Text('Open'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
         Row(
           children: [
             Expanded(
