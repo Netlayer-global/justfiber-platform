@@ -19,6 +19,7 @@ import type {
   RazorpayOverview,
   RazorpaySettlementItem,
   RazorpayWebhookLog,
+  BillingImportResult,
   BillingProfile,
   AdminPlanChangePreview,
   AdminPlanChangeResult,
@@ -569,6 +570,25 @@ function mapRazorpayWebhookLog(item: any): RazorpayWebhookLog {
   }
 }
 
+function mapBillingImportResult(item: any): BillingImportResult {
+  return {
+    imported: Number(item?.imported || 0),
+    reconciled: Number(item?.reconciled || 0),
+    manualReview: Number(item?.manualReview || 0),
+    skipped: Number(item?.skipped || 0),
+    results: Array.isArray(item?.results)
+      ? item.results.map((row: any) => ({
+          transactionId: row.transactionId || '',
+          customerId: row.customerId || '',
+          amount: Number(row.amount || 0),
+          status: row.status || '',
+          reason: row.reason || '',
+          invoiceId: row.invoiceId || '',
+        }))
+      : [],
+  }
+}
+
 export const adminAPI = {
   // Auth
   login: (login: string, password: string) =>
@@ -1068,6 +1088,16 @@ export const adminAPI = {
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapRazorpayWebhookLog) : [],
+    }
+  },
+  importBillingPaymentsCsv: async (csv: string) => {
+    const res = await request<any>('/api/v1/admin/billing/payments/import-csv', {
+      method: 'POST',
+      body: JSON.stringify({ csv }),
+    })
+    return {
+      ...res,
+      data: res.data ? mapBillingImportResult(res.data) : undefined,
     }
   },
   markRazorpayOrderStale: (orderId: string) =>

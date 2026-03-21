@@ -465,3 +465,20 @@ export interface RazorpayWebhookLog {
   errorMessage?: string
   createdAt?: string
 }
+
+export interface BillingImportResultItem {
+  transactionId: string
+  customerId?: string
+  amount?: number
+  status: string
+  reason?: string
+  invoiceId?: string
+}
+
+export interface BillingImportResult {
+  imported: number
+  reconciled: number
+  manualReview: number
+  skipped: number
+  results: BillingImportResultItem[]
+}

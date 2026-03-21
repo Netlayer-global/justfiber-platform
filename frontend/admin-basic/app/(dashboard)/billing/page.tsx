@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -68,6 +68,8 @@ export default function BillingPage() {
   const [razorpayOverview, setRazorpayOverview] = useState<RazorpayOverview | null>(null)
   const [razorpayWebhookLogs, setRazorpayWebhookLogs] = useState<RazorpayWebhookLog[]>([])
   const [collectionBucket, setCollectionBucket] = useState('')
+  const [csvImportText, setCsvImportText] = useState('')
+  const [csvImportResult, setCsvImportResult] = useState<BillingImportResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isRunningCycle, setIsRunningCycle] = useState(false)
@@ -423,6 +425,23 @@ export default function BillingPage() {
     }
   }
 
+  async function importCsvPayments(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      const res = await adminAPI.importBillingPaymentsCsv(csvImportText)
+      if (!res.success || !res.data) {
+        toast.error(res.error || 'Failed to import CSV payments')
+        return
+      }
+      setCsvImportResult(res.data)
+      toast.success('CSV payments imported')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to import CSV payments:', error)
+      toast.error('Failed to import CSV payments')
+    }
+  }
+
   async function setPromiseToPay(item: BillingCollectionItem) {
     const promisedAt = window.prompt('Promise to pay date (YYYY-MM-DD)', item.promiseToPayAt ? item.promiseToPayAt.slice(0, 10) : '')
     if (!promisedAt) return
@@ -627,6 +646,30 @@ export default function BillingPage() {
               </tbody>
             </table>
           </div>
+
+          <form onSubmit={importCsvPayments} className="card p-5 space-y-3">
+            <div className="font-semibold">Bulk Payment CSV Import</div>
+            <p className="text-xs text-slate-500">Headers: transactionId,customerId,amount,reference,invoiceId,provider,status,method,paidAt</p>
+            <textarea
+              className="input min-h-40 font-mono text-xs"
+              value={csvImportText}
+              onChange={(e) => setCsvImportText(e.target.value)}
+              placeholder={'transactionId,customerId,amount,reference,invoiceId\nTXN001,CUST001,999,UTR123,INV001'}
+            />
+            <button type="submit" className="btn-primary">Import CSV</button>
+            {csvImportResult ? (
+              <div className="rounded bg-[#0a0e27] p-4 space-y-2">
+                <div className="text-sm">Imported {csvImportResult.imported} | Reconciled {csvImportResult.reconciled} | Manual Review {csvImportResult.manualReview} | Skipped {csvImportResult.skipped}</div>
+                <div className="max-h-48 overflow-auto text-xs text-slate-300 space-y-1">
+                  {csvImportResult.results.slice(0, 20).map((row) => (
+                    <div key={`${row.transactionId}-${row.status}`}>
+                      {row.transactionId} | {row.customerId || '-'} | {row.status} {row.invoiceId ? `| ${row.invoiceId}` : ''} {row.reason ? `| ${row.reason}` : ''}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </form>
 
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold flex items-center justify-between gap-4">

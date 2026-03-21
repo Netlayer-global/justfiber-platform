@@ -32,6 +32,22 @@ function computeBalanceAfter({ currentBalance, direction, amount }) {
   return currentBalance + (direction === "debit" ? amount : -amount);
 }
 
+function parseCsvRows(rawText = "") {
+  const lines = String(rawText || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(",").map((item) => item.trim());
+  return lines.slice(1).map((line) => {
+    const values = line.split(",").map((item) => item.trim());
+    return headers.reduce((acc, header, index) => {
+      acc[header] = values[index] || "";
+      return acc;
+    }, {});
+  });
+}
+
 function buildInvoiceHtml(invoice) {
   const taxRows = (invoice.taxBreakdown || [])
     .map(
@@ -1405,6 +1421,146 @@ adminOpsRouter.post(
       confidenceScore,
       matchReason,
       matchedBy
+    });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/payments/import-csv",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const rows = parseCsvRows(req.body?.csv);
+    if (!rows.length) {
+      throw new ApiError(400, "CSV must include header and at least one row");
+    }
+    const results = [];
+    for (const row of rows) {
+      const transactionId = row.transactionId || row.paymentId || row.utr || row.reference;
+      const customerId = row.customerId || row.customer || "";
+      const invoiceId = row.invoiceId || row.invoice || "";
+      const amount = Number(row.amount || 0);
+      if (!transactionId || !customerId || !Number.isFinite(amount) || amount <= 0) {
+        results.push({
+          transactionId: transactionId || "",
+          status: "skipped",
+          reason: "missing_transaction_customer_or_amount"
+        });
+        continue;
+      }
+
+      const payment = await PaymentTransaction.findOneAndUpdate(
+        { transactionId },
+        {
+          $set: {
+            customerId,
+            invoiceId: invoiceId || undefined,
+            provider: row.provider || "csv_import",
+            amount,
+            currency: row.currency || "INR",
+            status: row.status || "success",
+            method: row.method || "bank_import",
+            reference: row.reference || transactionId,
+            paidAt: row.paidAt ? new Date(row.paidAt) : new Date(),
+            metadata: {
+              source: "admin_csv_import",
+              importedAt: new Date(),
+              importedByAdminId: req.admin?._id,
+              rawRow: row
+            }
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      const match = await findBestInvoiceForPayment(payment, invoiceId || undefined);
+      if (!match) {
+        payment.reconciliationStatus = "manual_review";
+        payment.metadata = {
+          ...(payment.metadata || {}),
+          reconciliationMode: "csv_import_review",
+          reconciliationConfidence: 0,
+          reconciliationMatchReason: "No eligible invoice found during import",
+          reconciliationMatchedBy: "no_match"
+        };
+        await payment.save();
+        results.push({
+          transactionId,
+          customerId,
+          amount,
+          status: "manual_review"
+        });
+        continue;
+      }
+
+      const { invoice, confidenceScore, matchReason, matchedBy } = match;
+      invoice.paymentStatus = "paid";
+      invoice.status = "settled";
+      invoice.metadata = {
+        ...(invoice.metadata || {}),
+        reconciledPaymentId: payment.transactionId,
+        reconciledAt: new Date()
+      };
+      await invoice.save();
+
+      payment.invoiceId = invoice.invoiceId;
+      payment.reconciliationStatus = "reconciled";
+      payment.reconciledInvoiceId = invoice.invoiceId;
+      payment.reconciledAt = new Date();
+      payment.reconciledByAdminId = req.admin?._id;
+      payment.metadata = {
+        ...(payment.metadata || {}),
+        reconciliationMode: invoiceId ? "csv_explicit" : "csv_smart_match",
+        reconciliationConfidence: confidenceScore,
+        reconciliationMatchReason: matchReason,
+        reconciliationMatchedBy: matchedBy
+      };
+      await payment.save();
+
+      const customer = await Customer.findOne({ customerId: payment.customerId });
+      if (customer) {
+        customer.billingSnapshot = {
+          ...(customer.billingSnapshot || {}),
+          dueAmount: 0,
+          lastPaymentStatus: "paid",
+          lastPaidAt: payment.paidAt || new Date(),
+          lastReconciledPaymentId: payment.transactionId
+        };
+        await customer.save();
+      }
+
+      const existingLedger = await BillingLedgerEntry.findOne({ paymentId: payment.transactionId }).lean();
+      if (!existingLedger) {
+        await createLedgerEntry({
+          customerId: payment.customerId,
+          serviceId: payment.serviceId,
+          invoiceId: invoice.invoiceId,
+          paymentId: payment.transactionId,
+          category: "payment",
+          direction: "credit",
+          amount: Number(payment.amount || 0),
+          reference: payment.reference || payment.transactionId,
+          note: "CSV import reconciliation",
+          source: "admin_csv_import",
+          createdByAdminId: req.admin?._id,
+          metadata: { requestId: req.requestId }
+        });
+      }
+
+      results.push({
+        transactionId,
+        customerId,
+        amount,
+        status: "reconciled",
+        invoiceId: invoice.invoiceId
+      });
+    }
+
+    return ok(res, {
+      imported: results.length,
+      reconciled: results.filter((item) => item.status === "reconciled").length,
+      manualReview: results.filter((item) => item.status === "manual_review").length,
+      skipped: results.filter((item) => item.status === "skipped").length,
+      results
     });
   })
 );
