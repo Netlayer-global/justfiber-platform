@@ -390,3 +390,22 @@ export interface BillingPayment {
   reconciliationMatchReason?: string
   reconciliationMatchedBy?: string
 }
+
+export interface BillingCollectionItem {
+  customerId: string
+  customerName: string
+  phone?: string
+  status?: string
+  billMode?: string
+  dueAmount: number
+  invoiceId?: string
+  invoiceNumber?: string
+  invoiceDueDate?: string
+  invoiceStatus?: string
+  overdueDays: number
+  bucket: 'pending_due' | 'overdue' | 'pending_plan_change' | 'suspend_ready'
+  pendingPlanName?: string
+  pendingPlanMode?: string
+  adjustmentPreview?: number
+  suspendRecommended?: boolean
+}

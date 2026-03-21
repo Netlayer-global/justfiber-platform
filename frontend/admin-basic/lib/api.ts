@@ -14,6 +14,7 @@ import type {
   BillingRun,
   BillingNote,
   BillingPayment,
+  BillingCollectionItem,
   BillingProfile,
   AdminPlanChangePreview,
   AdminPlanChangeResult,
@@ -476,6 +477,27 @@ function mapBillingPayment(payment: any): BillingPayment {
     reconciliationConfidence: Number(payment.metadata?.reconciliationConfidence || 0),
     reconciliationMatchReason: payment.metadata?.reconciliationMatchReason || '',
     reconciliationMatchedBy: payment.metadata?.reconciliationMatchedBy || '',
+  }
+}
+
+function mapBillingCollectionItem(item: any): BillingCollectionItem {
+  return {
+    customerId: item.customerId || '',
+    customerName: item.customerName || item.customerId || 'Customer',
+    phone: item.phone || '',
+    status: item.status || '',
+    billMode: item.billMode || '',
+    dueAmount: Number(item.dueAmount || 0),
+    invoiceId: item.invoiceId,
+    invoiceNumber: item.invoiceNumber,
+    invoiceDueDate: item.invoiceDueDate,
+    invoiceStatus: item.invoiceStatus,
+    overdueDays: Number(item.overdueDays || 0),
+    bucket: item.bucket || 'pending_due',
+    pendingPlanName: item.pendingPlanName,
+    pendingPlanMode: item.pendingPlanMode,
+    adjustmentPreview: Number(item.adjustmentPreview || 0),
+    suspendRecommended: item.suspendRecommended === true,
   }
 }
 
@@ -949,6 +971,14 @@ export const adminAPI = {
         items: Array.isArray(res.data) ? res.data.map(mapBillingPayment) : [],
         total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
       },
+    }
+  },
+  getBillingCollections: async (bucket?: string) => {
+    const query = bucket ? `?bucket=${encodeURIComponent(bucket)}` : ''
+    const res = await request<any[]>(`/api/v1/admin/billing/collections${query}`)
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapBillingCollectionItem) : [],
     }
   },
   reconcileBillingPayment: async (transactionId: string, invoiceId?: string) =>

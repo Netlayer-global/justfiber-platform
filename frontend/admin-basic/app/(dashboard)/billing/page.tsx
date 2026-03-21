@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment } from '@/lib/types'
+import { BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingRun, BillingNote, BillingPayment } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -63,6 +63,8 @@ export default function BillingPage() {
   const [runs, setRuns] = useState<BillingRun[]>([])
   const [notes, setNotes] = useState<BillingNote[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
+  const [collections, setCollections] = useState<BillingCollectionItem[]>([])
+  const [collectionBucket, setCollectionBucket] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isRunningCycle, setIsRunningCycle] = useState(false)
@@ -80,18 +82,19 @@ export default function BillingPage() {
 
   useEffect(() => {
     void loadBilling()
-  }, [])
+  }, [collectionBucket])
 
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes] = await Promise.all([
         adminAPI.getBillingData(),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
         adminAPI.getBillingRuns(),
         adminAPI.getBillingNotes(),
         adminAPI.getBillingPayments(),
+        adminAPI.getBillingCollections(collectionBucket || undefined),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -137,6 +140,9 @@ export default function BillingPage() {
       }
       if (paymentRes.success && paymentRes.data) {
         setPayments(paymentRes.data.items)
+      }
+      if (collectionRes.success && collectionRes.data) {
+        setCollections(collectionRes.data)
       }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
@@ -287,6 +293,21 @@ export default function BillingPage() {
     }
   }
 
+  async function suspendFromCollection(customerId: string) {
+    try {
+      const res = await adminAPI.suspendCustomer(customerId, 'Collections due suspension')
+      if (!res.success) {
+        toast.error(res.error || 'Failed to suspend customer')
+        return
+      }
+      toast.success('Customer suspended from collections queue')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to suspend customer from collection:', error)
+      toast.error('Failed to suspend customer')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -314,6 +335,89 @@ export default function BillingPage() {
             <div className="card p-5"><p className="text-sm text-slate-500">Overdue</p><p className="text-2xl font-semibold mt-2">{overview?.overdueInvoices || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.collectedAmount || 0).toFixed(2)}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">GST Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.taxCollected || 0).toFixed(2)}</p></div>
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold flex items-center justify-between gap-4">
+              <div>Collections Queue</div>
+              <select
+                className="input max-w-56"
+                value={collectionBucket}
+                onChange={(e) => setCollectionBucket(e.target.value)}
+              >
+                <option value="">All buckets</option>
+                <option value="pending_due">Pending due</option>
+                <option value="overdue">Overdue</option>
+                <option value="pending_plan_change">Pending plan change</option>
+                <option value="suspend_ready">Suspend ready</option>
+              </select>
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0e27]">
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">Bucket</th>
+                  <th className="table-header">Due</th>
+                  <th className="table-header">Overdue</th>
+                  <th className="table-header">Plan Change</th>
+                  <th className="table-header text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {collections.length ? collections.map((item) => (
+                  <tr key={`${item.customerId}-${item.bucket}-${item.invoiceId || 'na'}`} className="border-t border-[#2a2f4a] align-top">
+                    <td className="table-cell">
+                      <div className="font-medium">{item.customerName}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.customerId}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.phone || '-'} | {item.billMode || '-'}</div>
+                    </td>
+                    <td className="table-cell">
+                      <span className="px-2 py-1 rounded text-xs bg-[#0a0e27] text-slate-200">{item.bucket}</span>
+                      <div className="text-xs text-slate-500 mt-1">{item.invoiceStatus || item.status || '-'}</div>
+                    </td>
+                    <td className="table-cell">
+                      <div>Rs {Number(item.dueAmount || 0).toFixed(2)}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.invoiceNumber || '-'}</div>
+                    </td>
+                    <td className="table-cell">
+                      <div>{item.overdueDays} day(s)</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.invoiceDueDate ? new Date(item.invoiceDueDate).toLocaleDateString() : '-'}</div>
+                    </td>
+                    <td className="table-cell">
+                      <div>{item.pendingPlanName || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{item.pendingPlanMode || '-'}</div>
+                      {item.adjustmentPreview ? (
+                        <div className="text-xs text-slate-500 mt-1">Adj Rs {Number(item.adjustmentPreview).toFixed(2)}</div>
+                      ) : null}
+                    </td>
+                    <td className="table-cell text-right">
+                      {item.invoiceId ? (
+                        <a
+                          className="text-xs text-[#4da3ff] inline-block"
+                          href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open Invoice
+                        </a>
+                      ) : null}
+                      {item.suspendRecommended ? (
+                        <button
+                          className="btn-secondary mt-2"
+                          onClick={() => void suspendFromCollection(item.customerId)}
+                        >
+                          Suspend
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr className="border-t border-[#2a2f4a]">
+                    <td className="table-cell text-slate-500" colSpan={6}>No collection items in this bucket.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

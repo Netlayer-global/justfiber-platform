@@ -411,6 +411,97 @@ adminOpsRouter.get(
 );
 
 adminOpsRouter.get(
+  "/billing/collections",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const invoices = await BillingInvoice.find({
+      paymentStatus: { $in: ["pending", "overdue"] }
+    }).sort({ dueDate: 1, generatedAt: 1 }).lean();
+
+    const customerIds = [...new Set(invoices.map((invoice) => invoice.customerId).filter(Boolean))];
+    const customers = await Customer.find({
+      $or: [
+        { customerId: { $in: customerIds } },
+        { "billingSnapshot.pendingPlanChange": { $exists: true, $ne: null } }
+      ]
+    }).lean();
+
+    const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
+    const now = Date.now();
+    const bucketFilter = String(_req.query.bucket || "").trim();
+    const items = [];
+
+    for (const invoice of invoices) {
+      const customer = customerMap.get(invoice.customerId);
+      if (!customer) continue;
+      const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
+      const overdueDays = dueDate ? Math.max(0, Math.floor((now - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+      const graceDays = Number(customer.billingSnapshot?.graceDays || 0);
+      const baseItem = {
+        customerId: customer.customerId,
+        customerName: customer.fullName || customer.customerId,
+        phone: customer.phone,
+        status: customer.operationalStatus || "active",
+        billMode: customer.billingSnapshot?.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid"),
+        dueAmount: Number(customer.billingSnapshot?.dueAmount || invoice.totalAmount || 0),
+        invoiceId: invoice.invoiceId,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceDueDate: invoice.dueDate,
+        invoiceStatus: invoice.paymentStatus,
+        overdueDays,
+        pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
+        pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
+        adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
+      };
+
+      items.push({
+        ...baseItem,
+        bucket: overdueDays > 0 ? "overdue" : "pending_due",
+        suspendRecommended: overdueDays > graceDays && customer.operationalStatus === "active",
+      });
+
+      if (customer.billingSnapshot?.pendingPlanChange) {
+        items.push({
+          ...baseItem,
+          bucket: "pending_plan_change",
+          suspendRecommended: false,
+        });
+      }
+
+      if (overdueDays > graceDays && customer.operationalStatus === "active") {
+        items.push({
+          ...baseItem,
+          bucket: "suspend_ready",
+          suspendRecommended: true,
+        });
+      }
+    }
+
+    for (const customer of customers) {
+      if (!customer.billingSnapshot?.pendingPlanChange) continue;
+      if (items.some((item) => item.customerId === customer.customerId && item.bucket === "pending_plan_change")) continue;
+      items.push({
+        customerId: customer.customerId,
+        customerName: customer.fullName || customer.customerId,
+        phone: customer.phone,
+        status: customer.operationalStatus || "active",
+        billMode: customer.billingSnapshot?.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid"),
+        dueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
+        overdueDays: 0,
+        bucket: "pending_plan_change",
+        pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
+        pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
+        adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
+        suspendRecommended: false,
+      });
+    }
+
+    const filtered = bucketFilter ? items.filter((item) => item.bucket === bucketFilter) : items;
+    return ok(res, filtered);
+  })
+);
+
+adminOpsRouter.get(
   "/billing/invoices",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
