@@ -1,0 +1,406 @@
+import 'package:flutter/material.dart';
+
+import '../core/app_state.dart';
+
+class BookingFlowScreen extends StatefulWidget {
+  const BookingFlowScreen({super.key});
+
+  @override
+  State<BookingFlowScreen> createState() => _BookingFlowScreenState();
+}
+
+class _BookingFlowScreenState extends State<BookingFlowScreen> {
+  int step = 0;
+  String? selectedPlanCode;
+  final nameController = TextEditingController();
+  final addressController = TextEditingController();
+  final pinController = TextEditingController();
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    addressController.dispose();
+    pinController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = AppStateScope.of(context);
+    final session = appState.session;
+    final plans = appState.plans;
+    final latestBooking = appState.latestBooking;
+
+    if (nameController.text.isEmpty && session != null) {
+      nameController.text = appState.dashboard.customerName;
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          children: [
+            Text('Book Wi-Fi', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 2),
+            const Text('Address, plan, and booking in one flow', style: TextStyle(fontSize: 15, color: Color(0xFF6B7280))),
+          ],
+        ),
+        centerTitle: true,
+        backgroundColor: const Color(0xFFF4F2FF),
+        foregroundColor: const Color(0xFF17181C),
+      ),
+      backgroundColor: const Color(0xFFF4F2FF),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+        children: [
+          _heroBanner(),
+          const SizedBox(height: 18),
+          _stepper(),
+          const SizedBox(height: 20),
+          if (step == 0) _addressStep(appState),
+          if (step == 1) _planStep(appState, plans),
+          if (step == 2) _bookingStep(appState, plans),
+          if (step == 3 && latestBooking != null) _successStep(latestBooking),
+        ],
+      ),
+    );
+  }
+
+  Widget _addressStep(AppState appState) {
+    final feasibility = appState.feasibility;
+    return _sectionCard(
+      title: 'Confirm service address',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Unlock plans and offers available in your area.', style: TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+          const SizedBox(height: 16),
+          _field('Full name', nameController),
+          const SizedBox(height: 12),
+          _field('Address', addressController, maxLines: 3),
+          const SizedBox(height: 12),
+          _field('Pin code', pinController, keyboardType: TextInputType.number),
+          const SizedBox(height: 16),
+          if (feasibility != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: feasibility.feasible ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Text(
+                feasibility.message,
+                style: TextStyle(
+                  color: feasibility.feasible ? const Color(0xFF166534) : const Color(0xFF991B1B),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: appState.bookingBusy
+                  ? null
+                  : () async {
+                      final ok = await appState.checkFeasibility(
+                        address: addressController.text.trim(),
+                        pinCode: pinController.text.trim(),
+                      );
+                      if (!mounted) return;
+                      if (ok) {
+                        setState(() => step = 1);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(appState.bookingError ?? 'Service is not available at this address yet.')),
+                        );
+                      }
+                    },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD81F26)),
+              child: Text(appState.bookingBusy ? 'Checking...' : 'Confirm & View Plans'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _planStep(AppState appState, List<dynamic> plans) {
+    return _sectionCard(
+      title: 'Popular plans',
+      child: Column(
+        children: [
+          for (final plan in plans)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _planTile(
+                planName: plan.name,
+                speed: '${plan.speedMbps.toStringAsFixed(0)} Mbps',
+                price: 'Rs ${plan.monthlyPrice.toStringAsFixed(0)} /m + GST',
+                selected: selectedPlanCode == plan.planCode,
+                onSelect: () => setState(() => selectedPlanCode = plan.planCode),
+              ),
+            ),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: selectedPlanCode == null ? null : () => setState(() => step = 2),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+              child: const Text('Continue to Booking'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bookingStep(AppState appState, List<dynamic> plans) {
+    dynamic selected;
+    for (final item in plans) {
+      if (item.planCode == selectedPlanCode) {
+        selected = item;
+        break;
+      }
+    }
+
+    return _sectionCard(
+      title: 'Book installation',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'We will create the booking and assign the installation team. Slot confirmation can follow from support or installer assignment.',
+            style: TextStyle(color: Color(0xFF6B7280), height: 1.45),
+          ),
+          const SizedBox(height: 16),
+          _summaryRow('Customer', nameController.text.trim().isEmpty ? '-' : nameController.text.trim()),
+          _summaryRow('Address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
+          _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
+          _summaryRow('Plan', selected?.name ?? '-'),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: appState.bookingBusy
+                  ? null
+                  : () async {
+                      final ok = await appState.createBooking(
+                        planCode: selectedPlanCode!,
+                        fullName: nameController.text.trim(),
+                        address: addressController.text.trim(),
+                        pinCode: pinController.text.trim(),
+                      );
+                      if (!mounted) return;
+                      if (ok) {
+                        setState(() => step = 3);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(appState.bookingError ?? 'Unable to create booking')),
+                        );
+                      }
+                    },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD81F26)),
+              child: Text(appState.bookingBusy ? 'Booking...' : 'Create Booking'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _successStep(dynamic latestBooking) {
+    return _sectionCard(
+      title: 'Booking created',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Booking ${latestBooking.bookingNumber} is ${latestBooking.status}.',
+              style: const TextStyle(color: Color(0xFF166534), fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _summaryRow('Plan', latestBooking.planName),
+          _summaryRow('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
+          _summaryRow('Current step', latestBooking.currentStep),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+              child: const Text('Done'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroBanner() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF7F7FF), Color(0xFFFFE7E8)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('Offer on new Wi-Fi:', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFD81F26))),
+                  SizedBox(height: 6),
+                  Text('Select your plan, confirm address, and create booking in one smooth flow.', style: TextStyle(color: Color(0xFF394150), height: 1.4)),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            width: 120,
+            height: 120,
+            margin: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFFD81F26), borderRadius: BorderRadius.circular(26)),
+            child: const Icon(Icons.wifi_rounded, color: Colors.white, size: 56),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepper() {
+    final labels = ['Address', 'Select Plan', 'Booking', 'Track'];
+    return Row(
+      children: List.generate(labels.length, (index) {
+        final active = index <= step;
+        return Expanded(
+          child: Column(
+            children: [
+              Container(
+                height: 4,
+                margin: EdgeInsets.only(left: index == 0 ? 24 : 0, right: index == labels.length - 1 ? 24 : 0),
+                decoration: BoxDecoration(
+                  color: active ? const Color(0xFF22C55E) : const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(labels[index], style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF20242E))),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _sectionCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _field(String label, TextEditingController controller, {int maxLines = 1, TextInputType keyboardType = TextInputType.text}) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+      ),
+    );
+  }
+
+  Widget _planTile({
+    required String planName,
+    required String speed,
+    required String price,
+    required bool selected,
+    required VoidCallback onSelect,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: selected ? const Color(0xFF2563EB) : const Color(0xFFE5E7EB), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(price, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _summaryPill(speed, 'Speed')),
+              Expanded(child: _summaryPill('Unlimited', 'Internet')),
+              Expanded(child: _summaryPill('OTT Ready', 'Benefits')),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: Text(planName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18))),
+              OutlinedButton(
+                onPressed: onSelect,
+                child: Text(selected ? 'Selected' : 'Select Plan'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryPill(String value, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+      ],
+    );
+  }
+
+  Widget _summaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+          const Spacer(),
+          Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700))),
+        ],
+      ),
+    );
+  }
+}

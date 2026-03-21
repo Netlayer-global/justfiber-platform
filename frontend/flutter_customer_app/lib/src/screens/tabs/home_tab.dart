@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/usage_bar.dart';
 import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
+import '../booking_flow_screen.dart';
 import '../service_hub_screen.dart';
 import '../service_tracking_screen.dart';
 import '../support_history_screen.dart';
-import '../../widgets/app_card.dart';
-import '../../widgets/usage_bar.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key, required this.onNavigate});
@@ -21,6 +22,7 @@ class HomeTab extends StatelessWidget {
     final wifi = appState.wifi;
     final billing = appState.billing;
     final latestBooking = appState.latestBooking;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
       children: [
@@ -32,7 +34,10 @@ class HomeTab extends StatelessWidget {
                 children: [
                   Text('Hi, ${dashboard.customerName}', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 4),
-                  Text('Manage broadband, booking and support in one place.', style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    'Manage broadband, booking, billing, and support from one dashboard.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                 ],
               ),
             ),
@@ -44,49 +49,60 @@ class HomeTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        GestureDetector(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
+        AppCard(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF112246), Color(0xFF4C5DFF), Color(0xFF8D61FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          child: AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF4C5DFF), Color(0xFF8D61FF), Color(0xFF2A347E)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('My JustFiber', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white)),
-                const SizedBox(height: 10),
-                Text(
-                  'Rs ${dashboard.walletBalance.toStringAsFixed(0)}',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${dashboard.planName} active now',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                      ),
-                    ),
-                    FilledButton(
-                      onPressed: appState.busy ? null : () => Navigator.of(context).push(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your broadband dashboard',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                billing.currentPlan,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '${wifi.ssid24} | ${billing.billMode} | Due Rs ${billing.dueAmount.toStringAsFixed(0)}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white54),
+                      ),
+                      child: const Text('Manage Service'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
                       ),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: const Color(0xFF161B33),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: const Text('Open Service'),
+                      child: const Text('Book New'),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 18),
@@ -104,27 +120,29 @@ class HomeTab extends StatelessWidget {
           mainAxisSpacing: 14,
           crossAxisSpacing: 14,
           children: [
-            _feature(context, Icons.receipt_long_rounded, 'Bills', () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
-            )),
-            _feature(context, Icons.wifi_tethering_rounded, 'Wi-Fi', () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
-            )),
+            _feature(
+              context,
+              Icons.receipt_long_rounded,
+              'Bills',
+              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen())),
+            ),
+            _feature(
+              context,
+              Icons.wifi_tethering_rounded,
+              'Wi-Fi',
+              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceHubScreen())),
+            ),
+            _feature(
+              context,
+              Icons.add_home_work_outlined,
+              'Booking',
+              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingFlowScreen())),
+            ),
             _feature(
               context,
               Icons.calendar_month_rounded,
               'Tracking',
-              () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
-              ),
-            ),
-            _feature(
-              context,
-              Icons.support_agent_rounded,
-              'Support',
-              () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-              ),
+              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())),
             ),
           ],
         ),
@@ -167,16 +185,16 @@ class HomeTab extends StatelessWidget {
         AppCard(
           child: Row(
             children: [
-              const Icon(Icons.receipt_long_rounded, color: Color(0xFF4C5DFF)),
+              const Icon(Icons.router_rounded, color: Color(0xFF4C5DFF)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Billing documents', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Service health', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 4),
                     Text(
-                      '${billing.invoices.length} invoices, ${billing.payments.length} receipts, ${billing.notes.length} notes',
+                      '${wifi.connectedDevicesCount} devices connected | ${wifi.paused ? 'Paused' : 'Active'} | ${dashboard.activeDays} days left',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -184,7 +202,7 @@ class HomeTab extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+                  MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
                 ),
                 child: const Text('Open'),
               ),
@@ -205,7 +223,7 @@ class HomeTab extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text('Used out of ${dashboard.totalGb.toStringAsFixed(0)} GB', style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 10),
-                    UsageBar(progress: dashboard.usedGb / dashboard.totalGb),
+                    UsageBar(progress: dashboard.totalGb == 0 ? 0 : dashboard.usedGb / dashboard.totalGb),
                   ],
                 ),
               ),
@@ -239,8 +257,7 @@ class HomeTab extends StatelessWidget {
               _infoRow('Plan', billing.currentPlan),
               _infoRow('Next bill', billing.nextBillDate),
               _infoRow('Due amount', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
-              if (billing.pendingPlanChange != null)
-                _infoRow('Pending switch', billing.pendingPlanChange!.planName),
+              if (billing.pendingPlanChange != null) _infoRow('Pending switch', billing.pendingPlanChange!.planName),
             ],
           ),
         ),
@@ -275,6 +292,31 @@ class HomeTab extends StatelessWidget {
             ),
           ),
         ],
+        const SizedBox(height: 18),
+        AppCard(
+          child: Row(
+            children: [
+              const Icon(Icons.support_agent_rounded, color: Color(0xFF8D61FF)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Need help?', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text('Raise complaints, billing issues, and support requests.', style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                ),
+                child: const Text('Open'),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -325,7 +367,13 @@ class HomeTab extends StatelessWidget {
         children: [
           Text(label, style: const TextStyle(color: Color(0xFF9CA7D4))),
           const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+            ),
+          ),
         ],
       ),
     );
