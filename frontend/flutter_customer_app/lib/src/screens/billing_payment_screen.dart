@@ -16,6 +16,9 @@ class BillingPaymentScreen extends StatefulWidget {
 class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   late final Razorpay _razorpay;
   bool launching = false;
+  String? paymentError;
+  String? walletHint;
+  int retryCount = 0;
 
   @override
   void initState() {
@@ -35,7 +38,11 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
 
   void _openCheckout() {
     if (launching) return;
-    setState(() => launching = true);
+    setState(() {
+      launching = true;
+      paymentError = null;
+      walletHint = null;
+    });
     _razorpay.open({
       'key': widget.paymentOrder.keyId,
       'amount': widget.paymentOrder.amountPaise,
@@ -77,19 +84,32 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
 
   void _handlePaymentError(PaymentFailureResponse response) {
     if (!mounted) return;
-    setState(() => launching = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(response.message ?? 'Payment failed'),
-      ),
-    );
+    setState(() {
+      launching = false;
+      paymentError = response.message ?? 'Payment failed';
+      retryCount += 1;
+    });
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
     if (!mounted) return;
+    setState(() {
+      walletHint = 'Continue payment in ${response.walletName ?? 'wallet'} and return here after completion.';
+    });
+  }
+
+  Future<void> _requestPaymentHelp() async {
+    final appState = AppStateScope.of(context);
+    final ticketNumber = await appState.raiseComplaint(
+      category: 'billing',
+      subject: 'Payment failed for bill',
+      description:
+          'Payment failed while trying to pay Rs ${widget.paymentOrder.amount.toStringAsFixed(0)} for order ${widget.paymentOrder.orderId}. Please assist with billing/payment confirmation.',
+    );
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Continue payment in ${response.walletName ?? 'wallet'}'),
+        content: Text(ticketNumber == null ? (appState.error ?? 'Unable to create support request') : 'Support ticket created: $ticketNumber'),
       ),
     );
   }
@@ -132,31 +152,73 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
             ),
           ),
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
               children: [
-                Icon(
-                  Icons.payments_rounded,
-                  size: 72,
-                  color: Colors.white.withOpacity(0.9),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Secure payment window opens automatically.',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24),
-                  child: Text(
-                    'If nothing appears, tap Retry to launch Razorpay again.',
-                    style: TextStyle(color: Color(0xFFD7DBF4)),
-                    textAlign: TextAlign.center,
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F1630),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        paymentError == null ? Icons.payments_rounded : Icons.error_outline_rounded,
+                        size: 72,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        paymentError == null ? 'Secure payment window opens automatically.' : 'Payment needs your attention.',
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          paymentError ??
+                              'If nothing appears, tap Retry to launch Razorpay again.',
+                          style: const TextStyle(color: Color(0xFFD7DBF4)),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      if (walletHint != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          walletHint!,
+                          style: const TextStyle(color: Color(0xFFFFD9B8)),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      if (launching) const CircularProgressIndicator(color: Colors.white),
+                      if (!launching) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: _openCheckout,
+                            child: Text(retryCount > 0 ? 'Retry payment' : 'Open checkout'),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _requestPaymentHelp,
+                            child: const Text('Need help? Raise billing ticket'),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Back to app'),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                if (launching) const CircularProgressIndicator(color: Colors.white),
               ],
             ),
           ),
