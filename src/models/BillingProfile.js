@@ -12,6 +12,29 @@ const billingProfileSchema = new mongoose.Schema(
     autoSuspend: { type: Boolean, default: true },
     currency: { type: String, default: "INR" },
     taxPercent: { type: Number, default: 18 },
+    companyStateCode: { type: String, default: "UP" },
+    companyStateName: { type: String, default: "Uttar Pradesh" },
+    gstNumber: String,
+    taxMode: { type: String, enum: ["india_gst", "flat_tax"], default: "india_gst" },
+    interstateIgstPercent: { type: Number, default: 18 },
+    intrastateCgstPercent: { type: Number, default: 9 },
+    intrastateSgstPercent: { type: Number, default: 9 },
+    stateOverrides: {
+      type: [
+        new mongoose.Schema(
+          {
+            stateCode: String,
+            stateName: String,
+            igstPercent: Number,
+            cgstPercent: Number,
+            sgstPercent: Number,
+            unionTerritory: Boolean
+          },
+          { _id: false }
+        )
+      ],
+      default: []
+    },
     razorpayEnabled: { type: Boolean, default: true },
     active: { type: Boolean, default: true }
   },

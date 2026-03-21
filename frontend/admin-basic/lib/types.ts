@@ -226,7 +226,59 @@ export interface BillingData {
   id: string
   customerId: string
   amount: number
+  taxAmount?: number
+  totalAmount?: number
   dueDate: string
   status: 'pending' | 'paid' | 'overdue'
   invoiceId: string
+  invoiceNumber?: string
+  billCycle?: string
+  billingStateCode?: string
+  billingStateName?: string
+  taxMode?: string
+  taxBreakdown?: Array<{
+    label: string
+    rate: number
+    amount: number
+  }>
+}
+
+export interface BillingOverview {
+  totalInvoices: number
+  overdueInvoices: number
+  paidTransactions: number
+  dueAmount: number
+  collectedAmount: number
+  taxCollected: number
+  stateWiseGst: Array<{
+    stateCode?: string
+    stateName: string
+    invoiceCount: number
+    taxableAmount: number
+    taxAmount: number
+    totalAmount: number
+  }>
+}
+
+export interface BillingProfile {
+  id: string
+  code: string
+  name: string
+  companyStateCode?: string
+  companyStateName?: string
+  gstNumber?: string
+  taxMode?: 'india_gst' | 'flat_tax'
+  taxPercent?: number
+  interstateIgstPercent?: number
+  intrastateCgstPercent?: number
+  intrastateSgstPercent?: number
+  stateOverrides?: Array<{
+    stateCode: string
+    stateName?: string
+    igstPercent?: number
+    cgstPercent?: number
+    sgstPercent?: number
+    unionTerritory?: boolean
+  }>
+  active?: boolean
 }

@@ -10,6 +10,8 @@ import type {
   ServiceZone,
   DashboardStats,
   BillingData,
+  BillingOverview,
+  BillingProfile,
   CustomerAction,
   CustomerDevice,
   CustomerInvoice,
@@ -349,7 +351,9 @@ function mapBillingItem(invoice: any): BillingData {
   return {
     id: invoice._id || invoice.invoiceId || '',
     customerId: invoice.customerId || '',
-    amount: Number(invoice.totalAmount || invoice.amount || 0),
+    amount: Number(invoice.amount || invoice.totalAmount || 0),
+    taxAmount: Number(invoice.taxAmount || 0),
+    totalAmount: Number(invoice.totalAmount || invoice.amount || 0),
     dueDate: invoice.dueDate || invoice.generatedAt || new Date().toISOString(),
     status:
       invoice.paymentStatus === 'paid'
@@ -358,6 +362,30 @@ function mapBillingItem(invoice: any): BillingData {
           ? 'overdue'
           : 'pending',
     invoiceId: invoice.invoiceId || invoice._id || '',
+    invoiceNumber: invoice.invoiceNumber,
+    billCycle: invoice.billCycle,
+    billingStateCode: invoice.billingStateCode,
+    billingStateName: invoice.billingStateName,
+    taxMode: invoice.taxMode,
+    taxBreakdown: Array.isArray(invoice.taxBreakdown) ? invoice.taxBreakdown : [],
+  }
+}
+
+function mapBillingProfile(profile: any): BillingProfile {
+  return {
+    id: profile._id || profile.code || '',
+    code: profile.code || '',
+    name: profile.name || profile.code || 'Billing profile',
+    companyStateCode: profile.companyStateCode || '',
+    companyStateName: profile.companyStateName || '',
+    gstNumber: profile.gstNumber || '',
+    taxMode: profile.taxMode || 'india_gst',
+    taxPercent: Number(profile.taxPercent || 0),
+    interstateIgstPercent: Number(profile.interstateIgstPercent || 0),
+    intrastateCgstPercent: Number(profile.intrastateCgstPercent || 0),
+    intrastateSgstPercent: Number(profile.intrastateSgstPercent || 0),
+    stateOverrides: Array.isArray(profile.stateOverrides) ? profile.stateOverrides : [],
+    active: profile.active !== false,
   }
 }
 
@@ -777,6 +805,33 @@ export const adminAPI = {
       },
     }
   },
+  getBillingOverview: async () => request<BillingOverview>('/api/v1/admin/billing/overview'),
+  getBillingProfiles: async () => {
+    const res = await request<any[]>('/api/v1/admin/billing/gst-profiles')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapBillingProfile) : [],
+    }
+  },
+  saveBillingProfile: async (data: Partial<BillingProfile>) =>
+    request('/api/v1/admin/foundation/billing-profiles', {
+      method: 'POST',
+      body: JSON.stringify({
+        code: data.code,
+        name: data.name,
+        currency: 'INR',
+        taxPercent: data.taxPercent,
+        companyStateCode: data.companyStateCode,
+        companyStateName: data.companyStateName,
+        gstNumber: data.gstNumber,
+        taxMode: data.taxMode,
+        interstateIgstPercent: data.interstateIgstPercent,
+        intrastateCgstPercent: data.intrastateCgstPercent,
+        intrastateSgstPercent: data.intrastateSgstPercent,
+        stateOverrides: data.stateOverrides || [],
+        active: data.active !== false,
+      }),
+    }),
   getCustomerBilling: async (customerId: string) =>
     request<{
       summary: Record<string, unknown>

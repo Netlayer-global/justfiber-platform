@@ -18,15 +18,79 @@ function deriveAmount(service) {
   return Number.isFinite(monthlyPrice) && monthlyPrice > 0 ? monthlyPrice : 0;
 }
 
+function normalizeStateCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
 function buildInvoiceAmounts(totalAmount, taxPercent) {
   const safeTotal = Number(totalAmount || 0);
   const safeTaxPercent = Number(taxPercent || 0);
   if (!Number.isFinite(safeTotal) || safeTotal <= 0) {
-    return { amount: 0, taxAmount: 0, totalAmount: 0 };
+    return { amount: 0, taxAmount: 0, totalAmount: 0, taxBreakdown: [] };
   }
   const amount = Number((safeTotal / (1 + safeTaxPercent / 100)).toFixed(2));
   const taxAmount = Number((safeTotal - amount).toFixed(2));
-  return { amount, taxAmount, totalAmount: safeTotal };
+  return { amount, taxAmount, totalAmount: safeTotal, taxBreakdown: [] };
+}
+
+function buildGstAmounts(totalAmount, billingProfile, customer) {
+  const safeTotal = Number(totalAmount || 0);
+  if (!Number.isFinite(safeTotal) || safeTotal <= 0) {
+    return {
+      amount: 0,
+      taxAmount: 0,
+      totalAmount: 0,
+      taxBreakdown: [],
+      billingStateCode: "",
+      billingStateName: "",
+      placeOfSupply: "",
+      taxMode: billingProfile?.taxMode || "india_gst",
+      gstNumber: billingProfile?.gstNumber || ""
+    };
+  }
+
+  const customerStateName = customer?.address?.state || customer?.billingSnapshot?.billingStateName || "";
+  const customerStateCode = normalizeStateCode(customer?.address?.stateCode || customer?.billingSnapshot?.billingStateCode);
+  const companyStateCode = normalizeStateCode(billingProfile?.companyStateCode || "UP");
+  const override = (billingProfile?.stateOverrides || []).find((item) => normalizeStateCode(item.stateCode) === customerStateCode);
+
+  const isIntrastate = customerStateCode && customerStateCode === companyStateCode;
+  const effectiveTaxPercent = Number(
+    isIntrastate
+      ? (override?.cgstPercent ?? billingProfile?.intrastateCgstPercent ?? 9) +
+        (override?.sgstPercent ?? billingProfile?.intrastateSgstPercent ?? 9)
+      : (override?.igstPercent ?? billingProfile?.interstateIgstPercent ?? billingProfile?.taxPercent ?? 18)
+  );
+
+  const amount = Number((safeTotal / (1 + effectiveTaxPercent / 100)).toFixed(2));
+  const taxAmount = Number((safeTotal - amount).toFixed(2));
+
+  let taxBreakdown;
+  if (isIntrastate) {
+    const cgstRate = Number(override?.cgstPercent ?? billingProfile?.intrastateCgstPercent ?? 9);
+    const sgstRate = Number(override?.sgstPercent ?? billingProfile?.intrastateSgstPercent ?? 9);
+    const cgstAmount = Number((amount * cgstRate / 100).toFixed(2));
+    const sgstAmount = Number((taxAmount - cgstAmount).toFixed(2));
+    taxBreakdown = [
+      { label: "CGST", rate: cgstRate, amount: cgstAmount },
+      { label: "SGST", rate: sgstRate, amount: sgstAmount }
+    ];
+  } else {
+    const igstRate = Number(override?.igstPercent ?? billingProfile?.interstateIgstPercent ?? billingProfile?.taxPercent ?? 18);
+    taxBreakdown = [{ label: "IGST", rate: igstRate, amount: taxAmount }];
+  }
+
+  return {
+    amount,
+    taxAmount,
+    totalAmount: safeTotal,
+    taxBreakdown,
+    billingStateCode: customerStateCode,
+    billingStateName: customerStateName,
+    placeOfSupply: customerStateCode || customerStateName,
+    taxMode: billingProfile?.taxMode || "india_gst",
+    gstNumber: billingProfile?.gstNumber || ""
+  };
 }
 
 async function syncCustomerBillingSnapshot({ customerId, totalAmount, dueDate, paymentStatus, billCycle, invoiceNumber }) {
@@ -72,7 +136,11 @@ export class InternalBillingEngine {
     }
 
     const dueDate = addDays(generatedAt, billingProfile?.dueDays ?? 0);
-    const amounts = buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
+    const customer = await Customer.findOne({ customerId: service.customerId }).lean();
+    const amounts =
+      billingProfile?.taxMode === "india_gst"
+        ? buildGstAmounts(totalAmount, billingProfile, customer)
+        : buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
     const invoice = await BillingInvoice.create({
       invoiceId: `INV-${service.customerId}-${billCycle}`,
       customerId: service.customerId,
@@ -84,6 +152,12 @@ export class InternalBillingEngine {
       amount: amounts.amount,
       taxAmount: amounts.taxAmount,
       totalAmount: amounts.totalAmount,
+      taxMode: amounts.taxMode || billingProfile?.taxMode || "india_gst",
+      billingStateCode: amounts.billingStateCode,
+      billingStateName: amounts.billingStateName,
+      placeOfSupply: amounts.placeOfSupply,
+      gstNumber: amounts.gstNumber,
+      taxBreakdown: amounts.taxBreakdown || [],
       currency: billingProfile?.currency || "INR",
       status: "generated",
       paymentStatus: options.paymentStatus || "pending",

@@ -56,6 +56,23 @@ const billingProfileSchema = z.object({
   autoSuspend: z.boolean().default(true),
   currency: z.string().default("INR"),
   taxPercent: z.number().min(0).default(18),
+  companyStateCode: z.string().default("UP"),
+  companyStateName: z.string().default("Uttar Pradesh"),
+  gstNumber: z.string().optional(),
+  taxMode: z.enum(["india_gst", "flat_tax"]).default("india_gst"),
+  interstateIgstPercent: z.number().min(0).default(18),
+  intrastateCgstPercent: z.number().min(0).default(9),
+  intrastateSgstPercent: z.number().min(0).default(9),
+  stateOverrides: z.array(
+    z.object({
+      stateCode: z.string().min(2),
+      stateName: z.string().optional(),
+      igstPercent: z.number().min(0).optional(),
+      cgstPercent: z.number().min(0).optional(),
+      sgstPercent: z.number().min(0).optional(),
+      unionTerritory: z.boolean().optional()
+    })
+  ).default([]),
   razorpayEnabled: z.boolean().default(true),
   active: z.boolean().default(true)
 });

@@ -16,6 +16,7 @@ import { auditFromRequest } from "../../common/audit.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
+import { BillingProfile } from "../../models/BillingProfile.js";
 
 export const adminOpsRouter = Router();
 
@@ -89,7 +90,7 @@ adminOpsRouter.get(
   "/billing/overview",
   requirePermission(permissions.billingRead),
   asyncHandler(async (_req, res) => {
-    const [totalInvoices, overdueInvoices, paidTransactions, dueAmount, collectedAmount] = await Promise.all([
+    const [totalInvoices, overdueInvoices, paidTransactions, dueAmount, collectedAmount, taxCollected, stateWiseGst] = await Promise.all([
       BillingInvoice.countDocuments(),
       BillingInvoice.countDocuments({ paymentStatus: "overdue" }),
       PaymentTransaction.countDocuments({ status: "success" }),
@@ -100,6 +101,21 @@ adminOpsRouter.get(
       PaymentTransaction.aggregate([
         { $match: { status: "success" } },
         { $group: { _id: null, total: { $sum: "$amount" } } }
+      ]),
+      BillingInvoice.aggregate([
+        { $group: { _id: null, total: { $sum: "$taxAmount" } } }
+      ]),
+      BillingInvoice.aggregate([
+        {
+          $group: {
+            _id: { stateCode: "$billingStateCode", stateName: "$billingStateName" },
+            invoiceCount: { $sum: 1 },
+            taxableAmount: { $sum: "$amount" },
+            taxAmount: { $sum: "$taxAmount" },
+            totalAmount: { $sum: "$totalAmount" }
+          }
+        },
+        { $sort: { totalAmount: -1 } }
       ])
     ]);
 
@@ -108,7 +124,16 @@ adminOpsRouter.get(
       overdueInvoices,
       paidTransactions,
       dueAmount: dueAmount[0]?.total || 0,
-      collectedAmount: collectedAmount[0]?.total || 0
+      collectedAmount: collectedAmount[0]?.total || 0,
+      taxCollected: taxCollected[0]?.total || 0,
+      stateWiseGst: stateWiseGst.map((item) => ({
+        stateCode: item._id?.stateCode || "",
+        stateName: item._id?.stateName || "Unknown",
+        invoiceCount: item.invoiceCount || 0,
+        taxableAmount: item.taxableAmount || 0,
+        taxAmount: item.taxAmount || 0,
+        totalAmount: item.totalAmount || 0
+      }))
     });
   })
 );
@@ -130,6 +155,15 @@ adminOpsRouter.get(
       BillingInvoice.countDocuments(filter)
     ]);
     return ok(res, items, { page, limit, total });
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/gst-profiles",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const profiles = await BillingProfile.find({}).sort({ active: -1, code: 1 }).lean();
+    return ok(res, profiles);
   })
 );
 

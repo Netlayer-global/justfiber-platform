@@ -12,6 +12,24 @@ const billingInvoiceSchema = new mongoose.Schema(
     amount: Number,
     taxAmount: Number,
     totalAmount: Number,
+    taxMode: { type: String, default: "india_gst" },
+    billingStateCode: String,
+    billingStateName: String,
+    placeOfSupply: String,
+    gstNumber: String,
+    taxBreakdown: {
+      type: [
+        new mongoose.Schema(
+          {
+            label: String,
+            rate: Number,
+            amount: Number
+          },
+          { _id: false }
+        )
+      ],
+      default: []
+    },
     currency: { type: String, default: "INR" },
     status: { type: String, default: "generated", index: true },
     paymentStatus: { type: String, default: "pending", index: true },
