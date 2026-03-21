@@ -288,6 +288,24 @@ function buildBillingAttachment({ title, url, reference }) {
   }];
 }
 
+function csvEscape(value) {
+  const raw = value == null ? "" : String(value);
+  if (/[",\n]/.test(raw)) {
+    return `"${raw.replace(/"/g, '""')}"`;
+  }
+  return raw;
+}
+
+function buildCsv(rows = []) {
+  if (!rows.length) return "";
+  const headers = Object.keys(rows[0]);
+  const lines = [
+    headers.join(","),
+    ...rows.map((row) => headers.map((header) => csvEscape(row[header])).join(","))
+  ];
+  return lines.join("\n");
+}
+
 function buildCustomerPortalRetryUrl(customerId) {
   const configuredBase = String(env.USER_DOMAIN || "").trim();
   if (!configuredBase) return "";
@@ -563,6 +581,106 @@ adminOpsRouter.get(
       agingBuckets,
       collectionStats
     });
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/exports/invoices.csv",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const invoices = await BillingInvoice.find({})
+      .sort({ generatedAt: -1, createdAt: -1 })
+      .limit(5000)
+      .lean();
+    const csv = buildCsv(
+      invoices.map((invoice) => ({
+        invoiceNumber: invoice.invoiceNumber || invoice.invoiceId,
+        customerId: invoice.customerId,
+        billCycle: invoice.billCycle || "",
+        generatedAt: invoice.generatedAt ? new Date(invoice.generatedAt).toISOString() : "",
+        dueDate: invoice.dueDate ? new Date(invoice.dueDate).toISOString() : "",
+        paymentStatus: invoice.paymentStatus || "",
+        taxableAmount: Number(invoice.amount || 0).toFixed(2),
+        taxAmount: Number(invoice.taxAmount || 0).toFixed(2),
+        totalAmount: Number(invoice.totalAmount || 0).toFixed(2),
+        billingStateCode: invoice.billingStateCode || "",
+        billingStateName: invoice.billingStateName || "",
+        placeOfSupply: invoice.placeOfSupply || ""
+      }))
+    );
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=\"billing-invoices.csv\"");
+    return res.send(csv);
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/exports/payments.csv",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const payments = await PaymentTransaction.find({})
+      .sort({ paidAt: -1, createdAt: -1 })
+      .limit(5000)
+      .lean();
+    const csv = buildCsv(
+      payments.map((payment) => ({
+        transactionId: payment.transactionId,
+        customerId: payment.customerId,
+        invoiceId: payment.invoiceId || payment.reconciledInvoiceId || "",
+        provider: payment.provider || "",
+        method: payment.method || "",
+        status: payment.status || "",
+        amount: Number(payment.amount || 0).toFixed(2),
+        reference: payment.reference || "",
+        reconciliationStatus: payment.reconciliationStatus || "",
+        paidAt: payment.paidAt ? new Date(payment.paidAt).toISOString() : "",
+        createdAt: payment.createdAt ? new Date(payment.createdAt).toISOString() : ""
+      }))
+    );
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=\"billing-payments.csv\"");
+    return res.send(csv);
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/exports/gst-summary",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const stateWiseGst = await BillingInvoice.aggregate([
+      {
+        $group: {
+          _id: { stateCode: "$billingStateCode", stateName: "$billingStateName" },
+          invoiceCount: { $sum: 1 },
+          taxableAmount: { $sum: "$amount" },
+          taxAmount: { $sum: "$taxAmount" },
+          totalAmount: { $sum: "$totalAmount" }
+        }
+      },
+      { $sort: { totalAmount: -1 } }
+    ]);
+    const items = stateWiseGst.map((item) => ({
+      stateCode: item._id?.stateCode || "",
+      stateName: item._id?.stateName || "Unknown",
+      invoiceCount: item.invoiceCount || 0,
+      taxableAmount: Number(item.taxableAmount || 0),
+      taxAmount: Number(item.taxAmount || 0),
+      totalAmount: Number(item.totalAmount || 0)
+    }));
+    if (String(_req.query.format || "").toLowerCase() === "csv") {
+      const csv = buildCsv(items.map((item) => ({
+        stateCode: item.stateCode,
+        stateName: item.stateName,
+        invoiceCount: item.invoiceCount,
+        taxableAmount: item.taxableAmount.toFixed(2),
+        taxAmount: item.taxAmount.toFixed(2),
+        totalAmount: item.totalAmount.toFixed(2)
+      })));
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=\"gst-summary.csv\"");
+      return res.send(csv);
+    }
+    return ok(res, items);
   })
 );
 

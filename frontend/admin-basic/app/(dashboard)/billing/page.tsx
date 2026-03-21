@@ -521,13 +521,39 @@ export default function BillingPage() {
           <h1 className="text-3xl font-bold">Billing</h1>
           <p className="text-slate-600 mt-1">Manage invoices, GST breakdown, state-wise tax and billing profiles</p>
         </div>
-        <button onClick={() => void loadBilling()} className="btn-secondary inline-flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-        <button onClick={() => void runBillingCycle()} disabled={isRunningCycle} className="btn-primary">
-          {isRunningCycle ? 'Running...' : 'Run Billing Cycle'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            className="btn-secondary"
+            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/exports/invoices.csv`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Export Invoices CSV
+          </a>
+          <a
+            className="btn-secondary"
+            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/exports/payments.csv`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Export Payments CSV
+          </a>
+          <a
+            className="btn-secondary"
+            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/exports/gst-summary?format=csv`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Export GST CSV
+          </a>
+          <button onClick={() => void loadBilling()} className="btn-secondary inline-flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+          <button onClick={() => void runBillingCycle()} disabled={isRunningCycle} className="btn-primary">
+            {isRunningCycle ? 'Running...' : 'Run Billing Cycle'}
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
