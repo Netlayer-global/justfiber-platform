@@ -443,6 +443,9 @@ function mapBillingPayment(payment: any): BillingPayment {
     paidAt: payment.paidAt || payment.createdAt,
     reconciliationStatus: payment.reconciliationStatus || 'pending',
     reconciledInvoiceId: payment.reconciledInvoiceId,
+    reconciliationConfidence: Number(payment.metadata?.reconciliationConfidence || 0),
+    reconciliationMatchReason: payment.metadata?.reconciliationMatchReason || '',
+    reconciliationMatchedBy: payment.metadata?.reconciliationMatchedBy || '',
   }
 }
 

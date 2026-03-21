@@ -329,4 +329,7 @@ export interface BillingPayment {
   paidAt?: string
   reconciliationStatus?: 'pending' | 'matched' | 'manual_review' | 'reconciled'
   reconciledInvoiceId?: string
+  reconciliationConfidence?: number
+  reconciliationMatchReason?: string
+  reconciliationMatchedBy?: string
 }

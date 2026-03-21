@@ -725,7 +725,14 @@ async function findBestInvoiceForPayment(payment) {
     const byReference = await BillingInvoice.findOne({
       $or: [{ invoiceId: exactRef }, { invoiceNumber: exactRef }]
     });
-    if (byReference) return byReference;
+    if (byReference) {
+      return {
+        invoice: byReference,
+        confidenceScore: 0.99,
+        matchReason: "Payment reference exactly matched invoice number/id",
+        matchedBy: "reference_exact"
+      };
+    }
   }
 
   const amount = Number(payment.amount || 0);
@@ -740,10 +747,18 @@ async function findBestInvoiceForPayment(payment) {
 
   let best = null;
   let bestScore = -1;
+  let bestReasons = [];
   for (const invoice of candidates) {
     let score = 0;
-    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 1) score += 4;
-    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 0.01) score += 2;
+    const reasons = [];
+    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 1) {
+      score += 4;
+      reasons.push("Amount within Rs 1");
+    }
+    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 0.01) {
+      score += 2;
+      reasons.push("Exact amount match");
+    }
     const invoiceTokens = [
       invoice.invoiceId,
       invoice.invoiceNumber,
@@ -752,13 +767,24 @@ async function findBestInvoiceForPayment(payment) {
     ]
       .filter(Boolean)
       .map((value) => String(value).trim().toLowerCase());
-    if (refTokens.some((token) => invoiceTokens.includes(token))) score += 8;
+    if (refTokens.some((token) => invoiceTokens.includes(token))) {
+      score += 8;
+      reasons.push("Reference token matched invoice metadata");
+    }
     if (score > bestScore) {
       best = invoice;
       bestScore = score;
+      bestReasons = reasons;
     }
   }
-  return bestScore >= 4 ? best : null;
+  return bestScore >= 4 && best
+    ? {
+        invoice: best,
+        confidenceScore: Math.min(0.98, Number((bestScore / 14).toFixed(2))),
+        matchReason: bestReasons.join("; ") || "Best open invoice based on customer and amount",
+        matchedBy: bestReasons.some((reason) => reason.includes("Reference")) ? "reference_and_amount" : "amount_similarity"
+      }
+    : null;
 }
 
 async function runRecurringBillingTasks() {
@@ -837,13 +863,21 @@ async function runRecurringBillingTasks() {
     }).sort({ paidAt: -1, createdAt: -1 }).limit(50);
 
     for (const payment of pendingPayments) {
-      const invoice = await findBestInvoiceForPayment(payment);
+      const match = await findBestInvoiceForPayment(payment);
 
-      if (!invoice) {
+      if (!match) {
         payment.reconciliationStatus = "manual_review";
+        payment.metadata = {
+          ...(payment.metadata || {}),
+          reconciliationMode: "auto_worker_review",
+          reconciliationConfidence: 0,
+          reconciliationMatchReason: "No eligible open invoice reached minimum confidence",
+          reconciliationMatchedBy: "no_match"
+        };
         await payment.save();
         continue;
       }
+      const { invoice, confidenceScore, matchReason, matchedBy } = match;
 
       invoice.paymentStatus = "paid";
       invoice.status = "settled";
@@ -861,7 +895,10 @@ async function runRecurringBillingTasks() {
       payment.reconciledAt = new Date();
       payment.metadata = {
         ...(payment.metadata || {}),
-        reconciliationMode: "auto_worker"
+        reconciliationMode: "auto_worker",
+        reconciliationConfidence: confidenceScore,
+        reconciliationMatchReason: matchReason,
+        reconciliationMatchedBy: matchedBy
       };
       await payment.save();
 

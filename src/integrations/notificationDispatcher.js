@@ -7,11 +7,15 @@ import { providerAdapters } from "./providerAdapters.js";
 function getDefaultEventChannels(eventKey) {
   const defaults = {
     verification_code: { sms: true },
+    billing_invoice: { email: true, sms: true },
+    invoice_due_date: { email: true, sms: true },
     unpaid_invoice: { email: true, sms: true },
     paid_invoice: { email: true, sms: true },
     renewal: { email: true, sms: true },
     raising_ticket_notification: { email: true, sms: true },
-    ticket_message: { push: true }
+    ticket_message: { push: true },
+    user_discount: { email: true, sms: true },
+    user_penalty: { email: true, sms: true }
   };
   return defaults[eventKey] || { push: true };
 }
@@ -44,20 +48,21 @@ export const notificationDispatcher = {
     recipient,
     subject,
     body,
+    attachments,
     entityType,
     entityId,
     metadata
   }) {
     if (category === "sms") {
-      const result = await providerAdapters.sendSms({ recipient, subject, body, metadata, entityType, entityId });
+      const result = await providerAdapters.sendSms({ recipient, subject, body, metadata, attachments, entityType, entityId });
       return result.log;
     }
     if (category === "email") {
-      const result = await providerAdapters.sendEmail({ recipient, subject, body, metadata, entityType, entityId });
+      const result = await providerAdapters.sendEmail({ recipient, subject, body, metadata, attachments, entityType, entityId });
       return result.log;
     }
     if (category === "whatsapp") {
-      const result = await providerAdapters.sendWhatsapp({ recipient, subject, body, metadata, entityType, entityId });
+      const result = await providerAdapters.sendWhatsapp({ recipient, subject, body, metadata, attachments, entityType, entityId });
       return result.log;
     }
 
@@ -74,6 +79,7 @@ export const notificationDispatcher = {
         recipient,
         subject,
         body,
+        attachments,
         metadata
       }
     });
@@ -104,6 +110,7 @@ export const notificationDispatcher = {
           recipient,
           subject,
           body,
+          attachments,
           metadata
         },
         connection.config?.headers || {}
@@ -127,6 +134,7 @@ export const notificationDispatcher = {
     recipients,
     subject,
     body,
+    attachments,
     entityType,
     entityId,
     metadata
@@ -141,6 +149,7 @@ export const notificationDispatcher = {
         recipient: recipients.email,
         subject,
         body,
+        attachments,
         entityType,
         entityId,
         metadata: { ...(metadata || {}), eventKey }
@@ -153,6 +162,7 @@ export const notificationDispatcher = {
         recipient: recipients.sms,
         subject,
         body,
+        attachments,
         entityType,
         entityId,
         metadata: { ...(metadata || {}), eventKey }
@@ -165,6 +175,7 @@ export const notificationDispatcher = {
         recipient: recipients.whatsapp,
         subject,
         body,
+        attachments,
         entityType,
         entityId,
         metadata: { ...(metadata || {}), eventKey }
@@ -177,6 +188,7 @@ export const notificationDispatcher = {
         recipient: recipients.push,
         subject,
         body,
+        attachments,
         entityType,
         entityId,
         metadata: { ...(metadata || {}), eventKey, channel: "push" }

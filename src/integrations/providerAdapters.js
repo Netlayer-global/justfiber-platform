@@ -88,36 +88,36 @@ async function runProviderAction({
 }
 
 export const providerAdapters = {
-  sendSms({ recipient, subject, body, metadata, providerKey, entityType, entityId }) {
+  sendSms({ recipient, subject, body, metadata, attachments, providerKey, entityType, entityId }) {
     return runProviderAction({
       category: "sms",
       explicitKey: providerKey,
       eventType: "sms_send",
       entityType,
       entityId,
-      payload: { recipient, subject, body, metadata }
+      payload: { recipient, subject, body, metadata, attachments }
     });
   },
 
-  sendEmail({ recipient, subject, body, metadata, providerKey, entityType, entityId }) {
+  sendEmail({ recipient, subject, body, metadata, attachments, providerKey, entityType, entityId }) {
     return runProviderAction({
       category: "email",
       explicitKey: providerKey,
       eventType: "email_send",
       entityType,
       entityId,
-      payload: { recipient, subject, body, metadata }
+      payload: { recipient, subject, body, metadata, attachments }
     });
   },
 
-  sendWhatsapp({ recipient, subject, body, metadata, providerKey, entityType, entityId }) {
+  sendWhatsapp({ recipient, subject, body, metadata, attachments, providerKey, entityType, entityId }) {
     return runProviderAction({
       category: "whatsapp",
       explicitKey: providerKey,
       eventType: "whatsapp_send",
       entityType,
       entityId,
-      payload: { recipient, subject, body, metadata }
+      payload: { recipient, subject, body, metadata, attachments }
     });
   },
 

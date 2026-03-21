@@ -449,6 +449,7 @@ export default function BillingPage() {
                   <th className="table-header">Customer</th>
                   <th className="table-header">Amount</th>
                   <th className="table-header">Reconciliation</th>
+                  <th className="table-header">Audit</th>
                   <th className="table-header text-right">Action</th>
                 </tr>
               </thead>
@@ -465,6 +466,11 @@ export default function BillingPage() {
                     </td>
                     <td className="table-cell">Rs {payment.amount.toFixed(2)}</td>
                     <td className="table-cell">{payment.reconciliationStatus || 'pending'}</td>
+                    <td className="table-cell">
+                      <div>{Math.round((payment.reconciliationConfidence || 0) * 100)}%</div>
+                      <div className="text-xs text-slate-500 mt-1">{payment.reconciliationMatchedBy || 'pending_review'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{payment.reconciliationMatchReason || 'Not evaluated yet'}</div>
+                    </td>
                     <td className="table-cell text-right">
                       {payment.reconciliationStatus !== 'reconciled' ? (
                         <button className="btn-secondary" onClick={() => void reconcilePayment(payment.transactionId, payment.invoiceId)}>
