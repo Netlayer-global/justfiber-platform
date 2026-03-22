@@ -16,6 +16,9 @@ class BillingHistoryScreen extends StatelessWidget {
     final billing = appState.billing;
     final latestInvoice = billing.invoices.isEmpty ? null : billing.invoices.first;
     final latestPayment = billing.payments.isEmpty ? null : billing.payments.first;
+    final invoiceCount = billing.invoices.length;
+    final paymentCount = billing.payments.length;
+    final noteCount = billing.notes.length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Billing')),
@@ -108,34 +111,14 @@ class BillingHistoryScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (latestInvoice != null || latestPayment != null) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (latestInvoice != null && latestInvoice.pdfUrl.isNotEmpty)
-                        OutlinedButton(
-                          onPressed: () => _openDocument(context, appState, latestInvoice.invoiceNumber, latestInvoice.pdfUrl),
-                          child: const Text('Latest invoice'),
-                        ),
-                      if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
-                        OutlinedButton(
-                          onPressed: () => _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl),
-                          child: const Text('Latest receipt'),
-                        ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
-                    ),
-                    child: const Text('Open payments history'),
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _countChip('Invoices', invoiceCount.toString()),
+                    _countChip('Payments', paymentCount.toString()),
+                    _countChip('Notes', noteCount.toString()),
+                  ],
                 ),
               ],
             ),
@@ -195,6 +178,11 @@ class BillingHistoryScreen extends StatelessWidget {
                         ),
                         child: const Text('Open payments history'),
                       ),
+                      if (latestInvoice != null && latestInvoice.pdfUrl.isNotEmpty)
+                        OutlinedButton(
+                          onPressed: () => _openDocument(context, appState, latestInvoice.invoiceNumber, latestInvoice.pdfUrl),
+                          child: const Text('Latest invoice'),
+                        ),
                       if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
                         FilledButton.tonal(
                           onPressed: () => _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl),
@@ -250,6 +238,25 @@ class BillingHistoryScreen extends StatelessWidget {
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
         ],
+      ),
+    );
+  }
+
+  Widget _countChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF1F2937)),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
       ),
     );
   }
