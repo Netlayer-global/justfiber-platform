@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../core/app_state.dart';
 
@@ -12,6 +15,10 @@ class BookingFlowScreen extends StatefulWidget {
 class _BookingFlowScreenState extends State<BookingFlowScreen> {
   int step = 0;
   String? selectedPlanCode;
+  LatLng _selectedLocation = const LatLng(28.6139, 77.2090);
+  bool _hasPickedLocation = false;
+  bool _locationBusy = false;
+  String? _locationError;
   final nameController = TextEditingController();
   final addressController = TextEditingController();
   final pinController = TextEditingController();
@@ -80,6 +87,76 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           const SizedBox(height: 12),
           _field('Pin code', pinController, keyboardType: TextInputType.number),
           const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.tonal(
+                  onPressed: _locationBusy ? null : _fetchCurrentLocation,
+                  child: Text(_locationBusy ? 'Fetching location...' : 'Use Current Location'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 260,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFD8DAE5)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                FlutterMap(
+                  options: MapOptions(
+                    initialCenter: _selectedLocation,
+                    initialZoom: 16,
+                    onTap: (_, point) {
+                      setState(() {
+                        _selectedLocation = point;
+                        _hasPickedLocation = true;
+                        _locationError = null;
+                      });
+                    },
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.justfiber.customer',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _selectedLocation,
+                          width: 48,
+                          height: 48,
+                          child: const Icon(Icons.location_pin, size: 42, color: Color(0xFFD81F26)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const Positioned(
+                  top: 12,
+                  left: 12,
+                  right: 12,
+                  child: _MapHint(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _hasPickedLocation
+                ? 'Pinned location: ${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'
+                : 'Tap on the map to drop the exact install location pin.',
+            style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600),
+          ),
+          if ((_locationError ?? '').isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(_locationError!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w700)),
+          ],
+          const SizedBox(height: 16),
           if (feasibility != null)
             Container(
               width: double.infinity,
@@ -103,9 +180,12 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               onPressed: appState.bookingBusy
                   ? null
                   : () async {
+                      if (!_validateAddressStep()) return;
                       final ok = await appState.checkFeasibility(
                         address: addressController.text.trim(),
                         pinCode: pinController.text.trim(),
+                        lat: _selectedLocation.latitude,
+                        lng: _selectedLocation.longitude,
                       );
                       if (!mounted) return;
                       if (ok) {
@@ -176,6 +256,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Customer', nameController.text.trim().isEmpty ? '-' : nameController.text.trim()),
           _summaryRow('Address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
           _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
+          _summaryRow('Pinned coordinates', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
           _summaryRow('Plan', selected?.name ?? '-'),
           const SizedBox(height: 16),
           SizedBox(
@@ -189,6 +270,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         fullName: nameController.text.trim(),
                         address: addressController.text.trim(),
                         pinCode: pinController.text.trim(),
+                        lat: _selectedLocation.latitude,
+                        lng: _selectedLocation.longitude,
                       );
                       if (!mounted) return;
                       if (ok) {
@@ -279,6 +362,62 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         ],
       ),
     );
+  }
+
+  bool _validateAddressStep() {
+    final messenger = ScaffoldMessenger.of(context);
+    if (nameController.text.trim().length < 2) {
+      messenger.showSnackBar(const SnackBar(content: Text('Enter customer name before continuing.')));
+      return false;
+    }
+    if (addressController.text.trim().length < 5) {
+      messenger.showSnackBar(const SnackBar(content: Text('Enter installation address before continuing.')));
+      return false;
+    }
+    if (pinController.text.trim().length < 4) {
+      messenger.showSnackBar(const SnackBar(content: Text('Enter a valid pin code before continuing.')));
+      return false;
+    }
+    if (!_hasPickedLocation) {
+      messenger.showSnackBar(const SnackBar(content: Text('Drop the exact installation pin on the map.')));
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _fetchCurrentLocation() async {
+    setState(() {
+      _locationBusy = true;
+      _locationError = null;
+    });
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are turned off.');
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        throw Exception('Location permission is required to fetch current location.');
+      }
+      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      setState(() {
+        _selectedLocation = LatLng(position.latitude, position.longitude);
+        _hasPickedLocation = true;
+      });
+    } catch (e) {
+      setState(() {
+        _locationError = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _locationBusy = false;
+        });
+      }
+    }
   }
 
   Widget _stepper() {
@@ -400,6 +539,25 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           const Spacer(),
           Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700))),
         ],
+      ),
+    );
+  }
+}
+
+class _MapHint extends StatelessWidget {
+  const _MapHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Text(
+        'Tap map to drop the exact install pin. This live lat/lng will be saved for installer allocation.',
+        style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1F2937)),
       ),
     );
   }

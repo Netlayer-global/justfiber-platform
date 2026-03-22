@@ -257,6 +257,8 @@ class ApiClient {
     required String mobile,
     required String address,
     required String pinCode,
+    required double lat,
+    required double lng,
   }) async {
     final data = _asMap(
       await _request(
@@ -269,8 +271,8 @@ class ApiClient {
           'mobile': mobile,
           'fullAddress': address,
           'pinCode': pinCode,
-          'lat': 26.8467,
-          'lng': 80.9462,
+          'lat': lat,
+          'lng': lng,
           'paymentMode': 'cash',
         },
       ),
@@ -289,14 +291,16 @@ class ApiClient {
   Future<FeasibilityResult> checkFeasibility({
     required String address,
     required String pinCode,
+    required double lat,
+    required double lng,
   }) async {
     final data = _asMap(
       await _request(
         '/api/v1/customer/feasibility/check',
         method: 'POST',
         body: {
-          'lat': 26.8467,
-          'lng': 80.9462,
+          'lat': lat,
+          'lng': lng,
           'address': '$address, $pinCode',
         },
       ),

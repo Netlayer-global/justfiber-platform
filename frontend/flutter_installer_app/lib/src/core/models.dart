@@ -46,6 +46,9 @@ class InstallerJob {
     required this.customerName,
     required this.customerAddress,
     required this.jobType,
+    required this.latitude,
+    required this.longitude,
+    required this.mapUrl,
   });
 
   final String id;
@@ -54,6 +57,9 @@ class InstallerJob {
   final String customerName;
   final String customerAddress;
   final String jobType;
+  final double? latitude;
+  final double? longitude;
+  final String mapUrl;
 }
 
 class ProvisioningPreview {

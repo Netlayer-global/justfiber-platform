@@ -77,6 +77,9 @@ class InstallerApiClient {
         customerName: (map['customerName'] ?? map['customer']?['fullName'] ?? 'Customer').toString(),
         customerAddress: (map['customerAddress'] ?? map['serviceAddress'] ?? 'Address pending').toString(),
         jobType: (map['jobType'] ?? 'installation').toString(),
+        latitude: double.tryParse('${map['customerSnapshot']?['location']?['lat'] ?? ''}'),
+        longitude: double.tryParse('${map['customerSnapshot']?['location']?['lng'] ?? ''}'),
+        mapUrl: (map['customerSnapshot']?['location']?['mapUrl'] ?? '').toString(),
       );
     }).toList();
   }

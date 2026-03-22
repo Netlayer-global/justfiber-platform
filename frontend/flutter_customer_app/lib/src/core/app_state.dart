@@ -166,6 +166,8 @@ class AppState extends ChangeNotifier {
     required String fullName,
     required String address,
     required String pinCode,
+    required double lat,
+    required double lng,
   }) async {
     final current = session;
     if (current == null) {
@@ -184,6 +186,8 @@ class AppState extends ChangeNotifier {
         mobile: current.mobile,
         address: address,
         pinCode: pinCode,
+        lat: lat,
+        lng: lng,
       );
       bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
       installerVisits = await api.fetchServiceVisits(current);
@@ -240,12 +244,14 @@ class AppState extends ChangeNotifier {
   Future<bool> checkFeasibility({
     required String address,
     required String pinCode,
+    required double lat,
+    required double lng,
   }) async {
     bookingBusy = true;
     bookingError = null;
     notifyListeners();
     try {
-      feasibility = await api.checkFeasibility(address: address, pinCode: pinCode);
+      feasibility = await api.checkFeasibility(address: address, pinCode: pinCode, lat: lat, lng: lng);
       return feasibility!.feasible;
     } catch (e) {
       bookingError = e.toString();

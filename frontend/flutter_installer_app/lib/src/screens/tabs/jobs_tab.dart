@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_state.dart';
 import '../../core/models.dart';
@@ -49,6 +50,13 @@ class _JobsTabState extends State<JobsTab> {
                     Text(job.customerName, style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 4),
                     Text(job.customerAddress, style: Theme.of(context).textTheme.bodyMedium),
+                    if (job.latitude != null && job.longitude != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Pinned: ${job.latitude!.toStringAsFixed(6)}, ${job.longitude!.toStringAsFixed(6)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -65,6 +73,11 @@ class _JobsTabState extends State<JobsTab> {
             spacing: 10,
             runSpacing: 10,
             children: [
+              if (job.latitude != null && job.longitude != null)
+                OutlinedButton(
+                  onPressed: () => _openMap(job),
+                  child: const Text('Open Map'),
+                ),
               FilledButton(
                 onPressed: appState.busy ? null : () => appState.loadPreview(job.id),
                 child: const Text('Preview'),
@@ -106,5 +119,13 @@ class _JobsTabState extends State<JobsTab> {
         ],
       ),
     );
+  }
+
+  Future<void> _openMap(InstallerJob job) async {
+    final url = job.mapUrl.isNotEmpty
+        ? job.mapUrl
+        : 'https://maps.google.com/?q=${job.latitude},${job.longitude}';
+    final uri = Uri.parse(url);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
