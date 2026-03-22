@@ -27,6 +27,9 @@ export const bookingSchema = z.object({
   pinCode: z.string().min(4),
   lat: z.number(),
   lng: z.number(),
+  preferredDate: z.string().min(4).optional(),
+  preferredSlotCode: z.string().min(2).optional(),
+  preferredSlotLabel: z.string().min(2).optional(),
   paymentMode: z.enum(["razorpay", "cash"]).default("razorpay")
 });
 

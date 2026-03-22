@@ -13,8 +13,17 @@ class BookingFlowScreen extends StatefulWidget {
 }
 
 class _BookingFlowScreenState extends State<BookingFlowScreen> {
+  static const _slotOptions = [
+    ('morning', '10 AM - 1 PM'),
+    ('afternoon', '1 PM - 4 PM'),
+    ('evening', '4 PM - 7 PM'),
+  ];
+
   int step = 0;
   String? selectedPlanCode;
+  String? _selectedSlotCode = 'morning';
+  String? _selectedSlotLabel = '10 AM - 1 PM';
+  DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
   LatLng _selectedLocation = const LatLng(28.6139, 77.2090);
   bool _hasPickedLocation = false;
   bool _locationBusy = false;
@@ -258,6 +267,48 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
           _summaryRow('Pinned coordinates', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
           _summaryRow('Plan', selected?.name ?? '-'),
+          _summaryRow('Preferred date', _formatDate(_preferredDate)),
+          _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
+          const SizedBox(height: 16),
+          const Text('Preferred install date', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, index) {
+                final date = DateTime.now().add(Duration(days: index + 1));
+                final selectedDate = _isSameDate(date, _preferredDate);
+                return ChoiceChip(
+                  label: Text(_formatDate(date)),
+                  selected: selectedDate,
+                  onSelected: (_) => setState(() => _preferredDate = date),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemCount: 5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('Preferred install slot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _slotOptions.map((slot) {
+              final selectedSlot = _selectedSlotCode == slot.$1;
+              return ChoiceChip(
+                label: Text(slot.$2),
+                selected: selectedSlot,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedSlotCode = slot.$1;
+                    _selectedSlotLabel = slot.$2;
+                  });
+                },
+              );
+            }).toList(),
+          ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -272,6 +323,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         pinCode: pinController.text.trim(),
                         lat: _selectedLocation.latitude,
                         lng: _selectedLocation.longitude,
+                        preferredDate: _preferredDate.toIso8601String(),
+                        preferredSlotCode: _selectedSlotCode,
+                        preferredSlotLabel: _selectedSlotLabel,
                       );
                       if (!mounted) return;
                       if (ok) {
@@ -383,6 +437,15 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       return false;
     }
     return true;
+  }
+
+  bool _isSameDate(DateTime left, DateTime right) {
+    return left.year == right.year && left.month == right.month && left.day == right.day;
+  }
+
+  String _formatDate(DateTime date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${date.day} ${months[date.month - 1]}';
   }
 
   Future<void> _fetchCurrentLocation() async {

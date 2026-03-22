@@ -805,6 +805,13 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
       phone: payload.mobile,
       address: payload.fullAddress,
       location: { lat: payload.lat, lng: payload.lng },
+      preferredSlot: payload.preferredSlotCode
+        ? {
+            code: payload.preferredSlotCode,
+            label: payload.preferredSlotLabel || payload.preferredSlotCode,
+            date: payload.preferredDate || null
+          }
+        : null,
       planName: plan.name,
       planCode: plan.planCode
     },
@@ -978,7 +985,14 @@ customerPortalRouter.post(
         mobile: payload.mobile,
         email: payload.email,
         fullAddress: payload.fullAddress,
-        pinCode: payload.pinCode
+        pinCode: payload.pinCode,
+        preferredSlot: payload.preferredSlotCode
+          ? {
+              code: payload.preferredSlotCode,
+              label: payload.preferredSlotLabel || payload.preferredSlotCode,
+              date: payload.preferredDate || null
+            }
+          : null
       },
       payment: {
         provider: payload.paymentMode,

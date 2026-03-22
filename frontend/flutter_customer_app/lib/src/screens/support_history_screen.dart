@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
+import '../core/models.dart';
 import '../widgets/app_card.dart';
 
 class SupportHistoryScreen extends StatelessWidget {
@@ -60,7 +61,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       onTap: () => _createServiceRequest(
                         context,
                         appState,
-                        type: 'shift_connection',
+                        type: 'shift',
                         note: 'Customer wants to shift the Wi-Fi connection.',
                       ),
                     ),
@@ -69,7 +70,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       onTap: () => _createServiceRequest(
                         context,
                         appState,
-                        type: 'plan_issue',
+                        type: 'complaint',
                         note: 'Customer needs help with plan or recharge.',
                       ),
                     ),
@@ -80,15 +81,43 @@ class SupportHistoryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           _sectionCard(
-            title: 'Open requests',
+            title: 'Support tickets',
+            child: appState.tickets.isEmpty
+                ? const Text('No support tickets yet.', style: TextStyle(color: Color(0xFF6B7280)))
+                : Column(
+                    children: appState.tickets
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _statusRow(
+                              title: item.subject,
+                              subtitle: '${item.ticketNumber} · ${item.category}',
+                              createdAt: item.createdAt,
+                              status: item.status,
+                              onTap: () => _showTicketDetails(context, item),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+          ),
+          const SizedBox(height: 18),
+          _sectionCard(
+            title: 'Service requests',
             child: appState.requests.isEmpty
-                ? const Text('No requests or complaints yet.', style: TextStyle(color: Color(0xFF6B7280)))
+                ? const Text('No service requests yet.', style: TextStyle(color: Color(0xFF6B7280)))
                 : Column(
                     children: appState.requests
                         .map(
                           (item) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: _statusRow(item.title, item.createdAt, item.status),
+                            child: _statusRow(
+                              title: item.title,
+                              subtitle: '${item.referenceNumber} · ${item.type}',
+                              createdAt: item.createdAt,
+                              status: item.status,
+                              onTap: () => _showRequestDetails(context, item),
+                            ),
                           ),
                         )
                         .toList(),
@@ -148,35 +177,54 @@ class SupportHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _statusRow(String title, String createdAt, String status) {
+  Widget _statusRow({
+    required String title,
+    required String subtitle,
+    required String createdAt,
+    required String status,
+    required VoidCallback onTap,
+  }) {
     final color = _statusColor(status);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF4B5563), fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF6B7280))),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF6B7280))),
+                Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
               ],
             ),
-          ),
-          Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -217,6 +265,43 @@ class SupportHistoryScreen extends StatelessWidget {
         content: Text(requestNumber == null ? (appState.error ?? 'Unable to create request') : 'Request created: $requestNumber'),
       ),
     );
+    if (requestNumber != null) {
+      await appState.refresh();
+    }
+  }
+
+  Future<void> _showTicketDetails(BuildContext context, SupportTicketItem item) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _DetailSheet(
+        title: item.subject,
+        subtitle: '${item.ticketNumber} · ${item.category}',
+        status: item.status,
+        lines: [
+          'Priority: ${item.priority}',
+          'Created: ${item.createdAt.isEmpty ? '-' : item.createdAt}',
+          'Description: ${item.description.isEmpty ? '-' : item.description}',
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showRequestDetails(BuildContext context, RequestItem item) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _DetailSheet(
+        title: item.title,
+        subtitle: '${item.referenceNumber} · ${item.type}',
+        status: item.status,
+        lines: [
+          'Created: ${item.createdAt.isEmpty ? '-' : item.createdAt}',
+          'Type: ${item.type}',
+          'Note: ${item.note.isEmpty ? '-' : item.note}',
+        ],
+      ),
+    );
   }
 
   Color _statusColor(String status) {
@@ -224,9 +309,49 @@ class SupportHistoryScreen extends StatelessWidget {
     if (normalized.contains('closed') || normalized.contains('resolved') || normalized.contains('done') || normalized.contains('completed')) {
       return const Color(0xFF16A34A);
     }
-    if (normalized.contains('pending') || normalized.contains('open') || normalized.contains('in-progress')) {
+    if (normalized.contains('pending') || normalized.contains('open') || normalized.contains('in_progress') || normalized.contains('in-progress')) {
       return const Color(0xFFF59E0B);
     }
     return const Color(0xFFD81F26);
+  }
+}
+
+class _DetailSheet extends StatelessWidget {
+  const _DetailSheet({
+    required this.title,
+    required this.subtitle,
+    required this.status,
+    required this.lines,
+  });
+
+  final String title;
+  final String subtitle;
+  final String status;
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+            const SizedBox(height: 6),
+            Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            Text(status, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFD81F26))),
+            const SizedBox(height: 16),
+            for (final line in lines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(line, style: const TextStyle(height: 1.45)),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

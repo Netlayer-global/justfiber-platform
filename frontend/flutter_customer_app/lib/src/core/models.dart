@@ -150,12 +150,20 @@ class BillingNoteItem {
 
 class RequestItem {
   const RequestItem({
+    required this.id,
+    required this.referenceNumber,
     required this.title,
+    required this.type,
+    required this.note,
     required this.status,
     required this.createdAt,
   });
 
+  final String id;
+  final String referenceNumber;
   final String title;
+  final String type;
+  final String note;
   final String status;
   final String createdAt;
 }
@@ -168,6 +176,28 @@ class NotificationItem {
 
   final String title;
   final String body;
+}
+
+class SupportTicketItem {
+  const SupportTicketItem({
+    required this.id,
+    required this.ticketNumber,
+    required this.category,
+    required this.subject,
+    required this.description,
+    required this.status,
+    required this.priority,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String ticketNumber;
+  final String category;
+  final String subject;
+  final String description;
+  final String status;
+  final String priority;
+  final String createdAt;
 }
 
 class FaqItem {

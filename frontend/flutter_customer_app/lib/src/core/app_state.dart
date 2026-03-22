@@ -53,6 +53,7 @@ class AppState extends ChangeNotifier {
     notes: [],
   );
   List<RequestItem> requests = const [];
+  List<SupportTicketItem> tickets = const [];
   List<NotificationItem> notifications = const [];
   List<FaqItem> faqs = const [];
   List<AddonItem> addons = const [];
@@ -135,6 +136,7 @@ class AppState extends ChangeNotifier {
       wifi = await api.fetchWifi(current);
       billing = await api.fetchBilling(current);
       requests = await api.fetchRequests(current);
+      tickets = await api.fetchTickets(current);
       notifications = await api.fetchNotifications(current);
       faqs = await api.fetchFaqs();
       addons = await api.fetchAddons(current);
@@ -168,6 +170,9 @@ class AppState extends ChangeNotifier {
     required String pinCode,
     required double lat,
     required double lng,
+    String? preferredDate,
+    String? preferredSlotCode,
+    String? preferredSlotLabel,
   }) async {
     final current = session;
     if (current == null) {
@@ -188,6 +193,9 @@ class AppState extends ChangeNotifier {
         pinCode: pinCode,
         lat: lat,
         lng: lng,
+        preferredDate: preferredDate,
+        preferredSlotCode: preferredSlotCode,
+        preferredSlotLabel: preferredSlotLabel,
       );
       bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
       installerVisits = await api.fetchServiceVisits(current);
@@ -542,6 +550,9 @@ class AppState extends ChangeNotifier {
     latestBooking = null;
     bookingTracking = null;
     installerVisits = const [];
+    requests = const [];
+    tickets = const [];
+    notifications = const [];
     feasibility = null;
     billingPaymentOrder = null;
     planChangePreview = null;

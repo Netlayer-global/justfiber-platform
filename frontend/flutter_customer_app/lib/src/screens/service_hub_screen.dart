@@ -532,7 +532,7 @@ class ServiceHubScreen extends StatelessWidget {
   }
 
   Future<void> _showAddonInterest(BuildContext context, AppState appState, String addonName) async {
-    final request = await appState.submitServiceRequest(type: 'addon_interest', note: 'Interested in $addonName');
+    final request = await appState.submitServiceRequest(type: 'link_service', note: 'Interested in $addonName');
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(request == null ? (appState.error ?? 'Unable to submit add-on request') : '$addonName request created')),
@@ -588,7 +588,7 @@ class ServiceHubScreen extends StatelessWidget {
                           ? null
                           : () async {
                               final request = await appState.submitServiceRequest(
-                                type: 'shift_connection',
+                                type: 'shift',
                                 note: shiftMode == 'new_address'
                                     ? 'Customer wants to shift Wi-Fi to a new address.'
                                     : 'Customer wants to shift Wi-Fi within the same address.',

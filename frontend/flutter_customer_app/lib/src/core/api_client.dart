@@ -181,9 +181,31 @@ class ApiClient {
     final list = _asList(await _request('/api/v1/customer/requests', token: session.accessToken));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
+      final payload = _asMap(map['payload']);
       return RequestItem(
-        title: (map['subject'] ?? map['title'] ?? map['requestType'] ?? 'Customer request').toString(),
+        id: (map['_id'] ?? '').toString(),
+        referenceNumber: (map['requestNumber'] ?? '').toString(),
+        title: (map['subject'] ?? map['title'] ?? map['requestType'] ?? map['type'] ?? 'Customer request').toString(),
+        type: (map['type'] ?? 'request').toString(),
+        note: (payload['note'] ?? payload['description'] ?? '').toString(),
         status: (map['status'] ?? 'open').toString(),
+        createdAt: (map['createdAt'] ?? '').toString(),
+      );
+    }).toList();
+  }
+
+  Future<List<SupportTicketItem>> fetchTickets(CustomerSession session) async {
+    final list = _asList(await _request('/api/v1/customer/tickets', token: session.accessToken));
+    return list.map((item) {
+      final map = item as Map<String, dynamic>;
+      return SupportTicketItem(
+        id: (map['_id'] ?? '').toString(),
+        ticketNumber: (map['ticketNumber'] ?? '').toString(),
+        category: (map['category'] ?? '').toString(),
+        subject: (map['subject'] ?? 'Support ticket').toString(),
+        description: (map['description'] ?? '').toString(),
+        status: (map['status'] ?? 'open').toString(),
+        priority: (map['priority'] ?? 'medium').toString(),
         createdAt: (map['createdAt'] ?? '').toString(),
       );
     }).toList();
@@ -259,6 +281,9 @@ class ApiClient {
     required String pinCode,
     required double lat,
     required double lng,
+    String? preferredDate,
+    String? preferredSlotCode,
+    String? preferredSlotLabel,
   }) async {
     final data = _asMap(
       await _request(
@@ -273,6 +298,9 @@ class ApiClient {
           'pinCode': pinCode,
           'lat': lat,
           'lng': lng,
+          if (preferredDate != null && preferredDate.isNotEmpty) 'preferredDate': preferredDate,
+          if (preferredSlotCode != null && preferredSlotCode.isNotEmpty) 'preferredSlotCode': preferredSlotCode,
+          if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty) 'preferredSlotLabel': preferredSlotLabel,
           'paymentMode': 'cash',
         },
       ),
