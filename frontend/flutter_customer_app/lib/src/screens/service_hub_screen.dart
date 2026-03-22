@@ -19,6 +19,9 @@ class ServiceHubScreen extends StatelessWidget {
     final billing = appState.billing;
     final wifi = appState.wifi;
     final session = appState.session;
+    final displayWifiName = wifi.ssid24.isEmpty ? '${session?.mobile ?? ''}_wifi' : wifi.ssid24;
+    final planName = billing.currentPlan.isNotEmpty ? billing.currentPlan : (dashboard.planName.isNotEmpty ? dashboard.planName : 'No active plan');
+    final isActive = !wifi.paused && planName != 'No active plan';
 
     return Scaffold(
       appBar: AppBar(
@@ -27,7 +30,7 @@ class ServiceHubScreen extends StatelessWidget {
             Text('Wi-Fi', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 2),
             Text(
-              wifi.ssid24.isEmpty ? '${session?.mobile ?? ''}_wifi' : wifi.ssid24,
+              displayWifiName,
               style: const TextStyle(fontSize: 18, color: Color(0xFF676B76)),
             ),
           ],
@@ -71,12 +74,12 @@ class ServiceHubScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'Manage your service your way',
+                        'Your broadband control center',
                         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF13151A)),
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Billing, Wi-Fi settings, complaints, plan changes, and booking live in one place.',
+                        'Use one service hub for Wi-Fi controls, support, add-ons, plan changes, and connection activity.',
                         style: TextStyle(color: Color(0xFF4B5563), height: 1.4),
                       ),
                     ],
@@ -119,10 +122,10 @@ class ServiceHubScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('WI-FI | ${wifi.ssid24}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6D7280))),
+                        Text('WI-FI | $displayWifiName', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6D7280))),
                         const SizedBox(height: 6),
                         Text(
-                          'Bill of Rs ${billing.dueAmount.toStringAsFixed(0)} due ${_daysHint(billing.nextBillDate)}',
+                          'Bill of Rs ${billing.dueAmount.toStringAsFixed(0)} due by ${billing.nextBillDate.isEmpty ? 'soon' : billing.nextBillDate}',
                           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
                         ),
                         const SizedBox(height: 4),
@@ -173,13 +176,14 @@ class ServiceHubScreen extends StatelessWidget {
               children: [
                 const Text('PLAN', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF7B7F87))),
                 const SizedBox(height: 10),
-                Text(billing.currentPlan, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
+                Text(planName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    _metric('Speed', '${dashboard.planName.contains('200') ? '200' : '100'} Mbps'),
+                    _metric('Status', isActive ? 'Active' : 'Paused'),
+                    _metric('Mode', billing.billMode.isEmpty ? 'Not set' : billing.billMode),
                     _metric('Data', 'Unlimited'),
-                    _metric('Benefits', '${appState.addons.length + 2}+'),
+                    _metric('Devices', '${wifi.connectedDevicesCount}'),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -188,9 +192,9 @@ class ServiceHubScreen extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+                          MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
                         ),
-                        child: const Text('View Details'),
+                        child: const Text('View Plans'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -209,49 +213,29 @@ class ServiceHubScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
-            ),
+          _lightCard(
+            title: 'QUICK ACTIONS',
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'AMOUNT PAYABLE',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF7B7F87)),
-                      ),
-                    ),
-                    if (billing.dueAmount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(color: const Color(0xFFFDE68A), borderRadius: BorderRadius.circular(14)),
-                        child: const Text('DUE', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF6B4F00))),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text('Rs ${billing.dueAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 34)),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(child: _detailPair('Bill Generated On', billing.generatedDate.isEmpty ? '-' : billing.generatedDate)),
-                    Expanded(child: _detailPair('Due Date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: _detailPair('Bill Cycle', billing.billCycle)),
-                    Expanded(child: _detailPair('Bill Mode', billing.billMode)),
-                  ],
-                ),
-                const SizedBox(height: 18),
+                _quickAction(context, Icons.support_agent_rounded, 'Internet Connectivity', 'Get instant support for your Wi-Fi service', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()))),
+                _quickAction(context, Icons.router_outlined, 'Wi-Fi Settings', 'Diagnose issues, manage devices, guest Wi-Fi, and passwords', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen()))),
+                _quickAction(context, Icons.home_work_outlined, 'Shift Connection', 'Request relocation of your active connection', () => _showShiftConnectionSheet(context, appState)),
+                _quickAction(context, Icons.add_home_work_outlined, 'Book New Connection', 'Create a fresh broadband booking with plan and address confirmation', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingFlowScreen()))),
+                _quickAction(context, Icons.auto_awesome_motion_outlined, 'Change Plan', 'Upgrade or downgrade your current broadband plan', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()))),
+                _quickAction(context, Icons.description_outlined, 'Billing & Receipts', 'Open invoices, notes, receipts, and pay your due amount', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()))),
+                _quickAction(context, Icons.track_changes_outlined, 'Track orders, complaints', 'Get updates on bookings, service requests, and complaints', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())), last: true),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          _lightCard(
+            title: 'Billing snapshot',
+            child: Column(
+              children: [
+                _accountRow(Icons.currency_rupee_rounded, 'CURRENT DUE', 'Rs ${billing.dueAmount.toStringAsFixed(2)}'),
+                _accountRow(Icons.calendar_today_outlined, 'DUE DATE', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),
+                _accountRow(Icons.receipt_long_outlined, 'LAST PAYMENT', billing.lastPaymentDate.isEmpty ? '-' : billing.lastPaymentDate, last: true),
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
@@ -259,35 +243,19 @@ class ServiceHubScreen extends StatelessWidget {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
                         ),
-                        child: const Text('View Bill'),
+                        child: const Text('Open Billing'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: appState.busy ? null : () => _payBill(context, appState),
+                        onPressed: billing.dueAmount <= 0 || appState.busy ? null : () => _payBill(context, appState),
                         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
                         child: const Text('Pay Now'),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          _lightCard(
-            title: 'QUICK ACTIONS',
-            child: Column(
-              children: [
-                _quickAction(context, Icons.support_agent_rounded, 'Internet Connectivity', 'Get instant support for your Wi-Fi service', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()))),
-                _quickAction(context, Icons.router_outlined, 'Wi-Fi Settings', 'Diagnose issues, optimise wi-fi, manage devices & more', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen()))),
-                _quickAction(context, Icons.password_rounded, 'Set Wi-Fi name & password', 'Add name & a strong password for secure usage', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen()))),
-                _quickAction(context, Icons.home_work_outlined, 'Shift Connection', 'Get your device moved to a new location free of cost', () => _showShiftConnectionSheet(context, appState)),
-                _quickAction(context, Icons.add_home_work_outlined, 'Book New Connection', 'Create a fresh broadband booking with plan and address confirmation', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingFlowScreen()))),
-                _quickAction(context, Icons.auto_awesome_motion_outlined, 'Change Plan', 'Upgrade or downgrade your current broadband plan', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()))),
-                _quickAction(context, Icons.description_outlined, 'Bill Details', 'Get support on your last bill related queries', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()))),
-                _quickAction(context, Icons.track_changes_outlined, 'Track orders, complaints', 'Get update on the status of your orders & service request', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())), last: true),
               ],
             ),
           ),
@@ -325,7 +293,7 @@ class ServiceHubScreen extends StatelessWidget {
                               ),
                               OutlinedButton(
                                 onPressed: () => _showAddonInterest(context, appState, addon.name),
-                                child: const Text('Buy'),
+                                child: const Text('Request'),
                               ),
                             ],
                           ),
@@ -350,10 +318,10 @@ class ServiceHubScreen extends StatelessWidget {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Get control with my wi-fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF0F172A))),
+                Text('Get control with my Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF0F172A))),
                 SizedBox(height: 10),
                 Text(
-                  '- solve for network problems\n- manage connected devices\n- update password, and more',
+                  '- solve connectivity problems\n- manage connected devices\n- update guest Wi-Fi and password',
                   style: TextStyle(color: Color(0xFF334155), height: 1.6),
                 ),
               ],
@@ -364,10 +332,10 @@ class ServiceHubScreen extends StatelessWidget {
             title: 'ACCOUNT INFO.',
             child: Column(
               children: [
-                _accountRow(Icons.wifi_rounded, 'DSL NUMBER', wifi.ssid24.isEmpty ? '${session?.mobile ?? ''}_wifi' : wifi.ssid24),
+                _accountRow(Icons.wifi_rounded, 'DSL NUMBER', displayWifiName),
                 _accountRow(Icons.phone_iphone_rounded, 'REGISTERED MOBILE', session?.mobile ?? '-'),
-                _accountRow(Icons.account_circle_outlined, 'ACCOUNT NAME', dashboard.customerName),
-                _accountRow(Icons.description_outlined, 'CURRENT PLAN', billing.currentPlan, last: true),
+                _accountRow(Icons.account_circle_outlined, 'ACCOUNT NAME', dashboard.customerName.isEmpty ? '-' : dashboard.customerName),
+                _accountRow(Icons.description_outlined, 'CURRENT PLAN', planName, last: true),
               ],
             ),
           ),
@@ -425,20 +393,6 @@ class ServiceHubScreen extends StatelessWidget {
           Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: Color(0xFF7B7F87))),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailPair(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12, bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF7B7F87))),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
         ],
       ),
     );
@@ -511,11 +465,6 @@ class ServiceHubScreen extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: onTap,
     );
-  }
-
-  static String _daysHint(String nextBillDate) {
-    if (nextBillDate.isEmpty) return 'soon';
-    return 'by $nextBillDate';
   }
 
   Future<void> _payBill(BuildContext context, AppState appState) async {

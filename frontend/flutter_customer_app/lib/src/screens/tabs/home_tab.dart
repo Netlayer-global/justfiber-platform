@@ -21,7 +21,11 @@ class HomeTab extends StatelessWidget {
     final billing = appState.billing;
     final wifi = appState.wifi;
     final latestBooking = appState.latestBooking;
-    final hasService = billing.currentPlan.isNotEmpty && billing.currentPlan != 'JustFiber 100';
+    final displayName = dashboard.customerName.isEmpty ? 'JustFiber Customer' : dashboard.customerName;
+    final planName = billing.currentPlan.isNotEmpty ? billing.currentPlan : (dashboard.planName.isNotEmpty ? dashboard.planName : 'No active plan yet');
+    final wifiName = wifi.ssid24.isNotEmpty ? wifi.ssid24 : (dashboard.wifiName.isNotEmpty ? dashboard.wifiName : 'Wi-Fi not configured');
+    final billMode = billing.billMode.isEmpty ? 'Not set' : billing.billMode;
+    final hasService = billing.currentPlan.isNotEmpty || wifi.ssid24.isNotEmpty || dashboard.planName.isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -32,12 +36,12 @@ class HomeTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Hi, ${dashboard.customerName}', style: Theme.of(context).textTheme.headlineSmall),
+                  Text('Hi, $displayName', style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 6),
                   Text(
                     hasService
-                        ? 'Service, billing, Wi-Fi settings, and support are ready here.'
-                        : 'Book a new broadband connection and track the full journey here.',
+                        ? 'See your live service status, current due, Wi-Fi controls, and support from one dashboard.'
+                        : 'Check availability, select a plan, and create a real broadband booking flow from here.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -69,9 +73,7 @@ class HomeTab extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                hasService
-                    ? '${billing.currentPlan} • ${wifi.ssid24.isEmpty ? 'Wi-Fi' : wifi.ssid24}'
-                    : 'Check availability, choose a plan, and book your connection.',
+                hasService ? '$planName • $wifiName' : 'Check availability, choose a plan, and book your connection.',
                 style: const TextStyle(color: Color(0xFF4B5563), height: 1.45),
               ),
               const SizedBox(height: 18),
@@ -80,7 +82,7 @@ class HomeTab extends StatelessWidget {
                 runSpacing: 10,
                 children: [
                   _metricPill('Due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
-                  _metricPill('Mode', billing.billMode),
+                  _metricPill('Mode', billMode),
                   _metricPill('Devices', '${wifi.connectedDevicesCount}'),
                 ],
               ),
@@ -207,13 +209,12 @@ class HomeTab extends StatelessWidget {
             children: [
               const Text('Service summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
               const SizedBox(height: 14),
-              _infoRow('Current plan', billing.currentPlan),
-              _infoRow('Wi-Fi name', wifi.ssid24),
+              _infoRow('Current plan', planName),
+              _infoRow('Wi-Fi name', wifiName),
               _infoRow('Next bill date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),
               _infoRow('Connected devices', '${wifi.connectedDevicesCount}'),
-              _infoRow('Service state', wifi.paused ? 'Paused' : 'Active'),
-              if (billing.pendingPlanChange != null)
-                _infoRow('Pending plan change', billing.pendingPlanChange!.planName),
+              _infoRow('Service state', hasService ? (wifi.paused ? 'Paused' : 'Active') : 'Not active'),
+              if (billing.pendingPlanChange != null) _infoRow('Pending plan change', billing.pendingPlanChange!.planName),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,

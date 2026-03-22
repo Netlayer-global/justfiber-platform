@@ -38,10 +38,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final wifi = appState.wifi;
+    final title = wifi.ssid24.isEmpty ? 'Wi-Fi not configured' : wifi.ssid24;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Wi‑Fi Settings', style: Theme.of(context).textTheme.headlineSmall),
+        title: Text('Wi-Fi Settings', style: Theme.of(context).textTheme.headlineSmall),
         centerTitle: true,
         backgroundColor: const Color(0xFFF1F0FF),
         foregroundColor: const Color(0xFF17181C),
@@ -66,48 +67,66 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(wifi.ssid24, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
                           const SizedBox(height: 6),
-                          const Text('Router uptime available · live Wi‑Fi controls', style: TextStyle(color: Color(0xFF6B7280))),
+                          Text(
+                            'Quality: ${appState.networkQuality.quality} • Devices: ${wifi.connectedDevicesCount}',
+                            style: const TextStyle(color: Color(0xFF6B7280)),
+                          ),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(14)),
-                      child: const Text('Online', style: TextStyle(color: Color(0xFF166534), fontWeight: FontWeight.w700)),
+                      decoration: BoxDecoration(
+                        color: wifi.paused ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        wifi.paused ? 'Paused' : 'Online',
+                        style: TextStyle(
+                          color: wifi.paused ? const Color(0xFF991B1B) : const Color(0xFF166534),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 18),
                 _actionTile(
+                  icon: wifi.paused ? Icons.play_circle_outline_rounded : Icons.pause_circle_outline_rounded,
+                  title: wifi.paused ? 'Resume Wi-Fi' : 'Pause Wi-Fi',
+                  subtitle: wifi.paused ? 'Turn your broadband connection back on' : 'Temporarily pause internet access on this connection',
+                  onTap: () => _showPauseSheet(context, appState),
+                ),
+                _actionTile(
                   icon: Icons.password_rounded,
-                  title: 'Set Wi‑Fi name & password',
+                  title: 'Set Wi-Fi name & password',
                   subtitle: 'Add name and a strong password for secure usage',
                   onTap: () => _showRenameSheet(context, appState),
                 ),
                 _actionTile(
                   icon: Icons.tune_rounded,
-                  title: 'Optimise Wi‑Fi',
-                  subtitle: 'Get better connectivity & speed in a few mins',
-                  onTap: () => _showOptimizeSheet(context, appState),
+                  title: 'Run diagnostics',
+                  subtitle: 'Check current speed, latency, packet loss, and optical quality',
+                  onTap: () => _showDiagnosticsSheet(context, appState),
                 ),
                 _actionTile(
                   icon: Icons.devices_rounded,
                   title: 'Connected devices',
-                  subtitle: 'Track and manage devices connected to your Wi‑Fi',
+                  subtitle: 'Track and manage devices connected to your Wi-Fi',
                   onTap: () => _showConnectedDevices(context, appState),
                 ),
                 _actionTile(
                   icon: Icons.wifi_tethering_rounded,
-                  title: 'Guest Wi‑Fi',
-                  subtitle: 'Set name & password exclusive to your guests',
+                  title: 'Guest Wi-Fi',
+                  subtitle: 'Set a separate name and password for your guests',
                   onTap: () => _showGuestWifiSheet(context, appState),
                 ),
                 _actionTile(
                   icon: Icons.block_rounded,
-                  title: 'Manage Wi‑Fi access',
-                  subtitle: 'Restrict all or selected devices for specific duration',
+                  title: 'Manage Wi-Fi access',
+                  subtitle: 'Block or unblock specific connected devices',
                   onTap: () => _showConnectedDevices(context, appState, accessMode: true),
                 ),
                 _actionTile(
@@ -165,6 +184,62 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     );
   }
 
+  Future<void> _showPauseSheet(BuildContext context, AppState appState) async {
+    final wifi = appState.wifi;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                wifi.paused ? Icons.play_circle_fill_rounded : Icons.pause_circle_filled_rounded,
+                size: 80,
+                color: const Color(0xFF20242E),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                wifi.paused ? 'Resume internet on this connection?' : 'Pause internet on this connection?',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 26),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                wifi.paused
+                    ? 'Your router and service will start working again after confirmation.'
+                    : 'This will temporarily disable active internet access until you resume it again.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF6B7280), height: 1.45),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: appState.busy
+                      ? null
+                      : () async {
+                          final ok = await appState.toggleWifiPause(!wifi.paused);
+                          if (!context.mounted) return;
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(ok ? (wifi.paused ? 'Wi-Fi resumed' : 'Wi-Fi paused') : (appState.error ?? 'Unable to update Wi-Fi status'))),
+                          );
+                        },
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+                  child: Text(wifi.paused ? 'Resume Now' : 'Pause Now'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showRenameSheet(BuildContext context, AppState appState) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -180,9 +255,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
             children: [
               Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
               const SizedBox(height: 18),
-              const Text('Wi‑Fi name & password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
+              const Text('Wi-Fi name & password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
               const SizedBox(height: 18),
-              TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Wi‑Fi name')),
+              TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Wi-Fi name')),
               const SizedBox(height: 12),
               TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
               const SizedBox(height: 16),
@@ -200,7 +275,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           if (!context.mounted) return;
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(ok ? 'Wi‑Fi details updated' : (appState.error ?? 'Update failed'))),
+                            SnackBar(content: Text(ok ? 'Wi-Fi details updated' : (appState.error ?? 'Update failed'))),
                           );
                         },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
@@ -214,7 +289,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     );
   }
 
-  Future<void> _showOptimizeSheet(BuildContext context, AppState appState) async {
+  Future<void> _showDiagnosticsSheet(BuildContext context, AppState appState) async {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -227,15 +302,15 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
             children: [
               Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
               const SizedBox(height: 18),
-              const Icon(Icons.wifi_find_rounded, size: 72, color: Color(0xFF20242E)),
-              const SizedBox(height: 16),
-              const Text('Optimise Wi‑Fi to boost speed?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28), textAlign: TextAlign.center),
-              const SizedBox(height: 10),
-              const Text(
-                'It may take a few minutes, during which your Wi‑Fi connection will be temporarily affected. Inform active users beforehand.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF6B7280), height: 1.5),
-              ),
+              const Text('Diagnostics summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
+              const SizedBox(height: 18),
+              _diagnosticRow('Download speed', '${appState.speedTest.downloadMbps.toStringAsFixed(1)} Mbps'),
+              _diagnosticRow('Upload speed', '${appState.speedTest.uploadMbps.toStringAsFixed(1)} Mbps'),
+              _diagnosticRow('Latency', '${appState.networkQuality.latencyMs.toStringAsFixed(0)} ms'),
+              _diagnosticRow('Packet loss', '${appState.networkQuality.packetLossPercent.toStringAsFixed(1)} %'),
+              _diagnosticRow('Jitter', '${appState.networkQuality.jitterMs.toStringAsFixed(0)} ms'),
+              _diagnosticRow('Optical RX', '${appState.networkQuality.opticalRxPower.toStringAsFixed(1)} dBm'),
+              _diagnosticRow('Overall quality', appState.networkQuality.quality, last: true),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
@@ -243,52 +318,15 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   onPressed: appState.busy
                       ? null
                       : () async {
-                          final success = await appState.rebootRouter();
+                          await appState.refresh();
                           if (!context.mounted) return;
                           Navigator.of(context).pop();
-                          await _showOptimizeResult(context, success, appState.error);
+                          await _showDiagnosticsSheet(context, appState);
                         },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                  child: const Text('Optimize Now'),
+                  child: const Text('Refresh diagnostics'),
                 ),
               ),
-              const SizedBox(height: 10),
-              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Maybe Later')),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _showOptimizeResult(BuildContext context, bool success, String? error) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(success ? Icons.check_circle_rounded : Icons.error_rounded, size: 88, color: success ? const Color(0xFF84CC16) : const Color(0xFFEF4444)),
-              const SizedBox(height: 16),
-              Text(
-                success ? 'Wi‑Fi optimisation complete!' : 'Unable to optimise right now',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                success
-                    ? 'Router refresh request has been sent. Enjoy your high-speed internet connection.'
-                    : (error ?? 'Please try again in a few minutes.'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.of(context).pop(), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)), child: const Text('Done'))),
             ],
           ),
         );
@@ -312,12 +350,12 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
             children: [
               Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
               const SizedBox(height: 18),
-              Text(accessMode ? 'Manage Wi‑Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
+              Text(accessMode ? 'Manage Wi-Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
               const SizedBox(height: 14),
               if (devices.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text('No connected device at the moment. Try reconnecting to Wi‑Fi or refresh later.'),
+                  child: Text('No connected device at the moment. Try reconnecting to Wi-Fi or refresh later.'),
                 )
               else
                 ...devices.map((device) => Padding(
@@ -333,7 +371,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             children: [
                               Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                               const SizedBox(height: 4),
-                              Text('${device.connectionType} · ${device.signal}', style: const TextStyle(color: Color(0xFF6B7280))),
+                              Text('${device.connectionType} • ${device.signal}', style: const TextStyle(color: Color(0xFF6B7280))),
                             ],
                           ),
                         ),
@@ -382,7 +420,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 children: [
                   Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
                   const SizedBox(height: 18),
-                  const Text('Guest Wi‑Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
+                  const Text('Guest Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
                   const SizedBox(height: 12),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -390,7 +428,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     value: enabled,
                     onChanged: (value) => setLocalState(() => enabled = value),
                   ),
-                  TextField(controller: _guestSsidController, decoration: const InputDecoration(labelText: 'Guest Wi‑Fi name')),
+                  TextField(controller: _guestSsidController, decoration: const InputDecoration(labelText: 'Guest Wi-Fi name')),
                   const SizedBox(height: 12),
                   TextField(controller: _guestPasswordController, obscureText: true, decoration: const InputDecoration(labelText: 'Guest password')),
                   const SizedBox(height: 16),
@@ -408,11 +446,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                               if (!context.mounted) return;
                               Navigator.of(context).pop();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(ok ? 'Guest Wi‑Fi updated' : (appState.error ?? 'Unable to update guest Wi‑Fi'))),
+                                SnackBar(content: Text(ok ? 'Guest Wi-Fi updated' : (appState.error ?? 'Unable to update guest Wi-Fi'))),
                               );
                             },
                       style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                      child: const Text('Save guest Wi‑Fi'),
+                      child: const Text('Save guest Wi-Fi'),
                     ),
                   ),
                 ],
@@ -440,7 +478,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               const Text('Restart router?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28), textAlign: TextAlign.center),
               const SizedBox(height: 10),
               const Text(
-                'This may take a few minutes, during which your Wi‑Fi connection will be affected. Inform active users beforehand.',
+                'This may take a few minutes, during which your Wi-Fi connection will be affected. Inform active users beforehand.',
                 style: TextStyle(color: Color(0xFF6B7280), height: 1.4),
                 textAlign: TextAlign.center,
               ),
@@ -468,6 +506,21 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _diagnosticRow(String label, String value, {bool last = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1))),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+        ],
+      ),
     );
   }
 }
