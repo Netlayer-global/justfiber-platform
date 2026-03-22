@@ -19,136 +19,288 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     final appState = AppStateScope.of(context);
     final plans = appState.planChangeOptions;
     final currentPlan = appState.billing.currentPlan.toLowerCase();
+    final wifiName = appState.wifi.ssid24.isEmpty ? 'Active connection' : appState.wifi.ssid24;
+    final premiumPlans = plans.where((plan) => _isPremium(plan)).toList();
+    final standardPlans = plans.where((plan) => !_isPremium(plan)).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          children: [
-            Text('Select a plan', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 2),
-            Text(appState.wifi.ssid24, style: const TextStyle(fontSize: 18, color: Color(0xFF676B76))),
-          ],
-        ),
+        title: const Text('Choose your plan'),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF1F0FF),
+        backgroundColor: const Color(0xFFF4F5FF),
         foregroundColor: const Color(0xFF17181C),
       ),
-      backgroundColor: const Color(0xFFF1F0FF),
+      backgroundColor: const Color(0xFFF4F5FF),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
-          Row(
-            children: [
-              _tabChip('Recommended', true),
-              const SizedBox(width: 10),
-              _tabChip('Wi‑Fi', false),
-              const SizedBox(width: 10),
-              _tabChip('Wi‑Fi + Digital TV', false),
-            ],
-          ),
+          _heroCard(context, wifiName, appState.billing.currentPlan),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              const Expanded(child: Text('Plans to choose from', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28))),
-              TextButton(onPressed: () {}, child: const Text('Compare')),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(value: 'immediate', label: Text('Immediate')),
-              ButtonSegment<String>(value: 'next_cycle', label: Text('Next cycle')),
-            ],
-            selected: {effectiveMode},
-            onSelectionChanged: (value) => setState(() => effectiveMode = value.first),
-          ),
-          const SizedBox(height: 18),
+          _modeSwitcher(),
+          const SizedBox(height: 20),
           if (plans.isEmpty)
             const Text('No alternate plans available right now.')
-          else
-            ...plans.map((plan) {
-              final isCurrent = currentPlan.contains(plan.name.toLowerCase()) || currentPlan.contains(plan.planCode.toLowerCase());
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          if (isCurrent) ...[
-                            _badge('Active', const Color(0xFFDCFCE7), const Color(0xFF166534)),
-                            const SizedBox(width: 8),
-                          ],
-                          _badge(effectiveMode == 'next_cycle' ? 'Next cycle' : 'Immediate', const Color(0xFFE9E7FF), const Color(0xFF4338CA)),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(child: _planMetric('Rs ${plan.monthlyPrice.toStringAsFixed(0)} /m + GST', 'Price')),
-                          Expanded(child: _planMetric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
-                          Expanded(child: _planMetric('Unlimited', 'Internet')),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          for (final icon in _benefitIcons(plan)) ...[
-                            Container(
-                              width: 40,
-                              height: 40,
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(color: const Color(0xFFF5F3FF), borderRadius: BorderRadius.circular(12)),
-                              child: Icon(icon, color: const Color(0xFF20242E), size: 22),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          TextButton(
-                            onPressed: () => _previewPlan(context, appState, plan),
-                            child: const Text('View Details'),
-                          ),
-                          const Spacer(),
-                          SizedBox(
-                            width: 210,
-                            child: OutlinedButton(
-                              onPressed: appState.busy ? null : () => _applyPlan(context, appState, plan),
-                              child: Text(isCurrent ? 'Change Duration' : 'Select Plan'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+          else ...[
+            if (premiumPlans.isNotEmpty) ...[
+              _sectionHeader(
+                'Recommended upgrades',
+                'Higher speed and richer entertainment packs for this connection.',
+              ),
+              const SizedBox(height: 12),
+              ...premiumPlans.map((plan) => _planCard(context, appState, plan, currentPlan, featured: true)),
+              const SizedBox(height: 22),
+            ],
+            if (standardPlans.isNotEmpty) ...[
+              _sectionHeader(
+                'All Wi-Fi plans',
+                'Clean broadband plans with fast upgrades and easy billing changes.',
+              ),
+              const SizedBox(height: 12),
+              ...standardPlans.map((plan) => _planCard(context, appState, plan, currentPlan)),
+            ],
+          ],
         ],
       ),
     );
   }
 
-  Widget _tabChip(String label, bool active) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: active ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: active ? const Color(0xFF2563EB) : const Color(0xFFD9DCE8)),
+  Widget _heroCard(BuildContext context, String wifiName, String currentPlanName) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF111827), Color(0xFF312E81)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        alignment: Alignment.center,
-        child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, color: active ? const Color(0xFF111827) : const Color(0xFF6B7280))),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: const [
+          BoxShadow(color: Color(0x220F172A), blurRadius: 28, offset: Offset(0, 14)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Text(
+              'Plan studio',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            wifiName,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            currentPlanName.isEmpty ? 'Pick a plan for this connection.' : 'Current plan: $currentPlanName',
+            style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: const [
+              Expanded(child: _HeroMetric(label: 'Flow', value: 'Modern')),
+              SizedBox(width: 10),
+              Expanded(child: _HeroMetric(label: 'Billing', value: 'Instant')),
+              SizedBox(width: 10),
+              Expanded(child: _HeroMetric(label: 'Upgrade', value: 'Live')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeSwitcher() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _modeButton('immediate', 'Switch now', 'Apply with current-cycle adjustment')),
+          const SizedBox(width: 8),
+          Expanded(child: _modeButton('next_cycle', 'Next cycle', 'Queue the change for next billing cycle')),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeButton(String value, String title, String subtitle) {
+    final active = effectiveMode == value;
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => setState(() => effectiveMode = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF111827) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: active ? Colors.white : const Color(0xFF111827),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: active ? const Color(0xFFD1D5DB) : const Color(0xFF6B7280),
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+        const SizedBox(height: 4),
+        Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+      ],
+    );
+  }
+
+  Widget _planCard(
+    BuildContext context,
+    AppState appState,
+    PlanItem plan,
+    String currentPlan, {
+    bool featured = false,
+  }) {
+    final isCurrent = currentPlan.contains(plan.name.toLowerCase()) || currentPlan.contains(plan.planCode.toLowerCase());
+    final accent = featured ? const Color(0xFFD81F26) : const Color(0xFF4F46E5);
+    final background = featured ? const Color(0xFFFFF5F5) : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: featured ? const Color(0xFFFECACA) : const Color(0xFFE5E7EB)),
+          boxShadow: const [
+            BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 10)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (isCurrent) _badge('Active', const Color(0xFFDCFCE7), const Color(0xFF166534)),
+                          _badge(
+                            featured ? 'Recommended' : (effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
+                            featured ? const Color(0xFFFEE2E2) : const Color(0xFFE0E7FF),
+                            featured ? const Color(0xFFB91C1C) : const Color(0xFF3730A3),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Rs ${plan.monthlyPrice.toStringAsFixed(0)} / month + GST',
+                        style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 18),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: featured
+                          ? const [Color(0xFFFCA5A5), Color(0xFFD81F26)]
+                          : const [Color(0xFFC4B5FD), Color(0xFF4F46E5)],
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Icon(
+                    featured ? Icons.rocket_launch_rounded : Icons.wifi_rounded,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.88),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Row(
+                children: [
+                  Expanded(child: _planMetric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
+                  Expanded(child: _planMetric('Unlimited', 'Internet')),
+                  Expanded(child: _planMetric(_isPremium(plan) ? 'OTT+' : 'Core', 'Benefits')),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _benefitChips(plan),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _previewPlan(context, appState, plan),
+                    child: const Text('View details'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: appState.busy ? null : () => _applyPlan(context, appState, plan),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111827)),
+                    child: Text(isCurrent ? 'Change duration' : 'Select plan'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -165,19 +317,44 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Color(0xFF7B7F87))),
+        Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
       ],
     );
   }
 
-  List<IconData> _benefitIcons(PlanItem plan) {
-    final lower = plan.name.toLowerCase();
-    if (lower.contains('entertainment') || lower.contains('ott')) {
-      return const [Icons.movie_outlined, Icons.live_tv_rounded, Icons.wifi_rounded, Icons.add_circle_outline];
+  List<Widget> _benefitChips(PlanItem plan) {
+    final chips = <String>['Unlimited data', '${plan.speedMbps.toStringAsFixed(0)} Mbps class'];
+    if (_isPremium(plan)) {
+      chips.addAll(['OTT ready', 'Entertainment pack']);
+    } else {
+      chips.add('Smart broadband');
     }
-    return const [Icons.cloud_outlined, Icons.wifi_rounded];
+    if (plan.otcCharge > 0) {
+      chips.add('OTC Rs ${plan.otcCharge.toStringAsFixed(0)}');
+    }
+    return chips
+        .map(
+          (chip) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(chip, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+          ),
+        )
+        .toList();
+  }
+
+  bool _isPremium(PlanItem plan) {
+    final lower = plan.name.toLowerCase();
+    return lower.contains('entertainment') ||
+        lower.contains('ott') ||
+        lower.contains('combo') ||
+        plan.monthlyPrice >= 999 ||
+        plan.speedMbps >= 200;
   }
 
   Future<void> _previewPlan(BuildContext context, AppState appState, PlanItem plan) async {
@@ -202,7 +379,14 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
               const SizedBox(height: 18),
               Text(preview.nextPlanName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
+              Text(
+                effectiveMode == 'next_cycle'
+                    ? 'This switch will queue for the next billing cycle.'
+                    : 'This switch applies with current-cycle adjustment rules.',
+                style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
+              ),
+              const SizedBox(height: 16),
               _previewRow('Current price', 'Rs ${preview.currentPrice.toStringAsFixed(0)}'),
               _previewRow('Next price', 'Rs ${preview.nextPrice.toStringAsFixed(0)}'),
               _previewRow('Remaining days', '${preview.remainingDays}'),
@@ -218,7 +402,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                     _applyPlan(context, appState, plan);
                   },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                  child: const Text('Select Plan'),
+                  child: const Text('Continue with this plan'),
                 ),
               ),
             ],
@@ -267,5 +451,31 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         MaterialPageRoute(builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)),
       );
     }
+  }
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 12)),
+        ],
+      ),
+    );
   }
 }
