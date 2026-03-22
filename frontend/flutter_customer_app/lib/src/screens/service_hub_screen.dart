@@ -19,6 +19,8 @@ class ServiceHubScreen extends StatelessWidget {
     final billing = appState.billing;
     final wifi = appState.wifi;
     final session = appState.session;
+    final networkQuality = appState.networkQuality;
+    final speedTest = appState.speedTest;
     final displayWifiName = wifi.ssid24.isEmpty ? '${session?.mobile ?? ''}_wifi' : wifi.ssid24;
     final planName = billing.currentPlan.isNotEmpty ? billing.currentPlan : (dashboard.planName.isNotEmpty ? dashboard.planName : 'No active plan');
     final isActive = !wifi.paused && planName != 'No active plan';
@@ -229,29 +231,46 @@ class ServiceHubScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           _lightCard(
-            title: 'Billing snapshot',
+            title: 'SERVICE HEALTH',
             child: Column(
               children: [
-                _accountRow(Icons.currency_rupee_rounded, 'CURRENT DUE', 'Rs ${billing.dueAmount.toStringAsFixed(2)}'),
-                _accountRow(Icons.calendar_today_outlined, 'DUE DATE', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),
-                _accountRow(Icons.receipt_long_outlined, 'LAST PAYMENT', billing.lastPaymentDate.isEmpty ? '-' : billing.lastPaymentDate, last: true),
+                Row(
+                  children: [
+                    Expanded(child: _summaryHealthTile('Quality', networkQuality.quality)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryHealthTile('Latency', '${networkQuality.latencyMs.toStringAsFixed(0)} ms')),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _summaryHealthTile('Packet Loss', '${networkQuality.packetLossPercent.toStringAsFixed(1)}%')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryHealthTile('Speed Test', speedTest.status)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _accountRow(Icons.track_changes_outlined, 'OPEN REQUESTS', '${appState.requests.length}'),
+                _accountRow(Icons.support_agent_outlined, 'OPEN TICKETS', '${appState.tickets.length}', last: true),
                 const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+                          MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
                         ),
-                        child: const Text('Open Billing'),
+                        child: const Text('Open Tracking'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: billing.dueAmount <= 0 || appState.busy ? null : () => _payBill(context, appState),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const WifiSettingsScreen()),
+                        ),
                         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                        child: const Text('Pay Now'),
+                        child: const Text('Run Wi-Fi Actions'),
                       ),
                     ),
                   ],
@@ -393,6 +412,24 @@ class ServiceHubScreen extends StatelessWidget {
           Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: Color(0xFF7B7F87))),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryHealthTile(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF7B7F87), fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(value.isEmpty ? '-' : value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
         ],
       ),
     );

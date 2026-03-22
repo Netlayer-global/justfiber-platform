@@ -19,7 +19,7 @@ class ServiceTrackingScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Booking & Visit Tracking'),
+        title: const Text('Requests & Tracking'),
         backgroundColor: const Color(0xFF090C1A),
         foregroundColor: Colors.white,
       ),
@@ -42,6 +42,16 @@ class ServiceTrackingScreen extends StatelessWidget {
                 _row('Plan', latestBooking?.planName ?? '-'),
                 _row('Amount', latestBooking == null ? '-' : 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
                 _row('Current step', bookingTracking?.currentStep ?? latestBooking?.currentStep ?? '-'),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _countChip('Visits', visits.length)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _countChip('Requests', requests.length)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _countChip('Tickets', tickets.length)),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: appState.busy ? null : () => appState.refreshBookingTracking(),
@@ -224,6 +234,23 @@ class ServiceTrackingScreen extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _countChip(String label, int count) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Text('$count', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
         ],
       ),
     );
