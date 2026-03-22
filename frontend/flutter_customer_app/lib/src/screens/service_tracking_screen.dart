@@ -32,7 +32,7 @@ class ServiceTrackingScreen extends StatelessWidget {
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF10213A), Color(0xFF1D4ED8)],
+              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -60,6 +60,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: appState.busy ? null : () => appState.refreshBookingTracking(),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00F5D4), foregroundColor: const Color(0xFF031B17)),
                   child: const Text('Refresh tracking'),
                 ),
                 const SizedBox(height: 10),
@@ -71,11 +72,19 @@ class ServiceTrackingScreen extends StatelessWidget {
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
                       ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0x6600F5D4)),
+                      ),
                       child: const Text('Book another connection'),
                     ),
                     OutlinedButton(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0x6600F5D4)),
                       ),
                       child: const Text('Need support'),
                     ),
@@ -151,8 +160,9 @@ class ServiceTrackingScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: const Color(0xFFF8FBFF),
                             borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x2200C2FF)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,10 +227,11 @@ class ServiceTrackingScreen extends StatelessWidget {
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FBFF),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x2200C2FF)),
+                          ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -263,6 +274,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
                     ),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
                     child: const Text('Open Support Center'),
                   ),
                 ),
@@ -297,8 +309,9 @@ class ServiceTrackingScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
+        color: const Color(0x1400F5D4),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x6600F5D4)),
       ),
       child: Column(
         children: [

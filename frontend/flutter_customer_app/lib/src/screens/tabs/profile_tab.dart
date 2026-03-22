@@ -18,18 +18,21 @@ class ProfileTab extends StatelessWidget {
       children: [
         AppCard(
           gradient: const LinearGradient(
-            colors: [Color(0xFFF4F5FF), Color(0xFFFFF3F4)],
+            colors: [Color(0xFF0B0F19), Color(0xFF111827)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(dashboard.customerName.isEmpty ? 'Customer account' : dashboard.customerName, style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                dashboard.customerName.isEmpty ? 'Customer account' : dashboard.customerName,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+              ),
               const SizedBox(height: 8),
               Text(
                 appState.session?.mobile ?? '-',
-                style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700),
+                style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 16),
               Row(
@@ -80,6 +83,10 @@ class ProfileTab extends StatelessWidget {
         const SizedBox(height: 18),
         FilledButton.tonal(
           onPressed: appState.logout,
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF0B0F19),
+            foregroundColor: Colors.white,
+          ),
           child: const Text('Logout'),
         ),
       ],
@@ -90,15 +97,16 @@ class ProfileTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0x1400F5D4),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x6600F5D4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
         ],
       ),
     );
@@ -122,13 +130,13 @@ class ProfileTab extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B))),
           const Spacer(),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF05070D)),
             ),
           ),
         ],

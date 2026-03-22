@@ -52,8 +52,19 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
         children: [
           WebViewWidget(controller: _controller),
           if (_loading)
-            const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+            Center(
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: const Color(0xCC0B0F19),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: const Color(0x6600F5D4)),
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF00F5D4)),
+                ),
+              ),
             ),
         ],
       ),
