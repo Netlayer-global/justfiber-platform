@@ -301,62 +301,88 @@ class SupportHistoryScreen extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (_, setModalState) {
             return SafeArea(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(sheetContext).viewInsets.bottom),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Create support ticket', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: ['technical', 'billing', 'account', 'service'].map((item) {
-                        return ChoiceChip(
-                          label: Text(item),
-                          selected: category == item,
-                          onSelected: (_) => setModalState(() => category = item),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: subjectController,
-                      decoration: const InputDecoration(labelText: 'Subject'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: descriptionController,
-                      minLines: 3,
-                      maxLines: 5,
-                      decoration: const InputDecoration(labelText: 'Describe the issue'),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () async {
-                          final subject = subjectController.text.trim();
-                          final description = descriptionController.text.trim();
-                          if (subject.isEmpty || description.isEmpty) return;
-                          Navigator.pop(sheetContext);
-                          await _raiseQuickTicket(
-                            context,
-                            appState,
-                            category: category,
-                            subject: subject,
-                            description: description,
-                          );
-                        },
-                        child: const Text('Submit ticket'),
+                padding: EdgeInsets.fromLTRB(12, 16, 12, 12 + MediaQuery.of(sheetContext).viewInsets.bottom),
+                child: AppCard(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF09111D), Color(0xFF111827)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Create support ticket',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Open a broadband or billing support case and keep the conversation inside one ticket.',
+                        style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: ['technical', 'billing', 'account', 'service'].map((item) {
+                          final selected = category == item;
+                          return ChoiceChip(
+                            label: Text(item),
+                            selected: selected,
+                            labelStyle: TextStyle(
+                              color: selected ? const Color(0xFF031B17) : Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            backgroundColor: const Color(0x2200F5D4),
+                            selectedColor: const Color(0xFF00F5D4),
+                            side: const BorderSide(color: Color(0x6600F5D4)),
+                            onSelected: (_) => setModalState(() => category = item),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: subjectController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(labelText: 'Subject'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descriptionController,
+                        style: const TextStyle(color: Colors.white),
+                        minLines: 3,
+                        maxLines: 5,
+                        decoration: const InputDecoration(labelText: 'Describe the issue'),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () async {
+                            final subject = subjectController.text.trim();
+                            final description = descriptionController.text.trim();
+                            if (subject.isEmpty || description.isEmpty) return;
+                            Navigator.pop(sheetContext);
+                            await _raiseQuickTicket(
+                              context,
+                              appState,
+                              category: category,
+                              subject: subject,
+                              description: description,
+                            );
+                          },
+                          child: const Text('Submit ticket'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -373,55 +399,80 @@ class SupportHistoryScreen extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (_, setModalState) {
             return SafeArea(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(sheetContext).viewInsets.bottom),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Create service request', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: ['complaint', 'shift', 'disconnect', 'link_service'].map((item) {
-                        return ChoiceChip(
-                          label: Text(item),
-                          selected: requestType == item,
-                          onSelected: (_) => setModalState(() => requestType = item),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: noteController,
-                      minLines: 3,
-                      maxLines: 5,
-                      decoration: const InputDecoration(labelText: 'Request note'),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () async {
-                          final note = noteController.text.trim();
-                          if (note.isEmpty) return;
-                          Navigator.pop(sheetContext);
-                          await _createServiceRequest(
-                            context,
-                            appState,
-                            type: requestType,
-                            note: note,
-                          );
-                        },
-                        child: const Text('Submit request'),
+                padding: EdgeInsets.fromLTRB(12, 16, 12, 12 + MediaQuery.of(sheetContext).viewInsets.bottom),
+                child: AppCard(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF09111D), Color(0xFF111827)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Create service request',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Use a service request for shift, disconnect, linkage, or other connection changes.',
+                        style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: ['complaint', 'shift', 'disconnect', 'link_service'].map((item) {
+                          final selected = requestType == item;
+                          return ChoiceChip(
+                            label: Text(item),
+                            selected: selected,
+                            labelStyle: TextStyle(
+                              color: selected ? const Color(0xFF031B17) : Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            backgroundColor: const Color(0x2200C2FF),
+                            selectedColor: const Color(0xFF00C2FF),
+                            side: const BorderSide(color: Color(0x6600C2FF)),
+                            onSelected: (_) => setModalState(() => requestType = item),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: noteController,
+                        style: const TextStyle(color: Colors.white),
+                        minLines: 3,
+                        maxLines: 5,
+                        decoration: const InputDecoration(labelText: 'Request note'),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () async {
+                            final note = noteController.text.trim();
+                            if (note.isEmpty) return;
+                            Navigator.pop(sheetContext);
+                            await _createServiceRequest(
+                              context,
+                              appState,
+                              type: requestType,
+                              note: note,
+                            );
+                          },
+                          child: const Text('Submit request'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -498,47 +549,55 @@ class _DetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
-            const SizedBox(height: 6),
-            Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(999),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+        child: AppCard(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF09111D), Color(0xFF111827)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white)),
+              const SizedBox(height: 6),
+              Text(subtitle, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0x22FF6B6B),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: const Color(0x55FF6B6B)),
+                    ),
+                    child: Text(status, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFF8A80))),
                   ),
-                  child: Text(status, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFD81F26))),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: reference));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Reference copied')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Copy ref'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            for (final line in lines)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text(line, style: const TextStyle(height: 1.45)),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: reference));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Reference copied')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    label: const Text('Copy ref'),
+                  ),
+                ],
               ),
-          ],
+              const SizedBox(height: 16),
+              for (final line in lines)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(line, style: const TextStyle(height: 1.45, color: Color(0xFFE5E7EB))),
+                ),
+            ],
+          ),
         ),
       ),
     );

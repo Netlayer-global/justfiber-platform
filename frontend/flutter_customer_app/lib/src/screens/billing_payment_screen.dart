@@ -3,6 +3,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
+import '../widgets/app_card.dart';
 
 class BillingPaymentScreen extends StatefulWidget {
   const BillingPaymentScreen({super.key, required this.paymentOrder});
@@ -116,109 +117,131 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bill Payment'),
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            color: Colors.white,
+          AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF060A12), Color(0xFF101827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Razorpay Checkout', style: TextStyle(color: Color(0xFF16171D), fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 4),
+                      const Text(
+                        'Razorpay checkout',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 22),
+                      ),
+                      const SizedBox(height: 8),
                       Text(
                         'Amount: Rs ${widget.paymentOrder.amount.toStringAsFixed(0)}',
-                        style: const TextStyle(color: Color(0xFF6B7280)),
+                        style: const TextStyle(color: Color(0xFFB8C2D1), fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        paymentError == null
+                            ? 'The secure payment window opens automatically.'
+                            : 'Your payment attempt needs attention before completion.',
+                        style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
                       ),
                     ],
                   ),
                 ),
-                FilledButton.tonal(
-                  onPressed: launching ? null : _openCheckout,
-                  child: const Text('Retry'),
+                const SizedBox(width: 12),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0x1400F5D4),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0x6600F5D4)),
+                  ),
+                  child: Icon(
+                    paymentError == null ? Icons.payments_rounded : Icons.error_outline_rounded,
+                    color: paymentError == null ? const Color(0xFF00F5D4) : const Color(0xFFFF8A80),
+                  ),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+          const SizedBox(height: 18),
+          AppCard(
+            child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x120F172A), blurRadius: 24, offset: Offset(0, 12)),
-                    ],
+                if (walletHint != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF08131B),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0x3300C2FF)),
+                    ),
+                    child: Text(
+                      walletHint!,
+                      style: const TextStyle(color: Color(0xFFBEE8FF), fontWeight: FontWeight.w600, height: 1.4),
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        paymentError == null ? Icons.payments_rounded : Icons.error_outline_rounded,
-                        size: 72,
-                        color: const Color(0xFF16171D),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        paymentError == null ? 'Secure payment window opens automatically.' : 'Payment needs your attention.',
-                        style: const TextStyle(color: Color(0xFF16171D), fontSize: 18, fontWeight: FontWeight.w700),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          paymentError ??
-                              'If nothing appears, tap Retry to launch Razorpay again.',
-                          style: const TextStyle(color: Color(0xFF6B7280)),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      if (walletHint != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          walletHint!,
-                          style: const TextStyle(color: Color(0xFFFFD9B8)),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                      const SizedBox(height: 24),
-                      if (launching) const CircularProgressIndicator(),
-                      if (!launching) ...[
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _openCheckout,
-                            child: Text(retryCount > 0 ? 'Retry payment' : 'Open checkout'),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: _requestPaymentHelp,
-                            child: const Text('Need help? Raise billing ticket'),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Back to app'),
-                        ),
-                      ],
-                    ],
+                  const SizedBox(height: 14),
+                ],
+                if (launching) ...[
+                  const SizedBox(height: 8),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Launching secure checkout...',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                    textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Keep this screen open while Razorpay loads.',
+                    textAlign: TextAlign.center,
+                  ),
+                ] else ...[
+                  Text(
+                    retryCount > 0 ? 'Try payment again' : 'Ready to continue payment?',
+                    style: theme.textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    paymentError ?? 'If checkout did not appear, relaunch it below.',
+                    style: theme.textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 22),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _openCheckout,
+                      child: Text(retryCount > 0 ? 'Retry payment' : 'Open checkout'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _requestPaymentHelp,
+                      child: const Text('Raise billing ticket'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Back to app'),
+                  ),
+                ],
               ],
             ),
           ),
