@@ -70,7 +70,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
                           const SizedBox(height: 6),
                           Text(
-                            'Quality: ${appState.networkQuality.quality} • Devices: ${wifi.connectedDevicesCount}',
+                            'Quality: ${appState.networkQuality.quality} | Devices: ${wifi.connectedDevicesCount}',
                             style: const TextStyle(color: Color(0xFF6B7280)),
                           ),
                         ],
@@ -128,6 +128,12 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   title: 'Manage Wi-Fi access',
                   subtitle: 'Block or unblock specific connected devices',
                   onTap: () => _showConnectedDevices(context, appState, accessMode: true),
+                ),
+                _actionTile(
+                  icon: Icons.schedule_rounded,
+                  title: 'Parental controls',
+                  subtitle: 'Create scheduled rules to restrict access during selected hours',
+                  onTap: () => _showParentalControlsSheet(context, appState),
                 ),
                 _actionTile(
                   icon: Icons.restart_alt_rounded,
@@ -371,7 +377,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             children: [
                               Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                               const SizedBox(height: 4),
-                              Text('${device.connectionType} • ${device.signal}', style: const TextStyle(color: Color(0xFF6B7280))),
+                              Text('${device.connectionType} | ${device.signal}', style: const TextStyle(color: Color(0xFF6B7280))),
                             ],
                           ),
                         ),
@@ -460,6 +466,115 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
         );
       },
     );
+  }
+
+  Future<void> _showParentalControlsSheet(BuildContext context, AppState appState) async {
+    final targetController = TextEditingController();
+    final startController = TextEditingController(text: '22:00');
+    final endController = TextEditingController(text: '06:00');
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) {
+        final rules = appState.parentalRules;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
+              const SizedBox(height: 18),
+              const Text('Parental controls', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
+              const SizedBox(height: 10),
+              if (rules.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'No active rules right now. Add a schedule to automatically restrict Wi-Fi access.',
+                    style: TextStyle(color: Color(0xFF6B7280), height: 1.4),
+                  ),
+                )
+              else
+                ...rules.map(
+                  (rule) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(18)),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(rule.targetName, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                const SizedBox(height: 4),
+                                Text('${rule.startTime} - ${rule.endTime}', style: const TextStyle(color: Color(0xFF6B7280))),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: rule.blocked ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                            child: Text(
+                              rule.blocked ? 'Blocked' : 'Allowed',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: rule.blocked ? const Color(0xFF92400E) : const Color(0xFF166534),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              TextField(controller: targetController, decoration: const InputDecoration(labelText: 'Rule or device name')),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: startController, decoration: const InputDecoration(labelText: 'Start time (HH:MM)'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: endController, decoration: const InputDecoration(labelText: 'End time (HH:MM)'))),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: appState.busy
+                      ? null
+                      : () async {
+                          final ok = await appState.addParentalControl(
+                            targetName: targetController.text.trim(),
+                            startTime: startController.text.trim(),
+                            endTime: endController.text.trim(),
+                          );
+                          if (!context.mounted) return;
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(ok ? 'Parental control rule added' : (appState.error ?? 'Unable to add parental control'))),
+                          );
+                        },
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+                  child: const Text('Save parental control'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    targetController.dispose();
+    startController.dispose();
+    endController.dispose();
   }
 
   Future<void> _showRestartSheet(BuildContext context, AppState appState) async {

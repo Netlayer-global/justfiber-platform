@@ -14,6 +14,8 @@ class BillingHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
+    final latestInvoice = billing.invoices.isEmpty ? null : billing.invoices.first;
+    final latestPayment = billing.payments.isEmpty ? null : billing.payments.first;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Billing')),
@@ -106,6 +108,25 @@ class BillingHistoryScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (latestInvoice != null || latestPayment != null) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (latestInvoice != null && latestInvoice.pdfUrl.isNotEmpty)
+                        OutlinedButton(
+                          onPressed: () => _openDocument(context, appState, latestInvoice.invoiceNumber, latestInvoice.pdfUrl),
+                          child: const Text('Latest invoice'),
+                        ),
+                      if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
+                        OutlinedButton(
+                          onPressed: () => _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl),
+                          child: const Text('Latest receipt'),
+                        ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
