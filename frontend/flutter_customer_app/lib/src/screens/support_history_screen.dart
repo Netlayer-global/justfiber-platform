@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
@@ -30,6 +31,16 @@ class SupportHistoryScreen extends StatelessWidget {
                 const Text(
                   'Raise broadband, billing, shift connection, and service complaints from one place.',
                   style: TextStyle(color: Color(0xFF6B7280), height: 1.45),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(child: _summaryChip('Tickets', '${appState.tickets.length}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryChip('Requests', '${appState.requests.length}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryChip('Alerts', '${appState.notifications.length}')),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -169,6 +180,23 @@ class SupportHistoryScreen extends StatelessWidget {
     return OutlinedButton(
       onPressed: onTap,
       child: Text(label),
+    );
+  }
+
+  Widget _summaryChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
+        ],
+      ),
     );
   }
 
@@ -423,6 +451,7 @@ class SupportHistoryScreen extends StatelessWidget {
       builder: (_) => _DetailSheet(
         title: item.subject,
         subtitle: '${item.ticketNumber} | ${item.category}',
+        reference: item.ticketNumber,
         status: item.status,
         lines: [
           'Priority: ${item.priority}',
@@ -440,6 +469,7 @@ class SupportHistoryScreen extends StatelessWidget {
       builder: (_) => _DetailSheet(
         title: item.title,
         subtitle: '${item.referenceNumber} | ${item.type}',
+        reference: item.referenceNumber,
         status: item.status,
         lines: [
           'Created: ${item.createdAt.isEmpty ? '-' : item.createdAt}',
@@ -466,12 +496,14 @@ class _DetailSheet extends StatelessWidget {
   const _DetailSheet({
     required this.title,
     required this.subtitle,
+    required this.reference,
     required this.status,
     required this.lines,
   });
 
   final String title;
   final String subtitle;
+  final String reference;
   final String status;
   final List<String> lines;
 
@@ -488,7 +520,31 @@ class _DetailSheet extends StatelessWidget {
             const SizedBox(height: 6),
             Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
-            Text(status, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFD81F26))),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(status, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFD81F26))),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: reference));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Reference copied')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: const Text('Copy ref'),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             for (final line in lines)
               Padding(
