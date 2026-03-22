@@ -26,51 +26,57 @@ class HomeTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Hi, $displayName', style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(height: 6),
-                  Text(
-                    hasService
-                        ? 'See your live service status, due amount, and request tracking from one dashboard.'
-                        : 'Check availability, select a plan, and create a new broadband booking.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.white,
-              child: IconButton(
-                icon: const Icon(Icons.support_agent_rounded, color: Color(0xFF1F2937)),
-                onPressed: () => onNavigate(3),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        AppCard(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFF4F4), Color(0xFFF4F3FF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: const [
+              BoxShadow(color: Color(0x26030B14), blurRadius: 26, offset: Offset(0, 12)),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Broadband made simple',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF16171D)),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                hasService ? '$planName | $wifiName' : 'Check availability, choose a plan, and book your connection.',
-                style: const TextStyle(color: Color(0xFF4B5563), height: 1.45),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hi, $displayName',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          hasService
+                              ? 'Monitor your broadband, due amount, and active requests from one control surface.'
+                              : 'Check feasibility, select a plan, and create your broadband booking.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFFD1D5DB)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: const Color(0x1400F5D4),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0x6600F5D4)),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.support_agent_rounded, color: Color(0xFF00F5D4)),
+                      onPressed: () => onNavigate(3),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 18),
               Wrap(
@@ -92,7 +98,7 @@ class HomeTab extends StatelessWidget {
                           : () => Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
                               ),
-                      child: Text(hasService ? 'Open Services' : 'Book Connection'),
+                      child: Text(hasService ? 'Open services' : 'Book connection'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -103,9 +109,40 @@ class HomeTab extends StatelessWidget {
                           : () => Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
                               ),
-                      child: Text(hasService ? 'Open Billing' : 'Track Request'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0x5500F5D4)),
+                      ),
+                      child: Text(hasService ? 'Open billing' : 'Track request'),
                     ),
                   ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        AppCard(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFFFFF), Color(0xFFF2FFFC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Live connection snapshot', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF05070D))),
+              const SizedBox(height: 10),
+              Text(
+                hasService ? '$planName | $wifiName' : 'No active connection yet. Start with a new booking.',
+                style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(child: _summaryBox('Current plan', planName)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _summaryBox('Wi-Fi name', wifiName)),
                 ],
               ),
             ],
@@ -134,9 +171,14 @@ class HomeTab extends StatelessWidget {
           subtitle: 'Complaints, service requests, notifications, and help',
           onTap: () => onNavigate(3),
         ),
-        const SizedBox(height: 18),
-        if (billing.dueAmount > 0)
+        if (billing.dueAmount > 0) ...[
+          const SizedBox(height: 18),
           AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFFFFF), Color(0xFFF7FFFE)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -148,10 +190,11 @@ class HomeTab extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
+                        color: const Color(0x1400F5D4),
                         borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0x6600F5D4)),
                       ),
-                      child: const Text('DUE', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF92400E))),
+                      child: const Text('DUE', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0B0F19))),
                     ),
                   ],
                 ),
@@ -180,7 +223,8 @@ class HomeTab extends StatelessWidget {
               ],
             ),
           ),
-        if (billing.dueAmount > 0) const SizedBox(height: 18),
+        ],
+        const SizedBox(height: 18),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,7 +235,7 @@ class HomeTab extends StatelessWidget {
               _infoRow('Wi-Fi name', wifiName),
               _infoRow('Next bill date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),
               _infoRow('Connected devices', '${wifi.connectedDevicesCount}'),
-              _infoRow('Service state', hasService ? (wifi.paused ? 'Paused' : 'Active') : 'Not active'),
+              _infoRow('Service state', hasService ? (wifi.paused ? 'Paused' : 'Active') : 'Not active', highlight: true),
               if (billing.pendingPlanChange != null) _infoRow('Pending plan change', billing.pendingPlanChange!.planName),
             ],
           ),
@@ -200,7 +244,7 @@ class HomeTab extends StatelessWidget {
           const SizedBox(height: 18),
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFFEFF6FF), Color(0xFFF5F3FF)],
+              colors: [Color(0xFFFFFFFF), Color(0xFFF1F5FF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -212,7 +256,7 @@ class HomeTab extends StatelessWidget {
                 _infoRow('Booking number', latestBooking.bookingNumber),
                 _infoRow('Plan', latestBooking.planName),
                 _infoRow('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
-                _infoRow('Current step', latestBooking.currentStep),
+                _infoRow('Current step', latestBooking.currentStep, highlight: true),
                 const SizedBox(height: 14),
                 FilledButton(
                   onPressed: () => Navigator.of(context).push(
@@ -232,6 +276,24 @@ class HomeTab extends StatelessWidget {
     return Text(title, style: Theme.of(context).textTheme.titleLarge);
   }
 
+  Widget _summaryBox(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B0F19),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+
   Widget _navCard({
     required IconData icon,
     required String title,
@@ -242,22 +304,29 @@ class HomeTab extends StatelessWidget {
       borderRadius: BorderRadius.circular(28),
       onTap: onTap,
       child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 54,
+              height: 54,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1EEFF),
-                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFF0B0F19),
+                borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(icon, color: const Color(0xFF20242E)),
+              child: Icon(icon, color: const Color(0xFF00F5D4)),
             ),
-            const SizedBox(height: 16),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-            const SizedBox(height: 6),
-            Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), height: 1.35)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                  const SizedBox(height: 6),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF64748B), height: 1.35)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
           ],
         ),
       ),
@@ -268,33 +337,37 @@ class HomeTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF0B0F19),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x3300F5D4)),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFF16171D)),
+          style: const TextStyle(color: Colors.white),
           children: [
             TextSpan(text: '$value ', style: const TextStyle(fontWeight: FontWeight.w800)),
-            TextSpan(text: label, style: const TextStyle(color: Color(0xFF6B7280))),
+            TextSpan(text: label, style: const TextStyle(color: Color(0xFF94A3B8))),
           ],
         ),
       ),
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(String label, String value, {bool highlight = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B))),
           const Spacer(),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF16171D)),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: highlight ? const Color(0xFF00C2FF) : const Color(0xFF05070D),
+              ),
             ),
           ),
         ],

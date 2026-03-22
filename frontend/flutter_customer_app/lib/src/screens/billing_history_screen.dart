@@ -27,18 +27,18 @@ class BillingHistoryScreen extends StatelessWidget {
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFFFFF5F5), Color(0xFFF4F5FF)],
+              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Current bill', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26)),
+                const Text('Current bill', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: Colors.white)),
                 const SizedBox(height: 10),
                 Text(
                   'Rs ${billing.dueAmount.toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 34),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 34, color: Color(0xFF00F5D4)),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -99,6 +99,7 @@ class BillingHistoryScreen extends StatelessWidget {
                         onPressed: appState.busy || billing.dueAmount <= 0
                             ? null
                             : () => _payNow(context, appState, amount: billing.dueAmount),
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00F5D4), foregroundColor: const Color(0xFF031B17)),
                         child: Text(billing.pendingPlanChange != null ? 'Pay to switch plan' : 'Pay now'),
                       ),
                     ),
@@ -115,9 +116,9 @@ class BillingHistoryScreen extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _countChip('Invoices', invoiceCount.toString()),
-                    _countChip('Payments', paymentCount.toString()),
-                    _countChip('Notes', noteCount.toString()),
+                    _countChip('Invoices', invoiceCount.toString(), dark: true),
+                    _countChip('Payments', paymentCount.toString(), dark: true),
+                    _countChip('Notes', noteCount.toString(), dark: true),
                   ],
                 ),
               ],
@@ -242,16 +243,17 @@ class BillingHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _countChip(String label, String value) {
+  Widget _countChip(String label, String value, {bool dark = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: dark ? const Color(0x1400F5D4) : Colors.white,
         borderRadius: BorderRadius.circular(999),
+        border: dark ? Border.all(color: const Color(0x6600F5D4)) : null,
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFF1F2937)),
+          style: TextStyle(color: dark ? Colors.white : const Color(0xFF1F2937)),
           children: [
             TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
             TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
