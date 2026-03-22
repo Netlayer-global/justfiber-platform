@@ -370,6 +370,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Current step', latestBooking.currentStep),
           _summaryRow('Preferred date', _formatDate(_preferredDate)),
           _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
+          _summaryRow('Install address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
+          _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
+          _summaryRow('Map pin', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
@@ -413,6 +416,14 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => setState(() => step = 0),
+              child: const Text('Create another booking'),
+            ),
           ),
         ],
       ),

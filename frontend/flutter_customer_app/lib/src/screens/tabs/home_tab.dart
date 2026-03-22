@@ -36,7 +36,7 @@ class HomeTab extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     hasService
-                        ? 'See your live service status, due amount, latest updates, and request tracking from one dashboard.'
+                        ? 'See your live service status, due amount, and request tracking from one dashboard.'
                         : 'Check availability, select a plan, and create a new broadband booking.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
@@ -224,32 +224,6 @@ class HomeTab extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 18),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Latest updates', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
-              const SizedBox(height: 12),
-              if (appState.notifications.isEmpty)
-                const Text('No recent updates right now.', style: TextStyle(color: Color(0xFF6B7280)))
-              else
-                ...appState.notifications.take(3).map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        Text(item.body, style: const TextStyle(color: Color(0xFF6B7280))),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
       ],
     );
   }
