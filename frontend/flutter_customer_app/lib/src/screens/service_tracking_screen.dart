@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_state.dart';
 import '../widgets/app_card.dart';
+import 'booking_flow_screen.dart';
 import 'support_history_screen.dart';
 
 class ServiceTrackingScreen extends StatelessWidget {
@@ -16,6 +17,7 @@ class ServiceTrackingScreen extends StatelessWidget {
     final visits = appState.installerVisits;
     final requests = appState.requests;
     final tickets = appState.tickets;
+    final notifications = appState.notifications;
 
     return Scaffold(
       appBar: AppBar(
@@ -58,6 +60,25 @@ class ServiceTrackingScreen extends StatelessWidget {
                 FilledButton(
                   onPressed: appState.busy ? null : () => appState.refreshBookingTracking(),
                   child: const Text('Refresh tracking'),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
+                      ),
+                      child: const Text('Book another connection'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                      ),
+                      child: const Text('Need support'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -176,6 +197,40 @@ class ServiceTrackingScreen extends StatelessWidget {
                           ),
                         ),
                       )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Latest alerts', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                if (notifications.isEmpty)
+                  const Text('No tracking alerts right now.', style: TextStyle(color: Color(0xFF7B625A)))
+                else
+                  ...notifications.take(3).map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 6),
+                            Text(item.body, style: const TextStyle(color: Color(0xFF7B625A), height: 1.4)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
