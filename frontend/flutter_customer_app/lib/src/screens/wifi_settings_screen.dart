@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
+import '../widgets/app_card.dart';
 
 class WifiSettingsScreen extends StatefulWidget {
   const WifiSettingsScreen({super.key});
@@ -229,52 +230,57 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     final wifi = appState.wifi;
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                wifi.paused ? Icons.play_circle_fill_rounded : Icons.pause_circle_filled_rounded,
-                size: 80,
-                color: const Color(0xFF20242E),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                wifi.paused ? 'Resume internet on this connection?' : 'Pause internet on this connection?',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 26),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                wifi.paused
-                    ? 'Your router and service will start working again after confirmation.'
-                    : 'This will temporarily disable active internet access until you resume it again.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF6B7280), height: 1.45),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: appState.busy
-                      ? null
-                      : () async {
-                          final ok = await appState.toggleWifiPause(!wifi.paused);
-                          if (!context.mounted) return;
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(ok ? (wifi.paused ? 'Wi-Fi resumed' : 'Wi-Fi paused') : (appState.error ?? 'Unable to update Wi-Fi status'))),
-                          );
-                        },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                  child: Text(wifi.paused ? 'Resume Now' : 'Pause Now'),
+          padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+          child: AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF09111D), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  wifi.paused ? Icons.play_circle_fill_rounded : Icons.pause_circle_filled_rounded,
+                  size: 80,
+                  color: wifi.paused ? const Color(0xFF00F5D4) : const Color(0xFFFF8A80),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  wifi.paused ? 'Resume internet on this connection?' : 'Pause internet on this connection?',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  wifi.paused
+                      ? 'Your router and service will start working again after confirmation.'
+                      : 'This will temporarily disable active internet access until you resume it again.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: appState.busy
+                        ? null
+                        : () async {
+                            final ok = await appState.toggleWifiPause(!wifi.paused);
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(ok ? (wifi.paused ? 'Wi-Fi resumed' : 'Wi-Fi paused') : (appState.error ?? 'Unable to update Wi-Fi status'))),
+                            );
+                          },
+                    child: Text(wifi.paused ? 'Resume Now' : 'Pause Now'),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -285,45 +291,53 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
-              const SizedBox(height: 18),
-              const Text('Wi-Fi name & password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
-              const SizedBox(height: 18),
-              TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Wi-Fi name')),
-              const SizedBox(height: 12),
-              TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: appState.busy
-                      ? null
-                      : () async {
-                          final ok = await appState.changeWifiPasswordAndRefresh(
-                            password: _passwordController.text.trim(),
-                            ssid24: _nameController.text.trim(),
-                            ssid5: _nameController.text.trim(),
-                          );
-                          if (!context.mounted) return;
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(ok ? 'Wi-Fi details updated' : (appState.error ?? 'Update failed'))),
-                          );
-                        },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                  child: const Text('Save Changes'),
+          padding: EdgeInsets.fromLTRB(12, 16, 12, 12 + MediaQuery.of(context).viewInsets.bottom),
+          child: AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF09111D), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Wi-Fi name & password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Colors.white)),
+                const SizedBox(height: 10),
+                const Text(
+                  'Rename your Wi-Fi and set a stronger password for secure usage.',
+                  style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
                 ),
-              ),
-            ],
+                const SizedBox(height: 18),
+                TextField(controller: _nameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Wi-Fi name')),
+                const SizedBox(height: 12),
+                TextField(controller: _passwordController, style: const TextStyle(color: Colors.white), obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: appState.busy
+                        ? null
+                        : () async {
+                            final ok = await appState.changeWifiPasswordAndRefresh(
+                              password: _passwordController.text.trim(),
+                              ssid24: _nameController.text.trim(),
+                              ssid5: _nameController.text.trim(),
+                            );
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(ok ? 'Wi-Fi details updated' : (appState.error ?? 'Update failed'))),
+                            );
+                          },
+                    child: const Text('Save Changes'),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -333,42 +347,45 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
   Future<void> _showDiagnosticsSheet(BuildContext context, AppState appState) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
-              const SizedBox(height: 18),
-              const Text('Diagnostics summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
-              const SizedBox(height: 18),
-              _diagnosticRow('Download speed', '${appState.speedTest.downloadMbps.toStringAsFixed(1)} Mbps'),
-              _diagnosticRow('Upload speed', '${appState.speedTest.uploadMbps.toStringAsFixed(1)} Mbps'),
-              _diagnosticRow('Latency', '${appState.networkQuality.latencyMs.toStringAsFixed(0)} ms'),
-              _diagnosticRow('Packet loss', '${appState.networkQuality.packetLossPercent.toStringAsFixed(1)} %'),
-              _diagnosticRow('Jitter', '${appState.networkQuality.jitterMs.toStringAsFixed(0)} ms'),
-              _diagnosticRow('Optical RX', '${appState.networkQuality.opticalRxPower.toStringAsFixed(1)} dBm'),
-              _diagnosticRow('Overall quality', appState.networkQuality.quality, last: true),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: appState.busy
-                      ? null
-                      : () async {
-                          await appState.refresh();
-                          if (!context.mounted) return;
-                          Navigator.of(context).pop();
-                          await _showDiagnosticsSheet(context, appState);
-                        },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                  child: const Text('Refresh diagnostics'),
+          padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+          child: AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF09111D), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Diagnostics summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Colors.white)),
+                const SizedBox(height: 18),
+                _diagnosticRow('Download speed', '${appState.speedTest.downloadMbps.toStringAsFixed(1)} Mbps'),
+                _diagnosticRow('Upload speed', '${appState.speedTest.uploadMbps.toStringAsFixed(1)} Mbps'),
+                _diagnosticRow('Latency', '${appState.networkQuality.latencyMs.toStringAsFixed(0)} ms'),
+                _diagnosticRow('Packet loss', '${appState.networkQuality.packetLossPercent.toStringAsFixed(1)} %'),
+                _diagnosticRow('Jitter', '${appState.networkQuality.jitterMs.toStringAsFixed(0)} ms'),
+                _diagnosticRow('Optical RX', '${appState.networkQuality.opticalRxPower.toStringAsFixed(1)} dBm'),
+                _diagnosticRow('Overall quality', appState.networkQuality.quality, last: true),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: appState.busy
+                        ? null
+                        : () async {
+                            await appState.refresh();
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop();
+                            await _showDiagnosticsSheet(context, appState);
+                          },
+                    child: const Text('Refresh diagnostics'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -642,44 +659,49 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
   Future<void> _showRestartSheet(BuildContext context, AppState appState) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.router_rounded, size: 88, color: Color(0xFF20242E)),
-              const SizedBox(height: 16),
-              const Text('Restart router?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28), textAlign: TextAlign.center),
-              const SizedBox(height: 10),
-              const Text(
-                'This may take a few minutes, during which your Wi-Fi connection will be affected. Inform active users beforehand.',
-                style: TextStyle(color: Color(0xFF6B7280), height: 1.4),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: appState.busy
-                      ? null
-                      : () async {
-                          final ok = await appState.rebootRouter();
-                          if (!context.mounted) return;
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(ok ? 'Router restart requested' : (appState.error ?? 'Unable to restart router'))),
-                          );
-                        },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                  child: const Text('Restart Now'),
+          padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+          child: AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF09111D), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.router_rounded, size: 88, color: Color(0xFF00F5D4)),
+                const SizedBox(height: 16),
+                const Text('Restart router?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Colors.white), textAlign: TextAlign.center),
+                const SizedBox(height: 10),
+                const Text(
+                  'This may take a few minutes, during which your Wi-Fi connection will be affected. Inform active users beforehand.',
+                  style: TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Maybe Later')),
-            ],
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: appState.busy
+                        ? null
+                        : () async {
+                            final ok = await appState.rebootRouter();
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(ok ? 'Router restart requested' : (appState.error ?? 'Unable to restart router'))),
+                            );
+                          },
+                    child: const Text('Restart Now'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Maybe Later')),
+              ],
+            ),
           ),
         );
       },
@@ -690,12 +712,12 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1))),
+        border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0x22FFFFFF))),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600))),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Expanded(child: Text(label, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
         ],
       ),
     );
