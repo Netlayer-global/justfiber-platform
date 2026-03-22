@@ -5,6 +5,7 @@ import '../core/app_state.dart';
 import '../widgets/app_card.dart';
 import 'billing_payment_screen.dart';
 import 'document_viewer_screen.dart';
+import 'payments_history_screen.dart';
 
 class BillingHistoryScreen extends StatelessWidget {
   const BillingHistoryScreen({super.key});
@@ -84,6 +85,16 @@ class BillingHistoryScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
+                    ),
+                    child: const Text('Open payments history'),
+                  ),
                 ),
               ],
             ),

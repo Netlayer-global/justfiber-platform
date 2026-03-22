@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_state.dart';
 import '../widgets/app_card.dart';
 import 'document_viewer_screen.dart';
+import 'payment_detail_screen.dart';
 
 class PaymentsHistoryScreen extends StatefulWidget {
   const PaymentsHistoryScreen({super.key});
@@ -112,12 +113,20 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                     Row(
                       children: [
                         Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: payment)),
+                            ),
+                            child: const Text('View Details'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: OutlinedButton(
                             onPressed: payment.viewUrl.isEmpty ? null : () => _openDocument(context, appState, payment.transactionId, payment.viewUrl),
                             child: const Text('Open Receipt'),
                           ),
                         ),
-                        const SizedBox(width: 10),
                         Expanded(
                           child: FilledButton(
                             onPressed: payment.pdfUrl.isEmpty ? null : () => _openDocument(context, appState, '${payment.transactionId} PDF', payment.pdfUrl),
@@ -154,10 +163,15 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
   }
 
   Widget _statusBadge(payment) {
+    final pending = payment.paidAt.isEmpty;
     final failed = payment.reference.toLowerCase().contains('failed');
-    final label = failed ? 'Failed' : 'Success';
-    final color = failed ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7);
-    final text = failed ? const Color(0xFFB91C1C) : const Color(0xFF166534);
+    final label = failed ? 'Failed' : (pending ? 'Pending' : 'Success');
+    final color = failed
+        ? const Color(0xFFFEE2E2)
+        : (pending ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7));
+    final text = failed
+        ? const Color(0xFFB91C1C)
+        : (pending ? const Color(0xFF92400E) : const Color(0xFF166534));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),

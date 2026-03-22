@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_state.dart';
+import '../core/models.dart';
 import '../widgets/app_card.dart';
 
 class ServiceTrackingScreen extends StatelessWidget {
@@ -13,6 +14,8 @@ class ServiceTrackingScreen extends StatelessWidget {
     final latestBooking = appState.latestBooking;
     final bookingTracking = appState.bookingTracking;
     final visits = appState.installerVisits;
+    final requests = appState.requests;
+    final tickets = appState.tickets;
 
     return Scaffold(
       appBar: AppBar(
@@ -154,6 +157,54 @@ class ServiceTrackingScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 18),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Open requests', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                if (requests.isEmpty)
+                  const Text('No service requests created yet.', style: TextStyle(color: Color(0xFF7B625A)))
+                else
+                  ...requests.take(4).map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _requestTile(
+                        title: item.title,
+                        subtitle: '${item.referenceNumber} • ${item.createdAt.isEmpty ? '-' : item.createdAt}',
+                        status: item.status,
+                        onTap: () => _showRequestSheet(context, item),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Support tickets', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                if (tickets.isEmpty)
+                  const Text('No support tickets raised yet.', style: TextStyle(color: Color(0xFF7B625A)))
+                else
+                  ...tickets.take(4).map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _requestTile(
+                        title: item.subject,
+                        subtitle: '${item.ticketNumber} • ${item.createdAt.isEmpty ? '-' : item.createdAt}',
+                        status: item.status,
+                        onTap: () => _showTicketSheet(context, item),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -196,6 +247,92 @@ class ServiceTrackingScreen extends StatelessWidget {
           children: [
             TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700)),
             TextSpan(text: value),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _requestTile({
+    required String title,
+    required String subtitle,
+    required String status,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(status, style: TextStyle(color: _stepColor(status), fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showRequestSheet(BuildContext context, RequestItem item) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+            const SizedBox(height: 8),
+            Text(item.referenceNumber, style: const TextStyle(color: Color(0xFF7B625A), fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            _visitInfo('Type', item.type),
+            _visitInfo('Status', item.status),
+            _visitInfo('Created', item.createdAt.isEmpty ? '-' : item.createdAt),
+            _visitInfo('Note', item.note.isEmpty ? '-' : item.note),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showTicketSheet(BuildContext context, SupportTicketItem item) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(item.subject, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+            const SizedBox(height: 8),
+            Text(item.ticketNumber, style: const TextStyle(color: Color(0xFF7B625A), fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            _visitInfo('Category', item.category),
+            _visitInfo('Priority', item.priority),
+            _visitInfo('Status', item.status),
+            _visitInfo('Created', item.createdAt.isEmpty ? '-' : item.createdAt),
+            _visitInfo('Description', item.description.isEmpty ? '-' : item.description),
           ],
         ),
       ),
