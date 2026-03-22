@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
+import 'support_history_screen.dart';
 
 class ServiceTrackingScreen extends StatelessWidget {
   const ServiceTrackingScreen({super.key});
@@ -334,6 +335,19 @@ class ServiceTrackingScreen extends StatelessWidget {
             _visitInfo('Status', item.status),
             _visitInfo('Created', item.createdAt.isEmpty ? '-' : item.createdAt),
             _visitInfo('Note', item.note.isEmpty ? '-' : item.note),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                  );
+                },
+                child: const Text('Open Support Center'),
+              ),
+            ),
           ],
         ),
       ),
@@ -360,6 +374,19 @@ class ServiceTrackingScreen extends StatelessWidget {
             _visitInfo('Status', item.status),
             _visitInfo('Created', item.createdAt.isEmpty ? '-' : item.createdAt),
             _visitInfo('Description', item.description.isEmpty ? '-' : item.description),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                  );
+                },
+                child: const Text('Open Support Center'),
+              ),
+            ),
           ],
         ),
       ),

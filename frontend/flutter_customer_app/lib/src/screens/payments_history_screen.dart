@@ -4,6 +4,7 @@ import '../core/app_state.dart';
 import '../widgets/app_card.dart';
 import 'document_viewer_screen.dart';
 import 'payment_detail_screen.dart';
+import 'support_history_screen.dart';
 
 class PaymentsHistoryScreen extends StatefulWidget {
   const PaymentsHistoryScreen({super.key});
@@ -52,94 +53,101 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
               ),
             )
           else
-            ...payments.map((payment) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0EEFF),
-                            borderRadius: BorderRadius.circular(18),
+            ...payments.map(
+              (payment) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0EEFF),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF20242E)),
                           ),
-                          child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF20242E)),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Bill Payment • Broadband', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF70737C))),
-                              const SizedBox(height: 4),
-                              Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
-                              const SizedBox(height: 4),
-                              Text(
-                                payment.paidAt.isEmpty ? payment.provider.toUpperCase() : payment.paidAt,
-                                style: const TextStyle(color: Color(0xFF6D7280)),
-                              ),
-                            ],
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Bill Payment - Broadband',
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF70737C)),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  payment.paidAt.isEmpty ? payment.provider.toUpperCase() : payment.paidAt,
+                                  style: const TextStyle(color: Color(0xFF6D7280)),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Rs ${payment.amount.toStringAsFixed(0)}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _statusBadge(payment),
-                        if (payment.provider.isNotEmpty) _infoBadge(payment.provider.toUpperCase()),
-                        if (payment.reference.isNotEmpty) _infoBadge(payment.reference),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
+                          Text(
+                            'Rs ${payment.amount.toStringAsFixed(0)}',
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _statusBadge(payment),
+                          if (payment.provider.isNotEmpty) _infoBadge(payment.provider.toUpperCase()),
+                          if (payment.reference.isNotEmpty) _infoBadge(payment.reference),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          TextButton(
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: payment)),
                             ),
                             child: const Text('View Details'),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: OutlinedButton(
+                          OutlinedButton(
                             onPressed: payment.viewUrl.isEmpty ? null : () => _openDocument(context, appState, payment.transactionId, payment.viewUrl),
                             child: const Text('Open Receipt'),
                           ),
-                        ),
-                        Expanded(
-                          child: FilledButton(
+                          FilledButton(
                             onPressed: payment.pdfUrl.isEmpty ? null : () => _openDocument(context, appState, '${payment.transactionId} PDF', payment.pdfUrl),
                             style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
                             child: const Text('View PDF'),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          if (payment.paidAt.isEmpty || payment.reference.toLowerCase().contains('failed'))
+                            OutlinedButton(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                              ),
+                              child: const Text('Need Help'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            )),
+            ),
         ],
       ),
     );
@@ -162,16 +170,12 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     );
   }
 
-  Widget _statusBadge(payment) {
+  Widget _statusBadge(dynamic payment) {
     final pending = payment.paidAt.isEmpty;
     final failed = payment.reference.toLowerCase().contains('failed');
     final label = failed ? 'Failed' : (pending ? 'Pending' : 'Success');
-    final color = failed
-        ? const Color(0xFFFEE2E2)
-        : (pending ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7));
-    final text = failed
-        ? const Color(0xFFB91C1C)
-        : (pending ? const Color(0xFF92400E) : const Color(0xFF166534));
+    final color = failed ? const Color(0xFFFEE2E2) : (pending ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7));
+    final text = failed ? const Color(0xFFB91C1C) : (pending ? const Color(0xFF92400E) : const Color(0xFF166534));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
