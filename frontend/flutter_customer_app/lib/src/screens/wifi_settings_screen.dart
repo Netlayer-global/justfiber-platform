@@ -113,21 +113,15 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 ),
                 _actionTile(
                   icon: Icons.devices_rounded,
-                  title: 'Connected devices',
-                  subtitle: 'Track and manage devices connected to your Wi-Fi',
-                  onTap: () => _showConnectedDevices(context, appState),
+                  title: 'Connected devices & access',
+                  subtitle: 'Track connected devices and block or unblock access from one place',
+                  onTap: () => _showConnectedDevices(context, appState, accessMode: true),
                 ),
                 _actionTile(
                   icon: Icons.wifi_tethering_rounded,
                   title: 'Guest Wi-Fi',
                   subtitle: 'Set a separate name and password for your guests',
                   onTap: () => _showGuestWifiSheet(context, appState),
-                ),
-                _actionTile(
-                  icon: Icons.block_rounded,
-                  title: 'Manage Wi-Fi access',
-                  subtitle: 'Block or unblock specific connected devices',
-                  onTap: () => _showConnectedDevices(context, appState, accessMode: true),
                 ),
                 _actionTile(
                   icon: Icons.schedule_rounded,
@@ -340,7 +334,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     );
   }
 
-  Future<void> _showConnectedDevices(BuildContext context, AppState appState, {bool accessMode = false}) async {
+  Future<void> _showConnectedDevices(BuildContext context, AppState appState, {bool accessMode = true}) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

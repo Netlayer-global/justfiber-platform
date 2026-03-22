@@ -168,27 +168,43 @@ class BillingHistoryScreen extends StatelessWidget {
           const SizedBox(height: 18),
           _sectionCard(
             title: 'Payments',
-            child: billing.payments.isEmpty
-                ? const Text('No payment history available yet.', style: TextStyle(color: Color(0xFF6B7280)))
-                : Column(
-                    children: billing.payments
-                        .map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _documentRow(
-                              context,
-                              appState,
-                              title: item.transactionId,
-                              subtitle: item.paidAt.isEmpty ? item.provider.toUpperCase() : item.paidAt,
-                              amount: 'Rs ${item.amount.toStringAsFixed(2)}',
-                              meta: item.reference.isEmpty ? item.provider : item.reference,
-                              viewUrl: item.viewUrl,
-                              pdfUrl: item.pdfUrl,
-                            ),
-                          ),
-                        )
-                        .toList(),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    billing.payments.isEmpty
+                        ? 'No payment history available yet.'
+                        : 'Latest payment: ${billing.payments.first.amount.toStringAsFixed(2)} | ${billing.payments.first.paidAt.isEmpty ? billing.payments.first.provider.toUpperCase() : billing.payments.first.paidAt}',
+                    style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
                   ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
+                        ),
+                        child: const Text('Open payments history'),
+                      ),
+                      if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
+                        FilledButton.tonal(
+                          onPressed: () => _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl),
+                          child: const Text('Latest receipt'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 18),
           _sectionCard(
