@@ -46,19 +46,23 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       appBar: AppBar(
         title: Text('Wi-Fi Settings', style: Theme.of(context).textTheme.headlineSmall),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF1F0FF),
+        backgroundColor: const Color(0xFFF7F9FC),
         foregroundColor: const Color(0xFF17181C),
       ),
-      backgroundColor: const Color(0xFFF1F0FF),
+      backgroundColor: const Color(0xFFF7F9FC),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(28),
-              boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
+              boxShadow: const [BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,11 +73,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white)),
                           const SizedBox(height: 6),
                           Text(
                             'Quality: ${appState.networkQuality.quality} | Devices: ${wifi.connectedDevicesCount}',
-                            style: const TextStyle(color: Color(0xFF6B7280)),
+                            style: const TextStyle(color: Color(0xFFD1D5DB)),
                           ),
                         ],
                       ),
@@ -81,13 +85,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: wifi.paused ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+                        color: wifi.paused ? const Color(0x26EF4444) : const Color(0x1400F5D4),
                         borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: wifi.paused ? const Color(0x66EF4444) : const Color(0x6600F5D4)),
                       ),
                       child: Text(
                         wifi.paused ? 'Paused' : 'Online',
                         style: TextStyle(
-                          color: wifi.paused ? const Color(0xFF991B1B) : const Color(0xFF166534),
+                          color: wifi.paused ? const Color(0xFFFCA5A5) : const Color(0xFF00F5D4),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -168,28 +173,32 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1))),
+          border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0x22FFFFFF))),
         ),
         child: Row(
           children: [
             Container(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(color: const Color(0xFFF0EEFF), borderRadius: BorderRadius.circular(18)),
-              child: Icon(icon, color: const Color(0xFF22252D)),
+              decoration: BoxDecoration(
+                color: const Color(0x1400F5D4),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0x6600F5D4)),
+              ),
+              child: Icon(icon, color: const Color(0xFF00F5D4)),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF8A90A2)),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
           ],
         ),
       ),
@@ -200,12 +209,13 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: const Color(0x1400F5D4),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x6600F5D4)),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFF1F2937)),
+          style: const TextStyle(color: Colors.white),
           children: [
             TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
             TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),

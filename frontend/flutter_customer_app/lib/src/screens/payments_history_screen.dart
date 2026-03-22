@@ -59,10 +59,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFFFFF), Color(0xFFF7FFFE)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: const [
-                      BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
+                      BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
                     ],
                   ),
                   child: Column(
@@ -74,10 +78,10 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF0EEFF),
+                              color: const Color(0xFF0B0F19),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF20242E)),
+                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF00F5D4)),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -131,7 +135,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                           ),
                           FilledButton(
                             onPressed: payment.pdfUrl.isEmpty ? null : () => _openDocument(context, appState, '${payment.transactionId} PDF', payment.pdfUrl),
-                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
                             child: const Text('View PDF'),
                           ),
                           if (payment.paidAt.isEmpty || payment.reference.toLowerCase().contains('failed'))
@@ -160,12 +164,18 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE9E7FF) : Colors.white,
+          color: selected ? const Color(0xFF0B0F19) : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: selected ? const Color(0xFF8076FF) : const Color(0xFFE2E4F0)),
+          border: Border.all(color: selected ? const Color(0xFF00F5D4) : const Color(0xFFE2E4F0)),
         ),
         alignment: Alignment.center,
-        child: Text(label, style: TextStyle(fontWeight: FontWeight.w700, color: selected ? const Color(0xFF3C35A8) : const Color(0xFF40444F))),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: selected ? const Color(0xFF00F5D4) : const Color(0xFF40444F),
+          ),
+        ),
       ),
     );
   }
@@ -186,8 +196,11 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
   Widget _infoBadge(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
-      child: Text(text, style: const TextStyle(color: Color(0xFF4B5563), fontWeight: FontWeight.w600)),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B0F19),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(text, style: const TextStyle(color: Color(0xFF00F5D4), fontWeight: FontWeight.w600)),
     );
   }
 
