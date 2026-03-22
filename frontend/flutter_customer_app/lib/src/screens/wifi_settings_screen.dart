@@ -396,88 +396,104 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         final devices = appState.connectedDevices;
         final blockedCount = devices.where((device) => device.blocked).length;
         final allowedCount = devices.where((device) => !device.blocked).length;
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
-              const SizedBox(height: 18),
-              Text(accessMode ? 'Manage Wi-Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _statusChip('Connected', '${devices.length}'),
-                  _statusChip('Allowed', '$allowedCount'),
-                  _statusChip('Blocked', '$blockedCount'),
-                ],
-              ),
-              const SizedBox(height: 14),
-              if (devices.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text('No connected device at the moment. Try reconnecting to Wi-Fi or refresh later.'),
-                )
-              else
-                ...devices.map((device) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(18)),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 4),
-                              Text('${device.connectionType} | ${device.signal}', style: const TextStyle(color: Color(0xFF6B7280))),
-                            ],
-                          ),
-                        ),
-                        if (accessMode)
-                          Switch(
-                            value: !device.blocked,
-                            onChanged: appState.busy
-                                ? null
-                                : (allowed) async {
-                                    final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
-                                    if (!context.mounted) return;
-                                    if (!ok) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to update device access')));
-                                    }
-                                  },
-                        ),
-                      ],
-                    ),
-                  ),
-                )),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: appState.busy
-                      ? null
-                      : () async {
-                          await appState.refresh();
-                          if (!context.mounted) return;
-                          Navigator.of(context).pop();
-                          await _showConnectedDevices(context, appState, accessMode: accessMode);
-                        },
-                  child: const Text('Refresh device list'),
+          padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+          child: AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF09111D), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(accessMode ? 'Manage Wi-Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Colors.white)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _statusChip('Connected', '${devices.length}'),
+                    _statusChip('Allowed', '$allowedCount'),
+                    _statusChip('Blocked', '$blockedCount'),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                if (devices.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'No connected device at the moment. Try reconnecting to Wi-Fi or refresh later.',
+                      style: TextStyle(color: Color(0xFFD1D5DB)),
+                    ),
+                  )
+                else
+                  ...devices.map((device) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF08131B),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x3339FF14)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
+                                const SizedBox(height: 4),
+                                Text('${device.connectionType} | ${device.signal}', style: const TextStyle(color: Color(0xFFD1D5DB))),
+                              ],
+                            ),
+                          ),
+                          if (accessMode)
+                            Switch(
+                              value: !device.blocked,
+                              activeColor: const Color(0xFF39FF14),
+                              onChanged: appState.busy
+                                  ? null
+                                  : (allowed) async {
+                                      final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
+                                      if (!context.mounted) return;
+                                      if (!ok) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to update device access')));
+                                      }
+                                    },
+                            ),
+                        ],
+                      ),
+                    ),
+                  )),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: appState.busy
+                        ? null
+                        : () async {
+                            await appState.refresh();
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop();
+                            await _showConnectedDevices(context, appState, accessMode: accessMode);
+                          },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0x6639FF14)),
+                    ),
+                    child: const Text('Refresh device list'),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -491,54 +507,63 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         bool enabled = wifi.guestEnabled;
         return StatefulBuilder(
           builder: (context, setLocalState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
-                  const SizedBox(height: 18),
-                  const Text('Guest Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Enable guest network'),
-                    value: enabled,
-                    onChanged: (value) => setLocalState(() => enabled = value),
-                  ),
-                  TextField(controller: _guestSsidController, decoration: const InputDecoration(labelText: 'Guest Wi-Fi name')),
-                  const SizedBox(height: 12),
-                  TextField(controller: _guestPasswordController, obscureText: true, decoration: const InputDecoration(labelText: 'Guest password')),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: appState.busy
-                          ? null
-                          : () async {
-                              final ok = await appState.updateGuestWifi(
-                                enabled: enabled,
-                                ssid: _guestSsidController.text.trim(),
-                                password: _guestPasswordController.text.trim(),
-                              );
-                              if (!context.mounted) return;
-                              Navigator.of(context).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(ok ? 'Guest Wi-Fi updated' : (appState.error ?? 'Unable to update guest Wi-Fi'))),
-                              );
-                            },
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                      child: const Text('Save guest Wi-Fi'),
+              padding: EdgeInsets.fromLTRB(12, 16, 12, 12 + MediaQuery.of(context).viewInsets.bottom),
+              child: AppCard(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF09111D), Color(0xFF111827)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Guest Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Colors.white)),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Create a separate guest network with its own name and password.',
+                      style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Enable guest network', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                      value: enabled,
+                      activeColor: const Color(0xFF39FF14),
+                      onChanged: (value) => setLocalState(() => enabled = value),
+                    ),
+                    TextField(controller: _guestSsidController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Guest Wi-Fi name')),
+                    const SizedBox(height: 12),
+                    TextField(controller: _guestPasswordController, style: const TextStyle(color: Colors.white), obscureText: true, decoration: const InputDecoration(labelText: 'Guest password')),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: appState.busy
+                            ? null
+                            : () async {
+                                final ok = await appState.updateGuestWifi(
+                                  enabled: enabled,
+                                  ssid: _guestSsidController.text.trim(),
+                                  password: _guestPasswordController.text.trim(),
+                                );
+                                if (!context.mounted) return;
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(ok ? 'Guest Wi-Fi updated' : (appState.error ?? 'Unable to update guest Wi-Fi'))),
+                                );
+                              },
+                        child: const Text('Save guest Wi-Fi'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -554,99 +579,106 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         final rules = appState.parentalRules;
         return Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
-              const SizedBox(height: 18),
-              const Text('Parental controls', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
-              const SizedBox(height: 10),
-              if (rules.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    'No active rules right now. Add a schedule to automatically restrict Wi-Fi access.',
-                    style: TextStyle(color: Color(0xFF6B7280), height: 1.4),
-                  ),
-                )
-              else
-                ...rules.map(
-                  (rule) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(18)),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(rule.targetName, style: const TextStyle(fontWeight: FontWeight.w800)),
-                                const SizedBox(height: 4),
-                                Text('${rule.startTime} - ${rule.endTime}', style: const TextStyle(color: Color(0xFF6B7280))),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: rule.blocked ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                            child: Text(
-                              rule.blocked ? 'Blocked' : 'Allowed',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: rule.blocked ? const Color(0xFF92400E) : const Color(0xFF166534),
+          padding: EdgeInsets.fromLTRB(12, 16, 12, 12 + MediaQuery.of(context).viewInsets.bottom),
+          child: AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF09111D), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Parental controls', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Colors.white)),
+                const SizedBox(height: 10),
+                if (rules.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'No active rules right now. Add a schedule to automatically restrict Wi-Fi access.',
+                      style: TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                    ),
+                  )
+                else
+                  ...rules.map(
+                    (rule) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF08131B),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0x3339FF14)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(rule.targetName, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
+                                  const SizedBox(height: 4),
+                                  Text('${rule.startTime} - ${rule.endTime}', style: const TextStyle(color: Color(0xFFD1D5DB))),
+                                ],
                               ),
                             ),
-                          ),
-                        ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: rule.blocked ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              child: Text(
+                                rule.blocked ? 'Blocked' : 'Allowed',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: rule.blocked ? const Color(0xFF92400E) : const Color(0xFF166534),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                const SizedBox(height: 8),
+                TextField(controller: targetController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Rule or device name')),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: TextField(controller: startController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Start time (HH:MM)'))),
+                    const SizedBox(width: 12),
+                    Expanded(child: TextField(controller: endController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'End time (HH:MM)'))),
+                  ],
                 ),
-              const SizedBox(height: 8),
-              TextField(controller: targetController, decoration: const InputDecoration(labelText: 'Rule or device name')),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: startController, decoration: const InputDecoration(labelText: 'Start time (HH:MM)'))),
-                  const SizedBox(width: 12),
-                  Expanded(child: TextField(controller: endController, decoration: const InputDecoration(labelText: 'End time (HH:MM)'))),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: appState.busy
-                      ? null
-                      : () async {
-                          final ok = await appState.addParentalControl(
-                            targetName: targetController.text.trim(),
-                            startTime: startController.text.trim(),
-                            endTime: endController.text.trim(),
-                          );
-                          if (!context.mounted) return;
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(ok ? 'Parental control rule added' : (appState.error ?? 'Unable to add parental control'))),
-                          );
-                        },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                  child: const Text('Save parental control'),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: appState.busy
+                        ? null
+                        : () async {
+                            final ok = await appState.addParentalControl(
+                              targetName: targetController.text.trim(),
+                              startTime: startController.text.trim(),
+                              endTime: endController.text.trim(),
+                            );
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(ok ? 'Parental control rule added' : (appState.error ?? 'Unable to add parental control'))),
+                            );
+                          },
+                    child: const Text('Save parental control'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
