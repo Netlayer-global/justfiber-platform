@@ -48,6 +48,12 @@ class SupportHistoryScreen extends StatelessWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                      ),
+                      child: const Text('Open alerts center'),
+                    ),
                     _issueButton(
                       label: 'Internet issue',
                       onTap: () => _raiseQuickTicket(
@@ -142,45 +148,6 @@ class SupportHistoryScreen extends StatelessWidget {
                         )
                         .toList(),
                   ),
-          ),
-          const SizedBox(height: 18),
-          _sectionCard(
-            title: 'Recent notifications',
-            child: appState.notifications.isEmpty
-                ? const Text('No support notifications right now.', style: TextStyle(color: Color(0xFF6B7280)))
-                : Column(
-                    children: appState.notifications.take(8).map((item) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                              const SizedBox(height: 6),
-                              Text(item.body, style: const TextStyle(color: Color(0xFF6B7280))),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-              ),
-              child: const Text('Open all alerts'),
-            ),
           ),
         ],
       ),
