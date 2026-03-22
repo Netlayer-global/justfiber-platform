@@ -39,6 +39,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     final appState = AppStateScope.of(context);
     final wifi = appState.wifi;
     final title = wifi.ssid24.isEmpty ? 'Wi-Fi not configured' : wifi.ssid24;
+    final blockedCount = appState.connectedDevices.where((device) => device.blocked).length;
+    final allowedCount = appState.connectedDevices.where((device) => !device.blocked).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -90,6 +92,16 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                         ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _statusChip('Allowed devices', '$allowedCount'),
+                    _statusChip('Blocked devices', '$blockedCount'),
+                    _statusChip('Guest Wi-Fi', wifi.guestEnabled ? 'On' : 'Off'),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -178,6 +190,25 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               ),
             ),
             const Icon(Icons.chevron_right_rounded, color: Color(0xFF8A90A2)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF1F2937)),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
           ],
         ),
       ),
@@ -342,6 +373,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (context) {
         final devices = appState.connectedDevices;
+        final blockedCount = devices.where((device) => device.blocked).length;
+        final allowedCount = devices.where((device) => !device.blocked).length;
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
           child: Column(
@@ -351,6 +384,16 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
               const SizedBox(height: 18),
               Text(accessMode ? 'Manage Wi-Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _statusChip('Connected', '${devices.length}'),
+                  _statusChip('Allowed', '$allowedCount'),
+                  _statusChip('Blocked', '$blockedCount'),
+                ],
+              ),
               const SizedBox(height: 14),
               if (devices.isEmpty)
                 const Padding(
@@ -387,11 +430,26 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to update device access')));
                                     }
                                   },
-                          ),
+                        ),
                       ],
                     ),
                   ),
                 )),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: appState.busy
+                      ? null
+                      : () async {
+                          await appState.refresh();
+                          if (!context.mounted) return;
+                          Navigator.of(context).pop();
+                          await _showConnectedDevices(context, appState, accessMode: accessMode);
+                        },
+                  child: const Text('Refresh device list'),
+                ),
+              ),
             ],
           ),
         );
