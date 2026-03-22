@@ -30,16 +30,30 @@ class _HomeScreenState extends State<HomeScreen> {
       body: GradientOrbBackground(
         child: SafeArea(child: pages[index]),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
-        onTap: (value) => setState(() => index = value),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.wifi_rounded), label: 'Services'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded), label: 'Billing'),
-          BottomNavigationBarItem(icon: Icon(Icons.support_agent_rounded), label: 'Support'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
-        ],
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B0F19),
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const [
+            BoxShadow(color: Color(0x26030B14), blurRadius: 24, offset: Offset(0, 10)),
+          ],
+          border: Border.all(color: const Color(0x3300F5D4)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BottomNavigationBar(
+            currentIndex: index,
+            onTap: (value) => setState(() => index = value),
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+              BottomNavigationBarItem(icon: Icon(Icons.wifi_rounded), label: 'Services'),
+              BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded), label: 'Billing'),
+              BottomNavigationBarItem(icon: Icon(Icons.support_agent_rounded), label: 'Support'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
+            ],
+          ),
+        ),
       ),
     );
   }

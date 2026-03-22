@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildJustFiberTheme() {
-  const background = Color(0xFFF4F2FF);
+  const background = Color(0xFFF7F9FC);
   const surface = Color(0xFFFFFFFF);
-  const surfaceAlt = Color(0xFFF7F7FB);
-  const primary = Color(0xFFD81F26);
-  const accent = Color(0xFF315EFB);
-  const text = Color(0xFF16171D);
-  const muted = Color(0xFF6B7280);
+  const surfaceAlt = Color(0xFFF1F5F9);
+  const primary = Color(0xFF0B0F19);
+  const accent = Color(0xFF00F5D4);
+  const tertiary = Color(0xFF00C2FF);
+  const text = Color(0xFF05070D);
+  const muted = Color(0xFF64748B);
 
   return ThemeData(
     colorScheme: const ColorScheme.light(
       primary: primary,
       secondary: accent,
-      tertiary: Color(0xFF7C3AED),
+      tertiary: tertiary,
       error: Color(0xFFDC2626),
       background: background,
       surface: surface,
       onSurface: text,
       onPrimary: Colors.white,
-      onSecondary: Colors.white,
+      onSecondary: Color(0xFF031B17),
       onBackground: text,
     ),
     scaffoldBackgroundColor: background,
@@ -53,7 +54,7 @@ ThemeData buildJustFiberTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: primary, width: 1.2),
+        borderSide: const BorderSide(color: accent, width: 1.4),
       ),
       hintStyle: const TextStyle(color: muted),
     ),
@@ -63,8 +64,8 @@ ThemeData buildJustFiberTheme() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: Color(0xFFFFFFFF),
-      selectedItemColor: primary,
+      backgroundColor: Color(0xFF0B0F19),
+      selectedItemColor: accent,
       unselectedItemColor: muted,
       selectedLabelStyle: TextStyle(fontWeight: FontWeight.w700),
       showUnselectedLabels: true,
@@ -82,7 +83,7 @@ ThemeData buildJustFiberTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: text,
-        side: const BorderSide(color: Color(0xFFD3D8E5)),
+        side: const BorderSide(color: Color(0xFFCBD5E1)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
@@ -90,9 +91,15 @@ ThemeData buildJustFiberTheme() {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: accent,
+        foregroundColor: tertiary,
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
       ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: primary,
+      contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      behavior: SnackBarBehavior.floating,
     ),
   );
 }
