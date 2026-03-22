@@ -11,60 +11,66 @@ class SupportHistoryScreen extends StatelessWidget {
     final appState = AppStateScope.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Support & Complaints'),
-        backgroundColor: const Color(0xFF090C1A),
-        foregroundColor: Colors.white,
-      ),
-      backgroundColor: const Color(0xFF060816),
+      appBar: AppBar(title: const Text('Support & requests')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF5B132A), Color(0xFF9333EA)],
+              colors: [Color(0xFFF4F5FF), Color(0xFFFFF3F4)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Need help?', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
+                const Text('Get instant support', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26)),
                 const SizedBox(height: 10),
-                Text(
-                  'Raise broadband, billing, or plan change complaints and track recent requests here.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                const Text(
+                  'Raise broadband, billing, shift connection, and service complaints from one place.',
+                  style: TextStyle(color: Color(0xFF6B7280), height: 1.45),
                 ),
-                const SizedBox(height: 14),
-                Row(
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: appState.busy
-                            ? null
-                            : () => _raiseQuickTicket(
-                                  context,
-                                  appState,
-                                  category: 'billing',
-                                  subject: 'Need billing help',
-                                  description: 'Customer needs help with billing, payment, or renewal.',
-                                ),
-                        child: const Text('Raise billing ticket'),
+                    _issueButton(
+                      label: 'Internet issue',
+                      onTap: () => _raiseQuickTicket(
+                        context,
+                        appState,
+                        category: 'technical',
+                        subject: 'Internet issue',
+                        description: 'Customer is facing internet or connectivity issues.',
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: appState.busy
-                            ? null
-                            : () => _raiseQuickTicket(
-                                  context,
-                                  appState,
-                                  category: 'technical',
-                                  subject: 'Internet issue',
-                                  description: 'Customer is facing internet or device related issues.',
-                                ),
-                        child: const Text('Raise internet issue'),
+                    _issueButton(
+                      label: 'Billing issue',
+                      onTap: () => _raiseQuickTicket(
+                        context,
+                        appState,
+                        category: 'billing',
+                        subject: 'Billing help needed',
+                        description: 'Customer needs help with bill, payment, or recharge.',
+                      ),
+                    ),
+                    _issueButton(
+                      label: 'Shift connection',
+                      onTap: () => _createServiceRequest(
+                        context,
+                        appState,
+                        type: 'shift_connection',
+                        note: 'Customer wants to shift the Wi-Fi connection.',
+                      ),
+                    ),
+                    _issueButton(
+                      label: 'Plan issue',
+                      onTap: () => _createServiceRequest(
+                        context,
+                        appState,
+                        type: 'plan_issue',
+                        note: 'Customer needs help with plan or recharge.',
                       ),
                     ),
                   ],
@@ -73,74 +79,103 @@ class SupportHistoryScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Recent requests', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (appState.requests.isEmpty)
-                  const Text('No requests or complaints yet.', style: TextStyle(color: Color(0xFF7B625A)))
-                else
-                  ...appState.requests.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              margin: const EdgeInsets.only(top: 6),
-                              decoration: BoxDecoration(
-                                color: _statusColor(item.status),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 4),
-                                  Text(item.createdAt, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              item.status,
-                              style: TextStyle(color: _statusColor(item.status), fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      )),
-              ],
-            ),
+          _sectionCard(
+            title: 'Open requests',
+            child: appState.requests.isEmpty
+                ? const Text('No requests or complaints yet.', style: TextStyle(color: Color(0xFF6B7280)))
+                : Column(
+                    children: appState.requests
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _statusRow(item.title, item.createdAt, item.status),
+                          ),
+                        )
+                        .toList(),
+                  ),
           ),
           const SizedBox(height: 18),
-          AppCard(
+          _sectionCard(
+            title: 'Recent notifications',
+            child: appState.notifications.isEmpty
+                ? const Text('No support notifications right now.', style: TextStyle(color: Color(0xFF6B7280)))
+                : Column(
+                    children: appState.notifications.take(8).map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                              const SizedBox(height: 6),
+                              Text(item.body, style: const TextStyle(color: Color(0xFF6B7280))),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _issueButton({required String label, required VoidCallback onTap}) {
+    return OutlinedButton(
+      onPressed: onTap,
+      child: Text(label),
+    );
+  }
+
+  Widget _sectionCard({required String title, required Widget child}) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _statusRow(String title, String createdAt, String status) {
+    final color = _statusColor(status);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Recent notifications', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (appState.notifications.isEmpty)
-                  const Text('No support notifications yet.', style: TextStyle(color: Color(0xFF7B625A)))
-                else
-                  ...appState.notifications.take(6).map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 4),
-                            Text(item.body, style: const TextStyle(color: Color(0xFF7B625A))),
-                          ],
-                        ),
-                      )),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF6B7280))),
               ],
             ),
           ),
+          Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -169,12 +204,27 @@ class SupportHistoryScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _createServiceRequest(
+    BuildContext context,
+    AppState appState, {
+    required String type,
+    required String note,
+  }) async {
+    final requestNumber = await appState.submitServiceRequest(type: type, note: note);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(requestNumber == null ? (appState.error ?? 'Unable to create request') : 'Request created: $requestNumber'),
+      ),
+    );
+  }
+
   Color _statusColor(String status) {
     final normalized = status.toLowerCase();
-    if (normalized.contains('closed') || normalized.contains('resolved') || normalized.contains('done')) {
-      return const Color(0xFF22C55E);
+    if (normalized.contains('closed') || normalized.contains('resolved') || normalized.contains('done') || normalized.contains('completed')) {
+      return const Color(0xFF16A34A);
     }
-    if (normalized.contains('pending') || normalized.contains('open')) {
+    if (normalized.contains('pending') || normalized.contains('open') || normalized.contains('in-progress')) {
       return const Color(0xFFF59E0B);
     }
     return const Color(0xFFD81F26);

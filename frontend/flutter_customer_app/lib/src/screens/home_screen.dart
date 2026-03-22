@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/gradient_orb_background.dart';
+import 'billing_history_screen.dart';
 import 'service_hub_screen.dart';
+import 'support_history_screen.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/profile_tab.dart';
-import 'tabs/shop_tab.dart';
-import 'tabs/points_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,8 +22,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final pages = [
       HomeTab(onNavigate: (value) => setState(() => index = value)),
       const ServiceHubScreen(),
-      const ShopTab(),
-      const PointsTab(),
+      const BillingHistoryScreen(),
+      const SupportHistoryScreen(),
       const ProfileTab(),
     ];
     return Scaffold(
@@ -36,8 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.wifi_rounded), label: 'Services'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_bag_rounded), label: 'Shop'),
-          BottomNavigationBarItem(icon: Icon(Icons.stars_rounded), label: 'Points'),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded), label: 'Billing'),
+          BottomNavigationBarItem(icon: Icon(Icons.support_agent_rounded), label: 'Support'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
         ],
       ),

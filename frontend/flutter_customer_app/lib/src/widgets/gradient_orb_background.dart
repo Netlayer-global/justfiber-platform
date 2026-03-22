@@ -10,16 +10,16 @@ class GradientOrbBackground extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2C0E8C), Color(0xFF110F1E), Color(0xFF0A0D19)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF4F2FF), Color(0xFFF9F7FF), Color(0xFFF4F6FF)],
         ),
       ),
       child: Stack(
         children: [
-          Positioned(top: -80, right: -30, child: _orb(const Color(0x667646FF), 220)),
-          Positioned(top: 210, left: -70, child: _orb(const Color(0x553D9BFF), 180)),
-          Positioned(bottom: -90, right: -40, child: _orb(const Color(0x33FFFFFF), 200)),
+          Positioned(top: -80, right: -30, child: _orb(const Color(0x24D81F26), 220)),
+          Positioned(top: 240, left: -70, child: _orb(const Color(0x18315EFB), 180)),
+          Positioned(bottom: -90, right: -40, child: _orb(const Color(0x187C3AED), 200)),
           child,
         ],
       ),

@@ -29,11 +29,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Payments', style: Theme.of(context).textTheme.headlineSmall),
-        centerTitle: true,
-        backgroundColor: const Color(0xFFF1F0FF),
-        foregroundColor: const Color(0xFF17181C),
       ),
-      backgroundColor: const Color(0xFFF1F0FF),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
@@ -85,7 +81,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Bill Payment · Broadband', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF70737C))),
+                              const Text('Bill Payment • Broadband', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF70737C))),
                               const SizedBox(height: 4),
                               Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
                               const SizedBox(height: 4),

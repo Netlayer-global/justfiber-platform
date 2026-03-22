@@ -15,32 +15,57 @@ class BillingHistoryScreen extends StatelessWidget {
     final billing = appState.billing;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Billing History'),
-        backgroundColor: const Color(0xFF090C1A),
-        foregroundColor: Colors.white,
-      ),
-      backgroundColor: const Color(0xFF060816),
+      appBar: AppBar(title: const Text('Billing')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF1A2250), Color(0xFF2F3E8F)],
+              colors: [Color(0xFFFFF5F5), Color(0xFFF4F5FF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Account billing snapshot', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
-                const SizedBox(height: 12),
-                _row('Current plan', billing.currentPlan),
-                _row('Bill mode', billing.billMode),
-                _row('Payment status', billing.paymentStatus),
-                _row('Due amount', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
-                _row('Next bill date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),
-                const SizedBox(height: 12),
+                const Text('Current bill', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26)),
+                const SizedBox(height: 10),
+                Text(
+                  'Rs ${billing.dueAmount.toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 34),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(child: _summaryTile('Generated', billing.generatedDate.isEmpty ? '-' : billing.generatedDate)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryTile('Due date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _summaryTile('Cycle', billing.billCycle)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryTile('Mode', billing.billMode)),
+                  ],
+                ),
+                if (billing.pendingPlanChange != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFFFF),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      'Pending plan change: ${billing.pendingPlanChange!.planName}',
+                      style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1F2937)),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -48,13 +73,15 @@ class BillingHistoryScreen extends StatelessWidget {
                         onPressed: appState.busy || billing.dueAmount <= 0
                             ? null
                             : () => _payNow(context, appState, amount: billing.dueAmount),
-                        child: const Text('Pay now'),
+                        child: Text(billing.pendingPlanChange != null ? 'Pay to switch plan' : 'Pay now'),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    OutlinedButton(
-                      onPressed: appState.busy ? null : () => appState.refresh(),
-                      child: const Text('Refresh'),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: appState.busy ? null : appState.refresh,
+                        child: const Text('Refresh'),
+                      ),
                     ),
                   ],
                 ),
@@ -62,83 +89,111 @@ class BillingHistoryScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Invoices', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (billing.invoices.isEmpty)
-                  const Text('No invoices yet.', style: TextStyle(color: Color(0xFF7B625A)))
-                else
-                  ...billing.invoices.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _documentRow(
-                          context,
-                          appState,
-                          title: item.invoiceNumber.isEmpty ? 'Invoice' : item.invoiceNumber,
-                          subtitle: 'Due ${item.dueDate.isEmpty ? '-' : item.dueDate}',
-                          amount: 'Rs ${item.totalAmount.toStringAsFixed(0)}',
-                          trailing: item.paymentStatus,
-                          viewUrl: item.viewUrl,
-                          pdfUrl: item.pdfUrl,
-                        ),
-                      )),
-              ],
-            ),
+          _sectionCard(
+            title: 'Invoices',
+            child: billing.invoices.isEmpty
+                ? const Text('No invoices available yet.', style: TextStyle(color: Color(0xFF6B7280)))
+                : Column(
+                    children: billing.invoices
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _documentRow(
+                              context,
+                              appState,
+                              title: item.invoiceNumber.isEmpty ? 'Invoice' : item.invoiceNumber,
+                              subtitle: 'Generated ${item.generatedAt.isEmpty ? '-' : item.generatedAt}',
+                              amount: 'Rs ${item.totalAmount.toStringAsFixed(2)}',
+                              meta: item.paymentStatus,
+                              viewUrl: item.viewUrl,
+                              pdfUrl: item.pdfUrl,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
           ),
           const SizedBox(height: 18),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Payments', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (billing.payments.isEmpty)
-                  const Text('No payments yet.', style: TextStyle(color: Color(0xFF7B625A)))
-                else
-                  ...billing.payments.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _documentRow(
-                          context,
-                          appState,
-                          title: item.transactionId,
-                          subtitle: '${item.provider.toUpperCase()}  ${item.paidAt.isEmpty ? '-' : item.paidAt}',
-                          amount: 'Rs ${item.amount.toStringAsFixed(0)}',
-                          trailing: item.reference.isEmpty ? 'receipt' : item.reference,
-                          viewUrl: item.viewUrl,
-                          pdfUrl: item.pdfUrl,
-                        ),
-                      )),
-              ],
-            ),
+          _sectionCard(
+            title: 'Payments',
+            child: billing.payments.isEmpty
+                ? const Text('No payment history available yet.', style: TextStyle(color: Color(0xFF6B7280)))
+                : Column(
+                    children: billing.payments
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _documentRow(
+                              context,
+                              appState,
+                              title: item.transactionId,
+                              subtitle: item.paidAt.isEmpty ? item.provider.toUpperCase() : item.paidAt,
+                              amount: 'Rs ${item.amount.toStringAsFixed(2)}',
+                              meta: item.reference.isEmpty ? item.provider : item.reference,
+                              viewUrl: item.viewUrl,
+                              pdfUrl: item.pdfUrl,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
           ),
           const SizedBox(height: 18),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Billing notes', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (billing.notes.isEmpty)
-                  const Text('No billing notes.', style: TextStyle(color: Color(0xFF7B625A)))
-                else
-                  ...billing.notes.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _documentRow(
-                          context,
-                          appState,
-                          title: item.noteNumber,
-                          subtitle: item.reason.isEmpty ? item.type : item.reason,
-                          amount: 'Rs ${item.totalAmount.toStringAsFixed(0)}',
-                          trailing: item.issuedAt.isEmpty ? item.type : item.issuedAt,
-                          viewUrl: item.viewUrl,
-                          pdfUrl: item.pdfUrl,
-                        ),
-                      )),
-              ],
-            ),
+          _sectionCard(
+            title: 'Billing notes',
+            child: billing.notes.isEmpty
+                ? const Text('No billing notes right now.', style: TextStyle(color: Color(0xFF6B7280)))
+                : Column(
+                    children: billing.notes
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _documentRow(
+                              context,
+                              appState,
+                              title: item.noteNumber,
+                              subtitle: item.reason.isEmpty ? item.type : item.reason,
+                              amount: 'Rs ${item.totalAmount.toStringAsFixed(2)}',
+                              meta: item.issuedAt.isEmpty ? item.type : item.issuedAt,
+                              viewUrl: item.viewUrl,
+                              pdfUrl: item.pdfUrl,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryTile(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionCard({required String title, required Widget child}) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+          const SizedBox(height: 14),
+          child,
         ],
       ),
     );
@@ -150,68 +205,65 @@ class BillingHistoryScreen extends StatelessWidget {
     required String title,
     required String subtitle,
     required String amount,
-    required String trailing,
+    required String meta,
     required String viewUrl,
     required String pdfUrl,
   }) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              Text(subtitle, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
-              Wrap(
-                spacing: 8,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280))),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  if (viewUrl.isNotEmpty)
-                    TextButton(
-                      onPressed: () => _openDocument(context, appState, title, viewUrl),
-                      child: const Text('Open'),
-                    ),
-                  if (pdfUrl.isNotEmpty)
-                    TextButton(
-                      onPressed: () => _openDocument(context, appState, '$title PDF', pdfUrl),
-                      child: const Text('Open PDF'),
-                    ),
-                  if (pdfUrl.isNotEmpty || viewUrl.isNotEmpty)
-                    TextButton(
-                      onPressed: () => _shareDocument(appState, pdfUrl.isNotEmpty ? pdfUrl : viewUrl),
-                      child: const Text('Share'),
-                    ),
+                  Text(amount, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                  const SizedBox(height: 4),
+                  Text(meta, style: const TextStyle(color: Color(0xFFD81F26), fontWeight: FontWeight.w700)),
                 ],
               ),
             ],
           ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(amount, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(trailing, style: const TextStyle(color: Color(0xFFD81F26), fontSize: 12)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _row(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(color: Colors.white70)),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          if (viewUrl.isNotEmpty || pdfUrl.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (viewUrl.isNotEmpty)
+                  OutlinedButton(
+                    onPressed: () => _openDocument(context, appState, title, viewUrl),
+                    child: const Text('Open'),
+                  ),
+                if (pdfUrl.isNotEmpty)
+                  FilledButton.tonal(
+                    onPressed: () => _openDocument(context, appState, '$title PDF', pdfUrl),
+                    child: const Text('Open PDF'),
+                  ),
+                if (pdfUrl.isNotEmpty || viewUrl.isNotEmpty)
+                  TextButton(
+                    onPressed: () => _shareDocument(appState, pdfUrl.isNotEmpty ? pdfUrl : viewUrl),
+                    child: const Text('Share'),
+                  ),
+              ],
             ),
-          ),
+          ],
         ],
       ),
     );

@@ -119,27 +119,24 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bill Payment'),
-        backgroundColor: const Color(0xFF090C1A),
-        foregroundColor: Colors.white,
       ),
-      backgroundColor: const Color(0xFF060816),
       body: Column(
         children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            color: const Color(0xFF111935),
+            color: Colors.white,
             child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Razorpay Checkout', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                      const Text('Razorpay Checkout', style: TextStyle(color: Color(0xFF16171D), fontWeight: FontWeight.w700)),
                       const SizedBox(height: 4),
                       Text(
                         'Amount: Rs ${widget.paymentOrder.amount.toStringAsFixed(0)}',
-                        style: const TextStyle(color: Color(0xFFD7DBF4)),
+                        style: const TextStyle(color: Color(0xFF6B7280)),
                       ),
                     ],
                   ),
@@ -158,20 +155,23 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F1630),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x120F172A), blurRadius: 24, offset: Offset(0, 12)),
+                    ],
                   ),
                   child: Column(
                     children: [
                       Icon(
                         paymentError == null ? Icons.payments_rounded : Icons.error_outline_rounded,
                         size: 72,
-                        color: Colors.white.withOpacity(0.9),
+                        color: const Color(0xFF16171D),
                       ),
                       const SizedBox(height: 20),
                       Text(
                         paymentError == null ? 'Secure payment window opens automatically.' : 'Payment needs your attention.',
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                        style: const TextStyle(color: Color(0xFF16171D), fontSize: 18, fontWeight: FontWeight.w700),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
@@ -180,7 +180,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                         child: Text(
                           paymentError ??
                               'If nothing appears, tap Retry to launch Razorpay again.',
-                          style: const TextStyle(color: Color(0xFFD7DBF4)),
+                          style: const TextStyle(color: Color(0xFF6B7280)),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -193,7 +193,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                         ),
                       ],
                       const SizedBox(height: 24),
-                      if (launching) const CircularProgressIndicator(color: Colors.white),
+                      if (launching) const CircularProgressIndicator(),
                       if (!launching) ...[
                         SizedBox(
                           width: double.infinity,
