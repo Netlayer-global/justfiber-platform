@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/app_state.dart';
 import '../widgets/app_card.dart';
 import 'booking_flow_screen.dart';
+import 'notifications_screen.dart';
 import 'support_history_screen.dart';
 
 class ServiceTrackingScreen extends StatelessWidget {
@@ -231,6 +232,16 @@ class ServiceTrackingScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                    ),
+                    child: const Text('Open all alerts'),
+                  ),
+                ),
               ],
             ),
           ),
