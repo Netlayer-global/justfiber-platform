@@ -30,10 +30,14 @@ class PaymentDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(28),
               boxShadow: const [
-                BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
+                BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
               ],
             ),
             child: Column(
@@ -45,25 +49,26 @@ class PaymentDetailScreen extends StatelessWidget {
                       width: 58,
                       height: 58,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8FFF1),
+                        color: const Color(0x1400F5D4),
                         borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x6600F5D4)),
                       ),
-                      child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 34),
+                      child: const Icon(Icons.check_circle_rounded, color: Color(0xFF00F5D4), size: 34),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Broadband payment', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
+                          const Text('Broadband payment', style: TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700)),
                           const SizedBox(height: 4),
-                          Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                          Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Colors.white)),
                         ],
                       ),
                     ),
                     Text(
                       'Rs ${payment.amount.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFF00F5D4)),
                     ),
                   ],
                 ),
@@ -130,13 +135,13 @@ class PaymentDetailScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+            child: Text(label, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600)),
           ),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
             ),
           ),
         ],

@@ -19,20 +19,23 @@ class NotificationsScreen extends StatelessWidget {
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFFF4F5FF), Color(0xFFEFF6FF)],
+              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Stay updated', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26)),
+                const Text(
+                  'Stay updated',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: Colors.white),
+                ),
                 const SizedBox(height: 10),
                 Text(
                   notifications.isEmpty
                       ? 'There are no active alerts right now.'
                       : 'You have ${notifications.length} recent service, billing, or support alerts.',
-                  style: const TextStyle(color: Color(0xFF6B7280), height: 1.45),
+                  style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -41,11 +44,16 @@ class NotificationsScreen extends StatelessWidget {
                   children: [
                     FilledButton(
                       onPressed: appState.busy ? null : appState.refresh,
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00F5D4), foregroundColor: const Color(0xFF031B17)),
                       child: const Text('Refresh'),
                     ),
                     OutlinedButton(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0x6600F5D4)),
                       ),
                       child: const Text('Open Support Center'),
                     ),
@@ -66,8 +74,9 @@ class NotificationsScreen extends StatelessWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: const Color(0xFFF8FBFF),
                             borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0x2200C2FF)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

@@ -58,14 +58,14 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           children: [
             Text('Book Wi-Fi', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 2),
-            const Text('Address, plan, and booking in one flow', style: TextStyle(fontSize: 15, color: Color(0xFF6B7280))),
+            const Text('Address, plan, and booking in one flow', style: TextStyle(fontSize: 15, color: Color(0xFF64748B))),
           ],
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF4F2FF),
+        backgroundColor: const Color(0xFFF7F9FC),
         foregroundColor: const Color(0xFF17181C),
       ),
-      backgroundColor: const Color(0xFFF4F2FF),
+      backgroundColor: const Color(0xFFF7F9FC),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
         children: [
@@ -206,7 +206,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         );
                       }
                     },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD81F26)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00F5D4), foregroundColor: const Color(0xFF031B17)),
               child: Text(appState.bookingBusy ? 'Checking...' : 'Confirm & View Plans'),
             ),
           ),
@@ -235,7 +235,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             width: double.infinity,
             child: FilledButton(
               onPressed: selectedPlanCode == null ? null : () => setState(() => step = 2),
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
               child: const Text('Continue to Booking'),
             ),
           ),
@@ -337,7 +337,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         );
                       }
                     },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD81F26)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00F5D4), foregroundColor: const Color(0xFF031B17)),
               child: Text(appState.bookingBusy ? 'Booking...' : 'Create Booking'),
             ),
           ),
@@ -356,12 +356,16 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFDCFCE7),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               'Booking ${latestBooking.bookingNumber} is ${latestBooking.status}.',
-              style: const TextStyle(color: Color(0xFF166534), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFF00F5D4), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(height: 16),
@@ -411,7 +415,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               Expanded(
                 child: FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
                   child: const Text('Done'),
                 ),
               ),
