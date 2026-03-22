@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
 import '../../widgets/app_card.dart';
-import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
 import '../booking_flow_screen.dart';
-import '../service_hub_screen.dart';
 import '../service_tracking_screen.dart';
-import '../support_history_screen.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key, required this.onNavigate});
@@ -24,7 +21,6 @@ class HomeTab extends StatelessWidget {
     final displayName = dashboard.customerName.isEmpty ? 'JustFiber Customer' : dashboard.customerName;
     final planName = billing.currentPlan.isNotEmpty ? billing.currentPlan : (dashboard.planName.isNotEmpty ? dashboard.planName : 'No active plan yet');
     final wifiName = wifi.ssid24.isNotEmpty ? wifi.ssid24 : (dashboard.wifiName.isNotEmpty ? dashboard.wifiName : 'Wi-Fi not configured');
-    final billMode = billing.billMode.isEmpty ? 'Not set' : billing.billMode;
     final hasService = billing.currentPlan.isNotEmpty || wifi.ssid24.isNotEmpty || dashboard.planName.isNotEmpty;
 
     return ListView(
@@ -40,8 +36,8 @@ class HomeTab extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     hasService
-                        ? 'See your live service status, current due, Wi-Fi controls, and support from one dashboard.'
-                        : 'Check availability, select a plan, and create a real broadband booking flow from here.',
+                        ? 'See your live service status, due amount, latest updates, and request tracking from one dashboard.'
+                        : 'Check availability, select a plan, and create a new broadband booking.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -73,7 +69,7 @@ class HomeTab extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                hasService ? '$planName • $wifiName' : 'Check availability, choose a plan, and book your connection.',
+                hasService ? '$planName | $wifiName' : 'Check availability, choose a plan, and book your connection.',
                 style: const TextStyle(color: Color(0xFF4B5563), height: 1.45),
               ),
               const SizedBox(height: 18),
@@ -82,7 +78,7 @@ class HomeTab extends StatelessWidget {
                 runSpacing: 10,
                 children: [
                   _metricPill('Due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
-                  _metricPill('Mode', billMode),
+                  _metricPill('Status', hasService ? (wifi.paused ? 'Paused' : 'Active') : 'No service'),
                   _metricPill('Devices', '${wifi.connectedDevicesCount}'),
                 ],
               ),
@@ -103,11 +99,11 @@ class HomeTab extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: hasService
-                          ? () => _payBill(context, appState)
+                          ? () => onNavigate(2)
                           : () => Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
                               ),
-                      child: Text(hasService ? 'Pay Bill' : 'Track Request'),
+                      child: Text(hasService ? 'Open Billing' : 'Track Request'),
                     ),
                   ),
                 ],
@@ -116,40 +112,27 @@ class HomeTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        _sectionTitle(context, 'Quick actions', trailing: TextButton(onPressed: () => onNavigate(1), child: const Text('Manage service'))),
-        GridView.count(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 1.25,
-          children: [
-            _actionCard(
-              icon: Icons.add_home_work_outlined,
-              title: 'New Booking',
-              subtitle: 'Check address and create a new connection request',
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingFlowScreen())),
-            ),
-            _actionCard(
-              icon: Icons.receipt_long_rounded,
-              title: 'Billing',
-              subtitle: 'Invoices, dues, receipts, and payment history',
-              onTap: () => onNavigate(2),
-            ),
-            _actionCard(
-              icon: Icons.router_outlined,
-              title: 'Wi-Fi Settings',
-              subtitle: 'Password, guest Wi-Fi, devices, diagnostics',
-              onTap: () => onNavigate(1),
-            ),
-            _actionCard(
-              icon: Icons.support_agent_rounded,
-              title: 'Support',
-              subtitle: 'Complaints, service requests, and help',
-              onTap: () => onNavigate(3),
-            ),
-          ],
+        _sectionTitle(context, 'Primary sections'),
+        const SizedBox(height: 10),
+        _navCard(
+          icon: Icons.router_outlined,
+          title: 'Services',
+          subtitle: 'Wi-Fi settings, diagnostics, devices, shift connection, and plan controls',
+          onTap: () => onNavigate(1),
+        ),
+        const SizedBox(height: 12),
+        _navCard(
+          icon: Icons.receipt_long_rounded,
+          title: 'Billing',
+          subtitle: 'Bills, invoices, receipts, payment history, and dues',
+          onTap: () => onNavigate(2),
+        ),
+        const SizedBox(height: 12),
+        _navCard(
+          icon: Icons.support_agent_rounded,
+          title: 'Support',
+          subtitle: 'Complaints, service requests, notifications, and help',
+          onTap: () => onNavigate(3),
         ),
         const SizedBox(height: 18),
         if (billing.dueAmount > 0)
@@ -190,12 +173,7 @@ class HomeTab extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
-                        ),
-                        child: const Text('View bill'),
-                      ),
+                      child: OutlinedButton(onPressed: () => onNavigate(2), child: const Text('Open billing')),
                     ),
                   ],
                 ),
@@ -215,16 +193,6 @@ class HomeTab extends StatelessWidget {
               _infoRow('Connected devices', '${wifi.connectedDevicesCount}'),
               _infoRow('Service state', hasService ? (wifi.paused ? 'Paused' : 'Active') : 'Not active'),
               if (billing.pendingPlanChange != null) _infoRow('Pending plan change', billing.pendingPlanChange!.planName),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ServiceHubScreen()),
-                  ),
-                  child: const Text('Open service hub'),
-                ),
-              ),
             ],
           ),
         ),
@@ -286,17 +254,11 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _sectionTitle(BuildContext context, String title, {Widget? trailing}) {
-    return Row(
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
-        const Spacer(),
-        if (trailing != null) trailing,
-      ],
-    );
+  Widget _sectionTitle(BuildContext context, String title) {
+    return Text(title, style: Theme.of(context).textTheme.titleLarge);
   }
 
-  Widget _actionCard({
+  Widget _navCard({
     required IconData icon,
     required String title,
     required String subtitle,
@@ -318,7 +280,7 @@ class HomeTab extends StatelessWidget {
               ),
               child: Icon(icon, color: const Color(0xFF20242E)),
             ),
-            const Spacer(),
+            const SizedBox(height: 16),
             Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             const SizedBox(height: 6),
             Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), height: 1.35)),

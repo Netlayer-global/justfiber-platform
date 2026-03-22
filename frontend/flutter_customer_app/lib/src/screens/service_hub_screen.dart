@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
-import 'billing_history_screen.dart';
-import 'billing_payment_screen.dart';
-import 'booking_flow_screen.dart';
 import 'plan_catalog_screen.dart';
 import 'service_tracking_screen.dart';
 import 'support_history_screen.dart';
@@ -31,10 +28,7 @@ class ServiceHubScreen extends StatelessWidget {
           children: [
             Text('Wi-Fi', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 2),
-            Text(
-              displayWifiName,
-              style: const TextStyle(fontSize: 18, color: Color(0xFF676B76)),
-            ),
+            Text(displayWifiName, style: const TextStyle(fontSize: 18, color: Color(0xFF676B76))),
           ],
         ),
         centerTitle: true,
@@ -81,7 +75,7 @@ class ServiceHubScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Use one service hub for Wi-Fi controls, support, add-ons, plan changes, and connection activity.',
+                        'Manage only service-related actions here: Wi-Fi controls, plan changes, diagnostics, add-ons, and support.',
                         style: TextStyle(color: Color(0xFF4B5563), height: 1.4),
                       ),
                     ],
@@ -98,72 +92,6 @@ class ServiceHubScreen extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 18),
-          if (billing.dueAmount > 0)
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F1FF),
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: const Icon(Icons.wifi_rounded, size: 34, color: Color(0xFFD81F26)),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('WI-FI | $displayWifiName', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6D7280))),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Bill of Rs ${billing.dueAmount.toStringAsFixed(0)} due by ${billing.nextBillDate.isEmpty ? 'soon' : billing.nextBillDate}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text('Avoid late fee and service interruption', style: TextStyle(color: Color(0xFF6B7280))),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: appState.busy ? null : () => _payBill(context, appState),
-                    child: const Text('Pay Now'),
-                  ),
-                ],
-              ),
-            ),
-          if (billing.dueAmount > 0) const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
-                  ),
-                  child: const Text('Book New Connection'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
-                  ),
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                  child: const Text('Upgrade Plan'),
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: 18),
           Container(
@@ -219,13 +147,10 @@ class ServiceHubScreen extends StatelessWidget {
             title: 'QUICK ACTIONS',
             child: Column(
               children: [
-                _quickAction(context, Icons.support_agent_rounded, 'Internet Connectivity', 'Get instant support for your Wi-Fi service', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()))),
                 _quickAction(context, Icons.router_outlined, 'Wi-Fi Settings', 'Diagnose issues, manage devices, guest Wi-Fi, and passwords', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen()))),
                 _quickAction(context, Icons.home_work_outlined, 'Shift Connection', 'Request relocation of your active connection', () => _showShiftConnectionSheet(context, appState)),
-                _quickAction(context, Icons.add_home_work_outlined, 'Book New Connection', 'Create a fresh broadband booking with plan and address confirmation', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingFlowScreen()))),
                 _quickAction(context, Icons.auto_awesome_motion_outlined, 'Change Plan', 'Upgrade or downgrade your current broadband plan', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()))),
-                _quickAction(context, Icons.description_outlined, 'Billing & Receipts', 'Open invoices, notes, receipts, and pay your due amount', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()))),
-                _quickAction(context, Icons.track_changes_outlined, 'Track orders, complaints', 'Get updates on bookings, service requests, and complaints', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())), last: true),
+                _quickAction(context, Icons.track_changes_outlined, 'Track service activity', 'See booking progress, service requests, and complaint updates', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())), last: true),
               ],
             ),
           ),
@@ -324,41 +249,6 @@ class ServiceHubScreen extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFD9F2FF), Color(0xFFF0EEFF)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Get control with my Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF0F172A))),
-                SizedBox(height: 10),
-                Text(
-                  '- solve connectivity problems\n- manage connected devices\n- update guest Wi-Fi and password',
-                  style: TextStyle(color: Color(0xFF334155), height: 1.6),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          _lightCard(
-            title: 'ACCOUNT INFO.',
-            child: Column(
-              children: [
-                _accountRow(Icons.wifi_rounded, 'DSL NUMBER', displayWifiName),
-                _accountRow(Icons.phone_iphone_rounded, 'REGISTERED MOBILE', session?.mobile ?? '-'),
-                _accountRow(Icons.account_circle_outlined, 'ACCOUNT NAME', dashboard.customerName.isEmpty ? '-' : dashboard.customerName),
-                _accountRow(Icons.description_outlined, 'CURRENT PLAN', planName, last: true),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
           _lightCard(
             title: 'GET INSTANT SUPPORT',
             child: Column(
@@ -366,17 +256,7 @@ class ServiceHubScreen extends StatelessWidget {
                 _supportLink(context, 'I am having internet issues', () => _raiseSupport(context, appState, subject: 'Internet issue', description: 'I am having internet issues.')),
                 _supportLink(context, 'My Wi-Fi is disconnecting frequently', () => _raiseSupport(context, appState, subject: 'Wi-Fi disconnecting', description: 'My Wi-Fi is disconnecting frequently.')),
                 _supportLink(context, 'I want to shift my Wi-Fi', () => _showShiftConnectionSheet(context, appState)),
-                _supportLink(context, 'I need clarity on my bill', () => _raiseSupport(context, appState, subject: 'Billing clarification', description: 'I need clarity on my latest bill.')),
-                const Divider(height: 28),
-                Row(
-                  children: [
-                    const Expanded(child: Text('Need help for something else?', style: TextStyle(fontWeight: FontWeight.w700))),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen())),
-                      child: const Text('Chat Now'),
-                    ),
-                  ],
-                ),
+                _supportLink(context, 'Open support center', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()))),
               ],
             ),
           ),
@@ -501,19 +381,6 @@ class ServiceHubScreen extends StatelessWidget {
       title: Text(text, style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: onTap,
-    );
-  }
-
-  Future<void> _payBill(BuildContext context, AppState appState) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final paymentOrder = await appState.loadBillingPaymentOrder(amount: appState.billing.dueAmount);
-    if (!context.mounted) return;
-    if (paymentOrder == null) {
-      messenger.showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to create payment order')));
-      return;
-    }
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)),
     );
   }
 
