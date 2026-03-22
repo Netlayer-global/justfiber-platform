@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/app_state.dart';
+import 'service_tracking_screen.dart';
 
 class BookingFlowScreen extends StatefulWidget {
   const BookingFlowScreen({super.key});
@@ -367,14 +368,51 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Plan', latestBooking.planName),
           _summaryRow('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
           _summaryRow('Current step', latestBooking.currentStep),
+          _summaryRow('Preferred date', _formatDate(_preferredDate)),
+          _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
           const SizedBox(height: 16),
-          SizedBox(
+          Container(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-              child: const Text('Done'),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(20),
             ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('What happens next?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                SizedBox(height: 8),
+                Text('1. Operations and installer teams can now see this booking.'),
+                SizedBox(height: 4),
+                Text('2. The exact map pin and preferred install slot are attached to the job.'),
+                SizedBox(height: 4),
+                Text('3. You can track updates from the booking and service tracking screen.'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
+                    );
+                  },
+                  child: const Text('Track Booking'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+                  child: const Text('Done'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

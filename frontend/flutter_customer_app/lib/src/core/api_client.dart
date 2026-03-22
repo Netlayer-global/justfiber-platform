@@ -63,14 +63,14 @@ class ApiClient {
     final billing = _asMap(await _request('/api/v1/customer/billing/summary', token: session.accessToken));
     final wifi = _asMap(await _request('/api/v1/customer/wifi', token: session.accessToken));
     return DashboardData(
-      customerName: (dashboard['fullName'] ?? dashboard['customerName'] ?? 'JustFiber User').toString(),
-      planName: (dashboard['currentPlanName'] ?? billing['currentPlanName'] ?? 'JustFiber Plan').toString(),
-      walletBalance: double.tryParse('${billing['walletBalance'] ?? 100000}') ?? 100000,
-      usedGb: double.tryParse('${dashboard['usedDataGb'] ?? 16}') ?? 16,
-      totalGb: double.tryParse('${dashboard['totalDataGb'] ?? 40}') ?? 40,
-      points: int.tryParse('${dashboard['loyaltyPoints'] ?? 10040}') ?? 10040,
-      activeDays: int.tryParse('${dashboard['activeDays'] ?? 4}') ?? 4,
-      wifiName: (wifi['ssid24'] ?? wifi['ssid5'] ?? 'JustFiber').toString(),
+      customerName: (dashboard['fullName'] ?? dashboard['customerName'] ?? '').toString(),
+      planName: (dashboard['currentPlanName'] ?? billing['currentPlanName'] ?? '').toString(),
+      walletBalance: double.tryParse('${billing['walletBalance'] ?? 0}') ?? 0,
+      usedGb: double.tryParse('${dashboard['usedDataGb'] ?? 0}') ?? 0,
+      totalGb: double.tryParse('${dashboard['totalDataGb'] ?? 0}') ?? 0,
+      points: int.tryParse('${dashboard['loyaltyPoints'] ?? 0}') ?? 0,
+      activeDays: int.tryParse('${dashboard['activeDays'] ?? 0}') ?? 0,
+      wifiName: (wifi['ssid24'] ?? wifi['ssid5'] ?? '').toString(),
       billingDue: double.tryParse('${billing['dueAmount'] ?? 0}') ?? 0,
     );
   }
@@ -78,12 +78,12 @@ class ApiClient {
   Future<WifiData> fetchWifi(CustomerSession session) async {
     final data = _asMap(await _request('/api/v1/customer/wifi', token: session.accessToken));
     return WifiData(
-      ssid24: (data['ssid24'] ?? 'JustFiber').toString(),
-      ssid5: (data['ssid5'] ?? 'JustFiber').toString(),
+      ssid24: (data['ssid24'] ?? '').toString(),
+      ssid5: (data['ssid5'] ?? '').toString(),
       passwordMask: '********',
       paused: data['paused'] == true,
       guestEnabled: _asMap(data['guestWifi'])['enabled'] == true,
-      guestSsid: (_asMap(data['guestWifi'])['ssid'] ?? 'JustFiber-Guest').toString(),
+      guestSsid: (_asMap(data['guestWifi'])['ssid'] ?? '').toString(),
       connectedDevicesCount: int.tryParse('${data['connectedDevices'] ?? 0}') ?? 0,
     );
   }
@@ -129,12 +129,12 @@ class ApiClient {
     }).toList();
     final pendingPlanChangeMap = _asMap(data['pendingPlanChange']);
     return BillingData(
-      currentPlan: (data['currentPlan'] ?? data['currentPlanName'] ?? 'JustFiber 100').toString(),
+      currentPlan: (data['currentPlan'] ?? data['currentPlanName'] ?? '').toString(),
       dueAmount: double.tryParse('${data['dueAmount'] ?? data['amount'] ?? 0}') ?? 0,
-      nextBillDate: (data['dueDate'] ?? data['nextBillDate'] ?? '05/05/2029').toString(),
+      nextBillDate: (data['dueDate'] ?? data['nextBillDate'] ?? '').toString(),
       lastPaymentAmount: double.tryParse('${data['lastPaymentAmount'] ?? payments.firstOrNull?.amount ?? 0}') ?? 0,
-      billCycle: (data['billCycle'] ?? 'Monthly').toString(),
-      billMode: (data['billMode'] ?? 'Prepaid').toString(),
+      billCycle: (data['billCycle'] ?? '').toString(),
+      billMode: (data['billMode'] ?? '').toString(),
       generatedDate: (data['generatedDate'] ?? '').toString(),
       paymentStatus: (data['paymentStatus'] ?? 'unknown').toString(),
       lastPaymentDate: (data['lastPaymentDate'] ?? payments.firstOrNull?.paidAt ?? '').toString(),
@@ -264,7 +264,7 @@ class ApiClient {
       final map = item as Map<String, dynamic>;
       return PlanItem(
         planCode: (map['planCode'] ?? '').toString(),
-        name: (map['name'] ?? 'JustFiber Plan').toString(),
+        name: (map['name'] ?? '').toString(),
         speedMbps: double.tryParse('${map['speedMbps'] ?? 100}') ?? 100,
         monthlyPrice: double.tryParse('${map['monthlyPrice'] ?? 0}') ?? 0,
         otcCharge: double.tryParse('${map['otcCharge'] ?? 0}') ?? 0,
@@ -551,7 +551,7 @@ class ApiClient {
       final map = item as Map<String, dynamic>;
       return PlanItem(
         planCode: (map['planCode'] ?? '').toString(),
-        name: (map['name'] ?? 'JustFiber Plan').toString(),
+        name: (map['name'] ?? '').toString(),
         speedMbps: double.tryParse('${map['speedMbps'] ?? 100}') ?? 100,
         monthlyPrice: double.tryParse('${map['monthlyPrice'] ?? 0}') ?? 0,
         otcCharge: double.tryParse('${map['otcCharge'] ?? 0}') ?? 0,

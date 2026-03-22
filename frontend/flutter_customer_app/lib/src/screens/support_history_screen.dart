@@ -74,6 +74,14 @@ class SupportHistoryScreen extends StatelessWidget {
                         note: 'Customer needs help with plan or recharge.',
                       ),
                     ),
+                    _issueButton(
+                      label: 'Create ticket',
+                      onTap: () => _showCreateTicketSheet(context, appState),
+                    ),
+                    _issueButton(
+                      label: 'Create request',
+                      onTap: () => _showCreateRequestSheet(context, appState),
+                    ),
                   ],
                 ),
               ],
@@ -268,6 +276,144 @@ class SupportHistoryScreen extends StatelessWidget {
     if (requestNumber != null) {
       await appState.refresh();
     }
+  }
+
+  Future<void> _showCreateTicketSheet(BuildContext context, AppState appState) async {
+    final subjectController = TextEditingController();
+    final descriptionController = TextEditingController();
+    String category = 'technical';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (_, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(sheetContext).viewInsets.bottom),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Create support ticket', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ['technical', 'billing', 'account', 'service'].map((item) {
+                        return ChoiceChip(
+                          label: Text(item),
+                          selected: category == item,
+                          onSelected: (_) => setModalState(() => category = item),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: subjectController,
+                      decoration: const InputDecoration(labelText: 'Subject'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descriptionController,
+                      minLines: 3,
+                      maxLines: 5,
+                      decoration: const InputDecoration(labelText: 'Describe the issue'),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () async {
+                          final subject = subjectController.text.trim();
+                          final description = descriptionController.text.trim();
+                          if (subject.isEmpty || description.isEmpty) return;
+                          Navigator.pop(sheetContext);
+                          await _raiseQuickTicket(
+                            context,
+                            appState,
+                            category: category,
+                            subject: subject,
+                            description: description,
+                          );
+                        },
+                        child: const Text('Submit ticket'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showCreateRequestSheet(BuildContext context, AppState appState) async {
+    final noteController = TextEditingController();
+    String requestType = 'complaint';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (_, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(sheetContext).viewInsets.bottom),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Create service request', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ['complaint', 'shift', 'disconnect', 'link_service'].map((item) {
+                        return ChoiceChip(
+                          label: Text(item),
+                          selected: requestType == item,
+                          onSelected: (_) => setModalState(() => requestType = item),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: noteController,
+                      minLines: 3,
+                      maxLines: 5,
+                      decoration: const InputDecoration(labelText: 'Request note'),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () async {
+                          final note = noteController.text.trim();
+                          if (note.isEmpty) return;
+                          Navigator.pop(sheetContext);
+                          await _createServiceRequest(
+                            context,
+                            appState,
+                            type: requestType,
+                            note: note,
+                          );
+                        },
+                        child: const Text('Submit request'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _showTicketDetails(BuildContext context, SupportTicketItem item) async {
