@@ -61,8 +61,9 @@ class BillingHistoryScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color(0xFFF8FBFF),
                     borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0x2200F5D4)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,8 +157,9 @@ class BillingHistoryScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: const Color(0xFFF8FBFF),
                 borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0x2200C2FF)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,12 +175,12 @@ class BillingHistoryScreen extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      OutlinedButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
+                        OutlinedButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
+                          ),
+                          child: const Text('Open payments history'),
                         ),
-                        child: const Text('Open payments history'),
-                      ),
                       if (latestInvoice != null && latestInvoice.pdfUrl.isNotEmpty)
                         OutlinedButton(
                           onPressed: () => _openDocument(context, appState, latestInvoice.invoiceNumber, latestInvoice.pdfUrl),
@@ -187,6 +189,7 @@ class BillingHistoryScreen extends StatelessWidget {
                       if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
                         FilledButton.tonal(
                           onPressed: () => _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl),
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0x1400F5D4), foregroundColor: const Color(0xFF0B0F19)),
                           child: const Text('Latest receipt'),
                         ),
                     ],
@@ -229,8 +232,9 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF8FBFF),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x2200F5D4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,8 +307,9 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: const Color(0xFFF8FBFF),
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x2200C2FF)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

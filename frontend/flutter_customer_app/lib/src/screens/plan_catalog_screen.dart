@@ -27,10 +27,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       appBar: AppBar(
         title: const Text('Choose your plan'),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF4F5FF),
+        backgroundColor: const Color(0xFFF7F9FC),
         foregroundColor: const Color(0xFF17181C),
       ),
-      backgroundColor: const Color(0xFFF4F5FF),
+      backgroundColor: const Color(0xFFF7F9FC),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
@@ -69,7 +69,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF111827), Color(0xFF312E81)],
+          colors: [Color(0xFF0B0F19), Color(0xFF111827)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -86,6 +86,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0x6600F5D4)),
             ),
             child: const Text(
               'Plan studio',
@@ -126,6 +127,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0x2200C2FF)),
       ),
       child: Row(
         children: [
@@ -146,8 +148,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF111827) : const Color(0xFFF8FAFC),
+          color: active ? const Color(0xFF0B0F19) : const Color(0xFFF8FBFF),
           borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: active ? const Color(0x6600F5D4) : const Color(0x2200C2FF)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,7 +183,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
         const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+        Text(subtitle, style: const TextStyle(color: Color(0xFF64748B), height: 1.4)),
       ],
     );
   }
@@ -193,8 +196,8 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     bool featured = false,
   }) {
     final isCurrent = currentPlan.contains(plan.name.toLowerCase()) || currentPlan.contains(plan.planCode.toLowerCase());
-    final accent = featured ? const Color(0xFFD81F26) : const Color(0xFF4F46E5);
-    final background = featured ? const Color(0xFFFFF5F5) : Colors.white;
+    final accent = featured ? const Color(0xFF00C2FF) : const Color(0xFF00F5D4);
+    final background = featured ? const Color(0xFFF8FBFF) : Colors.white;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -203,9 +206,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: featured ? const Color(0xFFFECACA) : const Color(0xFFE5E7EB)),
+          border: Border.all(color: featured ? const Color(0x2200C2FF) : const Color(0x2200F5D4)),
           boxShadow: const [
-            BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 10)),
+            BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 10)),
           ],
         ),
         child: Column(
@@ -225,9 +228,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                           if (isCurrent) _badge('Active', const Color(0xFFDCFCE7), const Color(0xFF166534)),
                           _badge(
                             featured ? 'Recommended' : (effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
-                            featured ? const Color(0xFFFEE2E2) : const Color(0xFFE0E7FF),
-                            featured ? const Color(0xFFB91C1C) : const Color(0xFF3730A3),
-                          ),
+                          featured ? const Color(0x1400C2FF) : const Color(0x1400F5D4),
+                          featured ? const Color(0xFF00C2FF) : const Color(0xFF00F5D4),
+                        ),
                         ],
                       ),
                       const SizedBox(height: 14),
@@ -246,8 +249,8 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: featured
-                          ? const [Color(0xFFFCA5A5), Color(0xFFD81F26)]
-                          : const [Color(0xFFC4B5FD), Color(0xFF4F46E5)],
+                          ? const [Color(0xFF111827), Color(0xFF00C2FF)]
+                          : const [Color(0xFF0B0F19), Color(0xFF00F5D4)],
                     ),
                     borderRadius: BorderRadius.circular(22),
                   ),
@@ -263,9 +266,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.88),
-                borderRadius: BorderRadius.circular(22),
-              ),
+              color: const Color(0xFFF8FBFF),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: const Color(0x2200F5D4)),
+            ),
               child: Row(
                 children: [
                   Expanded(child: _planMetric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
@@ -293,7 +297,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 Expanded(
                   child: FilledButton(
                     onPressed: appState.busy ? null : () => _applyPlan(context, appState, plan),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111827)),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
                     child: Text(isCurrent ? 'Change duration' : 'Select plan'),
                   ),
                 ),
@@ -339,10 +343,11 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           (chip) => Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: const Color(0x1400F5D4),
               borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0x6600F5D4)),
             ),
-            child: Text(chip, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+            child: Text(chip, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0B0F19))),
           ),
         )
         .toList();
@@ -367,7 +372,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     }
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FBFF),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (context) {
         return Padding(
@@ -376,7 +381,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
+              Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0x2200C2FF), borderRadius: BorderRadius.circular(99)))),
               const SizedBox(height: 18),
               Text(preview.nextPlanName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
               const SizedBox(height: 10),
@@ -384,7 +389,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 effectiveMode == 'next_cycle'
                     ? 'This switch will queue for the next billing cycle.'
                     : 'This switch applies with current-cycle adjustment rules.',
-                style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
+                style: const TextStyle(color: Color(0xFF64748B), height: 1.4),
               ),
               const SizedBox(height: 16),
               _previewRow('Current price', 'Rs ${preview.currentPrice.toStringAsFixed(0)}'),
@@ -401,7 +406,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                     Navigator.of(context).pop();
                     _applyPlan(context, appState, plan);
                   },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
                   child: const Text('Continue with this plan'),
                 ),
               ),
