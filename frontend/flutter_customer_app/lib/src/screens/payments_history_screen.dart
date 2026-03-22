@@ -81,7 +81,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               color: const Color(0xFF0B0F19),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF00F5D4)),
+                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF39FF14)),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -166,14 +166,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF0B0F19) : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: selected ? const Color(0xFF00F5D4) : const Color(0xFFE2E4F0)),
+          border: Border.all(color: selected ? const Color(0xFF39FF14) : const Color(0xFFE2E4F0)),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: selected ? const Color(0xFF00F5D4) : const Color(0xFF40444F),
+            color: selected ? const Color(0xFF39FF14) : const Color(0xFF40444F),
           ),
         ),
       ),
@@ -200,7 +200,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
         color: const Color(0xFF0B0F19),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(text, style: const TextStyle(color: Color(0xFF00F5D4), fontWeight: FontWeight.w600)),
+      child: Text(text, style: const TextStyle(color: Color(0xFF39FF14), fontWeight: FontWeight.w600)),
     );
   }
 
@@ -220,3 +220,4 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     );
   }
 }
+

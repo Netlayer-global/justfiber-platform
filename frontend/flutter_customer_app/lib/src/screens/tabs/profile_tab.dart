@@ -97,9 +97,9 @@ class ProfileTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0x1400F5D4),
+        color: const Color(0x1439FF14),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x6600F5D4)),
+        border: Border.all(color: const Color(0x6639FF14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,3 +144,4 @@ class ProfileTab extends StatelessWidget {
     );
   }
 }
+

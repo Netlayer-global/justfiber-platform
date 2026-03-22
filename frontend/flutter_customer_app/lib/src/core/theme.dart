@@ -5,8 +5,8 @@ ThemeData buildJustFiberTheme() {
   const surface = Color(0xFFFFFFFF);
   const surfaceAlt = Color(0xFFF1F5F9);
   const primary = Color(0xFF0B0F19);
-  const accent = Color(0xFF00F5D4);
-  const tertiary = Color(0xFF00C2FF);
+  const accent = Color(0xFF39FF14);
+  const tertiary = Color(0xFF39FF14);
   const text = Color(0xFF05070D);
   const muted = Color(0xFF64748B);
 
@@ -103,3 +103,4 @@ ThemeData buildJustFiberTheme() {
     ),
   );
 }
+

@@ -44,7 +44,7 @@ class NotificationsScreen extends StatelessWidget {
                   children: [
                     FilledButton(
                       onPressed: appState.busy ? null : appState.refresh,
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00F5D4), foregroundColor: const Color(0xFF031B17)),
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF39FF14), foregroundColor: const Color(0xFF031B17)),
                       child: const Text('Refresh'),
                     ),
                     OutlinedButton(
@@ -53,7 +53,7 @@ class NotificationsScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x6600F5D4)),
+                        side: const BorderSide(color: Color(0x6639FF14)),
                       ),
                       child: const Text('Open Support Center'),
                     ),
@@ -76,7 +76,7 @@ class NotificationsScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: const Color(0xFFF8FBFF),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0x2200C2FF)),
+                            border: Border.all(color: const Color(0x2239FF14)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,3 +96,4 @@ class NotificationsScreen extends StatelessWidget {
     );
   }
 }
+

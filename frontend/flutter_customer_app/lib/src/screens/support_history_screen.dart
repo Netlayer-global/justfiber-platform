@@ -57,7 +57,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x6600F5D4)),
+                        side: const BorderSide(color: Color(0x6639FF14)),
                       ),
                       child: const Text('Open alerts center'),
                     ),
@@ -172,9 +172,9 @@ class SupportHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0x1400F5D4),
+        color: const Color(0x1439FF14),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x6600F5D4)),
+        border: Border.all(color: const Color(0x6639FF14)),
       ),
       child: Column(
         children: [
@@ -216,7 +216,7 @@ class SupportHistoryScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFF8FBFF),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0x2200C2FF)),
+          border: Border.all(color: const Color(0x2239FF14)),
         ),
         child: Row(
           children: [
@@ -340,9 +340,9 @@ class SupportHistoryScreen extends StatelessWidget {
                               color: selected ? const Color(0xFF031B17) : Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
-                            backgroundColor: const Color(0x2200F5D4),
-                            selectedColor: const Color(0xFF00F5D4),
-                            side: const BorderSide(color: Color(0x6600F5D4)),
+                            backgroundColor: const Color(0x2239FF14),
+                            selectedColor: const Color(0xFF39FF14),
+                            side: const BorderSide(color: Color(0x6639FF14)),
                             onSelected: (_) => setModalState(() => category = item),
                           );
                         }).toList(),
@@ -438,9 +438,9 @@ class SupportHistoryScreen extends StatelessWidget {
                               color: selected ? const Color(0xFF031B17) : Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
-                            backgroundColor: const Color(0x2200C2FF),
-                            selectedColor: const Color(0xFF00C2FF),
-                            side: const BorderSide(color: Color(0x6600C2FF)),
+                            backgroundColor: const Color(0x2239FF14),
+                            selectedColor: const Color(0xFF39FF14),
+                            side: const BorderSide(color: Color(0x6639FF14)),
                             onSelected: (_) => setModalState(() => requestType = item),
                           );
                         }).toList(),
@@ -603,3 +603,4 @@ class _DetailSheet extends StatelessWidget {
     );
   }
 }
+

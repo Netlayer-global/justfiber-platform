@@ -67,12 +67,12 @@ class HomeTab extends StatelessWidget {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: const Color(0x1400F5D4),
+                      color: const Color(0x1439FF14),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x6600F5D4)),
+                      border: Border.all(color: const Color(0x6639FF14)),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.support_agent_rounded, color: Color(0xFF00F5D4)),
+                      icon: const Icon(Icons.support_agent_rounded, color: Color(0xFF39FF14)),
                       onPressed: () => onNavigate(3),
                     ),
                   ),
@@ -111,7 +111,7 @@ class HomeTab extends StatelessWidget {
                               ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x5500F5D4)),
+                        side: const BorderSide(color: Color(0x5539FF14)),
                       ),
                       child: Text(hasService ? 'Open billing' : 'Track request'),
                     ),
@@ -190,9 +190,9 @@ class HomeTab extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0x1400F5D4),
+                        color: const Color(0x1439FF14),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0x6600F5D4)),
+                        border: Border.all(color: const Color(0x6639FF14)),
                       ),
                       child: const Text('DUE', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0B0F19))),
                     ),
@@ -313,7 +313,7 @@ class HomeTab extends StatelessWidget {
                 color: const Color(0xFF0B0F19),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(icon, color: const Color(0xFF00F5D4)),
+              child: Icon(icon, color: const Color(0xFF39FF14)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -339,7 +339,7 @@ class HomeTab extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0B0F19),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x3300F5D4)),
+        border: Border.all(color: const Color(0x3339FF14)),
       ),
       child: RichText(
         text: TextSpan(
@@ -366,7 +366,7 @@ class HomeTab extends StatelessWidget {
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: highlight ? const Color(0xFF00C2FF) : const Color(0xFF05070D),
+                color: highlight ? const Color(0xFF39FF14) : const Color(0xFF05070D),
               ),
             ),
           ),
@@ -392,3 +392,4 @@ class HomeTab extends StatelessWidget {
     );
   }
 }
+

@@ -86,14 +86,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: wifi.paused ? const Color(0x26EF4444) : const Color(0x1400F5D4),
+                        color: wifi.paused ? const Color(0x26EF4444) : const Color(0x1439FF14),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: wifi.paused ? const Color(0x66EF4444) : const Color(0x6600F5D4)),
+                        border: Border.all(color: wifi.paused ? const Color(0x66EF4444) : const Color(0x6639FF14)),
                       ),
                       child: Text(
                         wifi.paused ? 'Paused' : 'Online',
                         style: TextStyle(
-                          color: wifi.paused ? const Color(0xFFFCA5A5) : const Color(0xFF00F5D4),
+                          color: wifi.paused ? const Color(0xFFFCA5A5) : const Color(0xFF39FF14),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -182,11 +182,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0x1400F5D4),
+                color: const Color(0x1439FF14),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0x6600F5D4)),
+                border: Border.all(color: const Color(0x6639FF14)),
               ),
-              child: Icon(icon, color: const Color(0xFF00F5D4)),
+              child: Icon(icon, color: const Color(0xFF39FF14)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -210,9 +210,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0x1400F5D4),
+        color: const Color(0x1439FF14),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x6600F5D4)),
+        border: Border.all(color: const Color(0x6639FF14)),
       ),
       child: RichText(
         text: TextSpan(
@@ -246,7 +246,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 Icon(
                   wifi.paused ? Icons.play_circle_fill_rounded : Icons.pause_circle_filled_rounded,
                   size: 80,
-                  color: wifi.paused ? const Color(0xFF00F5D4) : const Color(0xFFFF8A80),
+                  color: wifi.paused ? const Color(0xFF39FF14) : const Color(0xFFFF8A80),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -672,7 +672,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.router_rounded, size: 88, color: Color(0xFF00F5D4)),
+                const Icon(Icons.router_rounded, size: 88, color: Color(0xFF39FF14)),
                 const SizedBox(height: 16),
                 const Text('Restart router?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Colors.white), textAlign: TextAlign.center),
                 const SizedBox(height: 10),
@@ -723,3 +723,4 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     );
   }
 }
+

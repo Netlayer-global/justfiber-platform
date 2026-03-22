@@ -26,10 +26,11 @@ class AppCard extends StatelessWidget {
         ),
         boxShadow: const [
           BoxShadow(color: Color(0x16030B14), blurRadius: 28, offset: Offset(0, 14)),
-          BoxShadow(color: Color(0x1200F5D4), blurRadius: 6, offset: Offset(0, 0)),
+          BoxShadow(color: Color(0x1239FF14), blurRadius: 6, offset: Offset(0, 0)),
         ],
       ),
       child: child,
     );
   }
 }
+

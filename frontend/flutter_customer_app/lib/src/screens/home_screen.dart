@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
           boxShadow: const [
             BoxShadow(color: Color(0x26030B14), blurRadius: 24, offset: Offset(0, 10)),
           ],
-          border: Border.all(color: const Color(0x3300F5D4)),
+          border: Border.all(color: const Color(0x3339FF14)),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
@@ -58,3 +58,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

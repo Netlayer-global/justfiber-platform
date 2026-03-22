@@ -206,7 +206,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         );
                       }
                     },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00F5D4), foregroundColor: const Color(0xFF031B17)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF39FF14), foregroundColor: const Color(0xFF031B17)),
               child: Text(appState.bookingBusy ? 'Checking...' : 'Confirm & View Plans'),
             ),
           ),
@@ -337,7 +337,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         );
                       }
                     },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00F5D4), foregroundColor: const Color(0xFF031B17)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF39FF14), foregroundColor: const Color(0xFF031B17)),
               child: Text(appState.bookingBusy ? 'Booking...' : 'Create Booking'),
             ),
           ),
@@ -365,7 +365,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             ),
             child: Text(
               'Booking ${latestBooking.bookingNumber} is ${latestBooking.status}.',
-              style: const TextStyle(color: Color(0xFF00F5D4), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFF39FF14), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(height: 16),
@@ -678,3 +678,4 @@ class _MapHint extends StatelessWidget {
     );
   }
 }
+

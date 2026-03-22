@@ -49,11 +49,11 @@ class PaymentDetailScreen extends StatelessWidget {
                       width: 58,
                       height: 58,
                       decoration: BoxDecoration(
-                        color: const Color(0x1400F5D4),
+                        color: const Color(0x1439FF14),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x6600F5D4)),
+                        border: Border.all(color: const Color(0x6639FF14)),
                       ),
-                      child: const Icon(Icons.check_circle_rounded, color: Color(0xFF00F5D4), size: 34),
+                      child: const Icon(Icons.check_circle_rounded, color: Color(0xFF39FF14), size: 34),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -68,7 +68,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     ),
                     Text(
                       'Rs ${payment.amount.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFF00F5D4)),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFF39FF14)),
                     ),
                   ],
                 ),
@@ -173,3 +173,4 @@ class PaymentDetailScreen extends StatelessWidget {
     await Share.share(fullUrl);
   }
 }
+

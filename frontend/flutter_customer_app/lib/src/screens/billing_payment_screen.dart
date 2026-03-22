@@ -162,13 +162,13 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0x1400F5D4),
+                    color: const Color(0x1439FF14),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x6600F5D4)),
+                    border: Border.all(color: const Color(0x6639FF14)),
                   ),
                   child: Icon(
                     paymentError == null ? Icons.payments_rounded : Icons.error_outline_rounded,
-                    color: paymentError == null ? const Color(0xFF00F5D4) : const Color(0xFFFF8A80),
+                    color: paymentError == null ? const Color(0xFF39FF14) : const Color(0xFFFF8A80),
                   ),
                 ),
               ],
@@ -185,7 +185,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF08131B),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x3300C2FF)),
+                      border: Border.all(color: const Color(0x3339FF14)),
                     ),
                     child: Text(
                       walletHint!,
@@ -250,3 +250,4 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     );
   }
 }
+
