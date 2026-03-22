@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/app_state.dart';
 import 'plan_catalog_screen.dart';
 import 'service_tracking_screen.dart';
-import 'support_history_screen.dart';
 import 'wifi_settings_screen.dart';
 
 class ServiceHubScreen extends StatelessWidget {
@@ -34,20 +33,6 @@ class ServiceHubScreen extends StatelessWidget {
         centerTitle: true,
         backgroundColor: const Color(0xFFF1F0FF),
         foregroundColor: const Color(0xFF17181C),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: IconButton(
-                icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF1B1E26)),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       backgroundColor: const Color(0xFFF1F0FF),
       body: ListView(
@@ -75,7 +60,7 @@ class ServiceHubScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Manage only service-related actions here: Wi-Fi controls, plan changes, diagnostics, add-ons, and support.',
+                        'Manage only service-related actions here: Wi-Fi controls, plan changes, diagnostics, add-ons, and connection health.',
                         style: TextStyle(color: Color(0xFF4B5563), height: 1.4),
                       ),
                     ],
@@ -248,18 +233,6 @@ class ServiceHubScreen extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 18),
-          _lightCard(
-            title: 'GET INSTANT SUPPORT',
-            child: Column(
-              children: [
-                _supportLink(context, 'I am having internet issues', () => _raiseSupport(context, appState, subject: 'Internet issue', description: 'I am having internet issues.')),
-                _supportLink(context, 'My Wi-Fi is disconnecting frequently', () => _raiseSupport(context, appState, subject: 'Wi-Fi disconnecting', description: 'My Wi-Fi is disconnecting frequently.')),
-                _supportLink(context, 'I want to shift my Wi-Fi', () => _showShiftConnectionSheet(context, appState)),
-                _supportLink(context, 'Open support center', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()))),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -372,15 +345,6 @@ class ServiceHubScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _supportLink(BuildContext context, String text, VoidCallback onTap) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(text, style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: onTap,
     );
   }
 
@@ -501,11 +465,4 @@ class ServiceHubScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _raiseSupport(BuildContext context, AppState appState, {required String subject, required String description}) async {
-    final ticket = await appState.raiseComplaint(category: 'internet_issue', subject: subject, description: description);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ticket == null ? (appState.error ?? 'Unable to create support request') : 'Support ticket created: $ticket')),
-    );
-  }
 }

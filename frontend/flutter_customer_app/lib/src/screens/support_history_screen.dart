@@ -71,7 +71,7 @@ class SupportHistoryScreen extends StatelessWidget {
                         context,
                         appState,
                         type: 'complaint',
-                        note: 'Customer needs help with plan or recharge.',
+                        note: 'Customer needs help with current plan or recharge.',
                       ),
                     ),
                     _issueButton(
@@ -99,7 +99,7 @@ class SupportHistoryScreen extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _statusRow(
                               title: item.subject,
-                              subtitle: '${item.ticketNumber} · ${item.category}',
+                              subtitle: '${item.ticketNumber} | ${item.category}',
                               createdAt: item.createdAt,
                               status: item.status,
                               onTap: () => _showTicketDetails(context, item),
@@ -121,7 +121,7 @@ class SupportHistoryScreen extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _statusRow(
                               title: item.title,
-                              subtitle: '${item.referenceNumber} · ${item.type}',
+                              subtitle: '${item.referenceNumber} | ${item.type}',
                               createdAt: item.createdAt,
                               status: item.status,
                               onTap: () => _showRequestDetails(context, item),
@@ -422,7 +422,7 @@ class SupportHistoryScreen extends StatelessWidget {
       isScrollControlled: true,
       builder: (_) => _DetailSheet(
         title: item.subject,
-        subtitle: '${item.ticketNumber} · ${item.category}',
+        subtitle: '${item.ticketNumber} | ${item.category}',
         status: item.status,
         lines: [
           'Priority: ${item.priority}',
@@ -439,7 +439,7 @@ class SupportHistoryScreen extends StatelessWidget {
       isScrollControlled: true,
       builder: (_) => _DetailSheet(
         title: item.title,
-        subtitle: '${item.referenceNumber} · ${item.type}',
+        subtitle: '${item.referenceNumber} | ${item.type}',
         status: item.status,
         lines: [
           'Created: ${item.createdAt.isEmpty ? '-' : item.createdAt}',

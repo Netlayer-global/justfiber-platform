@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_state.dart';
-import '../core/models.dart';
 import '../widgets/app_card.dart';
 import 'support_history_screen.dart';
 
@@ -74,44 +73,44 @@ class ServiceTrackingScreen extends StatelessWidget {
                   const Text('No booking timeline available yet.', style: TextStyle(color: Color(0xFF7B625A)))
                 else
                   ...bookingTracking.steps.asMap().entries.map((entry) {
-                        final step = entry.value;
-                        return Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              margin: const EdgeInsets.only(top: 6),
-                              decoration: BoxDecoration(
-                                color: _stepColor(step.status),
-                                shape: BoxShape.circle,
-                              ),
+                    final step = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            margin: const EdgeInsets.only(top: 6),
+                            decoration: BoxDecoration(
+                              color: _stepColor(step.status),
+                              shape: BoxShape.circle,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(step.code.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.w700)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(step.code.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 4),
+                                Text(step.at.isEmpty ? 'Pending' : step.at, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                                if (entry.key == 0 && latestBooking?.preferredSlotLabel.isNotEmpty == true) ...[
                                   const SizedBox(height: 4),
-                                  Text(step.at.isEmpty ? 'Pending' : step.at, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
-                                  if (entry.key == 0 && latestBooking?.preferredSlotLabel.isNotEmpty == true) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Preferred slot: ${latestBooking!.preferredSlotLabel}',
-                                      style: const TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w700),
-                                    ),
-                                  ],
+                                  Text(
+                                    'Preferred slot: ${latestBooking!.preferredSlotLabel}',
+                                    style: const TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w700),
+                                  ),
                                 ],
-                              ),
+                              ],
                             ),
-                            Text(step.status, style: TextStyle(color: _stepColor(step.status), fontSize: 12)),
-                          ],
-                        ),
-                      );
-                      }),
+                          ),
+                          Text(step.status, style: TextStyle(color: _stepColor(step.status), fontSize: 12)),
+                        ],
+                      ),
+                    );
+                  }),
               ],
             ),
           ),
@@ -185,46 +184,22 @@ class ServiceTrackingScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Open requests', style: Theme.of(context).textTheme.titleLarge),
+                Text('Support activity', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
-                if (requests.isEmpty)
-                  const Text('No service requests created yet.', style: TextStyle(color: Color(0xFF7B625A)))
-                else
-                  ...requests.take(4).map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _requestTile(
-                        title: item.title,
-                        subtitle: '${item.referenceNumber} • ${item.createdAt.isEmpty ? '-' : item.createdAt}',
-                        status: item.status,
-                        onTap: () => _showRequestSheet(context, item),
-                      ),
+                _activityRow('Open requests', '${requests.length}'),
+                _activityRow('Open tickets', '${tickets.length}'),
+                _activityRow('Latest request', requests.isEmpty ? 'None' : '${requests.first.referenceNumber} | ${requests.first.status}'),
+                _activityRow('Latest ticket', tickets.isEmpty ? 'None' : '${tickets.first.ticketNumber} | ${tickets.first.status}', last: true),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
                     ),
+                    child: const Text('Open Support Center'),
                   ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Support tickets', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (tickets.isEmpty)
-                  const Text('No support tickets raised yet.', style: TextStyle(color: Color(0xFF7B625A)))
-                else
-                  ...tickets.take(4).map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _requestTile(
-                        title: item.subject,
-                        subtitle: '${item.ticketNumber} • ${item.createdAt.isEmpty ? '-' : item.createdAt}',
-                        status: item.status,
-                        onTap: () => _showTicketSheet(context, item),
-                      ),
-                    ),
-                  ),
+                ),
               ],
             ),
           ),
@@ -293,114 +268,26 @@ class ServiceTrackingScreen extends StatelessWidget {
     );
   }
 
-  Widget _requestTile({
-    required String title,
-    required String subtitle,
-    required String status,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(status, style: TextStyle(color: _stepColor(status), fontWeight: FontWeight.w700)),
-          ],
-        ),
+  Widget _activityRow(String label, String value, {bool last = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE5E7EB))),
       ),
-    );
-  }
-
-  Future<void> _showRequestSheet(BuildContext context, RequestItem item) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
-            const SizedBox(height: 8),
-            Text(item.referenceNumber, style: const TextStyle(color: Color(0xFF7B625A), fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            _visitInfo('Type', item.type),
-            _visitInfo('Status', item.status),
-            _visitInfo('Created', item.createdAt.isEmpty ? '-' : item.createdAt),
-            _visitInfo('Note', item.note.isEmpty ? '-' : item.note),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                  );
-                },
-                child: const Text('Open Support Center'),
-              ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 16),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(color: Color(0xFF7B625A), fontWeight: FontWeight.w600),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showTicketSheet(BuildContext context, SupportTicketItem item) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(item.subject, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
-            const SizedBox(height: 8),
-            Text(item.ticketNumber, style: const TextStyle(color: Color(0xFF7B625A), fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            _visitInfo('Category', item.category),
-            _visitInfo('Priority', item.priority),
-            _visitInfo('Status', item.status),
-            _visitInfo('Created', item.createdAt.isEmpty ? '-' : item.createdAt),
-            _visitInfo('Description', item.description.isEmpty ? '-' : item.description),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                  );
-                },
-                child: const Text('Open Support Center'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
