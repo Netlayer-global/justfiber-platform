@@ -313,6 +313,8 @@ class BookingQuote {
     required this.planName,
     required this.amount,
     required this.currentStep,
+    required this.preferredDate,
+    required this.preferredSlotLabel,
   });
 
   final String bookingNumber;
@@ -320,6 +322,8 @@ class BookingQuote {
   final String planName;
   final double amount;
   final String currentStep;
+  final String preferredDate;
+  final String preferredSlotLabel;
 }
 
 class FeasibilityResult {

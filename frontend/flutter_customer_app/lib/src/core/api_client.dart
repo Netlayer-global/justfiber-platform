@@ -313,6 +313,8 @@ class ApiClient {
       planName: (selectedPlan['planName'] ?? planCode).toString(),
       amount: double.tryParse('${selectedPlan['totalAmount'] ?? 0}') ?? 0,
       currentStep: (tracking['currentStep'] ?? 'booking_placed').toString(),
+      preferredDate: preferredDate ?? '',
+      preferredSlotLabel: preferredSlotLabel ?? '',
     );
   }
 

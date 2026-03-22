@@ -51,6 +51,26 @@ class BillingHistoryScreen extends StatelessWidget {
                     Expanded(child: _summaryTile('Mode', billing.billMode)),
                   ],
                 ),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Bill snapshot', style: TextStyle(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 10),
+                      _billBreakupRow('Current due', 'Rs ${billing.dueAmount.toStringAsFixed(2)}'),
+                      _billBreakupRow('Last payment', billing.lastPaymentAmount <= 0 ? '-' : 'Rs ${billing.lastPaymentAmount.toStringAsFixed(2)}'),
+                      _billBreakupRow('Adjustment preview', billing.adjustmentPreview == 0 ? '-' : 'Rs ${billing.adjustmentPreview.toStringAsFixed(2)}'),
+                      _billBreakupRow('Payment status', billing.paymentStatus.isEmpty ? '-' : billing.paymentStatus),
+                    ],
+                  ),
+                ),
                 if (billing.pendingPlanChange != null) ...[
                   const SizedBox(height: 14),
                   Container(
@@ -205,6 +225,20 @@ class BillingHistoryScreen extends StatelessWidget {
           Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
           const SizedBox(height: 14),
           child,
+        ],
+      ),
+    );
+  }
+
+  Widget _billBreakupRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w700)),
+          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
         ],
       ),
     );

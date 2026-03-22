@@ -43,6 +43,8 @@ class ServiceTrackingScreen extends StatelessWidget {
                 _row('Plan', latestBooking?.planName ?? '-'),
                 _row('Amount', latestBooking == null ? '-' : 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
                 _row('Current step', bookingTracking?.currentStep ?? latestBooking?.currentStep ?? '-'),
+                _row('Preferred date', latestBooking?.preferredDate.isNotEmpty == true ? latestBooking!.preferredDate : '-'),
+                _row('Preferred slot', latestBooking?.preferredSlotLabel.isNotEmpty == true ? latestBooking!.preferredSlotLabel : '-'),
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -71,7 +73,9 @@ class ServiceTrackingScreen extends StatelessWidget {
                 if (bookingTracking == null || bookingTracking.steps.isEmpty)
                   const Text('No booking timeline available yet.', style: TextStyle(color: Color(0xFF7B625A)))
                 else
-                  ...bookingTracking.steps.map((step) => Padding(
+                  ...bookingTracking.steps.asMap().entries.map((entry) {
+                        final step = entry.value;
+                        return Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,13 +97,21 @@ class ServiceTrackingScreen extends StatelessWidget {
                                   Text(step.code.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 4),
                                   Text(step.at.isEmpty ? 'Pending' : step.at, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                                  if (entry.key == 0 && latestBooking?.preferredSlotLabel.isNotEmpty == true) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Preferred slot: ${latestBooking!.preferredSlotLabel}',
+                                      style: const TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
                             Text(step.status, style: TextStyle(color: _stepColor(step.status), fontSize: 12)),
                           ],
                         ),
-                      )),
+                      );
+                      }),
               ],
             ),
           ),
