@@ -486,6 +486,16 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _successChip('Status', latestBooking.status.replaceAll('_', ' ')),
+              _successChip('Step', latestBooking.currentStep),
+              _successChip('Slot', _selectedSlotLabel ?? '-'),
+            ],
+          ),
+          const SizedBox(height: 16),
           _summaryRow('Plan', latestBooking.planName),
           _summaryRow('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
           _summaryRow('Current step', latestBooking.currentStep),
@@ -568,6 +578,37 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               child: const Text('Create another booking'),
             ),
           ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () async {
+                await AppStateScope.of(context).refresh();
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+              },
+              child: const Text('Return to App Home'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _successChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10151A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x55E6FF3C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
         ],
       ),
     );
