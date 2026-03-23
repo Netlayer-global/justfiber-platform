@@ -251,6 +251,8 @@ class ServiceTrackingScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 10),
                               _visitInfo('Installer', visit.installerName.isEmpty ? 'Assigned team' : visit.installerName),
+                              if (visit.installerPhone.isNotEmpty) _visitInfo('Phone', visit.installerPhone),
+                              if (visit.planName.isNotEmpty) _visitInfo('Plan', visit.planName),
                               _visitInfo('ETA', visit.etaText.isEmpty ? '-' : visit.etaText),
                               _visitInfo('Latest update', visit.lastUpdateNote.isEmpty ? visit.latestEventCode : visit.lastUpdateNote),
                               _visitInfo('Updated at', visit.lastUpdateAt.isEmpty ? '-' : visit.lastUpdateAt),

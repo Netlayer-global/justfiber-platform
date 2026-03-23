@@ -446,6 +446,8 @@ class ApiClient {
         createdAt: (map['createdAt'] ?? '').toString(),
         completedAt: (map['completedAt'] ?? '').toString(),
         installerName: (map['installerName'] ?? '').toString(),
+        installerPhone: (map['installerPhone'] ?? '').toString(),
+        planName: (map['planName'] ?? '').toString(),
         lastUpdateAt: (map['lastUpdateAt'] ?? '').toString(),
         lastUpdateNote: (map['lastUpdateNote'] ?? '').toString(),
         latestEventCode: (map['latestEventCode'] ?? '').toString(),

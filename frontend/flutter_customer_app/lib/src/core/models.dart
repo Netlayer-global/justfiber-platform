@@ -407,6 +407,8 @@ class InstallerVisitItem {
     required this.createdAt,
     required this.completedAt,
     required this.installerName,
+    required this.installerPhone,
+    required this.planName,
     required this.lastUpdateAt,
     required this.lastUpdateNote,
     required this.latestEventCode,
@@ -421,6 +423,8 @@ class InstallerVisitItem {
   final String createdAt;
   final String completedAt;
   final String installerName;
+  final String installerPhone;
+  final String planName;
   final String lastUpdateAt;
   final String lastUpdateNote;
   final String latestEventCode;

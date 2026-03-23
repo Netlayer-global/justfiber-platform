@@ -651,6 +651,10 @@ function buildInstallerVisitSummary(job) {
     createdAt: job.createdAt,
     completedAt: job.completedAt,
     installerName,
+    installerPhone: job.installerId && typeof job.installerId === "object"
+      ? (job.installerId.phone || "")
+      : "",
+    planName: job.customerSnapshot?.planName || "",
     lastUpdateAt: latestTimeline?.at || job.updatedAt || job.createdAt,
     lastUpdateNote: latestTimeline?.note || latestTimeline?.event || "",
     latestEventCode: latestTimeline?.event || "",

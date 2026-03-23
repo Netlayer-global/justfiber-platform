@@ -324,11 +324,14 @@ export default function InstallersPage() {
                         <div>
                           <div className="font-medium">{job.jobNumber || job.id}</div>
                           <div className="text-slate-400">{job.customerName || job.customerId}</div>
+                          {job.address ? <div className="text-slate-500">{job.address}</div> : null}
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="rounded bg-[#1e293b] px-2 py-1">{job.type}</span>
                           <span className="rounded bg-[#1e293b] px-2 py-1">{job.rawStatus || job.status}</span>
                           <span className="rounded bg-[#1e293b] px-2 py-1">{job.priority || 'medium'}</span>
+                          {job.planName ? <span className="rounded bg-[#1e293b] px-2 py-1">{job.planName}</span> : null}
+                          {job.finalSerialNumber ? <span className="rounded bg-[#1e293b] px-2 py-1">{job.finalSerialNumber}</span> : null}
                         </div>
                       </div>
                     ))}

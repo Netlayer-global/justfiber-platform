@@ -379,10 +379,18 @@ function mapJob(job: any): Job {
     rawStatus: job.status || 'assigned',
     customerId: job.customerId || '',
     customerName: job.customerSnapshot?.fullName || '',
+    customerPhone: job.customerSnapshot?.phone || '',
     installerId: job.installerId || undefined,
     installerName: job.installerName || '',
     priority: job.priority || 'medium',
     address: job.customerSnapshot?.address || '',
+    planName: job.customerSnapshot?.planName || '',
+    mapUrl: job.customerSnapshot?.location?.mapUrl
+      || (job.customerSnapshot?.location?.lat != null && job.customerSnapshot?.location?.lng != null
+        ? `https://maps.google.com/?q=${job.customerSnapshot.location.lat},${job.customerSnapshot.location.lng}`
+        : ''),
+    finalSerialNumber: job.deviceContext?.finalSerialNumber || job.deviceContext?.manualSerialNumber || '',
+    configStatus: job.activation?.configStatus || '',
     scheduledDate: job.scheduledDate || job.assignment?.assignedAt,
     completedDate: job.completedAt,
   }

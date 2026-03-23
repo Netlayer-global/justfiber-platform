@@ -288,6 +288,7 @@ export default function JobsPage() {
                   </div>
                   <p className="text-sm text-slate-500 mt-1">{job.customerName || job.customerId}</p>
                   <p className="text-sm text-slate-500">{job.address || 'Address unavailable'}</p>
+                  {job.customerPhone ? <p className="text-sm text-slate-500">Phone: {job.customerPhone}</p> : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm min-w-[260px]">
@@ -299,6 +300,18 @@ export default function JobsPage() {
                     <p className="text-slate-500 text-xs">Customer ID</p>
                     <p className="font-mono">{job.customerId}</p>
                   </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Plan</p>
+                    <p className="font-semibold">{job.planName || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">ONT Serial</p>
+                    <p className="font-semibold">{job.finalSerialNumber || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Config</p>
+                    <p className="font-semibold">{job.configStatus || '-'}</p>
+                  </div>
                   {job.scheduledDate ? (
                     <div className="col-span-2 flex items-center gap-2 text-slate-500">
                       <Calendar className="w-3 h-3" />
@@ -307,6 +320,33 @@ export default function JobsPage() {
                   ) : null}
                 </div>
               </div>
+
+              {(job.mapUrl || job.planName || job.customerPhone || job.finalSerialNumber || job.configStatus) ? (
+                <div className="rounded border border-[#2a2f4a] bg-[#0f172a] p-3 text-sm text-slate-300">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {job.mapUrl ? (
+                      <a
+                        href={job.mapUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-[#d8ff16]"
+                      >
+                        Open map
+                      </a>
+                    ) : null}
+                    {job.customerPhone ? (
+                      <a href={`tel:${job.customerPhone}`} className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                        Call customer
+                      </a>
+                    ) : null}
+                    {job.configStatus ? (
+                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                        Config: {job.configStatus}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-end">
                 <div className="space-y-2">

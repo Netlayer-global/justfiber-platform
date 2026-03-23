@@ -261,10 +261,15 @@ export interface Job {
   rawStatus?: string
   customerId: string
   customerName?: string
+  customerPhone?: string
   installerId?: string
   installerName?: string
   priority?: 'low' | 'medium' | 'high' | 'urgent'
   address?: string
+  planName?: string
+  mapUrl?: string
+  finalSerialNumber?: string
+  configStatus?: string
   scheduledDate?: string
   completedDate?: string
 }
