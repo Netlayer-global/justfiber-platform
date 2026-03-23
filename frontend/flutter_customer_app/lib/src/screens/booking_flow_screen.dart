@@ -308,7 +308,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 return ChoiceChip(
                   label: Text(_formatDate(date)),
                   selected: selectedDate,
-                  backgroundColor: const Color(0xFF08131B),
+                  backgroundColor: const Color(0xFF10151A),
                   selectedColor: const Color(0xFFE6FF3C),
                   side: BorderSide(color: selectedDate ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C)),
                   labelStyle: TextStyle(
@@ -333,7 +333,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               return ChoiceChip(
                 label: Text(slot.$2),
                 selected: selectedSlot,
-                backgroundColor: const Color(0xFF08131B),
+                backgroundColor: const Color(0xFF10151A),
                 selectedColor: const Color(0xFFE6FF3C),
                 side: BorderSide(color: selectedSlot ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C)),
                 labelStyle: TextStyle(
@@ -465,7 +465,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     if (!context.mounted) return;
                     Navigator.of(context).pop();
                   },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF111111)),
                   child: const Text('Done'),
                 ),
               ),
@@ -538,7 +538,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             height: 120,
             margin: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0x14E6FF3C),
+              color: const Color(0xFF10151A),
               borderRadius: BorderRadius.circular(26),
               border: Border.all(color: const Color(0x66E6FF3C)),
             ),
@@ -731,7 +731,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 onPressed: onSelect,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: selected ? const Color(0xFFE6FF3C) : const Color(0xFFEFEEE8),
-                  backgroundColor: selected ? const Color(0xFF0E1520) : const Color(0xFF08131B),
+                  backgroundColor: selected ? const Color(0xFF10151A) : const Color(0xFF15181C),
                   side: BorderSide(color: selected ? const Color(0x66E6FF3C) : const Color(0x22E6FF3C)),
                 ),
                 child: Text(selected ? 'Selected' : 'Select Plan'),

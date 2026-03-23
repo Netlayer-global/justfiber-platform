@@ -99,7 +99,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: wifi.paused ? const Color(0x26EF4444) : const Color(0x14E6FF3C),
+                        color: wifi.paused ? const Color(0xFF1E1111) : const Color(0xFF10151A),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: wifi.paused ? const Color(0x66EF4444) : const Color(0x66E6FF3C)),
                       ),
@@ -196,7 +196,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0x14E6FF3C),
+                color: const Color(0xFF10151A),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: const Color(0x66E6FF3C)),
               ),
@@ -223,7 +223,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0x14E6FF3C),
+        color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0x66E6FF3C)),
       ),
