@@ -14,12 +14,26 @@ class JobsTab extends StatefulWidget {
 }
 
 class _JobsTabState extends State<JobsTab> {
+  final _searchController = TextEditingController();
+  String _queueFilter = 'all';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
     final theme = Theme.of(context);
-    final activeJobs = appState.jobs.where((job) => job.status != 'completed').toList();
-    final completedJobs = appState.jobs.where((job) => job.status == 'completed').toList();
+    final search = _searchController.text.trim().toLowerCase();
+    final filteredJobs = _filterJobs(appState.jobs, search);
+    final activeJobs = filteredJobs.where((job) => job.status != 'completed').toList();
+    final completedJobs = filteredJobs.where((job) => job.status == 'completed').toList();
+    final liveInstalls = activeJobs.where((job) => job.jobType != 'complaint').length;
+    final liveComplaints = activeJobs.where((job) => job.jobType == 'complaint').length;
+    final exceptionJobs = activeJobs.where((job) => job.configStatus == 'failed').length;
 
     return RefreshIndicator(
       color: const Color(0xFFE6FF3C),
@@ -65,6 +79,37 @@ class _JobsTabState extends State<JobsTab> {
                     Expanded(child: _metricChip('Closed', '${completedJobs.length}')),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _metricChip('Installs', '$liveInstalls')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _metricChip('Complaints', '$liveComplaints')),
+                    const SizedBox(width: 8),
+                    Expanded(child: _metricChip('Exceptions', '$exceptionJobs')),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _searchController,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'Search jobs, phone, plan, address',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _filterChip('All', 'all'),
+                    _filterChip('Install', 'install'),
+                    _filterChip('Complaint', 'complaint'),
+                    _filterChip('Exceptions', 'exceptions'),
+                    _filterChip('Closed', 'closed'),
+                  ],
+                ),
               ],
             ),
           ),
@@ -90,6 +135,20 @@ class _JobsTabState extends State<JobsTab> {
                   const SizedBox(height: 8),
                   const Text(
                     'Pull to refresh when dispatch assigns the next installation or complaint visit.',
+                    style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                  ),
+                ],
+              ),
+            )
+          else if (filteredJobs.isEmpty)
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('No jobs matched this queue.', style: theme.textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Try clearing the search or switching to another queue filter.',
                     style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
                   ),
                 ],
@@ -162,6 +221,14 @@ class _JobsTabState extends State<JobsTab> {
     );
   }
 
+  Widget _filterChip(String label, String value) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: _queueFilter == value,
+      onSelected: (_) => setState(() => _queueFilter = value),
+    );
+  }
+
   Widget _jobCard(BuildContext context, InstallerAppState appState, InstallerJob job) {
     final isComplaint = job.jobType == 'complaint';
     final stageLabel = _stageLabel(job);
@@ -169,6 +236,8 @@ class _JobsTabState extends State<JobsTab> {
     final hasConfigFailure = job.configStatus == 'failed';
     final hasPinnedLocation = job.latitude != null && job.longitude != null;
     final hasLinkedRouter = job.finalSerialNumber.isNotEmpty;
+    final nextVisitLabel = _nextVisitLabel(job);
+    final exceptionTone = hasConfigFailure ? const Color(0xFFFCD34D) : const Color(0xFFD1D5DB);
 
     return InkWell(
       borderRadius: BorderRadius.circular(28),
@@ -232,17 +301,23 @@ class _JobsTabState extends State<JobsTab> {
               job.customerAddress,
               style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
             ),
-            if (job.planName.isNotEmpty || job.scheduledAt.isNotEmpty) ...[
+            if (job.planName.isNotEmpty || job.scheduledAt.isNotEmpty || nextVisitLabel != '-') ...[
               const SizedBox(height: 12),
               Row(
                 children: [
                   if (job.planName.isNotEmpty)
                     Expanded(child: _infoBox('Plan', job.planName)),
-                  if (job.planName.isNotEmpty && job.scheduledAt.isNotEmpty) const SizedBox(width: 10),
+                  if (job.planName.isNotEmpty && (job.scheduledAt.isNotEmpty || nextVisitLabel != '-')) const SizedBox(width: 10),
                   if (job.scheduledAt.isNotEmpty)
-                    Expanded(child: _infoBox('Scheduled', _shortDate(job.scheduledAt))),
+                    Expanded(child: _infoBox('Scheduled', _shortDate(job.scheduledAt)))
+                  else if (nextVisitLabel != '-')
+                    Expanded(child: _infoBox('Next step', nextVisitLabel)),
                 ],
               ),
+              if (job.scheduledAt.isNotEmpty && nextVisitLabel != '-') ...[
+                const SizedBox(height: 10),
+                _infoBox('Next step', nextVisitLabel),
+              ],
             ],
             const SizedBox(height: 12),
             Wrap(
@@ -252,6 +327,7 @@ class _JobsTabState extends State<JobsTab> {
                 _pill(isComplaint ? 'complaint' : 'installation'),
                 _pill(stageLabel),
                 _pill(job.priority),
+                _pill(_urgencyLabel(job)),
                 if (hasPinnedLocation) _pill('Pinned location'),
                 if (hasLinkedRouter) _pill('Router linked'),
               ],
@@ -273,7 +349,7 @@ class _JobsTabState extends State<JobsTab> {
                       ? 'Router config failed. Open the job and retry activation.'
                       : 'Latest event: ${job.latestEventCode.replaceAll('.', ' ')}',
                   style: TextStyle(
-                    color: hasConfigFailure ? const Color(0xFFFCD34D) : const Color(0xFFD1D5DB),
+                    color: exceptionTone,
                     fontWeight: FontWeight.w700,
                     height: 1.35,
                   ),
@@ -432,6 +508,101 @@ class _JobsTabState extends State<JobsTab> {
   bool _canStartTravel(InstallerJob job) => job.status == 'accepted';
 
   bool _canQuickPreview(InstallerJob job) => job.status != 'completed';
+
+  List<InstallerJob> _filterJobs(List<InstallerJob> jobs, String search) {
+    final filtered = jobs.where((job) {
+      final matchesFilter = switch (_queueFilter) {
+        'install' => job.jobType != 'complaint' && job.status != 'completed',
+        'complaint' => job.jobType == 'complaint' && job.status != 'completed',
+        'exceptions' => job.configStatus == 'failed' && job.status != 'completed',
+        'closed' => job.status == 'completed',
+        _ => true,
+      };
+      if (!matchesFilter) return false;
+      if (search.isEmpty) return true;
+      final haystack = [
+        job.jobNumber,
+        job.customerName,
+        job.customerPhone,
+        job.customerAddress,
+        job.planName,
+        job.status,
+        job.priority,
+        job.latestEventCode,
+      ].join(' ').toLowerCase();
+      return haystack.contains(search);
+    }).toList();
+    filtered.sort(_compareJobs);
+    return filtered;
+  }
+
+  int _compareJobs(InstallerJob a, InstallerJob b) {
+    final aClosed = a.status == 'completed';
+    final bClosed = b.status == 'completed';
+    if (aClosed != bClosed) {
+      return aClosed ? 1 : -1;
+    }
+    final priorityCompare = _priorityRank(a.priority).compareTo(_priorityRank(b.priority));
+    if (priorityCompare != 0) return priorityCompare;
+    final dateA = DateTime.tryParse(a.scheduledAt);
+    final dateB = DateTime.tryParse(b.scheduledAt);
+    if (dateA != null && dateB != null) {
+      return dateA.compareTo(dateB);
+    }
+    if (dateA != null) return -1;
+    if (dateB != null) return 1;
+    return a.jobNumber.compareTo(b.jobNumber);
+  }
+
+  int _priorityRank(String value) {
+    switch (value.toLowerCase()) {
+      case 'critical':
+        return 0;
+      case 'high':
+        return 1;
+      case 'medium':
+        return 2;
+      default:
+        return 3;
+    }
+  }
+
+  String _urgencyLabel(InstallerJob job) {
+    if (job.priority.toLowerCase() == 'critical') return 'Immediate';
+    if (job.priority.toLowerCase() == 'high') return 'Priority';
+    if (job.scheduledAt.isEmpty) return 'Queue ready';
+    final scheduled = DateTime.tryParse(job.scheduledAt)?.toLocal();
+    if (scheduled == null) return 'Queue ready';
+    final minutes = scheduled.difference(DateTime.now()).inMinutes;
+    if (minutes <= 0) return 'Due now';
+    if (minutes <= 30) return 'Due soon';
+    return 'Planned';
+  }
+
+  String _nextVisitLabel(InstallerJob job) {
+    switch (job.status) {
+      case 'assigned':
+        return 'Accept dispatch';
+      case 'accepted':
+        return 'Start travel';
+      case 'enroute':
+        return 'Reach customer site';
+      case 'onsite':
+        return 'Scan ONT serial';
+      case 'ont_scanned':
+        return 'Push activation';
+      case 'activation_in_progress':
+        return 'Wait for config';
+      case 'active':
+        return 'Capture proof';
+      case 'complaint_in_progress':
+        return 'Resolve complaint';
+      case 'completed':
+        return 'Closed';
+      default:
+        return '-';
+    }
+  }
 
   String _primaryActionLabel(InstallerJob job) {
     if (job.status == 'completed') return 'Review';
