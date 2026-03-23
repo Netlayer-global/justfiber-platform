@@ -14,6 +14,7 @@ class BillingHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
+    final theme = Theme.of(context);
     final latestInvoice = billing.invoices.isEmpty ? null : billing.invoices.first;
     final latestPayment = billing.payments.isEmpty ? null : billing.payments.first;
     final invoiceCount = billing.invoices.length;
@@ -34,11 +35,24 @@ class BillingHistoryScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Current bill', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: Colors.white)),
+                Text(
+                  'Current bill',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontSize: 28,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 Text(
                   'Rs ${billing.dueAmount.toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 34, color: Color(0xFF39FF14)),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 38, color: Color(0xFF39FF14), letterSpacing: -1),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  billing.paymentStatus.isEmpty
+                      ? 'Your active billing snapshot for this cycle'
+                      : 'Status: ${billing.paymentStatus}',
+                  style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -158,12 +172,17 @@ class BillingHistoryScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FBFF),
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0x2239FF14)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text(
+                    'Payments overview',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     billing.payments.isEmpty
                         ? 'No payment history available yet.'
@@ -233,7 +252,7 @@ class BillingHistoryScreen extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FBFF),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x2239FF14)),
       ),
       child: Column(
@@ -251,9 +270,9 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: dark ? const Color(0x1439FF14) : Colors.white,
+        color: dark ? const Color(0x1439FF14) : const Color(0xFFF8FBFF),
         borderRadius: BorderRadius.circular(999),
-        border: dark ? Border.all(color: const Color(0x6639FF14)) : null,
+        border: Border.all(color: dark ? const Color(0x6639FF14) : const Color(0x2239FF14)),
       ),
       child: RichText(
         text: TextSpan(
@@ -307,8 +326,12 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FBFF),
-        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0x2239FF14)),
       ),
       child: Column(

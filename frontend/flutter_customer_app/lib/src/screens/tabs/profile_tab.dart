@@ -12,6 +12,7 @@ class ProfileTab extends StatelessWidget {
     final billing = appState.billing;
     final dashboard = appState.dashboard;
     final wifi = appState.wifi;
+    final theme = Theme.of(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -24,27 +25,43 @@ class ProfileTab extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                dashboard.customerName.isEmpty ? 'Customer account' : dashboard.customerName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                appState.session?.mobile ?? '-',
-                style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _topMetric('Plan', billing.currentPlan.isEmpty ? '-' : billing.currentPlan)),
-                  const SizedBox(width: 10),
-                  Expanded(child: _topMetric('Mode', billing.billMode.isEmpty ? '-' : billing.billMode)),
-                ],
-              ),
-            ],
+              children: [
+                Text(
+                  dashboard.customerName.isEmpty ? 'Customer account' : dashboard.customerName,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontSize: 28,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  appState.session?.mobile ?? '-',
+                  style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your account console for connection, billing, and registered service details.',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFFCBD5E1)),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _topMetric('Plan', billing.currentPlan.isEmpty ? '-' : billing.currentPlan)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _topMetric('Mode', billing.billMode.isEmpty ? '-' : billing.billMode)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _topMetric('Due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _topMetric('Devices', '${wifi.connectedDevicesCount} online')),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 18),
         _sectionCard(
           title: 'Account information',
@@ -53,6 +70,7 @@ class ProfileTab extends StatelessWidget {
             children: [
               _row('Customer name', dashboard.customerName.isEmpty ? '-' : dashboard.customerName),
               _row('Registered mobile', appState.session?.mobile ?? '-'),
+              _row('Connection name', dashboard.wifiName.isEmpty ? '-' : dashboard.wifiName),
               _row('Current plan', billing.currentPlan.isEmpty ? '-' : billing.currentPlan),
               _row('Billing mode', billing.billMode.isEmpty ? '-' : billing.billMode),
               _row('Wi-Fi name', wifi.ssid24.isEmpty ? '-' : wifi.ssid24),
@@ -72,6 +90,8 @@ class ProfileTab extends StatelessWidget {
               _row('Last payment date', billing.lastPaymentDate.isEmpty ? '-' : billing.lastPaymentDate),
               _row('Last payment amount', 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'),
               _row('Current bill cycle', billing.billCycle.isEmpty ? '-' : billing.billCycle),
+              _row('Loyalty points', '${dashboard.points}'),
+              _row('Active days', '${dashboard.activeDays}'),
               if ((appState.error ?? '').isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
@@ -97,8 +117,12 @@ class ProfileTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0x1439FF14),
-        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          colors: [Color(0x1439FF14), Color(0x0CFFFFFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x6639FF14)),
       ),
       child: Column(
@@ -127,19 +151,32 @@ class ProfileTab extends StatelessWidget {
 
   Widget _row(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B))),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF05070D)),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FBFF),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0x2239FF14)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF05070D)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

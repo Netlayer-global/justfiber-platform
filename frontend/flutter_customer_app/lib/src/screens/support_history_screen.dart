@@ -12,6 +12,7 @@ class SupportHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Support & requests')),
@@ -27,16 +28,19 @@ class SupportHistoryScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Get instant support',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: Colors.white),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontSize: 28,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   'Raise broadband, billing, shift connection, and service complaints from one place.',
                   style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(child: _summaryChip('Tickets', '${appState.tickets.length}')),
@@ -46,23 +50,23 @@ class SupportHistoryScreen extends StatelessWidget {
                     Expanded(child: _summaryChip('Alerts', '${appState.notifications.length}')),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
+                const Text(
+                  'Quick actions',
+                  style: TextStyle(
+                    color: Color(0xFF9CA3AF),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x6639FF14)),
-                      ),
-                      child: const Text('Open alerts center'),
-                    ),
                     _issueButton(
                       label: 'Internet issue',
+                      icon: Icons.wifi_tethering_error_rounded,
                       onTap: () => _raiseQuickTicket(
                         context,
                         appState,
@@ -73,6 +77,7 @@ class SupportHistoryScreen extends StatelessWidget {
                     ),
                     _issueButton(
                       label: 'Billing issue',
+                      icon: Icons.receipt_long_rounded,
                       onTap: () => _raiseQuickTicket(
                         context,
                         appState,
@@ -83,6 +88,7 @@ class SupportHistoryScreen extends StatelessWidget {
                     ),
                     _issueButton(
                       label: 'Shift connection',
+                      icon: Icons.swap_horiz_rounded,
                       onTap: () => _createServiceRequest(
                         context,
                         appState,
@@ -92,6 +98,7 @@ class SupportHistoryScreen extends StatelessWidget {
                     ),
                     _issueButton(
                       label: 'Plan issue',
+                      icon: Icons.auto_awesome_motion_rounded,
                       onTap: () => _createServiceRequest(
                         context,
                         appState,
@@ -101,11 +108,23 @@ class SupportHistoryScreen extends StatelessWidget {
                     ),
                     _issueButton(
                       label: 'Create ticket',
+                      icon: Icons.support_agent_rounded,
                       onTap: () => _showCreateTicketSheet(context, appState),
                     ),
                     _issueButton(
                       label: 'Create request',
+                      icon: Icons.assignment_rounded,
                       onTap: () => _showCreateRequestSheet(context, appState),
+                    ),
+                    FilledButton.tonal(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0x2239FF14),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Open alerts center'),
                     ),
                   ],
                 ),
@@ -161,9 +180,14 @@ class SupportHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _issueButton({required String label, required VoidCallback onTap}) {
-    return OutlinedButton(
+  Widget _issueButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return OutlinedButton.icon(
       onPressed: onTap,
+      icon: Icon(icon, size: 16),
       child: Text(label),
     );
   }
@@ -178,9 +202,13 @@ class SupportHistoryScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.white)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Colors.white)),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
@@ -214,9 +242,16 @@ class SupportHistoryScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FBFF),
-          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(color: const Color(0x2239FF14)),
+          boxShadow: const [
+            BoxShadow(color: Color(0x0A39FF14), blurRadius: 10, offset: Offset(0, 2)),
+          ],
         ),
         child: Row(
           children: [
@@ -230,7 +265,7 @@ class SupportHistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                   const SizedBox(height: 4),
                   Text(subtitle, style: const TextStyle(color: Color(0xFF4B5563), fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),

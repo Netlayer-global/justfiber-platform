@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 ThemeData buildJustFiberTheme() {
   const background = Color(0xFFF7F9FC);
@@ -9,6 +10,17 @@ ThemeData buildJustFiberTheme() {
   const tertiary = Color(0xFF39FF14);
   const text = Color(0xFF05070D);
   const muted = Color(0xFF64748B);
+  final base = ThemeData.light(useMaterial3: true);
+  final textTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme).copyWith(
+    headlineMedium: GoogleFonts.spaceGrotesk(fontSize: 30, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.8),
+    headlineSmall: GoogleFonts.spaceGrotesk(fontSize: 24, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.6),
+    titleLarge: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.4),
+    titleMedium: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w700, color: text),
+    bodyLarge: GoogleFonts.dmSans(fontSize: 16, color: muted, height: 1.45),
+    bodyMedium: GoogleFonts.dmSans(fontSize: 14, color: muted, height: 1.45),
+    labelLarge: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w700, color: text),
+    labelMedium: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w700, color: muted, letterSpacing: 0.2),
+  );
 
   return ThemeData(
     colorScheme: const ColorScheme.light(
@@ -25,25 +37,19 @@ ThemeData buildJustFiberTheme() {
     ),
     scaffoldBackgroundColor: background,
     useMaterial3: true,
-    textTheme: const TextTheme(
-      headlineMedium: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: text),
-      headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: text),
-      titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: text),
-      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: text),
-      bodyMedium: TextStyle(fontSize: 14, color: muted, height: 1.45),
-      labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: muted),
-    ),
-    appBarTheme: const AppBarTheme(
+    textTheme: textTheme,
+    appBarTheme: AppBarTheme(
       backgroundColor: background,
       foregroundColor: text,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
-      titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: text),
+      titleTextStyle: GoogleFonts.spaceGrotesk(fontSize: 22, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.5),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: surfaceAlt,
+      labelStyle: GoogleFonts.dmSans(color: muted, fontWeight: FontWeight.w600),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -56,7 +62,7 @@ ThemeData buildJustFiberTheme() {
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: accent, width: 1.4),
       ),
-      hintStyle: const TextStyle(color: muted),
+      hintStyle: GoogleFonts.dmSans(color: muted),
     ),
     cardTheme: CardThemeData(
       color: surface,
@@ -67,7 +73,7 @@ ThemeData buildJustFiberTheme() {
       backgroundColor: Color(0xFF0B0F19),
       selectedItemColor: accent,
       unselectedItemColor: muted,
-      selectedLabelStyle: TextStyle(fontWeight: FontWeight.w700),
+      selectedLabelStyle: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
       showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
     ),
@@ -77,7 +83,7 @@ ThemeData buildJustFiberTheme() {
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700, fontSize: 15),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -86,18 +92,18 @@ ThemeData buildJustFiberTheme() {
         side: const BorderSide(color: Color(0xFFCBD5E1)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700, fontSize: 15),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: tertiary,
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: primary,
-      contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      contentTextStyle: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       behavior: SnackBarBehavior.floating,
     ),
