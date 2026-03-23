@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import {
+  ArrowDown,
+  ArrowUp,
   Cable,
   Copy,
   Loader,
@@ -219,16 +221,22 @@ export default function PlansPage() {
 
   const filteredPlans = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    return plans.filter((plan) => {
-      const matchesQuery =
-        !needle ||
-        [plan.name, plan.planCode, ...(plan.tags || [])]
+    return plans
+      .filter((plan) => {
+        const matchesQuery =
+          !needle ||
+          [plan.name, plan.planCode, ...(plan.tags || [])]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(needle))
-      const matchesCategory = categoryFilter === 'all' || plan.category === categoryFilter
-      const matchesStatus = statusFilter === 'all' || plan.status === statusFilter
-      return matchesQuery && matchesCategory && matchesStatus
-    })
+        const matchesCategory = categoryFilter === 'all' || plan.category === categoryFilter
+        const matchesStatus = statusFilter === 'all' || plan.status === statusFilter
+        return matchesQuery && matchesCategory && matchesStatus
+      })
+      .sort((left, right) => {
+        const orderDiff = Number(left.sortOrder || 1) - Number(right.sortOrder || 1)
+        if (orderDiff !== 0) return orderDiff
+        return left.name.localeCompare(right.name)
+      })
   }, [plans, query, categoryFilter, statusFilter])
 
   const selectedPlan =
@@ -386,6 +394,38 @@ export default function PlansPage() {
       status: 'inactive',
       sortOrder: String((plan.sortOrder || 1) + 1),
     })
+  }
+
+  async function movePlan(plan: Plan, direction: 'up' | 'down') {
+    const ordered = [...plans].sort((left, right) => Number(left.sortOrder || 1) - Number(right.sortOrder || 1))
+    const currentIndex = ordered.findIndex((item) => item.id === plan.id)
+    if (currentIndex < 0) return
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    if (targetIndex < 0 || targetIndex >= ordered.length) return
+
+    const current = ordered[currentIndex]
+    const target = ordered[targetIndex]
+    const currentOrder = Number(current.sortOrder || currentIndex + 1)
+    const targetOrder = Number(target.sortOrder || targetIndex + 1)
+
+    try {
+      setIsSaving(true)
+      const [currentRes, targetRes] = await Promise.all([
+        adminAPI.updatePlan(current.planCode || current.id, { ...current, sortOrder: targetOrder }),
+        adminAPI.updatePlan(target.planCode || target.id, { ...target, sortOrder: currentOrder }),
+      ])
+      if (!currentRes.success || !targetRes.success) {
+        toast.error(currentRes.error || targetRes.error || 'Failed to reorder plan')
+        return
+      }
+      toast.success(`Moved ${plan.name} ${direction}`)
+      await loadPlans()
+    } catch (error) {
+      console.error('[plans] Failed to reorder plan:', error)
+      toast.error('Failed to reorder plan')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -654,6 +694,28 @@ export default function PlansPage() {
                 </div>
               </div>
 
+              <div className="mt-4 rounded-[22px] border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Lane compare</div>
+                <div className="mt-4 grid gap-3 md:grid-cols-3 text-sm text-white/70">
+                  <div className="rounded-[18px] bg-black/20 p-3">
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/35">Monthly</div>
+                    <div className="mt-2 text-xl font-black text-white">{formatCurrency(Number(preview.price || 0))}</div>
+                  </div>
+                  <div className="rounded-[18px] bg-black/20 p-3">
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/35">Quarterly uplift</div>
+                    <div className="mt-2 text-xl font-black text-white">
+                      {Number(preview.quarterlyPrice || 0) > 0 ? formatCurrency(Number(preview.quarterlyPrice || 0) - Number(preview.price || 0) * 3) : '-'}
+                    </div>
+                  </div>
+                  <div className="rounded-[18px] bg-black/20 p-3">
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/35">Setup revenue</div>
+                    <div className="mt-2 text-xl font-black text-white">
+                      {formatCurrency(Number(preview.installationCharge || 0) + Number(preview.otcCharge || 0))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="mt-4 flex flex-wrap gap-2">
                 {splitCsv(preview.tags).slice(0, 6).map((tag) => (
                   <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75">
@@ -726,6 +788,24 @@ export default function PlansPage() {
                 <button type="button" onClick={() => beginEdit(plan)} className="btn-secondary inline-flex items-center gap-2">
                   <Pencil className="h-4 w-4" />
                   Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void movePlan(plan, 'up')}
+                  disabled={isSaving || filteredPlans[0]?.id === plan.id}
+                  className="btn-secondary inline-flex items-center gap-2"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                  Move up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void movePlan(plan, 'down')}
+                  disabled={isSaving || filteredPlans[filteredPlans.length - 1]?.id === plan.id}
+                  className="btn-secondary inline-flex items-center gap-2"
+                >
+                  <ArrowDown className="h-4 w-4" />
+                  Move down
                 </button>
                 <button type="button" onClick={() => clonePlan(plan)} className="btn-secondary inline-flex items-center gap-2">
                   <Copy className="h-4 w-4" />
