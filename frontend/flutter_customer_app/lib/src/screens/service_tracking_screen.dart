@@ -71,7 +71,11 @@ class ServiceTrackingScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
-                  onPressed: appState.busy ? null : () => appState.refreshBookingTracking(),
+                  onPressed: appState.busy
+                      ? null
+                      : () async {
+                          await appState.refreshBookingTracking();
+                        },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
                   child: const Text('Refresh tracking'),
                 ),
@@ -81,9 +85,14 @@ class ServiceTrackingScreen extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     OutlinedButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
-                      ),
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refreshBookingTracking();
+                        }
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
                         backgroundColor: const Color(0xFF0E1520),
@@ -92,9 +101,14 @@ class ServiceTrackingScreen extends StatelessWidget {
                       child: const Text('Book another connection'),
                     ),
                     OutlinedButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                      ),
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refreshBookingTracking();
+                        }
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
                         backgroundColor: const Color(0xFF0E1520),
@@ -280,9 +294,14 @@ class ServiceTrackingScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                    ),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                      );
+                      if (context.mounted) {
+                        await appState.refreshBookingTracking();
+                      }
+                    },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFEFEEE8),
                       backgroundColor: const Color(0xFF0E1520),
@@ -311,9 +330,14 @@ class ServiceTrackingScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                    ),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                      );
+                      if (context.mounted) {
+                        await appState.refreshBookingTracking();
+                      }
+                    },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFFE6FF3C),
                       foregroundColor: const Color(0xFF111111),

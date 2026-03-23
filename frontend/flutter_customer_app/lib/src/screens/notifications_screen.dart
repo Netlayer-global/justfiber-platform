@@ -187,9 +187,14 @@ class NotificationsScreen extends StatelessWidget {
                       child: const Text('Refresh'),
                     ),
                     OutlinedButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                      ),
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
                         backgroundColor: const Color(0xFF0E1520),
@@ -198,9 +203,14 @@ class NotificationsScreen extends StatelessWidget {
                       child: const Text('Open Support Center'),
                     ),
                     OutlinedButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
-                      ),
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
                         backgroundColor: const Color(0xFF0E1520),
@@ -328,9 +338,9 @@ class NotificationsScreen extends StatelessWidget {
                                       }
                                     },
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFF111111),
-                                      backgroundColor: const Color(0xFFF3F1E9),
-                                      side: const BorderSide(color: Color(0x14000000)),
+                                      foregroundColor: const Color(0xFFEFEEE8),
+                                      backgroundColor: const Color(0xFF0E1520),
+                                      side: const BorderSide(color: Color(0x33E6FF3C)),
                                     ),
                                     child: Text(item.readAt.isEmpty ? 'Mark as read' : 'Refresh alerts'),
                                   ),

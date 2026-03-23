@@ -421,7 +421,12 @@ class SupportHistoryScreen extends StatelessWidget {
                           onPressed: () async {
                             final subject = subjectController.text.trim();
                             final description = descriptionController.text.trim();
-                            if (subject.isEmpty || description.isEmpty) return;
+                            if (subject.isEmpty || description.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Enter subject and description before submitting.')),
+                              );
+                              return;
+                            }
                             Navigator.pop(sheetContext);
                             await _raiseQuickTicket(
                               context,
@@ -512,7 +517,12 @@ class SupportHistoryScreen extends StatelessWidget {
                         child: FilledButton(
                           onPressed: () async {
                             final note = noteController.text.trim();
-                            if (note.isEmpty) return;
+                            if (note.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Enter request note before submitting.')),
+                              );
+                              return;
+                            }
                             Navigator.pop(sheetContext);
                             await _createServiceRequest(
                               context,

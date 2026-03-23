@@ -380,6 +380,9 @@ class AppState extends ChangeNotifier {
       if (current != null) {
         bookingTracking = await api.fetchBookingTracking(current, bookingNumber);
         installerVisits = await api.fetchServiceVisits(current);
+        notifications = await api.fetchNotifications(current);
+        requests = await api.fetchRequests(current);
+        tickets = await api.fetchTickets(current);
       } else if ((latestBookingLookupMobile ?? '').isNotEmpty) {
         bookingTracking = await api.fetchPublicBookingTracking(
           bookingNumber: bookingNumber,
