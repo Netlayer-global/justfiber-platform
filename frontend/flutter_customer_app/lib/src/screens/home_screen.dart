@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_state.dart';
 import '../widgets/gradient_orb_background.dart';
 import 'billing_history_screen.dart';
 import 'service_hub_screen.dart';
@@ -17,10 +18,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
 
+  Future<void> _setIndex(int value) async {
+    if (value == index) return;
+    setState(() => index = value);
+    final appState = AppStateScope.of(context);
+    if (appState.session != null && !appState.busy) {
+      await appState.refresh();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomeTab(onNavigate: (value) => setState(() => index = value)),
+      HomeTab(onNavigate: (value) => _setIndex(value)),
       const ServiceHubScreen(),
       const BillingHistoryScreen(),
       const SupportHistoryScreen(),
@@ -44,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(28),
           child: BottomNavigationBar(
             currentIndex: index,
-            onTap: (value) => setState(() => index = value),
+            onTap: (value) => _setIndex(value),
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
               BottomNavigationBarItem(icon: Icon(Icons.wifi_rounded), label: 'Services'),
