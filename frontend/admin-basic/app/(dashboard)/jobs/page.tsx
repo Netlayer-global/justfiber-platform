@@ -305,6 +305,10 @@ export default function JobsPage() {
                     <p className="font-semibold">{job.planName || '-'}</p>
                   </div>
                   <div>
+                    <p className="text-slate-500 text-xs">Field stage</p>
+                    <p className="font-semibold">{job.rawStatus || '-'}</p>
+                  </div>
+                  <div>
                     <p className="text-slate-500 text-xs">ONT Serial</p>
                     <p className="font-semibold">{job.finalSerialNumber || '-'}</p>
                   </div>
@@ -344,7 +348,17 @@ export default function JobsPage() {
                         Config: {job.configStatus}
                       </span>
                     ) : null}
+                    {job.latestEventCode ? (
+                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                        Event: {job.latestEventCode}
+                      </span>
+                    ) : null}
                   </div>
+                  {job.latestEventNote ? (
+                    <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                      {job.latestEventNote}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 

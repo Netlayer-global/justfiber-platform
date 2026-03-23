@@ -374,6 +374,11 @@ function mapInstaller(installer: any): Installer {
 }
 
 function mapJob(job: any): Job {
+  const latestTimeline = Array.isArray(job.timeline)
+    ? [...job.timeline]
+        .filter((item: any) => item?.at)
+        .sort((a: any, b: any) => new Date(b.at).getTime() - new Date(a.at).getTime())[0]
+    : null
   return {
     id: job._id || job.jobNumber || '',
     jobNumber: job.jobNumber || job._id || '',
@@ -402,6 +407,8 @@ function mapJob(job: any): Job {
         : ''),
     finalSerialNumber: job.deviceContext?.finalSerialNumber || job.deviceContext?.manualSerialNumber || '',
     configStatus: job.activation?.configStatus || '',
+    latestEventCode: latestTimeline?.event || '',
+    latestEventNote: latestTimeline?.note || latestTimeline?.event || '',
     scheduledDate: job.scheduledDate || job.assignment?.assignedAt,
     completedDate: job.completedAt,
   }

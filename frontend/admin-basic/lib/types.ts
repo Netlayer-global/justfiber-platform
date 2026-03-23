@@ -281,6 +281,8 @@ export interface Job {
   mapUrl?: string
   finalSerialNumber?: string
   configStatus?: string
+  latestEventCode?: string
+  latestEventNote?: string
   scheduledDate?: string
   completedDate?: string
 }

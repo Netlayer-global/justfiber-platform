@@ -569,6 +569,16 @@ installerAppRouter.post(
     };
     pushTimeline(job, "job.proof_uploaded", req.installer._id, "Proof uploaded");
     await job.save();
+    const booking = await getRelatedBooking(job);
+    if (booking) {
+      await notifyBookingCustomer(
+        booking,
+        "installer_proof_uploaded",
+        "Installation proof uploaded",
+        `Proof has been uploaded for booking ${booking.bookingNumber}.`,
+        { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+      );
+    }
     return ok(res, job.proof);
   })
 );
@@ -592,6 +602,16 @@ async function sendOtp(job, purpose) {
   };
   pushTimeline(job, "job.otp_sent", "system", `OTP sent for ${purpose}`);
   await job.save();
+  const booking = await getRelatedBooking(job);
+  if (booking) {
+    await notifyBookingCustomer(
+      booking,
+      "installer_otp_sent",
+      "Completion OTP sent",
+      `OTP has been sent for ${purpose === "complaint_complete" ? "complaint closure" : "installation completion"}.`,
+      { bookingNumber: booking.bookingNumber, installerJobId: job._id, purpose }
+    );
+  }
   return code;
 }
 
@@ -633,6 +653,16 @@ installerAppRouter.post(
     await verifyOtp(job, payload.otp);
     pushTimeline(job, "job.otp_verified", req.installer._id, "Install completion OTP verified");
     await job.save();
+    const booking = await getRelatedBooking(job);
+    if (booking) {
+      await notifyBookingCustomer(
+        booking,
+        "installer_otp_verified",
+        "Completion OTP verified",
+        `Booking ${booking.bookingNumber} completion OTP has been verified.`,
+        { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+      );
+    }
     return ok(res, { verified: true });
   })
 );
@@ -645,6 +675,16 @@ installerAppRouter.post(
     await verifyOtp(job, payload.otp);
     pushTimeline(job, "job.otp_verified", req.installer._id, "Complaint completion OTP verified");
     await job.save();
+    const booking = await getRelatedBooking(job);
+    if (booking) {
+      await notifyBookingCustomer(
+        booking,
+        "complaint_otp_verified",
+        "Complaint OTP verified",
+        `Complaint closure OTP has been verified for booking ${booking.bookingNumber}.`,
+        { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+      );
+    }
     return ok(res, { verified: true });
   })
 );
@@ -827,6 +867,16 @@ installerAppRouter.post(
             }
           }
         }
+      );
+    }
+    const booking = await getRelatedBooking(job);
+    if (booking) {
+      await notifyBookingCustomer(
+        booking,
+        "complaint_resolved",
+        "Complaint resolved",
+        `Complaint visit for booking ${booking.bookingNumber} has been completed.`,
+        { bookingNumber: booking.bookingNumber, installerJobId: job._id }
       );
     }
     const subscriberService = await SubscriberService.findOne({ serviceId: job.serviceId }).lean();
