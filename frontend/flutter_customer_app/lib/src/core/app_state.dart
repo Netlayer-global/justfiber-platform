@@ -268,6 +268,14 @@ class AppState extends ChangeNotifier {
       } catch (e) {
         firstError ??= e.toString();
       }
+      if ((latestBooking?.bookingNumber ?? '').isNotEmpty) {
+        try {
+          bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
+          await _syncLatestBookingWithTracking();
+        } catch (e) {
+          firstError ??= e.toString();
+        }
+      }
       try {
         parentalRules = await api.fetchParentalRules(current);
       } catch (e) {
