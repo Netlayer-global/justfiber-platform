@@ -48,7 +48,7 @@ class PaymentDetailScreen extends StatelessWidget {
                       width: 58,
                       height: 58,
                       decoration: BoxDecoration(
-                        color: const Color(0x14E6FF3C),
+                        color: const Color(0xFF10151A),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: const Color(0x66E6FF3C)),
                       ),

@@ -196,13 +196,13 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF08131B),
+                      color: const Color(0xFF10151A),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x33E6FF3C)),
+                      border: Border.all(color: const Color(0x55E6FF3C)),
                     ),
                     child: Text(
                       walletHint!,
-                      style: const TextStyle(color: Color(0xFFBEE8FF), fontWeight: FontWeight.w600, height: 1.4),
+                      style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w600, height: 1.4),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -264,8 +264,8 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
-                        backgroundColor: const Color(0xFF0E1520),
-                        side: const BorderSide(color: Color(0x33FFFFFF)),
+                        backgroundColor: const Color(0xFF10151A),
+                        side: const BorderSide(color: Color(0x55E6FF3C)),
                       ),
                       child: const Text('Back to app'),
                     ),
