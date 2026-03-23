@@ -128,15 +128,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
-  Future<void> _run(Future<dynamic> Function() action, String success) async {
+  Future<bool> _run(Future<dynamic> Function() action, String success) async {
     setState(() => _busy = true);
     try {
       await action();
       await _appState.refresh();
       await _loadAll();
       _show(success);
+      return true;
     } catch (e) {
       _show(e.toString());
+      return false;
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -1119,8 +1121,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool proofUploaded,
   }) {
     final pages = isComplaint
-        ? ['Briefing', 'Onsite', 'Resolution', 'Closure']
-        : ['Briefing', 'Site', 'Activation', 'Closure'];
+        ? ['1 Briefing', '2 Onsite', '3 Resolution', '4 Closure']
+        : ['1 Details', '2 ONT Scan', '3 ONT Details', '4 Activation', '5 Proof', '6 Complete'];
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1352,16 +1354,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           FilledButton(
                             onPressed: _busy || !canResolveComplaint
                                 ? null
-                                : () {
+                                : () async {
                                       final otp = _otpController.text.trim();
                                       if (otp.length != 6) {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      _run(() async {
+                                      final ok = await _run(() async {
                                         await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
                                         await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
                                       }, 'Complaint resolved');
+                                      if (ok && mounted) {
+                                        Navigator.of(context).pop();
+                                      }
                                     },
                             child: const Text('Resolve complaint'),
                           ),
@@ -1370,7 +1375,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     ]
                   : [
                       _workflowStageCard(
-                        title: 'Customer briefing',
+                        title: '1. Job details',
                         subtitle: 'Review customer, address, map, and job scope before moving.',
                         children: [
                           _row('Plan', planName),
@@ -1405,10 +1410,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         ],
                       ),
                       _workflowStageCard(
-                        title: 'Reach site',
-                        subtitle: 'Travel, reach customer location, and mark the visit onsite.',
+                        title: '2. ONT scan',
+                        subtitle: 'Reach site, mark onsite, then scan or type the ONT serial.',
                         children: [
                           _row('Current stage', status.replaceAll('_', ' ')),
+                          TextField(
+                            controller: _serialController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(labelText: 'ONT serial number'),
+                          ),
+                          const SizedBox(height: 10),
                           Wrap(
                             spacing: 10,
                             runSpacing: 10,
@@ -1419,7 +1430,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                     : () => _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started'),
                                 child: const Text('Start travel'),
                               ),
-                              FilledButton(
+                              OutlinedButton(
                                 onPressed: _busy || !canStartOnsite
                                     ? null
                                     : () => _run(() async {
@@ -1436,25 +1447,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         }, 'Onsite started'),
                                 child: const Text('Mark onsite'),
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      _workflowStageCard(
-                        title: 'Link and activate',
-                        subtitle: 'Scan ONT serial, preview config, check diagnostics, then activate.',
-                        children: [
-                          TextField(
-                            controller: _serialController,
-                            onChanged: (_) => setState(() {}),
-                            decoration: const InputDecoration(labelText: 'ONT serial number'),
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              OutlinedButton(
+                              FilledButton(
                                 onPressed: _busy
                                     ? null
                                     : () => _scanSerial(
@@ -1464,14 +1457,51 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         ),
                                 child: const Text('Scan barcode'),
                               ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: '3. ONT details',
+                        subtitle: 'Verify optical levels, linked router state, and provisioning health before activation.',
+                        children: [
+                          _row('Scanned serial', _serialController.text.trim().isEmpty ? '-' : _serialController.text.trim()),
+                          _row('RX power', '${optical['rxPower'] ?? '-'}'),
+                          _row('TX power', '${optical['txPower'] ?? '-'}'),
+                          _row('Health', '${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}'),
+                          _row('Router online', '${device['onlineStatus'] ?? 'unknown'}'),
+                          _row('Provisioning state', '${device['provisioningState'] ?? 'pending'}'),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
                               OutlinedButton(
                                 onPressed: _busy ? null : () => _run(() => _appState.api.fetchProvisioningPreview(_appState.session!, widget.job.id), 'Preview refreshed'),
                                 child: const Text('Load preview'),
                               ),
                               OutlinedButton(
                                 onPressed: _busy ? null : () => _run(() => _appState.api.fetchDiagnostics(_appState.session!, widget.job.id), 'Diagnostics refreshed'),
-                                child: const Text('Diagnostics'),
+                                child: const Text('Refresh ONT details'),
                               ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: '4. Activation',
+                        subtitle: 'Push router config, watch provisioning, and retry if backend config fails.',
+                        children: [
+                          _row('Current stage', status.replaceAll('_', ' ')),
+                          _row('Config status', configStatus),
+                          _row('PPPoE', pppoeUsername),
+                          _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? '-').toString()),
+                          _row('Wi-Fi 2.4G', wifiSsid24),
+                          _row('Wi-Fi 5G', wifiSsid5),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
                               FilledButton(
                                 onPressed: _busy || !canActivate
                                     ? null
@@ -1502,13 +1532,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 ),
                             ],
                           ),
+                          if (_activationCountdown > 0) ...[
+                            const SizedBox(height: 12),
+                            _row('Activation wait', '${_activationCountdown}s remaining'),
+                          ],
                         ],
                       ),
                       _workflowStageCard(
-                        title: 'Proof and completion',
+                        title: '5. Proof',
                         subtitle: activationLive
-                            ? 'Capture router/cable proof, send OTP, and close installation.'
-                            : 'Activation must be live before proof and completion can be closed.',
+                            ? 'Capture router and cable proof after internet becomes active.'
+                            : 'Activation must be live before proof can be closed.',
                         children: [
                           if (_routerPhotoPath != null || _cablePhotoPath != null) ...[
                             Wrap(
@@ -1551,6 +1585,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         ),
                                 child: Text(proofUploaded ? 'Update proof' : 'Submit proof'),
                               ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: '6. OTP and completion',
+                        subtitle: proofUploaded
+                            ? 'Send OTP, take customer confirmation, and complete the job.'
+                            : 'Proof submit hone ke baad OTP aur completion enabled hoga.',
+                        children: [
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
                               FilledButton(
                                 onPressed: _busy || !canSendInstallOtp
                                     ? null
@@ -1581,16 +1629,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           FilledButton(
                             onPressed: _busy || !canCompleteInstall
                                 ? null
-                                : () {
+                                : () async {
                                       final otp = _otpController.text.trim();
                                       if (otp.length != 6) {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      _run(() async {
+                                      final ok = await _run(() async {
                                         await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
                                         await _appState.api.completeJob(_appState.session!, widget.job.id);
                                       }, 'Installation completed');
+                                      if (ok && mounted) {
+                                        Navigator.of(context).pop();
+                                      }
                                     },
                             child: const Text('Complete installation'),
                           ),
@@ -2164,10 +2215,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
       if (_canResolveComplaint(status, _otpController.text.trim())) {
         final otp = _otpController.text.trim();
-        await _run(() async {
+        final ok = await _run(() async {
           await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
           await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
         }, 'Complaint resolved');
+        if (ok && mounted) {
+          Navigator.of(context).pop();
+        }
         return;
       }
       _show('No complaint action available right now');
@@ -2249,10 +2303,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
     if (_canCompleteInstall(status, _otpController.text.trim())) {
       final otp = _otpController.text.trim();
-      await _run(() async {
+      final ok = await _run(() async {
         await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
         await _appState.api.completeJob(_appState.session!, widget.job.id);
       }, 'Installation completed');
+      if (ok && mounted) {
+        Navigator.of(context).pop();
+      }
       return;
     }
     _show('No installer action available right now');
