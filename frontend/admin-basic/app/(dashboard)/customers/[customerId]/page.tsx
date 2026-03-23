@@ -32,6 +32,7 @@ export default function CustomerDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [isSaving, setIsSaving] = useState(false)
+  const [bookingBusyId, setBookingBusyId] = useState<string | null>(null)
   const [reason, setReason] = useState('Admin action')
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentReference, setPaymentReference] = useState('')
@@ -228,6 +229,28 @@ export default function CustomerDetailPage() {
       toast.error('Failed to retry provisioning')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleBookingStatusUpdate(bookingId: string, status: string) {
+    if (!customer) return
+    try {
+      setBookingBusyId(bookingId)
+      const res = await adminAPI.updateCustomerBooking(customer.id, bookingId, {
+        status,
+        note: `Updated from admin customer detail to ${status}`,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to update booking')
+        return
+      }
+      toast.success(`Booking moved to ${status}`)
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to update booking:', error)
+      toast.error('Failed to update booking')
+    } finally {
+      setBookingBusyId(null)
     }
   }
 
@@ -605,6 +628,26 @@ export default function CustomerDetailPage() {
                             {booking.assignedInstallerName ? (
                               <span className="rounded-full border border-white/10 px-2 py-1">Installer {booking.assignedInstallerName}</span>
                             ) : null}
+                            <select
+                              className="rounded-full border border-white/10 bg-black px-2 py-1 text-xs text-white outline-none"
+                              defaultValue=""
+                              disabled={bookingBusyId === booking.id}
+                              onChange={(e) => {
+                                const value = e.target.value
+                                if (!value) return
+                                void handleBookingStatusUpdate(booking.id, value)
+                                e.currentTarget.value = ''
+                              }}
+                            >
+                              <option value="">Update booking</option>
+                              <option value="payment_pending">Payment pending</option>
+                              <option value="paid">Paid</option>
+                              <option value="awaiting_assignment">Awaiting assignment</option>
+                              <option value="assigned">Assigned</option>
+                              <option value="in_progress">In progress</option>
+                              <option value="installed">Installed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
                           </div>
                         </div>
                       ))}

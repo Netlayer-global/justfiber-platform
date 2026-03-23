@@ -775,6 +775,11 @@ export const adminAPI = {
         invoiceSummary: data.invoiceSummary,
       }),
     }),
+  updateCustomerBooking: (customerId: string, bookingId: string, data: { status: string; note?: string }) =>
+    request(`/api/v1/admin/customers/${customerId}/bookings/${bookingId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
   suspendCustomer: (id: string, reason: string) =>
     request(`/api/v1/admin/customers/${id}/suspend`, {
       method: 'POST',

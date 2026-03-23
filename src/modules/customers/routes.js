@@ -8,7 +8,7 @@ import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
-import { statusActionSchema, retryProvisioningSchema, updateCustomerSchema, adminPlanChangeSchema } from "./schemas.js";
+import { statusActionSchema, retryProvisioningSchema, updateCustomerSchema, adminPlanChangeSchema, updateBookingStatusSchema } from "./schemas.js";
 import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { allowedPresets } from "../../integrations/genieacsClient.js";
@@ -79,6 +79,58 @@ function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMo
     payableNow: adjustmentAmount > 0 ? adjustmentAmount : 0,
     creditAmount: adjustmentAmount < 0 ? Math.abs(adjustmentAmount) : 0,
     mode: "immediate"
+  };
+}
+
+function buildBookingTracking(status, existingTracking = {}, note) {
+  const stepMap = {
+    initiated: "booking_placed",
+    payment_pending: "payment_confirmed",
+    paid: "payment_confirmed",
+    awaiting_assignment: "payment_confirmed",
+    assigned: "installer_assigned",
+    in_progress: "work_in_progress",
+    installed: "installation_completed",
+    cancelled: "cancelled"
+  };
+  const currentStep = stepMap[status] || existingTracking.currentStep || "booking_placed";
+  const existingSteps = Array.isArray(existingTracking.steps) ? [...existingTracking.steps] : [];
+  const upsertStep = (code, stepStatus, atValue) => {
+    const index = existingSteps.findIndex((item) => item?.code === code);
+    const next = { code, status: stepStatus, at: atValue };
+    if (index >= 0) {
+      existingSteps[index] = { ...existingSteps[index], ...next };
+    } else {
+      existingSteps.push(next);
+    }
+  };
+
+  upsertStep("booking_placed", "done", existingTracking?.steps?.find?.((item) => item?.code === "booking_placed")?.at || new Date());
+  if (["paid", "awaiting_assignment", "assigned", "in_progress", "installed"].includes(status)) {
+    upsertStep("payment_confirmed", "done", new Date());
+  } else if (status === "payment_pending") {
+    upsertStep("payment_confirmed", "pending", null);
+  }
+  if (["assigned", "in_progress", "installed"].includes(status)) {
+    upsertStep("installer_assigned", "done", new Date());
+  } else if (status === "awaiting_assignment") {
+    upsertStep("installer_assigned", "pending", null);
+  }
+  if (status === "in_progress") {
+    upsertStep("work_in_progress", "done", new Date());
+  }
+  if (status === "installed") {
+    upsertStep("work_in_progress", "done", new Date());
+    upsertStep("installation_completed", "done", new Date());
+  }
+  if (status === "cancelled") {
+    upsertStep("cancelled", "done", new Date());
+  }
+
+  return {
+    currentStep,
+    steps: existingSteps,
+    lastAdminNote: note || existingTracking.lastAdminNote || ""
   };
 }
 
@@ -207,6 +259,66 @@ customersRouter.patch(
       metadata: Object.keys(payload)
     });
     return ok(res, customer);
+  })
+);
+
+customersRouter.patch(
+  "/:customerId/bookings/:bookingId",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = updateBookingStatusSchema.parse(req.body || {});
+    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+
+    const linkedUsers = await CustomerUser.find({
+      $or: [
+        { linkedCustomerIds: customer.customerId },
+        ...(customer.phone ? [{ mobile: customer.phone }] : []),
+        ...(customer.email ? [{ email: customer.email }] : [])
+      ]
+    }).select({ _id: 1 }).lean();
+    const linkedUserIds = linkedUsers.map((item) => String(item._id));
+
+    const booking = await ConnectionBooking.findById(req.params.bookingId);
+    if (!booking) {
+      throw new ApiError(404, "Booking not found");
+    }
+
+    const belongsToCustomer =
+      (booking.customerUserId && linkedUserIds.includes(String(booking.customerUserId))) ||
+      (customer.phone && booking.personalDetails?.mobile === customer.phone);
+
+    if (!belongsToCustomer) {
+      throw new ApiError(404, "Booking not found for this customer");
+    }
+
+    booking.status = payload.status;
+    booking.tracking = buildBookingTracking(payload.status, booking.tracking || {}, payload.note);
+    if (payload.status === "paid") {
+      booking.payment = {
+        ...(booking.payment || {}),
+        status: "paid",
+        paidAt: booking.payment?.paidAt || new Date()
+      };
+    }
+    if (payload.status === "cancelled") {
+      booking.payment = {
+        ...(booking.payment || {}),
+        status: booking.payment?.status || "cancelled"
+      };
+    }
+
+    await booking.save();
+    await auditFromRequest(req, {
+      action: "customer.booking.updated",
+      entityType: "booking",
+      entityId: booking._id.toString(),
+      metadata: { status: payload.status }
+    });
+
+    return ok(res, booking);
   })
 );
 

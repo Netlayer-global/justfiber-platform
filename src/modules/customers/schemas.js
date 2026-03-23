@@ -15,6 +15,11 @@ export const adminPlanChangeSchema = z.object({
   note: z.string().max(300).optional()
 });
 
+export const updateBookingStatusSchema = z.object({
+  status: z.enum(["initiated", "payment_pending", "paid", "awaiting_assignment", "assigned", "in_progress", "installed", "cancelled"]),
+  note: z.string().max(300).optional()
+});
+
 export const updateCustomerSchema = z.object({
   fullName: z.string().min(2).max(200).optional(),
   phone: z.string().min(8).max(20).optional(),
