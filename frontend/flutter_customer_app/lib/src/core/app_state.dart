@@ -361,22 +361,17 @@ class AppState extends ChangeNotifier {
         preferredSlotLabel: preferredSlotLabel,
       );
       latestBookingLookupMobile = current?.mobile ?? mobile;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_latestBookingNumberKey, latestBooking!.bookingNumber);
-      await prefs.setString(_latestBookingMobileKey, latestBookingLookupMobile!);
-      await prefs.setString(_latestBookingPlanKey, latestBooking!.planName);
-      await prefs.setDouble(_latestBookingAmountKey, latestBooking!.amount);
-      await prefs.setString(_latestBookingStepKey, latestBooking!.currentStep);
-      await prefs.setString(_latestBookingDateKey, latestBooking!.preferredDate);
-      await prefs.setString(_latestBookingSlotKey, latestBooking!.preferredSlotLabel);
+      await _persistLatestBookingCache();
       if (current != null) {
         bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
         installerVisits = await api.fetchServiceVisits(current);
+        await _syncLatestBookingWithTracking();
       } else if (latestBookingLookupMobile != null && latestBookingLookupMobile!.isNotEmpty) {
         bookingTracking = await api.fetchPublicBookingTracking(
           bookingNumber: latestBooking!.bookingNumber,
           mobile: latestBookingLookupMobile!,
         );
+        await _syncLatestBookingWithTracking();
       }
       return true;
     } catch (e) {
@@ -466,7 +461,7 @@ class AppState extends ChangeNotifier {
         tickets = await api.fetchTickets(current);
         if ((bookingNumber ?? '').isNotEmpty) {
           bookingTracking = await api.fetchBookingTracking(current, bookingNumber!);
-          _syncLatestBookingWithTracking();
+          await _syncLatestBookingWithTracking();
         }
       } else if ((latestBookingLookupMobile ?? '').isNotEmpty) {
         if ((bookingNumber ?? '').isEmpty) return;
@@ -474,7 +469,7 @@ class AppState extends ChangeNotifier {
           bookingNumber: bookingNumber!,
           mobile: latestBookingLookupMobile!,
         );
-        _syncLatestBookingWithTracking();
+        await _syncLatestBookingWithTracking();
       } else {
         return;
       }
@@ -783,7 +778,7 @@ class AppState extends ChangeNotifier {
               bookingNumber: latestBooking!.bookingNumber,
               mobile: latestBookingLookupMobile!,
             );
-            _syncLatestBookingWithTracking();
+            await _syncLatestBookingWithTracking();
           } catch (_) {
             // keep stored booking summary even if public tracking isn't available yet
           }
@@ -806,7 +801,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void _syncLatestBookingWithTracking() {
+  Future<void> _syncLatestBookingWithTracking() async {
     final currentBooking = latestBooking;
     final tracking = bookingTracking;
     if (currentBooking == null || tracking == null) return;
@@ -817,6 +812,30 @@ class AppState extends ChangeNotifier {
       currentStep: normalizedStep.isEmpty ? currentBooking.currentStep : normalizedStep,
       status: latestStatus.isEmpty ? currentBooking.status : latestStatus,
     );
+    await _persistLatestBookingCache();
+  }
+
+  Future<void> _persistLatestBookingCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    final booking = latestBooking;
+    final lookupMobile = latestBookingLookupMobile;
+    if (booking == null) {
+      await prefs.remove(_latestBookingNumberKey);
+      await prefs.remove(_latestBookingMobileKey);
+      await prefs.remove(_latestBookingPlanKey);
+      await prefs.remove(_latestBookingAmountKey);
+      await prefs.remove(_latestBookingStepKey);
+      await prefs.remove(_latestBookingDateKey);
+      await prefs.remove(_latestBookingSlotKey);
+      return;
+    }
+    await prefs.setString(_latestBookingNumberKey, booking.bookingNumber);
+    await prefs.setString(_latestBookingMobileKey, lookupMobile ?? '');
+    await prefs.setString(_latestBookingPlanKey, booking.planName);
+    await prefs.setDouble(_latestBookingAmountKey, booking.amount);
+    await prefs.setString(_latestBookingStepKey, booking.currentStep);
+    await prefs.setString(_latestBookingDateKey, booking.preferredDate);
+    await prefs.setString(_latestBookingSlotKey, booking.preferredSlotLabel);
   }
 }
 
