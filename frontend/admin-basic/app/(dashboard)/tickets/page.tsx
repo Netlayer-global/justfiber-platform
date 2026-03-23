@@ -2,20 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { Ticket } from '@/lib/types'
-import { AlertCircle, Loader, ShieldCheck, Ticket as TicketIcon } from 'lucide-react'
+import { SupportQueueRequest, Ticket } from '@/lib/types'
+import { AlertCircle, ClipboardList, Loader, ShieldCheck, Ticket as TicketIcon } from 'lucide-react'
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
+  const [requests, setRequests] = useState<SupportQueueRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const queueMetrics: Array<{
     label: string
     value: string
     Icon: typeof AlertCircle
   }> = [
-    { label: 'Open', value: String(tickets.filter((t) => t.status === 'open').length), Icon: AlertCircle },
+    { label: 'Open tickets', value: String(tickets.filter((t) => ['open', 'assigned', 'in_progress'].includes(t.status)).length), Icon: AlertCircle },
     { label: 'Resolved', value: String(tickets.filter((t) => t.status === 'resolved').length), Icon: ShieldCheck },
-    { label: 'Total', value: String(tickets.length), Icon: TicketIcon },
+    { label: 'Open requests', value: String(requests.filter((r) => !['completed', 'closed', 'cancelled'].includes(r.status)).length), Icon: ClipboardList },
+    { label: 'Total', value: String(tickets.length + requests.length), Icon: TicketIcon },
   ]
 
   useEffect(() => {
@@ -25,9 +27,10 @@ export default function TicketsPage() {
   async function loadTickets() {
     try {
       setIsLoading(true)
-      const response = await adminAPI.getTickets()
+      const response = await adminAPI.getSupportQueue()
       if (response.success && response.data) {
-        setTickets(response.data.items)
+        setTickets(response.data.tickets)
+        setRequests(response.data.requests)
       }
     } catch (error) {
       console.error('[v0] Failed to load tickets:', error)
@@ -49,9 +52,9 @@ export default function TicketsPage() {
         </div>
         <div className="neon-panel p-8">
           <div className="text-xs uppercase tracking-[0.25em] text-black/55">Queue pulse</div>
-          <div className="mt-3 text-5xl font-black">{tickets.length}</div>
-          <div className="mt-2 text-sm text-black/60">Support items in the current working queue</div>
-          <div className="mt-8 grid grid-cols-3 gap-3">
+          <div className="mt-3 text-5xl font-black">{tickets.length + requests.length}</div>
+          <div className="mt-2 text-sm text-black/60">Customer app tickets and service requests in one queue</div>
+          <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
             {queueMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
@@ -66,53 +69,105 @@ export default function TicketsPage() {
       {isLoading ? (
         <div className="card p-6 text-center"><Loader className="mx-auto h-6 w-6 animate-spin text-[#d8ff16]" /></div>
       ) : (
-        <div className="overflow-x-auto card">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#0a0a0a]">
-                <th className="table-header">Subject</th>
-                <th className="table-header">Priority</th>
-                <th className="table-header">Status</th>
-                <th className="table-header">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tickets.map((ticket) => (
-                <tr key={ticket.id} className="border-t border-white/10 hover:bg-white/5">
-                  <td className="table-cell font-medium text-white">{ticket.subject}</td>
-                  <td className="table-cell">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        ticket.priority === 'high'
-                          ? 'bg-red-100 text-red-700'
-                          : ticket.priority === 'medium'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {ticket.priority}
-                    </span>
-                  </td>
-                  <td className="table-cell">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        ticket.status === 'resolved'
-                          ? 'bg-green-100 text-green-700'
-                          : ticket.status === 'open'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {ticket.status}
-                    </span>
-                  </td>
-                  <td className="table-cell">
-                    {new Date(ticket.createdAt).toLocaleDateString()}
-                  </td>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <div className="overflow-x-auto card">
+            <div className="border-b border-white/10 px-5 py-4">
+              <div className="text-sm font-semibold text-white">Support tickets</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-white/40">Customer app complaints and billing tickets</div>
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0a0a]">
+                  <th className="table-header">Subject</th>
+                  <th className="table-header">Priority</th>
+                  <th className="table-header">Status</th>
+                  <th className="table-header">Created</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {tickets.map((ticket) => (
+                  <tr key={ticket.id} className="border-t border-white/10 hover:bg-white/5">
+                    <td className="table-cell font-medium text-white">{ticket.subject}</td>
+                    <td className="table-cell">
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          ticket.priority === 'high'
+                            ? 'bg-red-100 text-red-700'
+                            : ticket.priority === 'medium'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {ticket.priority}
+                      </span>
+                    </td>
+                    <td className="table-cell">
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          ticket.status === 'resolved'
+                            ? 'bg-green-100 text-green-700'
+                            : ticket.status === 'open'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {ticket.status}
+                      </span>
+                    </td>
+                    <td className="table-cell">
+                      {new Date(ticket.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+                {tickets.length === 0 ? (
+                  <tr>
+                    <td className="table-cell text-white/55" colSpan={4}>No tickets in the queue.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="overflow-x-auto card">
+            <div className="border-b border-white/10 px-5 py-4">
+              <div className="text-sm font-semibold text-white">Service requests</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-white/40">Shift, disconnect, complaint, addon and plan-change requests</div>
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0a0a]">
+                  <th className="table-header">Request</th>
+                  <th className="table-header">Type</th>
+                  <th className="table-header">Status</th>
+                  <th className="table-header">Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((request) => (
+                  <tr key={request.id} className="border-t border-white/10 hover:bg-white/5">
+                    <td className="table-cell">
+                      <div className="font-medium text-white">{request.requestNumber}</div>
+                      <div className="text-xs text-white/45">{request.customerId || request.serviceId || 'Customer app request'}</div>
+                    </td>
+                    <td className="table-cell text-white">{request.type}</td>
+                    <td className="table-cell">
+                      <span className="rounded-full bg-white/10 px-2 py-1 text-xs font-medium text-white">
+                        {request.status}
+                      </span>
+                    </td>
+                    <td className="table-cell">
+                      {new Date(request.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+                {requests.length === 0 ? (
+                  <tr>
+                    <td className="table-cell text-white/55" colSpan={4}>No service requests in the queue.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

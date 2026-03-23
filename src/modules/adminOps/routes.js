@@ -24,6 +24,7 @@ import { BillingProfile } from "../../models/BillingProfile.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { env } from "../../config/env.js";
+import { ServiceRequest } from "../../models/ServiceRequest.js";
 
 export const adminOpsRouter = Router();
 
@@ -1470,6 +1471,41 @@ adminOpsRouter.get(
       lan: device.lanInfo || {},
       optical: device.opticalInfo || {},
       tags: device.tags || []
+    });
+  })
+);
+
+adminOpsRouter.get(
+  "/support/queue",
+  requirePermission(permissions.ticketRead),
+  asyncHandler(async (req, res) => {
+    const status = String(req.query?.status || "").trim();
+    const requestType = String(req.query?.type || "").trim();
+    const ticketFilter = {};
+    const requestFilter = {};
+
+    if (status) {
+      ticketFilter.status = status;
+      requestFilter.status = status;
+    }
+    if (requestType) {
+      requestFilter.type = requestType;
+    }
+
+    const [tickets, requests] = await Promise.all([
+      SupportTicket.find(ticketFilter).sort({ createdAt: -1 }).limit(50).lean(),
+      ServiceRequest.find(requestFilter).sort({ createdAt: -1 }).limit(50).lean()
+    ]);
+
+    return ok(res, {
+      tickets,
+      requests,
+      metrics: {
+        openTickets: tickets.filter((item) => ["open", "assigned", "in_progress"].includes(item.status)).length,
+        resolvedTickets: tickets.filter((item) => ["resolved", "closed"].includes(item.status)).length,
+        openRequests: requests.filter((item) => !["completed", "closed", "cancelled"].includes(item.status)).length,
+        totalRequests: requests.length
+      }
     });
   })
 );

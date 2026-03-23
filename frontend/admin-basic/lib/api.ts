@@ -30,6 +30,7 @@ import type {
   CustomerInvoice,
   CustomerPayment,
   CustomerTicket,
+  SupportQueueRequest,
 } from './types'
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
@@ -318,6 +319,19 @@ function mapTicket(ticket: any): Ticket {
     customerId: ticket.customerId || '',
     assignedTo: ticket.assignedToAdminId || ticket.assignedTeam,
     createdAt: ticket.createdAt || new Date().toISOString(),
+  }
+}
+
+function mapSupportQueueRequest(request: any): SupportQueueRequest {
+  return {
+    id: request._id || request.requestNumber || '',
+    requestNumber: request.requestNumber || request._id || '',
+    type: request.type || 'request',
+    status: request.status || 'open',
+    customerId: request.customerId || '',
+    serviceId: request.serviceId || '',
+    note: request.note || request.payload?.note || request.timeline?.[0]?.note || '',
+    createdAt: request.createdAt || new Date().toISOString(),
   }
 }
 
@@ -835,6 +849,19 @@ export const adminAPI = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+  getSupportQueue: async () => {
+    const res = await request<any>('/api/v1/admin/support/queue')
+    return {
+      ...res,
+      data: res.data
+        ? {
+            tickets: Array.isArray(res.data.tickets) ? res.data.tickets.map(mapTicket) : [],
+            requests: Array.isArray(res.data.requests) ? res.data.requests.map(mapSupportQueueRequest) : [],
+            metrics: res.data.metrics || {},
+          }
+        : undefined,
+    }
+  },
 
   // Installers
   getInstallers: async (page = 1, limit = 20) => {

@@ -220,6 +220,17 @@ export interface Ticket {
   createdAt: string
 }
 
+export interface SupportQueueRequest {
+  id: string
+  requestNumber: string
+  type: string
+  status: string
+  customerId?: string
+  serviceId?: string
+  note?: string
+  createdAt: string
+}
+
 export interface Installer {
   id: string
   installerCode?: string
