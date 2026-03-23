@@ -94,7 +94,7 @@ class ServiceHubScreen extends StatelessWidget {
                   width: 88,
                   height: 88,
                   decoration: BoxDecoration(
-                    color: const Color(0x14E6FF3C),
+                    color: const Color(0xFF10151A),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0x66E6FF3C)),
                   ),
@@ -307,8 +307,9 @@ class ServiceHubScreen extends StatelessWidget {
                                   width: 68,
                                   height: 68,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF0B0F19),
+                                    color: const Color(0xFF10151A),
                                     borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: const Color(0x33E6FF3C)),
                                   ),
                                   child: const Icon(Icons.add_box_outlined, size: 32, color: Color(0xFFE6FF3C)),
                                 ),

@@ -66,13 +66,13 @@ class NotificationsScreen extends StatelessWidget {
   Color _badgeBackgroundFor(_AlertKind kind) {
     switch (kind) {
       case _AlertKind.billing:
-        return const Color(0x14E6FF3C);
+        return const Color(0xFF10151A);
       case _AlertKind.support:
-        return const Color(0x221F2937);
+        return const Color(0xFF15181C);
       case _AlertKind.tracking:
-        return const Color(0x14F59E0B);
+        return const Color(0xFF1A1510);
       case _AlertKind.general:
-        return const Color(0x120B0F19);
+        return const Color(0xFF15181C);
     }
   }
 
@@ -210,7 +210,7 @@ class NotificationsScreen extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
-                        backgroundColor: const Color(0xFF0E1520),
+                        backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Open Support Center'),
@@ -226,7 +226,7 @@ class NotificationsScreen extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
-                        backgroundColor: const Color(0xFF0E1520),
+                        backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Open Billing'),
@@ -340,7 +340,7 @@ class NotificationsScreen extends StatelessWidget {
                                     },
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: const Color(0xFFEFEEE8),
-                                      backgroundColor: const Color(0xFF0E1520),
+                                      backgroundColor: const Color(0xFF10151A),
                                       side: const BorderSide(color: Color(0x33E6FF3C)),
                                     ),
                                     child: Text(item.readAt.isEmpty ? 'Mark as read' : 'Refresh alerts'),
