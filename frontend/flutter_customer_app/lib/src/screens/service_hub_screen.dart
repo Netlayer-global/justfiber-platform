@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
+import '../widgets/app_card.dart';
 import 'plan_catalog_screen.dart';
 import 'service_tracking_screen.dart';
 import 'wifi_settings_screen.dart';
@@ -39,67 +40,90 @@ class ServiceHubScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 34),
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF0B0F19), Color(0xFF111827)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
+                colors: [Color(0xFF090D15), Color(0xFF111827)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: const Color(0x2239FF14)),
+              boxShadow: const [
+                BoxShadow(color: Color(0x26030B14), blurRadius: 24, offset: Offset(0, 10)),
+              ],
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Your broadband control center',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white),
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontSize: 28,
+                            ),
                       ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Manage only service-related actions here: Wi-Fi controls, plan changes, diagnostics, add-ons, and connection health.',
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Manage service actions here only: Wi-Fi controls, devices, diagnostics, shifts, and plan changes.',
                         style: TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                      ),
+                      const SizedBox(height: 18),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _heroMetric('State', isActive ? 'Active' : 'Paused'),
+                          _heroMetric('Devices', '${wifi.connectedDevicesCount}'),
+                          _heroMetric('Mode', billing.billMode.isEmpty ? 'Unset' : billing.billMode),
+                        ],
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 14),
                 Container(
-                  width: 92,
-                  height: 92,
+                  width: 88,
+                  height: 88,
                   decoration: BoxDecoration(
                     color: const Color(0x1439FF14),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0x6639FF14)),
                   ),
-                  child: const Icon(Icons.wifi_rounded, color: Color(0xFF39FF14), size: 44),
+                  child: const Icon(Icons.wifi_rounded, color: Color(0xFF39FF14), size: 42),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: const [BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8))],
-            ),
+          _lightPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('PLAN', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF7B7F87))),
+                const Text('Current service', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
                 const SizedBox(height: 10),
-                Text(planName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
+                Text(
+                  '$planName | $displayWifiName',
+                  style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+                ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    _metric('Status', isActive ? 'Active' : 'Paused'),
-                    _metric('Mode', billing.billMode.isEmpty ? 'Not set' : billing.billMode),
-                    _metric('Data', 'Unlimited'),
-                    _metric('Devices', '${wifi.connectedDevicesCount}'),
+                    Expanded(child: _serviceStat('Plan', planName)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _serviceStat('Wi-Fi', displayWifiName)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _serviceStat('Status', isActive ? 'Active' : 'Paused')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _serviceStat('Quality', networkQuality.quality.isEmpty ? '-' : networkQuality.quality)),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -110,7 +134,7 @@ class ServiceHubScreen extends StatelessWidget {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
                         ),
-                        child: const Text('View Plans'),
+                        child: const Text('View plans'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -119,8 +143,7 @@ class ServiceHubScreen extends StatelessWidget {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
                         ),
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
-                        child: const Text('Change Plan'),
+                        child: const Text('Change plan'),
                       ),
                     ),
                   ],
@@ -129,22 +152,51 @@ class ServiceHubScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          _lightCard(
-            title: 'QUICK ACTIONS',
+          _lightPanel(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _quickAction(context, Icons.router_outlined, 'Wi-Fi Settings', 'Diagnose issues, manage devices, guest Wi-Fi, and passwords', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen()))),
-                _quickAction(context, Icons.home_work_outlined, 'Shift Connection', 'Request relocation of your active connection', () => _showShiftConnectionSheet(context, appState)),
-                _quickAction(context, Icons.auto_awesome_motion_outlined, 'Change Plan', 'Upgrade or downgrade your current broadband plan', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()))),
-                _quickAction(context, Icons.track_changes_outlined, 'Track service activity', 'See booking progress, service requests, and complaint updates', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())), last: true),
+                const Text('Quick actions', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                const SizedBox(height: 12),
+                _quickAction(
+                  context,
+                  Icons.router_outlined,
+                  'Wi-Fi settings',
+                  'Passwords, guest Wi-Fi, devices, access, and router actions',
+                  () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen())),
+                ),
+                _quickAction(
+                  context,
+                  Icons.home_work_outlined,
+                  'Shift connection',
+                  'Create a relocation request for your current broadband setup',
+                  () => _showShiftConnectionSheet(context, appState),
+                ),
+                _quickAction(
+                  context,
+                  Icons.auto_awesome_motion_outlined,
+                  'Change plan',
+                  'Upgrade or downgrade your service using the current billing rules',
+                  () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen())),
+                ),
+                _quickAction(
+                  context,
+                  Icons.track_changes_outlined,
+                  'Track service activity',
+                  'See booking steps, visits, requests, and complaint progress',
+                  () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())),
+                  last: true,
+                ),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          _lightCard(
-            title: 'SERVICE HEALTH',
+          _lightPanel(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text('Service health', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(child: _summaryHealthTile('Quality', networkQuality.quality)),
@@ -161,8 +213,8 @@ class ServiceHubScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                _accountRow(Icons.track_changes_outlined, 'OPEN REQUESTS', '${appState.requests.length}'),
-                _accountRow(Icons.support_agent_outlined, 'OPEN TICKETS', '${appState.tickets.length}', last: true),
+                _accountRow(Icons.track_changes_outlined, 'Open requests', '${appState.requests.length}'),
+                _accountRow(Icons.support_agent_outlined, 'Open tickets', '${appState.tickets.length}', last: true),
                 const SizedBox(height: 14),
                 Row(
                   children: [
@@ -171,7 +223,7 @@ class ServiceHubScreen extends StatelessWidget {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
                         ),
-                        child: const Text('Open Tracking'),
+                        child: const Text('Open tracking'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -180,8 +232,7 @@ class ServiceHubScreen extends StatelessWidget {
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const WifiSettingsScreen()),
                         ),
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF111317)),
-                        child: const Text('Run Wi-Fi Actions'),
+                        child: const Text('Run Wi-Fi actions'),
                       ),
                     ),
                   ],
@@ -191,46 +242,58 @@ class ServiceHubScreen extends StatelessWidget {
           ),
           if (appState.addons.isNotEmpty) ...[
             const SizedBox(height: 18),
-            _lightCard(
-              title: 'Get add-ons',
+            _lightPanel(
               child: Column(
-                children: appState.addons
-                    .take(2)
-                    .map(
-                      (addon) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(22)),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 72,
-                                height: 72,
-                                decoration: BoxDecoration(color: const Color(0xFFF0EEFF), borderRadius: BorderRadius.circular(18)),
-                                child: const Icon(Icons.add_box_outlined, size: 34, color: Color(0xFF22252D)),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Add-ons', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                  const SizedBox(height: 12),
+                  ...appState.addons.take(2).map(
+                        (addon) => Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
-                                    const SizedBox(height: 4),
-                                    Text(addon.description, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
-                                  ],
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: const Color(0x1439FF14)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 68,
+                                  height: 68,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0B0F19),
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: const Icon(Icons.add_box_outlined, size: 32, color: Color(0xFF39FF14)),
                                 ),
-                              ),
-                              OutlinedButton(
-                                onPressed: () => _showAddonInterest(context, appState, addon.name),
-                                child: const Text('Request'),
-                              ),
-                            ],
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                                      const SizedBox(height: 4),
+                                      Text(addon.description, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                                    ],
+                                  ),
+                                ),
+                                OutlinedButton(
+                                  onPressed: () => _showAddonInterest(context, appState, addon.name),
+                                  child: const Text('Request'),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    )
-                    .toList(),
+                ],
               ),
             ),
           ],
@@ -239,33 +302,59 @@ class ServiceHubScreen extends StatelessWidget {
     );
   }
 
-  Widget _lightCard({required String title, required Widget child}) {
+  Widget _heroMetric(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: const [BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8))],
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x3339FF14)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF7B7F87))),
-          const SizedBox(height: 12),
-          child,
-        ],
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Colors.white),
+          children: [
+            TextSpan(text: '$value ', style: const TextStyle(fontWeight: FontWeight.w800)),
+            TextSpan(text: label, style: const TextStyle(color: Color(0xFF94A3B8))),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _metric(String label, String value) {
-    return Expanded(
+  Widget _lightPanel({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFFFF), Color(0xFFF7FFFE)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0x1439FF14)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _serviceStat(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBFF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0x2239FF14)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFF7B7F87))),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -275,14 +364,14 @@ class ServiceHubScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6FFFE),
+        color: const Color(0xFFF8FBFF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x2239FF14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF7B7F87), fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(value.isEmpty ? '-' : value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
         ],
@@ -295,13 +384,24 @@ class ServiceHubScreen extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1)))),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1)),
+          ),
+        ),
         child: Row(
           children: [
             Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(color: const Color(0xFF0B0F19), borderRadius: BorderRadius.circular(18)),
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0B0F19), Color(0xFF141A25)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+              ),
               child: Icon(icon, color: const Color(0xFF39FF14)),
             ),
             const SizedBox(width: 14),
@@ -309,7 +409,7 @@ class ServiceHubScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
                   const SizedBox(height: 4),
                   Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
                 ],
@@ -325,21 +425,29 @@ class ServiceHubScreen extends StatelessWidget {
   Widget _accountRow(IconData icon, String label, String value, {bool last = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1)))),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1)),
+        ),
+      ),
       child: Row(
         children: [
           Container(
             width: 50,
             height: 50,
-            decoration: BoxDecoration(color: const Color(0xFFF0EEFF), borderRadius: BorderRadius.circular(18)),
-            child: Icon(icon, color: const Color(0xFF1F2937)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0x2239FF14)),
+            ),
+            child: Icon(icon, color: const Color(0xFF111827)),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: Color(0xFF7B7F87), fontWeight: FontWeight.w700)),
+                Text(label, style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
               ],
@@ -373,7 +481,13 @@ class ServiceHubScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)))),
+                  Center(
+                    child: Container(
+                      width: 52,
+                      height: 6,
+                      decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)),
+                    ),
+                  ),
                   const SizedBox(height: 18),
                   const Text('Shift Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
                   const SizedBox(height: 14),
@@ -396,7 +510,7 @@ class ServiceHubScreen extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: const Color(0xFF2563EB), borderRadius: BorderRadius.circular(18)),
+                    decoration: BoxDecoration(color: const Color(0xFF111827), borderRadius: BorderRadius.circular(18)),
                     child: const Text('Shift your Wi-Fi connection for free!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(height: 14),
@@ -418,7 +532,6 @@ class ServiceHubScreen extends StatelessWidget {
                                 SnackBar(content: Text(request == null ? (appState.error ?? 'Unable to create shift request') : 'Shift request submitted')),
                               );
                             },
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD81F26)),
                       child: const Text('Proceed'),
                     ),
                   ),
@@ -446,7 +559,7 @@ class ServiceHubScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: selected ? const Color(0xFF2563EB) : const Color(0xFFE5E7EB), width: 1.5),
+          border: Border.all(color: selected ? const Color(0xFF39FF14) : const Color(0xFFE5E7EB), width: 1.5),
         ),
         child: Row(
           children: [
@@ -466,6 +579,4 @@ class ServiceHubScreen extends StatelessWidget {
       ),
     );
   }
-
 }
-

@@ -27,14 +27,15 @@ class HomeTab extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
       children: [
         Container(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+              colors: [Color(0xFF090D15), Color(0xFF111827)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: const Color(0x2239FF14)),
             boxShadow: const [
               BoxShadow(color: Color(0x26030B14), blurRadius: 26, offset: Offset(0, 12)),
             ],
@@ -43,6 +44,7 @@ class HomeTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Column(
@@ -50,22 +52,27 @@ class HomeTab extends StatelessWidget {
                       children: [
                         Text(
                           'Hi, $displayName',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontSize: 30,
+                              ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           hasService
-                              ? 'Monitor your broadband, due amount, and active requests from one control surface.'
-                              : 'Check feasibility, select a plan, and create your broadband booking.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFFD1D5DB)),
+                              ? 'Monitor your broadband, due amount, and active requests from one clean control surface.'
+                              : 'Check feasibility, pick a plan, and start your broadband booking in a few steps.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: const Color(0xFFD1D5DB),
+                              ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 14),
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
                       color: const Color(0x1439FF14),
                       borderRadius: BorderRadius.circular(18),
@@ -78,7 +85,7 @@ class HomeTab extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
@@ -88,7 +95,7 @@ class HomeTab extends StatelessWidget {
                   _metricPill('Devices', '${wifi.connectedDevicesCount}'),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -122,16 +129,37 @@ class HomeTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        AppCard(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFF2FFFC)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+        _lightPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Live connection snapshot', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF05070D))),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Live connection snapshot',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF05070D)),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: hasService ? const Color(0x1439FF14) : const Color(0x120B0F19),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: hasService ? const Color(0x6639FF14) : const Color(0x1A0B0F19),
+                      ),
+                    ),
+                    child: Text(
+                      hasService ? 'ACTIVE' : 'NEW',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: hasService ? const Color(0xFF0B0F19) : const Color(0xFF334155),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 10),
               Text(
                 hasService ? '$planName | $wifiName' : 'No active connection yet. Start with a new booking.',
@@ -173,12 +201,7 @@ class HomeTab extends StatelessWidget {
         ),
         if (billing.dueAmount > 0) ...[
           const SizedBox(height: 18),
-          AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFFFFF), Color(0xFFF7FFFE)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+          _lightPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -225,7 +248,7 @@ class HomeTab extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 18),
-        AppCard(
+        _lightPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -242,12 +265,7 @@ class HomeTab extends StatelessWidget {
         ),
         if (latestBooking != null) ...[
           const SizedBox(height: 18),
-          AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFFFFF), Color(0xFFF1F5FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+          _lightPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -280,8 +298,13 @@ class HomeTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B0F19),
-        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B0F19), Color(0xFF151B27)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x2239FF14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,10 +330,14 @@ class HomeTab extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 54,
-              height: 54,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: const Color(0xFF0B0F19),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0B0F19), Color(0xFF141A25)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Icon(icon, color: const Color(0xFF39FF14)),
@@ -337,7 +364,7 @@ class HomeTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B0F19),
+        color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0x3339FF14)),
       ),
@@ -355,23 +382,55 @@ class HomeTab extends StatelessWidget {
 
   Widget _infoRow(String label, String value, {bool highlight = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B))),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: highlight ? const Color(0xFF39FF14) : const Color(0xFF05070D),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FBFF),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0x2239FF14)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: highlight ? const Color(0xFF111827) : const Color(0xFF05070D),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _lightPanel({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFFFF), Color(0xFFF7FFFE)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0x1439FF14)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
         ],
       ),
+      child: child,
     );
   }
 
@@ -392,4 +451,3 @@ class HomeTab extends StatelessWidget {
     );
   }
 }
-
