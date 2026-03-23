@@ -72,7 +72,7 @@ ThemeData buildJustFiberTheme() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: const Color(0xFF050505),
+      backgroundColor: const Color(0xFF0C1018),
       selectedItemColor: accent,
       unselectedItemColor: muted,
       selectedLabelStyle: GoogleFonts.dmSans(fontWeight: FontWeight.w700),

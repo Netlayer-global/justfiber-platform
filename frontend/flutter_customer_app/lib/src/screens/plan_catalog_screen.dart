@@ -130,9 +130,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFEEE8),
+        color: const Color(0xFF12161A),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x33E6FF3C)),
       ),
       child: Row(
         children: [
@@ -153,9 +153,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF0B0F19) : const Color(0xFFEFEEE8),
+          color: active ? const Color(0xFF0B0F19) : const Color(0xFF15181C),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: active ? const Color(0x66E6FF3C) : const Color(0x22E6FF3C)),
+          border: Border.all(color: active ? const Color(0x99E6FF3C) : const Color(0x33E6FF3C)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,7 +163,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             Text(
               title,
               style: TextStyle(
-                color: active ? const Color(0xFFEFEEE8) : const Color(0xFF111827),
+                color: active ? const Color(0xFFEFEEE8) : const Color(0xFFEFEEE8),
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -202,7 +202,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   }) {
     final isCurrent = currentPlan.contains(plan.name.toLowerCase()) || currentPlan.contains(plan.planCode.toLowerCase());
     final accent = featured ? const Color(0xFFE6FF3C) : const Color(0xFFE6FF3C);
-    final background = featured ? const Color(0xFFEFEEE8) : const Color(0xFFEFEEE8);
+    final background = featured ? const Color(0xFF15181C) : const Color(0xFF12161A);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -211,7 +211,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: featured ? const Color(0x22E6FF3C) : const Color(0x22E6FF3C)),
+          border: Border.all(color: featured ? const Color(0x66E6FF3C) : const Color(0x33E6FF3C)),
           boxShadow: const [
             BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 10)),
           ],
@@ -230,16 +230,17 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          if (isCurrent) _badge('Active', const Color(0xFFDCFCE7), const Color(0xFF166534)),
+                          if (isCurrent) _badge('Active', const Color(0x141C6B34), const Color(0xFFE6FF3C), borderColor: const Color(0x66E6FF3C)),
                           _badge(
                             featured ? 'Recommended' : (effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
-                          featured ? const Color(0x14E6FF3C) : const Color(0x14E6FF3C),
-                          featured ? const Color(0xFFE6FF3C) : const Color(0xFFE6FF3C),
-                        ),
+                            featured ? const Color(0x14E6FF3C) : const Color(0x14111818),
+                            featured ? const Color(0xFFE6FF3C) : const Color(0xFFD1D5DB),
+                            borderColor: featured ? const Color(0x66E6FF3C) : const Color(0x33E6FF3C),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 14),
-                      Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
+                      Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFFEFEEE8))),
                       const SizedBox(height: 6),
                       Text(
                         'Rs ${plan.monthlyPrice.toStringAsFixed(0)} / month + GST',
@@ -271,10 +272,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-              color: const Color(0xFFEFEEE8),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0x22E6FF3C)),
-            ),
+                color: const Color(0xFF0F1419),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0x33E6FF3C)),
+              ),
               child: Row(
                 children: [
                   Expanded(child: _planMetric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
@@ -302,7 +303,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 Expanded(
                   child: FilledButton(
                     onPressed: appState.busy ? null : () => _applyPlan(context, appState, plan),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF111111)),
                     child: Text(isCurrent ? 'Change duration' : 'Select plan'),
                   ),
                 ),
@@ -314,10 +315,14 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     );
   }
 
-  Widget _badge(String label, Color bg, Color fg) {
+  Widget _badge(String label, Color bg, Color fg, {Color? borderColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor ?? bg),
+      ),
       child: Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w700)),
     );
   }
@@ -326,9 +331,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+        Text(label, style: const TextStyle(color: Color(0xFF8A92A3))),
       ],
     );
   }
@@ -348,11 +353,11 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           (chip) => Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0x14E6FF3C),
+              color: const Color(0xFF10151A),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: const Color(0x66E6FF3C)),
             ),
-            child: Text(chip, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0B0F19))),
+            child: Text(chip, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFEFEEE8))),
           ),
         )
         .toList();
@@ -484,8 +489,9 @@ class _HeroMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFEEE8).withValues(alpha: 0.1),
+        color: const Color(0xFF15181C),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x22E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
