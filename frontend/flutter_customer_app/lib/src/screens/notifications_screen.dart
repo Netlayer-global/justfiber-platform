@@ -102,16 +102,16 @@ class NotificationsScreen extends StatelessWidget {
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+              colors: [Color(0xFF090D15), Color(0xFF111827)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Stay updated',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: Colors.white),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 28),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -152,6 +152,16 @@ class NotificationsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _heroMetric('Alerts', '${notifications.length}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _heroMetric('Billing', '${notifications.where((n) => _kindFor(n) == _AlertKind.billing).length}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _heroMetric('Support', '${notifications.where((n) => _kindFor(n) == _AlertKind.support).length}')),
+                  ],
+                ),
               ],
             ),
           ),
@@ -168,8 +178,12 @@ class NotificationsScreen extends StatelessWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FBFF),
-                            borderRadius: BorderRadius.circular(20),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
                             border: Border.all(color: const Color(0x2239FF14)),
                           ),
                           child: Column(
@@ -239,6 +253,25 @@ class NotificationsScreen extends StatelessWidget {
                     }).toList(),
                   ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroMetric(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x3339FF14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
         ],
       ),
     );

@@ -35,6 +35,40 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
+          AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF090D15), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Payment timeline',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 28),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  payments.isEmpty
+                      ? 'No payment activity found right now.'
+                      : 'Track successful, pending, and failed broadband payments from one place.',
+                  style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _heroMetric('Total', '${billing.payments.length}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _heroMetric('Success', '${billing.payments.where((p) => p.paidAt.isNotEmpty).length}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _heroMetric('Issues', '${billing.payments.where((p) => p.paidAt.isEmpty || p.reference.toLowerCase().contains('failed')).length}')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(child: _filterChip('all', 'All')),
@@ -64,7 +98,8 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: const Color(0x1439FF14)),
                     boxShadow: const [
                       BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
                     ],
@@ -176,6 +211,25 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
             color: selected ? const Color(0xFF39FF14) : const Color(0xFF40444F),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _heroMetric(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x3339FF14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
+        ],
       ),
     );
   }

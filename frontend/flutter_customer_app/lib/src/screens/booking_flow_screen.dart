@@ -438,11 +438,12 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFF7F7FF), Color(0xFFFFE7E8)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          colors: [Color(0xFF090D15), Color(0xFF111827)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0x2239FF14)),
       ),
       child: Row(
         children: [
@@ -452,9 +453,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
-                  Text('Offer on new Wi-Fi:', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFD81F26))),
+                  Text('Book new Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF39FF14))),
                   SizedBox(height: 6),
-                  Text('Select your plan, confirm address, and create booking in one smooth flow.', style: TextStyle(color: Color(0xFF394150), height: 1.4)),
+                  Text('Select your plan, confirm address, and create a live booking with an exact install map pin.', style: TextStyle(color: Color(0xFFD1D5DB), height: 1.4)),
                 ],
               ),
             ),
@@ -463,8 +464,12 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             width: 120,
             height: 120,
             margin: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFFD81F26), borderRadius: BorderRadius.circular(26)),
-            child: const Icon(Icons.wifi_rounded, color: Colors.white, size: 56),
+            decoration: BoxDecoration(
+              color: const Color(0x1439FF14),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: const Color(0x6639FF14)),
+            ),
+            child: const Icon(Icons.wifi_rounded, color: Color(0xFF39FF14), size: 56),
           ),
         ],
       ),
@@ -565,8 +570,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFFFF), Color(0xFFF7FFFE)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0x1439FF14)),
         boxShadow: const [BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8))],
       ),
       child: Column(
@@ -604,9 +614,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: selected ? const Color(0xFF2563EB) : const Color(0xFFE5E7EB), width: 1.5),
+        border: Border.all(color: selected ? const Color(0xFF39FF14) : const Color(0xFFE5E7EB), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

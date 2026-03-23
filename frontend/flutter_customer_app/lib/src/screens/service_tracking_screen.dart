@@ -32,14 +32,17 @@ class ServiceTrackingScreen extends StatelessWidget {
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+              colors: [Color(0xFF090D15), Color(0xFF111827)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Current booking', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
+                Text(
+                  'Current booking',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 28),
+                ),
                 const SizedBox(height: 12),
                 _row('Booking no.', latestBooking?.bookingNumber ?? '-'),
                 _row('Plan', latestBooking?.planName ?? '-'),
@@ -111,8 +114,8 @@ class ServiceTrackingScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            width: 10,
-                            height: 10,
+                            width: 12,
+                            height: 12,
                             margin: const EdgeInsets.only(top: 6),
                             decoration: BoxDecoration(
                               color: _stepColor(step.status),
@@ -160,8 +163,12 @@ class ServiceTrackingScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FBFF),
-                            borderRadius: BorderRadius.circular(18),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(22),
                             border: Border.all(color: const Color(0x2239FF14)),
                           ),
                           child: Column(
@@ -224,12 +231,16 @@ class ServiceTrackingScreen extends StatelessWidget {
                   ...notifications.take(3).map(
                     (item) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FBFF),
-                            borderRadius: BorderRadius.circular(18),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: const Color(0x2239FF14)),
                           ),
                         child: Column(
@@ -309,7 +320,7 @@ class ServiceTrackingScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0x1439FF14),
+        color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0x6639FF14)),
       ),
@@ -317,7 +328,7 @@ class ServiceTrackingScreen extends StatelessWidget {
         children: [
           Text('$count', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
         ],
       ),
     );
