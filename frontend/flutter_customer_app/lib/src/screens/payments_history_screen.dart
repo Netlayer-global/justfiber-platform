@@ -170,16 +170,28 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                         runSpacing: 10,
                         children: [
                           TextButton(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: payment)),
-                            ),
+                            onPressed: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: payment)),
+                              );
+                              if (context.mounted) {
+                                await appState.refresh();
+                              }
+                            },
                             style: TextButton.styleFrom(
                               foregroundColor: const Color(0xFFE6FF3C),
                             ),
                             child: const Text('View Details'),
                           ),
                           OutlinedButton(
-                            onPressed: payment.viewUrl.isEmpty ? null : () => _openDocument(context, appState, payment.transactionId, payment.viewUrl),
+                            onPressed: payment.viewUrl.isEmpty
+                                ? null
+                                : () async {
+                                    await _openDocument(context, appState, payment.transactionId, payment.viewUrl);
+                                    if (context.mounted) {
+                                      await appState.refresh();
+                                    }
+                                  },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFFE6FF3C),
                               backgroundColor: const Color(0xFF111827),
@@ -188,7 +200,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                             child: const Text('Open Receipt'),
                           ),
                           FilledButton(
-                            onPressed: payment.pdfUrl.isEmpty ? null : () => _openDocument(context, appState, '${payment.transactionId} PDF', payment.pdfUrl),
+                            onPressed: payment.pdfUrl.isEmpty
+                                ? null
+                                : () async {
+                                    await _openDocument(context, appState, '${payment.transactionId} PDF', payment.pdfUrl);
+                                    if (context.mounted) {
+                                      await appState.refresh();
+                                    }
+                                  },
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFFE6FF3C),
                               foregroundColor: const Color(0xFF111111),
@@ -197,9 +216,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                           ),
                           if (payment.paidAt.isEmpty || payment.reference.toLowerCase().contains('failed'))
                             OutlinedButton(
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                              ),
+                              onPressed: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                                );
+                                if (context.mounted) {
+                                  await appState.refresh();
+                                }
+                              },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFEFEEE8),
                                 backgroundColor: const Color(0xFF0E1520),

@@ -158,7 +158,7 @@ class BillingHistoryScreen extends StatelessWidget {
           _sectionCard(
             title: 'Invoices',
             child: billing.invoices.isEmpty
-                ? const Text('No invoices available yet.', style: TextStyle(color: Color(0xFF6B7280)))
+                ? const Text('No invoices available yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 : Column(
                     children: billing.invoices
                         .map(
@@ -207,9 +207,14 @@ class BillingHistoryScreen extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                         OutlinedButton(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
-                          ),
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
+                            );
+                            if (context.mounted) {
+                              await appState.refresh();
+                            }
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFFE6FF3C),
                             backgroundColor: const Color(0xFF111827),
@@ -219,7 +224,12 @@ class BillingHistoryScreen extends StatelessWidget {
                         ),
                       if (latestInvoice != null && latestInvoice.pdfUrl.isNotEmpty)
                         OutlinedButton(
-                          onPressed: () => _openDocument(context, appState, latestInvoice.invoiceNumber, latestInvoice.pdfUrl),
+                          onPressed: () async {
+                            await _openDocument(context, appState, latestInvoice.invoiceNumber, latestInvoice.pdfUrl);
+                            if (context.mounted) {
+                              await appState.refresh();
+                            }
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFFE6FF3C),
                             backgroundColor: const Color(0xFF111827),
@@ -229,7 +239,12 @@ class BillingHistoryScreen extends StatelessWidget {
                         ),
                       if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
                         FilledButton.tonal(
-                          onPressed: () => _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl),
+                          onPressed: () async {
+                            await _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl);
+                            if (context.mounted) {
+                              await appState.refresh();
+                            }
+                          },
                           style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF0B0F19)),
                           child: const Text('Latest receipt'),
                         ),
@@ -243,7 +258,7 @@ class BillingHistoryScreen extends StatelessWidget {
           _sectionCard(
             title: 'Billing notes',
             child: billing.notes.isEmpty
-                ? const Text('No billing notes right now.', style: TextStyle(color: Color(0xFF6B7280)))
+                ? const Text('No billing notes right now.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 : Column(
                     children: billing.notes
                         .map(
@@ -391,7 +406,12 @@ class BillingHistoryScreen extends StatelessWidget {
               children: [
                 if (viewUrl.isNotEmpty)
                   OutlinedButton(
-                    onPressed: () => _openDocument(context, appState, title, viewUrl),
+                    onPressed: () async {
+                      await _openDocument(context, appState, title, viewUrl);
+                      if (context.mounted) {
+                        await appState.refresh();
+                      }
+                    },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFE6FF3C),
                       backgroundColor: const Color(0xFF111827),
@@ -401,7 +421,12 @@ class BillingHistoryScreen extends StatelessWidget {
                   ),
                 if (pdfUrl.isNotEmpty)
                   FilledButton.tonal(
-                    onPressed: () => _openDocument(context, appState, '$title PDF', pdfUrl),
+                    onPressed: () async {
+                      await _openDocument(context, appState, '$title PDF', pdfUrl);
+                      if (context.mounted) {
+                        await appState.refresh();
+                      }
+                    },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFFE6FF3C),
                       foregroundColor: const Color(0xFF111111),
