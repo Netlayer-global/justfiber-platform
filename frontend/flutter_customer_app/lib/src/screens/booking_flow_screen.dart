@@ -365,6 +365,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       );
                       if (!mounted) return;
                       if (ok) {
+                        await appState.refresh();
+                        if (!mounted) return;
                         setState(() => step = 3);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -474,7 +476,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 _selectedSlotCode = 'morning';
                 _selectedSlotLabel = '10 AM - 1 PM';
                 _preferredDate = DateTime.now().add(const Duration(days: 1));
+                _selectedLocation = const LatLng(28.6139, 77.2090);
+                _hasPickedLocation = false;
                 _locationError = null;
+                nameController.clear();
+                mobileController.text = AppStateScope.of(context).session?.mobile ?? widget.initialMobile ?? '';
+                addressController.clear();
+                pinController.clear();
                 AppStateScope.of(context).clearBookingDraft();
               }),
               child: const Text('Create another booking'),
