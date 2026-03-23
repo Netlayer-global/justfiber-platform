@@ -50,6 +50,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Map<String, dynamic>? _diagnostics;
   Map<String, dynamic>? _preview;
   int _workflowPage = 0;
+  bool _showAdvancedPanels = false;
 
   @override
   void initState() {
@@ -362,6 +363,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   activationLive: activationLive,
                   proofUploaded: proofUploaded,
                 ),
+                const SizedBox(height: 16),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Advanced panels', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Use this only when you need deeper diagnostics, timeline, or full raw workflow panels.',
+                        style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => setState(() => _showAdvancedPanels = !_showAdvancedPanels),
+                        child: Text(_showAdvancedPanels ? 'Hide advanced panels' : 'Show advanced panels'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_showAdvancedPanels) ...[
                 const SizedBox(height: 16),
                 AppCard(
                   child: Column(
@@ -1012,6 +1033,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ],
                     ),
                   ),
+                ],
                 ],
               ],
             ),
