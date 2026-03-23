@@ -109,9 +109,6 @@ class InstallerAppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.acceptJob(current, jobId);
-      await api.startTravel(current, jobId);
-      await api.startOnsite(current, jobId);
       await api.setManualSerial(current, jobId, serial);
       await api.checkOptical(current, jobId);
       await api.saveChecklist(current, jobId);

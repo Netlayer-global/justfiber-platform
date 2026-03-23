@@ -166,13 +166,20 @@ class InstallerApiClient {
   }
 
   Future<void> saveChecklist(InstallerSession session, String jobId) async {
-    await _request('/api/v1/installer/jobs/$jobId/save-checklist', method: 'POST', token: session.accessToken, body: {
-      'checklistItems': [
-        {'key': 'fiber_ok', 'label': 'Fiber OK', 'status': 'done'},
-        {'key': 'router_ok', 'label': 'Router OK', 'status': 'done'}
-      ],
-      'notes': 'Checklist completed from installer app'
-    });
+    await _request(
+      '/api/v1/installer/jobs/$jobId/save-checklist',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        'fiberLinked': true,
+        'powerLevelOk': true,
+        'wanConfigured': true,
+        'wifiConfigured': true,
+        'speedTestDone': true,
+        'customerEducated': true,
+        'notes': 'Checklist completed from installer app',
+      },
+    );
   }
 
   Future<void> activate(InstallerSession session, String jobId) async {
