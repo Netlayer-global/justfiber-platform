@@ -78,7 +78,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                   onPressed: appState.busy
                       ? null
                       : () async {
-                          await appState.refreshBookingTracking();
+                          await _refreshTrackingWithFeedback(context, appState);
                         },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
                   child: const Text('Refresh tracking'),
@@ -205,7 +205,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                     title: 'No installer visit assigned yet.',
                     subtitle: 'Assigned jobs and visit updates will appear here once operations dispatches a team.',
                     actionLabel: 'Refresh tracking',
-                    onTap: appState.refreshBookingTracking,
+                    onTap: () => _refreshTrackingWithFeedback(context, appState),
                   )
                 else
                   ...visits.map((visit) => Padding(
@@ -522,6 +522,21 @@ class ServiceTrackingScreen extends StatelessWidget {
         const SnackBar(content: Text('Unable to open installer location right now.')),
       );
     }
+  }
+
+  Future<void> _refreshTrackingWithFeedback(BuildContext context, AppState appState) async {
+    await appState.refreshBookingTracking();
+    if (!context.mounted) return;
+    final hasTrackingData = (appState.bookingTracking?.steps.isNotEmpty ?? false) ||
+        appState.installerVisits.isNotEmpty ||
+        appState.requests.isNotEmpty ||
+        appState.tickets.isNotEmpty ||
+        appState.notifications.isNotEmpty;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(hasTrackingData ? 'Tracking updated' : 'No new tracking updates yet'),
+      ),
+    );
   }
 }
 
