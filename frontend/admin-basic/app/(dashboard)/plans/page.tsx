@@ -38,6 +38,12 @@ type PlanFormState = {
   voicePackageName: string
   voiceChannels: string
   voiceExtraPrice: string
+  accessProfileCode: string
+  vlanId: string
+  pppoePrefix: string
+  pppoeRealm: string
+  defaultPppoePassword: string
+  wifiNamePrefix: string
 }
 
 const initialForm: PlanFormState = {
@@ -72,6 +78,12 @@ const initialForm: PlanFormState = {
   voicePackageName: '',
   voiceChannels: '',
   voiceExtraPrice: '',
+  accessProfileCode: '',
+  vlanId: '100',
+  pppoePrefix: 'jf',
+  pppoeRealm: '',
+  defaultPppoePassword: '123456',
+  wifiNamePrefix: 'JustFiber',
 }
 
 function toForm(plan?: Plan | null): PlanFormState {
@@ -108,6 +120,12 @@ function toForm(plan?: Plan | null): PlanFormState {
     voicePackageName: plan.addons?.voice?.packageName || '',
     voiceChannels: String(plan.addons?.voice?.channels || ''),
     voiceExtraPrice: String(plan.addons?.voice?.extraPrice || ''),
+    accessProfileCode: plan.provisioning?.accessProfileCode || '',
+    vlanId: String(plan.provisioning?.vlanId || 100),
+    pppoePrefix: plan.provisioning?.pppoePrefix || 'jf',
+    pppoeRealm: plan.provisioning?.pppoeRealm || '',
+    defaultPppoePassword: plan.provisioning?.defaultPppoePassword || '123456',
+    wifiNamePrefix: plan.provisioning?.wifiNamePrefix || 'JustFiber',
   }
 }
 
@@ -223,6 +241,14 @@ export default function PlansPage() {
           channels: Number(form.voiceChannels || 0),
           extraPrice: Number(form.voiceExtraPrice || 0),
         },
+      },
+      provisioning: {
+        accessProfileCode: form.accessProfileCode.trim(),
+        vlanId: Number(form.vlanId || 0),
+        pppoePrefix: form.pppoePrefix.trim(),
+        pppoeRealm: form.pppoeRealm.trim(),
+        defaultPppoePassword: form.defaultPppoePassword.trim(),
+        wifiNamePrefix: form.wifiNamePrefix.trim(),
       },
     }
 
@@ -380,6 +406,21 @@ export default function PlansPage() {
           <input className="input" placeholder="Voice package name" value={form.voicePackageName} onChange={(e) => setForm({ ...form, voicePackageName: e.target.value })} />
           <input className="input" placeholder="Voice channels" type="number" value={form.voiceChannels} onChange={(e) => setForm({ ...form, voiceChannels: e.target.value })} />
           <input className="input" placeholder="Voice extra price" type="number" value={form.voiceExtraPrice} onChange={(e) => setForm({ ...form, voiceExtraPrice: e.target.value })} />
+        </div>
+
+        <div className="rounded-[24px] border border-[#d8ff16]/20 bg-white/5 p-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div className="xl:col-span-3">
+            <div className="font-semibold text-white">Provisioning Defaults</div>
+            <div className="mt-1 text-sm text-white/55">
+              These values are used by installer activation, PPPoE creation, Wi-Fi defaults, and VLAN push.
+            </div>
+          </div>
+          <input className="input" placeholder="Access profile code" value={form.accessProfileCode} onChange={(e) => setForm({ ...form, accessProfileCode: e.target.value })} />
+          <input className="input" placeholder="VLAN ID" type="number" value={form.vlanId} onChange={(e) => setForm({ ...form, vlanId: e.target.value })} />
+          <input className="input" placeholder="PPPoE prefix" value={form.pppoePrefix} onChange={(e) => setForm({ ...form, pppoePrefix: e.target.value })} />
+          <input className="input" placeholder="PPPoE realm (optional)" value={form.pppoeRealm} onChange={(e) => setForm({ ...form, pppoeRealm: e.target.value })} />
+          <input className="input" placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
+          <input className="input" placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

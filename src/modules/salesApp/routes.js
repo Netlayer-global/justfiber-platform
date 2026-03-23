@@ -121,6 +121,15 @@ salesAppRouter.post(
 );
 
 salesAppRouter.get(
+  "/plans",
+  requireSalesAuth,
+  asyncHandler(async (_req, res) => {
+    const plans = await PlanCatalog.find({ active: true }).sort({ sortOrder: 1 }).lean();
+    return ok(res, plans);
+  })
+);
+
+salesAppRouter.get(
   "/dashboard",
   requireSalesAuth,
   asyncHandler(async (req, res) => {
@@ -138,7 +147,7 @@ salesAppRouter.post(
   requireSalesAuth,
   asyncHandler(async (req, res) => {
     const payload = salesLeadSchema.parse(req.body);
-    const plan = await PlanCatalog.findOne({ planCode: payload.planCode });
+    const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true });
     if (!plan) {
       throw new ApiError(404, "Plan not found");
     }

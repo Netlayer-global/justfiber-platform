@@ -80,6 +80,14 @@ const planSchema = z.object({
       extraPrice: z.number().optional()
     }).optional()
   }).optional(),
+  provisioning: z.object({
+    accessProfileCode: z.string().optional(),
+    vlanId: z.number().optional(),
+    pppoePrefix: z.string().optional(),
+    pppoeRealm: z.string().optional(),
+    defaultPppoePassword: z.string().optional(),
+    wifiNamePrefix: z.string().optional()
+  }).optional(),
   active: z.boolean().optional(),
   sortOrder: z.number().optional()
 });

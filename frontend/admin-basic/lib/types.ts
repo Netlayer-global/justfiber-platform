@@ -57,6 +57,14 @@ export interface Plan {
       extraPrice?: number
     }
   }
+  provisioning?: {
+    accessProfileCode?: string
+    vlanId?: number
+    pppoePrefix?: string
+    pppoeRealm?: string
+    defaultPppoePassword?: string
+    wifiNamePrefix?: string
+  }
   type: string
   status: 'active' | 'inactive'
   createdAt: string

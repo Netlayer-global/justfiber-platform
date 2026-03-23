@@ -233,24 +233,28 @@ export function normalizeCustomerId(value) {
   return String(value || "").trim();
 }
 
-export function buildPppoeCredentials(customerId) {
+export function buildPppoeCredentials(customerId, planProvisioning = {}) {
   const normalized = normalizeCustomerId(customerId);
   const digitsOnly = normalized.replace(/\D/g, "");
   const suffix = (digitsOnly || "00000000").slice(-8).padStart(8, "0");
+  const prefix = String(planProvisioning?.pppoePrefix || "jf").trim() || "jf";
+  const realm = String(planProvisioning?.pppoeRealm || "").trim();
+  const usernameBase = `${prefix}-${suffix}`;
   return {
-    username: `jf-${suffix}`,
-    password: "123456"
+    username: realm ? `${usernameBase}@${realm}` : usernameBase,
+    password: String(planProvisioning?.defaultPppoePassword || "123456")
   };
 }
 
-export function buildWifiCredentials() {
+export function buildWifiCredentials(planProvisioning = {}) {
   let suffix = "";
   for (let i = 0; i < 4; i += 1) {
     suffix += Math.floor(Math.random() * 10);
   }
+  const prefix = String(planProvisioning?.wifiNamePrefix || "JustFiber").trim() || "JustFiber";
   return {
-    ssid24: "JustFiber",
-    ssid5: "JustFiber",
+    ssid24: `${prefix}-2.4G`,
+    ssid5: `${prefix}-5G`,
     password: `Just@${suffix}`
   };
 }

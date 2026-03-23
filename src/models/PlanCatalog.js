@@ -42,6 +42,14 @@ const planCatalogSchema = new mongoose.Schema(
         extraPrice: Number
       }
     },
+    provisioning: {
+      accessProfileCode: String,
+      vlanId: Number,
+      pppoePrefix: String,
+      pppoeRealm: String,
+      defaultPppoePassword: String,
+      wifiNamePrefix: String
+    },
     active: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 1 }
   },

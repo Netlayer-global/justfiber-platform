@@ -34,6 +34,13 @@ async function pickAccessProfile(plan) {
   if (!plan) {
     return AccessProfile.findOne({ active: true }).sort({ downMbps: 1, createdAt: 1 }).lean();
   }
+  if (plan.provisioning?.accessProfileCode) {
+    const mapped = await AccessProfile.findOne({
+      active: true,
+      code: plan.provisioning.accessProfileCode
+    }).lean();
+    if (mapped) return mapped;
+  }
   return (
     (await AccessProfile.findOne({
       active: true,
@@ -121,7 +128,9 @@ export class InternalSubscriberPlatform {
     ]);
     const customerType = resolveCustomerType(plan);
     const billMode = resolveBillModeForPlan({ billingProfile, plan });
-    const provisionalPppoe = jobRecord.activation?.preparedCredentials?.pppoe || buildPppoeCredentials(identifiers.customerId);
+    const provisionalPppoe =
+      jobRecord.activation?.preparedCredentials?.pppoe ||
+      buildPppoeCredentials(identifiers.customerId, plan?.provisioning);
 
     const customer = await Customer.findOneAndUpdate(
       { customerId: identifiers.customerId },
@@ -223,7 +232,8 @@ export class InternalSubscriberPlatform {
       subscriberService: await SubscriberService.findOne({ serviceId: identifiers.serviceId }).lean(),
       accessProfile,
       billingProfile,
-      bngNode
+      bngNode,
+      plan
     };
   }
 

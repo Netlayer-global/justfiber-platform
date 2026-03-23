@@ -227,9 +227,10 @@ const worker = new Worker(
           deviceId
         });
         const prepared = jobRecord.activation?.preparedCredentials || {};
-        const pppoe = prepared.pppoe || buildPppoeCredentials(jobRecord.customerId);
-        const wifi = prepared.wifi || buildWifiCredentials();
-        const vlanId = prepared.vlanId || existingDevice?.wanInfo?.vlanId || 100;
+        const planProvisioning = bootstrap?.plan?.provisioning || {};
+        const pppoe = prepared.pppoe || buildPppoeCredentials(jobRecord.customerId, planProvisioning);
+        const wifi = prepared.wifi || buildWifiCredentials(planProvisioning);
+        const vlanId = prepared.vlanId || planProvisioning.vlanId || existingDevice?.wanInfo?.vlanId || 100;
 
         updateActivationStage(
           jobRecord,
@@ -241,7 +242,10 @@ const worker = new Worker(
           customerId: jobRecord.customerId,
           radiusUsername: pppoe.username,
           radiusPassword: pppoe.password,
-          accessProfileCode: bootstrap?.accessProfile?.code || jobRecord.customerSnapshot?.planCode,
+          accessProfileCode:
+            bootstrap?.plan?.provisioning?.accessProfileCode ||
+            bootstrap?.accessProfile?.code ||
+            jobRecord.customerSnapshot?.planCode,
           billingProfileCode: bootstrap?.billingProfile?.code,
           bngNodeCode: bootstrap?.bngNode?.nodeCode,
           metadata: {

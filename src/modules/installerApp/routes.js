@@ -14,6 +14,7 @@ import { OtpEvent } from "../../models/OtpEvent.js";
 import { ConnectionBooking } from "../../models/ConnectionBooking.js";
 import { Customer } from "../../models/Customer.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
+import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { buildPagination } from "../../common/pagination.js";
@@ -77,8 +78,9 @@ function buildInstallerRecommendations({ opticalHealth, checklist, device }) {
 
 function buildProvisioningPreview(job, device) {
   const existing = job.activation?.preparedCredentials;
-  const pppoe = existing?.pppoe || buildPppoeCredentials(job.customerId);
-  const wifi = existing?.wifi || buildWifiCredentials();
+  const provisioning = job.customerSnapshot?.planProvisioning || {};
+  const pppoe = existing?.pppoe || buildPppoeCredentials(job.customerId, provisioning);
+  const wifi = existing?.wifi || buildWifiCredentials(provisioning);
   const brand = detectOntBrand({
     serialNumber: job.deviceContext?.finalSerialNumber || device?.serialNumber,
     productClass: device?.productClass,
@@ -88,7 +90,7 @@ function buildProvisioningPreview(job, device) {
     brand,
     pppoe,
     wifi,
-    vlanId: job.activation?.preparedCredentials?.vlanId || device?.wanInfo?.vlanId || 100,
+    vlanId: job.activation?.preparedCredentials?.vlanId || provisioning?.vlanId || device?.wanInfo?.vlanId || 100,
     natEnabled: true
   };
 }
@@ -253,6 +255,15 @@ installerAppRouter.get(
   "/jobs/:jobId/provisioning-preview",
   asyncHandler(async (req, res) => {
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    if (!job.customerSnapshot?.planProvisioning && job.customerSnapshot?.planCode) {
+      const plan = await PlanCatalog.findOne({ planCode: job.customerSnapshot.planCode }).lean();
+      if (plan?.provisioning) {
+        job.customerSnapshot = {
+          ...(job.customerSnapshot || {}),
+          planProvisioning: plan.provisioning
+        };
+      }
+    }
     const deviceId = job.deviceContext?.finalDeviceId || `ONT-${job.deviceContext?.finalSerialNumber || ""}`;
     const device = deviceId ? await DeviceOperationalCache.findOne({ deviceId }).lean() : null;
     const preview = buildProvisioningPreview(job, device);
