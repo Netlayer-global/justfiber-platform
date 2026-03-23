@@ -291,14 +291,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 6),
-                const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
-              ],
-            ),
+            Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
           ],
         ),
       ),
