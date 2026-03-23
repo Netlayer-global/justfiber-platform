@@ -307,6 +307,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               child: _planTile(
                 planName: plan.name,
                 speed: '${plan.speedMbps.toStringAsFixed(0)} Mbps',
+                upload: '${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps',
+                data: plan.dataPolicy == 'unlimited' ? 'Unlimited' : '${plan.dataLimitGb.toStringAsFixed(0)} GB',
                 price: 'Rs ${plan.monthlyPrice.toStringAsFixed(0)} /m + GST',
                 selected: selectedPlanCode == plan.planCode,
                 onSelect: () => setState(() => selectedPlanCode = plan.planCode),
@@ -876,6 +878,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   Widget _planTile({
     required String planName,
     required String speed,
+    required String upload,
+    required String data,
     required String price,
     required bool selected,
     required VoidCallback onSelect,
@@ -899,8 +903,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           Row(
             children: [
               Expanded(child: _summaryPill(speed, 'Speed')),
-              Expanded(child: _summaryPill('Unlimited', 'Internet')),
-              Expanded(child: _summaryPill('OTT Ready', 'Benefits')),
+              Expanded(child: _summaryPill(upload, 'Upload')),
+              Expanded(child: _summaryPill(data, 'Data')),
             ],
           ),
           const SizedBox(height: 14),

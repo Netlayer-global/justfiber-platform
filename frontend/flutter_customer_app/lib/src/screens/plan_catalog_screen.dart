@@ -279,8 +279,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               child: Row(
                 children: [
                   Expanded(child: _planMetric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
+                  Expanded(child: _planMetric('${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps', 'Upload')),
                   Expanded(child: _planMetric(_validityLabel(plan), 'Durations')),
-                  Expanded(child: _planMetric(_isPremium(plan) ? 'Premium' : 'Core', 'Lane')),
+                  Expanded(child: _planMetric(_dataLabel(plan), 'Data')),
                 ],
               ),
             ),
@@ -312,6 +313,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                   if (plan.yearlyPrice > 0) _planPriceRow('Yearly', plan.yearlyPrice),
                   if (plan.installationCharge > 0) _planPriceRow('Installation', plan.installationCharge),
                   if (plan.otcCharge > 0) _planPriceRow('OTC', plan.otcCharge),
+                  _planTextRow('Data policy', _dataPolicyLabel(plan)),
+                  if (plan.dataPolicy != 'unlimited' && plan.dataLimitGb > 0)
+                    _planTextRow('Data cap', '${plan.dataLimitGb.toStringAsFixed(0)} GB'),
+                  if (plan.fupSpeedMbps > 0) _planTextRow('FUP speed', '${plan.fupSpeedMbps.toStringAsFixed(0)} Mbps'),
                 ],
               ),
             ),
@@ -374,6 +379,12 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     if (plan.otcCharge > 0) {
       chips.add('OTC Rs ${plan.otcCharge.toStringAsFixed(0)}');
     }
+    if (plan.uploadSpeedMbps > 0) {
+      chips.add('Up ${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps');
+    }
+    if (plan.dataPolicy != 'unlimited' && plan.dataLimitGb > 0) {
+      chips.add('${plan.dataLimitGb.toStringAsFixed(0)} GB');
+    }
     return chips
         .map(
           (chip) => Container(
@@ -407,6 +418,23 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     return 'Rs ${plan.monthlyPrice.toStringAsFixed(0)}$taxSuffix';
   }
 
+  String _dataLabel(PlanItem plan) {
+    if (plan.dataPolicy == 'unlimited') return 'Unlimited';
+    if (plan.dataLimitGb > 0) return '${plan.dataLimitGb.toStringAsFixed(0)} GB';
+    return plan.dataPolicy.toUpperCase();
+  }
+
+  String _dataPolicyLabel(PlanItem plan) {
+    switch (plan.dataPolicy) {
+      case 'fup':
+        return 'FUP';
+      case 'hard_cap':
+        return 'Hard cap';
+      default:
+        return 'Unlimited';
+    }
+  }
+
   String _validityLabel(PlanItem plan) {
     final labels = <String>[
       if (plan.validityMonthly) 'M',
@@ -426,6 +454,22 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           const Spacer(),
           Text(
             'Rs ${amount.toStringAsFixed(0)}',
+            style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _planTextRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB))),
+          const Spacer(),
+          Text(
+            value,
             style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
           ),
         ],
