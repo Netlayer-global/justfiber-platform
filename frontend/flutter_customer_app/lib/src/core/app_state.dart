@@ -99,7 +99,10 @@ class AppState extends ChangeNotifier {
     restoreSession();
   }
 
-  void _resetCustomerState() {
+  void _resetCustomerState({bool preserveGuestBooking = false}) {
+    final preservedBooking = preserveGuestBooking ? latestBooking : null;
+    final preservedTracking = preserveGuestBooking ? bookingTracking : null;
+    final preservedLookupMobile = preserveGuestBooking ? latestBookingLookupMobile : null;
     session = null;
     demoOtp = null;
     error = null;
@@ -145,9 +148,9 @@ class AppState extends ChangeNotifier {
     faqs = const [];
     addons = const [];
     connectedDevices = const [];
-    latestBooking = null;
-    bookingTracking = null;
-    latestBookingLookupMobile = null;
+    latestBooking = preservedBooking;
+    bookingTracking = preservedTracking;
+    latestBookingLookupMobile = preservedLookupMobile;
     installerVisits = const [];
     feasibility = null;
     billingPaymentOrder = null;
@@ -784,7 +787,7 @@ class AppState extends ChangeNotifier {
         }
       }
       if (mobile == null || accessToken == null || refreshToken == null) {
-        _resetCustomerState();
+        _resetCustomerState(preserveGuestBooking: latestBooking != null);
         return;
       }
       session = CustomerSession(
