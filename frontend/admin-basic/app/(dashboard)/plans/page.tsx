@@ -704,7 +704,7 @@ export default function PlansPage() {
               <div className="mt-4 flex flex-wrap gap-2">
                 {preview.featured ? <span className="rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#d8ff16]">Featured</span> : null}
                 {preview.recommended ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Recommended</span> : null}
-                {preview.spotlightLabel.trim().isNotEmpty ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.spotlightLabel}</span> : null}
+                {preview.spotlightLabel.trim().length > 0 ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.spotlightLabel}</span> : null}
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
