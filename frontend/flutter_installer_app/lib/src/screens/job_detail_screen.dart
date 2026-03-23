@@ -35,6 +35,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   final _replaceSerialController = TextEditingController();
   final _complaintNoteController = TextEditingController(text: 'Visited site and started complaint handling.');
   final _imagePicker = ImagePicker();
+  final _workflowController = PageController();
   String _complaintResolutionCode = 'ont_replace';
   bool _busy = false;
   bool _routerPhotoReady = false;
@@ -48,6 +49,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Map<String, dynamic>? _detail;
   Map<String, dynamic>? _diagnostics;
   Map<String, dynamic>? _preview;
+  int _workflowPage = 0;
 
   @override
   void initState() {
@@ -62,6 +64,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     _otpController.dispose();
     _replaceSerialController.dispose();
     _complaintNoteController.dispose();
+    _workflowController.dispose();
     super.dispose();
   }
 
@@ -333,6 +336,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 16),
+                _workflowPager(
+                  context,
+                  status: status,
+                  isComplaint: isComplaint,
+                  phone: phone,
+                  planName: planName,
+                  configStatus: configStatus,
+                  canAccept: canAccept,
+                  canStartTravel: canStartTravel,
+                  canStartOnsite: canStartOnsite,
+                  canActivate: canActivate,
+                  canRetry: canRetry,
+                  canStartComplaint: canStartComplaint,
+                  canReplaceOnt: canReplaceOnt,
+                  canSendComplaintOtp: canSendComplaintOtp,
+                  canResolveComplaint: canResolveComplaint,
+                  canSubmitProof: canSubmitProof,
+                  canSendInstallOtp: canSendInstallOtp,
+                  canCompleteInstall: canCompleteInstall,
+                  activationLive: activationLive,
+                  proofUploaded: proofUploaded,
                 ),
                 const SizedBox(height: 16),
                 AppCard(
@@ -1066,6 +1092,572 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _workflowPager(
+    BuildContext context, {
+    required String status,
+    required bool isComplaint,
+    required String phone,
+    required String planName,
+    required String configStatus,
+    required bool canAccept,
+    required bool canStartTravel,
+    required bool canStartOnsite,
+    required bool canActivate,
+    required bool canRetry,
+    required bool canStartComplaint,
+    required bool canReplaceOnt,
+    required bool canSendComplaintOtp,
+    required bool canResolveComplaint,
+    required bool canSubmitProof,
+    required bool canSendInstallOtp,
+    required bool canCompleteInstall,
+    required bool activationLive,
+    required bool proofUploaded,
+  }) {
+    final pages = isComplaint
+        ? ['Briefing', 'Onsite', 'Resolution', 'Closure']
+        : ['Briefing', 'Site', 'Activation', 'Closure'];
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'WORKFLOW PAGES',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF9CA3AF),
+              letterSpacing: 2.8,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text('Next-page field flow', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(
+              pages.length,
+              (index) => Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: index == pages.length - 1 ? 0 : 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _workflowPage == index ? const Color(0xFFE6FF3C) : const Color(0xFF10151A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: _workflowPage == index ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            color: _workflowPage == index ? const Color(0xFF020617) : const Color(0xFFE6FF3C),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          pages[index],
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: _workflowPage == index ? const Color(0xFF020617) : const Color(0xFFD1D5DB),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 280,
+            child: PageView(
+              controller: _workflowController,
+              onPageChanged: (value) => setState(() => _workflowPage = value),
+              children: isComplaint
+                  ? [
+                      _workflowStageCard(
+                        title: 'Customer briefing',
+                        subtitle: 'Review customer, address, map, and ticket type before moving.',
+                        children: [
+                          _row('Plan', planName),
+                          _row('Customer', phone.isEmpty ? '-' : phone),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              if (widget.job.mapUrl.isNotEmpty || (widget.job.latitude != null && widget.job.longitude != null))
+                                OutlinedButton(
+                                  onPressed: () => _openUri(
+                                    widget.job.mapUrl.isNotEmpty
+                                        ? widget.job.mapUrl
+                                        : 'https://maps.google.com/?q=${widget.job.latitude},${widget.job.longitude}',
+                                    fallback: 'Map not available',
+                                  ),
+                                  child: const Text('Open map'),
+                                ),
+                              if (phone.isNotEmpty)
+                                OutlinedButton(
+                                  onPressed: () => _openUri('tel:$phone', fallback: 'Call action not available'),
+                                  child: const Text('Call customer'),
+                                ),
+                              FilledButton(
+                                onPressed: _busy || !canAccept
+                                    ? null
+                                    : () => _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Complaint accepted'),
+                                child: const Text('Accept complaint'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: 'Reach and start complaint',
+                        subtitle: 'Travel, reach site, and start the complaint workflow.',
+                        children: [
+                          _row('Current stage', status.replaceAll('_', ' ')),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: _busy || !canStartTravel
+                                    ? null
+                                    : () => _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started'),
+                                child: const Text('Start travel'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canStartOnsite
+                                    ? null
+                                    : () => _run(() async {
+                                          await _appState.api.startOnsite(_appState.session!, widget.job.id);
+                                          if (widget.job.latitude != null && widget.job.longitude != null) {
+                                            await _appState.api.checkinLocation(
+                                              _appState.session!,
+                                              widget.job.id,
+                                              lat: widget.job.latitude!,
+                                              lng: widget.job.longitude!,
+                                              address: widget.job.customerAddress,
+                                            );
+                                          }
+                                        }, 'Onsite started'),
+                                child: const Text('Mark onsite'),
+                              ),
+                              FilledButton(
+                                onPressed: _busy || !canStartComplaint
+                                    ? null
+                                    : () => _run(
+                                          () => _appState.api.startComplaint(
+                                            _appState.session!,
+                                            widget.job.id,
+                                            resolutionCode: _complaintResolutionCode,
+                                            note: _complaintNoteController.text.trim().isEmpty
+                                                ? 'Installer started complaint work'
+                                                : _complaintNoteController.text.trim(),
+                                          ),
+                                          'Complaint workflow started',
+                                        ),
+                                child: const Text('Start complaint'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: 'Replace and test',
+                        subtitle: 'Scan replacement ONT, replace it, and trigger customer OTP.',
+                        children: [
+                          TextField(
+                            controller: _replaceSerialController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(labelText: 'Replacement ONT serial'),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () => _scanSerial(
+                                          controller: _replaceSerialController,
+                                          title: 'Scan replacement ONT',
+                                          subtitle: 'Scan the replacement router barcode or QR code to capture the new serial.',
+                                        ),
+                                child: const Text('Scan barcode'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canReplaceOnt
+                                    ? null
+                                    : () {
+                                          final serial = _replaceSerialController.text.trim();
+                                          if (serial.isEmpty) {
+                                            _show('Enter replacement ONT serial');
+                                            return;
+                                          }
+                                          _run(
+                                            () => _appState.api.replaceDevice(
+                                              _appState.session!,
+                                              widget.job.id,
+                                              newSerialNumber: serial,
+                                              reason: _complaintNoteController.text.trim().isEmpty
+                                                  ? 'ONT replaced from installer app'
+                                                  : _complaintNoteController.text.trim(),
+                                            ),
+                                            'ONT replacement saved',
+                                          );
+                                        },
+                                child: const Text('Replace ONT'),
+                              ),
+                              FilledButton(
+                                onPressed: _busy || !canSendComplaintOtp
+                                    ? null
+                                    : () async {
+                                          setState(() => _busy = true);
+                                          try {
+                                            final otp = await _appState.api.sendComplaintOtp(_appState.session!, widget.job.id);
+                                            _show(otp == null ? 'Complaint OTP sent' : 'Complaint OTP: $otp');
+                                            await _loadAll();
+                                          } catch (e) {
+                                            _show(e.toString());
+                                          } finally {
+                                            if (mounted) setState(() => _busy = false);
+                                          }
+                                        },
+                                child: const Text('Send OTP'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: 'OTP and closure',
+                        subtitle: 'Take customer OTP and resolve the complaint.',
+                        children: [
+                          TextField(
+                            controller: _otpController,
+                            onChanged: (_) => setState(() {}),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'Customer OTP'),
+                          ),
+                          const SizedBox(height: 10),
+                          FilledButton(
+                            onPressed: _busy || !canResolveComplaint
+                                ? null
+                                : () {
+                                      final otp = _otpController.text.trim();
+                                      if (otp.length != 6) {
+                                        _show('Enter 6-digit OTP');
+                                        return;
+                                      }
+                                      _run(() async {
+                                        await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
+                                        await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
+                                      }, 'Complaint resolved');
+                                    },
+                            child: const Text('Resolve complaint'),
+                          ),
+                        ],
+                      ),
+                    ]
+                  : [
+                      _workflowStageCard(
+                        title: 'Customer briefing',
+                        subtitle: 'Review customer, address, map, and job scope before moving.',
+                        children: [
+                          _row('Plan', planName),
+                          _row('Customer', phone.isEmpty ? '-' : phone),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              if (widget.job.mapUrl.isNotEmpty || (widget.job.latitude != null && widget.job.longitude != null))
+                                OutlinedButton(
+                                  onPressed: () => _openUri(
+                                    widget.job.mapUrl.isNotEmpty
+                                        ? widget.job.mapUrl
+                                        : 'https://maps.google.com/?q=${widget.job.latitude},${widget.job.longitude}',
+                                    fallback: 'Map not available',
+                                  ),
+                                  child: const Text('Open map'),
+                                ),
+                              if (phone.isNotEmpty)
+                                OutlinedButton(
+                                  onPressed: () => _openUri('tel:$phone', fallback: 'Call action not available'),
+                                  child: const Text('Call customer'),
+                                ),
+                              FilledButton(
+                                onPressed: _busy || !canAccept
+                                    ? null
+                                    : () => _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Job accepted'),
+                                child: const Text('Accept job'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: 'Reach site',
+                        subtitle: 'Travel, reach customer location, and mark the visit onsite.',
+                        children: [
+                          _row('Current stage', status.replaceAll('_', ' ')),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: _busy || !canStartTravel
+                                    ? null
+                                    : () => _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started'),
+                                child: const Text('Start travel'),
+                              ),
+                              FilledButton(
+                                onPressed: _busy || !canStartOnsite
+                                    ? null
+                                    : () => _run(() async {
+                                          await _appState.api.startOnsite(_appState.session!, widget.job.id);
+                                          if (widget.job.latitude != null && widget.job.longitude != null) {
+                                            await _appState.api.checkinLocation(
+                                              _appState.session!,
+                                              widget.job.id,
+                                              lat: widget.job.latitude!,
+                                              lng: widget.job.longitude!,
+                                              address: widget.job.customerAddress,
+                                            );
+                                          }
+                                        }, 'Onsite started'),
+                                child: const Text('Mark onsite'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: 'Link and activate',
+                        subtitle: 'Scan ONT serial, preview config, check diagnostics, then activate.',
+                        children: [
+                          TextField(
+                            controller: _serialController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(labelText: 'ONT serial number'),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () => _scanSerial(
+                                          controller: _serialController,
+                                          title: 'Scan ONT serial',
+                                          subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                                        ),
+                                child: const Text('Scan barcode'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy ? null : () => _run(() => _appState.api.fetchProvisioningPreview(_appState.session!, widget.job.id), 'Preview refreshed'),
+                                child: const Text('Load preview'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy ? null : () => _run(() => _appState.api.fetchDiagnostics(_appState.session!, widget.job.id), 'Diagnostics refreshed'),
+                                child: const Text('Diagnostics'),
+                              ),
+                              FilledButton(
+                                onPressed: _busy || !canActivate
+                                    ? null
+                                    : () {
+                                          final serial = _serialController.text.trim();
+                                          if (serial.isEmpty) {
+                                            _show('Enter ONT serial first');
+                                            return;
+                                          }
+                                          _startActivationCountdown();
+                                          _run(() => _appState.runActivationFlow(widget.job.id, serial), 'Activation requested');
+                                        },
+                                child: const Text('Activate'),
+                              ),
+                              if (configStatus == 'failed' || status == 'failed')
+                                OutlinedButton(
+                                  onPressed: _busy || !canRetry
+                                      ? null
+                                      : () => _run(
+                                            () => _appState.api.retryActivation(
+                                              _appState.session!,
+                                              widget.job.id,
+                                              note: 'Retry from installer app after config failure',
+                                            ),
+                                            'Retry requested',
+                                          ),
+                                  child: const Text('Retry config'),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      _workflowStageCard(
+                        title: 'Proof and completion',
+                        subtitle: activationLive
+                            ? 'Capture router/cable proof, send OTP, and close installation.'
+                            : 'Activation must be live before proof and completion can be closed.',
+                        children: [
+                          if (_routerPhotoPath != null || _cablePhotoPath != null) ...[
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                if (_routerPhotoPath != null) _proofPreviewCard('Router photo', _routerPhotoPath!),
+                                if (_cablePhotoPath != null) _proofPreviewCard('Cable photo', _cablePhotoPath!),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: _busy ? null : () => _captureProofPhoto(routerPhoto: true),
+                                child: Text(_routerPhotoReady ? 'Router photo ready' : 'Capture router photo'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy ? null : () => _captureProofPhoto(routerPhoto: false),
+                                child: Text(_cablePhotoReady ? 'Cable photo ready' : 'Capture cable photo'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canSubmitProof
+                                    ? null
+                                    : () => _run(
+                                          () => _appState.api.uploadProof(
+                                            _appState.session!,
+                                            widget.job.id,
+                                            routerPhotoUrl: _routerPhotoPath != null
+                                                ? Uri.file(_routerPhotoPath!).toString()
+                                                : 'https://justfiber.local/proof/${widget.job.id}/router.jpg',
+                                            cablePhotoUrl: _cablePhotoPath != null
+                                                ? Uri.file(_cablePhotoPath!).toString()
+                                                : 'https://justfiber.local/proof/${widget.job.id}/cable.jpg',
+                                          ),
+                                          'Installation proof submitted',
+                                        ),
+                                child: Text(proofUploaded ? 'Update proof' : 'Submit proof'),
+                              ),
+                              FilledButton(
+                                onPressed: _busy || !canSendInstallOtp
+                                    ? null
+                                    : () async {
+                                          setState(() => _busy = true);
+                                          try {
+                                            final otp = await _appState.api.sendCompletionOtp(_appState.session!, widget.job.id);
+                                            _show(otp == null ? 'Completion OTP sent' : 'Completion OTP: $otp');
+                                            await _loadAll();
+                                          } catch (e) {
+                                            _show(e.toString());
+                                          } finally {
+                                            if (mounted) setState(() => _busy = false);
+                                          }
+                                        },
+                                child: const Text('Send OTP'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: _otpController,
+                            onChanged: (_) => setState(() {}),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'Customer OTP'),
+                          ),
+                          const SizedBox(height: 10),
+                          FilledButton(
+                            onPressed: _busy || !canCompleteInstall
+                                ? null
+                                : () {
+                                      final otp = _otpController.text.trim();
+                                      if (otp.length != 6) {
+                                        _show('Enter 6-digit OTP');
+                                        return;
+                                      }
+                                      _run(() async {
+                                        await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
+                                        await _appState.api.completeJob(_appState.session!, widget.job.id);
+                                      }, 'Installation completed');
+                                    },
+                            child: const Text('Complete installation'),
+                          ),
+                        ],
+                      ),
+                    ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _workflowPage == 0
+                      ? null
+                      : () => _workflowController.previousPage(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOut,
+                          ),
+                  child: const Text('Previous page'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _workflowPage == pages.length - 1
+                      ? null
+                      : () => _workflowController.nextPage(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOut,
+                          ),
+                  child: const Text('Next page'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _workflowStageCard({
+    required String title,
+    required String subtitle,
+    required List<Widget> children,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10151A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0x22E6FF3C)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+            ),
+            const SizedBox(height: 14),
+            ...children,
+          ],
+        ),
       ),
     );
   }
