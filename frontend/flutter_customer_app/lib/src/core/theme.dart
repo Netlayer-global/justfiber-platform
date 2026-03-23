@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 ThemeData buildJustFiberTheme() {
-  const background = Color(0xFF050505);
-  const surface = Color(0xFF0A0A0A);
-  const surfaceAlt = Color(0xFF101215);
+  const background = Color(0xFF000000);
+  const surface = Color(0xFF050505);
+  const surfaceAlt = Color(0xFF13161A);
   const primary = Color(0xFFE6FF3C);
   const accent = Color(0xFFE6FF3C);
   const tertiary = Color(0xFFE6FF3C);
   const text = Color(0xFFF5F5F5);
   const muted = Color(0xFF8A92A3);
-  const cardSurface = Color(0xFF101215);
+  const cardSurface = Color(0xFF15181C);
   const cardText = Color(0xFFF5F5F5);
   final base = ThemeData.light(useMaterial3: true);
   final textTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme).copyWith(
@@ -72,7 +72,7 @@ ThemeData buildJustFiberTheme() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: const Color(0xFF090909),
+      backgroundColor: const Color(0xFF050505),
       selectedItemColor: accent,
       unselectedItemColor: muted,
       selectedLabelStyle: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
@@ -91,7 +91,7 @@ ThemeData buildJustFiberTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: const Color(0xFFE6FF3C),
-        backgroundColor: const Color(0xFF0B0F16),
+        backgroundColor: const Color(0xFF111418),
         side: const BorderSide(color: Color(0x99E6FF3C), width: 1.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),

@@ -78,20 +78,6 @@ class HomeTab extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: const Color(0x14E6FF3C),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x66E6FF3C)),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.support_agent_rounded, color: Color(0xFFE6FF3C)),
-                      onPressed: () => onNavigate(3),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 20),

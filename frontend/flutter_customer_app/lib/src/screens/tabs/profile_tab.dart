@@ -126,11 +126,7 @@ class ProfileTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0x14E6FF3C), Color(0x0CFFFFFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: const Color(0xFF12161A),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x66E6FF3C)),
       ),
@@ -164,7 +160,7 @@ class ProfileTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFEFEEE8),
+          color: const Color(0xFF12161A),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0x22E6FF3C)),
         ),
@@ -173,7 +169,7 @@ class ProfileTab extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(width: 12),
@@ -181,7 +177,7 @@ class ProfileTab extends StatelessWidget {
               child: Text(
                 value,
                 textAlign: TextAlign.right,
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF05070D)),
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8)),
               ),
             ),
           ],

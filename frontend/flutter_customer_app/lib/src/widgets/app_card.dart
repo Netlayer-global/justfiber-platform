@@ -20,7 +20,7 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedBackground = color ?? const Color(0xFF101215);
+    final resolvedBackground = color ?? const Color(0xFF15181C);
     final bool darkCard = true;
     final resolvedTextColor = textColor ?? const Color(0xFFF5F5F5);
     return Container(
@@ -34,8 +34,8 @@ class AppCard extends StatelessWidget {
           width: 1,
         ),
         boxShadow: const [
-          BoxShadow(color: Color(0x38000000), blurRadius: 28, offset: Offset(0, 18)),
-          BoxShadow(color: Color(0x0FE6FF3C), blurRadius: 10, offset: Offset(0, 0)),
+          BoxShadow(color: Color(0x44000000), blurRadius: 28, offset: Offset(0, 18)),
+          BoxShadow(color: Color(0x08E6FF3C), blurRadius: 8, offset: Offset(0, 0)),
         ],
       ),
       child: IconTheme(
