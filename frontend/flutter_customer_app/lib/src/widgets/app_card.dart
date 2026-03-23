@@ -22,12 +22,12 @@ class AppCard extends StatelessWidget {
         color: gradient == null ? const Color(0xFFEFEEE8) : null,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: gradient == null ? const Color(0x14000000) : const Color(0x14FFFFFF),
+          color: gradient == null ? const Color(0x1CE6FF3C) : const Color(0x22E6FF3C),
           width: 1,
         ),
         boxShadow: const [
-          BoxShadow(color: Color(0x26000000), blurRadius: 34, offset: Offset(0, 20)),
-          BoxShadow(color: Color(0x12E6FF3C), blurRadius: 10, offset: Offset(0, 0)),
+          BoxShadow(color: Color(0x30000000), blurRadius: 34, offset: Offset(0, 20)),
+          BoxShadow(color: Color(0x16E6FF3C), blurRadius: 14, offset: Offset(0, 0)),
         ],
       ),
       child: IconTheme(
