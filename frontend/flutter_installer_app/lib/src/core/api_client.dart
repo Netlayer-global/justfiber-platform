@@ -84,6 +84,10 @@ class InstallerApiClient {
     }).toList();
   }
 
+  Future<Map<String, dynamic>> fetchJobDetail(InstallerSession session, String jobId) async {
+    return _asMap(await _request('/api/v1/installer/jobs/$jobId', token: session.accessToken));
+  }
+
   Future<ProvisioningPreview> fetchProvisioningPreview(InstallerSession session, String jobId) async {
     final data = _asMap(await _request('/api/v1/installer/jobs/$jobId/provisioning-preview', token: session.accessToken));
     final credentials = _asMap(data['preparedCredentials'] ?? data['credentials']);
@@ -182,5 +186,84 @@ class InstallerApiClient {
 
   Future<void> completeJob(InstallerSession session, String jobId) async {
     await _request('/api/v1/installer/jobs/$jobId/complete', method: 'POST', token: session.accessToken);
+  }
+
+  Future<void> retryActivation(InstallerSession session, String jobId, {required String note}) async {
+    await _request(
+      '/api/v1/installer/jobs/$jobId/retry-activation',
+      method: 'POST',
+      token: session.accessToken,
+      body: {'note': note},
+    );
+  }
+
+  Future<void> uploadProof(
+    InstallerSession session,
+    String jobId, {
+    required String routerPhotoUrl,
+    required String cablePhotoUrl,
+  }) async {
+    await _request(
+      '/api/v1/installer/jobs/$jobId/upload-proof',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        'routerPhotoUrl': routerPhotoUrl,
+        'cablePhotoUrl': cablePhotoUrl,
+      },
+    );
+  }
+
+  Future<void> startComplaint(
+    InstallerSession session,
+    String jobId, {
+    required String note,
+    String? resolutionCode,
+  }) async {
+    await _request(
+      '/api/v1/installer/jobs/$jobId/start-complaint',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        'note': note,
+        if (resolutionCode != null && resolutionCode.isNotEmpty) 'resolutionCode': resolutionCode,
+      },
+    );
+  }
+
+  Future<void> replaceDevice(
+    InstallerSession session,
+    String jobId, {
+    required String newSerialNumber,
+    required String reason,
+  }) async {
+    await _request(
+      '/api/v1/installer/jobs/$jobId/replace-device',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        'newSerialNumber': newSerialNumber,
+        'reason': reason,
+      },
+    );
+  }
+
+  Future<String?> sendComplaintOtp(InstallerSession session, String jobId) async {
+    final data = _asMap(await _request('/api/v1/installer/jobs/$jobId/send-complaint-otp', method: 'POST', token: session.accessToken));
+    final otp = data['demoOtp']?.toString();
+    return otp == null || otp.isEmpty ? null : otp;
+  }
+
+  Future<void> verifyComplaintOtp(InstallerSession session, String jobId, String otp) async {
+    await _request(
+      '/api/v1/installer/jobs/$jobId/verify-complaint-otp',
+      method: 'POST',
+      token: session.accessToken,
+      body: {'otp': otp},
+    );
+  }
+
+  Future<void> resolveComplaint(InstallerSession session, String jobId) async {
+    await _request('/api/v1/installer/jobs/$jobId/resolve-complaint', method: 'POST', token: session.accessToken);
   }
 }

@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_state.dart';
 import '../../core/models.dart';
+import '../job_detail_screen.dart';
 import '../../widgets/app_card.dart';
 
 class JobsTab extends StatefulWidget {
@@ -192,6 +193,12 @@ class _JobsTabState extends State<JobsTab> {
             spacing: 10,
             runSpacing: 10,
             children: [
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
+                ),
+                child: const Text('Open job'),
+              ),
               if (job.latitude != null && job.longitude != null)
                 OutlinedButton(
                   onPressed: () => _openMap(context, job),
