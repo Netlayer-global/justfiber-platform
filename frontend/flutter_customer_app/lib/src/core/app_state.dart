@@ -643,7 +643,7 @@ class AppState extends ChangeNotifier {
       if ((latestBookingLookupMobile ?? '').isNotEmpty) {
         try {
           bookingTracking = await api.fetchPublicBookingTracking(
-            bookingNumber: latestBooking.bookingNumber,
+            bookingNumber: latestBooking!.bookingNumber,
             mobile: latestBookingLookupMobile!,
           );
         } catch (_) {
