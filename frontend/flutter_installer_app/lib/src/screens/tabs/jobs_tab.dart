@@ -14,14 +14,22 @@ class JobsTab extends StatefulWidget {
 
 class _JobsTabState extends State<JobsTab> {
   final Map<String, TextEditingController> _serialControllers = {};
+  final Map<String, TextEditingController> _otpControllers = {};
 
-  TextEditingController _controllerFor(String jobId) {
+  TextEditingController _serialControllerFor(String jobId) {
     return _serialControllers.putIfAbsent(jobId, () => TextEditingController());
+  }
+
+  TextEditingController _otpControllerFor(String jobId) {
+    return _otpControllers.putIfAbsent(jobId, () => TextEditingController());
   }
 
   @override
   void dispose() {
     for (final controller in _serialControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _otpControllers.values) {
       controller.dispose();
     }
     super.dispose();
@@ -31,6 +39,7 @@ class _JobsTabState extends State<JobsTab> {
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
     final theme = Theme.of(context);
+
     return RefreshIndicator(
       color: const Color(0xFFE6FF3C),
       backgroundColor: const Color(0xFF0C1018),
@@ -50,17 +59,20 @@ class _JobsTabState extends State<JobsTab> {
                 Text(
                   'FIELD JOBS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF9CA3AF),
-                    letterSpacing: 3.2,
-                    fontWeight: FontWeight.w700,
-                  ),
+                        color: const Color(0xFF9CA3AF),
+                        letterSpacing: 3.2,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
                 const SizedBox(height: 10),
-                Text('Assigned installations', style: theme.textTheme.headlineSmall),
+                Text('Assigned jobs', style: theme.textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text(
-                  'Accept jobs, check provisioning preview, capture ONT serial, and complete activation from one queue.',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFFD1D5DB), height: 1.45),
+                  'Run the actual field sequence from acceptance to installation completion with diagnostics and OTP handover.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFFD1D5DB),
+                        height: 1.45,
+                      ),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -88,26 +100,27 @@ class _JobsTabState extends State<JobsTab> {
                 ),
               ),
             ),
-          ...(appState.jobs.isEmpty
-              ? [
-                  AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('No jobs available right now.', style: theme.textTheme.titleLarge),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Pull to refresh or wait for dispatch to assign the next installation.',
-                          style: TextStyle(color: Color(0xFF9CA3AF), height: 1.4),
-                        ),
-                      ],
-                    ),
+          if (appState.jobs.isEmpty)
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('No jobs available right now.', style: theme.textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Pull to refresh when dispatch assigns the next installation or complaint visit.',
+                    style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
                   ),
-                ]
-              : appState.jobs.map((job) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: _jobCard(context, appState, job),
-                  ))),
+                ],
+              ),
+            )
+          else
+            ...appState.jobs.map(
+              (job) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _jobCard(context, appState, job),
+              ),
+            ),
         ],
       ),
     );
@@ -123,9 +136,19 @@ class _JobsTabState extends State<JobsTab> {
       ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Color(0xFFEFEEE8))),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 20,
+              color: Color(0xFFEFEEE8),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
@@ -133,7 +156,9 @@ class _JobsTabState extends State<JobsTab> {
 
   Widget _jobCard(BuildContext context, InstallerAppState appState, InstallerJob job) {
     final preview = appState.selectedJobId == job.id ? appState.preview : null;
-    final serialController = _controllerFor(job.id);
+    final diagnostics = appState.selectedJobId == job.id ? appState.diagnostics : null;
+    final serialController = _serialControllerFor(job.id);
+    final otpController = _otpControllerFor(job.id);
 
     return AppCard(
       color: const Color(0xFF0C1018),
@@ -141,40 +166,28 @@ class _JobsTabState extends State<JobsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Text(job.jobNumber, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            job.customerName,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFFEFEEE8)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            job.customerAddress,
+            style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(job.jobNumber, style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 4),
-                    Text(job.customerName, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFFEFEEE8))),
-                    const SizedBox(height: 6),
-                    Text(job.customerAddress, style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _pill(job.jobType.replaceAll('_', ' ')),
-                        _pill(job.status),
-                        if (job.latitude != null && job.longitude != null)
-                          _pill('Pinned location'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              _pill(job.jobType.replaceAll('_', ' ')),
+              _pill(job.status.replaceAll('_', ' ')),
+              if (job.latitude != null && job.longitude != null) _pill('Pinned location'),
             ],
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: serialController,
-            decoration: const InputDecoration(labelText: 'ONT serial'),
-          ),
-          const SizedBox(height: 12),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -187,16 +200,74 @@ class _JobsTabState extends State<JobsTab> {
               OutlinedButton(
                 onPressed: appState.busy
                     ? null
-                    : () async {
-                        final ok = await appState.loadPreview(job.id);
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(ok ? 'Provisioning preview loaded' : (appState.error ?? 'Unable to load preview')),
+                    : () => _runAction(
+                          context,
+                          appState,
+                          successMessage: 'Job accepted',
+                          action: () => appState.acceptJob(job.id),
+                        ),
+                child: const Text('Accept'),
+              ),
+              OutlinedButton(
+                onPressed: appState.busy
+                    ? null
+                    : () => _runAction(
+                          context,
+                          appState,
+                          successMessage: 'Travel started',
+                          action: () => appState.startTravel(job.id),
+                        ),
+                child: const Text('Start travel'),
+              ),
+              OutlinedButton(
+                onPressed: appState.busy
+                    ? null
+                    : () => _runAction(
+                          context,
+                          appState,
+                          successMessage: 'Onsite workflow started',
+                          action: () => appState.startOnsite(
+                            job.id,
+                            lat: job.latitude,
+                            lng: job.longitude,
+                            address: job.customerAddress,
                           ),
-                        );
-                      },
+                        ),
+                child: const Text('Start onsite'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: serialController,
+            decoration: const InputDecoration(labelText: 'ONT serial'),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              OutlinedButton(
+                onPressed: appState.busy
+                    ? null
+                    : () => _runAction(
+                          context,
+                          appState,
+                          successMessage: 'Provisioning preview loaded',
+                          action: () => appState.loadPreview(job.id),
+                        ),
                 child: const Text('Load preview'),
+              ),
+              OutlinedButton(
+                onPressed: appState.busy
+                    ? null
+                    : () => _runAction(
+                          context,
+                          appState,
+                          successMessage: 'Diagnostics loaded',
+                          action: () => appState.loadDiagnostics(job.id),
+                        ),
+                child: const Text('Diagnostics'),
               ),
               FilledButton(
                 onPressed: appState.busy
@@ -221,6 +292,89 @@ class _JobsTabState extends State<JobsTab> {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10151A),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: const Color(0x22E6FF3C)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'COMPLETION FLOW',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: const Color(0xFF9CA3AF),
+                        letterSpacing: 2.8,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: otpController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Completion OTP'),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    OutlinedButton(
+                      onPressed: appState.busy
+                          ? null
+                          : () async {
+                              final otp = await appState.sendCompletionOtp(job.id);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    otp == null
+                                        ? (appState.error ?? 'Unable to send completion OTP')
+                                        : 'Completion OTP sent: $otp',
+                                  ),
+                                ),
+                              );
+                            },
+                      child: const Text('Send OTP'),
+                    ),
+                    OutlinedButton(
+                      onPressed: appState.busy
+                          ? null
+                          : () async {
+                              final otp = otpController.text.trim();
+                              if (otp.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Enter completion OTP first.')),
+                                );
+                                return;
+                              }
+                              await _runAction(
+                                context,
+                                appState,
+                                successMessage: 'Completion OTP verified',
+                                action: () => appState.verifyCompletionOtp(job.id, otp),
+                              );
+                            },
+                      child: const Text('Verify OTP'),
+                    ),
+                    FilledButton(
+                      onPressed: appState.busy
+                          ? null
+                          : () => _runAction(
+                                context,
+                                appState,
+                                successMessage: 'Job completed',
+                                action: () => appState.completeJob(job.id),
+                              ),
+                      child: const Text('Complete job'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
           if (preview != null) ...[
             const SizedBox(height: 14),
             Container(
@@ -236,15 +390,43 @@ class _JobsTabState extends State<JobsTab> {
                   Text(
                     'PREVIEW · ${preview.brand.toUpperCase()}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: const Color(0xFF9CA3AF),
-                      letterSpacing: 2.8,
-                    ),
+                          color: const Color(0xFF9CA3AF),
+                          letterSpacing: 2.8,
+                        ),
                   ),
                   const SizedBox(height: 10),
                   _previewRow('PPPoE', '${preview.pppoeUsername} / ${preview.pppoePassword}'),
-                  _previewRow('Wi‑Fi', '${preview.ssid24} / ${preview.ssid5}'),
+                  _previewRow('Wi-Fi', '${preview.ssid24} / ${preview.ssid5}'),
                   _previewRow('Password', preview.wifiPassword),
                   _previewRow('VLAN', '${preview.vlanId}'),
+                ],
+              ),
+            ),
+          ],
+          if (diagnostics != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10151A),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0x22E6FF3C)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'DIAGNOSTICS',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: const Color(0xFF9CA3AF),
+                          letterSpacing: 2.8,
+                        ),
+                  ),
+                  const SizedBox(height: 10),
+                  _previewRow('Job status', '${diagnostics['status'] ?? '-'}'),
+                  _previewRow('Optical', '${(diagnostics['optical'] as Map?)?['healthStatus'] ?? 'unknown'}'),
+                  _previewRow('Online', '${(diagnostics['device'] as Map?)?['onlineStatus'] ?? 'unknown'}'),
+                  _previewRow('Provisioning', '${(diagnostics['device'] as Map?)?['provisioningState'] ?? 'pending'}'),
                 ],
               ),
             ),
@@ -276,13 +458,34 @@ class _JobsTabState extends State<JobsTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 82,
-            child: Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700)),
+            width: 90,
+            child: Text(
+              label,
+              style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700),
+            ),
           ),
           Expanded(
-            child: Text(value.isEmpty ? '-' : value, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w600)),
+            child: Text(
+              value.isEmpty ? '-' : value,
+              style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w600),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _runAction(
+    BuildContext context,
+    InstallerAppState appState, {
+    required String successMessage,
+    required Future<bool> Function() action,
+  }) async {
+    final ok = await action();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? successMessage : (appState.error ?? 'Action failed')),
       ),
     );
   }

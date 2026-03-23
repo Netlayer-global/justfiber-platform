@@ -124,6 +124,21 @@ class InstallerApiClient {
     await _request('/api/v1/installer/jobs/$jobId/start-onsite', method: 'POST', token: session.accessToken);
   }
 
+  Future<void> checkinLocation(
+    InstallerSession session,
+    String jobId, {
+    required double lat,
+    required double lng,
+    required String address,
+  }) async {
+    await _request(
+      '/api/v1/installer/jobs/$jobId/checkin-location',
+      method: 'POST',
+      token: session.accessToken,
+      body: {'lat': lat, 'lng': lng, 'address': address},
+    );
+  }
+
   Future<void> setManualSerial(InstallerSession session, String jobId, String serial) async {
     await _request('/api/v1/installer/jobs/$jobId/manual-serial', method: 'POST', token: session.accessToken, body: {'serialNumber': serial});
   }
@@ -144,5 +159,28 @@ class InstallerApiClient {
 
   Future<void> activate(InstallerSession session, String jobId) async {
     await _request('/api/v1/installer/jobs/$jobId/activate', method: 'POST', token: session.accessToken);
+  }
+
+  Future<Map<String, dynamic>> fetchDiagnostics(InstallerSession session, String jobId) async {
+    return _asMap(await _request('/api/v1/installer/jobs/$jobId/diagnostics', token: session.accessToken));
+  }
+
+  Future<String?> sendCompletionOtp(InstallerSession session, String jobId) async {
+    final data = _asMap(await _request('/api/v1/installer/jobs/$jobId/send-completion-otp', method: 'POST', token: session.accessToken));
+    final otp = data['demoOtp']?.toString();
+    return otp == null || otp.isEmpty ? null : otp;
+  }
+
+  Future<void> verifyCompletionOtp(InstallerSession session, String jobId, String otp) async {
+    await _request(
+      '/api/v1/installer/jobs/$jobId/verify-completion-otp',
+      method: 'POST',
+      token: session.accessToken,
+      body: {'otp': otp},
+    );
+  }
+
+  Future<void> completeJob(InstallerSession session, String jobId) async {
+    await _request('/api/v1/installer/jobs/$jobId/complete', method: 'POST', token: session.accessToken);
   }
 }

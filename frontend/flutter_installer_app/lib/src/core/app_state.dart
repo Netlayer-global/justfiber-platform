@@ -31,6 +31,7 @@ class InstallerAppState extends ChangeNotifier {
   List<InstallerJob> jobs = const [];
   List<InstallerNotificationItem> notifications = const [];
   ProvisioningPreview? preview;
+  Map<String, dynamic>? diagnostics;
   String? selectedJobId;
 
   InstallerAppState() {
@@ -71,6 +72,7 @@ class InstallerAppState extends ChangeNotifier {
       notifications = await api.fetchNotifications(current);
       if (selectedJobId != null && selectedJobId!.isNotEmpty) {
         preview = await api.fetchProvisioningPreview(current, selectedJobId!);
+        diagnostics = await api.fetchDiagnostics(current, selectedJobId!);
       }
     } catch (e) {
       error = e.toString();
@@ -89,6 +91,7 @@ class InstallerAppState extends ChangeNotifier {
     notifyListeners();
     try {
       preview = await api.fetchProvisioningPreview(current, jobId);
+      diagnostics = await api.fetchDiagnostics(current, jobId);
       return true;
     } catch (e) {
       error = e.toString();
@@ -124,6 +127,140 @@ class InstallerAppState extends ChangeNotifier {
     }
   }
 
+  Future<bool> acceptJob(String jobId) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.acceptJob(current, jobId);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> startTravel(String jobId) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.startTravel(current, jobId);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> startOnsite(String jobId, {double? lat, double? lng, String? address}) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.startOnsite(current, jobId);
+      if (lat != null && lng != null) {
+        await api.checkinLocation(current, jobId, lat: lat, lng: lng, address: address ?? '');
+      }
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> loadDiagnostics(String jobId) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      selectedJobId = jobId;
+      diagnostics = await api.fetchDiagnostics(current, jobId);
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> sendCompletionOtp(String jobId) async {
+    final current = session;
+    if (current == null) return null;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      return await api.sendCompletionOtp(current, jobId);
+    } catch (e) {
+      error = e.toString();
+      return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> verifyCompletionOtp(String jobId, String otp) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.verifyCompletionOtp(current, jobId, otp);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> completeJob(String jobId) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.completeJob(current, jobId);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
   void logout() {
     SharedPreferences.getInstance().then((prefs) {
       prefs.remove(_installerLoginKey);
@@ -132,6 +269,7 @@ class InstallerAppState extends ChangeNotifier {
     });
     session = null;
     preview = null;
+    diagnostics = null;
     selectedJobId = null;
     error = null;
     jobs = const [];
