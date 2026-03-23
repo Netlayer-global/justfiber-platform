@@ -94,6 +94,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   'password': previewModel.wifiPassword,
                 },
               };
+        final serial = (detail['deviceContext']?['finalSerialNumber'] ?? detail['deviceContext']?['manualSerialNumber'] ?? '')
+            .toString();
+        if (serial.isNotEmpty && _serialController.text.trim().isEmpty) {
+          _serialController.text = serial;
+        }
       });
     } catch (e) {
       _show('${e.toString()}');
@@ -158,6 +163,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final linkedSerial = (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
+    final proofUploaded = proof.isNotEmpty;
+    final canAccept = _canAccept(status);
+    final canStartTravel = _canStartTravel(status);
+    final canStartOnsite = _canStartOnsite(status);
+    final canActivate = _canActivate(status);
+    final canRetry = _canRetry(status, configStatus);
+    final canStartComplaint = _canStartComplaint(status);
+    final canReplaceOnt = _canReplaceOnt(status);
+    final canSendComplaintOtp = _canSendComplaintOtp(status);
+    final canResolveComplaint = _canResolveComplaint(status, _otpController.text.trim());
+    final canSubmitProof = _canSubmitProof(status, _routerPhotoReady, _cablePhotoReady);
+    final canSendInstallOtp = _canSendInstallOtp(status, proofUploaded, _routerPhotoReady, _cablePhotoReady);
+    final canCompleteInstall = _canCompleteInstall(status, _otpController.text.trim());
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.job.jobNumber)),
@@ -268,20 +286,54 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       const SizedBox(height: 14),
                       _stageTimeline(status, isComplaint: isComplaint),
                       const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10151A),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0x22E6FF3C)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isComplaint ? 'Current complaint stage' : 'Current install stage',
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _nextActionText(
+                                status: status,
+                                isComplaint: isComplaint,
+                                linkedSerial: linkedSerial,
+                                activationLive: activationLive,
+                                proofUploaded: proofUploaded,
+                              ),
+                              style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
                         children: [
                           OutlinedButton(
-                            onPressed: _busy ? null : () => _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Job accepted'),
+                            onPressed: _busy || !canAccept
+                                ? null
+                                : () => _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Job accepted'),
                             child: const Text('Accept'),
                           ),
                           OutlinedButton(
-                            onPressed: _busy ? null : () => _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started'),
+                            onPressed: _busy || !canStartTravel
+                                ? null
+                                : () => _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started'),
                             child: const Text('Start travel'),
                           ),
                           OutlinedButton(
-                            onPressed: _busy
+                            onPressed: _busy || !canStartOnsite
                                 ? null
                                 : () => _run(() async {
                                       await _appState.api.startOnsite(_appState.session!, widget.job.id);
@@ -302,6 +354,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       const SizedBox(height: 14),
                       TextField(
                         controller: _serialController,
+                        onChanged: (_) => setState(() {}),
                         decoration: const InputDecoration(labelText: 'ONT serial number'),
                       ),
                       const SizedBox(height: 12),
@@ -318,7 +371,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             child: const Text('Diagnostics'),
                           ),
                           FilledButton(
-                            onPressed: _busy
+                            onPressed: _busy || !canActivate
                                 ? null
                                 : () {
                                     final serial = _serialController.text.trim();
@@ -333,7 +386,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                           if (configStatus == 'failed' || status == 'failed')
                             OutlinedButton(
-                              onPressed: _busy
+                              onPressed: _busy || !canRetry
                                   ? null
                                   : () => _run(
                                         () => _appState.api.retryActivation(
@@ -458,6 +511,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         const SizedBox(height: 12),
                         TextField(
                           controller: _replaceSerialController,
+                          onChanged: (_) => setState(() {}),
                           decoration: const InputDecoration(labelText: 'Replacement ONT serial'),
                         ),
                         const SizedBox(height: 12),
@@ -466,7 +520,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           runSpacing: 10,
                           children: [
                             OutlinedButton(
-                              onPressed: _busy
+                              onPressed: _busy || !canStartComplaint
                                   ? null
                                   : () => _run(
                                         () => _appState.api.startComplaint(
@@ -481,7 +535,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: const Text('Start complaint'),
                             ),
                             OutlinedButton(
-                              onPressed: _busy
+                              onPressed: _busy || !canReplaceOnt
                                   ? null
                                   : () {
                                       final serial = _replaceSerialController.text.trim();
@@ -504,7 +558,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: const Text('Replace ONT'),
                             ),
                             OutlinedButton(
-                              onPressed: _busy
+                              onPressed: _busy || !canSendComplaintOtp
                                   ? null
                                   : () async {
                                       setState(() => _busy = true);
@@ -521,7 +575,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: const Text('Send OTP'),
                             ),
                             FilledButton(
-                              onPressed: _busy
+                              onPressed: _busy || !canResolveComplaint
                                   ? null
                                   : () {
                                       final otp = _otpController.text.trim();
@@ -605,13 +659,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: Text(_cablePhotoReady ? 'Cable photo ready' : 'Capture cable photo'),
                             ),
                             OutlinedButton(
-                              onPressed: _busy
+                              onPressed: _busy || !canSubmitProof
                                   ? null
                                   : () {
-                                      if (!_routerPhotoReady || !_cablePhotoReady) {
-                                        _show('Capture router and cable photos first');
-                                        return;
-                                      }
                                       _run(
                                         () => _appState.api.uploadProof(
                                           _appState.session!,
@@ -625,7 +675,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: Text(proof.isNotEmpty ? 'Update proof' : 'Submit proof'),
                             ),
                             OutlinedButton(
-                              onPressed: _busy
+                              onPressed: _busy || !canSendInstallOtp
                                   ? null
                                   : () async {
                                       setState(() => _busy = true);
@@ -653,6 +703,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         const SizedBox(height: 12),
                         TextField(
                           controller: _otpController,
+                          onChanged: (_) => setState(() {}),
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(labelText: 'Customer OTP'),
                         ),
@@ -660,7 +711,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton(
-                            onPressed: _busy
+                            onPressed: _busy || !canCompleteInstall
                                 ? null
                                 : () {
                                     final otp = _otpController.text.trim();
@@ -802,5 +853,63 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         );
       }),
     );
+  }
+
+  bool _canAccept(String status) => status == 'assigned';
+
+  bool _canStartTravel(String status) => status == 'accepted';
+
+  bool _canStartOnsite(String status) => status == 'enroute';
+
+  bool _canActivate(String status) => ['onsite', 'ont_scanned', 'failed'].contains(status);
+
+  bool _canRetry(String status, String configStatus) => status == 'failed' || configStatus == 'failed';
+
+  bool _canStartComplaint(String status) => ['assigned', 'accepted', 'enroute', 'onsite'].contains(status);
+
+  bool _canReplaceOnt(String status) => ['onsite', 'complaint_in_progress', 'ont_scanned'].contains(status);
+
+  bool _canSendComplaintOtp(String status) => ['complaint_in_progress', 'onsite', 'active'].contains(status);
+
+  bool _canResolveComplaint(String status, String otp) =>
+      ['complaint_in_progress', 'active', 'onsite'].contains(status) && otp.length == 6;
+
+  bool _canSubmitProof(String status, bool routerReady, bool cableReady) =>
+      ['active', 'activation_in_progress', 'onsite', 'ont_scanned'].contains(status) && routerReady && cableReady;
+
+  bool _canSendInstallOtp(String status, bool proofUploaded, bool routerReady, bool cableReady) =>
+      ['active', 'activation_in_progress'].contains(status) && (proofUploaded || (routerReady && cableReady));
+
+  bool _canCompleteInstall(String status, String otp) =>
+      ['active', 'activation_in_progress'].contains(status) && otp.length == 6;
+
+  String _nextActionText({
+    required String status,
+    required bool isComplaint,
+    required String linkedSerial,
+    required bool activationLive,
+    required bool proofUploaded,
+  }) {
+    if (isComplaint) {
+      if (status == 'assigned') return 'Accept the complaint visit first, then start travel to customer location.';
+      if (status == 'accepted') return 'Start travel and head to the customer site.';
+      if (status == 'enroute') return 'Mark onsite after you reach customer location and begin complaint work.';
+      if (status == 'onsite') return 'Start complaint workflow, replace ONT if needed, then send OTP for resolution.';
+      if (status == 'complaint_in_progress') return 'Finish replacement/config checks, send OTP, verify it, then resolve the complaint.';
+      if (status == 'completed') return 'Complaint is closed. Review the final device and timeline details.';
+      return 'Open the complaint flow and continue the next field action.';
+    }
+
+    if (status == 'assigned') return 'Accept the installation job to take ownership from dispatch.';
+    if (status == 'accepted') return 'Start travel and proceed to the customer location.';
+    if (status == 'enroute') return 'Mark onsite once you reach the site and are ready to start installation.';
+    if (status == 'onsite' && linkedSerial.isEmpty) return 'Scan or enter the ONT serial, then load diagnostics and run activation.';
+    if (status == 'onsite' && linkedSerial.isNotEmpty) return 'Router is linked. Run activation and wait for backend config push.';
+    if (status == 'ont_scanned') return 'Router linked. Run activation and monitor the provisioning countdown.';
+    if (status == 'activation_in_progress') return 'Wait for config push. If config fails, use retry. If internet comes up, move to proof and OTP.';
+    if (activationLive && !proofUploaded) return 'Internet is active. Capture router/cable proof, submit it, then send customer OTP.';
+    if (activationLive && proofUploaded) return 'Proof is uploaded. Send completion OTP, verify it with customer, then complete installation.';
+    if (status == 'completed') return 'Installation is closed. Review PPPoE, Wi-Fi, proof, and completion timestamps.';
+    return 'Continue the next installer step from this job workflow.';
   }
 }
