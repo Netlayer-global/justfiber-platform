@@ -32,6 +32,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   bool _hasPickedLocation = false;
   bool _locationBusy = false;
   String? _locationError;
+  bool _locationPermissionDeniedForever = false;
+  bool _locationServiceDisabled = false;
   final nameController = TextEditingController();
   final mobileController = TextEditingController();
   final addressController = TextEditingController();
@@ -184,6 +186,27 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           if ((_locationError ?? '').isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(_locationError!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (_locationServiceDisabled)
+                  OutlinedButton(
+                    onPressed: Geolocator.openLocationSettings,
+                    child: const Text('Open location settings'),
+                  ),
+                if (_locationPermissionDeniedForever)
+                  OutlinedButton(
+                    onPressed: Geolocator.openAppSettings,
+                    child: const Text('Open app settings'),
+                  ),
+                OutlinedButton(
+                  onPressed: _locationBusy ? null : _fetchCurrentLocation,
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
           ],
           const SizedBox(height: 16),
           if (feasibility != null)
@@ -588,17 +611,24 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     setState(() {
       _locationBusy = true;
       _locationError = null;
+      _locationPermissionDeniedForever = false;
+      _locationServiceDisabled = false;
     });
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        setState(() => _locationServiceDisabled = true);
         throw Exception('Location services are turned off.');
       }
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      if (permission == LocationPermission.deniedForever) {
+        setState(() => _locationPermissionDeniedForever = true);
+        throw Exception('Location permission is permanently denied. Open app settings and allow location access.');
+      }
+      if (permission == LocationPermission.denied) {
         throw Exception('Location permission is required to fetch current location.');
       }
       final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
