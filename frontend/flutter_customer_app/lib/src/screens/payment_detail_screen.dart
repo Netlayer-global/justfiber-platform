@@ -80,6 +80,7 @@ class PaymentDetailScreen extends StatelessWidget {
           AppCard(
             color: const Color(0xFF0C1018),
             borderColor: const Color(0x22E6FF3C),
+            textColor: const Color(0xFFEFEEE8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

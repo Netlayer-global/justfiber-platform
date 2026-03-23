@@ -90,9 +90,9 @@ ThemeData buildJustFiberTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFFEFEEE8),
-        backgroundColor: const Color(0xFF0E1520),
-        side: const BorderSide(color: Color(0x55E6FF3C)),
+        foregroundColor: const Color(0xFFE6FF3C),
+        backgroundColor: const Color(0xFF0B0F16),
+        side: const BorderSide(color: Color(0x99E6FF3C), width: 1.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700, fontSize: 15),
