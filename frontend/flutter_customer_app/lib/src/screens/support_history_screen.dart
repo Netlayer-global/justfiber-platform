@@ -242,7 +242,7 @@ class SupportHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0x14E6FF3C),
+        color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x66E6FF3C)),
       ),
@@ -450,7 +450,7 @@ class SupportHistoryScreen extends StatelessWidget {
                               color: selected ? const Color(0xFF031B17) : const Color(0xFFEFEEE8),
                               fontWeight: FontWeight.w700,
                             ),
-                            backgroundColor: const Color(0x22E6FF3C),
+                            backgroundColor: const Color(0xFF10151A),
                             selectedColor: const Color(0xFFE6FF3C),
                             side: const BorderSide(color: Color(0x66E6FF3C)),
                             onSelected: (_) => setModalState(() => category = item),
@@ -553,7 +553,7 @@ class SupportHistoryScreen extends StatelessWidget {
                               color: selected ? const Color(0xFF031B17) : const Color(0xFFEFEEE8),
                               fontWeight: FontWeight.w700,
                             ),
-                            backgroundColor: const Color(0x22E6FF3C),
+                            backgroundColor: const Color(0xFF10151A),
                             selectedColor: const Color(0xFFE6FF3C),
                             side: const BorderSide(color: Color(0x66E6FF3C)),
                             onSelected: (_) => setModalState(() => requestType = item),

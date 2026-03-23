@@ -333,13 +333,13 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: dark ? const Color(0x14E6FF3C) : const Color(0xFFEFEEE8),
+        color: dark ? const Color(0xFF10151A) : const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: dark ? const Color(0x66E6FF3C) : const Color(0x22E6FF3C)),
+        border: Border.all(color: dark ? const Color(0x66E6FF3C) : const Color(0x33E6FF3C)),
       ),
       child: RichText(
         text: TextSpan(
-          style: TextStyle(color: dark ? const Color(0xFFEFEEE8) : const Color(0xFF1F2937)),
+          style: TextStyle(color: dark ? const Color(0xFFEFEEE8) : const Color(0xFFEFEEE8)),
           children: [
             TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
             TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
