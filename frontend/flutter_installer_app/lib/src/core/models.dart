@@ -44,8 +44,15 @@ class InstallerJob {
     required this.jobNumber,
     required this.status,
     required this.customerName,
+    required this.customerPhone,
     required this.customerAddress,
+    required this.planName,
     required this.jobType,
+    required this.priority,
+    required this.scheduledAt,
+    required this.latestEventCode,
+    required this.configStatus,
+    required this.finalSerialNumber,
     required this.latitude,
     required this.longitude,
     required this.mapUrl,
@@ -55,8 +62,15 @@ class InstallerJob {
   final String jobNumber;
   final String status;
   final String customerName;
+  final String customerPhone;
   final String customerAddress;
+  final String planName;
   final String jobType;
+  final String priority;
+  final String scheduledAt;
+  final String latestEventCode;
+  final String configStatus;
+  final String finalSerialNumber;
   final double? latitude;
   final double? longitude;
   final String mapUrl;

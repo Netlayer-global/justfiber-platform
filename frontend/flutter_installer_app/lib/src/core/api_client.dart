@@ -75,8 +75,18 @@ class InstallerApiClient {
         jobNumber: (map['jobNumber'] ?? 'JOB').toString(),
         status: (map['status'] ?? 'assigned').toString(),
         customerName: (map['customerName'] ?? map['customer']?['fullName'] ?? 'Customer').toString(),
+        customerPhone: (map['customerSnapshot']?['phone'] ?? map['phone'] ?? '').toString(),
         customerAddress: (map['customerAddress'] ?? map['serviceAddress'] ?? 'Address pending').toString(),
+        planName: (map['customerSnapshot']?['planName'] ?? '').toString(),
         jobType: (map['jobType'] ?? 'installation').toString(),
+        priority: (map['priority'] ?? 'medium').toString(),
+        scheduledAt: (map['scheduledDate'] ?? map['assignment']?['assignedAt'] ?? '').toString(),
+        latestEventCode: ((map['timeline'] is List && (map['timeline'] as List).isNotEmpty)
+                ? ((map['timeline'] as List).last as Map<String, dynamic>)['event']
+                : '')?.toString() ??
+            '',
+        configStatus: (map['activation']?['configStatus'] ?? '').toString(),
+        finalSerialNumber: (map['deviceContext']?['finalSerialNumber'] ?? map['deviceContext']?['manualSerialNumber'] ?? '').toString(),
         latitude: double.tryParse('${map['customerSnapshot']?['location']?['lat'] ?? ''}'),
         longitude: double.tryParse('${map['customerSnapshot']?['location']?['lng'] ?? ''}'),
         mapUrl: (map['customerSnapshot']?['location']?['mapUrl'] ?? '').toString(),

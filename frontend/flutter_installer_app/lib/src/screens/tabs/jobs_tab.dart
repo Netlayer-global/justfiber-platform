@@ -3,8 +3,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_state.dart';
 import '../../core/models.dart';
-import '../job_detail_screen.dart';
 import '../../widgets/app_card.dart';
+import '../job_detail_screen.dart';
 
 class JobsTab extends StatefulWidget {
   const JobsTab({super.key});
@@ -14,32 +14,12 @@ class JobsTab extends StatefulWidget {
 }
 
 class _JobsTabState extends State<JobsTab> {
-  final Map<String, TextEditingController> _serialControllers = {};
-  final Map<String, TextEditingController> _otpControllers = {};
-
-  TextEditingController _serialControllerFor(String jobId) {
-    return _serialControllers.putIfAbsent(jobId, () => TextEditingController());
-  }
-
-  TextEditingController _otpControllerFor(String jobId) {
-    return _otpControllers.putIfAbsent(jobId, () => TextEditingController());
-  }
-
-  @override
-  void dispose() {
-    for (final controller in _serialControllers.values) {
-      controller.dispose();
-    }
-    for (final controller in _otpControllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
     final theme = Theme.of(context);
+    final activeJobs = appState.jobs.where((job) => job.status != 'completed').toList();
+    final completedJobs = appState.jobs.where((job) => job.status == 'completed').toList();
 
     return RefreshIndicator(
       color: const Color(0xFFE6FF3C),
@@ -66,10 +46,10 @@ class _JobsTabState extends State<JobsTab> {
                       ),
                 ),
                 const SizedBox(height: 10),
-                Text('Assigned jobs', style: theme.textTheme.headlineSmall),
+                Text('Dispatch queue', style: theme.textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text(
-                  'Run the actual field sequence from acceptance to installation completion with diagnostics and OTP handover.',
+                  'Open any job card to continue the full field workflow: accept, travel, onsite, router link, activation, proof, OTP, and completion.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFFD1D5DB),
                         height: 1.45,
@@ -80,9 +60,9 @@ class _JobsTabState extends State<JobsTab> {
                   children: [
                     Expanded(child: _metricChip('Pending', '${appState.dashboard.pendingJobs}')),
                     const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Completed', '${appState.dashboard.completedJobs}')),
+                    Expanded(child: _metricChip('Active', '${activeJobs.length}')),
                     const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Queue', '${appState.jobs.length}')),
+                    Expanded(child: _metricChip('Closed', '${completedJobs.length}')),
                   ],
                 ),
               ],
@@ -115,14 +95,41 @@ class _JobsTabState extends State<JobsTab> {
                 ],
               ),
             )
-          else
-            ...appState.jobs.map(
-              (job) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _jobCard(context, appState, job),
+          else ...[
+            if (activeJobs.isNotEmpty) ...[
+              _sectionLabel(context, 'LIVE FIELD QUEUE'),
+              ...activeJobs.map(
+                (job) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _jobCard(context, appState, job),
+                ),
               ),
-            ),
+            ],
+            if (completedJobs.isNotEmpty) ...[
+              _sectionLabel(context, 'RECENTLY CLOSED'),
+              ...completedJobs.map(
+                (job) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _jobCard(context, appState, job),
+                ),
+              ),
+            ],
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF9CA3AF),
+              letterSpacing: 2.8,
+              fontWeight: FontWeight.w700,
+            ),
       ),
     );
   }
@@ -156,10 +163,12 @@ class _JobsTabState extends State<JobsTab> {
   }
 
   Widget _jobCard(BuildContext context, InstallerAppState appState, InstallerJob job) {
-    final preview = appState.selectedJobId == job.id ? appState.preview : null;
-    final diagnostics = appState.selectedJobId == job.id ? appState.diagnostics : null;
-    final serialController = _serialControllerFor(job.id);
-    final otpController = _otpControllerFor(job.id);
+    final isComplaint = job.jobType == 'complaint';
+    final stageLabel = _stageLabel(job);
+    final primaryAction = _primaryActionLabel(job);
+    final hasConfigFailure = job.configStatus == 'failed';
+    final hasPinnedLocation = job.latitude != null && job.longitude != null;
+    final hasLinkedRouter = job.finalSerialNumber.isNotEmpty;
 
     return InkWell(
       borderRadius: BorderRadius.circular(28),
@@ -173,6 +182,7 @@ class _JobsTabState extends State<JobsTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Column(
@@ -182,8 +192,20 @@ class _JobsTabState extends State<JobsTab> {
                       const SizedBox(height: 4),
                       Text(
                         job.customerName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFFEFEEE8)),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: const Color(0xFFEFEEE8),
+                            ),
                       ),
+                      if (job.customerPhone.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          job.customerPhone,
+                          style: const TextStyle(
+                            color: Color(0xFF9CA3AF),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -194,9 +216,9 @@ class _JobsTabState extends State<JobsTab> {
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: const Color(0x55E6FF3C)),
                   ),
-                  child: const Text(
-                    'Open',
-                    style: TextStyle(
+                  child: Text(
+                    primaryAction,
+                    style: const TextStyle(
                       color: Color(0xFFE6FF3C),
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
@@ -210,28 +232,71 @@ class _JobsTabState extends State<JobsTab> {
               job.customerAddress,
               style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
             ),
-            const SizedBox(height: 10),
+            if (job.planName.isNotEmpty || job.scheduledAt.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (job.planName.isNotEmpty)
+                    Expanded(child: _infoBox('Plan', job.planName)),
+                  if (job.planName.isNotEmpty && job.scheduledAt.isNotEmpty) const SizedBox(width: 10),
+                  if (job.scheduledAt.isNotEmpty)
+                    Expanded(child: _infoBox('Scheduled', _shortDate(job.scheduledAt))),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _pill(job.jobType.replaceAll('_', ' ')),
-                _pill(job.status.replaceAll('_', ' ')),
-                if (job.latitude != null && job.longitude != null) _pill('Pinned location'),
+                _pill(isComplaint ? 'complaint' : 'installation'),
+                _pill(stageLabel),
+                _pill(job.priority),
+                if (hasPinnedLocation) _pill('Pinned location'),
+                if (hasLinkedRouter) _pill('Router linked'),
               ],
             ),
+            if (hasConfigFailure || job.latestEventCode.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10151A),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: hasConfigFailure ? const Color(0x66F59E0B) : const Color(0x22E6FF3C),
+                  ),
+                ),
+                child: Text(
+                  hasConfigFailure
+                      ? 'Router config failed. Open the job and retry activation.'
+                      : 'Latest event: ${job.latestEventCode.replaceAll('.', ' ')}',
+                  style: TextStyle(
+                    color: hasConfigFailure ? const Color(0xFFFCD34D) : const Color(0xFFD1D5DB),
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Wrap(
               spacing: 10,
               runSpacing: 10,
               children: [
-                if (job.latitude != null && job.longitude != null)
+                if (hasPinnedLocation)
                   OutlinedButton(
                     onPressed: () => _openMap(context, job),
                     child: const Text('Open map'),
                   ),
+                if (job.customerPhone.isNotEmpty)
+                  OutlinedButton(
+                    onPressed: () => _openCall(context, job.customerPhone),
+                    child: const Text('Call customer'),
+                  ),
                 OutlinedButton(
-                  onPressed: appState.busy
+                  onPressed: appState.busy || !_canAccept(job)
                       ? null
                       : () => _runAction(
                             context,
@@ -242,7 +307,7 @@ class _JobsTabState extends State<JobsTab> {
                   child: const Text('Accept'),
                 ),
                 OutlinedButton(
-                  onPressed: appState.busy
+                  onPressed: appState.busy || !_canStartTravel(job)
                       ? null
                       : () => _runAction(
                             context,
@@ -253,7 +318,7 @@ class _JobsTabState extends State<JobsTab> {
                   child: const Text('Start travel'),
                 ),
                 OutlinedButton(
-                  onPressed: appState.busy
+                  onPressed: appState.busy || !_canQuickPreview(job)
                       ? null
                       : () => _runAction(
                             context,
@@ -265,17 +330,34 @@ class _JobsTabState extends State<JobsTab> {
                 ),
               ],
             ),
-            if (preview != null || diagnostics != null) ...[
-              const SizedBox(height: 14),
-              Text(
-                'Tap card to open full workflow',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: const Color(0xFF9CA3AF),
-                    ),
-              ),
-            ],
+            const SizedBox(height: 14),
+            Text(
+              'Tap card to open full workflow',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: const Color(0xFF9CA3AF),
+                  ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _infoBox(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10151A),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x22E6FF3C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
+        ],
       ),
     );
   }
@@ -291,30 +373,6 @@ class _JobsTabState extends State<JobsTab> {
       child: Text(
         label,
         style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700, fontSize: 12),
-      ),
-    );
-  }
-
-  Widget _previewRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(
-              label,
-              style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value.isEmpty ? '-' : value,
-              style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -351,5 +409,87 @@ class _JobsTabState extends State<JobsTab> {
         const SnackBar(content: Text('Unable to open job location right now.')),
       );
     }
+  }
+
+  Future<void> _openCall(BuildContext context, String phone) async {
+    final uri = Uri.tryParse('tel:$phone');
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customer phone is not available right now.')),
+      );
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open dialer right now.')),
+      );
+    }
+  }
+
+  bool _canAccept(InstallerJob job) => job.status == 'assigned';
+
+  bool _canStartTravel(InstallerJob job) => job.status == 'accepted';
+
+  bool _canQuickPreview(InstallerJob job) => job.status != 'completed';
+
+  String _primaryActionLabel(InstallerJob job) {
+    if (job.status == 'completed') return 'Review';
+    if (job.status == 'assigned') return 'Accept';
+    if (job.status == 'accepted') return 'Travel';
+    if (job.status == 'enroute') return 'Onsite';
+    if (job.status == 'ont_scanned') return 'Activate';
+    if (job.status == 'activation_in_progress') return 'Watch';
+    return 'Continue';
+  }
+
+  String _stageLabel(InstallerJob job) {
+    switch (job.status) {
+      case 'assigned':
+        return 'assigned';
+      case 'accepted':
+        return 'accepted';
+      case 'enroute':
+        return 'travelling';
+      case 'onsite':
+        return 'onsite';
+      case 'ont_scanned':
+        return 'router linked';
+      case 'activation_in_progress':
+        return 'activating';
+      case 'complaint_in_progress':
+        return 'complaint live';
+      case 'active':
+        return 'internet live';
+      case 'completed':
+        return 'completed';
+      default:
+        return job.status.replaceAll('_', ' ');
+    }
+  }
+
+  String _shortDate(String value) {
+    if (value.isEmpty) return '-';
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return value;
+    final local = parsed.toLocal();
+    final month = <int, String>{
+      1: 'Jan',
+      2: 'Feb',
+      3: 'Mar',
+      4: 'Apr',
+      5: 'May',
+      6: 'Jun',
+      7: 'Jul',
+      8: 'Aug',
+      9: 'Sep',
+      10: 'Oct',
+      11: 'Nov',
+      12: 'Dec',
+    }[local.month]!;
+    final hour = local.hour == 0 ? 12 : (local.hour > 12 ? local.hour - 12 : local.hour);
+    final minute = local.minute.toString().padLeft(2, '0');
+    final suffix = local.hour >= 12 ? 'PM' : 'AM';
+    return '${local.day} $month, $hour:$minute $suffix';
   }
 }
