@@ -149,6 +149,15 @@ export default function PlansPage() {
         .some((value) => String(value).toLowerCase().includes(needle))
     )
   }, [plans, query])
+  const catalogMetrics: Array<{
+    label: string
+    value: string
+    Icon: typeof Sparkles
+  }> = [
+    { label: 'Active', value: String(plans.filter((plan) => plan.status === 'active').length), Icon: Sparkles },
+    { label: 'Segments', value: '3', Icon: Layers3 },
+    { label: 'Catalog', value: String(filteredPlans.length), Icon: Cable },
+  ]
 
   function beginCreate() {
     setEditingPlanId(null)
@@ -273,11 +282,7 @@ export default function PlansPage() {
           <div className="mt-3 text-5xl font-black">{plans.length}</div>
           <div className="mt-2 text-sm text-black/60">Plans across home, business, and enterprise lanes</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              ['Active', String(plans.filter((plan) => plan.status === 'active').length), Sparkles],
-              ['Segments', '3', Layers3],
-              ['Catalog', String(filteredPlans.length), Cable],
-            ].map(([label, value, Icon]) => (
+            {catalogMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
