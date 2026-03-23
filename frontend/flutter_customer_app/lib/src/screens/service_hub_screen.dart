@@ -131,18 +131,28 @@ class ServiceHubScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
-                        ),
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+                          );
+                          if (context.mounted) {
+                            await appState.refresh();
+                          }
+                        },
                         child: const Text('View plans'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
-                        ),
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+                          );
+                          if (context.mounted) {
+                            await appState.refresh();
+                          }
+                        },
                         child: const Text('Change plan'),
                       ),
                     ),
@@ -163,7 +173,12 @@ class ServiceHubScreen extends StatelessWidget {
                   Icons.router_outlined,
                   'Wi-Fi settings',
                   'Passwords, guest Wi-Fi, devices, access, and router actions',
-                  () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen())),
+                  () async {
+                    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WifiSettingsScreen()));
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
                 ),
                 _quickAction(
                   context,
@@ -177,14 +192,24 @@ class ServiceHubScreen extends StatelessWidget {
                   Icons.auto_awesome_motion_outlined,
                   'Change plan',
                   'Upgrade or downgrade your service using the current billing rules',
-                  () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen())),
+                  () async {
+                    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
                 ),
                 _quickAction(
                   context,
                   Icons.track_changes_outlined,
                   'Track service activity',
                   'See booking steps, visits, requests, and complaint progress',
-                  () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())),
+                  () async {
+                    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
                   last: true,
                 ),
               ],
@@ -220,18 +245,28 @@ class ServiceHubScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
-                        ),
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
+                          );
+                          if (context.mounted) {
+                            await appState.refresh();
+                          }
+                        },
                         child: const Text('Open tracking'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const WifiSettingsScreen()),
-                        ),
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const WifiSettingsScreen()),
+                          );
+                          if (context.mounted) {
+                            await appState.refresh();
+                          }
+                        },
                         child: const Text('Run Wi-Fi actions'),
                       ),
                     ),

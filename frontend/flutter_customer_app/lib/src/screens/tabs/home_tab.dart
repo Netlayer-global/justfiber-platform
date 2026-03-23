@@ -97,9 +97,14 @@ class HomeTab extends StatelessWidget {
                     child: FilledButton(
                       onPressed: hasService
                           ? () => onNavigate(1)
-                          : () => Navigator.of(context).push(
+                          : () async {
+                              await Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
-                              ),
+                              );
+                              if (context.mounted) {
+                                await appState.refresh();
+                              }
+                            },
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFFE6FF3C),
                         foregroundColor: const Color(0xFF111111),
@@ -112,9 +117,14 @@ class HomeTab extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: hasService
                           ? (appState.busy ? null : () => _payBill(context, appState))
-                          : () => Navigator.of(context).push(
+                          : () async {
+                              await Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
-                              ),
+                              );
+                              if (context.mounted) {
+                                await appState.refresh();
+                              }
+                            },
                       child: Text(hasService ? 'Pay bill' : 'Track request'),
                     ),
                   ),
@@ -272,9 +282,14 @@ class HomeTab extends StatelessWidget {
                 _infoRow('Current step', latestBooking.currentStep, highlight: true),
                 const SizedBox(height: 14),
                 FilledButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
-                  ),
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
+                    );
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFFE6FF3C),
                     foregroundColor: const Color(0xFF111111),
