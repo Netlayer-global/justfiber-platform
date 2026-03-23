@@ -339,26 +339,43 @@ class ApiClient {
     String? preferredSlotCode,
     String? preferredSlotLabel,
   }) async {
-    final data = _asMap(
-      await _request(
-        session == null ? '/api/v1/customer/bookings/public' : '/api/v1/customer/bookings',
-        method: 'POST',
-        token: session?.accessToken,
-        body: {
-          'planCode': planCode,
-          'fullName': fullName,
-          'mobile': mobile,
-          'fullAddress': address,
-          'pinCode': pinCode,
-          'lat': lat,
-          'lng': lng,
-          if (preferredDate != null && preferredDate.isNotEmpty) 'preferredDate': preferredDate,
-          if (preferredSlotCode != null && preferredSlotCode.isNotEmpty) 'preferredSlotCode': preferredSlotCode,
-          if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty) 'preferredSlotLabel': preferredSlotLabel,
-          'paymentMode': 'cash',
-        },
-      ),
-    );
+    final body = {
+      'planCode': planCode,
+      'fullName': fullName,
+      'mobile': mobile,
+      'fullAddress': address,
+      'pinCode': pinCode,
+      'lat': lat,
+      'lng': lng,
+      if (preferredDate != null && preferredDate.isNotEmpty) 'preferredDate': preferredDate,
+      if (preferredSlotCode != null && preferredSlotCode.isNotEmpty) 'preferredSlotCode': preferredSlotCode,
+      if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty) 'preferredSlotLabel': preferredSlotLabel,
+      'paymentMode': 'cash',
+    };
+    final primaryPath = session == null ? '/api/v1/customer/bookings/public' : '/api/v1/customer/bookings';
+    final fallbackPath = session == null ? '/api/v1/customer/bookings' : '/api/v1/customer/bookings/public';
+    Map<String, dynamic> data;
+    try {
+      data = _asMap(
+        await _request(
+          primaryPath,
+          method: 'POST',
+          token: session?.accessToken,
+          body: body,
+        ),
+      );
+    } catch (e) {
+      final message = e.toString();
+      if (!message.contains('Route not found')) rethrow;
+      data = _asMap(
+        await _request(
+          fallbackPath,
+          method: 'POST',
+          token: session?.accessToken,
+          body: body,
+        ),
+      );
+    }
     final selectedPlan = _asMap(data['selectedPlan']);
     final tracking = _asMap(data['tracking']);
     return BookingQuote(
