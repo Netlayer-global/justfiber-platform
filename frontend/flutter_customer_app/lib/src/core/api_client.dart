@@ -44,6 +44,25 @@ class ApiClient {
     return const [];
   }
 
+  DateTime? _parseDate(String? value) {
+    final text = (value ?? '').trim();
+    if (text.isEmpty) return null;
+    return DateTime.tryParse(text)?.toUtc();
+  }
+
+  List<T> _sortByDateDesc<T>(List<T> items, String Function(T item) getDate) {
+    final sorted = List<T>.from(items);
+    sorted.sort((left, right) {
+      final rightDate = _parseDate(getDate(right));
+      final leftDate = _parseDate(getDate(left));
+      if (rightDate == null && leftDate == null) return 0;
+      if (rightDate == null) return -1;
+      if (leftDate == null) return 1;
+      return rightDate.compareTo(leftDate);
+    });
+    return sorted;
+  }
+
   Future<String> sendOtp(String mobile) async {
     final data = _asMap(await _request('/api/v1/customer/auth/send-otp', method: 'POST', body: {'mobile': mobile}));
     return (data['demoOtp'] ?? '').toString();
@@ -91,7 +110,7 @@ class ApiClient {
   Future<BillingData> fetchBilling(CustomerSession session) async {
     final details = _asMap(await _request('/api/v1/customer/billing/details', token: session.accessToken));
     final data = _asMap(details['summary']);
-    final invoices = _asList(details['invoices']).map((item) {
+    final invoices = _sortByDateDesc(_asList(details['invoices']).map((item) {
       final map = item as Map<String, dynamic>;
       return BillingInvoiceItem(
         invoiceNumber: (map['invoiceNumber'] ?? map['invoiceId'] ?? '').toString(),
@@ -102,8 +121,8 @@ class ApiClient {
         viewUrl: (map['viewUrl'] ?? '').toString(),
         pdfUrl: (map['pdfUrl'] ?? '').toString(),
       );
-    }).toList();
-    final payments = _asList(details['payments']).map((item) {
+    }).toList(), (item) => item.generatedAt);
+    final payments = _sortByDateDesc(_asList(details['payments']).map((item) {
       final map = item as Map<String, dynamic>;
       return BillingPaymentItem(
         transactionId: (map['transactionId'] ?? '').toString(),
@@ -114,8 +133,8 @@ class ApiClient {
         viewUrl: (map['viewUrl'] ?? '').toString(),
         pdfUrl: (map['pdfUrl'] ?? '').toString(),
       );
-    }).toList();
-    final notes = _asList(details['notes']).map((item) {
+    }).toList(), (item) => item.paidAt);
+    final notes = _sortByDateDesc(_asList(details['notes']).map((item) {
       final map = item as Map<String, dynamic>;
       return BillingNoteItem(
         noteNumber: (map['noteNumber'] ?? '').toString(),
@@ -126,7 +145,7 @@ class ApiClient {
         viewUrl: (map['viewUrl'] ?? '').toString(),
         pdfUrl: (map['pdfUrl'] ?? '').toString(),
       );
-    }).toList();
+    }).toList(), (item) => item.issuedAt);
     final pendingPlanChangeMap = _asMap(data['pendingPlanChange']);
     return BillingData(
       currentPlan: (data['currentPlan'] ?? data['currentPlanName'] ?? '').toString(),
@@ -179,7 +198,7 @@ class ApiClient {
 
   Future<List<RequestItem>> fetchRequests(CustomerSession session) async {
     final list = _asList(await _request('/api/v1/customer/requests', token: session.accessToken));
-    return list.map((item) {
+    return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
       final payload = _asMap(map['payload']);
       return RequestItem(
@@ -191,12 +210,12 @@ class ApiClient {
         status: (map['status'] ?? 'open').toString(),
         createdAt: (map['createdAt'] ?? '').toString(),
       );
-    }).toList();
+    }).toList(), (item) => item.createdAt);
   }
 
   Future<List<SupportTicketItem>> fetchTickets(CustomerSession session) async {
     final list = _asList(await _request('/api/v1/customer/tickets', token: session.accessToken));
-    return list.map((item) {
+    return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
       return SupportTicketItem(
         id: (map['_id'] ?? '').toString(),
@@ -208,12 +227,12 @@ class ApiClient {
         priority: (map['priority'] ?? 'medium').toString(),
         createdAt: (map['createdAt'] ?? '').toString(),
       );
-    }).toList();
+    }).toList(), (item) => item.createdAt);
   }
 
   Future<List<NotificationItem>> fetchNotifications(CustomerSession session) async {
     final list = _asList(await _request('/api/v1/customer/notifications', token: session.accessToken));
-    return list.map((item) {
+    return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
       return NotificationItem(
         id: (map['_id'] ?? '').toString(),
@@ -224,7 +243,7 @@ class ApiClient {
         readAt: (map['readAt'] ?? '').toString(),
         payload: _asMap(map['payload']),
       );
-    }).toList();
+    }).toList(), (item) => item.createdAt);
   }
 
   Future<void> markNotificationRead(CustomerSession session, String notificationId) async {
@@ -395,7 +414,7 @@ class ApiClient {
 
   Future<List<InstallerVisitItem>> fetchServiceVisits(CustomerSession session) async {
     final list = _asList(await _request('/api/v1/customer/services/track', token: session.accessToken));
-    return list.map((item) {
+    return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
       return InstallerVisitItem(
         jobNumber: (map['jobNumber'] ?? '').toString(),
@@ -411,7 +430,7 @@ class ApiClient {
         mapUrl: (map['mapUrl'] ?? '').toString(),
         etaText: (map['etaText'] ?? '').toString(),
       );
-    }).toList();
+    }).toList(), (item) => item.lastUpdateAt.isNotEmpty ? item.lastUpdateAt : item.createdAt);
   }
 
   Future<BillingPaymentOrder> createBillingPaymentOrder(CustomerSession session, {double? amount}) async {
