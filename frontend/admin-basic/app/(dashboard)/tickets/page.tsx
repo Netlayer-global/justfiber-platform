@@ -8,6 +8,15 @@ import { AlertCircle, Loader, ShieldCheck, Ticket as TicketIcon } from 'lucide-r
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const queueMetrics: Array<{
+    label: string
+    value: string
+    Icon: typeof AlertCircle
+  }> = [
+    { label: 'Open', value: String(tickets.filter((t) => t.status === 'open').length), Icon: AlertCircle },
+    { label: 'Resolved', value: String(tickets.filter((t) => t.status === 'resolved').length), Icon: ShieldCheck },
+    { label: 'Total', value: String(tickets.length), Icon: TicketIcon },
+  ]
 
   useEffect(() => {
     loadTickets()
@@ -43,11 +52,7 @@ export default function TicketsPage() {
           <div className="mt-3 text-5xl font-black">{tickets.length}</div>
           <div className="mt-2 text-sm text-black/60">Support items in the current working queue</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              ['Open', String(tickets.filter((t) => t.status === 'open').length), AlertCircle],
-              ['Resolved', String(tickets.filter((t) => t.status === 'resolved').length), ShieldCheck],
-              ['Total', String(tickets.length), TicketIcon],
-            ].map(([label, value, Icon]) => (
+            {queueMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
