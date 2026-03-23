@@ -107,6 +107,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         children: [
           const Text('Unlock plans and offers available in your area.', style: TextStyle(color: Color(0xFF6B7280), height: 1.4)),
           const SizedBox(height: 16),
+          _addressChecklist(),
+          const SizedBox(height: 16),
           _field('Full name', nameController),
           const SizedBox(height: 12),
           _field('Mobile number', mobileController, keyboardType: TextInputType.phone),
@@ -321,6 +323,14 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               child: const Text('Continue to Booking'),
             ),
           ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => setState(() => step = 0),
+              child: const Text('Back to Address'),
+            ),
+          ),
         ],
       ),
     );
@@ -438,6 +448,14 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
               child: Text(appState.bookingBusy ? 'Booking...' : 'Create Booking'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: appState.bookingBusy ? null : () => setState(() => step = 1),
+              child: const Text('Back to Plans'),
             ),
           ),
         ],
@@ -600,6 +618,56 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               border: Border.all(color: const Color(0x66E6FF3C)),
             ),
             child: const Icon(Icons.wifi_rounded, color: Color(0xFFE6FF3C), size: 56),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _addressChecklist() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10151A),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x22E6FF3C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Complete these before checking plans',
+            style: TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 10),
+          _checkItem('Full name', nameController.text.trim().isNotEmpty),
+          _checkItem('Mobile number', mobileController.text.trim().length >= 10),
+          _checkItem('Address', addressController.text.trim().length >= 5),
+          _checkItem('Pin code', pinController.text.trim().length >= 4),
+          _checkItem('Map pin dropped', _hasPickedLocation),
+        ],
+      ),
+    );
+  }
+
+  Widget _checkItem(String label, bool done) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            size: 18,
+            color: done ? const Color(0xFFE6FF3C) : const Color(0xFF6B7280),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: done ? const Color(0xFFEFEEE8) : const Color(0xFF9CA3AF),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
