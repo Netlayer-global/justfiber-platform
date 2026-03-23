@@ -232,10 +232,12 @@ class SupportHistoryScreen extends StatelessWidget {
 
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
+      color: const Color(0xFF0C1018),
+      borderColor: const Color(0x22E6FF3C),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFEFEEE8))),
           const SizedBox(height: 14),
           child,
         ],
@@ -259,7 +261,7 @@ class SupportHistoryScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+            colors: [Color(0xFF0B0F19), Color(0xFF111827)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -281,11 +283,11 @@ class SupportHistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFEFEEE8))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF4B5563), fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF6B7280))),
+                  Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF94A3B8))),
                 ],
               ),
             ),

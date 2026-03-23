@@ -109,13 +109,15 @@ class ServiceTrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
+            color: const Color(0xFF0C1018),
+            borderColor: const Color(0x22E6FF3C),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Booking timeline', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 if (bookingTracking == null || bookingTracking.steps.isEmpty)
-                  const Text('No booking timeline available yet.', style: TextStyle(color: Color(0xFF7B625A)))
+                  const Text('No booking timeline available yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 else
                   ...bookingTracking.steps.asMap().entries.map((entry) {
                     final step = entry.value;
@@ -138,9 +140,9 @@ class ServiceTrackingScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(step.code.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.w700)),
+                                Text(step.code.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
                                 const SizedBox(height: 4),
-                                Text(step.at.isEmpty ? 'Pending' : step.at, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                                Text(step.at.isEmpty ? 'Pending' : step.at, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
                                 if (entry.key == 0 && latestBooking?.preferredSlotLabel.isNotEmpty == true) ...[
                                   const SizedBox(height: 4),
                                   Text(
@@ -161,24 +163,26 @@ class ServiceTrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
+            color: const Color(0xFF0C1018),
+            borderColor: const Color(0x22E6FF3C),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Installer visits', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 if (visits.isEmpty)
-                  const Text('No installer visit or complaint job assigned yet.', style: TextStyle(color: Color(0xFF7B625A)))
+                  const Text('No installer visit or complaint job assigned yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 else
                   ...visits.map((visit) => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: Container(
                           padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                             borderRadius: BorderRadius.circular(22),
                             border: Border.all(color: const Color(0x22E6FF3C)),
                           ),
@@ -191,11 +195,11 @@ class ServiceTrackingScreen extends StatelessWidget {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(visit.jobNumber, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                        Text(visit.jobNumber, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
                                         const SizedBox(height: 4),
                                         Text(
                                           '${visit.type} | ${visit.priority} | ${visit.createdAt.isEmpty ? '-' : visit.createdAt}',
-                                          style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12),
+                                          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
                                         ),
                                       ],
                                     ),
@@ -205,7 +209,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                                     children: [
                                       Text(visit.status, style: TextStyle(color: _stepColor(visit.status), fontWeight: FontWeight.w600)),
                                       if (visit.completedAt.isNotEmpty)
-                                        Text(visit.completedAt, style: const TextStyle(color: Color(0xFF7B625A), fontSize: 12)),
+                                        Text(visit.completedAt, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
                                     ],
                                   ),
                                 ],
@@ -220,9 +224,9 @@ class ServiceTrackingScreen extends StatelessWidget {
                                 OutlinedButton(
                                   onPressed: () => _openMap(visit.mapUrl),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF111111),
-                                    backgroundColor: const Color(0xFFF3F1E9),
-                                    side: const BorderSide(color: Color(0x14000000)),
+                                    foregroundColor: const Color(0xFFE6FF3C),
+                                    backgroundColor: const Color(0xFF111827),
+                                    side: const BorderSide(color: Color(0x66E6FF3C)),
                                   ),
                                   child: const Text('Open location'),
                                 ),
@@ -236,13 +240,15 @@ class ServiceTrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
+            color: const Color(0xFF0C1018),
+            borderColor: const Color(0x22E6FF3C),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Latest alerts', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 if (notifications.isEmpty)
-                  const Text('No tracking alerts right now.', style: TextStyle(color: Color(0xFF7B625A)))
+                  const Text('No tracking alerts right now.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 else
                   ...notifications.take(3).map(
                     (item) => Padding(
@@ -252,7 +258,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+                              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -262,9 +268,9 @@ class ServiceTrackingScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                            Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
                             const SizedBox(height: 6),
-                            Text(item.body, style: const TextStyle(color: Color(0xFF7B625A), height: 1.4)),
+                            Text(item.body, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.4)),
                           ],
                         ),
                       ),
@@ -290,6 +296,8 @@ class ServiceTrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
+            color: const Color(0xFF0C1018),
+            borderColor: const Color(0x22E6FF3C),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

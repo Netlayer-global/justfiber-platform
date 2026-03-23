@@ -226,8 +226,10 @@ class NotificationsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
+            color: const Color(0xFF0C1018),
+            borderColor: const Color(0x22E6FF3C),
             child: notifications.isEmpty
-                ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFF6B7280)))
+                ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 : Column(
                     children: notifications.map((item) {
                       final kind = _kindFor(item);
@@ -238,7 +240,7 @@ class NotificationsScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+                              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -280,7 +282,7 @@ class NotificationsScreen extends StatelessWidget {
                                   Text(
                                     _relativeTime(item),
                                     style: const TextStyle(
-                                      color: Color(0xFF6B7280),
+                                      color: Color(0xFF9CA3AF),
                                       fontWeight: FontWeight.w700,
                                       fontSize: 12,
                                     ),
@@ -300,9 +302,9 @@ class NotificationsScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                              Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFEFEEE8))),
                               const SizedBox(height: 6),
-                              Text(item.body, style: const TextStyle(color: Color(0xFF6B7280), height: 1.45)),
+                              Text(item.body, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45)),
                               const SizedBox(height: 14),
                               Wrap(
                                 spacing: 10,
