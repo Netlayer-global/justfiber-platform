@@ -103,6 +103,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             : {
                 'brand': previewModel.brand,
                 'vlanId': previewModel.vlanId,
+                'planCode': previewModel.planCode,
+                'planName': previewModel.planName,
+                'planCategory': previewModel.planCategory,
+                'monthlyPrice': previewModel.monthlyPrice,
+                'otcCharge': previewModel.otcCharge,
+                'installationCharge': previewModel.installationCharge,
+                'tags': previewModel.tags,
+                'staticBenefits': previewModel.staticBenefits,
+                'features': previewModel.features,
                 'natEnabled': true,
                 'pppoe': {
                   'username': previewModel.pppoeUsername,
@@ -238,6 +247,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final wifiPassword = (wifi['password'] ?? activation['credentials']?['wifi']?['password'] ?? '-').toString();
     final pppoeUsername = (pppoe['username'] ?? activation['credentials']?['pppoeUsername'] ?? '-').toString();
     final pppoePassword = (pppoe['password'] ?? activation['credentials']?['pppoePassword'] ?? '-').toString();
+    final planCode = widget.job.planCode.isEmpty ? (preview['planCode'] ?? '').toString() : widget.job.planCode;
+    final planCategory = widget.job.planCategory.isEmpty ? (preview['planCategory'] ?? 'home').toString() : widget.job.planCategory;
+    final planPrice = widget.job.monthlyPrice > 0 ? widget.job.monthlyPrice : double.tryParse('${preview['monthlyPrice'] ?? 0}') ?? 0;
+    final planOtc = widget.job.otcCharge > 0 ? widget.job.otcCharge : double.tryParse('${preview['otcCharge'] ?? 0}') ?? 0;
+    final planInstall = widget.job.installationCharge > 0 ? widget.job.installationCharge : double.tryParse('${preview['installationCharge'] ?? 0}') ?? 0;
+    final planTags = widget.job.tags.isNotEmpty
+        ? widget.job.tags
+        : ((preview['tags'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[]);
+    final planBenefits = widget.job.staticBenefits.isNotEmpty
+        ? widget.job.staticBenefits
+        : ((preview['staticBenefits'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[]);
     final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final linkedSerial = (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
@@ -315,7 +335,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           Expanded(child: _chip('Priority', (detail?['priority'] ?? 'medium').toString())),
                         ],
                       ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(child: _chip('Plan code', planCode.isEmpty ? '-' : planCode)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _chip('Monthly', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-')),
+                        ],
+                      ),
                       const SizedBox(height: 14),
+                      if (planTags.isNotEmpty || planBenefits.isNotEmpty) ...[
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ...planTags.take(3).map((tag) => _miniPill(tag)),
+                            ...planBenefits.take(2).map((item) => _miniPill(item)),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                      ],
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
@@ -619,6 +658,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                         ),
                       ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Plan and commercial summary', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 12),
+                      _row('Plan lane', planCategory),
+                      _row('Plan code', planCode.isEmpty ? '-' : planCode),
+                      _row('Monthly price', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-'),
+                      _row('OTC', planOtc > 0 ? 'Rs ${planOtc.toStringAsFixed(0)}' : '-'),
+                      _row('Installation', planInstall > 0 ? 'Rs ${planInstall.toStringAsFixed(0)}' : '-'),
                     ],
                   ),
                 ),
@@ -1058,6 +1112,25 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
         ],
+      ),
+    );
+  }
+
+  Widget _miniPill(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141A22),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x33E6FF3C)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFEFEEE8),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

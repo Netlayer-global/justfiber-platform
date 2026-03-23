@@ -266,15 +266,26 @@ installerAppRouter.get(
     }
     const deviceId = job.deviceContext?.finalDeviceId || `ONT-${job.deviceContext?.finalSerialNumber || ""}`;
     const device = deviceId ? await DeviceOperationalCache.findOne({ deviceId }).lean() : null;
-    const preview = buildProvisioningPreview(job, device);
-    job.activation = {
-      ...(job.activation || {}),
-      preparedCredentials: preview,
-      previewGeneratedAt: new Date()
-    };
+  const preview = buildProvisioningPreview(job, device);
+  const planSummary = {
+    planCode: job.customerSnapshot?.planCode || "",
+    planName: job.customerSnapshot?.planName || "",
+    category: job.customerSnapshot?.planCategory || "home",
+    monthlyPrice: Number(job.customerSnapshot?.monthlyPrice || 0),
+    otcCharge: Number(job.customerSnapshot?.otcCharge || 0),
+    installationCharge: Number(job.customerSnapshot?.installationCharge || 0),
+    tags: Array.isArray(job.customerSnapshot?.tags) ? job.customerSnapshot.tags : [],
+    staticBenefits: Array.isArray(job.customerSnapshot?.staticBenefits) ? job.customerSnapshot.staticBenefits : [],
+    features: Array.isArray(job.customerSnapshot?.features) ? job.customerSnapshot.features : []
+  };
+  job.activation = {
+    ...(job.activation || {}),
+    preparedCredentials: preview,
+    previewGeneratedAt: new Date()
+  };
     pushTimeline(job, "job.provisioning_previewed", req.installer._id, `Brand ${preview.brand}`);
     await job.save();
-    return ok(res, preview);
+    return ok(res, { ...preview, planSummary });
   })
 );
 

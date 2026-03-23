@@ -243,7 +243,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                       Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFFEFEEE8))),
                       const SizedBox(height: 6),
                       Text(
-                        'Rs ${plan.monthlyPrice.toStringAsFixed(0)} / month + GST',
+                        '${_formatPlanHeadline(plan)} / month',
                         style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 18),
                       ),
                     ],
@@ -279,8 +279,8 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               child: Row(
                 children: [
                   Expanded(child: _planMetric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
-                  Expanded(child: _planMetric('Unlimited', 'Internet')),
-                  Expanded(child: _planMetric(_isPremium(plan) ? 'OTT+' : 'Core', 'Benefits')),
+                  Expanded(child: _planMetric(_validityLabel(plan), 'Durations')),
+                  Expanded(child: _planMetric(_isPremium(plan) ? 'Premium' : 'Core', 'Lane')),
                 ],
               ),
             ),
@@ -289,6 +289,31 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               spacing: 8,
               runSpacing: 8,
               children: _benefitChips(plan),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F1419),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0x33E6FF3C)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Plan economics',
+                    style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8)),
+                  ),
+                  const SizedBox(height: 10),
+                  _planPriceRow('Monthly', plan.monthlyPrice),
+                  if (plan.quarterlyPrice > 0) _planPriceRow('Quarterly', plan.quarterlyPrice),
+                  if (plan.halfYearlyPrice > 0) _planPriceRow('Half yearly', plan.halfYearlyPrice),
+                  if (plan.yearlyPrice > 0) _planPriceRow('Yearly', plan.yearlyPrice),
+                  if (plan.installationCharge > 0) _planPriceRow('Installation', plan.installationCharge),
+                  if (plan.otcCharge > 0) _planPriceRow('OTC', plan.otcCharge),
+                ],
+              ),
             ),
             const SizedBox(height: 18),
             Row(
@@ -339,11 +364,12 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   }
 
   List<Widget> _benefitChips(PlanItem plan) {
-    final chips = <String>['Unlimited data', '${plan.speedMbps.toStringAsFixed(0)} Mbps class'];
-    if (_isPremium(plan)) {
-      chips.addAll(['OTT ready', 'Entertainment pack']);
-    } else {
-      chips.add('Smart broadband');
+    final chips = <String>[
+      ...plan.tags.take(3),
+      ...plan.staticBenefits.take(2),
+    ];
+    if (chips.isEmpty) {
+      chips.addAll(['Unlimited data', '${plan.speedMbps.toStringAsFixed(0)} Mbps class']);
     }
     if (plan.otcCharge > 0) {
       chips.add('OTC Rs ${plan.otcCharge.toStringAsFixed(0)}');
@@ -370,6 +396,41 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         lower.contains('combo') ||
         plan.monthlyPrice >= 999 ||
         plan.speedMbps >= 200;
+  }
+
+  String _formatPlanHeadline(PlanItem plan) {
+    final taxSuffix = plan.pricesExcludeGst
+        ? ' + GST'
+        : plan.taxIncluded
+            ? ' GST incl.'
+            : '';
+    return 'Rs ${plan.monthlyPrice.toStringAsFixed(0)}$taxSuffix';
+  }
+
+  String _validityLabel(PlanItem plan) {
+    final labels = <String>[
+      if (plan.validityMonthly) 'M',
+      if (plan.validityQuarterly) 'Q',
+      if (plan.validityHalfYearly) 'H',
+      if (plan.validityYearly) 'Y',
+    ];
+    return labels.isEmpty ? 'M' : labels.join(' / ');
+  }
+
+  Widget _planPriceRow(String label, double amount) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB))),
+          const Spacer(),
+          Text(
+            'Rs ${amount.toStringAsFixed(0)}',
+            style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _previewPlan(BuildContext context, AppState appState, PlanItem plan) async {

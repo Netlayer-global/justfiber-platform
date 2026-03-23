@@ -47,6 +47,13 @@ class InstallerJob {
     required this.customerPhone,
     required this.customerAddress,
     required this.planName,
+    required this.planCode,
+    required this.planCategory,
+    required this.monthlyPrice,
+    required this.otcCharge,
+    required this.installationCharge,
+    required this.tags,
+    required this.staticBenefits,
     required this.jobType,
     required this.priority,
     required this.scheduledAt,
@@ -65,6 +72,13 @@ class InstallerJob {
   final String customerPhone;
   final String customerAddress;
   final String planName;
+  final String planCode;
+  final String planCategory;
+  final double monthlyPrice;
+  final double otcCharge;
+  final double installationCharge;
+  final List<String> tags;
+  final List<String> staticBenefits;
   final String jobType;
   final String priority;
   final String scheduledAt;
@@ -85,6 +99,15 @@ class ProvisioningPreview {
     required this.ssid5,
     required this.wifiPassword,
     required this.vlanId,
+    required this.planCode,
+    required this.planName,
+    required this.planCategory,
+    required this.monthlyPrice,
+    required this.otcCharge,
+    required this.installationCharge,
+    required this.tags,
+    required this.staticBenefits,
+    required this.features,
   });
 
   final String brand;
@@ -94,6 +117,15 @@ class ProvisioningPreview {
   final String ssid5;
   final String wifiPassword;
   final int vlanId;
+  final String planCode;
+  final String planName;
+  final String planCategory;
+  final double monthlyPrice;
+  final double otcCharge;
+  final double installationCharge;
+  final List<String> tags;
+  final List<String> staticBenefits;
+  final List<String> features;
 }
 
 class InstallerNotificationItem {

@@ -244,14 +244,44 @@ class PlanItem {
     required this.name,
     required this.speedMbps,
     required this.monthlyPrice,
+    required this.quarterlyPrice,
+    required this.halfYearlyPrice,
+    required this.yearlyPrice,
     required this.otcCharge,
+    required this.installationCharge,
+    required this.category,
+    required this.taxIncluded,
+    required this.gstRate,
+    required this.pricesExcludeGst,
+    required this.tags,
+    required this.staticBenefits,
+    required this.features,
+    required this.validityMonthly,
+    required this.validityQuarterly,
+    required this.validityHalfYearly,
+    required this.validityYearly,
   });
 
   final String planCode;
   final String name;
   final double speedMbps;
   final double monthlyPrice;
+  final double quarterlyPrice;
+  final double halfYearlyPrice;
+  final double yearlyPrice;
   final double otcCharge;
+  final double installationCharge;
+  final String category;
+  final bool taxIncluded;
+  final double gstRate;
+  final bool pricesExcludeGst;
+  final List<String> tags;
+  final List<String> staticBenefits;
+  final List<String> features;
+  final bool validityMonthly;
+  final bool validityQuarterly;
+  final bool validityHalfYearly;
+  final bool validityYearly;
 }
 
 class PendingPlanChange {

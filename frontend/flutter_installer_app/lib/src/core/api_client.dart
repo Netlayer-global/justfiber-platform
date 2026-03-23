@@ -78,6 +78,13 @@ class InstallerApiClient {
         customerPhone: (map['customerSnapshot']?['phone'] ?? map['phone'] ?? '').toString(),
         customerAddress: (map['customerAddress'] ?? map['serviceAddress'] ?? 'Address pending').toString(),
         planName: (map['customerSnapshot']?['planName'] ?? '').toString(),
+        planCode: (map['customerSnapshot']?['planCode'] ?? '').toString(),
+        planCategory: (map['customerSnapshot']?['planCategory'] ?? 'home').toString(),
+        monthlyPrice: double.tryParse('${map['customerSnapshot']?['monthlyPrice'] ?? 0}') ?? 0,
+        otcCharge: double.tryParse('${map['customerSnapshot']?['otcCharge'] ?? 0}') ?? 0,
+        installationCharge: double.tryParse('${map['customerSnapshot']?['installationCharge'] ?? 0}') ?? 0,
+        tags: _asList(map['customerSnapshot']?['tags']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+        staticBenefits: _asList(map['customerSnapshot']?['staticBenefits']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
         jobType: (map['jobType'] ?? 'installation').toString(),
         priority: (map['priority'] ?? 'medium').toString(),
         scheduledAt: (map['scheduledDate'] ?? map['assignment']?['assignedAt'] ?? '').toString(),
@@ -103,6 +110,7 @@ class InstallerApiClient {
     final credentials = _asMap(data['preparedCredentials'] ?? data['credentials']);
     final pppoe = _asMap(credentials['pppoe']);
     final wifi = _asMap(credentials['wifi']);
+    final planSummary = _asMap(data['planSummary']);
     return ProvisioningPreview(
       brand: (credentials['brand'] ?? data['ontBrand'] ?? 'generic').toString(),
       pppoeUsername: (pppoe['username'] ?? data['pppoeUsername'] ?? '').toString(),
@@ -111,6 +119,15 @@ class InstallerApiClient {
       ssid5: (wifi['ssid5'] ?? 'JustFiber').toString(),
       wifiPassword: (wifi['password'] ?? '').toString(),
       vlanId: int.tryParse('${credentials['vlanId'] ?? 100}') ?? 100,
+      planCode: (planSummary['planCode'] ?? '').toString(),
+      planName: (planSummary['planName'] ?? '').toString(),
+      planCategory: (planSummary['category'] ?? 'home').toString(),
+      monthlyPrice: double.tryParse('${planSummary['monthlyPrice'] ?? 0}') ?? 0,
+      otcCharge: double.tryParse('${planSummary['otcCharge'] ?? 0}') ?? 0,
+      installationCharge: double.tryParse('${planSummary['installationCharge'] ?? 0}') ?? 0,
+      tags: _asList(planSummary['tags']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+      staticBenefits: _asList(planSummary['staticBenefits']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+      features: _asList(planSummary['features']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
     );
   }
 

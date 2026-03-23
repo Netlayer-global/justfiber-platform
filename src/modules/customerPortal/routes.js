@@ -929,7 +929,19 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
           }
         : null,
       planName: plan.name,
-      planCode: plan.planCode
+      planCode: plan.planCode,
+      planCategory: plan.category || "home",
+      monthlyPrice: Number(plan.monthlyPrice || 0),
+      otcCharge: Number(plan.otcCharge || 0),
+      installationCharge: Number(plan.installationCharge || 0),
+      tags: Array.isArray(plan.tags) ? plan.tags : [],
+      staticBenefits: Array.isArray(plan.staticBenefits) ? plan.staticBenefits : [],
+      features: Array.isArray(plan.features)
+        ? plan.features.filter(Boolean)
+        : typeof plan.features === "string"
+          ? [plan.features]
+          : [],
+      planProvisioning: plan.provisioning || null
     },
     timeline: [
       {

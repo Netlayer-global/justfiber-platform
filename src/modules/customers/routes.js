@@ -394,6 +394,12 @@ customersRouter.post(
       booking.tracking?.steps?.find?.((item) => item?.code === "installer_assigned")?.jobId;
     let job = existingJobId ? await InstallerJob.findById(existingJobId) : null;
 
+    const planRecord = booking.selectedPlan?.planCode
+      ? await PlanCatalog.findOne({ planCode: booking.selectedPlan.planCode }).lean()
+      : customer.planCode
+        ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean()
+        : null;
+
     const customerSnapshot = {
       fullName: booking.personalDetails?.fullName || customer.fullName || customer.customerId,
       phone: booking.personalDetails?.mobile || customer.phone || "",
@@ -402,7 +408,19 @@ customersRouter.post(
       location: booking.feasibility?.location || booking.personalDetails?.location || undefined,
       preferredSlot: booking.personalDetails?.preferredSlot || null,
       planName: booking.selectedPlan?.planName || booking.selectedPlan?.planCode || customer.planName || "",
-      planCode: booking.selectedPlan?.planCode || customer.planCode || ""
+      planCode: booking.selectedPlan?.planCode || customer.planCode || "",
+      planCategory: planRecord?.category || "home",
+      monthlyPrice: Number(planRecord?.monthlyPrice || booking.selectedPlan?.monthlyPrice || 0),
+      otcCharge: Number(planRecord?.otcCharge || booking.selectedPlan?.otcCharge || 0),
+      installationCharge: Number(planRecord?.installationCharge || 0),
+      tags: Array.isArray(planRecord?.tags) ? planRecord.tags : [],
+      staticBenefits: Array.isArray(planRecord?.staticBenefits) ? planRecord.staticBenefits : [],
+      features: Array.isArray(planRecord?.features)
+        ? planRecord.features.filter(Boolean)
+        : typeof planRecord?.features === "string"
+          ? [planRecord.features]
+          : [],
+      planProvisioning: planRecord?.provisioning || null
     };
 
     if (job) {
