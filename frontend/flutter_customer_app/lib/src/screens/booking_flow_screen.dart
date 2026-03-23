@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/app_state.dart';
+import '../widgets/app_card.dart';
 import 'service_tracking_screen.dart';
 
 class BookingFlowScreen extends StatefulWidget {
