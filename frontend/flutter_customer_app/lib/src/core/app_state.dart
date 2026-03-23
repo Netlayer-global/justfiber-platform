@@ -480,6 +480,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       await api.rebootDevice(current);
+      await refresh();
       return true;
     } catch (e) {
       error = e.toString();

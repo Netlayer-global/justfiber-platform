@@ -160,7 +160,12 @@ class SupportHistoryScreen extends StatelessWidget {
                               subtitle: '${item.ticketNumber} | ${item.category}',
                               createdAt: item.createdAt,
                               status: item.status,
-                              onTap: () => _showTicketDetails(context, item),
+                              onTap: () async {
+                                await _showTicketDetails(context, item);
+                                if (context.mounted) {
+                                  await appState.refresh();
+                                }
+                              },
                             ),
                           ),
                         )
@@ -182,7 +187,12 @@ class SupportHistoryScreen extends StatelessWidget {
                               subtitle: '${item.referenceNumber} | ${item.type}',
                               createdAt: item.createdAt,
                               status: item.status,
-                              onTap: () => _showRequestDetails(context, item),
+                              onTap: () async {
+                                await _showRequestDetails(context, item);
+                                if (context.mounted) {
+                                  await appState.refresh();
+                                }
+                              },
                             ),
                           ),
                         )
