@@ -435,7 +435,7 @@ class BillingHistoryScreen extends StatelessWidget {
                   ),
                 if (pdfUrl.isNotEmpty || viewUrl.isNotEmpty)
                   TextButton(
-                    onPressed: () => _shareDocument(appState, pdfUrl.isNotEmpty ? pdfUrl : viewUrl),
+                    onPressed: () => _shareDocumentWithFeedback(context, appState, pdfUrl.isNotEmpty ? pdfUrl : viewUrl),
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0xFFE6FF3C),
                     ),
@@ -451,7 +451,12 @@ class BillingHistoryScreen extends StatelessWidget {
 
   Future<void> _openDocument(BuildContext context, AppState appState, String title, String relativeUrl) async {
     final session = appState.session;
-    if (session == null) return;
+    if (session == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login again to open this document.')),
+      );
+      return;
+    }
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
     await Navigator.of(context).push(
@@ -488,6 +493,20 @@ class BillingHistoryScreen extends StatelessWidget {
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
     await Share.share(fullUrl);
+  }
+
+  Future<void> _shareDocumentWithFeedback(BuildContext context, AppState appState, String relativeUrl) async {
+    if (relativeUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No document available to share yet.')),
+      );
+      return;
+    }
+    await _shareDocument(appState, relativeUrl);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Document ready to share')),
+    );
   }
 }
 

@@ -547,6 +547,7 @@ class SupportHistoryScreen extends StatelessWidget {
         subtitle: '${item.ticketNumber} | ${item.category}',
         reference: item.ticketNumber,
         status: item.status,
+        statusColor: _statusColor(item.status),
         lines: [
           'Priority: ${item.priority}',
           'Created: ${item.createdAt.isEmpty ? '-' : item.createdAt}',
@@ -565,6 +566,7 @@ class SupportHistoryScreen extends StatelessWidget {
         subtitle: '${item.referenceNumber} | ${item.type}',
         reference: item.referenceNumber,
         status: item.status,
+        statusColor: _statusColor(item.status),
         lines: [
           'Created: ${item.createdAt.isEmpty ? '-' : item.createdAt}',
           'Type: ${item.type}',
@@ -592,6 +594,7 @@ class _DetailSheet extends StatelessWidget {
     required this.subtitle,
     required this.reference,
     required this.status,
+    required this.statusColor,
     required this.lines,
   });
 
@@ -599,6 +602,7 @@ class _DetailSheet extends StatelessWidget {
   final String subtitle;
   final String reference;
   final String status;
+  final Color statusColor;
   final List<String> lines;
 
   @override
@@ -625,11 +629,11 @@ class _DetailSheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0x22FF6B6B),
+                      color: statusColor.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0x55FF6B6B)),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.35)),
                     ),
-                    child: Text(status, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFF8A80))),
+                    child: Text(status, style: TextStyle(fontWeight: FontWeight.w800, color: statusColor)),
                   ),
                   const Spacer(),
                   TextButton.icon(

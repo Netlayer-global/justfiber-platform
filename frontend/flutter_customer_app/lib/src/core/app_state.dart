@@ -381,19 +381,23 @@ class AppState extends ChangeNotifier {
   Future<void> refreshBookingTracking() async {
     final current = session;
     final bookingNumber = latestBooking?.bookingNumber;
-    if (bookingNumber == null || bookingNumber.isEmpty) return;
     try {
       if (current != null) {
-        bookingTracking = await api.fetchBookingTracking(current, bookingNumber);
         installerVisits = await api.fetchServiceVisits(current);
         notifications = await api.fetchNotifications(current);
         requests = await api.fetchRequests(current);
         tickets = await api.fetchTickets(current);
+        if ((bookingNumber ?? '').isNotEmpty) {
+          bookingTracking = await api.fetchBookingTracking(current, bookingNumber!);
+        }
       } else if ((latestBookingLookupMobile ?? '').isNotEmpty) {
+        if ((bookingNumber ?? '').isEmpty) return;
         bookingTracking = await api.fetchPublicBookingTracking(
-          bookingNumber: bookingNumber,
+          bookingNumber: bookingNumber!,
           mobile: latestBookingLookupMobile!,
         );
+      } else {
+        return;
       }
       notifyListeners();
     } catch (_) {
