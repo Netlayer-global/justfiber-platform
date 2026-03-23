@@ -14,6 +14,7 @@ class InstallerAppState extends ChangeNotifier {
 
   InstallerSession? session;
   bool busy = false;
+  bool restoringSession = true;
   String? error;
   InstallerDashboard dashboard = const InstallerDashboard(
     todayNewInstallationJobs: 0,
@@ -147,6 +148,7 @@ class InstallerAppState extends ChangeNotifier {
       phone: '',
       availabilityStatus: '-',
     );
+    restoringSession = false;
     notifyListeners();
   }
 
@@ -156,11 +158,15 @@ class InstallerAppState extends ChangeNotifier {
     final accessToken = prefs.getString(_installerAccessTokenKey);
     final refreshToken = prefs.getString(_installerRefreshTokenKey);
     if (login == null || accessToken == null || refreshToken == null) {
+      restoringSession = false;
+      notifyListeners();
       return;
     }
     session = InstallerSession(login: login, accessToken: accessToken, refreshToken: refreshToken);
     notifyListeners();
     await refresh();
+    restoringSession = false;
+    notifyListeners();
   }
 }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
+import '../widgets/app_card.dart';
+import '../widgets/field_background.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -10,6 +12,54 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
+    if (appState.restoringSession) {
+      return Scaffold(
+        body: FieldBackground(
+          child: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: AppCard(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF141A22),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0x55E6FF3C)),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: Color(0xFFE6FF3C),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Restoring installer session',
+                        style: Theme.of(context).textTheme.titleLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Checking saved credentials and loading your assigned field queue.',
+                        style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return appState.session == null ? const LoginScreen() : const HomeScreen();
   }
 }
