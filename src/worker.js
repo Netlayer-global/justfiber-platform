@@ -213,7 +213,17 @@ const worker = new Worker(
             serviceId: bootstrap.customer.serviceId,
             planCode: bootstrap.customer.planCode,
             planName: bootstrap.customer.planName,
-            speedMbps: bootstrap.accessProfile?.downMbps || jobRecord.customerSnapshot?.speedMbps
+            speedMbps:
+              bootstrap.plan?.speedMbps ||
+              bootstrap.accessProfile?.downMbps ||
+              jobRecord.customerSnapshot?.speedMbps,
+            uploadSpeedMbps:
+              bootstrap.plan?.uploadSpeedMbps ||
+              bootstrap.accessProfile?.upMbps ||
+              jobRecord.customerSnapshot?.uploadSpeedMbps,
+            dataPolicy: bootstrap.plan?.dataPolicy || jobRecord.customerSnapshot?.dataPolicy || "unlimited",
+            dataLimitGb: Number(bootstrap.plan?.dataLimitGb || jobRecord.customerSnapshot?.dataLimitGb || 0) || null,
+            fupSpeedMbps: Number(bootstrap.plan?.fupSpeedMbps || jobRecord.customerSnapshot?.fupSpeedMbps || 0) || null
           };
         }
         const deviceId =
@@ -249,7 +259,22 @@ const worker = new Worker(
           billingProfileCode: bootstrap?.billingProfile?.code,
           bngNodeCode: bootstrap?.bngNode?.nodeCode,
           metadata: {
-            source: "installer_activation"
+            source: "installer_activation",
+            networkProfile: {
+              speedMbps:
+                bootstrap?.plan?.speedMbps ||
+                bootstrap?.accessProfile?.downMbps ||
+                jobRecord.customerSnapshot?.speedMbps ||
+                0,
+              uploadSpeedMbps:
+                bootstrap?.plan?.uploadSpeedMbps ||
+                bootstrap?.accessProfile?.upMbps ||
+                jobRecord.customerSnapshot?.uploadSpeedMbps ||
+                0,
+              dataPolicy: bootstrap?.plan?.dataPolicy || jobRecord.customerSnapshot?.dataPolicy || "unlimited",
+              dataLimitGb: Number(bootstrap?.plan?.dataLimitGb || jobRecord.customerSnapshot?.dataLimitGb || 0) || null,
+              fupSpeedMbps: Number(bootstrap?.plan?.fupSpeedMbps || jobRecord.customerSnapshot?.fupSpeedMbps || 0) || null
+            }
           }
         });
         updateActivationStage(jobRecord, "radius_create_done", "PPPoE user created in FreeRADIUS");

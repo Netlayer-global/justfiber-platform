@@ -413,6 +413,11 @@ customersRouter.post(
       monthlyPrice: Number(planRecord?.monthlyPrice || booking.selectedPlan?.monthlyPrice || 0),
       otcCharge: Number(planRecord?.otcCharge || booking.selectedPlan?.otcCharge || 0),
       installationCharge: Number(planRecord?.installationCharge || 0),
+      speedMbps: Number(planRecord?.speedMbps || booking.selectedPlan?.speedMbps || 0),
+      uploadSpeedMbps: Number(planRecord?.uploadSpeedMbps || booking.selectedPlan?.uploadSpeedMbps || 0),
+      dataPolicy: planRecord?.dataPolicy || booking.selectedPlan?.dataPolicy || "unlimited",
+      dataLimitGb: Number(planRecord?.dataLimitGb || booking.selectedPlan?.dataLimitGb || 0) || null,
+      fupSpeedMbps: Number(planRecord?.fupSpeedMbps || booking.selectedPlan?.fupSpeedMbps || 0) || null,
       tags: Array.isArray(planRecord?.tags) ? planRecord.tags : [],
       staticBenefits: Array.isArray(planRecord?.staticBenefits) ? planRecord.staticBenefits : [],
       features: Array.isArray(planRecord?.features)
@@ -787,6 +792,13 @@ customersRouter.post(
     customer.billingSnapshot = {
       ...(customer.billingSnapshot || {}),
       speedMbps: plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+      uploadSpeedMbps:
+        plan.uploadSpeedMbps ||
+        customer.billingSnapshot?.uploadSpeedMbps ||
+        Math.max(2, Math.round((plan.speedMbps || customer.billingSnapshot?.speedMbps || 100) * 0.35)),
+      dataPolicy: plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+      dataLimitGb: Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
+      fupSpeedMbps: Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null,
       billMode: nextBillMode,
       lastPlanPrice: Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0),
       nextPlanPrice: Number(plan.monthlyPrice || 0),

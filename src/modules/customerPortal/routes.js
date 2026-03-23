@@ -467,14 +467,18 @@ function isMissingGenieDeviceError(error) {
 
 function estimateNetworkMetrics({ customer, device }) {
   const planSpeed = Number(customer?.billingSnapshot?.speedMbps || customer?.speedMbps || 100);
+  const uploadPlanSpeed =
+    Number(customer?.billingSnapshot?.uploadSpeedMbps || customer?.uploadSpeedMbps || 0) ||
+    Math.max(2, Math.round(planSpeed * 0.35));
   const online = device?.onlineStatus === "online";
   const rxPower = Number(device?.opticalInfo?.rxPower ?? -22);
   const signalPenalty = rxPower < -26 ? 0.55 : rxPower < -23 ? 0.75 : 0.92;
   const blockedClients = getConnectedDevices(device).filter((item) => item.blocked).length;
   const speedMbps = online ? Math.max(5, Math.round(planSpeed * signalPenalty) - blockedClients * 2) : 0;
+  const uploadMbps = online ? Math.max(2, Math.round(uploadPlanSpeed * signalPenalty) - blockedClients) : 0;
   const latencyMs = online ? Math.max(5, Math.round(8 + Math.abs(rxPower + 20) * 3)) : 999;
   const packetLossPercent = online ? Number((rxPower < -26 ? 2.8 : rxPower < -23 ? 1.2 : 0.2).toFixed(1)) : 100;
-  return { speedMbps, latencyMs, packetLossPercent, rxPower };
+  return { speedMbps, uploadMbps, latencyMs, packetLossPercent, rxPower };
 }
 
 async function notifyCustomerAction(customerUserId, type, title, body, payload) {
@@ -562,7 +566,12 @@ async function createConnectionBooking({ customerUser, payload }) {
       planName: plan.name,
       monthlyPrice: plan.monthlyPrice,
       otcCharge: plan.otcCharge,
-      totalAmount: amount
+      totalAmount: amount,
+      speedMbps: Number(plan.speedMbps || 0),
+      uploadSpeedMbps: Number(plan.uploadSpeedMbps || 0),
+      dataPolicy: plan.dataPolicy || "unlimited",
+      dataLimitGb: Number(plan.dataLimitGb || 0) || null,
+      fupSpeedMbps: Number(plan.fupSpeedMbps || 0) || null
     },
     feasibility: {
       ...feasibility,
@@ -767,6 +776,13 @@ async function finalizePendingPlanChange(customer, customerUserId) {
   customer.billingSnapshot = {
     ...(customer.billingSnapshot || {}),
     speedMbps: plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+    uploadSpeedMbps:
+      plan.uploadSpeedMbps ||
+      customer.billingSnapshot?.uploadSpeedMbps ||
+      Math.max(2, Math.round((plan.speedMbps || customer.billingSnapshot?.speedMbps || 100) * 0.35)),
+    dataPolicy: plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+    dataLimitGb: Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
+    fupSpeedMbps: Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null,
     billMode: pending.billMode || customer.billingSnapshot?.billMode,
     pendingPlanChange: null,
     adjustmentPreview: 0,
@@ -949,6 +965,11 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
       monthlyPrice: Number(plan.monthlyPrice || 0),
       otcCharge: Number(plan.otcCharge || 0),
       installationCharge: Number(plan.installationCharge || 0),
+      speedMbps: Number(plan.speedMbps || 0),
+      uploadSpeedMbps: Number(plan.uploadSpeedMbps || 0),
+      dataPolicy: plan.dataPolicy || "unlimited",
+      dataLimitGb: Number(plan.dataLimitGb || 0) || null,
+      fupSpeedMbps: Number(plan.fupSpeedMbps || 0) || null,
       tags: Array.isArray(plan.tags) ? plan.tags : [],
       staticBenefits: Array.isArray(plan.staticBenefits) ? plan.staticBenefits : [],
       features: Array.isArray(plan.features)
@@ -2182,7 +2203,7 @@ customerPortalRouter.get(
     return ok(res, {
       startedAt: new Date(),
       downloadMbps: metrics.speedMbps,
-      uploadMbps: Math.max(2, Math.round(metrics.speedMbps * 0.35)),
+      uploadMbps: metrics.uploadMbps,
       latencyMs: metrics.latencyMs,
       packetLossPercent: metrics.packetLossPercent,
       status: device.onlineStatus === "online" ? "completed" : "failed"
@@ -2369,6 +2390,13 @@ customerPortalRouter.post(
     customer.billingSnapshot = {
       ...(customer.billingSnapshot || {}),
       speedMbps: plan.speedMbps || customer.billingSnapshot?.speedMbps || 100,
+      uploadSpeedMbps:
+        plan.uploadSpeedMbps ||
+        customer.billingSnapshot?.uploadSpeedMbps ||
+        Math.max(2, Math.round((plan.speedMbps || customer.billingSnapshot?.speedMbps || 100) * 0.35)),
+      dataPolicy: plan.dataPolicy || customer.billingSnapshot?.dataPolicy || "unlimited",
+      dataLimitGb: Number(plan.dataLimitGb || customer.billingSnapshot?.dataLimitGb || 0) || null,
+      fupSpeedMbps: Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null,
       billMode: nextBillMode,
       lastPlanPrice: Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0),
       nextPlanPrice: Number(plan.monthlyPrice || 0),

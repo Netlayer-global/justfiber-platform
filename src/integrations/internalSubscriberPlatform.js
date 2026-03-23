@@ -24,6 +24,25 @@ function buildIdentifiers(bookingNumber) {
   };
 }
 
+function normalizePlanNetworkProfile(plan = {}, accessProfile = null) {
+  const speedMbps = Number(plan?.speedMbps || accessProfile?.downMbps || 0) || 0;
+  const uploadSpeedMbps =
+    Number(plan?.uploadSpeedMbps || accessProfile?.upMbps || 0) ||
+    (speedMbps ? Math.max(2, Math.round(speedMbps * 0.35)) : 0);
+  const dataPolicy = ["unlimited", "fup", "hard_cap"].includes(plan?.dataPolicy)
+    ? plan.dataPolicy
+    : "unlimited";
+  const dataLimitGb = Number(plan?.dataLimitGb || 0) || null;
+  const fupSpeedMbps = Number(plan?.fupSpeedMbps || 0) || null;
+  return {
+    speedMbps,
+    uploadSpeedMbps,
+    dataPolicy,
+    dataLimitGb,
+    fupSpeedMbps
+  };
+}
+
 function addDays(date, days) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
@@ -44,8 +63,13 @@ async function pickAccessProfile(plan) {
   return (
     (await AccessProfile.findOne({
       active: true,
-      downMbps: Number(plan.speedMbps || 0)
+      downMbps: Number(plan.speedMbps || 0),
+      ...(plan?.uploadSpeedMbps ? { upMbps: Number(plan.uploadSpeedMbps) } : {})
     }).lean()) ||
+    (await AccessProfile.findOne({
+      active: true,
+      downMbps: Number(plan.speedMbps || 0)
+    }).sort({ upMbps: 1, createdAt: 1 }).lean()) ||
     AccessProfile.findOne({ active: true }).sort({ downMbps: 1, createdAt: 1 }).lean()
   );
 }
@@ -128,6 +152,7 @@ export class InternalSubscriberPlatform {
     ]);
     const customerType = resolveCustomerType(plan);
     const billMode = resolveBillModeForPlan({ billingProfile, plan });
+    const networkProfile = normalizePlanNetworkProfile(plan, accessProfile);
     const provisionalPppoe =
       jobRecord.activation?.preparedCredentials?.pppoe ||
       buildPppoeCredentials(identifiers.customerId, plan?.provisioning);
@@ -166,6 +191,11 @@ export class InternalSubscriberPlatform {
             lastPaymentStatus: booking.payment?.status === "paid" ? "paid" : "pending",
             dueAmount: booking.payment?.status === "paid" ? 0 : Number(plan?.monthlyPrice || booking.selectedPlan?.monthlyPrice || 0),
             remainingDays: 30,
+            speedMbps: networkProfile.speedMbps,
+            uploadSpeedMbps: networkProfile.uploadSpeedMbps,
+            dataPolicy: networkProfile.dataPolicy,
+            dataLimitGb: networkProfile.dataLimitGb,
+            fupSpeedMbps: networkProfile.fupSpeedMbps,
             billMode,
             billingZoneCode: booking.feasibility?.matchedZone?.zoneCode || booking.feasibility?.matchedZone?.zoneName,
             billingZoneName: booking.feasibility?.matchedZone?.zoneName,
@@ -200,7 +230,8 @@ export class InternalSubscriberPlatform {
             planCode: plan?.planCode || booking.selectedPlan?.planCode,
             customerType,
             billMode,
-            installerJobId: jobRecord._id.toString()
+            installerJobId: jobRecord._id.toString(),
+            networkProfile
           }
         }
       },
@@ -255,6 +286,7 @@ export class InternalSubscriberPlatform {
       : await pickBillingProfile();
     const customerType = resolveCustomerType({ category: installerJob.customerSnapshot?.category || (booking?.selectedPlan?.category) });
     const billMode = resolveBillModeForPlan({ billingProfile, plan: { category: customerType } });
+    const networkProfile = normalizePlanNetworkProfile(installerJob.customerSnapshot);
 
     const customer = await Customer.findOneAndUpdate(
       { customerId: identifiers.customerId },
@@ -272,7 +304,11 @@ export class InternalSubscriberPlatform {
             lastPaymentStatus: booking?.payment?.status === "paid" ? "paid" : "pending",
             dueAmount: booking?.payment?.status === "paid" ? 0 : installerJob.customerSnapshot?.monthlyPrice || 0,
             remainingDays: 30,
-            speedMbps: installerJob.customerSnapshot?.speedMbps,
+            speedMbps: networkProfile.speedMbps,
+            uploadSpeedMbps: networkProfile.uploadSpeedMbps,
+            dataPolicy: networkProfile.dataPolicy,
+            dataLimitGb: networkProfile.dataLimitGb,
+            fupSpeedMbps: networkProfile.fupSpeedMbps,
             lastPaymentProvider: booking?.payment?.provider || "internal_platform",
             billMode,
             billingZoneCode: booking?.feasibility?.matchedZone?.zoneCode || booking?.feasibility?.matchedZone?.zoneName,
@@ -313,7 +349,8 @@ export class InternalSubscriberPlatform {
             deviceId,
             vlanId,
             customerType,
-            billMode
+            billMode,
+            networkProfile
           }
         }
       }
