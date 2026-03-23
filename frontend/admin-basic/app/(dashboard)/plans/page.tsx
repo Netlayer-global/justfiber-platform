@@ -5,6 +5,7 @@ import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import {
   Cable,
+  Copy,
   Loader,
   Pencil,
   Plus,
@@ -55,6 +56,7 @@ type PlanFormState = {
   pppoeRealm: string
   defaultPppoePassword: string
   wifiNamePrefix: string
+  sortOrder: string
 }
 
 const initialForm: PlanFormState = {
@@ -95,6 +97,7 @@ const initialForm: PlanFormState = {
   pppoeRealm: '',
   defaultPppoePassword: '123456',
   wifiNamePrefix: 'JustFiber',
+  sortOrder: '1',
 }
 
 function splitCsv(value: string) {
@@ -113,6 +116,17 @@ function splitLines(value: string) {
 
 function formatCurrency(amount?: number) {
   return `Rs ${Number(amount || 0).toFixed(0)}`
+}
+
+function buildPppoePreview(form: PlanFormState) {
+  const prefix = form.pppoePrefix.trim() || 'jf'
+  const realm = form.pppoeRealm.trim()
+  return `${prefix}.demo001${realm ? `@${realm}` : ''}`
+}
+
+function buildWifiPreview(form: PlanFormState) {
+  const prefix = form.wifiNamePrefix.trim() || 'JustFiber'
+  return `${prefix}-Home-2.4G / ${prefix}-Home-5G`
 }
 
 function renderCategoryLabel(category?: Plan['category']) {
@@ -166,6 +180,7 @@ function toForm(plan?: Plan | null): PlanFormState {
     pppoeRealm: plan.provisioning?.pppoeRealm || '',
     defaultPppoePassword: plan.provisioning?.defaultPppoePassword || '123456',
     wifiNamePrefix: plan.provisioning?.wifiNamePrefix || 'JustFiber',
+    sortOrder: String(plan.sortOrder || 1),
   }
 }
 
@@ -298,6 +313,7 @@ export default function PlansPage() {
         defaultPppoePassword: form.defaultPppoePassword.trim(),
         wifiNamePrefix: form.wifiNamePrefix.trim(),
       },
+      sortOrder: Number(form.sortOrder || 1),
     }
 
     try {
@@ -336,6 +352,40 @@ export default function PlansPage() {
       console.error('[plans] Failed to deactivate plan:', error)
       toast.error('Failed to deactivate plan')
     }
+  }
+
+  async function togglePlanStatus(plan: Plan) {
+    try {
+      setIsSaving(true)
+      const nextStatus = plan.status === 'active' ? 'inactive' : 'active'
+      const res = await adminAPI.updatePlan(plan.planCode || plan.id, {
+        ...plan,
+        status: nextStatus,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to update plan status')
+        return
+      }
+      toast.success(nextStatus === 'active' ? 'Plan activated' : 'Plan hidden')
+      await loadPlans()
+    } catch (error) {
+      console.error('[plans] Failed to toggle plan status:', error)
+      toast.error('Failed to update plan status')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  function clonePlan(plan: Plan) {
+    setEditingPlanId(null)
+    setSelectedPlanId(plan.id)
+    setForm({
+      ...toForm(plan),
+      planCode: `${plan.planCode || plan.id}_COPY`,
+      name: `${plan.name} Copy`,
+      status: 'inactive',
+      sortOrder: String((plan.sortOrder || 1) + 1),
+    })
   }
 
   return (
@@ -437,6 +487,7 @@ export default function PlansPage() {
             <input className="input" placeholder="OTC charge" type="number" value={form.otcCharge} onChange={(e) => setForm({ ...form, otcCharge: e.target.value })} />
             <input className="input" placeholder="Installation charge" type="number" value={form.installationCharge} onChange={(e) => setForm({ ...form, installationCharge: e.target.value })} />
             <input className="input" placeholder="GST rate %" type="number" value={form.gstRate} onChange={(e) => setForm({ ...form, gstRate: e.target.value })} />
+            <input className="input" placeholder="Sort order" type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -577,9 +628,28 @@ export default function PlansPage() {
                   <div className="mt-4 space-y-2 text-sm text-white/70">
                     <div className="flex items-center justify-between"><span>Access profile</span><span>{preview.accessProfileCode || '-'}</span></div>
                     <div className="flex items-center justify-between"><span>VLAN</span><span>{preview.vlanId || '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>PPPoE</span><span>{preview.pppoePrefix || '-'}{preview.pppoeRealm ? `@${preview.pppoeRealm}` : ''}</span></div>
+                    <div className="flex items-center justify-between"><span>PPPoE</span><span>{buildPppoePreview(preview)}</span></div>
                     <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{preview.wifiNamePrefix || '-'}</span></div>
                     <div className="flex items-center justify-between"><span>Password</span><span>{preview.defaultPppoePassword || '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>Sort order</span><span>{preview.sortOrder || '1'}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Provisioning sample</div>
+                  <div className="mt-4 space-y-2 text-sm text-white/70">
+                    <div className="flex items-center justify-between"><span>PPPoE username</span><span>{buildPppoePreview(preview)}</span></div>
+                    <div className="flex items-center justify-between"><span>Wi-Fi names</span><span>{buildWifiPreview(preview)}</span></div>
+                  </div>
+                </div>
+                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Catalog ops</div>
+                  <div className="mt-4 space-y-2 text-sm text-white/70">
+                    <div className="flex items-center justify-between"><span>State</span><span>{preview.status}</span></div>
+                    <div className="flex items-center justify-between"><span>GST mode</span><span>{preview.pricesExcludeGst ? 'Exclusive' : 'Inclusive / retail'}</span></div>
+                    <div className="flex items-center justify-between"><span>Launch lane</span><span>#{preview.sortOrder || '1'}</span></div>
                   </div>
                 </div>
               </div>
@@ -646,6 +716,7 @@ export default function PlansPage() {
               </div>
 
               <div className="mt-5 grid gap-2 text-sm text-white/70">
+                <div className="flex items-center justify-between"><span>Sort order</span><span>{plan.sortOrder || 1}</span></div>
                 <div className="flex items-center justify-between"><span>Access profile</span><span>{plan.provisioning?.accessProfileCode || '-'}</span></div>
                 <div className="flex items-center justify-between"><span>VLAN</span><span>{plan.provisioning?.vlanId || '-'}</span></div>
                 <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{plan.provisioning?.wifiNamePrefix || '-'}</span></div>
@@ -656,10 +727,24 @@ export default function PlansPage() {
                   <Pencil className="h-4 w-4" />
                   Edit
                 </button>
-                <button type="button" onClick={() => void deactivatePlan(plan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-200">
-                  <Trash2 className="h-4 w-4" />
-                  Deactivate
+                <button type="button" onClick={() => clonePlan(plan)} className="btn-secondary inline-flex items-center gap-2">
+                  <Copy className="h-4 w-4" />
+                  Clone
                 </button>
+                <button
+                  type="button"
+                  onClick={() => void togglePlanStatus(plan)}
+                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-200' : 'border-[#d8ff16]/30 text-[#d8ff16]'}`}
+                >
+                  {plan.status === 'active' ? <Trash2 className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                  {plan.status === 'active' ? 'Hide' : 'Activate'}
+                </button>
+                {plan.status === 'active' ? (
+                  <button type="button" onClick={() => void deactivatePlan(plan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-200">
+                    <Trash2 className="h-4 w-4" />
+                    Deactivate
+                  </button>
+                ) : null}
               </div>
             </article>
           ))}

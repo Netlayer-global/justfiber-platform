@@ -65,6 +65,7 @@ export interface Plan {
     defaultPppoePassword?: string
     wifiNamePrefix?: string
   }
+  sortOrder?: number
   type: string
   status: 'active' | 'inactive'
   createdAt: string

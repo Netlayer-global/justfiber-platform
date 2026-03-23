@@ -140,6 +140,7 @@ function mapPlan(plan: any): Plan {
       defaultPppoePassword: plan.provisioning?.defaultPppoePassword || '',
       wifiNamePrefix: plan.provisioning?.wifiNamePrefix || '',
     },
+    sortOrder: Number(plan.sortOrder || 1),
     type: plan.serviceType || 'fiber',
     status: plan.active === false ? 'inactive' : 'active',
     createdAt: plan.createdAt || new Date().toISOString(),
@@ -731,6 +732,7 @@ export const adminAPI = {
         addons: data.addons,
         provisioning: data.provisioning,
         active: data.status !== 'inactive',
+        sortOrder: data.sortOrder,
       }),
     }),
   updatePlan: (id: string, data: Partial<Plan>) =>
@@ -756,6 +758,7 @@ export const adminAPI = {
         addons: data.addons,
         provisioning: data.provisioning,
         active: data.status ? data.status !== 'inactive' : undefined,
+        sortOrder: data.sortOrder,
       }),
     }),
   deletePlan: (id: string) =>
