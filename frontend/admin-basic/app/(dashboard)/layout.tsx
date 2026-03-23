@@ -4,13 +4,13 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import {
+  Activity,
   BarChart3,
   Cable,
   CreditCard,
   HardDrive,
   LogOut,
   MapPinned,
-  ShieldUser,
   Ticket,
   UserRound,
   Wrench,
@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { href: '/devices', label: 'Devices', icon: HardDrive },
   { href: '/tickets', label: 'Tickets', icon: Ticket },
   { href: '/installers', label: 'Installers', icon: Wrench },
-  { href: '/jobs', label: 'Jobs', icon: ShieldUser },
+  { href: '/jobs', label: 'Jobs', icon: Activity },
   { href: '/serviceability', label: 'Serviceability', icon: MapPinned },
 ]
 

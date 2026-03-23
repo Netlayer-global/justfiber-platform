@@ -527,6 +527,16 @@ export default function BillingPage() {
     }
   }
 
+  const pulseMetrics: Array<{
+    label: string
+    value: string
+    Icon: typeof CreditCard
+  }> = [
+    { label: 'Invoices', value: String(overview?.totalInvoices || 0), Icon: CreditCard },
+    { label: 'GST', value: `Rs ${Number(overview?.taxCollected || 0).toFixed(0)}`, Icon: ShieldCheck },
+    { label: 'Overdue', value: String(overview?.overdueInvoices || 0), Icon: Wallet },
+  ]
+
   return (
     <div className="space-y-6">
       <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
@@ -547,11 +557,7 @@ export default function BillingPage() {
           <div className="mt-3 text-5xl font-black">Rs {Number(overview?.collectedAmount || 0).toFixed(0)}</div>
           <div className="mt-2 text-sm text-black/60">Collected amount tracked against live invoice volume</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              ['Invoices', String(overview?.totalInvoices || 0), CreditCard],
-              ['GST', `Rs ${Number(overview?.taxCollected || 0).toFixed(0)}`, ShieldCheck],
-              ['Overdue', String(overview?.overdueInvoices || 0), Wallet],
-            ].map(([label, value, Icon]) => (
+            {pulseMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
