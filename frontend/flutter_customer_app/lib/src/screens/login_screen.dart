@@ -66,8 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0B0F19),
+                        color: const Color(0xFF12161A),
                         borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0x22E6FF3C)),
                       ),
                       child: const Icon(Icons.wifi_rounded, color: Color(0xFFE6FF3C), size: 22),
                     ),
@@ -130,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0B0F19),
+                  color: const Color(0xFF12161A),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: const Color(0x33E6FF3C)),
                   boxShadow: const [
@@ -326,7 +327,7 @@ class _AuthShowcaseCard extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF05070B), Color(0xFF0B1020)],
+                  colors: [Color(0xFF0F131B), Color(0xFF151A24)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

@@ -60,14 +60,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0C1018),
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
           return Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF020202), Color(0xFF05070B), Color(0xFF020202)],
+                colors: [Color(0xFF0C1018), Color(0xFF10141C), Color(0xFF12161A)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       gradient: RadialGradient(
                         center: Alignment(0, -0.2),
                         radius: 0.72,
-                        colors: [Color(0x220E1320), Color(0x00000000)],
+                        colors: [Color(0x22161B27), Color(0x00000000)],
                       ),
                     ),
                   ),
@@ -241,7 +241,7 @@ class _BottomGlow extends StatelessWidget {
             colors: [
               Color(0xAAE6FF3C),
               Color(0x44B4D82B),
-              Color(0x120B0F19),
+              Color(0x1612161A),
               Color(0x00000000),
             ],
           ),
