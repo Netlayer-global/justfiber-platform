@@ -28,7 +28,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         title: const Text('Choose your plan'),
         centerTitle: true,
         backgroundColor: const Color(0xFF050505),
-        foregroundColor: const Color(0xFF17181C),
+        foregroundColor: const Color(0xFFEFEEE8),
       ),
       backgroundColor: const Color(0xFF050505),
       body: ListView(
@@ -372,7 +372,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     }
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFFEFEEE8),
+      backgroundColor: const Color(0xFF0B0F19),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (context) {
         return Padding(
@@ -383,13 +383,16 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             children: [
               Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0x22E6FF3C), borderRadius: BorderRadius.circular(99)))),
               const SizedBox(height: 18),
-              Text(preview.nextPlanName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
+              Text(
+                preview.nextPlanName,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30, color: Color(0xFFEFEEE8)),
+              ),
               const SizedBox(height: 10),
               Text(
                 effectiveMode == 'next_cycle'
                     ? 'This switch will queue for the next billing cycle.'
                     : 'This switch applies with current-cycle adjustment rules.',
-                style: const TextStyle(color: Color(0xFF64748B), height: 1.4),
+                style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
               ),
               const SizedBox(height: 16),
               _previewRow('Current price', 'Rs ${preview.currentPrice.toStringAsFixed(0)}'),
@@ -406,7 +409,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                     Navigator.of(context).pop();
                     _applyPlan(context, appState, plan);
                   },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE6FF3C),
+                    foregroundColor: const Color(0xFF111111),
+                  ),
                   child: const Text('Continue with this plan'),
                 ),
               ),
@@ -422,9 +428,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB))),
           const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
         ],
       ),
     );

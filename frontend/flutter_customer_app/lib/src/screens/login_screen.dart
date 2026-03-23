@@ -130,11 +130,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFEEE8),
+                  color: const Color(0xFF0B0F19),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: const Color(0x14E6FF3C)),
+                  border: Border.all(color: const Color(0x33E6FF3C)),
                   boxShadow: const [
-                    BoxShadow(color: Color(0x14030B14), blurRadius: 20, offset: Offset(0, 10)),
+                    BoxShadow(color: Color(0x26000000), blurRadius: 20, offset: Offset(0, 10)),
                   ],
                 ),
                 child: Column(
@@ -143,14 +143,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       otpRequested ? 'Enter OTP to continue' : 'Login with mobile number',
-                      style: theme.textTheme.titleLarge,
+                      style: theme.textTheme.titleLarge?.copyWith(color: const Color(0xFFEFEEE8)),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       otpRequested
                           ? 'We sent a one-time password to your registered mobile number.'
                           : 'Use your registered number to receive an OTP and access your broadband account.',
-                      style: theme.textTheme.bodyMedium,
+                      style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFFD1D5DB)),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -182,13 +182,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2F2),
+                          color: const Color(0xFF2A0F13),
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFFECACA)),
+                          border: Border.all(color: const Color(0x66EF4444)),
                         ),
                         child: Text(
                           appState.error!,
-                          style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
@@ -214,9 +214,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF111111),
-                          side: const BorderSide(color: Color(0x14000000)),
-                          backgroundColor: const Color(0xFFF5F4ED),
+                          foregroundColor: const Color(0xFFEFEEE8),
+                          side: const BorderSide(color: Color(0x55E6FF3C)),
+                          backgroundColor: const Color(0xFF0E1520),
                         ),
                         child: const Text('Book new connection'),
                       ),
@@ -321,14 +321,14 @@ class _AuthShowcaseCard extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFF4F3EC), Color(0xFFECEAE1)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF090D15), Color(0xFF111827)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(34),
-                border: Border.all(color: const Color(0x14E6FF3C)),
+                border: Border.all(color: const Color(0x22E6FF3C)),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x12030B14), blurRadius: 24, offset: Offset(0, 10)),
+                  BoxShadow(color: Color(0x22030B14), blurRadius: 24, offset: Offset(0, 10)),
                 ],
               ),
               child: Padding(
@@ -427,7 +427,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                 width: 160,
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF6F4ED),
+                                  color: const Color(0xFFEFEEE8),
                                   borderRadius: BorderRadius.circular(22),
                                   border: Border.all(color: const Color(0x14E6FF3C)),
                                   boxShadow: const [
@@ -463,13 +463,16 @@ class _AuthShowcaseCard extends StatelessWidget {
                     Text(
                       slide.title,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 26),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontSize: 26,
+                            color: const Color(0xFFEFEEE8),
+                          ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       slide.subtitle,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+                      style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
                     ),
                   ],
                 ),

@@ -33,7 +33,7 @@ class ServiceHubScreen extends StatelessWidget {
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFF050505),
-        foregroundColor: const Color(0xFF17181C),
+        foregroundColor: const Color(0xFFEFEEE8),
       ),
       backgroundColor: const Color(0xFF050505),
       body: ListView(
@@ -470,7 +470,7 @@ class ServiceHubScreen extends StatelessWidget {
     String shiftMode = 'new_address';
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFFEFEEE8),
+      backgroundColor: const Color(0xFF0B0F19),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (context) {
         return StatefulBuilder(
@@ -485,11 +485,14 @@ class ServiceHubScreen extends StatelessWidget {
                     child: Container(
                       width: 52,
                       height: 6,
-                      decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(99)),
+                      decoration: BoxDecoration(color: const Color(0x33E6FF3C), borderRadius: BorderRadius.circular(99)),
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text('Shift Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 30)),
+                  const Text(
+                    'Shift Wi-Fi',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 30, color: Color(0xFFEFEEE8)),
+                  ),
                   const SizedBox(height: 14),
                   _radioCard(
                     title: 'New address',
@@ -510,7 +513,11 @@ class ServiceHubScreen extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: const Color(0xFF111827), borderRadius: BorderRadius.circular(18)),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF111827),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0x55E6FF3C)),
+                    ),
                     child: const Text('Shift your Wi-Fi connection for free!', style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(height: 14),
@@ -557,9 +564,9 @@ class ServiceHubScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: const Color(0xFFEFEEE8),
+          color: const Color(0xFF111827),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: selected ? const Color(0xFFE6FF3C) : const Color(0xFFE5E7EB), width: 1.5),
+          border: Border.all(color: selected ? const Color(0xFFE6FF3C) : const Color(0x33E6FF3C), width: 1.5),
         ),
         child: Row(
           children: [
@@ -567,9 +574,12 @@ class ServiceHubScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFEFEEE8)),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280))),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFFD1D5DB))),
                 ],
               ),
             ),
