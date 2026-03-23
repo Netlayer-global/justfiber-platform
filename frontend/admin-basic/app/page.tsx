@@ -52,6 +52,15 @@ function MockPhone({ right = false }: { right?: boolean }) {
 
 export default function RootPage() {
   const [hasToken, setHasToken] = useState(false)
+  const heroFeatures: Array<{
+    title: string
+    desc: string
+    Icon: typeof WalletCards
+  }> = [
+    { title: 'Revenue pulse', desc: 'Zone-level collection and GST visibility in one surface.', Icon: WalletCards },
+    { title: 'Secure ops', desc: 'Controlled access for billing, tickets, and field activity.', Icon: ShieldCheck },
+    { title: 'Deep analytics', desc: 'Neon dashboards built for faster operational decisions.', Icon: BarChart3 },
+  ]
 
   useEffect(() => {
     setHasToken(Boolean(getAuthToken()))
@@ -108,11 +117,7 @@ export default function RootPage() {
               </div>
 
               <div className="grid gap-3 pt-10 md:grid-cols-3">
-                {[
-                  ['Revenue pulse', 'Zone-level collection and GST visibility in one surface.', WalletCards],
-                  ['Secure ops', 'Controlled access for billing, tickets, and field activity.', ShieldCheck],
-                  ['Deep analytics', 'Neon dashboards built for faster operational decisions.', BarChart3],
-                ].map(([title, desc, Icon]) => (
+                {heroFeatures.map(({ title, desc, Icon }) => (
                   <div key={title} className="rounded-[24px] border border-white/10 bg-white/5 p-5">
                     <Icon className="h-5 w-5 text-[#d8ff16]" />
                     <div className="mt-4 text-lg font-semibold">{title}</div>
