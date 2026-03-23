@@ -74,9 +74,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         foregroundColor: const Color(0xFFEFEEE8),
       ),
       backgroundColor: const Color(0xFF050505),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-        children: [
+      body: RefreshIndicator(
+        color: const Color(0xFFE6FF3C),
+        backgroundColor: const Color(0xFF0C1018),
+        onRefresh: appState.refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+          children: [
           _heroBanner(),
           const SizedBox(height: 18),
           _stepper(),
@@ -85,7 +89,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           if (step == 1) _planStep(appState, plans),
           if (step == 2) _bookingStep(appState, plans),
           if (step == 3 && latestBooking != null) _successStep(latestBooking),
-        ],
+          ],
+        ),
       ),
     );
   }

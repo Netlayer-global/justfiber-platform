@@ -51,9 +51,13 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
         foregroundColor: const Color(0xFFEFEEE8),
       ),
       backgroundColor: const Color(0xFF050505),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-        children: [
+      body: RefreshIndicator(
+        color: const Color(0xFFE6FF3C),
+        backgroundColor: const Color(0xFF0C1018),
+        onRefresh: appState.refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          children: [
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
@@ -166,7 +170,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
