@@ -272,8 +272,8 @@ class ApiClient {
     }).where((item) => item.planCode.isNotEmpty).toList();
   }
 
-  Future<BookingQuote> createBooking(
-    CustomerSession session, {
+  Future<BookingQuote> createBooking({
+    CustomerSession? session,
     required String planCode,
     required String fullName,
     required String mobile,
@@ -287,9 +287,9 @@ class ApiClient {
   }) async {
     final data = _asMap(
       await _request(
-        '/api/v1/customer/bookings',
+        session == null ? '/api/v1/customer/bookings/public' : '/api/v1/customer/bookings',
         method: 'POST',
-        token: session.accessToken,
+        token: session?.accessToken,
         body: {
           'planCode': planCode,
           'fullName': fullName,

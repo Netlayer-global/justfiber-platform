@@ -24,6 +24,7 @@ import type {
   AdminPlanChangePreview,
   AdminPlanChangeResult,
   CustomerAction,
+  CustomerBooking,
   CustomerServiceRequest,
   CustomerDevice,
   CustomerInvoice,
@@ -184,6 +185,7 @@ function mapCustomer(customer: any): Customer {
     payments: Array.isArray(customer.payments) ? customer.payments.map(mapCustomerPayment) : undefined,
     actions: Array.isArray(customer.actions) ? customer.actions.map(mapCustomerAction) : undefined,
     billingNotes: Array.isArray(customer.billingNotes) ? customer.billingNotes.map(mapBillingNote) : undefined,
+    bookings: Array.isArray(customer.bookings) ? customer.bookings.map(mapCustomerBooking) : undefined,
     serviceRequests: Array.isArray(customer.serviceRequests)
       ? customer.serviceRequests.map(mapCustomerServiceRequest)
       : undefined,
@@ -197,6 +199,22 @@ function mapCustomer(customer: any): Customer {
           pinCode: customer.address.pinCode || customer.address.pincode,
         }
       : undefined,
+  }
+}
+
+function mapCustomerBooking(booking: any): CustomerBooking {
+  return {
+    id: booking._id || booking.bookingNumber || '',
+    bookingNumber: booking.bookingNumber || booking._id || '',
+    status: booking.status || 'initiated',
+    planName: booking.selectedPlan?.planName || booking.selectedPlan?.planCode || '',
+    amount: Number(booking.selectedPlan?.totalAmount || booking.payment?.amount || 0),
+    paymentStatus: booking.payment?.status || '',
+    assignedInstallerName: booking.assignment?.installerName || '',
+    preferredSlotLabel: booking.personalDetails?.preferredSlot?.label || '',
+    preferredDate: booking.personalDetails?.preferredSlot?.date || '',
+    address: booking.personalDetails?.fullAddress || '',
+    createdAt: booking.createdAt,
   }
 }
 

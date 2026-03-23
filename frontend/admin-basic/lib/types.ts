@@ -86,6 +86,7 @@ export interface Customer {
   actions?: CustomerAction[]
   billingNotes?: BillingNote[]
   serviceRequests?: CustomerServiceRequest[]
+  bookings?: CustomerBooking[]
   rawAddress?: {
     line1?: string
     line2?: string
@@ -94,6 +95,20 @@ export interface Customer {
     state?: string
     pinCode?: string
   }
+}
+
+export interface CustomerBooking {
+  id: string
+  bookingNumber: string
+  status: string
+  planName?: string
+  amount: number
+  paymentStatus?: string
+  assignedInstallerName?: string
+  preferredSlotLabel?: string
+  preferredDate?: string
+  address?: string
+  createdAt?: string
 }
 
 export interface Device {

@@ -449,8 +449,8 @@ export default function CustomerDetailPage() {
     },
     {
       label: 'Support load',
-      value: String((customer.tickets?.length || 0) + (customer.serviceRequests?.length || 0)),
-      hint: `${customer.tickets?.length || 0} tickets / ${customer.serviceRequests?.length || 0} requests`,
+      value: String((customer.tickets?.length || 0) + (customer.serviceRequests?.length || 0) + (customer.bookings?.length || 0)),
+      hint: `${customer.tickets?.length || 0} tickets / ${customer.serviceRequests?.length || 0} requests / ${customer.bookings?.length || 0} bookings`,
     },
   ]
 
@@ -576,6 +576,40 @@ export default function CustomerDetailPage() {
                     <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>Retry Provisioning</button>
                     <button className="btn-secondary" onClick={() => void handleCustomerUpdate({ status: 'active' })} disabled={isSaving}>Mark Active</button>
                   </div>
+                </div>
+                <div className="card p-5 space-y-3">
+                  <h2 className="text-lg font-semibold">Booking pipeline</h2>
+                  {(customer.bookings || []).length ? (
+                    <div className="space-y-2">
+                      {customer.bookings?.map((booking) => (
+                        <div key={booking.id} className="rounded bg-[#0a0e27] px-3 py-3 text-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {booking.bookingNumber} | {booking.planName || 'Booking'}
+                              </div>
+                              <div className="text-slate-400">{booking.address || '-'}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium">Rs {booking.amount.toFixed(2)}</div>
+                              <div className="text-slate-400">{booking.status}</div>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
+                            <span className="rounded-full border border-white/10 px-2 py-1">Payment {booking.paymentStatus || '-'}</span>
+                            {booking.preferredSlotLabel ? (
+                              <span className="rounded-full border border-white/10 px-2 py-1">
+                                Slot {booking.preferredSlotLabel}{booking.preferredDate ? ` | ${booking.preferredDate}` : ''}
+                              </span>
+                            ) : null}
+                            {booking.assignedInstallerName ? (
+                              <span className="rounded-full border border-white/10 px-2 py-1">Installer {booking.assignedInstallerName}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-slate-500 text-sm">No bookings found for this customer identity</p>}
                 </div>
               </>
             ) : null}

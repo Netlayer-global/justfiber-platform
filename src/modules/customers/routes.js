@@ -18,6 +18,8 @@ import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { BillingNote } from "../../models/BillingNote.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
+import { ConnectionBooking } from "../../models/ConnectionBooking.js";
+import { CustomerUser } from "../../models/CustomerUser.js";
 
 export const customersRouter = Router();
 
@@ -152,7 +154,23 @@ customersRouter.get(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
-    const [devices, tickets, invoices, payments, actions, billingNotes, serviceRequests] = await Promise.all([
+    const linkedUsers = await CustomerUser.find({
+      $or: [
+        { linkedCustomerIds: customer.customerId },
+        ...(customer.phone ? [{ mobile: customer.phone }] : []),
+        ...(customer.email ? [{ email: customer.email }] : [])
+      ]
+    })
+      .select({ _id: 1 })
+      .lean();
+    const bookingUserIds = linkedUsers.map((user) => user._id);
+    const bookingFilter = {
+      $or: [
+        ...(bookingUserIds.length ? [{ customerUserId: { $in: bookingUserIds } }] : []),
+        ...(customer.phone ? [{ "personalDetails.mobile": customer.phone }] : [])
+      ]
+    };
+    const [devices, tickets, invoices, payments, actions, billingNotes, serviceRequests, bookings] = await Promise.all([
       DeviceOperationalCache.find({ customerId: customer.customerId }).lean(),
       SupportTicket.find({ customerId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean()
       ,
@@ -160,9 +178,12 @@ customersRouter.get(
       PaymentTransaction.find({ customerId: customer.customerId }).sort({ paidAt: -1, createdAt: -1 }).limit(12).lean(),
       AdminActionRequest.find({ targetType: "customer", targetId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean(),
       BillingNote.find({ customerId: customer.customerId }).sort({ issuedAt: -1, createdAt: -1 }).limit(12).lean(),
-      ServiceRequest.find({ customerId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean()
+      ServiceRequest.find({ customerId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean(),
+      bookingFilter.$or.length
+        ? ConnectionBooking.find(bookingFilter).sort({ createdAt: -1 }).limit(12).lean()
+        : Promise.resolve([])
     ]);
-    return ok(res, { ...customer, devices, tickets, invoices, payments, actions, billingNotes, serviceRequests });
+    return ok(res, { ...customer, devices, tickets, invoices, payments, actions, billingNotes, serviceRequests, bookings });
   })
 );
 

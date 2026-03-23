@@ -155,34 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ],
-                    if ((appState.demoOtp ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0B0F19),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0x2239FF14)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.lock_clock_rounded, color: Color(0xFF39FF14)),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Demo OTP: ${appState.demoOtp}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                     if ((appState.error ?? '').isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Container(
@@ -216,7 +188,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: double.infinity,
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => BookingFlowScreen(initialMobile: mobileController.text.trim()),
+                          ),
                         ),
                         child: const Text('Book new connection'),
                       ),

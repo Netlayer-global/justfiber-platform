@@ -7,7 +7,9 @@ import '../core/app_state.dart';
 import 'service_tracking_screen.dart';
 
 class BookingFlowScreen extends StatefulWidget {
-  const BookingFlowScreen({super.key});
+  const BookingFlowScreen({super.key, this.initialMobile});
+
+  final String? initialMobile;
 
   @override
   State<BookingFlowScreen> createState() => _BookingFlowScreenState();
@@ -30,12 +32,14 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   bool _locationBusy = false;
   String? _locationError;
   final nameController = TextEditingController();
+  final mobileController = TextEditingController();
   final addressController = TextEditingController();
   final pinController = TextEditingController();
 
   @override
   void dispose() {
     nameController.dispose();
+    mobileController.dispose();
     addressController.dispose();
     pinController.dispose();
     super.dispose();
@@ -50,6 +54,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
     if (nameController.text.isEmpty && session != null) {
       nameController.text = appState.dashboard.customerName;
+    }
+    if (mobileController.text.isEmpty) {
+      mobileController.text = session?.mobile ?? widget.initialMobile ?? '';
     }
 
     return Scaffold(
@@ -92,6 +99,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           const Text('Unlock plans and offers available in your area.', style: TextStyle(color: Color(0xFF6B7280), height: 1.4)),
           const SizedBox(height: 16),
           _field('Full name', nameController),
+          const SizedBox(height: 12),
+          _field('Mobile number', mobileController, keyboardType: TextInputType.phone),
           const SizedBox(height: 12),
           _field('Address', addressController, maxLines: 3),
           const SizedBox(height: 12),
@@ -320,6 +329,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       final ok = await appState.createBooking(
                         planCode: selectedPlanCode!,
                         fullName: nameController.text.trim(),
+                        mobile: mobileController.text.trim(),
                         address: addressController.text.trim(),
                         pinCode: pinController.text.trim(),
                         lat: _selectedLocation.latitude,
@@ -480,6 +490,11 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     final messenger = ScaffoldMessenger.of(context);
     if (nameController.text.trim().length < 2) {
       messenger.showSnackBar(const SnackBar(content: Text('Enter customer name before continuing.')));
+      return false;
+    }
+    final mobile = mobileController.text.trim();
+    if (mobile.length != 10 || int.tryParse(mobile) == null) {
+      messenger.showSnackBar(const SnackBar(content: Text('Enter a valid 10-digit mobile number before continuing.')));
       return false;
     }
     if (addressController.text.trim().length < 5) {

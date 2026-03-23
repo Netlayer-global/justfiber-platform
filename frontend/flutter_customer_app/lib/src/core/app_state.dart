@@ -166,6 +166,7 @@ class AppState extends ChangeNotifier {
   Future<bool> createBooking({
     required String planCode,
     required String fullName,
+    required String mobile,
     required String address,
     required String pinCode,
     required double lat,
@@ -175,20 +176,15 @@ class AppState extends ChangeNotifier {
     String? preferredSlotLabel,
   }) async {
     final current = session;
-    if (current == null) {
-      bookingError = 'Login required before booking.';
-      notifyListeners();
-      return false;
-    }
     bookingBusy = true;
     bookingError = null;
     notifyListeners();
     try {
       latestBooking = await api.createBooking(
-        current,
+        session: current,
         planCode: planCode,
         fullName: fullName,
-        mobile: current.mobile,
+        mobile: current?.mobile ?? mobile,
         address: address,
         pinCode: pinCode,
         lat: lat,
@@ -197,8 +193,10 @@ class AppState extends ChangeNotifier {
         preferredSlotCode: preferredSlotCode,
         preferredSlotLabel: preferredSlotLabel,
       );
-      bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
-      installerVisits = await api.fetchServiceVisits(current);
+      if (current != null) {
+        bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
+        installerVisits = await api.fetchServiceVisits(current);
+      }
       return true;
     } catch (e) {
       bookingError = e.toString();

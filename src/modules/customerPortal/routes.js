@@ -504,6 +504,114 @@ async function markLatestInvoicePaid({ customerId, paymentId, amount, source }) 
   return invoice;
 }
 
+async function findOrCreatePortalUserForBooking({ mobile, email, fullName, existingUser }) {
+  if (existingUser) {
+    return existingUser;
+  }
+  let user = await CustomerUser.findOne({
+    $or: [
+      ...(mobile ? [{ mobile }] : []),
+      ...(email ? [{ email }] : [])
+    ]
+  });
+  if (!user) {
+    user = await CustomerUser.create({
+      mobile,
+      email,
+      fullName,
+      authMode: mobile ? "mobile_otp" : "email_otp",
+      state: "booking_in_progress"
+    });
+  } else {
+    user.fullName = fullName || user.fullName;
+    user.mobile = mobile || user.mobile;
+    user.email = email || user.email;
+    user.state = "booking_in_progress";
+    await user.save();
+  }
+  return user;
+}
+
+async function createConnectionBooking({ customerUser, payload }) {
+  const plan = await PlanCatalog.findOne({ planCode: payload.planCode });
+  if (!plan) {
+    throw new ApiError(404, "Plan not found");
+  }
+  const feasibility = await evaluateFeasibility({
+    lat: payload.lat,
+    lng: payload.lng,
+    address: payload.fullAddress,
+    pinCode: payload.pinCode
+  });
+  if (!feasibility.feasible) {
+    throw new ApiError(409, feasibility.message || "Selected address is not serviceable");
+  }
+  const amount = (plan.monthlyPrice || 0) + (plan.otcCharge || 0);
+  const isOfflinePayment = payload.paymentMode === "cash";
+
+  const booking = await ConnectionBooking.create({
+    bookingNumber: `JF${Date.now().toString().slice(-6)}`,
+    customerUserId: customerUser?._id,
+    status: "payment_pending",
+    selectedPlan: {
+      planCode: plan.planCode,
+      planName: plan.name,
+      monthlyPrice: plan.monthlyPrice,
+      otcCharge: plan.otcCharge,
+      totalAmount: amount
+    },
+    feasibility: {
+      ...feasibility,
+      gps: { lat: payload.lat, lng: payload.lng }
+    },
+    personalDetails: {
+      fullName: payload.fullName,
+      mobile: payload.mobile,
+      email: payload.email,
+      fullAddress: payload.fullAddress,
+      pinCode: payload.pinCode,
+      preferredSlot: payload.preferredSlotCode
+        ? {
+            code: payload.preferredSlotCode,
+            label: payload.preferredSlotLabel || payload.preferredSlotCode,
+            date: payload.preferredDate || null
+          }
+        : null
+    },
+    payment: {
+      provider: payload.paymentMode,
+      status: isOfflinePayment ? "paid" : "pending",
+      amount,
+      paidAt: isOfflinePayment ? new Date() : null
+    },
+    tracking: {
+      currentStep: isOfflinePayment ? "payment_confirmed" : "payment_pending",
+      steps: [
+        { code: "booking_placed", status: "done", at: new Date() },
+        {
+          code: "payment_confirmed",
+          status: isOfflinePayment ? "done" : "pending",
+          at: isOfflinePayment ? new Date() : null
+        },
+        { code: "installer_assigned", status: "pending", at: null }
+      ]
+    }
+  });
+
+  if (isOfflinePayment) {
+    await assignInstallerIfAvailable({ booking, payload, plan, feasibility });
+  }
+
+  if (customerUser) {
+    customerUser.state = "booking_in_progress";
+    customerUser.fullName = payload.fullName || customerUser.fullName;
+    await customerUser.save();
+  }
+
+  const responseBooking = await ConnectionBooking.findById(booking._id).lean();
+  return responseBooking;
+}
+
 function buildInstallerVisitSummary(job) {
   const timeline = Array.isArray(job.timeline) ? [...job.timeline] : [];
   const latestTimeline = timeline
@@ -945,84 +1053,25 @@ customerPortalRouter.post(
 );
 
 customerPortalRouter.post(
+  "/bookings/public",
+  asyncHandler(async (req, res) => {
+    const payload = bookingSchema.parse(req.body);
+    const customerUser = await findOrCreatePortalUserForBooking({
+      mobile: payload.mobile,
+      email: payload.email,
+      fullName: payload.fullName
+    });
+    const booking = await createConnectionBooking({ customerUser, payload });
+    return ok(res, { ...booking }, { created: true });
+  })
+);
+
+customerPortalRouter.post(
   "/bookings",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = bookingSchema.parse(req.body);
-    const plan = await PlanCatalog.findOne({ planCode: payload.planCode });
-    if (!plan) {
-      throw new ApiError(404, "Plan not found");
-    }
-    const feasibility = await evaluateFeasibility({
-      lat: payload.lat,
-      lng: payload.lng,
-      address: payload.fullAddress,
-      pinCode: payload.pinCode
-    });
-    if (!feasibility.feasible) {
-      throw new ApiError(409, feasibility.message || "Selected address is not serviceable");
-    }
-    const amount = (plan.monthlyPrice || 0) + (plan.otcCharge || 0);
-    const isOfflinePayment = payload.paymentMode === "cash";
-
-    const booking = await ConnectionBooking.create({
-      bookingNumber: `JF${Date.now().toString().slice(-6)}`,
-      customerUserId: req.customerUser._id,
-      status: "payment_pending",
-      selectedPlan: {
-        planCode: plan.planCode,
-        planName: plan.name,
-        monthlyPrice: plan.monthlyPrice,
-        otcCharge: plan.otcCharge,
-        totalAmount: amount
-      },
-      feasibility: {
-        ...feasibility,
-        gps: { lat: payload.lat, lng: payload.lng }
-      },
-      personalDetails: {
-        fullName: payload.fullName,
-        mobile: payload.mobile,
-        email: payload.email,
-        fullAddress: payload.fullAddress,
-        pinCode: payload.pinCode,
-        preferredSlot: payload.preferredSlotCode
-          ? {
-              code: payload.preferredSlotCode,
-              label: payload.preferredSlotLabel || payload.preferredSlotCode,
-              date: payload.preferredDate || null
-            }
-          : null
-      },
-      payment: {
-        provider: payload.paymentMode,
-        status: isOfflinePayment ? "paid" : "pending",
-        amount,
-        paidAt: isOfflinePayment ? new Date() : null
-      },
-      tracking: {
-        currentStep: isOfflinePayment ? "payment_confirmed" : "payment_pending",
-        steps: [
-          { code: "booking_placed", status: "done", at: new Date() },
-          {
-            code: "payment_confirmed",
-            status: isOfflinePayment ? "done" : "pending",
-            at: isOfflinePayment ? new Date() : null
-          },
-          { code: "installer_assigned", status: "pending", at: null }
-        ]
-      }
-    });
-
-    if (isOfflinePayment) {
-      await assignInstallerIfAvailable({ booking, payload, plan, feasibility });
-    }
-
-    req.customerUser.state = "booking_in_progress";
-    req.customerUser.fullName = payload.fullName;
-    await req.customerUser.save();
-
-    const responseBooking = await ConnectionBooking.findById(booking._id).lean();
+    const responseBooking = await createConnectionBooking({ customerUser: req.customerUser, payload });
     return ok(
       res,
       {
