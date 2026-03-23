@@ -26,9 +26,13 @@ class PaymentDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('Payment Details', style: Theme.of(context).textTheme.headlineSmall),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-        children: [
+      body: RefreshIndicator(
+        color: const Color(0xFFE6FF3C),
+        backgroundColor: const Color(0xFF0C1018),
+        onRefresh: appState.refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          children: [
           AppCard(
             gradient: const LinearGradient(
               colors: [Color(0xFF0B0F19), Color(0xFF111827)],
@@ -159,7 +163,8 @@ class PaymentDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -204,6 +209,7 @@ class PaymentDetailScreen extends StatelessWidget {
         ),
       ),
     );
+    await appState.refresh();
   }
 
   Future<void> _shareDocument(AppState appState) async {

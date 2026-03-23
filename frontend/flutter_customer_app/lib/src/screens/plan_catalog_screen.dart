@@ -31,9 +31,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         foregroundColor: const Color(0xFFEFEEE8),
       ),
       backgroundColor: const Color(0xFF050505),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-        children: [
+      body: RefreshIndicator(
+        color: const Color(0xFFE6FF3C),
+        backgroundColor: const Color(0xFF0C1018),
+        onRefresh: appState.refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          children: [
           _heroCard(context, wifiName, appState.billing.currentPlan),
           const SizedBox(height: 18),
           _modeSwitcher(),
@@ -59,7 +63,8 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               ...standardPlans.map((plan) => _planCard(context, appState, plan, currentPlan)),
             ],
           ],
-        ],
+          ],
+        ),
       ),
     );
   }

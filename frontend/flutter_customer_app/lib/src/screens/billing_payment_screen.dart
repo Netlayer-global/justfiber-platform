@@ -132,9 +132,13 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
       appBar: AppBar(
         title: const Text('Bill Payment'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
-        children: [
+      body: RefreshIndicator(
+        color: const Color(0xFFE6FF3C),
+        backgroundColor: const Color(0xFF0C1018),
+        onRefresh: AppStateScope.of(context).refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+          children: [
           AppCard(
             gradient: const LinearGradient(
               colors: [Color(0xFF060A12), Color(0xFF101827)],
@@ -270,7 +274,8 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
