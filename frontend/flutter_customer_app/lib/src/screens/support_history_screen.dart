@@ -375,14 +375,53 @@ class SupportHistoryScreen extends StatelessWidget {
       description: description,
     );
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ticketNumber == null ? (appState.error ?? 'Unable to create support ticket') : 'Support ticket created: $ticketNumber'),
-      ),
-    );
     if (ticketNumber != null) {
       await appState.refresh();
+      final latestTicket = _findLatestTicket(appState, ticketNumber);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Support ticket created: $ticketNumber'),
+          action: latestTicket == null
+              ? null
+              : SnackBarAction(
+                  label: 'View',
+                  onPressed: () {
+                    _showTicketDetails(context, latestTicket);
+                  },
+                ),
+        ),
+      );
+      return;
     }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(appState.error ?? 'Unable to create support ticket'),
+      ),
+    );
+  }
+
+  Future<void> _showTicketCreatedFeedback(
+    BuildContext context,
+    AppState appState,
+    String ticketNumber,
+  ) async {
+    await appState.refresh();
+    if (!context.mounted) return;
+    final latestTicket = _findLatestTicket(appState, ticketNumber);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Support ticket created: $ticketNumber'),
+        action: latestTicket == null
+            ? null
+            : SnackBarAction(
+                label: 'View',
+                onPressed: () {
+                  _showTicketDetails(context, latestTicket);
+                },
+              ),
+      ),
+    );
   }
 
   Future<void> _createServiceRequest(
@@ -393,14 +432,30 @@ class SupportHistoryScreen extends StatelessWidget {
   }) async {
     final requestNumber = await appState.submitServiceRequest(type: type, note: note);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(requestNumber == null ? (appState.error ?? 'Unable to create request') : 'Request created: $requestNumber'),
-      ),
-    );
     if (requestNumber != null) {
       await appState.refresh();
+      final latestRequest = _findLatestRequest(appState, requestNumber);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Request created: $requestNumber'),
+          action: latestRequest == null
+              ? null
+              : SnackBarAction(
+                  label: 'View',
+                  onPressed: () {
+                    _showRequestDetails(context, latestRequest);
+                  },
+                ),
+        ),
+      );
+      return;
     }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(appState.error ?? 'Unable to create request'),
+      ),
+    );
   }
 
   Future<void> _showCreateTicketSheet(BuildContext context, AppState appState) async {
@@ -498,10 +553,7 @@ class SupportHistoryScreen extends StatelessWidget {
                             if (!context.mounted) return;
                             if (ticketNumber != null) {
                               Navigator.pop(sheetContext);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Support ticket created: $ticketNumber')),
-                              );
-                              await appState.refresh();
+                              await _showTicketCreatedFeedback(context, appState, ticketNumber);
                               return;
                             }
                             setModalState(() => submitting = false);
@@ -608,10 +660,22 @@ class SupportHistoryScreen extends StatelessWidget {
                             if (!context.mounted) return;
                             if (requestNumber != null) {
                               Navigator.pop(sheetContext);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Request created: $requestNumber')),
-                              );
                               await appState.refresh();
+                              final latestRequest = _findLatestRequest(appState, requestNumber);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Request created: $requestNumber'),
+                                  action: latestRequest == null
+                                      ? null
+                                      : SnackBarAction(
+                                          label: 'View',
+                                          onPressed: () {
+                                            _showRequestDetails(context, latestRequest);
+                                          },
+                                        ),
+                                ),
+                              );
                               return;
                             }
                             setModalState(() => submitting = false);
@@ -680,6 +744,20 @@ class SupportHistoryScreen extends StatelessWidget {
       return const Color(0xFFF59E0B);
     }
     return const Color(0xFFD81F26);
+  }
+
+  SupportTicketItem? _findLatestTicket(AppState appState, String ticketNumber) {
+    for (final item in appState.tickets) {
+      if (item.ticketNumber == ticketNumber) return item;
+    }
+    return appState.tickets.isNotEmpty ? appState.tickets.first : null;
+  }
+
+  RequestItem? _findLatestRequest(AppState appState, String requestNumber) {
+    for (final item in appState.requests) {
+      if (item.referenceNumber == requestNumber) return item;
+    }
+    return appState.requests.isNotEmpty ? appState.requests.first : null;
   }
 }
 
