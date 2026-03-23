@@ -99,6 +99,79 @@ class AppState extends ChangeNotifier {
     restoreSession();
   }
 
+  void _resetCustomerState() {
+    session = null;
+    demoOtp = null;
+    error = null;
+    dashboard = const DashboardData(
+      customerName: '',
+      planName: '',
+      walletBalance: 0,
+      usedGb: 0,
+      totalGb: 0,
+      points: 0,
+      activeDays: 0,
+      wifiName: '',
+      billingDue: 0,
+    );
+    wifi = const WifiData(
+      ssid24: '',
+      ssid5: '',
+      passwordMask: '********',
+      paused: false,
+      guestEnabled: false,
+      guestSsid: '',
+      connectedDevicesCount: 0,
+    );
+    billing = const BillingData(
+      currentPlan: '',
+      dueAmount: 0,
+      nextBillDate: '',
+      lastPaymentAmount: 0,
+      billCycle: '',
+      billMode: '',
+      generatedDate: '',
+      paymentStatus: '',
+      lastPaymentDate: '',
+      adjustmentPreview: 0,
+      pendingPlanChange: null,
+      invoices: [],
+      payments: [],
+      notes: [],
+    );
+    requests = const [];
+    tickets = const [];
+    notifications = const [];
+    faqs = const [];
+    addons = const [];
+    connectedDevices = const [];
+    latestBooking = null;
+    bookingTracking = null;
+    latestBookingLookupMobile = null;
+    installerVisits = const [];
+    feasibility = null;
+    billingPaymentOrder = null;
+    speedTest = const SpeedTestData(
+      downloadMbps: 0,
+      uploadMbps: 0,
+      latencyMs: 0,
+      packetLossPercent: 0,
+      status: 'idle',
+    );
+    networkQuality = const NetworkQualityData(
+      latencyMs: 0,
+      packetLossPercent: 0,
+      jitterMs: 0,
+      opticalRxPower: 0,
+      quality: 'unknown',
+    );
+    parentalRules = const [];
+    planChangeOptions = const [];
+    planChangePreview = null;
+    lastPlanChangeResult = null;
+    bookingError = null;
+  }
+
   Future<void> requestOtp(String mobile) async {
     busy = true;
     error = null;
@@ -676,21 +749,7 @@ class AppState extends ChangeNotifier {
       prefs.remove(_latestBookingDateKey);
       prefs.remove(_latestBookingSlotKey);
     });
-    session = null;
-    demoOtp = null;
-    error = null;
-    latestBooking = null;
-    latestBookingLookupMobile = null;
-    bookingTracking = null;
-    installerVisits = const [];
-    requests = const [];
-    tickets = const [];
-    notifications = const [];
-    feasibility = null;
-    billingPaymentOrder = null;
-    planChangePreview = null;
-    lastPlanChangeResult = null;
-    bookingError = null;
+    _resetCustomerState();
     notifyListeners();
   }
 
@@ -725,6 +784,7 @@ class AppState extends ChangeNotifier {
         }
       }
       if (mobile == null || accessToken == null || refreshToken == null) {
+        _resetCustomerState();
         return;
       }
       session = CustomerSession(
