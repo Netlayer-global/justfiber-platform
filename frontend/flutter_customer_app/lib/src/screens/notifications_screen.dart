@@ -110,17 +110,26 @@ class NotificationsScreen extends StatelessWidget {
       case _AlertKind.billing:
         if (context.mounted) {
           await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()));
+          if (context.mounted) {
+            await appState.refresh();
+          }
         }
         return;
       case _AlertKind.support:
       case _AlertKind.general:
         if (context.mounted) {
           await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()));
+          if (context.mounted) {
+            await appState.refresh();
+          }
         }
         return;
       case _AlertKind.tracking:
         if (context.mounted) {
           await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
+          if (context.mounted) {
+            await appState.refresh();
+          }
         }
         return;
     }
@@ -296,18 +305,6 @@ class NotificationsScreen extends StatelessWidget {
                                       fontWeight: FontWeight.w700,
                                       fontSize: 12,
                                     ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Icon(
-                                    kind == _AlertKind.billing
-                                        ? Icons.receipt_long_rounded
-                                        : kind == _AlertKind.support
-                                            ? Icons.support_agent_rounded
-                                            : kind == _AlertKind.tracking
-                                                ? Icons.route_rounded
-                                            : Icons.notifications_active_rounded,
-                                    size: 18,
-                                    color: _badgeForegroundFor(kind),
                                   ),
                                 ],
                               ),
