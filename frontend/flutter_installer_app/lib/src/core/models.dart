@@ -85,11 +85,19 @@ class ProvisioningPreview {
 class InstallerNotificationItem {
   const InstallerNotificationItem({
     required this.id,
+    required this.type,
     required this.title,
     required this.body,
+    required this.createdAt,
+    required this.readAt,
+    required this.payload,
   });
 
   final String id;
+  final String type;
   final String title;
   final String body;
+  final DateTime? createdAt;
+  final DateTime? readAt;
+  final Map<String, dynamic> payload;
 }

@@ -261,6 +261,70 @@ class InstallerAppState extends ChangeNotifier {
     }
   }
 
+  Future<bool> markNotificationRead(String notificationId) async {
+    final current = session;
+    if (current == null) return false;
+    try {
+      await api.markNotificationRead(current, notificationId);
+      notifications = notifications.map((item) {
+        if (item.id != notificationId) return item;
+        return InstallerNotificationItem(
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          body: item.body,
+          createdAt: item.createdAt,
+          readAt: DateTime.now(),
+          payload: item.payload,
+        );
+      }).toList();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> startLeave({required String reason, DateTime? expectedEndAt}) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.startLeave(current, reason: reason, expectedEndAt: expectedEndAt);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> endLeave() async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.endLeave(current);
+      await refresh();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
   void logout() {
     SharedPreferences.getInstance().then((prefs) {
       prefs.remove(_installerLoginKey);

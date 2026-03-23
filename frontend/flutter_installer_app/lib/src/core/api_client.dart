@@ -110,8 +110,12 @@ class InstallerApiClient {
       final map = item as Map<String, dynamic>;
       return InstallerNotificationItem(
         id: (map['_id'] ?? '').toString(),
+        type: (map['type'] ?? 'notification').toString(),
         title: (map['title'] ?? 'Notification').toString(),
         body: (map['body'] ?? map['message'] ?? '').toString(),
+        createdAt: DateTime.tryParse('${map['createdAt'] ?? ''}'),
+        readAt: DateTime.tryParse('${map['readAt'] ?? ''}'),
+        payload: _asMap(map['payload']),
       );
     }).toList();
   }
@@ -186,6 +190,10 @@ class InstallerApiClient {
 
   Future<void> completeJob(InstallerSession session, String jobId) async {
     await _request('/api/v1/installer/jobs/$jobId/complete', method: 'POST', token: session.accessToken);
+  }
+
+  Future<void> markNotificationRead(InstallerSession session, String notificationId) async {
+    await _request('/api/v1/installer/notifications/$notificationId/read', method: 'POST', token: session.accessToken);
   }
 
   Future<void> retryActivation(InstallerSession session, String jobId, {required String note}) async {
@@ -265,5 +273,25 @@ class InstallerApiClient {
 
   Future<void> resolveComplaint(InstallerSession session, String jobId) async {
     await _request('/api/v1/installer/jobs/$jobId/resolve-complaint', method: 'POST', token: session.accessToken);
+  }
+
+  Future<void> startLeave(
+    InstallerSession session, {
+    required String reason,
+    DateTime? expectedEndAt,
+  }) async {
+    await _request(
+      '/api/v1/installer/profile/start-leave',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        'reason': reason,
+        if (expectedEndAt != null) 'expectedEndAt': expectedEndAt.toUtc().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> endLeave(InstallerSession session) async {
+    await _request('/api/v1/installer/profile/end-leave', method: 'POST', token: session.accessToken);
   }
 }
