@@ -432,7 +432,10 @@ export default function CustomerDetailPage() {
     {
       label: 'Lifecycle status',
       value: customer.status,
-      hint: customer.serviceStatus || 'Service sync active',
+      hint:
+        ('serviceStatus' in customer && typeof customer.serviceStatus === 'string'
+          ? customer.serviceStatus
+          : '') || 'Service sync active',
     },
     {
       label: 'Current due',
