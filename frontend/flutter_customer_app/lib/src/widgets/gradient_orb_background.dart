@@ -12,14 +12,14 @@ class GradientOrbBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF000000), Color(0xFF020202), Color(0xFF050505)],
+          colors: [Color(0xFF0C1018), Color(0xFF10141C), Color(0xFF12161A)],
         ),
       ),
       child: Stack(
         children: [
-          Positioned(top: -80, right: -30, child: _orb(const Color(0x16E6FF3C), 220)),
-          Positioned(top: 240, left: -70, child: _orb(const Color(0x0EE6FF3C), 180)),
-          Positioned(bottom: -90, right: -40, child: _orb(const Color(0x180A0A0A), 200)),
+          Positioned(top: -80, right: -30, child: _orb(const Color(0x14E6FF3C), 220)),
+          Positioned(top: 240, left: -70, child: _orb(const Color(0x0CE6FF3C), 180)),
+          Positioned(bottom: -90, right: -40, child: _orb(const Color(0x2212161A), 200)),
           child,
         ],
       ),

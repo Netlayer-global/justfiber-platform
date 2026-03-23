@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 ThemeData buildJustFiberTheme() {
-  const background = Color(0xFF000000);
-  const surface = Color(0xFF050505);
-  const surfaceAlt = Color(0xFF13161A);
+  const background = Color(0xFF0C1018);
+  const surface = Color(0xFF0C1018);
+  const surfaceAlt = Color(0xFF12161A);
   const primary = Color(0xFFE6FF3C);
   const accent = Color(0xFFE6FF3C);
   const tertiary = Color(0xFFE6FF3C);
@@ -105,7 +105,7 @@ ThemeData buildJustFiberTheme() {
       ),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: const Color(0xFF0C1117),
+      backgroundColor: const Color(0xFF12161A),
       contentTextStyle: GoogleFonts.dmSans(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       behavior: SnackBarBehavior.floating,

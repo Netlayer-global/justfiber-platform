@@ -23,10 +23,10 @@ class ServiceTrackingScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Requests & Tracking'),
-        backgroundColor: const Color(0xFF050505),
+        backgroundColor: const Color(0xFF0C1018),
         foregroundColor: const Color(0xFFEFEEE8),
       ),
-      backgroundColor: const Color(0xFF050505),
+      backgroundColor: const Color(0xFF0C1018),
       body: RefreshIndicator(
         color: const Color(0xFFE6FF3C),
         backgroundColor: const Color(0xFF0C1018),
