@@ -189,6 +189,13 @@ class SupportHistoryScreen extends StatelessWidget {
       onPressed: onTap,
       icon: Icon(icon, size: 16),
       label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF111111),
+        backgroundColor: const Color(0xFFF3F1E9),
+        side: const BorderSide(color: Color(0x14000000)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
     );
   }
 

@@ -198,11 +198,21 @@ class BillingHistoryScreen extends StatelessWidget {
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
                           ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF111111),
+                            backgroundColor: const Color(0xFFF3F1E9),
+                            side: const BorderSide(color: Color(0x14000000)),
+                          ),
                           child: const Text('Open payments history'),
                         ),
                       if (latestInvoice != null && latestInvoice.pdfUrl.isNotEmpty)
                         OutlinedButton(
                           onPressed: () => _openDocument(context, appState, latestInvoice.invoiceNumber, latestInvoice.pdfUrl),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF111111),
+                            backgroundColor: const Color(0xFFF3F1E9),
+                            side: const BorderSide(color: Color(0x14000000)),
+                          ),
                           child: const Text('Latest invoice'),
                         ),
                       if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)

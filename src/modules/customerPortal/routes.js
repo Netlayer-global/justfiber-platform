@@ -54,6 +54,11 @@ import {
 
 const otpStore = new Map();
 
+export function getCustomerPortalDemoOtp(key) {
+  if (!key) return null;
+  return otpStore.get(String(key)) || null;
+}
+
 export const customerPortalRouter = Router();
 
 function computeBalanceAfter({ currentBalance, direction, amount }) {

@@ -9,6 +9,7 @@ import type {
   Job,
   ServiceZone,
   DashboardStats,
+  DemoOtpLookup,
   BillingData,
   BillingOverview,
   BillingRun,
@@ -656,6 +657,8 @@ export const adminAPI = {
         : undefined,
     }
   },
+  getCustomerDemoOtp: (mobile: string) =>
+    request<DemoOtpLookup>(`/api/v1/admin/customer-auth/demo-otp?mobile=${encodeURIComponent(mobile)}`),
 
   // Plans
   getPlans: async () => {

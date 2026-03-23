@@ -292,6 +292,12 @@ export interface DashboardStats {
   systemHealth: number
 }
 
+export interface DemoOtpLookup {
+  mobile: string
+  otp: string | null
+  available: boolean
+}
+
 export interface BillingData {
   id: string
   customerId: string

@@ -27,10 +27,27 @@ import { env } from "../../config/env.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
+import { getCustomerPortalDemoOtp } from "../customerPortal/routes.js";
 
 export const adminOpsRouter = Router();
 
 adminOpsRouter.use(requireAuth);
+
+adminOpsRouter.get(
+  "/customer-auth/demo-otp",
+  asyncHandler(async (req, res) => {
+    const mobile = String(req.query.mobile || "").trim();
+    if (!mobile) {
+      throw new ApiError(400, "Mobile is required");
+    }
+    const otp = getCustomerPortalDemoOtp(mobile);
+    return ok(res, {
+      mobile,
+      otp,
+      available: Boolean(otp),
+    });
+  })
+);
 
 function computeBalanceAfter({ currentBalance, direction, amount }) {
   return currentBalance + (direction === "debit" ? amount : -amount);
