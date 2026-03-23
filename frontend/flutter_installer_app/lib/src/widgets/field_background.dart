@@ -12,13 +12,13 @@ class FieldBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF042B2A), Color(0xFF081018), Color(0xFF081018)],
+          colors: [Color(0xFF0C1018), Color(0xFF0C1018), Color(0xFF0B0F19)],
         ),
       ),
       child: Stack(
         children: [
-          Positioned(top: -70, right: -40, child: _orb(const Color(0x331FD2A8), 220)),
-          Positioned(top: 180, left: -60, child: _orb(const Color(0x224D9FFF), 180)),
+          Positioned(top: -70, right: -40, child: _orb(const Color(0x22E6FF3C), 220)),
+          Positioned(top: 180, left: -60, child: _orb(const Color(0x111B2311), 180)),
           child,
         ],
       ),

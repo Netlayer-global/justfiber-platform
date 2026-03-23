@@ -16,16 +16,16 @@ class InstallerAppState extends ChangeNotifier {
   bool busy = false;
   String? error;
   InstallerDashboard dashboard = const InstallerDashboard(
-    todayNewInstallationJobs: 4,
-    pendingJobs: 1,
-    completedJobs: 2,
-    availabilityStatus: 'available',
+    todayNewInstallationJobs: 0,
+    pendingJobs: 0,
+    completedJobs: 0,
+    availabilityStatus: '-',
   );
   InstallerProfile profile = const InstallerProfile(
-    fullName: 'Ravi Chauhan',
-    installerCode: 'INS-1001',
-    phone: '9000000001',
-    availabilityStatus: 'available',
+    fullName: '',
+    installerCode: '',
+    phone: '',
+    availabilityStatus: '-',
   );
   List<InstallerJob> jobs = const [];
   List<InstallerNotificationItem> notifications = const [];
@@ -79,26 +79,28 @@ class InstallerAppState extends ChangeNotifier {
     }
   }
 
-  Future<void> loadPreview(String jobId) async {
+  Future<bool> loadPreview(String jobId) async {
     final current = session;
-    if (current == null) return;
+    if (current == null) return false;
     selectedJobId = jobId;
     busy = true;
     error = null;
     notifyListeners();
     try {
       preview = await api.fetchProvisioningPreview(current, jobId);
+      return true;
     } catch (e) {
       error = e.toString();
+      return false;
     } finally {
       busy = false;
       notifyListeners();
     }
   }
 
-  Future<void> runActivationFlow(String jobId, String serial) async {
+  Future<bool> runActivationFlow(String jobId, String serial) async {
     final current = session;
-    if (current == null) return;
+    if (current == null) return false;
     busy = true;
     error = null;
     notifyListeners();
@@ -111,8 +113,10 @@ class InstallerAppState extends ChangeNotifier {
       await api.saveChecklist(current, jobId);
       await api.activate(current, jobId);
       await refresh();
+      return true;
     } catch (e) {
       error = e.toString();
+      return false;
     } finally {
       busy = false;
       notifyListeners();
@@ -129,6 +133,20 @@ class InstallerAppState extends ChangeNotifier {
     preview = null;
     selectedJobId = null;
     error = null;
+    jobs = const [];
+    notifications = const [];
+    dashboard = const InstallerDashboard(
+      todayNewInstallationJobs: 0,
+      pendingJobs: 0,
+      completedJobs: 0,
+      availabilityStatus: '-',
+    );
+    profile = const InstallerProfile(
+      fullName: '',
+      installerCode: '',
+      phone: '',
+      availabilityStatus: '-',
+    );
     notifyListeners();
   }
 

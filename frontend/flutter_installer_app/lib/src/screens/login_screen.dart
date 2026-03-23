@@ -27,9 +27,18 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Spacer(),
+                Text(
+                  'INSTALLER CONSOLE',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF9CA3AF),
+                    letterSpacing: 3.2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
                 Text('JustFiber Field', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 12),
-                Text('Installer app for jobs, activation, diagnostics and completion workflow.', style: theme.textTheme.bodyMedium),
+                Text('Installer app for jobs, activation, diagnostics, and completion workflow.', style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFFD1D5DB), height: 1.45)),
                 const SizedBox(height: 28),
                 TextField(
                   controller: loginController,
@@ -51,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 if ((appState.error ?? '').isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  Text(appState.error!, style: const TextStyle(color: Colors.redAccent)),
+                  Text(appState.error!, style: const TextStyle(color: Color(0xFFFCA5A5))),
                 ],
                 const Spacer(),
               ],
