@@ -135,7 +135,19 @@ class ServiceTrackingScreen extends StatelessWidget {
                 Text('Booking timeline', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 if (bookingTracking == null || bookingTracking.steps.isEmpty)
-                  const Text('No booking timeline available yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
+                  _emptyState(
+                    title: 'No booking timeline available yet.',
+                    subtitle: 'Create a new broadband booking or refresh tracking to fetch the latest status.',
+                    actionLabel: 'Book connection',
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
+                      );
+                      if (context.mounted) {
+                        await appState.refreshBookingTracking();
+                      }
+                    },
+                  )
                 else
                   ...bookingTracking.steps.asMap().entries.map((entry) {
                     final step = entry.value;
@@ -189,7 +201,12 @@ class ServiceTrackingScreen extends StatelessWidget {
                 Text('Installer visits', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 if (visits.isEmpty)
-                  const Text('No installer visit or complaint job assigned yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
+                  _emptyState(
+                    title: 'No installer visit assigned yet.',
+                    subtitle: 'Assigned jobs and visit updates will appear here once operations dispatches a team.',
+                    actionLabel: 'Refresh tracking',
+                    onTap: appState.refreshBookingTracking,
+                  )
                 else
                   ...visits.map((visit) => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
@@ -266,7 +283,19 @@ class ServiceTrackingScreen extends StatelessWidget {
                 Text('Latest alerts', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 if (notifications.isEmpty)
-                  const Text('No tracking alerts right now.', style: TextStyle(color: Color(0xFF9CA3AF)))
+                  _emptyState(
+                    title: 'No tracking alerts right now.',
+                    subtitle: 'Booking, installer, and service movement alerts will show up here.',
+                    actionLabel: 'Open support center',
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                      );
+                      if (context.mounted) {
+                        await appState.refreshBookingTracking();
+                      }
+                    },
+                  )
                 else
                   ...notifications.take(3).map(
                     (item) => Padding(
@@ -437,6 +466,40 @@ class ServiceTrackingScreen extends StatelessWidget {
               textAlign: TextAlign.right,
               style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState({
+    required String title,
+    required String subtitle,
+    required String actionLabel,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B0F19),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x22E6FF3C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45)),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: onTap,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFE6FF3C),
+              foregroundColor: const Color(0xFF111111),
+            ),
+            child: Text(actionLabel),
           ),
         ],
       ),

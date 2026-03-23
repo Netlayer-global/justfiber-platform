@@ -153,7 +153,12 @@ class SupportHistoryScreen extends StatelessWidget {
           _sectionCard(
             title: 'Support tickets',
             child: appState.tickets.isEmpty
-                ? const Text('No support tickets yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
+                ? _emptyState(
+                    title: 'No support tickets yet.',
+                    subtitle: 'Create a ticket for billing, internet, or account issues from the quick actions above.',
+                    actionLabel: 'Create ticket',
+                    onTap: () => _showCreateTicketSheet(context, appState),
+                  )
                 : Column(
                     children: appState.tickets
                         .map(
@@ -180,7 +185,12 @@ class SupportHistoryScreen extends StatelessWidget {
           _sectionCard(
             title: 'Service requests',
             child: appState.requests.isEmpty
-                ? const Text('No service requests yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
+                ? _emptyState(
+                    title: 'No service requests yet.',
+                    subtitle: 'Need a shift, disconnect, or service change? Create a request from this screen.',
+                    actionLabel: 'Create request',
+                    onTap: () => _showCreateRequestSheet(context, appState),
+                  )
                 : Column(
                     children: appState.requests
                         .map(
@@ -260,6 +270,40 @@ class SupportHistoryScreen extends StatelessWidget {
           Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFEFEEE8))),
           const SizedBox(height: 14),
           child,
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState({
+    required String title,
+    required String subtitle,
+    required String actionLabel,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B0F19),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x22E6FF3C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45)),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: onTap,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFE6FF3C),
+              foregroundColor: const Color(0xFF111111),
+            ),
+            child: Text(actionLabel),
+          ),
         ],
       ),
     );

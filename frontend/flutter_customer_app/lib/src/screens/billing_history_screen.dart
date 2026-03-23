@@ -162,7 +162,12 @@ class BillingHistoryScreen extends StatelessWidget {
           _sectionCard(
             title: 'Invoices',
             child: billing.invoices.isEmpty
-                ? const Text('No invoices available yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
+                ? _emptyState(
+                    title: 'No invoices available yet.',
+                    subtitle: 'Your generated invoices will appear here once a billing cycle is processed.',
+                    actionLabel: 'Refresh billing',
+                    onTap: appState.refresh,
+                  )
                 : Column(
                     children: billing.invoices
                         .map(
@@ -254,6 +259,17 @@ class BillingHistoryScreen extends StatelessWidget {
                         ),
                     ],
                   ),
+                  if (billing.payments.isEmpty) ...[
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: billing.dueAmount > 0 ? () => _payNow(context, appState, amount: billing.dueAmount) : appState.refresh,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFE6FF3C),
+                        foregroundColor: const Color(0xFF111111),
+                      ),
+                      child: Text(billing.dueAmount > 0 ? 'Pay current bill' : 'Refresh billing'),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -262,7 +278,12 @@ class BillingHistoryScreen extends StatelessWidget {
           _sectionCard(
             title: 'Billing notes',
             child: billing.notes.isEmpty
-                ? const Text('No billing notes right now.', style: TextStyle(color: Color(0xFF9CA3AF)))
+                ? _emptyState(
+                    title: 'No billing notes right now.',
+                    subtitle: 'Credit notes, adjustments, and other billing notes will appear here when available.',
+                    actionLabel: 'Refresh billing',
+                    onTap: appState.refresh,
+                  )
                 : Column(
                     children: billing.notes
                         .map(
@@ -338,6 +359,40 @@ class BillingHistoryScreen extends StatelessWidget {
           Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFEFEEE8))),
           const SizedBox(height: 14),
           child,
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState({
+    required String title,
+    required String subtitle,
+    required String actionLabel,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B0F19),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x22E6FF3C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45)),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: onTap,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFE6FF3C),
+              foregroundColor: const Color(0xFF111111),
+            ),
+            child: Text(actionLabel),
+          ),
         ],
       ),
     );
