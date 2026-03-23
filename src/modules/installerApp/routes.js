@@ -724,13 +724,26 @@ installerAppRouter.post(
         ]
       }
     });
+    const preparedWifi = job.activation?.preparedCredentials?.wifi || {};
+    const preparedPppoe = job.activation?.preparedCredentials?.pppoe || {};
     if (booking) {
       await notifyBookingCustomer(
         booking,
         "installation_completed",
         "Installation completed",
-        `Booking ${booking.bookingNumber} installation completed successfully.`,
-        { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+        `Booking ${booking.bookingNumber} installation completed successfully. Internet is active now.`,
+        {
+          bookingNumber: booking.bookingNumber,
+          installerJobId: job._id,
+          planName: job.customerSnapshot?.planName || "",
+          wifiSsid24: preparedWifi.ssid24 || "",
+          wifiSsid5: preparedWifi.ssid5 || "",
+          wifiPassword: preparedWifi.password || "",
+          pppoeUsername: preparedPppoe.username || "",
+          configStatus: job.activation?.configStatus || "",
+          proofUploadedAt: job.proof?.uploadedAt || null,
+          completionOtpVerifiedAt: job.otp?.verifiedAt || null
+        }
       );
     }
     const [customer, subscriberService] = await Promise.all([

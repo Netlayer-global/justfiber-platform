@@ -102,6 +102,29 @@ class NotificationsScreen extends StatelessWidget {
     }
   }
 
+  List<String> _detailLines(NotificationItem item) {
+    final payload = item.payload;
+    final lines = <String>[];
+    final planName = (payload['planName'] ?? '').toString();
+    final wifi24 = (payload['wifiSsid24'] ?? '').toString();
+    final wifi5 = (payload['wifiSsid5'] ?? '').toString();
+    final wifiPassword = (payload['wifiPassword'] ?? '').toString();
+    final configStatus = (payload['configStatus'] ?? '').toString();
+    if (planName.isNotEmpty) {
+      lines.add('Plan: $planName');
+    }
+    if (wifi24.isNotEmpty || wifi5.isNotEmpty) {
+      lines.add('Wi-Fi: ${wifi24.isEmpty ? '-' : wifi24}${wifi5.isEmpty ? '' : ' / $wifi5'}');
+    }
+    if (wifiPassword.isNotEmpty) {
+      lines.add('Password: $wifiPassword');
+    }
+    if (configStatus.isNotEmpty) {
+      lines.add('Config: $configStatus');
+    }
+    return lines;
+  }
+
   Future<void> _openPrimaryAction(BuildContext context, AppState appState, NotificationItem item) async {
     if (item.id.isNotEmpty) {
       await appState.markNotificationRead(item.id);
@@ -316,6 +339,35 @@ class NotificationsScreen extends StatelessWidget {
                               Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFEFEEE8))),
                               const SizedBox(height: 6),
                               Text(item.body, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45)),
+                              if (_detailLines(item).isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10151A),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: const Color(0x33E6FF3C)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: _detailLines(item)
+                                        .map(
+                                          (line) => Padding(
+                                            padding: const EdgeInsets.only(bottom: 6),
+                                            child: Text(
+                                              line,
+                                              style: const TextStyle(
+                                                color: Color(0xFFEFEEE8),
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 14),
                               Wrap(
                                 spacing: 10,
