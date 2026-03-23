@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import '../core/app_state.dart';
@@ -57,7 +58,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
         'name': widget.paymentOrder.customerName,
       },
       'theme': {
-        'color': '#4C5DFF',
+        'color': '#E6FF3C',
       },
     });
   }
@@ -112,6 +113,14 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
       SnackBar(
         content: Text(ticketNumber == null ? (appState.error ?? 'Unable to create support request') : 'Support ticket created: $ticketNumber'),
       ),
+    );
+  }
+
+  Future<void> _copyOrderReference() async {
+    await Clipboard.setData(ClipboardData(text: widget.paymentOrder.orderId));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Order reference copied')),
     );
   }
 
@@ -234,6 +243,14 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     child: OutlinedButton(
                       onPressed: _requestPaymentHelp,
                       child: const Text('Raise billing ticket'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _copyOrderReference,
+                      child: const Text('Copy order reference'),
                     ),
                   ),
                   const SizedBox(height: 8),

@@ -475,5 +475,6 @@ class HomeTab extends StatelessWidget {
         builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder),
       ),
     );
+    await appState.refresh();
   }
 }

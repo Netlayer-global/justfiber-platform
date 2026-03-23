@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
+import '../widgets/app_card.dart';
 import 'document_viewer_screen.dart';
 
 class PaymentDetailScreen extends StatelessWidget {
@@ -27,18 +29,11 @@ class PaymentDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0B0F19), Color(0xFF111827)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: const [
-                BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
-              ],
+          AppCard(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,48 +72,87 @@ class PaymentDetailScreen extends StatelessWidget {
                 _detailRow('Paid on', paidAt),
                 _detailRow('Provider', provider),
                 _detailRow('Reference', reference),
+                _detailRow('Receipt access', payment.pdfUrl.isNotEmpty || payment.viewUrl.isNotEmpty ? 'Available' : 'Not generated yet'),
               ],
             ),
           ),
           const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFEEE8),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: const [
-                BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
-              ],
-            ),
+          AppCard(
+            color: const Color(0xFF0C1018),
+            borderColor: const Color(0x22E6FF3C),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Quick actions', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                const Text(
+                  'PAYMENT ACTIONS',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                    color: Color(0xFFEFEEE8),
+                    letterSpacing: 0.2,
+                  ),
+                ),
                 const SizedBox(height: 14),
                 if (payment.viewUrl.isNotEmpty)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
+                    iconColor: const Color(0xFFE6FF3C),
+                    textColor: const Color(0xFFEFEEE8),
+                    subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
                     leading: const Icon(Icons.receipt_long_rounded),
                     title: const Text('Open payment receipt'),
                     subtitle: const Text('View the receipt inside the app'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
                     onTap: () => _openDocument(context, appState, 'Receipt', payment.viewUrl),
                   ),
                 if (payment.pdfUrl.isNotEmpty)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
+                    iconColor: const Color(0xFFE6FF3C),
+                    textColor: const Color(0xFFEFEEE8),
+                    subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
                     leading: const Icon(Icons.picture_as_pdf_rounded),
                     title: const Text('Open PDF'),
                     subtitle: const Text('View the payment receipt PDF'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
                     onTap: () => _openDocument(context, appState, 'Receipt PDF', payment.pdfUrl),
                   ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
+                  iconColor: const Color(0xFFE6FF3C),
+                  textColor: const Color(0xFFEFEEE8),
+                  subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+                  leading: const Icon(Icons.copy_rounded),
+                  title: const Text('Copy transaction ID'),
+                  subtitle: const Text('Keep the payment reference handy for support'),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
+                  onTap: () => _copyText(context, payment.transactionId, 'Transaction ID copied'),
+                ),
+                if (payment.reference.isNotEmpty)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    iconColor: const Color(0xFFE6FF3C),
+                    textColor: const Color(0xFFEFEEE8),
+                    subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+                    leading: const Icon(Icons.tag_rounded),
+                    title: const Text('Copy payment reference'),
+                    subtitle: const Text('Use this if you need to verify payment manually'),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
+                    onTap: () => _copyText(context, payment.reference, 'Payment reference copied'),
+                  ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  iconColor: const Color(0xFFE6FF3C),
+                  textColor: const Color(0xFFEFEEE8),
+                  subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
                   leading: const Icon(Icons.share_rounded),
                   title: const Text('Share payment'),
-                  subtitle: const Text('Send this receipt link to someone else'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  subtitle: Text(
+                    payment.pdfUrl.isNotEmpty || payment.viewUrl.isNotEmpty
+                        ? 'Send this receipt link to someone else'
+                        : 'Share transaction details even if receipt is not generated yet',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
                   onTap: () => _shareDocument(appState),
                 ),
               ],
@@ -167,10 +201,29 @@ class PaymentDetailScreen extends StatelessWidget {
 
   Future<void> _shareDocument(AppState appState) async {
     final relativeUrl = payment.pdfUrl.isNotEmpty ? payment.pdfUrl : payment.viewUrl;
-    if (relativeUrl.isEmpty) return;
+    if (relativeUrl.isEmpty) {
+      await Share.share(
+        'JustFiber payment\n'
+        'Transaction: ${payment.transactionId}\n'
+        'Amount: Rs ${payment.amount.toStringAsFixed(2)}\n'
+        'Status: ${payment.paidAt.isEmpty ? 'Pending' : 'Success'}\n'
+        'Reference: ${payment.reference.isEmpty ? '-' : payment.reference}',
+        subject: 'JustFiber payment ${payment.transactionId}',
+      );
+      return;
+    }
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
-    await Share.share(fullUrl);
+    await Share.share(fullUrl, subject: 'JustFiber receipt ${payment.transactionId}');
+  }
+
+  Future<void> _copyText(BuildContext context, String text, String message) async {
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }
 

@@ -455,6 +455,7 @@ class BillingHistoryScreen extends StatelessWidget {
         builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder),
       ),
     );
+    await appState.refresh();
   }
 
   Future<void> _shareDocument(AppState appState, String relativeUrl) async {
