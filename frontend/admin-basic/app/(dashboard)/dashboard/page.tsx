@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [otpMobile, setOtpMobile] = useState('')
   const [otpValue, setOtpValue] = useState<string | null>(null)
   const [otpBusy, setOtpBusy] = useState(false)
+  const [otpMessage, setOtpMessage] = useState('Tap Send OTP in the customer app first, then look it up here.')
 
   useEffect(() => {
     void loadStats()
@@ -73,13 +74,20 @@ export default function DashboardPage() {
     if (!otpMobile.trim()) return
     try {
       setOtpBusy(true)
+      setOtpMessage('Checking current OTP...')
       const res = await adminAPI.getCustomerDemoOtp(otpMobile.trim())
       if (res.success && res.data) {
         setOtpValue(res.data.otp)
+        setOtpMessage(
+          res.data.available
+            ? `OTP found for ${res.data.mobile}.`
+            : 'No OTP found yet. Use Send OTP in the app first, then retry here.'
+        )
       }
     } catch (error) {
       console.log('[dashboard] Error loading OTP:', error)
       setOtpValue(null)
+      setOtpMessage('Unable to fetch OTP right now.')
     } finally {
       setOtpBusy(false)
     }
@@ -292,8 +300,11 @@ export default function DashboardPage() {
               {otpValue || '------'}
             </div>
             <div className="mt-2 text-sm text-white/55">
+              {otpMessage}
+            </div>
+            <div className="mt-2 text-xs text-white/35">
               Customer app me pehle mobile daal kar <span className="font-semibold text-white">Send OTP</span> tap karo.
-              Uske baad yahan same mobile se current demo OTP dekh kar login test kar sakte ho.
+              Fir yahan same mobile number se current OTP dekh kar login test karo.
             </div>
           </div>
         </div>

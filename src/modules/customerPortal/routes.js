@@ -51,13 +51,12 @@ import {
   wifiPauseSchema,
   wifiUpdateSchema
 } from "./schemas.js";
-
-const otpStore = new Map();
-
-export function getCustomerPortalDemoOtp(key) {
-  if (!key) return null;
-  return otpStore.get(String(key)) || null;
-}
+import {
+  getCustomerPortalDemoOtp,
+  normalizeCustomerPortalOtpKey,
+  setCustomerPortalDemoOtp,
+  verifyCustomerPortalDemoOtp
+} from "../../common/customerPortalOtpStore.js";
 
 export const customerPortalRouter = Router();
 
@@ -987,9 +986,9 @@ customerPortalRouter.post(
     if (!payload.mobile && !payload.email) {
       throw new ApiError(400, "Mobile or email required");
     }
-    const key = payload.mobile || payload.email;
+    const key = normalizeCustomerPortalOtpKey(payload.mobile || payload.email);
     const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
-    otpStore.set(key, otp);
+    setCustomerPortalDemoOtp(key, otp);
     return ok(res, { sent: true, demoOtp: otp });
   })
 );
@@ -998,8 +997,8 @@ customerPortalRouter.post(
   "/auth/verify-otp",
   asyncHandler(async (req, res) => {
     const payload = verifyOtpSchema.parse(req.body);
-    const key = payload.mobile || payload.email;
-    if (!key || otpStore.get(key) !== payload.otp) {
+    const key = normalizeCustomerPortalOtpKey(payload.mobile || payload.email);
+    if (!key || !verifyCustomerPortalDemoOtp(key, payload.otp)) {
       throw new ApiError(400, "Invalid OTP");
     }
     let user = await CustomerUser.findOne({

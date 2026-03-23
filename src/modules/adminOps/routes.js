@@ -27,7 +27,7 @@ import { env } from "../../config/env.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
-import { getCustomerPortalDemoOtp } from "../customerPortal/routes.js";
+import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../common/customerPortalOtpStore.js";
 
 export const adminOpsRouter = Router();
 
@@ -40,9 +40,10 @@ adminOpsRouter.get(
     if (!mobile) {
       throw new ApiError(400, "Mobile is required");
     }
-    const otp = getCustomerPortalDemoOtp(mobile);
+    const normalizedMobile = normalizeCustomerPortalOtpKey(mobile);
+    const otp = getCustomerPortalDemoOtp(normalizedMobile);
     return ok(res, {
-      mobile,
+      mobile: normalizedMobile,
       otp,
       available: Boolean(otp),
     });
