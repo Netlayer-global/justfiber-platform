@@ -243,6 +243,10 @@ class PlanItem {
     required this.planCode,
     required this.name,
     required this.speedMbps,
+    required this.uploadSpeedMbps,
+    required this.dataLimitGb,
+    required this.fupSpeedMbps,
+    required this.dataPolicy,
     required this.monthlyPrice,
     required this.quarterlyPrice,
     required this.halfYearlyPrice,
@@ -265,6 +269,10 @@ class PlanItem {
   final String planCode;
   final String name;
   final double speedMbps;
+  final double uploadSpeedMbps;
+  final double dataLimitGb;
+  final double fupSpeedMbps;
+  final String dataPolicy;
   final double monthlyPrice;
   final double quarterlyPrice;
   final double halfYearlyPrice;

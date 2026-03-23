@@ -25,6 +25,10 @@ type PlanFormState = {
   name: string
   category: 'home' | 'business' | 'enterprise'
   speed: string
+  uploadSpeed: string
+  dataLimitGb: string
+  fupSpeedMbps: string
+  dataPolicy: 'unlimited' | 'fup' | 'hard_cap'
   price: string
   quarterlyPrice: string
   halfYearlyPrice: string
@@ -69,6 +73,10 @@ const initialForm: PlanFormState = {
   name: '',
   category: 'home',
   speed: '',
+  uploadSpeed: '',
+  dataLimitGb: '',
+  fupSpeedMbps: '',
+  dataPolicy: 'unlimited',
   price: '',
   quarterlyPrice: '',
   halfYearlyPrice: '',
@@ -155,6 +163,10 @@ function toForm(plan?: Plan | null): PlanFormState {
     name: plan.name,
     category: plan.category || 'home',
     speed: String(plan.speed || ''),
+    uploadSpeed: String(plan.uploadSpeed || ''),
+    dataLimitGb: String(plan.dataLimitGb || ''),
+    fupSpeedMbps: String(plan.fupSpeedMbps || ''),
+    dataPolicy: plan.dataPolicy || 'unlimited',
     price: String(plan.price || ''),
     quarterlyPrice: String(plan.quarterlyPrice || ''),
     halfYearlyPrice: String(plan.halfYearlyPrice || ''),
@@ -290,6 +302,10 @@ export default function PlansPage() {
       name: form.name.trim(),
       category: form.category,
       speed: Number(form.speed || 0),
+      uploadSpeed: Number(form.uploadSpeed || 0),
+      dataLimitGb: Number(form.dataLimitGb || 0),
+      fupSpeedMbps: Number(form.fupSpeedMbps || 0),
+      dataPolicy: form.dataPolicy,
       price: Number(form.price || 0),
       quarterlyPrice: Number(form.quarterlyPrice || 0),
       halfYearlyPrice: Number(form.halfYearlyPrice || 0),
@@ -539,6 +555,14 @@ export default function PlansPage() {
               <option value="inactive">Inactive</option>
             </select>
             <input className="input" placeholder="Speed Mbps" type="number" value={form.speed} onChange={(e) => setForm({ ...form, speed: e.target.value })} />
+            <input className="input" placeholder="Upload Mbps" type="number" value={form.uploadSpeed} onChange={(e) => setForm({ ...form, uploadSpeed: e.target.value })} />
+            <select className="input" value={form.dataPolicy} onChange={(e) => setForm({ ...form, dataPolicy: e.target.value as PlanFormState['dataPolicy'] })}>
+              <option value="unlimited">Unlimited</option>
+              <option value="fup">FUP</option>
+              <option value="hard_cap">Hard cap</option>
+            </select>
+            <input className="input" placeholder="Data limit (GB)" type="number" value={form.dataLimitGb} onChange={(e) => setForm({ ...form, dataLimitGb: e.target.value })} />
+            <input className="input" placeholder="FUP speed Mbps" type="number" value={form.fupSpeedMbps} onChange={(e) => setForm({ ...form, fupSpeedMbps: e.target.value })} />
             <input className="input" placeholder="Monthly price" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             <input className="input" placeholder="Quarterly price" type="number" value={form.quarterlyPrice} onChange={(e) => setForm({ ...form, quarterlyPrice: e.target.value })} />
             <input className="input" placeholder="Half-yearly price" type="number" value={form.halfYearlyPrice} onChange={(e) => setForm({ ...form, halfYearlyPrice: e.target.value })} />
@@ -685,12 +709,24 @@ export default function PlansPage() {
 
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <div className="rounded-[22px] bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Download</div>
+                  <div className="mt-3 text-3xl font-black text-white">{preview.speed || '0'} Mbps</div>
+                </div>
+                <div className="rounded-[22px] bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Upload</div>
+                  <div className="mt-3 text-3xl font-black text-white">{preview.uploadSpeed || '0'} Mbps</div>
+                </div>
+                <div className="rounded-[22px] bg-white/5 p-4">
                   <div className="text-xs uppercase tracking-[0.18em] text-white/45">Monthly</div>
                   <div className="mt-3 text-3xl font-black text-white">{formatCurrency(Number(preview.price || 0))}</div>
                 </div>
                 <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Speed</div>
-                  <div className="mt-3 text-3xl font-black text-white">{preview.speed || '0'} Mbps</div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Data</div>
+                  <div className="mt-3 text-3xl font-black text-white">
+                    {preview.dataPolicy === 'unlimited'
+                      ? 'Unlimited'
+                      : `${preview.dataLimitGb || '0'} GB`}
+                  </div>
                 </div>
               </div>
 
@@ -703,6 +739,9 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between"><span>Yearly</span><span>{formatCurrency(Number(preview.yearlyPrice || 0))}</span></div>
                     <div className="flex items-center justify-between"><span>Installation</span><span>{formatCurrency(Number(preview.installationCharge || 0))}</span></div>
                     <div className="flex items-center justify-between"><span>OTC</span><span>{formatCurrency(Number(preview.otcCharge || 0))}</span></div>
+                    <div className="flex items-center justify-between"><span>Data policy</span><span>{preview.dataPolicy}</span></div>
+                    <div className="flex items-center justify-between"><span>Data cap</span><span>{preview.dataPolicy === 'unlimited' ? 'Unlimited' : `${preview.dataLimitGb || '0'} GB`}</span></div>
+                    <div className="flex items-center justify-between"><span>FUP speed</span><span>{preview.fupSpeedMbps ? `${preview.fupSpeedMbps} Mbps` : '-'}</span></div>
                   </div>
                 </div>
                 <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
@@ -798,12 +837,22 @@ export default function PlansPage() {
 
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Speed</div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Download</div>
                   <div className="mt-3 text-2xl font-black text-white">{plan.speed} Mbps</div>
+                </div>
+                <div className="rounded-[22px] bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Upload</div>
+                  <div className="mt-3 text-2xl font-black text-white">{plan.uploadSpeed || 0} Mbps</div>
                 </div>
                 <div className="rounded-[22px] bg-white/5 p-4">
                   <div className="text-xs uppercase tracking-[0.18em] text-white/45">Monthly</div>
                   <div className="mt-3 text-2xl font-black text-white">{formatCurrency(plan.price)}</div>
+                </div>
+                <div className="rounded-[22px] bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Data</div>
+                  <div className="mt-3 text-2xl font-black text-white">
+                    {plan.dataPolicy === 'unlimited' ? 'Unlimited' : `${plan.dataLimitGb || 0} GB`}
+                  </div>
                 </div>
               </div>
 
@@ -839,6 +888,7 @@ export default function PlansPage() {
                 <div className="flex items-center justify-between"><span>Access profile</span><span>{plan.provisioning?.accessProfileCode || '-'}</span></div>
                 <div className="flex items-center justify-between"><span>VLAN</span><span>{plan.provisioning?.vlanId || '-'}</span></div>
                 <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{plan.provisioning?.wifiNamePrefix || '-'}</span></div>
+                <div className="flex items-center justify-between"><span>FUP</span><span>{plan.fupSpeedMbps ? `${plan.fupSpeedMbps} Mbps` : '-'}</span></div>
               </div>
 
               <div className="mt-6 flex flex-wrap gap-2">

@@ -21,6 +21,10 @@ export interface Plan {
   name: string
   category?: 'home' | 'business' | 'enterprise'
   speed: number
+  uploadSpeed?: number
+  dataLimitGb?: number
+  fupSpeedMbps?: number
+  dataPolicy?: 'unlimited' | 'fup' | 'hard_cap'
   price: number
   quarterlyPrice?: number
   halfYearlyPrice?: number
