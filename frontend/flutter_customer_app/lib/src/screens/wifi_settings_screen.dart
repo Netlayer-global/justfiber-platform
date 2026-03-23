@@ -327,15 +327,29 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton(
-                    onPressed: appState.busy
-                        ? null
-                        : () async {
-                            final ok = await appState.changeWifiPasswordAndRefresh(
-                              password: _passwordController.text.trim(),
-                              ssid24: _nameController.text.trim(),
-                              ssid5: _nameController.text.trim(),
-                            );
+                    child: FilledButton(
+                      onPressed: appState.busy
+                          ? null
+                          : () async {
+                              final ssid = _nameController.text.trim();
+                              final password = _passwordController.text.trim();
+                              if (ssid.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Enter a Wi-Fi name before saving.')),
+                                );
+                                return;
+                              }
+                              if (password.length < 8) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Password must be at least 8 characters long.')),
+                                );
+                                return;
+                              }
+                              final ok = await appState.changeWifiPasswordAndRefresh(
+                              password: password,
+                              ssid24: ssid,
+                              ssid5: ssid,
+                              );
                             if (!context.mounted) return;
                             Navigator.of(context).pop();
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -561,10 +575,24 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                         onPressed: appState.busy
                             ? null
                             : () async {
+                                final guestSsid = _guestSsidController.text.trim();
+                                final guestPassword = _guestPasswordController.text.trim();
+                                if (enabled && guestSsid.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Enter a guest Wi-Fi name before saving.')),
+                                  );
+                                  return;
+                                }
+                                if (enabled && guestPassword.length < 8) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Guest password must be at least 8 characters long.')),
+                                  );
+                                  return;
+                                }
                                 final ok = await appState.updateGuestWifi(
                                   enabled: enabled,
-                                  ssid: _guestSsidController.text.trim(),
-                                  password: _guestPasswordController.text.trim(),
+                                  ssid: guestSsid,
+                                  password: guestPassword,
                                 );
                                 if (!context.mounted) return;
                                 Navigator.of(context).pop();
@@ -679,10 +707,26 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     onPressed: appState.busy
                         ? null
                         : () async {
+                            final targetName = targetController.text.trim();
+                            final startTime = startController.text.trim();
+                            final endTime = endController.text.trim();
+                            if (targetName.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Enter a rule or device name before saving.')),
+                              );
+                              return;
+                            }
+                            final timePattern = RegExp(r'^\d{2}:\d{2}$');
+                            if (!timePattern.hasMatch(startTime) || !timePattern.hasMatch(endTime)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Enter start and end time in HH:MM format.')),
+                              );
+                              return;
+                            }
                             final ok = await appState.addParentalControl(
-                              targetName: targetController.text.trim(),
-                              startTime: startController.text.trim(),
-                              endTime: endController.text.trim(),
+                              targetName: targetName,
+                              startTime: startTime,
+                              endTime: endTime,
                             );
                             if (!context.mounted) return;
                             Navigator.of(context).pop();

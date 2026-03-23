@@ -372,6 +372,12 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  void clearBookingDraft() {
+    feasibility = null;
+    bookingError = null;
+    notifyListeners();
+  }
+
   Future<void> refreshBookingTracking() async {
     final current = session;
     final bookingNumber = latestBooking?.bookingNumber;

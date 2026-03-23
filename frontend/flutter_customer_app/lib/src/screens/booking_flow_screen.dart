@@ -439,10 +439,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
                     );
+                    if (context.mounted) {
+                      await AppStateScope.of(context).refreshBookingTracking();
+                    }
                   },
                   child: const Text('Track Booking'),
                 ),
@@ -461,7 +464,15 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => setState(() => step = 0),
+              onPressed: () => setState(() {
+                step = 0;
+                selectedPlanCode = null;
+                _selectedSlotCode = 'morning';
+                _selectedSlotLabel = '10 AM - 1 PM';
+                _preferredDate = DateTime.now().add(const Duration(days: 1));
+                _locationError = null;
+                AppStateScope.of(context).clearBookingDraft();
+              }),
               child: const Text('Create another booking'),
             ),
           ),
