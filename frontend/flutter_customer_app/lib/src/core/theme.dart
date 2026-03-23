@@ -4,14 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 ThemeData buildJustFiberTheme() {
   const background = Color(0xFF050505);
   const surface = Color(0xFF0A0A0A);
-  const surfaceAlt = Color(0xFF0E1116);
+  const surfaceAlt = Color(0xFF101215);
   const primary = Color(0xFFE6FF3C);
   const accent = Color(0xFFE6FF3C);
   const tertiary = Color(0xFFE6FF3C);
-  const text = Color(0xFF111111);
+  const text = Color(0xFFF5F5F5);
   const muted = Color(0xFF8A92A3);
-  const cardSurface = Color(0xFFEFEEE8);
-  const cardText = Color(0xFF111111);
+  const cardSurface = Color(0xFF101215);
+  const cardText = Color(0xFFF5F5F5);
   final base = ThemeData.light(useMaterial3: true);
   final textTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme).copyWith(
     headlineMedium: GoogleFonts.spaceGrotesk(fontSize: 30, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.8),
@@ -32,10 +32,10 @@ ThemeData buildJustFiberTheme() {
       error: Color(0xFFDC2626),
       background: background,
       surface: surface,
-      onSurface: text,
+      onSurface: const Color(0xFFF5F5F5),
       onPrimary: Color(0xFF111111),
       onSecondary: Color(0xFF111111),
-      onBackground: text,
+      onBackground: const Color(0xFFF5F5F5),
     ),
     scaffoldBackgroundColor: background,
     useMaterial3: true,

@@ -20,21 +20,22 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool darkCard = gradient != null || color != null;
-    final resolvedTextColor = textColor ?? (darkCard ? const Color(0xFFF5F5F5) : const Color(0xFF111111));
+    final resolvedBackground = color ?? const Color(0xFF101215);
+    final bool darkCard = true;
+    final resolvedTextColor = textColor ?? const Color(0xFFF5F5F5);
     return Container(
       padding: padding,
       decoration: BoxDecoration(
         gradient: gradient,
-        color: gradient == null ? (color ?? const Color(0xFFEFEEE8)) : null,
+        color: gradient == null ? resolvedBackground : null,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: borderColor ?? (gradient == null ? const Color(0x1CE6FF3C) : const Color(0x22E6FF3C)),
+          color: borderColor ?? const Color(0x22E6FF3C),
           width: 1,
         ),
         boxShadow: const [
-          BoxShadow(color: Color(0x30000000), blurRadius: 34, offset: Offset(0, 20)),
-          BoxShadow(color: Color(0x16E6FF3C), blurRadius: 14, offset: Offset(0, 0)),
+          BoxShadow(color: Color(0x38000000), blurRadius: 28, offset: Offset(0, 18)),
+          BoxShadow(color: Color(0x0FE6FF3C), blurRadius: 10, offset: Offset(0, 0)),
         ],
       ),
       child: IconTheme(
