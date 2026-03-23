@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { adminAPI } from '@/lib/api'
 import type { Customer } from '@/lib/types'
-import { Eye, Loader, RefreshCw, Search } from 'lucide-react'
+import { Eye, Loader, RefreshCw, Search, Users, Wifi, UserX } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function CustomersPage() {
@@ -53,13 +53,38 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Customers</h1>
-          <p className="text-slate-600 mt-1">
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="card p-8">
+          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Subscriber control</div>
+          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
+            Customers,
+            <span className="text-[#d8ff16]"> organized for action.</span>
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
             Search by name, mobile, email, customer ID, account number or PPPoE username.
           </p>
         </div>
+        <div className="neon-panel p-8">
+          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Portfolio pulse</div>
+          <div className="mt-3 text-5xl font-black">{customers.length}</div>
+          <div className="mt-2 text-sm text-black/60">Customers loaded across active service zones</div>
+          <div className="mt-8 grid grid-cols-3 gap-3">
+            {[
+              ['Active', String(activeCount), Wifi],
+              ['Paused', String(customers.length - activeCount), UserX],
+              ['Base', String(customers.length), Users],
+            ].map(([label, value, Icon]) => (
+              <div key={label} className="rounded-[22px] bg-black/10 p-4">
+                <Icon className="h-4 w-4 text-black/75" />
+                <div className="mt-4 text-2xl font-bold">{value}</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
         <button onClick={() => void loadCustomers()} className="btn-secondary inline-flex items-center gap-2">
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -68,9 +93,9 @@ export default function CustomersPage() {
 
       <form onSubmit={handleSearch} className="card p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         <div className="xl:col-span-2">
-          <label className="text-xs text-slate-500 mb-2 block">Search</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Search</label>
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
             <input
               className="input w-full pl-10"
               placeholder="Name, mobile, email, PPPoE, customer ID"
@@ -80,7 +105,7 @@ export default function CustomersPage() {
           </div>
         </div>
         <div>
-          <label className="text-xs text-slate-500 mb-2 block">Status</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Status</label>
           <select className="input w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All statuses</option>
             <option value="active">Active</option>
@@ -89,11 +114,11 @@ export default function CustomersPage() {
           </select>
         </div>
         <div>
-          <label className="text-xs text-slate-500 mb-2 block">Plan code</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Plan code</label>
           <input className="input w-full" placeholder="PLAN-100" value={planCode} onChange={(e) => setPlanCode(e.target.value)} />
         </div>
         <div>
-          <label className="text-xs text-slate-500 mb-2 block">City</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">City</label>
           <input className="input w-full" placeholder="Lucknow" value={city} onChange={(e) => setCity(e.target.value)} />
         </div>
         <div className="xl:col-span-5">
@@ -101,24 +126,24 @@ export default function CustomersPage() {
         </div>
       </form>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Loaded customers</p>
-          <p className="text-2xl font-semibold">{customers.length}</p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="metric-tile">
+          <p className="text-xs uppercase tracking-[0.18em] text-black/45">Loaded customers</p>
+          <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{customers.length}</p>
         </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Active</p>
-          <p className="text-2xl font-semibold">{activeCount}</p>
+        <div className="metric-tile">
+          <p className="text-xs uppercase tracking-[0.18em] text-black/45">Active</p>
+          <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{activeCount}</p>
         </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Suspended / inactive</p>
-          <p className="text-2xl font-semibold">{customers.length - activeCount}</p>
+        <div className="metric-tile">
+          <p className="text-xs uppercase tracking-[0.18em] text-black/45">Suspended / inactive</p>
+          <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{customers.length - activeCount}</p>
         </div>
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center h-96">
-          <Loader className="w-6 h-6 animate-spin text-[#0066cc]" />
+          <Loader className="h-6 w-6 animate-spin text-[#d8ff16]" />
         </div>
       ) : (
         <div className="card overflow-hidden">

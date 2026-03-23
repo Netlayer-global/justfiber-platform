@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import { Installer, Job } from '@/lib/types'
-import { Loader, RefreshCw } from 'lucide-react'
+import { Loader, RefreshCw, ShieldCheck, UserRoundCog, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 
 type InstallerFormState = {
@@ -155,11 +155,36 @@ export default function InstallersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Installers</h1>
-          <p className="text-slate-600 mt-1">Create installers, manage credentials and track availability</p>
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="card p-8">
+          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Field workforce</div>
+          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
+            Installers,
+            <span className="text-[#d8ff16]"> managed with field precision.</span>
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">Create installers, manage credentials, and track live availability.</p>
         </div>
+        <div className="neon-panel p-8">
+          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Field pulse</div>
+          <div className="mt-3 text-5xl font-black">{installers.length}</div>
+          <div className="mt-2 text-sm text-black/60">Installers currently tracked in the workforce registry</div>
+          <div className="mt-8 grid grid-cols-3 gap-3">
+            {[
+              ['Available', String(installers.filter((i) => i.availabilityStatus === 'available').length), ShieldCheck],
+              ['Busy', String(installers.filter((i) => i.availabilityStatus === 'busy').length), Wrench],
+              ['Total', String(installers.length), UserRoundCog],
+            ].map(([label, value, Icon]) => (
+              <div key={label} className="rounded-[22px] bg-black/10 p-4">
+                <Icon className="h-4 w-4 text-black/75" />
+                <div className="mt-4 text-2xl font-bold">{value}</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-end gap-4">
         <button onClick={loadInstallers} className="btn-secondary inline-flex items-center gap-2">
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -192,7 +217,7 @@ export default function InstallersPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#0066cc]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#d8ff16]" />
         </div>
       ) : (
         <div className="space-y-4">

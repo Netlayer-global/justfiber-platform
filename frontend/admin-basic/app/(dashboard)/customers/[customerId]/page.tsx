@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import type { AdminPlanChangePreview, Customer, CustomerDevice, Plan } from '@/lib/types'
-import { Loader, RefreshCw } from 'lucide-react'
+import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 type TabKey = 'overview' | 'billing' | 'devices' | 'tickets' | 'actions'
@@ -16,6 +16,14 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'tickets', label: 'Tickets' },
   { key: 'actions', label: 'Action History' },
 ]
+
+const tabIcons: Record<TabKey, any> = {
+  overview: UserCircle2,
+  billing: Wallet,
+  devices: Router,
+  tickets: Ticket,
+  actions: Activity,
+}
 
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>()
@@ -126,6 +134,7 @@ export default function CustomerDetailPage() {
   )
   const pendingPlanChange = billingSummary.pendingPlanChange as Record<string, any> | undefined
   const adminApiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
+  const currentPlanCode = customer?.plan.planCode || customer?.plan.id
 
   async function handleCustomerUpdate(patch: Partial<Customer>) {
     if (!customer) return
@@ -416,53 +425,120 @@ export default function CustomerDetailPage() {
     return <div className="text-[#b4bcc4]">Customer not found</div>
   }
 
+  const topStats = [
+    {
+      label: 'Lifecycle status',
+      value: customer.status,
+      hint: customer.serviceStatus || 'Service sync active',
+    },
+    {
+      label: 'Current due',
+      value: `Rs ${Number(billingSummary.dueAmount || 0).toFixed(2)}`,
+      hint: billingSummary.billMode || 'prepaid',
+    },
+    {
+      label: 'Linked devices',
+      value: String(customer.devices?.length || 0),
+      hint: `${customer.devices?.filter((device) => device.onlineStatus === 'online').length || 0} online`,
+    },
+    {
+      label: 'Support load',
+      value: String((customer.tickets?.length || 0) + (customer.serviceRequests?.length || 0)),
+      hint: `${customer.tickets?.length || 0} tickets / ${customer.serviceRequests?.length || 0} requests`,
+    },
+  ]
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{customer.name}</h1>
-          <p className="text-[#b4bcc4] mt-1">
-            {customer.customerId || customer.id} | {customer.phone} | {customer.email}
-          </p>
-          <p className="text-[#b4bcc4] mt-1">
-            Plan: {customer.plan.name} | PPPoE: {customer.pppoeUsername || '-'} | Service: {customer.serviceId || '-'}
-          </p>
-        </div>
-        <button onClick={() => void loadCustomer()} className="btn-secondary inline-flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
+      <div className="grid gap-4 xl:grid-cols-[1.6fr_0.9fr]">
+        <section className="card p-6 md:p-7">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs uppercase tracking-[0.32em] text-[#d8ff16]">
+                Subscriber command center
+              </div>
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">{customer.name}</h1>
+                <p className="mt-2 text-sm text-[#b4bcc4]">
+                  {customer.customerId || customer.id} • {customer.phone} • {customer.email}
+                </p>
+                <p className="mt-2 text-sm text-[#b4bcc4]">
+                  Plan {customer.plan.name} • PPPoE {customer.pppoeUsername || '-'} • Service {customer.serviceId || '-'}
+                </p>
+              </div>
+            </div>
+
+            <div className="neon-panel min-w-[260px] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-black/60">Commercial pulse</p>
+              <p className="mt-3 text-4xl font-semibold tracking-tight">Rs {Number(billingSummary.dueAmount || 0).toFixed(2)}</p>
+              <p className="mt-2 text-sm text-black/70">
+                {pendingPlanChange?.planName
+                  ? `Pending switch to ${pendingPlanChange.planName}`
+                  : 'No active commercial blocker on this account'}
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-[#d8ff16]">
+                  {billingSummary.billMode || 'prepaid'}
+                </span>
+                <span className="rounded-full border border-black/15 px-3 py-1 text-xs font-medium text-black/80">
+                  {customer.status}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="metric-tile p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-black/45">Commercial snapshot</p>
+          <div className="mt-5 grid gap-4 text-sm">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">Account</p>
+              <p className="mt-2 text-lg font-semibold">{customer.accountNumber || '-'}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">Current plan</p>
+              <p className="mt-2 text-lg font-semibold">{customer.plan.name}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">Expiry</p>
+              <p className="mt-2 text-lg font-semibold">
+                {customer.expiryAt ? new Date(customer.expiryAt).toLocaleDateString() : '-'}
+              </p>
+            </div>
+            <button onClick={() => void loadCustomer()} className="btn-secondary inline-flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh subscriber
+            </button>
+          </div>
+        </section>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Status</p>
-          <p className="text-xl font-semibold">{customer.status}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Due amount</p>
-          <p className="text-xl font-semibold">Rs {Number(billingSummary.dueAmount || 0)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Installation / synced</p>
-          <p className="text-xl font-semibold">{customer.installationDate ? new Date(customer.installationDate).toLocaleDateString() : '-'}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Expiry</p>
-          <p className="text-xl font-semibold">{customer.expiryAt ? new Date(customer.expiryAt).toLocaleDateString() : '-'}</p>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {topStats.map((item) => (
+          <div key={item.label} className="metric-tile p-5">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-black/40">{item.label}</p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight">{item.value}</p>
+            <p className="mt-2 text-sm text-black/55">{item.hint}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="card p-4 space-y-4">
+      <div className="card p-4 md:p-5 space-y-5">
         <div className="flex flex-wrap gap-2">
           {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={activeTab === tab.key ? 'btn-primary' : 'btn-secondary'}
-            >
-              {tab.label}
-            </button>
+            (() => {
+              const Icon = tabIcons[tab.key]
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={activeTab === tab.key ? 'btn-primary inline-flex items-center gap-2' : 'btn-secondary inline-flex items-center gap-2'}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              )
+            })()
           ))}
         </div>
 
@@ -485,7 +561,7 @@ export default function CustomerDetailPage() {
                   </div>
                   <button className="btn-primary" onClick={() => void handleSaveProfile()} disabled={isSaving}>Save Customer Profile</button>
                 </div>
-                <div className="card p-5 space-y-4">
+                <div className="metric-tile p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Quick status actions</h2>
                   <input className="input w-full" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for suspend / resume / retry" />
                   <div className="flex flex-wrap gap-2">
@@ -501,16 +577,16 @@ export default function CustomerDetailPage() {
             {activeTab === 'billing' ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="card p-4">
-                    <p className="text-xs text-slate-500">Billing mode</p>
+                  <div className="metric-tile p-4">
+                    <p className="text-xs uppercase tracking-[0.22em] text-black/40">Billing mode</p>
                     <p className="text-lg font-semibold">{String(billingSummary.billMode || 'prepaid')}</p>
                   </div>
-                  <div className="card p-4">
-                    <p className="text-xs text-slate-500">Pending plan change</p>
+                  <div className="metric-tile p-4">
+                    <p className="text-xs uppercase tracking-[0.22em] text-black/40">Pending plan change</p>
                     <p className="text-lg font-semibold">{pendingPlanChange?.planName || '-'}</p>
                   </div>
-                  <div className="card p-4">
-                    <p className="text-xs text-slate-500">Adjustment / payable</p>
+                  <div className="metric-tile p-4">
+                    <p className="text-xs uppercase tracking-[0.22em] text-black/40">Adjustment / payable</p>
                     <p className="text-lg font-semibold">Rs {Number(billingSummary.adjustmentPreview || billingSummary.dueAmount || 0)}</p>
                   </div>
                 </div>
@@ -548,7 +624,7 @@ export default function CustomerDetailPage() {
                     <select className="input" value={planCode} onChange={(e) => setPlanCode(e.target.value)}>
                       <option value="">Select target plan</option>
                       {availablePlans
-                        .filter((plan) => plan.planCode !== customer.plan.id)
+                        .filter((plan) => (plan.planCode || plan.id) !== currentPlanCode)
                         .map((plan) => (
                           <option key={plan.id} value={plan.planCode || plan.id}>
                             {plan.name} | {plan.speed} Mbps | Rs {plan.price}
@@ -677,20 +753,20 @@ export default function CustomerDetailPage() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="rounded border border-[#2a2f4a] p-3">
-                          <p className="text-xs text-slate-500">Connected clients</p>
+                        <div className="metric-tile p-3">
+                          <p className="text-xs uppercase tracking-[0.22em] text-black/40">Connected clients</p>
                           <p className="text-lg font-semibold">{connectedClients}</p>
                         </div>
-                        <div className="rounded border border-[#2a2f4a] p-3">
-                          <p className="text-xs text-slate-500">RX Power</p>
+                        <div className="metric-tile p-3">
+                          <p className="text-xs uppercase tracking-[0.22em] text-black/40">RX Power</p>
                           <p className="text-lg font-semibold">{Number.isFinite(rxPower) ? `${rxPower} dBm` : '-'}</p>
                         </div>
-                        <div className="rounded border border-[#2a2f4a] p-3">
-                          <p className="text-xs text-slate-500">TX Power</p>
+                        <div className="metric-tile p-3">
+                          <p className="text-xs uppercase tracking-[0.22em] text-black/40">TX Power</p>
                           <p className="text-lg font-semibold">{Number.isFinite(txPower) ? `${txPower} dBm` : '-'}</p>
                         </div>
-                        <div className="rounded border border-[#2a2f4a] p-3">
-                          <p className="text-xs text-slate-500">Optical health</p>
+                        <div className="metric-tile p-3">
+                          <p className="text-xs uppercase tracking-[0.22em] text-black/40">Optical health</p>
                           <p className="text-lg font-semibold">{opticalHealth}</p>
                         </div>
                       </div>
@@ -776,40 +852,49 @@ export default function CustomerDetailPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="card p-5 space-y-3">
+            <div className="metric-tile p-5 space-y-4">
               <h2 className="text-lg font-semibold">Status & Commercial</h2>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-slate-500 text-xs">Customer ID</p>
-                  <p className="font-medium">{customer.customerId || customer.id}</p>
+                    <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Customer ID</p>
+                    <p className="font-medium">{customer.customerId || customer.id}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs">Account No.</p>
+                  <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Account No.</p>
                   <p className="font-medium">{customer.accountNumber || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs">Service ID</p>
+                  <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Service ID</p>
                   <p className="font-medium">{customer.serviceId || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs">Plan</p>
+                  <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Plan</p>
                   <p className="font-medium">{customer.plan.name}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs">PPPoE</p>
+                  <p className="text-black/40 text-xs uppercase tracking-[0.2em]">PPPoE</p>
                   <p className="font-medium">{customer.pppoeUsername || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-xs">Invoices</p>
+                  <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Invoices</p>
                   <p className="font-medium">{customer.invoices?.length || 0}</p>
                 </div>
               </div>
             </div>
 
-            <div className="card p-5 space-y-3">
-              <h2 className="text-lg font-semibold">Editable Snapshot</h2>
+            <div className="card p-5 space-y-4">
+              <h2 className="text-lg font-semibold">Action rail</h2>
+              <p className="text-sm text-[#b4bcc4]">
+                Fast operator controls for lifecycle flips and manual recovery.
+              </p>
               <button className="btn-secondary w-full" onClick={() => void handleCustomerUpdate({ status: customer.status === 'active' ? 'suspended' : 'active' })} disabled={isSaving}>
                 Toggle Active / Suspended Flag
+              </button>
+              <button className="btn-primary w-full" onClick={() => setActiveTab('billing')}>
+                Open billing command
+              </button>
+              <button className="btn-secondary w-full" onClick={() => setActiveTab('devices')}>
+                Open device command
               </button>
             </div>
           </div>

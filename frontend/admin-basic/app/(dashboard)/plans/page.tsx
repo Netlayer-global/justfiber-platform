@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
-import { Loader, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
+import { Cable, Layers3, Loader, Pencil, Plus, RefreshCw, Sparkles, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 type PlanFormState = {
@@ -257,13 +257,38 @@ export default function PlansPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Plan Management</h1>
-          <p className="text-slate-600 mt-1">
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="card p-8">
+          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Catalog studio</div>
+          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
+            Plans,
+            <span className="text-[#d8ff16]"> built for every upgrade path.</span>
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
             Manage catalog plans that customer app booking and plan-change screens consume.
           </p>
         </div>
+        <div className="neon-panel p-8">
+          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Catalog pulse</div>
+          <div className="mt-3 text-5xl font-black">{plans.length}</div>
+          <div className="mt-2 text-sm text-black/60">Plans across home, business, and enterprise lanes</div>
+          <div className="mt-8 grid grid-cols-3 gap-3">
+            {[
+              ['Active', String(plans.filter((plan) => plan.status === 'active').length), Sparkles],
+              ['Segments', '3', Layers3],
+              ['Catalog', String(filteredPlans.length), Cable],
+            ].map(([label, value, Icon]) => (
+              <div key={label} className="rounded-[22px] bg-black/10 p-4">
+                <Icon className="h-4 w-4 text-black/75" />
+                <div className="mt-4 text-2xl font-bold">{value}</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
         <div className="flex flex-wrap gap-2">
           <button onClick={() => void loadPlans()} className="btn-secondary inline-flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -279,8 +304,8 @@ export default function PlansPage() {
       <form onSubmit={handleSavePlan} className="card p-6 space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold">{editingPlanId ? 'Edit Plan' : 'Create Plan'}</h2>
-            <p className="text-sm text-slate-600 mt-1">
+            <h2 className="text-lg font-semibold text-white">{editingPlanId ? 'Edit Plan' : 'Create Plan'}</h2>
+            <p className="mt-1 text-sm text-white/55">
               Build monthly, quarterly, half-yearly and yearly plans with GST behaviour and optional static IP, OTT and voice add-ons.
             </p>
           </div>
@@ -312,11 +337,11 @@ export default function PlansPage() {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
-          <label className="flex items-center gap-3 rounded border border-[#2a2f4a] px-3 py-2 text-sm">
-            <input type="checkbox" checked={form.taxIncluded} onChange={(e) => setForm({ ...form, taxIncluded: e.target.checked })} />
-            Tax Included
-          </label>
-          <label className="flex items-center gap-3 rounded border border-[#2a2f4a] px-3 py-2 text-sm">
+            <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/75">
+              <input type="checkbox" checked={form.taxIncluded} onChange={(e) => setForm({ ...form, taxIncluded: e.target.checked })} />
+              Tax Included
+            </label>
+          <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/75">
             <input type="checkbox" checked={form.pricesExcludeGst} onChange={(e) => setForm({ ...form, pricesExcludeGst: e.target.checked })} />
             Prices Excluding GST
           </label>
@@ -324,29 +349,29 @@ export default function PlansPage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <div className="rounded border border-[#2a2f4a] p-4 space-y-3">
-            <div className="font-semibold">Validity Options</div>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.validityMonthly} onChange={(e) => setForm({ ...form, validityMonthly: e.target.checked })} /> Monthly</label>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.validityQuarterly} onChange={(e) => setForm({ ...form, validityQuarterly: e.target.checked })} /> Quarterly</label>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.validityHalfYearly} onChange={(e) => setForm({ ...form, validityHalfYearly: e.target.checked })} /> Half Yearly</label>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.validityYearly} onChange={(e) => setForm({ ...form, validityYearly: e.target.checked })} /> Yearly</label>
+          <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 space-y-3">
+            <div className="font-semibold text-white">Validity Options</div>
+            <label className="flex items-center gap-2 text-sm text-white/75"><input type="checkbox" checked={form.validityMonthly} onChange={(e) => setForm({ ...form, validityMonthly: e.target.checked })} /> Monthly</label>
+            <label className="flex items-center gap-2 text-sm text-white/75"><input type="checkbox" checked={form.validityQuarterly} onChange={(e) => setForm({ ...form, validityQuarterly: e.target.checked })} /> Quarterly</label>
+            <label className="flex items-center gap-2 text-sm text-white/75"><input type="checkbox" checked={form.validityHalfYearly} onChange={(e) => setForm({ ...form, validityHalfYearly: e.target.checked })} /> Half Yearly</label>
+            <label className="flex items-center gap-2 text-sm text-white/75"><input type="checkbox" checked={form.validityYearly} onChange={(e) => setForm({ ...form, validityYearly: e.target.checked })} /> Yearly</label>
           </div>
 
-          <div className="rounded border border-[#2a2f4a] p-4 space-y-3">
-            <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={form.staticIpEnabled} onChange={(e) => setForm({ ...form, staticIpEnabled: e.target.checked })} /> Static IP Add-on</label>
+          <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 space-y-3">
+            <label className="flex items-center gap-2 font-semibold text-white"><input type="checkbox" checked={form.staticIpEnabled} onChange={(e) => setForm({ ...form, staticIpEnabled: e.target.checked })} /> Static IP Add-on</label>
             <input className="input" placeholder="Included static IP count" type="number" value={form.staticIpIncludedCount} onChange={(e) => setForm({ ...form, staticIpIncludedCount: e.target.value })} />
             <input className="input" placeholder="Extra static IP price" type="number" value={form.staticIpExtraPrice} onChange={(e) => setForm({ ...form, staticIpExtraPrice: e.target.value })} />
           </div>
 
-          <div className="rounded border border-[#2a2f4a] p-4 space-y-3">
-            <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={form.ottEnabled} onChange={(e) => setForm({ ...form, ottEnabled: e.target.checked })} /> OTT Add-on</label>
+          <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 space-y-3">
+            <label className="flex items-center gap-2 font-semibold text-white"><input type="checkbox" checked={form.ottEnabled} onChange={(e) => setForm({ ...form, ottEnabled: e.target.checked })} /> OTT Add-on</label>
             <input className="input" placeholder="OTT package name" value={form.ottPackageName} onChange={(e) => setForm({ ...form, ottPackageName: e.target.value })} />
             <input className="input" placeholder="OTT extra price" type="number" value={form.ottExtraPrice} onChange={(e) => setForm({ ...form, ottExtraPrice: e.target.value })} />
           </div>
         </div>
 
-        <div className="rounded border border-[#2a2f4a] p-4 grid grid-cols-1 xl:grid-cols-4 gap-4">
-          <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={form.voiceEnabled} onChange={(e) => setForm({ ...form, voiceEnabled: e.target.checked })} /> Voice Add-on</label>
+        <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 grid grid-cols-1 xl:grid-cols-4 gap-4">
+          <label className="flex items-center gap-2 font-semibold text-white"><input type="checkbox" checked={form.voiceEnabled} onChange={(e) => setForm({ ...form, voiceEnabled: e.target.checked })} /> Voice Add-on</label>
           <input className="input" placeholder="Voice package name" value={form.voicePackageName} onChange={(e) => setForm({ ...form, voicePackageName: e.target.value })} />
           <input className="input" placeholder="Voice channels" type="number" value={form.voiceChannels} onChange={(e) => setForm({ ...form, voiceChannels: e.target.value })} />
           <input className="input" placeholder="Voice extra price" type="number" value={form.voiceExtraPrice} onChange={(e) => setForm({ ...form, voiceExtraPrice: e.target.value })} />
@@ -385,7 +410,7 @@ export default function PlansPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#0066cc]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#d8ff16]" />
         </div>
       ) : (
         <div className="card overflow-hidden">
