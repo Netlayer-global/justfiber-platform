@@ -334,6 +334,26 @@ class BookingQuote {
   final String currentStep;
   final String preferredDate;
   final String preferredSlotLabel;
+
+  BookingQuote copyWith({
+    String? bookingNumber,
+    String? status,
+    String? planName,
+    double? amount,
+    String? currentStep,
+    String? preferredDate,
+    String? preferredSlotLabel,
+  }) {
+    return BookingQuote(
+      bookingNumber: bookingNumber ?? this.bookingNumber,
+      status: status ?? this.status,
+      planName: planName ?? this.planName,
+      amount: amount ?? this.amount,
+      currentStep: currentStep ?? this.currentStep,
+      preferredDate: preferredDate ?? this.preferredDate,
+      preferredSlotLabel: preferredSlotLabel ?? this.preferredSlotLabel,
+    );
+  }
 }
 
 class FeasibilityResult {

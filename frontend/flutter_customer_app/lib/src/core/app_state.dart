@@ -466,6 +466,7 @@ class AppState extends ChangeNotifier {
         tickets = await api.fetchTickets(current);
         if ((bookingNumber ?? '').isNotEmpty) {
           bookingTracking = await api.fetchBookingTracking(current, bookingNumber!);
+          _syncLatestBookingWithTracking();
         }
       } else if ((latestBookingLookupMobile ?? '').isNotEmpty) {
         if ((bookingNumber ?? '').isEmpty) return;
@@ -473,6 +474,7 @@ class AppState extends ChangeNotifier {
           bookingNumber: bookingNumber!,
           mobile: latestBookingLookupMobile!,
         );
+        _syncLatestBookingWithTracking();
       } else {
         return;
       }
@@ -781,6 +783,7 @@ class AppState extends ChangeNotifier {
               bookingNumber: latestBooking!.bookingNumber,
               mobile: latestBookingLookupMobile!,
             );
+            _syncLatestBookingWithTracking();
           } catch (_) {
             // keep stored booking summary even if public tracking isn't available yet
           }
@@ -801,6 +804,19 @@ class AppState extends ChangeNotifier {
       restoringSession = false;
       notifyListeners();
     }
+  }
+
+  void _syncLatestBookingWithTracking() {
+    final currentBooking = latestBooking;
+    final tracking = bookingTracking;
+    if (currentBooking == null || tracking == null) return;
+
+    final normalizedStep = tracking.currentStep.trim();
+    final latestStatus = tracking.steps.isNotEmpty ? tracking.steps.last.status.trim() : '';
+    latestBooking = currentBooking.copyWith(
+      currentStep: normalizedStep.isEmpty ? currentBooking.currentStep : normalizedStep,
+      status: latestStatus.isEmpty ? currentBooking.status : latestStatus,
+    );
   }
 }
 
