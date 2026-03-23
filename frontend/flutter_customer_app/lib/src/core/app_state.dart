@@ -8,6 +8,13 @@ const defaultApiBase = 'http://103.139.191.114:4000';
 const _mobileKey = 'justfiber.mobile';
 const _accessTokenKey = 'justfiber.access_token';
 const _refreshTokenKey = 'justfiber.refresh_token';
+const _latestBookingNumberKey = 'justfiber.latest_booking_number';
+const _latestBookingMobileKey = 'justfiber.latest_booking_mobile';
+const _latestBookingPlanKey = 'justfiber.latest_booking_plan';
+const _latestBookingAmountKey = 'justfiber.latest_booking_amount';
+const _latestBookingStepKey = 'justfiber.latest_booking_step';
+const _latestBookingDateKey = 'justfiber.latest_booking_date';
+const _latestBookingSlotKey = 'justfiber.latest_booking_slot';
 
 class AppState extends ChangeNotifier {
   final api = ApiClient(baseUrl: defaultApiBase);
@@ -61,6 +68,7 @@ class AppState extends ChangeNotifier {
   List<PlanItem> plans = const [];
   BookingQuote? latestBooking;
   BookingTrackingData? bookingTracking;
+  String? latestBookingLookupMobile;
   List<InstallerVisitItem> installerVisits = const [];
   FeasibilityResult? feasibility;
   BillingPaymentOrder? billingPaymentOrder;
@@ -219,9 +227,23 @@ class AppState extends ChangeNotifier {
         preferredSlotCode: preferredSlotCode,
         preferredSlotLabel: preferredSlotLabel,
       );
+      latestBookingLookupMobile = current?.mobile ?? mobile;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_latestBookingNumberKey, latestBooking!.bookingNumber);
+      await prefs.setString(_latestBookingMobileKey, latestBookingLookupMobile!);
+      await prefs.setString(_latestBookingPlanKey, latestBooking!.planName);
+      await prefs.setDouble(_latestBookingAmountKey, latestBooking!.amount);
+      await prefs.setString(_latestBookingStepKey, latestBooking!.currentStep);
+      await prefs.setString(_latestBookingDateKey, latestBooking!.preferredDate);
+      await prefs.setString(_latestBookingSlotKey, latestBooking!.preferredSlotLabel);
       if (current != null) {
         bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
         installerVisits = await api.fetchServiceVisits(current);
+      } else if (latestBookingLookupMobile != null && latestBookingLookupMobile!.isNotEmpty) {
+        bookingTracking = await api.fetchPublicBookingTracking(
+          bookingNumber: latestBooking!.bookingNumber,
+          mobile: latestBookingLookupMobile!,
+        );
       }
       return true;
     } catch (e) {
@@ -297,10 +319,17 @@ class AppState extends ChangeNotifier {
   Future<void> refreshBookingTracking() async {
     final current = session;
     final bookingNumber = latestBooking?.bookingNumber;
-    if (current == null || bookingNumber == null || bookingNumber.isEmpty) return;
+    if (bookingNumber == null || bookingNumber.isEmpty) return;
     try {
-      bookingTracking = await api.fetchBookingTracking(current, bookingNumber);
-      installerVisits = await api.fetchServiceVisits(current);
+      if (current != null) {
+        bookingTracking = await api.fetchBookingTracking(current, bookingNumber);
+        installerVisits = await api.fetchServiceVisits(current);
+      } else if ((latestBookingLookupMobile ?? '').isNotEmpty) {
+        bookingTracking = await api.fetchPublicBookingTracking(
+          bookingNumber: bookingNumber,
+          mobile: latestBookingLookupMobile!,
+        );
+      }
       notifyListeners();
     } catch (_) {
       // keep current state
@@ -567,11 +596,19 @@ class AppState extends ChangeNotifier {
       prefs.remove(_mobileKey);
       prefs.remove(_accessTokenKey);
       prefs.remove(_refreshTokenKey);
+      prefs.remove(_latestBookingNumberKey);
+      prefs.remove(_latestBookingMobileKey);
+      prefs.remove(_latestBookingPlanKey);
+      prefs.remove(_latestBookingAmountKey);
+      prefs.remove(_latestBookingStepKey);
+      prefs.remove(_latestBookingDateKey);
+      prefs.remove(_latestBookingSlotKey);
     });
     session = null;
     demoOtp = null;
     error = null;
     latestBooking = null;
+    latestBookingLookupMobile = null;
     bookingTracking = null;
     installerVisits = const [];
     requests = const [];
@@ -590,7 +627,32 @@ class AppState extends ChangeNotifier {
     final mobile = prefs.getString(_mobileKey);
     final accessToken = prefs.getString(_accessTokenKey);
     final refreshToken = prefs.getString(_refreshTokenKey);
+    final latestBookingNumber = prefs.getString(_latestBookingNumberKey);
+    final latestBookingMobile = prefs.getString(_latestBookingMobileKey);
+    if ((latestBookingNumber ?? '').isNotEmpty) {
+      latestBooking = BookingQuote(
+        bookingNumber: latestBookingNumber!,
+        status: 'pending',
+        planName: prefs.getString(_latestBookingPlanKey) ?? '',
+        amount: prefs.getDouble(_latestBookingAmountKey) ?? 0,
+        currentStep: prefs.getString(_latestBookingStepKey) ?? '',
+        preferredDate: prefs.getString(_latestBookingDateKey) ?? '',
+        preferredSlotLabel: prefs.getString(_latestBookingSlotKey) ?? '',
+      );
+      latestBookingLookupMobile = latestBookingMobile;
+      if ((latestBookingLookupMobile ?? '').isNotEmpty) {
+        try {
+          bookingTracking = await api.fetchPublicBookingTracking(
+            bookingNumber: latestBooking.bookingNumber,
+            mobile: latestBookingLookupMobile!,
+          );
+        } catch (_) {
+          // keep stored booking summary even if public tracking isn't available yet
+        }
+      }
+    }
     if (mobile == null || accessToken == null || refreshToken == null) {
+      notifyListeners();
       return;
     }
     session = CustomerSession(

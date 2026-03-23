@@ -1104,6 +1104,28 @@ customerPortalRouter.get(
 );
 
 customerPortalRouter.get(
+  "/bookings/:bookingNumber/tracking/public",
+  asyncHandler(async (req, res) => {
+    const bookingNumber = String(req.params.bookingNumber || "").trim();
+    const mobile = String(req.query.mobile || "").replace(/\D+/g, "");
+    if (!bookingNumber || !mobile) {
+      throw new ApiError(400, "Booking number and mobile are required");
+    }
+    const booking = await ConnectionBooking.findOne({
+      bookingNumber
+    }).lean();
+    if (!booking) {
+      throw new ApiError(404, "Booking not found");
+    }
+    const bookingMobile = String(booking.personalDetails?.mobile || "").replace(/\D+/g, "");
+    if (!bookingMobile || bookingMobile !== mobile) {
+      throw new ApiError(404, "Booking not found");
+    }
+    return ok(res, booking.tracking || {});
+  })
+);
+
+customerPortalRouter.get(
   "/bookings/:bookingNumber/tracking",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {

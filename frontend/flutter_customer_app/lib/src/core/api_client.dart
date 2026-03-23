@@ -371,6 +371,28 @@ class ApiClient {
     );
   }
 
+  Future<BookingTrackingData> fetchPublicBookingTracking({
+    required String bookingNumber,
+    required String mobile,
+  }) async {
+    final normalizedMobile = mobile.replaceAll(RegExp(r'\D+'), '');
+    final data = _asMap(
+      await _request('/api/v1/customer/bookings/$bookingNumber/tracking/public?mobile=$normalizedMobile'),
+    );
+    final steps = _asList(data['steps']).map((item) {
+      final map = item as Map<String, dynamic>;
+      return BookingTrackingItem(
+        code: (map['code'] ?? '').toString(),
+        status: (map['status'] ?? '').toString(),
+        at: (map['at'] ?? '').toString(),
+      );
+    }).toList();
+    return BookingTrackingData(
+      currentStep: (data['currentStep'] ?? '').toString(),
+      steps: steps,
+    );
+  }
+
   Future<List<InstallerVisitItem>> fetchServiceVisits(CustomerSession session) async {
     final list = _asList(await _request('/api/v1/customer/services/track', token: session.accessToken));
     return list.map((item) {
