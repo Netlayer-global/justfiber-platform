@@ -9,6 +9,7 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [requests, setRequests] = useState<SupportQueueRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [ticketBusyId, setTicketBusyId] = useState<string | null>(null)
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null)
   const queueMetrics: Array<{
     label: string
@@ -57,6 +58,20 @@ export default function TicketsPage() {
     }
   }
 
+  async function updateTicketStatus(ticketId: string, status: string) {
+    try {
+      setTicketBusyId(ticketId)
+      const response = await adminAPI.updateTicket(ticketId, { status })
+      if (response.success) {
+        await loadTickets()
+      }
+    } catch (error) {
+      console.error('[v0] Failed to update support ticket:', error)
+    } finally {
+      setTicketBusyId(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -100,6 +115,7 @@ export default function TicketsPage() {
                   <th className="table-header">Priority</th>
                   <th className="table-header">Status</th>
                   <th className="table-header">Created</th>
+                  <th className="table-header">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,11 +151,30 @@ export default function TicketsPage() {
                     <td className="table-cell">
                       {new Date(ticket.createdAt).toLocaleDateString()}
                     </td>
+                    <td className="table-cell">
+                      <select
+                        className="rounded-xl border border-white/10 bg-black px-3 py-2 text-xs text-white outline-none"
+                        defaultValue=""
+                        disabled={ticketBusyId === ticket.id}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          if (!value) return
+                          void updateTicketStatus(ticket.id, value)
+                          event.currentTarget.value = ''
+                        }}
+                      >
+                        <option value="">Update</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </td>
                   </tr>
                 ))}
                 {tickets.length === 0 ? (
                   <tr>
-                    <td className="table-cell text-white/55" colSpan={4}>No tickets in the queue.</td>
+                    <td className="table-cell text-white/55" colSpan={5}>No tickets in the queue.</td>
                   </tr>
                 ) : null}
               </tbody>

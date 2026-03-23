@@ -213,7 +213,7 @@ export interface Ticket {
   id: string
   subject: string
   description: string
-  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  status: 'open' | 'assigned' | 'in_progress' | 'resolved' | 'closed' | string
   priority: 'low' | 'medium' | 'high'
   customerId: string
   assignedTo?: string
