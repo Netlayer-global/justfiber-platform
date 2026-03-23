@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_state.dart';
@@ -31,6 +33,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   final _otpController = TextEditingController();
   final _replaceSerialController = TextEditingController();
   final _complaintNoteController = TextEditingController(text: 'Visited site and started complaint handling.');
+  final _imagePicker = ImagePicker();
   String _complaintResolutionCode = 'ont_replace';
   bool _busy = false;
   bool _routerPhotoReady = false;
@@ -39,6 +42,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Timer? _activationTimer;
   DateTime? _routerPhotoCapturedAt;
   DateTime? _cablePhotoCapturedAt;
+  String? _routerPhotoPath;
+  String? _cablePhotoPath;
   Map<String, dynamic>? _detail;
   Map<String, dynamic>? _diagnostics;
   Map<String, dynamic>? _preview;
@@ -170,6 +175,30 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       controller.text = scanned.trim();
     });
     _show('Serial scanned: ${scanned.trim()}');
+  }
+
+  Future<void> _captureProofPhoto({required bool routerPhoto}) async {
+    try {
+      final file = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+      if (!mounted || file == null) return;
+      setState(() {
+        if (routerPhoto) {
+          _routerPhotoReady = true;
+          _routerPhotoCapturedAt = DateTime.now();
+          _routerPhotoPath = file.path;
+        } else {
+          _cablePhotoReady = true;
+          _cablePhotoCapturedAt = DateTime.now();
+          _cablePhotoPath = file.path;
+        }
+      });
+      _show(routerPhoto ? 'Router photo captured' : 'Cable photo captured');
+    } catch (e) {
+      _show('Unable to open camera right now');
+    }
   }
 
   @override
@@ -758,6 +787,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
+                        if (_routerPhotoPath != null || _cablePhotoPath != null) ...[
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              if (_routerPhotoPath != null) _proofPreviewCard('Router photo', _routerPhotoPath!),
+                              if (_cablePhotoPath != null) _proofPreviewCard('Cable photo', _cablePhotoPath!),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                         Wrap(
                           spacing: 10,
                           runSpacing: 10,
@@ -765,25 +805,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             OutlinedButton(
                               onPressed: _busy
                                   ? null
-                                  : () {
-                                      setState(() {
-                                        _routerPhotoReady = true;
-                                        _routerPhotoCapturedAt = DateTime.now();
-                                      });
-                                      _show('Router photo captured');
-                                    },
+                                  : () => _captureProofPhoto(routerPhoto: true),
                               child: Text(_routerPhotoReady ? 'Router photo ready' : 'Capture router photo'),
                             ),
                             OutlinedButton(
                               onPressed: _busy
                                   ? null
-                                  : () async {
-                                      setState(() {
-                                        _cablePhotoReady = true;
-                                        _cablePhotoCapturedAt = DateTime.now();
-                                      });
-                                      _show('Cable photo captured');
-                                    },
+                                  : () => _captureProofPhoto(routerPhoto: false),
                               child: Text(_cablePhotoReady ? 'Cable photo ready' : 'Capture cable photo'),
                             ),
                             OutlinedButton(
@@ -794,8 +822,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         () => _appState.api.uploadProof(
                                           _appState.session!,
                                           widget.job.id,
-                                          routerPhotoUrl: 'https://justfiber.local/proof/${widget.job.id}/router.jpg',
-                                          cablePhotoUrl: 'https://justfiber.local/proof/${widget.job.id}/cable.jpg',
+                                          routerPhotoUrl: _routerPhotoPath != null
+                                              ? Uri.file(_routerPhotoPath!).toString()
+                                              : 'https://justfiber.local/proof/${widget.job.id}/router.jpg',
+                                          cablePhotoUrl: _cablePhotoPath != null
+                                              ? Uri.file(_cablePhotoPath!).toString()
+                                              : 'https://justfiber.local/proof/${widget.job.id}/cable.jpg',
                                         ),
                                         'Installation proof submitted',
                                       );
@@ -901,6 +933,43 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               value.isEmpty ? '-' : value,
               style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _proofPreviewCard(String label, String path) {
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10151A),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x22E6FF3C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Image.file(
+                File(path),
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFF141A22),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.image_not_supported_rounded, color: Color(0xFF9CA3AF)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
           ),
         ],
       ),
