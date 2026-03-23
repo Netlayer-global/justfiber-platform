@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
+import '../../core/models.dart';
 import '../../widgets/app_card.dart';
 
 class DashboardTab extends StatelessWidget {
@@ -11,6 +12,9 @@ class DashboardTab extends StatelessWidget {
     final appState = InstallerStateScope.of(context);
     final dashboard = appState.dashboard;
     final profile = appState.profile;
+    final todayJobs = appState.jobs.where(_isTodayJob).where((job) => job.status != 'completed').length;
+    final pendingJobs = appState.jobs.where((job) => !_isTodayJob(job) && job.status != 'completed').length;
+    final completedJobs = appState.jobs.where((job) => job.status == 'completed').length;
     return RefreshIndicator(
       color: const Color(0xFFE6FF3C),
       backgroundColor: const Color(0xFF0C1018),
@@ -42,7 +46,7 @@ class DashboardTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${profile.installerCode.isEmpty ? '-' : profile.installerCode} · ${profile.phone.isEmpty ? '-' : profile.phone}',
+                  '${profile.installerCode.isEmpty ? '-' : profile.installerCode} • ${profile.phone.isEmpty ? '-' : profile.phone}',
                   style: const TextStyle(color: Color(0xFFD1D5DB)),
                 ),
                 const SizedBox(height: 12),
@@ -64,13 +68,13 @@ class DashboardTab extends StatelessWidget {
           const SizedBox(height: 18),
           Row(
             children: [
-              Expanded(child: _metric(context, 'New jobs', '${dashboard.todayNewInstallationJobs}')),
+              Expanded(child: _metric(context, 'Today', '$todayJobs')),
               const SizedBox(width: 12),
-              Expanded(child: _metric(context, 'Pending', '${dashboard.pendingJobs}')),
+              Expanded(child: _metric(context, 'Pending', '$pendingJobs')),
             ],
           ),
           const SizedBox(height: 12),
-          _metric(context, 'Completed', '${dashboard.completedJobs}'),
+          _metric(context, 'Completed', '$completedJobs'),
           const SizedBox(height: 18),
           AppCard(
             color: const Color(0xFF0C1018),
@@ -104,5 +108,13 @@ class DashboardTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _isTodayJob(InstallerJob job) {
+    if (job.scheduledAt.isEmpty) return false;
+    final parsed = DateTime.tryParse(job.scheduledAt)?.toLocal();
+    if (parsed == null) return false;
+    final now = DateTime.now();
+    return parsed.year == now.year && parsed.month == now.month && parsed.day == now.day;
   }
 }

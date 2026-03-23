@@ -30,7 +30,10 @@ class _JobsTabState extends State<JobsTab> {
     final search = _searchController.text.trim().toLowerCase();
     final filteredJobs = _filterJobs(appState.jobs, search);
     final activeJobs = filteredJobs.where((job) => job.status != 'completed').toList();
+    final todayJobs = activeJobs.where(_isTodayJob).toList();
+    final pendingJobs = activeJobs.where((job) => !_isTodayJob(job)).toList();
     final completedJobs = filteredJobs.where((job) => job.status == 'completed').toList();
+    final completedTodayJobs = completedJobs.where(_isTodayJob).toList();
     final liveInstalls = activeJobs.where((job) => job.jobType != 'complaint').length;
     final liveComplaints = activeJobs.where((job) => job.jobType == 'complaint').length;
     final exceptionJobs = activeJobs.where((job) => job.configStatus == 'failed').length;
@@ -72,9 +75,9 @@ class _JobsTabState extends State<JobsTab> {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Expanded(child: _metricChip('Pending', '${appState.dashboard.pendingJobs}')),
+                    Expanded(child: _metricChip('Today', '${todayJobs.length}')),
                     const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Active', '${activeJobs.length}')),
+                    Expanded(child: _metricChip('Pending', '${pendingJobs.length}')),
                     const SizedBox(width: 8),
                     Expanded(child: _metricChip('Closed', '${completedJobs.length}')),
                   ],
@@ -155,9 +158,18 @@ class _JobsTabState extends State<JobsTab> {
               ),
             )
           else ...[
-            if (activeJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'LIVE FIELD QUEUE'),
-              ...activeJobs.map(
+            if (todayJobs.isNotEmpty) ...[
+              _sectionLabel(context, 'TODAY FIELD VISITS'),
+              ...todayJobs.map(
+                (job) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _jobCard(context, appState, job),
+                ),
+              ),
+            ],
+            if (pendingJobs.isNotEmpty) ...[
+              _sectionLabel(context, 'PENDING FOLLOW-UPS'),
+              ...pendingJobs.map(
                 (job) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: _jobCard(context, appState, job),
@@ -165,8 +177,8 @@ class _JobsTabState extends State<JobsTab> {
               ),
             ],
             if (completedJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'RECENTLY CLOSED'),
-              ...completedJobs.map(
+              _sectionLabel(context, completedTodayJobs.isNotEmpty ? 'COMPLETED TODAY' : 'RECENTLY CLOSED'),
+              ...(completedTodayJobs.isNotEmpty ? completedTodayJobs : completedJobs).map(
                 (job) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: _jobCard(context, appState, job),
@@ -508,6 +520,14 @@ class _JobsTabState extends State<JobsTab> {
   bool _canStartTravel(InstallerJob job) => job.status == 'accepted';
 
   bool _canQuickPreview(InstallerJob job) => job.status != 'completed';
+
+  bool _isTodayJob(InstallerJob job) {
+    if (job.scheduledAt.isEmpty) return false;
+    final parsed = DateTime.tryParse(job.scheduledAt)?.toLocal();
+    if (parsed == null) return false;
+    final now = DateTime.now();
+    return parsed.year == now.year && parsed.month == now.month && parsed.day == now.day;
+  }
 
   List<InstallerJob> _filterJobs(List<InstallerJob> jobs, String search) {
     final filtered = jobs.where((job) {
