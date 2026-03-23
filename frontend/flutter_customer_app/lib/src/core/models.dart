@@ -170,12 +170,22 @@ class RequestItem {
 
 class NotificationItem {
   const NotificationItem({
+    required this.id,
+    required this.type,
     required this.title,
     required this.body,
+    required this.createdAt,
+    required this.readAt,
+    required this.payload,
   });
 
+  final String id;
+  final String type;
   final String title;
   final String body;
+  final String createdAt;
+  final String readAt;
+  final Map<String, dynamic> payload;
 }
 
 class SupportTicketItem {

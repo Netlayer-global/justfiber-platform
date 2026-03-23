@@ -216,10 +216,23 @@ class ApiClient {
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       return NotificationItem(
+        id: (map['_id'] ?? '').toString(),
+        type: (map['type'] ?? 'general').toString(),
         title: (map['title'] ?? 'Notification').toString(),
         body: (map['body'] ?? map['message'] ?? '').toString(),
+        createdAt: (map['createdAt'] ?? '').toString(),
+        readAt: (map['readAt'] ?? '').toString(),
+        payload: _asMap(map['payload']),
       );
     }).toList();
+  }
+
+  Future<void> markNotificationRead(CustomerSession session, String notificationId) async {
+    await _request(
+      '/api/v1/customer/notifications/$notificationId/read',
+      method: 'POST',
+      token: session.accessToken,
+    );
   }
 
   Future<List<FaqItem>> fetchFaqs() async {

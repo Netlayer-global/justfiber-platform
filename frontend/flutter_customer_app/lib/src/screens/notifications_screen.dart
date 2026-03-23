@@ -4,6 +4,7 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
 import 'billing_history_screen.dart';
+import 'service_tracking_screen.dart';
 import 'support_history_screen.dart';
 
 class NotificationsScreen extends StatelessWidget {
@@ -12,6 +13,16 @@ class NotificationsScreen extends StatelessWidget {
   static const _accent = Color(0xFF39FF14);
 
   _AlertKind _kindFor(NotificationItem item) {
+    final type = item.type.toLowerCase();
+    if (type.contains('billing_') || type.contains('refund') || type.contains('receipt')) {
+      return _AlertKind.billing;
+    }
+    if (type.contains('booking') || type.contains('installer') || type.contains('job')) {
+      return _AlertKind.tracking;
+    }
+    if (type.contains('ticket') || type.contains('request') || type.contains('support')) {
+      return _AlertKind.support;
+    }
     final text = '${item.title} ${item.body}'.toLowerCase();
     if (text.contains('bill') ||
         text.contains('invoice') ||
@@ -20,6 +31,13 @@ class NotificationsScreen extends StatelessWidget {
         text.contains('receipt') ||
         text.contains('gst')) {
       return _AlertKind.billing;
+    }
+    if (text.contains('booking') ||
+        text.contains('install') ||
+        text.contains('installer') ||
+        text.contains('assigned job') ||
+        text.contains('visit')) {
+      return _AlertKind.tracking;
     }
     if (text.contains('ticket') ||
         text.contains('request') ||
@@ -38,6 +56,8 @@ class NotificationsScreen extends StatelessWidget {
         return 'Billing';
       case _AlertKind.support:
         return 'Support';
+      case _AlertKind.tracking:
+        return 'Tracking';
       case _AlertKind.general:
         return 'Update';
     }
@@ -49,6 +69,8 @@ class NotificationsScreen extends StatelessWidget {
         return const Color(0x1439FF14);
       case _AlertKind.support:
         return const Color(0x1A00C2FF);
+      case _AlertKind.tracking:
+        return const Color(0x14F59E0B);
       case _AlertKind.general:
         return const Color(0x120B0F19);
     }
@@ -60,6 +82,8 @@ class NotificationsScreen extends StatelessWidget {
         return _accent;
       case _AlertKind.support:
         return const Color(0xFF00C2FF);
+      case _AlertKind.tracking:
+        return const Color(0xFFF59E0B);
       case _AlertKind.general:
         return const Color(0xFF111827);
     }
@@ -71,23 +95,46 @@ class NotificationsScreen extends StatelessWidget {
         return 'Open Billing';
       case _AlertKind.support:
         return 'Open Support';
+      case _AlertKind.tracking:
+        return 'Open Tracking';
       case _AlertKind.general:
         return 'View Support';
     }
   }
 
-  VoidCallback _primaryActionFor(BuildContext context, _AlertKind kind) {
-    switch (kind) {
+  Future<void> _openPrimaryAction(BuildContext context, AppState appState, NotificationItem item) async {
+    if (item.id.isNotEmpty) {
+      await appState.markNotificationRead(item.id);
+    }
+    switch (_kindFor(item)) {
       case _AlertKind.billing:
-        return () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
-            );
+        if (context.mounted) {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()));
+        }
+        return;
       case _AlertKind.support:
       case _AlertKind.general:
-        return () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-            );
+        if (context.mounted) {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()));
+        }
+        return;
+      case _AlertKind.tracking:
+        if (context.mounted) {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
+        }
+        return;
     }
+  }
+
+  String _relativeTime(NotificationItem item) {
+    if (item.createdAt.isEmpty) return 'Latest';
+    final parsed = DateTime.tryParse(item.createdAt);
+    if (parsed == null) return item.createdAt;
+    final diff = DateTime.now().difference(parsed.toLocal());
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 
   @override
@@ -153,13 +200,14 @@ class NotificationsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    Expanded(child: _heroMetric('Alerts', '${notifications.length}')),
-                    const SizedBox(width: 10),
-                    Expanded(child: _heroMetric('Billing', '${notifications.where((n) => _kindFor(n) == _AlertKind.billing).length}')),
-                    const SizedBox(width: 10),
-                    Expanded(child: _heroMetric('Support', '${notifications.where((n) => _kindFor(n) == _AlertKind.support).length}')),
+                    SizedBox(width: 136, child: _heroMetric('Alerts', '${notifications.length}')),
+                    SizedBox(width: 136, child: _heroMetric('Billing', '${notifications.where((n) => _kindFor(n) == _AlertKind.billing).length}')),
+                    SizedBox(width: 136, child: _heroMetric('Support', '${notifications.where((n) => _kindFor(n) == _AlertKind.support).length}')),
+                    SizedBox(width: 136, child: _heroMetric('Tracking', '${notifications.where((n) => _kindFor(n) == _AlertKind.tracking).length}')),
                   ],
                 ),
               ],
@@ -208,11 +256,32 @@ class NotificationsScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const Spacer(),
+                                  if (item.readAt.isEmpty)
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF39FF14),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  if (item.readAt.isEmpty) const SizedBox(width: 10),
+                                  Text(
+                                    _relativeTime(item),
+                                    style: const TextStyle(
+                                      color: Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
                                   Icon(
                                     kind == _AlertKind.billing
                                         ? Icons.receipt_long_rounded
                                         : kind == _AlertKind.support
                                             ? Icons.support_agent_rounded
+                                            : kind == _AlertKind.tracking
+                                                ? Icons.route_rounded
                                             : Icons.notifications_active_rounded,
                                     size: 18,
                                     color: _badgeForegroundFor(kind),
@@ -229,7 +298,7 @@ class NotificationsScreen extends StatelessWidget {
                                 runSpacing: 10,
                                 children: [
                                   FilledButton(
-                                    onPressed: _primaryActionFor(context, kind),
+                                    onPressed: () => _openPrimaryAction(context, appState, item),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: const Color(0xFF111827),
                                       foregroundColor: Colors.white,
@@ -237,12 +306,19 @@ class NotificationsScreen extends StatelessWidget {
                                     child: Text(_primaryActionLabelFor(kind)),
                                   ),
                                   OutlinedButton(
-                                    onPressed: appState.busy ? null : appState.refresh,
+                                    onPressed: () async {
+                                      if (item.id.isNotEmpty) {
+                                        await appState.markNotificationRead(item.id);
+                                      }
+                                      if (context.mounted) {
+                                        await appState.refresh();
+                                      }
+                                    },
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: const Color(0xFF111827),
                                       side: const BorderSide(color: Color(0x2239FF14)),
                                     ),
-                                    child: const Text('Refresh alerts'),
+                                    child: Text(item.readAt.isEmpty ? 'Mark as read' : 'Refresh alerts'),
                                   ),
                                 ],
                               ),
@@ -281,5 +357,6 @@ class NotificationsScreen extends StatelessWidget {
 enum _AlertKind {
   billing,
   support,
+  tracking,
   general,
 }

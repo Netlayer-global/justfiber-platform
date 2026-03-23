@@ -154,6 +154,32 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> markNotificationRead(String notificationId) async {
+    final current = session;
+    if (current == null || notificationId.isEmpty) return;
+    try {
+      await api.markNotificationRead(current, notificationId);
+      notifications = notifications
+          .map(
+            (item) => item.id == notificationId
+                ? NotificationItem(
+                    id: item.id,
+                    type: item.type,
+                    title: item.title,
+                    body: item.body,
+                    createdAt: item.createdAt,
+                    readAt: DateTime.now().toIso8601String(),
+                    payload: item.payload,
+                  )
+                : item,
+          )
+          .toList(growable: false);
+      notifyListeners();
+    } catch (_) {
+      // Keep the alerts center usable even if read sync fails.
+    }
+  }
+
   Future<void> loadPlans() async {
     try {
       plans = await api.fetchPlans();
