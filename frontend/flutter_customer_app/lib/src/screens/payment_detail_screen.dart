@@ -154,7 +154,7 @@ class PaymentDetailScreen extends StatelessWidget {
                         : 'Share transaction details even if receipt is not generated yet',
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
-                  onTap: () => _shareDocument(appState),
+                  onTap: () => _shareDocumentWithFeedback(context, appState),
                 ),
               ],
             ),
@@ -186,7 +186,13 @@ class PaymentDetailScreen extends StatelessWidget {
 
   Future<void> _openDocument(BuildContext context, AppState appState, String title, String relativeUrl) async {
     final session = appState.session;
-    if (session == null) return;
+    if (session == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login again to open this document.')),
+      );
+      return;
+    }
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
     await Navigator.of(context).push(
@@ -216,6 +222,14 @@ class PaymentDetailScreen extends StatelessWidget {
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
     await Share.share(fullUrl, subject: 'JustFiber receipt ${payment.transactionId}');
+  }
+
+  Future<void> _shareDocumentWithFeedback(BuildContext context, AppState appState) async {
+    await _shareDocument(appState);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Payment details ready to share')),
+    );
   }
 
   Future<void> _copyText(BuildContext context, String text, String message) async {

@@ -68,7 +68,7 @@ class NotificationsScreen extends StatelessWidget {
       case _AlertKind.billing:
         return const Color(0x14E6FF3C);
       case _AlertKind.support:
-        return const Color(0x1A00C2FF);
+        return const Color(0x221F2937);
       case _AlertKind.tracking:
         return const Color(0x14F59E0B);
       case _AlertKind.general:
@@ -81,11 +81,11 @@ class NotificationsScreen extends StatelessWidget {
       case _AlertKind.billing:
         return _accent;
       case _AlertKind.support:
-        return const Color(0xFF00C2FF);
+        return const Color(0xFFEFEEE8);
       case _AlertKind.tracking:
         return const Color(0xFFF59E0B);
       case _AlertKind.general:
-        return const Color(0xFF111827);
+        return const Color(0xFFD1D5DB);
     }
   }
 
@@ -214,7 +214,7 @@ class NotificationsScreen extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
                         backgroundColor: const Color(0xFF0E1520),
-                        side: const BorderSide(color: Color(0x3322D3EE)),
+                        side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Open Billing'),
                     ),

@@ -253,10 +253,18 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                       child: const Text('Copy order reference'),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Back to app'),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFEFEEE8),
+                        backgroundColor: const Color(0xFF0E1520),
+                        side: const BorderSide(color: Color(0x33FFFFFF)),
+                      ),
+                      child: const Text('Back to app'),
+                    ),
                   ),
                 ],
               ],
