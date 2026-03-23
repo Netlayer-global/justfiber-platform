@@ -210,6 +210,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final complaint = (detail?['complaint'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final deviceContext = (detail?['deviceContext'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final proof = (detail?['proof'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final timeline = (detail?['timeline'] as List?)?.whereType<Map>().map((item) => item.cast<String, dynamic>()).toList() ?? const <Map<String, dynamic>>[];
     final optical = (detail?['opticalReadings'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final preview = _preview ?? const <String, dynamic>{};
     final diagnostics = _diagnostics ?? const <String, dynamic>{};
@@ -564,6 +565,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _row('Router serial', '${device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '-'}'),
                       _row('Router online', '${device['onlineStatus'] ?? 'unknown'}'),
                       _row('Provisioning state', '${device['provisioningState'] ?? 'pending'}'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Field timeline', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 12),
+                      if (timeline.isEmpty)
+                        const Text(
+                          'No field updates recorded yet.',
+                          style: TextStyle(color: Color(0xFF9CA3AF)),
+                        )
+                      else
+                        ...timeline.reversed.take(8).map(_timelineRow),
                     ],
                   ),
                 ),
@@ -970,6 +988,62 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           Text(
             label,
             style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _timelineRow(Map<String, dynamic> item) {
+    final note = (item['note'] ?? '').toString();
+    final actor = (item['actorType'] ?? '').toString();
+    final event = (item['event'] ?? '').toString().replaceAll('.', ' ');
+    final at = (item['at'] ?? '').toString();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE6FF3C),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10151A),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0x22E6FF3C)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.isEmpty ? 'timeline update' : event,
+                    style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800),
+                  ),
+                  if (note.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      note,
+                      style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Text(
+                    '${actor.isEmpty ? 'system' : actor} • ${at.isEmpty ? '-' : at}',
+                    style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
