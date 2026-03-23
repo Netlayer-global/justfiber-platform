@@ -188,7 +188,7 @@ class SupportHistoryScreen extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 16),
-      child: Text(label),
+      label: Text(label),
     );
   }
 
