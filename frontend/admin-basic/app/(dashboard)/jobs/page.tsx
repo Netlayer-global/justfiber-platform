@@ -33,6 +33,15 @@ export default function JobsPage() {
   const [reassignInstallerId, setReassignInstallerId] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | Job['status']>('all')
   const [typeFilter, setTypeFilter] = useState<'all' | AssignForm['type']>('all')
+  const dispatchMetrics: Array<{
+    label: string
+    value: string
+    Icon: typeof ShieldAlert
+  }> = [
+    { label: 'Pending', value: String(jobs.filter((j) => j.status === 'pending').length), Icon: ShieldAlert },
+    { label: 'In progress', value: String(jobs.filter((j) => j.status === 'in_progress').length), Icon: Wrench },
+    { label: 'Total', value: String(jobs.length), Icon: ClipboardList },
+  ]
 
   useEffect(() => {
     void loadData()
@@ -159,11 +168,7 @@ export default function JobsPage() {
           <div className="mt-3 text-5xl font-black">{jobs.length}</div>
           <div className="mt-2 text-sm text-black/60">Jobs currently tracked across installer and complaint workflows</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              ['Pending', String(jobs.filter((j) => j.status === 'pending').length), ShieldAlert],
-              ['In progress', String(jobs.filter((j) => j.status === 'in_progress').length), Wrench],
-              ['Total', String(jobs.length), ClipboardList],
-            ].map(([label, value, Icon]) => (
+            {dispatchMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
