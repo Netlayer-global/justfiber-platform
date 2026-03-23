@@ -50,6 +50,15 @@ export default function CustomersPage() {
     () => customers.filter((customer) => customer.status === 'active').length,
     [customers]
   )
+  const portfolioMetrics: Array<{
+    label: string
+    value: string
+    Icon: typeof Wifi
+  }> = [
+    { label: 'Active', value: String(activeCount), Icon: Wifi },
+    { label: 'Paused', value: String(customers.length - activeCount), Icon: UserX },
+    { label: 'Base', value: String(customers.length), Icon: Users },
+  ]
 
   return (
     <div className="space-y-6">
@@ -69,11 +78,7 @@ export default function CustomersPage() {
           <div className="mt-3 text-5xl font-black">{customers.length}</div>
           <div className="mt-2 text-sm text-black/60">Customers loaded across active service zones</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              ['Active', String(activeCount), Wifi],
-              ['Paused', String(customers.length - activeCount), UserX],
-              ['Base', String(customers.length), Users],
-            ].map(([label, value, Icon]) => (
+            {portfolioMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
