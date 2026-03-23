@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,6 +25,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _busy = false;
   bool _routerPhotoReady = false;
   bool _cablePhotoReady = false;
+  int _activationCountdown = 0;
+  Timer? _activationTimer;
+  DateTime? _routerPhotoCapturedAt;
+  DateTime? _cablePhotoCapturedAt;
   Map<String, dynamic>? _detail;
   Map<String, dynamic>? _diagnostics;
   Map<String, dynamic>? _preview;
@@ -35,6 +41,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   @override
   void dispose() {
+    _activationTimer?.cancel();
     _serialController.dispose();
     _otpController.dispose();
     _replaceSerialController.dispose();
@@ -43,6 +50,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   InstallerAppState get _appState => InstallerStateScope.of(context);
+
+  void _startActivationCountdown([int seconds = 90]) {
+    _activationTimer?.cancel();
+    setState(() => _activationCountdown = seconds);
+    _activationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _activationCountdown <= 1) {
+        timer.cancel();
+        if (mounted) {
+          setState(() => _activationCountdown = 0);
+        }
+        return;
+      }
+      setState(() => _activationCountdown -= 1);
+    });
+  }
 
   Future<void> _loadAll() async {
     final session = _appState.session;
@@ -134,6 +156,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final wifi = (preview['wifi'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final pppoe = (preview['pppoe'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final linkedSerial = (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '').toString();
+    final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.job.jobNumber)),
@@ -216,7 +240,33 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (linkedSerial.isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF141A22),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x55E6FF3C)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.router_rounded, color: Color(0xFFE6FF3C)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Router linked: $linkedSerial',
+                                  style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
                       Text('Field actions', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 14),
+                      _stageTimeline(status, isComplaint: isComplaint),
                       const SizedBox(height: 14),
                       Wrap(
                         spacing: 10,
@@ -276,6 +326,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       _show('Enter ONT serial first');
                                       return;
                                     }
+                                    _startActivationCountdown();
                                     _run(() => _appState.runActivationFlow(widget.job.id, serial), 'Activation requested');
                                   },
                             child: Text(_busy ? 'Working...' : 'Activate'),
@@ -296,6 +347,63 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                         ],
                       ),
+                      if (_activationCountdown > 0) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF141A22),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x33E6FF3C)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Configuring router',
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Waiting for backend config push and ONT read-back. Approx time left: ${_activationCountdown}s',
+                                style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                              ),
+                              const SizedBox(height: 12),
+                              LinearProgressIndicator(
+                                value: (90 - _activationCountdown) / 90,
+                                minHeight: 8,
+                                backgroundColor: const Color(0xFF0C1018),
+                                valueColor: const AlwaysStoppedAnimation(Color(0xFFE6FF3C)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (activationLive) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF141A22),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x55E6FF3C)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded, color: Color(0xFFE6FF3C)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Internet is active. Customer notification should be triggered from backend activation flow.',
+                                  style: const TextStyle(color: Color(0xFFEFEEE8), height: 1.4, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -476,8 +584,32 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               onPressed: _busy
                                   ? null
                                   : () {
+                                      setState(() {
+                                        _routerPhotoReady = true;
+                                        _routerPhotoCapturedAt = DateTime.now();
+                                      });
+                                      _show('Router photo captured');
+                                    },
+                              child: Text(_routerPhotoReady ? 'Router photo ready' : 'Capture router photo'),
+                            ),
+                            OutlinedButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () async {
+                                      setState(() {
+                                        _cablePhotoReady = true;
+                                        _cablePhotoCapturedAt = DateTime.now();
+                                      });
+                                      _show('Cable photo captured');
+                                    },
+                              child: Text(_cablePhotoReady ? 'Cable photo ready' : 'Capture cable photo'),
+                            ),
+                            OutlinedButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () {
                                       if (!_routerPhotoReady || !_cablePhotoReady) {
-                                        _show('Mark both router and cable photos as captured first');
+                                        _show('Capture router and cable photos first');
                                         return;
                                       }
                                       _run(
@@ -511,6 +643,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                           ],
                         ),
+                        if (_routerPhotoCapturedAt != null || _cablePhotoCapturedAt != null) ...[
+                          const SizedBox(height: 10),
+                          if (_routerPhotoCapturedAt != null)
+                            _row('Router photo', _routerPhotoCapturedAt.toString()),
+                          if (_cablePhotoCapturedAt != null)
+                            _row('Cable photo', _cablePhotoCapturedAt.toString()),
+                        ],
                         const SizedBox(height: 12),
                         TextField(
                           controller: _otpController,
@@ -586,6 +725,82 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _stageTimeline(String status, {required bool isComplaint}) {
+    final stages = isComplaint
+        ? const [
+            ('accept', 'Accept'),
+            ('travel', 'Travel'),
+            ('onsite', 'Onsite'),
+            ('replace', 'Replace ONT'),
+            ('otp', 'OTP verify'),
+            ('done', 'Resolved'),
+          ]
+        : const [
+            ('accept', 'Accept'),
+            ('travel', 'Travel'),
+            ('onsite', 'Onsite'),
+            ('serial', 'Link router'),
+            ('activate', 'Activate'),
+            ('proof', 'Proof'),
+            ('otp', 'OTP verify'),
+            ('done', 'Complete'),
+          ];
+
+    int activeIndex;
+    switch (status) {
+      case 'accepted':
+        activeIndex = 1;
+        break;
+      case 'enroute':
+        activeIndex = 2;
+        break;
+      case 'onsite':
+        activeIndex = 3;
+        break;
+      case 'ont_scanned':
+        activeIndex = 4;
+        break;
+      case 'activation_in_progress':
+      case 'active':
+        activeIndex = isComplaint ? 4 : 5;
+        break;
+      case 'completed':
+        activeIndex = stages.length;
+        break;
+      case 'complaint_in_progress':
+        activeIndex = 4;
+        break;
+      default:
+        activeIndex = 0;
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: List.generate(stages.length, (index) {
+        final done = index < activeIndex;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: done ? const Color(0xFF1B2311) : const Color(0xFF141A22),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: done ? const Color(0x55E6FF3C) : const Color(0x221F2937),
+            ),
+          ),
+          child: Text(
+            stages[index].$2,
+            style: TextStyle(
+              color: done ? const Color(0xFFE6FF3C) : const Color(0xFF9CA3AF),
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        );
+      }),
     );
   }
 }
