@@ -401,6 +401,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                         : () async {
                             await appState.refresh();
                             if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Diagnostics refreshed')),
+                            );
                             Navigator.of(context).pop();
                             await _showDiagnosticsSheet(context, appState);
                           },
@@ -487,9 +490,15 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                   : (allowed) async {
                                       final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
                                       if (!context.mounted) return;
-                                      if (!ok) {
-                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to update device access')));
-                                      }
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            ok
+                                                ? (allowed ? 'Device access restored' : 'Device blocked')
+                                                : (appState.error ?? 'Unable to update device access'),
+                                          ),
+                                        ),
+                                      );
                                     },
                             ),
                         ],
@@ -505,6 +514,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                         : () async {
                             await appState.refresh();
                             if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Refresh device list updated')),
+                            );
                             Navigator.of(context).pop();
                             await _showConnectedDevices(context, appState, accessMode: accessMode);
                           },

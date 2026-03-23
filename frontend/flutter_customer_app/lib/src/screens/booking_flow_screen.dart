@@ -453,7 +453,11 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () async {
+                    await AppStateScope.of(context).refreshBookingTracking();
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop();
+                  },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
                   child: const Text('Done'),
                 ),
