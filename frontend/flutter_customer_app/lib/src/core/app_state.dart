@@ -22,6 +22,7 @@ class AppState extends ChangeNotifier {
   CustomerSession? session;
   String? demoOtp;
   bool busy = false;
+  bool restoringSession = true;
   String? error;
   DashboardData dashboard = const DashboardData(
     customerName: '',
@@ -694,45 +695,49 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> restoreSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final mobile = prefs.getString(_mobileKey);
-    final accessToken = prefs.getString(_accessTokenKey);
-    final refreshToken = prefs.getString(_refreshTokenKey);
-    final latestBookingNumber = prefs.getString(_latestBookingNumberKey);
-    final latestBookingMobile = prefs.getString(_latestBookingMobileKey);
-    if ((latestBookingNumber ?? '').isNotEmpty) {
-      latestBooking = BookingQuote(
-        bookingNumber: latestBookingNumber!,
-        status: 'pending',
-        planName: prefs.getString(_latestBookingPlanKey) ?? '',
-        amount: prefs.getDouble(_latestBookingAmountKey) ?? 0,
-        currentStep: prefs.getString(_latestBookingStepKey) ?? '',
-        preferredDate: prefs.getString(_latestBookingDateKey) ?? '',
-        preferredSlotLabel: prefs.getString(_latestBookingSlotKey) ?? '',
-      );
-      latestBookingLookupMobile = latestBookingMobile;
-      if ((latestBookingLookupMobile ?? '').isNotEmpty) {
-        try {
-          bookingTracking = await api.fetchPublicBookingTracking(
-            bookingNumber: latestBooking!.bookingNumber,
-            mobile: latestBookingLookupMobile!,
-          );
-        } catch (_) {
-          // keep stored booking summary even if public tracking isn't available yet
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final mobile = prefs.getString(_mobileKey);
+      final accessToken = prefs.getString(_accessTokenKey);
+      final refreshToken = prefs.getString(_refreshTokenKey);
+      final latestBookingNumber = prefs.getString(_latestBookingNumberKey);
+      final latestBookingMobile = prefs.getString(_latestBookingMobileKey);
+      if ((latestBookingNumber ?? '').isNotEmpty) {
+        latestBooking = BookingQuote(
+          bookingNumber: latestBookingNumber!,
+          status: 'pending',
+          planName: prefs.getString(_latestBookingPlanKey) ?? '',
+          amount: prefs.getDouble(_latestBookingAmountKey) ?? 0,
+          currentStep: prefs.getString(_latestBookingStepKey) ?? '',
+          preferredDate: prefs.getString(_latestBookingDateKey) ?? '',
+          preferredSlotLabel: prefs.getString(_latestBookingSlotKey) ?? '',
+        );
+        latestBookingLookupMobile = latestBookingMobile;
+        if ((latestBookingLookupMobile ?? '').isNotEmpty) {
+          try {
+            bookingTracking = await api.fetchPublicBookingTracking(
+              bookingNumber: latestBooking!.bookingNumber,
+              mobile: latestBookingLookupMobile!,
+            );
+          } catch (_) {
+            // keep stored booking summary even if public tracking isn't available yet
+          }
         }
       }
-    }
-    if (mobile == null || accessToken == null || refreshToken == null) {
+      if (mobile == null || accessToken == null || refreshToken == null) {
+        return;
+      }
+      session = CustomerSession(
+        mobile: mobile,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
       notifyListeners();
-      return;
+      await refresh();
+    } finally {
+      restoringSession = false;
+      notifyListeners();
     }
-    session = CustomerSession(
-      mobile: mobile,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    );
-    notifyListeners();
-    await refresh();
   }
 }
 
