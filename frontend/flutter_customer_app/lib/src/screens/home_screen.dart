@@ -19,9 +19,14 @@ class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
 
   Future<void> _setIndex(int value) async {
-    if (value == index) return;
-    setState(() => index = value);
     final appState = AppStateScope.of(context);
+    if (value == index) {
+      if (appState.session != null && !appState.busy) {
+        await appState.refresh();
+      }
+      return;
+    }
+    setState(() => index = value);
     if (appState.session != null && !appState.busy) {
       await appState.refresh();
     }

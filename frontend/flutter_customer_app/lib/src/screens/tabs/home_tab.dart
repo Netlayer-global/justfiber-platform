@@ -23,9 +23,13 @@ class HomeTab extends StatelessWidget {
     final wifiName = wifi.ssid24.isNotEmpty ? wifi.ssid24 : (dashboard.wifiName.isNotEmpty ? dashboard.wifiName : 'Wi-Fi not configured');
     final hasService = billing.currentPlan.isNotEmpty || wifi.ssid24.isNotEmpty || dashboard.planName.isNotEmpty;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
-      children: [
+    return RefreshIndicator(
+      color: const Color(0xFFE6FF3C),
+      backgroundColor: const Color(0xFF0C1018),
+      onRefresh: appState.refresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
+        children: [
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -300,7 +304,8 @@ class HomeTab extends StatelessWidget {
             ),
           ),
         ],
-      ],
+        ],
+      ),
     );
   }
 

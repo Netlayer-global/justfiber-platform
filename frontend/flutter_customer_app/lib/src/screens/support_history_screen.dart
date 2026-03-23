@@ -16,9 +16,13 @@ class SupportHistoryScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Support & requests')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-        children: [
+      body: RefreshIndicator(
+        color: const Color(0xFFE6FF3C),
+        backgroundColor: const Color(0xFF0C1018),
+        onRefresh: appState.refresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          children: [
           AppCard(
             gradient: const LinearGradient(
               colors: [Color(0xFF0B0F19), Color(0xFF111827)],
@@ -199,7 +203,8 @@ class SupportHistoryScreen extends StatelessWidget {
                         .toList(),
                   ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

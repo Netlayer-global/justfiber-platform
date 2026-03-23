@@ -14,9 +14,13 @@ class ProfileTab extends StatelessWidget {
     final wifi = appState.wifi;
     final theme = Theme.of(context);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
-      children: [
+    return RefreshIndicator(
+      color: const Color(0xFFE6FF3C),
+      backgroundColor: const Color(0xFF0C1018),
+      onRefresh: appState.refresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
+        children: [
         AppCard(
           gradient: const LinearGradient(
             colors: [Color(0xFF0B0F19), Color(0xFF111827)],
@@ -118,7 +122,8 @@ class ProfileTab extends StatelessWidget {
           ),
           child: const Text('Logout'),
         ),
-      ],
+        ],
+      ),
     );
   }
 
