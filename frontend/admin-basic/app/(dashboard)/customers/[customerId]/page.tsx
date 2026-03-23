@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
-import type { AdminPlanChangePreview, Customer, CustomerDevice, Plan } from '@/lib/types'
+import type { AdminPlanChangePreview, Customer, CustomerDevice, Installer, Plan } from '@/lib/types'
 import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -37,6 +37,7 @@ export default function CustomerDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentReference, setPaymentReference] = useState('')
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([])
+  const [availableInstallers, setAvailableInstallers] = useState<Installer[]>([])
   const [planCode, setPlanCode] = useState('')
   const [planChangeMode, setPlanChangeMode] = useState<'immediate' | 'next_cycle'>('immediate')
   const [planChangeNote, setPlanChangeNote] = useState('')
@@ -62,11 +63,13 @@ export default function CustomerDetailPage() {
     pppoePassword: string
     natEnabled: boolean
   }>>({})
+  const [bookingInstallerSelections, setBookingInstallerSelections] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!customerId) return
     void loadCustomer()
     void loadPlans()
+    void loadInstallers()
   }, [customerId])
 
   async function loadCustomer() {
@@ -126,6 +129,19 @@ export default function CustomerDetailPage() {
       }
     } catch (error) {
       console.error('[v0] Failed to load plans:', error)
+    }
+  }
+
+  async function loadInstallers() {
+    try {
+      const res = await adminAPI.getInstallers(1, 200)
+      if (res.success && res.data) {
+        setAvailableInstallers(
+          (res.data.items || []).filter((installer) => installer.status === 'active' && installer.availabilityStatus !== 'on_leave')
+        )
+      }
+    } catch (error) {
+      console.error('[v0] Failed to load installers:', error)
     }
   }
 
@@ -249,6 +265,37 @@ export default function CustomerDetailPage() {
     } catch (error) {
       console.error('[v0] Failed to update booking:', error)
       toast.error('Failed to update booking')
+    } finally {
+      setBookingBusyId(null)
+    }
+  }
+
+  async function handleAssignBookingInstaller(bookingId: string) {
+    if (!customer) return
+    const installerId = bookingInstallerSelections[bookingId]
+    if (!installerId) {
+      toast.error('Select an installer first')
+      return
+    }
+
+    try {
+      setBookingBusyId(bookingId)
+      const res = await adminAPI.assignBookingInstaller(customer.id, bookingId, {
+        installerId,
+        note: 'Assigned from customer detail panel',
+        priority: 'medium',
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to assign installer')
+        return
+      }
+      toast.success('Installer assigned to booking')
+      setBookingInstallerSelections((current) => ({ ...current, [bookingId]: '' }))
+      await loadCustomer()
+      await loadInstallers()
+    } catch (error) {
+      console.error('[v0] Failed to assign booking installer:', error)
+      toast.error('Failed to assign installer')
     } finally {
       setBookingBusyId(null)
     }
@@ -626,8 +673,36 @@ export default function CustomerDetailPage() {
                               </span>
                             ) : null}
                             {booking.assignedInstallerName ? (
-                              <span className="rounded-full border border-white/10 px-2 py-1">Installer {booking.assignedInstallerName}</span>
+                              <span className="rounded-full border border-white/10 px-2 py-1">
+                                Installer {booking.assignedInstallerName}{booking.assignedInstallerPhone ? ` | ${booking.assignedInstallerPhone}` : ''}
+                              </span>
                             ) : null}
+                            <select
+                              className="rounded-full border border-white/10 bg-black px-2 py-1 text-xs text-white outline-none"
+                              value={bookingInstallerSelections[booking.id] ?? booking.assignedInstallerId ?? ''}
+                              disabled={bookingBusyId === booking.id}
+                              onChange={(e) =>
+                                setBookingInstallerSelections((current) => ({
+                                  ...current,
+                                  [booking.id]: e.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">Select installer</option>
+                              {availableInstallers.map((installer) => (
+                                <option key={installer.id} value={installer.id}>
+                                  {installer.name} [{installer.availabilityStatus || 'available'}]
+                                  {installer.assignedCity ? ` | ${installer.assignedCity}` : ''}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              className="rounded-full border border-[#d8ff16]/40 bg-[#d8ff16]/10 px-3 py-1 text-xs font-semibold text-[#d8ff16] transition hover:bg-[#d8ff16]/20"
+                              disabled={bookingBusyId === booking.id}
+                              onClick={() => void handleAssignBookingInstaller(booking.id)}
+                            >
+                              {bookingBusyId === booking.id ? 'Assigning...' : booking.assignedInstallerName ? 'Reassign Installer' : 'Assign Installer'}
+                            </button>
                             <select
                               className="rounded-full border border-white/10 bg-black px-2 py-1 text-xs text-white outline-none"
                               defaultValue=""

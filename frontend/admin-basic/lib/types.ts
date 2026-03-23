@@ -104,7 +104,10 @@ export interface CustomerBooking {
   planName?: string
   amount: number
   paymentStatus?: string
+  assignedInstallerId?: string
   assignedInstallerName?: string
+  assignedInstallerPhone?: string
+  installerJobId?: string
   preferredSlotLabel?: string
   preferredDate?: string
   address?: string

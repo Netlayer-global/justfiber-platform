@@ -212,7 +212,10 @@ function mapCustomerBooking(booking: any): CustomerBooking {
     planName: booking.selectedPlan?.planName || booking.selectedPlan?.planCode || '',
     amount: Number(booking.selectedPlan?.totalAmount || booking.payment?.amount || 0),
     paymentStatus: booking.payment?.status || '',
+    assignedInstallerId: booking.assignment?.installerId ? String(booking.assignment.installerId) : '',
     assignedInstallerName: booking.assignment?.installerName || '',
+    assignedInstallerPhone: booking.assignment?.installerPhone || '',
+    installerJobId: booking.assignment?.jobId ? String(booking.assignment.jobId) : '',
     preferredSlotLabel: booking.personalDetails?.preferredSlot?.label || '',
     preferredDate: booking.personalDetails?.preferredSlot?.date || '',
     address: booking.personalDetails?.fullAddress || '',
@@ -791,6 +794,20 @@ export const adminAPI = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+  assignBookingInstaller: async (
+    customerId: string,
+    bookingId: string,
+    data: { installerId: string; note?: string; priority?: 'low' | 'medium' | 'high' | 'urgent' }
+  ) => {
+    const res = await request<any>(`/api/v1/admin/customers/${customerId}/bookings/${bookingId}/assign-installer`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapCustomerBooking(res.data) : undefined,
+    }
+  },
   suspendCustomer: (id: string, reason: string) =>
     request(`/api/v1/admin/customers/${id}/suspend`, {
       method: 'POST',

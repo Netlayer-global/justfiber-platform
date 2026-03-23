@@ -8,7 +8,14 @@ import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
-import { statusActionSchema, retryProvisioningSchema, updateCustomerSchema, adminPlanChangeSchema, updateBookingStatusSchema } from "./schemas.js";
+import {
+  assignBookingInstallerSchema,
+  statusActionSchema,
+  retryProvisioningSchema,
+  updateCustomerSchema,
+  adminPlanChangeSchema,
+  updateBookingStatusSchema
+} from "./schemas.js";
 import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { allowedPresets } from "../../integrations/genieacsClient.js";
@@ -21,7 +28,9 @@ import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { ConnectionBooking } from "../../models/ConnectionBooking.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
-
+import { Installer } from "../../models/Installer.js";
+import { InstallerJob } from "../../models/InstallerJob.js";
+import { InstallerNotification } from "../../models/InstallerNotification.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
@@ -330,6 +339,170 @@ customersRouter.patch(
       entityType: "booking",
       entityId: booking._id.toString(),
       metadata: { status: payload.status }
+    });
+
+    return ok(res, booking);
+  })
+);
+
+customersRouter.post(
+  "/:customerId/bookings/:bookingId/assign-installer",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = assignBookingInstallerSchema.parse(req.body || {});
+    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+
+    const linkedUsers = await CustomerUser.find({
+      $or: [
+        { linkedCustomerIds: customer.customerId },
+        ...(customer.phone ? [{ mobile: customer.phone }] : []),
+        ...(customer.email ? [{ email: customer.email }] : [])
+      ]
+    }).select({ _id: 1 }).lean();
+    const linkedUserIds = linkedUsers.map((item) => String(item._id));
+
+    const [booking, installer] = await Promise.all([
+      ConnectionBooking.findById(req.params.bookingId),
+      Installer.findById(payload.installerId)
+    ]);
+    if (!booking) {
+      throw new ApiError(404, "Booking not found");
+    }
+    if (!installer) {
+      throw new ApiError(404, "Installer not found");
+    }
+
+    const belongsToCustomer =
+      (booking.customerUserId && linkedUserIds.includes(String(booking.customerUserId))) ||
+      (customer.phone && booking.personalDetails?.mobile === customer.phone);
+
+    if (!belongsToCustomer) {
+      throw new ApiError(404, "Booking not found for this customer");
+    }
+    if (installer.status !== "active" || installer.availabilityStatus === "on_leave") {
+      throw new ApiError(409, "Installer cannot be assigned");
+    }
+    if (["installed", "cancelled"].includes(booking.status)) {
+      throw new ApiError(409, "Closed bookings cannot be reassigned");
+    }
+
+    const existingJobId =
+      booking.assignment?.jobId ||
+      booking.tracking?.steps?.find?.((item) => item?.code === "installer_assigned")?.jobId;
+    let job = existingJobId ? await InstallerJob.findById(existingJobId) : null;
+
+    const customerSnapshot = {
+      fullName: booking.personalDetails?.fullName || customer.fullName || customer.customerId,
+      phone: booking.personalDetails?.mobile || customer.phone || "",
+      alternatePhone: booking.personalDetails?.alternateMobile || "",
+      address: booking.personalDetails?.fullAddress || customer.address?.line1 || "",
+      location: booking.feasibility?.location || booking.personalDetails?.location || undefined,
+      preferredSlot: booking.personalDetails?.preferredSlot || null,
+      planName: booking.selectedPlan?.planName || booking.selectedPlan?.planCode || customer.planName || "",
+      planCode: booking.selectedPlan?.planCode || customer.planCode || ""
+    };
+
+    if (job) {
+      job.installerId = installer._id;
+      job.priority = payload.priority || job.priority || "medium";
+      job.status = ["completed", "cancelled"].includes(job.status) ? "assigned" : job.status;
+      job.customerSnapshot = { ...(job.customerSnapshot || {}), ...customerSnapshot };
+      job.assignment = {
+        ...(job.assignment || {}),
+        assignedAt: new Date(),
+        assignedBy: req.admin._id,
+        autoAssigned: false,
+        zone: installer.assignedZones?.[0] || null
+      };
+      job.timeline.push({
+        event: "job.reassigned",
+        actorType: "admin",
+        actorId: req.admin._id,
+        note: payload.note || `Booking ${booking.bookingNumber} manually reassigned`
+      });
+      await job.save();
+    } else {
+      job = await InstallerJob.create({
+        jobNumber: `JOB-${Date.now()}`,
+        type: "installation",
+        status: "assigned",
+        customerId: booking.bookingNumber,
+        serviceId: booking.bookingNumber,
+        installerId: installer._id,
+        priority: payload.priority,
+        customerSnapshot,
+        assignment: {
+          assignedAt: new Date(),
+          assignedBy: req.admin._id,
+          autoAssigned: false,
+          zone: installer.assignedZones?.[0] || null
+        },
+        timeline: [
+          {
+            event: "job.assigned",
+            actorType: "admin",
+            actorId: req.admin._id,
+            note: payload.note || `Booking ${booking.bookingNumber} assigned from admin customer panel`
+          }
+        ]
+      });
+    }
+
+    booking.status = "assigned";
+    booking.assignment = {
+      ...(booking.assignment || {}),
+      installerId: installer._id,
+      installerName: installer.fullName || installer.installerCode || "Installer",
+      installerPhone: installer.phone || "",
+      assignedAt: new Date(),
+      autoAssigned: false,
+      zone: installer.assignedZones?.[0] || null,
+      jobId: job._id
+    };
+    booking.tracking = buildBookingTracking("assigned", booking.tracking || {}, payload.note);
+    if (Array.isArray(booking.tracking?.steps)) {
+      booking.tracking.steps = booking.tracking.steps.map((step) =>
+        step?.code === "installer_assigned"
+          ? { ...step, status: "done", at: new Date(), jobId: job._id }
+          : step
+      );
+    }
+    await booking.save();
+
+    await Installer.updateOne({ _id: installer._id }, { $set: { availabilityStatus: "busy" } });
+    await InstallerNotification.create({
+      installerId: installer._id,
+      type: "new_job",
+      title: "Booking assigned from admin",
+      body: `${customerSnapshot.fullName} installation has been assigned.`,
+      payload: { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+    });
+    if (booking.customerUserId) {
+      await CustomerNotification.create({
+        customerUserId: booking.customerUserId,
+        type: "installer_assigned",
+        title: "Installer assigned",
+        body: `${installer.fullName || "Installer"} has been assigned for booking ${booking.bookingNumber}.`,
+        payload: {
+          bookingNumber: booking.bookingNumber,
+          installerJobId: job._id,
+          installerId: installer._id
+        }
+      });
+    }
+
+    await auditFromRequest(req, {
+      action: "customer.booking.installer_assigned",
+      entityType: "booking",
+      entityId: booking._id.toString(),
+      metadata: {
+        bookingNumber: booking.bookingNumber,
+        installerId: String(installer._id),
+        installerName: installer.fullName || installer.installerCode
+      }
     });
 
     return ok(res, booking);

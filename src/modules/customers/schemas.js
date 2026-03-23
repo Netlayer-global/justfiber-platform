@@ -20,6 +20,12 @@ export const updateBookingStatusSchema = z.object({
   note: z.string().max(300).optional()
 });
 
+export const assignBookingInstallerSchema = z.object({
+  installerId: z.string().min(2),
+  note: z.string().max(300).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium")
+});
+
 export const updateCustomerSchema = z.object({
   fullName: z.string().min(2).max(200).optional(),
   phone: z.string().min(8).max(20).optional(),
