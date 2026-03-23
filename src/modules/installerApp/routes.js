@@ -900,7 +900,16 @@ installerAppRouter.post(
         "complaint_resolved",
         "Complaint resolved",
         `Complaint visit for booking ${booking.bookingNumber} has been completed.`,
-        { bookingNumber: booking.bookingNumber, installerJobId: job._id }
+        {
+          bookingNumber: booking.bookingNumber,
+          installerJobId: job._id,
+          resolutionCode: job.complaint?.resolutionCode || "",
+          resolutionNote: job.complaint?.note || "",
+          replacedDevice: Boolean(job.complaint?.replacedDevice),
+          oldSerialNumber: job.deviceContext?.oldSerialNumber || "",
+          newSerialNumber: job.deviceContext?.finalSerialNumber || "",
+          completionOtpVerifiedAt: job.otp?.verifiedAt || null
+        }
       );
     }
     const subscriberService = await SubscriberService.findOne({ serviceId: job.serviceId }).lean();

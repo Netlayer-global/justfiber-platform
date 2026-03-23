@@ -110,6 +110,11 @@ class NotificationsScreen extends StatelessWidget {
     final wifi5 = (payload['wifiSsid5'] ?? '').toString();
     final wifiPassword = (payload['wifiPassword'] ?? '').toString();
     final configStatus = (payload['configStatus'] ?? '').toString();
+    final resolutionCode = (payload['resolutionCode'] ?? '').toString();
+    final resolutionNote = (payload['resolutionNote'] ?? '').toString();
+    final replacedDevice = payload['replacedDevice'] == true;
+    final oldSerial = (payload['oldSerialNumber'] ?? '').toString();
+    final newSerial = (payload['newSerialNumber'] ?? '').toString();
     if (planName.isNotEmpty) {
       lines.add('Plan: $planName');
     }
@@ -121,6 +126,18 @@ class NotificationsScreen extends StatelessWidget {
     }
     if (configStatus.isNotEmpty) {
       lines.add('Config: $configStatus');
+    }
+    if (resolutionCode.isNotEmpty) {
+      lines.add('Resolution: $resolutionCode');
+    }
+    if (resolutionNote.isNotEmpty) {
+      lines.add('Note: $resolutionNote');
+    }
+    if (replacedDevice) {
+      lines.add('ONT replaced: ${newSerial.isEmpty ? 'Yes' : newSerial}');
+      if (oldSerial.isNotEmpty) {
+        lines.add('Old ONT: $oldSerial');
+      }
     }
     return lines;
   }
