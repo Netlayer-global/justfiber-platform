@@ -31,8 +31,6 @@ import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../c
 
 export const adminOpsRouter = Router();
 
-adminOpsRouter.use(requireAuth);
-
 adminOpsRouter.get(
   "/customer-auth/demo-otp",
   asyncHandler(async (req, res) => {
@@ -49,6 +47,8 @@ adminOpsRouter.get(
     });
   })
 );
+
+adminOpsRouter.use(requireAuth);
 
 function computeBalanceAfter({ currentBalance, direction, amount }) {
   return currentBalance + (direction === "debit" ? amount : -amount);
