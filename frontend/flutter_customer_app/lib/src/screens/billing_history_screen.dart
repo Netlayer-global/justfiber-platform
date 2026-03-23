@@ -36,6 +36,15 @@ class BillingHistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'BILLING CONSOLE',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF9CA3AF),
+                    letterSpacing: 3.2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
                   'Current bill',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     color: const Color(0xFFEFEEE8),
@@ -122,6 +131,11 @@ class BillingHistoryScreen extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: appState.busy ? null : appState.refresh,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFEFEEE8),
+                          backgroundColor: const Color(0xFF0E1520),
+                          side: const BorderSide(color: Color(0x55E6FF3C)),
+                        ),
                         child: const Text('Refresh'),
                       ),
                     ),
@@ -378,16 +392,28 @@ class BillingHistoryScreen extends StatelessWidget {
                 if (viewUrl.isNotEmpty)
                   OutlinedButton(
                     onPressed: () => _openDocument(context, appState, title, viewUrl),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF111111),
+                      backgroundColor: const Color(0xFFF3F1E9),
+                      side: const BorderSide(color: Color(0x14000000)),
+                    ),
                     child: const Text('Open'),
                   ),
                 if (pdfUrl.isNotEmpty)
                   FilledButton.tonal(
                     onPressed: () => _openDocument(context, appState, '$title PDF', pdfUrl),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFE6FF3C),
+                      foregroundColor: const Color(0xFF111111),
+                    ),
                     child: const Text('Open PDF'),
                   ),
                 if (pdfUrl.isNotEmpty || viewUrl.isNotEmpty)
                   TextButton(
                     onPressed: () => _shareDocument(appState, pdfUrl.isNotEmpty ? pdfUrl : viewUrl),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF111111),
+                    ),
                     child: const Text('Share'),
                   ),
               ],

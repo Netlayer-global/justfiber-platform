@@ -23,9 +23,18 @@ class ProfileTab extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'ACCOUNT CONSOLE',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF9CA3AF),
+                    letterSpacing: 3.2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
                 Text(
                   dashboard.customerName.isEmpty ? 'Customer account' : dashboard.customerName,
                   style: theme.textTheme.headlineSmall?.copyWith(
@@ -104,8 +113,8 @@ class ProfileTab extends StatelessWidget {
         FilledButton.tonal(
           onPressed: appState.logout,
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF0B0F19),
-            foregroundColor: const Color(0xFFEFEEE8),
+            backgroundColor: const Color(0xFFE6FF3C),
+            foregroundColor: const Color(0xFF111111),
           ),
           child: const Text('Logout'),
         ),

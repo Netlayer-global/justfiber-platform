@@ -29,6 +29,15 @@ class SupportHistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'SUPPORT DESK',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF9CA3AF),
+                    letterSpacing: 3.2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
                   'Get instant support',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     color: const Color(0xFFEFEEE8),
@@ -121,8 +130,8 @@ class SupportHistoryScreen extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                       ),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0x22E6FF3C),
-                        foregroundColor: const Color(0xFFEFEEE8),
+                        backgroundColor: const Color(0xFFE6FF3C),
+                        foregroundColor: const Color(0xFF111111),
                       ),
                       child: const Text('Open alerts center'),
                     ),
@@ -190,9 +199,9 @@ class SupportHistoryScreen extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label),
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF111111),
-        backgroundColor: const Color(0xFFF3F1E9),
-        side: const BorderSide(color: Color(0x14000000)),
+        foregroundColor: const Color(0xFFEFEEE8),
+        backgroundColor: const Color(0xFF0E1520),
+        side: const BorderSide(color: Color(0x33E6FF3C)),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),

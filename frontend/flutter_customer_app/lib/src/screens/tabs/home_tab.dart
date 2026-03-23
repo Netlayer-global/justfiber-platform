@@ -51,6 +51,15 @@ class HomeTab extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
+                          'CUSTOMER DASHBOARD',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: const Color(0xFF9CA3AF),
+                                letterSpacing: 3.2,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
                           'Hi, $displayName',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: const Color(0xFFEFEEE8),
@@ -105,6 +114,10 @@ class HomeTab extends StatelessWidget {
                           : () => Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
                               ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFE6FF3C),
+                        foregroundColor: const Color(0xFF111111),
+                      ),
                       child: Text(hasService ? 'Open services' : 'Book connection'),
                     ),
                   ),
@@ -118,6 +131,7 @@ class HomeTab extends StatelessWidget {
                               ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
+                        backgroundColor: const Color(0xFF0E1520),
                         side: const BorderSide(color: Color(0x55E6FF3C)),
                       ),
                       child: Text(hasService ? 'Open billing' : 'Track request'),
@@ -280,6 +294,10 @@ class HomeTab extends StatelessWidget {
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
                   ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE6FF3C),
+                    foregroundColor: const Color(0xFF111111),
+                  ),
                   child: const Text('Track booking'),
                 ),
               ],
@@ -291,7 +309,27 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _sectionTitle(BuildContext context, String title) {
-    return Text(title, style: Theme.of(context).textTheme.titleLarge);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'CONTROL MODULES',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: const Color(0xFF9CA3AF),
+                letterSpacing: 3,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: const Color(0xFFEFEEE8),
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+      ],
+    );
   }
 
   Widget _summaryBox(String label, String value) {
@@ -416,20 +454,8 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _lightPanel({required Widget child}) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFFFF), Color(0xFFF7FFFE)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0x14E6FF3C)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
-        ],
-      ),
       child: child,
     );
   }
