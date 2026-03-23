@@ -144,7 +144,7 @@ class SupportHistoryScreen extends StatelessWidget {
           _sectionCard(
             title: 'Support tickets',
             child: appState.tickets.isEmpty
-                ? const Text('No support tickets yet.', style: TextStyle(color: Color(0xFF6B7280)))
+                ? const Text('No support tickets yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 : Column(
                     children: appState.tickets
                         .map(
@@ -166,7 +166,7 @@ class SupportHistoryScreen extends StatelessWidget {
           _sectionCard(
             title: 'Service requests',
             child: appState.requests.isEmpty
-                ? const Text('No service requests yet.', style: TextStyle(color: Color(0xFF6B7280)))
+                ? const Text('No service requests yet.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 : Column(
                     children: appState.requests
                         .map(

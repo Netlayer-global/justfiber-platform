@@ -23,10 +23,10 @@ class ServiceTrackingScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Requests & Tracking'),
-        backgroundColor: const Color(0xFF090C1A),
+        backgroundColor: const Color(0xFF050505),
         foregroundColor: const Color(0xFFEFEEE8),
       ),
-      backgroundColor: const Color(0xFF060816),
+      backgroundColor: const Color(0xFF050505),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
@@ -147,7 +147,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                                   const SizedBox(height: 4),
                                   Text(
                                     'Preferred slot: ${latestBooking!.preferredSlotLabel}',
-                                    style: const TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w700),
+                                    style: const TextStyle(color: Color(0xFFE6FF3C), fontSize: 12, fontWeight: FontWeight.w700),
                                   ),
                                 ],
                               ],
@@ -380,9 +380,9 @@ class ServiceTrackingScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+          style: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 13),
           children: [
-            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700)),
+            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
             TextSpan(text: value),
           ],
         ),
@@ -394,19 +394,19 @@ class ServiceTrackingScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE5E7EB))),
+        border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0x22E6FF3C))),
       ),
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
           ),
           const SizedBox(width: 16),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(color: Color(0xFF7B625A), fontWeight: FontWeight.w600),
+              style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600),
             ),
           ),
         ],
