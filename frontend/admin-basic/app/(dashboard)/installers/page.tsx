@@ -36,6 +36,15 @@ export default function InstallersPage() {
   const [form, setForm] = useState<InstallerFormState>(initialForm)
   const [passwordInstallerId, setPasswordInstallerId] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const installerMetrics: Array<{
+    label: string
+    value: string
+    Icon: typeof ShieldCheck
+  }> = [
+    { label: 'Available', value: String(installers.filter((i) => i.availabilityStatus === 'available').length), Icon: ShieldCheck },
+    { label: 'Busy', value: String(installers.filter((i) => i.availabilityStatus === 'busy').length), Icon: Wrench },
+    { label: 'Total', value: String(installers.length), Icon: UserRoundCog },
+  ]
 
   useEffect(() => {
     loadInstallers()
@@ -169,11 +178,7 @@ export default function InstallersPage() {
           <div className="mt-3 text-5xl font-black">{installers.length}</div>
           <div className="mt-2 text-sm text-black/60">Installers currently tracked in the workforce registry</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              ['Available', String(installers.filter((i) => i.availabilityStatus === 'available').length), ShieldCheck],
-              ['Busy', String(installers.filter((i) => i.availabilityStatus === 'busy').length), Wrench],
-              ['Total', String(installers.length), UserRoundCog],
-            ].map(([label, value, Icon]) => (
+            {installerMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
