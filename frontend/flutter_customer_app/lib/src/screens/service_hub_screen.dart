@@ -28,7 +28,7 @@ class ServiceHubScreen extends StatelessWidget {
           children: [
             Text('Wi-Fi', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 2),
-            Text(displayWifiName, style: const TextStyle(fontSize: 18, color: Color(0xFF64748B))),
+            Text(displayWifiName, style: const TextStyle(fontSize: 18, color: Color(0xFF94A3B8))),
           ],
         ),
         centerTitle: true,
@@ -255,12 +255,12 @@ class ServiceHubScreen extends StatelessWidget {
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFFFFFFF), Color(0xFFF8FFFB)],
+                                colors: [Color(0xFF0B0F19), Color(0xFF111827)],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: const Color(0x14E6FF3C)),
+                              border: Border.all(color: const Color(0x22E6FF3C)),
                             ),
                             child: Row(
                               children: [
@@ -278,9 +278,9 @@ class ServiceHubScreen extends StatelessWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                                      Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
                                       const SizedBox(height: 4),
-                                      Text(addon.description, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                                      Text(addon.description, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.4)),
                                     ],
                                   ),
                                 ),
@@ -323,20 +323,10 @@ class ServiceHubScreen extends StatelessWidget {
   }
 
   Widget _lightPanel({required Widget child}) {
-    return Container(
+    return AppCard(
+      color: const Color(0xFF0C1018),
+      borderColor: const Color(0x22E6FF3C),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFFFF), Color(0xFFF7FFFE)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0x14E6FF3C)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
-        ],
-      ),
       child: child,
     );
   }
@@ -345,16 +335,16 @@ class ServiceHubScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFEEE8),
+        color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x22E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
         ],
       ),
     );
@@ -364,16 +354,19 @@ class ServiceHubScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFEEE8),
+        color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x22E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value.isEmpty ? '-' : value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          Text(
+            value.isEmpty ? '-' : value,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8)),
+          ),
         ],
       ),
     );
@@ -409,13 +402,12 @@ class ServiceHubScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), height: 1.4)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.4)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF8A90A2)),
           ],
         ),
       ),
@@ -427,7 +419,7 @@ class ServiceHubScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         border: Border(
-          bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1)),
+          bottom: last ? BorderSide.none : const BorderSide(color: Color(0x22E6FF3C)),
         ),
       ),
       child: Row(
@@ -436,20 +428,20 @@ class ServiceHubScreen extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
+              color: const Color(0xFF101722),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: const Color(0x22E6FF3C)),
             ),
-            child: Icon(icon, color: const Color(0xFF111827)),
+            child: Icon(icon, color: const Color(0xFFE6FF3C)),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
+                Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
-                Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFEFEEE8))),
               ],
             ),
           ),
