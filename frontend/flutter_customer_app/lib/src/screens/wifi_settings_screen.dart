@@ -544,8 +544,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Enable guest network', style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
+                      subtitle: const Text('Separate guests from your main home network', style: TextStyle(color: Color(0xFFD1D5DB))),
                       value: enabled,
                       activeColor: const Color(0xFFE6FF3C),
+                      inactiveThumbColor: const Color(0xFF9CA3AF),
+                      inactiveTrackColor: const Color(0xFF1F2937),
                       onChanged: (value) => setLocalState(() => enabled = value),
                     ),
                     TextField(controller: _guestSsidController, style: const TextStyle(color: const Color(0xFFEFEEE8)), decoration: const InputDecoration(labelText: 'Guest Wi-Fi name')),
@@ -640,14 +643,17 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: rule.blocked ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+                                color: rule.blocked ? const Color(0xFF2A1108) : const Color(0xFF0D1A12),
                                 borderRadius: BorderRadius.circular(99),
+                                border: Border.all(
+                                  color: rule.blocked ? const Color(0x66F59E0B) : const Color(0x66E6FF3C),
+                                ),
                               ),
                               child: Text(
                                 rule.blocked ? 'Blocked' : 'Allowed',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: rule.blocked ? const Color(0xFF92400E) : const Color(0xFF166534),
+                                  color: rule.blocked ? const Color(0xFFFDE68A) : const Color(0xFFE6FF3C),
                                 ),
                               ),
                             ),
@@ -741,7 +747,18 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Maybe Later')),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFEFEEE8),
+                      backgroundColor: const Color(0xFF0E1520),
+                      side: const BorderSide(color: Color(0x22E6FF3C)),
+                    ),
+                    child: const Text('Maybe Later'),
+                  ),
+                ),
               ],
             ),
           ),

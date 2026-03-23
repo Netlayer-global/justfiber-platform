@@ -303,6 +303,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 return ChoiceChip(
                   label: Text(_formatDate(date)),
                   selected: selectedDate,
+                  backgroundColor: const Color(0xFF08131B),
+                  selectedColor: const Color(0xFFE6FF3C),
+                  side: BorderSide(color: selectedDate ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C)),
+                  labelStyle: TextStyle(
+                    color: selectedDate ? const Color(0xFF111111) : const Color(0xFFEFEEE8),
+                    fontWeight: FontWeight.w700,
+                  ),
                   onSelected: (_) => setState(() => _preferredDate = date),
                 );
               },
@@ -321,6 +328,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               return ChoiceChip(
                 label: Text(slot.$2),
                 selected: selectedSlot,
+                backgroundColor: const Color(0xFF08131B),
+                selectedColor: const Color(0xFFE6FF3C),
+                side: BorderSide(color: selectedSlot ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C)),
+                labelStyle: TextStyle(
+                  color: selectedSlot ? const Color(0xFF111111) : const Color(0xFFEFEEE8),
+                  fontWeight: FontWeight.w700,
+                ),
                 onSelected: (_) {
                   setState(() {
                     _selectedSlotCode = slot.$1;
