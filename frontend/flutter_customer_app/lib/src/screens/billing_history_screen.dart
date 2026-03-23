@@ -126,18 +126,23 @@ class BillingHistoryScreen extends StatelessWidget {
                         onPressed: appState.busy || billing.dueAmount <= 0
                             ? null
                             : () => _payNow(context, appState, amount: billing.dueAmount),
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFE6FF3C),
+                          foregroundColor: const Color(0xFF031B17),
+                          elevation: 0,
+                        ),
                         child: Text(billing.pendingPlanChange != null ? 'Pay to switch plan' : 'Pay now'),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: OutlinedButton(
+                      child: FilledButton(
                         onPressed: appState.busy ? null : appState.refresh,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFEFEEE8),
-                          backgroundColor: const Color(0xFF0E1520),
-                          side: const BorderSide(color: Color(0x55E6FF3C)),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B2311),
+                          foregroundColor: const Color(0xFFE6FF3C),
+                          disabledBackgroundColor: const Color(0xFF111827),
+                          disabledForegroundColor: const Color(0xFF6B7280),
                         ),
                         child: const Text('Refresh'),
                       ),
@@ -433,7 +438,7 @@ class BillingHistoryScreen extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (viewUrl.isNotEmpty)
+                if (viewUrl.isNotEmpty && pdfUrl.isEmpty)
                   OutlinedButton(
                     onPressed: () async {
                       await _openDocument(context, appState, title, viewUrl);
@@ -460,7 +465,7 @@ class BillingHistoryScreen extends StatelessWidget {
                       backgroundColor: const Color(0xFFE6FF3C),
                       foregroundColor: const Color(0xFF111111),
                     ),
-                    child: const Text('Open PDF'),
+                    child: Text(viewUrl.isNotEmpty ? 'Open invoice' : 'Open PDF'),
                   ),
                 if (pdfUrl.isNotEmpty || viewUrl.isNotEmpty)
                   TextButton(
