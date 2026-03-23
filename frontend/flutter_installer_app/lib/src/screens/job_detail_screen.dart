@@ -249,6 +249,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final canSubmitProof = _canSubmitProof(status, _routerPhotoReady, _cablePhotoReady);
     final canSendInstallOtp = _canSendInstallOtp(status, proofUploaded, _routerPhotoReady, _cablePhotoReady);
     final canCompleteInstall = _canCompleteInstall(status, _otpController.text.trim());
+    final nextStepNumber = _nextStepNumber(
+      status: status,
+      isComplaint: isComplaint,
+      activationLive: activationLive,
+      proofUploaded: proofUploaded,
+      otpReady: _otpController.text.trim().length == 6,
+    );
+    final totalSteps = isComplaint ? 7 : 8;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.job.jobNumber)),
@@ -387,6 +395,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: 14),
+                      _nextActionCard(
+                        context,
+                        status: status,
+                        configStatus: configStatus,
+                        isComplaint: isComplaint,
+                        canAccept: canAccept,
+                        canStartTravel: canStartTravel,
+                        canStartOnsite: canStartOnsite,
+                        canActivate: canActivate,
+                        canRetry: canRetry,
+                        canStartComplaint: canStartComplaint,
+                        canReplaceOnt: canReplaceOnt,
+                        canSendComplaintOtp: canSendComplaintOtp,
+                        canResolveComplaint: canResolveComplaint,
+                        canSubmitProof: canSubmitProof,
+                        canSendInstallOtp: canSendInstallOtp,
+                        canCompleteInstall: canCompleteInstall,
+                        proofUploaded: proofUploaded,
+                        nextStepNumber: nextStepNumber,
+                        totalSteps: totalSteps,
                       ),
                       const SizedBox(height: 14),
                       Wrap(
@@ -1040,6 +1070,117 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
+  Widget _nextActionCard(
+    BuildContext context, {
+    required String status,
+    required String configStatus,
+    required bool isComplaint,
+    required bool canAccept,
+    required bool canStartTravel,
+    required bool canStartOnsite,
+    required bool canActivate,
+    required bool canRetry,
+    required bool canStartComplaint,
+    required bool canReplaceOnt,
+    required bool canSendComplaintOtp,
+    required bool canResolveComplaint,
+    required bool canSubmitProof,
+    required bool canSendInstallOtp,
+    required bool canCompleteInstall,
+    required bool proofUploaded,
+    required int nextStepNumber,
+    required int totalSteps,
+  }) {
+    final theme = Theme.of(context);
+    final nextLabel = isComplaint
+        ? _nextComplaintActionLabel(
+            status: status,
+            canAccept: canAccept,
+            canStartTravel: canStartTravel,
+            canStartOnsite: canStartOnsite,
+            canStartComplaint: canStartComplaint,
+            canReplaceOnt: canReplaceOnt,
+            canSendComplaintOtp: canSendComplaintOtp,
+            canResolveComplaint: canResolveComplaint,
+          )
+        : _nextInstallActionLabel(
+            status: status,
+            canAccept: canAccept,
+            canStartTravel: canStartTravel,
+            canStartOnsite: canStartOnsite,
+            canActivate: canActivate,
+            canRetry: canRetry,
+            canSubmitProof: canSubmitProof,
+            canSendInstallOtp: canSendInstallOtp,
+            canCompleteInstall: canCompleteInstall,
+          );
+    final nextSubtitle = isComplaint
+        ? _nextComplaintActionSubtitle(status)
+        : _nextInstallActionSubtitle(status);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141A22),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0x55E6FF3C)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isComplaint ? 'GUIDED COMPLAINT FLOW' : 'GUIDED INSTALL FLOW',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF9CA3AF),
+              letterSpacing: 2.8,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Step $nextStepNumber of $totalSteps',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            nextSubtitle,
+            style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: nextStepNumber / totalSteps,
+            minHeight: 8,
+            backgroundColor: const Color(0xFF0C1018),
+            valueColor: const AlwaysStoppedAnimation(Color(0xFFE6FF3C)),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton(
+                onPressed: _busy ? null : () => _handleNextPrimaryAction(status, configStatus, isComplaint, proofUploaded),
+                child: Text(nextLabel),
+              ),
+              if (!isComplaint && (status == 'onsite' || status == 'ont_scanned' || status == 'failed'))
+                OutlinedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _scanSerial(
+                            controller: _serialController,
+                            title: 'Scan ONT serial',
+                            subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                          ),
+                  child: const Text('Scan serial'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _timelineRow(Map<String, dynamic> item) {
     final note = (item['note'] ?? '').toString();
     final actor = (item['actorType'] ?? '').toString();
@@ -1221,6 +1362,309 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   bool _canCompleteInstall(String status, String otp) =>
       ['active', 'activation_in_progress'].contains(status) && otp.length == 6;
+
+  int _nextStepNumber({
+    required String status,
+    required bool isComplaint,
+    required bool activationLive,
+    required bool proofUploaded,
+    required bool otpReady,
+  }) {
+    if (isComplaint) {
+      switch (status) {
+        case 'assigned':
+          return 1;
+        case 'accepted':
+          return 2;
+        case 'enroute':
+          return 3;
+        case 'onsite':
+          return 4;
+        case 'complaint_in_progress':
+          return otpReady ? 7 : 6;
+        case 'completed':
+          return 7;
+        default:
+          return 4;
+      }
+    }
+
+    switch (status) {
+      case 'assigned':
+        return 1;
+      case 'accepted':
+        return 2;
+      case 'enroute':
+        return 3;
+      case 'onsite':
+      case 'ont_scanned':
+      case 'failed':
+        return 4;
+      case 'activation_in_progress':
+        return 5;
+      case 'active':
+        if (!proofUploaded) return 6;
+        return otpReady ? 8 : 7;
+      case 'completed':
+        return 8;
+      default:
+        return activationLive ? 6 : 4;
+    }
+  }
+
+  String _nextInstallActionLabel({
+    required String status,
+    required bool canAccept,
+    required bool canStartTravel,
+    required bool canStartOnsite,
+    required bool canActivate,
+    required bool canRetry,
+    required bool canSubmitProof,
+    required bool canSendInstallOtp,
+    required bool canCompleteInstall,
+  }) {
+    if (canAccept) return 'Accept job';
+    if (canStartTravel) return 'Start travel';
+    if (canStartOnsite) return 'Mark onsite';
+    if (canRetry && status == 'failed') return 'Retry config';
+    if (canActivate) return 'Run activation';
+    if (canSubmitProof) return 'Submit proof';
+    if (canSendInstallOtp) return 'Send OTP';
+    if (canCompleteInstall) return 'Complete installation';
+    if (status == 'completed') return 'Installation closed';
+    return 'Wait for next update';
+  }
+
+  String _nextComplaintActionLabel({
+    required String status,
+    required bool canAccept,
+    required bool canStartTravel,
+    required bool canStartOnsite,
+    required bool canStartComplaint,
+    required bool canReplaceOnt,
+    required bool canSendComplaintOtp,
+    required bool canResolveComplaint,
+  }) {
+    if (canAccept && status == 'assigned') return 'Accept complaint';
+    if (canStartTravel && status == 'accepted') return 'Start travel';
+    if (canStartOnsite && status == 'enroute') return 'Mark onsite';
+    if (canStartComplaint && status == 'onsite') return 'Start complaint';
+    if (canReplaceOnt) return 'Replace ONT';
+    if (canSendComplaintOtp) return 'Send OTP';
+    if (canResolveComplaint) return 'Resolve complaint';
+    if (status == 'completed') return 'Complaint closed';
+    return 'Wait for next update';
+  }
+
+  String _nextInstallActionSubtitle(String status) {
+    switch (status) {
+      case 'assigned':
+        return 'Take ownership from dispatch before moving toward the customer site.';
+      case 'accepted':
+        return 'Start travel so dispatch and customer both see movement toward the site.';
+      case 'enroute':
+        return 'Reach the customer location and mark the visit onsite before provisioning.';
+      case 'onsite':
+      case 'ont_scanned':
+      case 'failed':
+        return 'Link the ONT serial, preview config, check diagnostics, and push activation.';
+      case 'activation_in_progress':
+        return 'Backend is pushing PPPoE, VLAN, NAT, and Wi-Fi config to the router.';
+      case 'active':
+        return 'Capture proof, submit it, send OTP, and complete customer handover.';
+      case 'completed':
+        return 'Installation is closed. Review the proof, timeline, and final router details.';
+      default:
+        return 'Continue the installation sequence from the next guided action.';
+    }
+  }
+
+  String _nextComplaintActionSubtitle(String status) {
+    switch (status) {
+      case 'assigned':
+        return 'Take ownership of the complaint ticket before moving to site.';
+      case 'accepted':
+        return 'Start travel so the complaint visit is active in the field queue.';
+      case 'enroute':
+        return 'Reach customer site and mark the visit onsite before starting complaint work.';
+      case 'onsite':
+        return 'Select issue type, add complaint note, and start the complaint workflow.';
+      case 'complaint_in_progress':
+        return 'Replace ONT if needed, verify the fix, send customer OTP, and close the complaint.';
+      case 'completed':
+        return 'Complaint is closed. Review replacement summary and final timeline.';
+      default:
+        return 'Continue the complaint workflow from the next guided action.';
+    }
+  }
+
+  Future<void> _handleNextPrimaryAction(String status, String configStatus, bool isComplaint, bool proofUploaded) async {
+    if (_busy) return;
+    if (isComplaint) {
+      if (_canAccept(status)) {
+        await _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Complaint accepted');
+        return;
+      }
+      if (_canStartTravel(status)) {
+        await _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started');
+        return;
+      }
+      if (_canStartOnsite(status)) {
+        await _run(() async {
+          await _appState.api.startOnsite(_appState.session!, widget.job.id);
+          if (widget.job.latitude != null && widget.job.longitude != null) {
+            await _appState.api.checkinLocation(
+              _appState.session!,
+              widget.job.id,
+              lat: widget.job.latitude!,
+              lng: widget.job.longitude!,
+              address: widget.job.customerAddress,
+            );
+          }
+        }, 'Onsite started');
+        return;
+      }
+      if (_canStartComplaint(status)) {
+        await _run(
+          () => _appState.api.startComplaint(
+            _appState.session!,
+            widget.job.id,
+            resolutionCode: _complaintResolutionCode,
+            note: _complaintNoteController.text.trim().isEmpty
+                ? 'Installer started complaint work'
+                : _complaintNoteController.text.trim(),
+          ),
+          'Complaint workflow started',
+        );
+        return;
+      }
+      if (_canReplaceOnt(status)) {
+        final serial = _replaceSerialController.text.trim();
+        if (serial.isEmpty) {
+          _show('Enter replacement ONT serial');
+          return;
+        }
+        await _run(
+          () => _appState.api.replaceDevice(
+            _appState.session!,
+            widget.job.id,
+            newSerialNumber: serial,
+            reason: _complaintNoteController.text.trim().isEmpty
+                ? 'ONT replaced from installer app'
+                : _complaintNoteController.text.trim(),
+          ),
+          'ONT replacement saved',
+        );
+        return;
+      }
+      if (_canSendComplaintOtp(status)) {
+        setState(() => _busy = true);
+        try {
+          final otp = await _appState.api.sendComplaintOtp(_appState.session!, widget.job.id);
+          _show(otp == null ? 'Complaint OTP sent' : 'Complaint OTP: $otp');
+          await _loadAll();
+        } catch (e) {
+          _show(e.toString());
+        } finally {
+          if (mounted) setState(() => _busy = false);
+        }
+        return;
+      }
+      if (_canResolveComplaint(status, _otpController.text.trim())) {
+        final otp = _otpController.text.trim();
+        await _run(() async {
+          await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
+          await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
+        }, 'Complaint resolved');
+        return;
+      }
+      _show('No complaint action available right now');
+      return;
+    }
+
+    if (_canAccept(status)) {
+      await _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Job accepted');
+      return;
+    }
+    if (_canStartTravel(status)) {
+      await _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started');
+      return;
+    }
+    if (_canStartOnsite(status)) {
+      await _run(() async {
+        await _appState.api.startOnsite(_appState.session!, widget.job.id);
+        if (widget.job.latitude != null && widget.job.longitude != null) {
+          await _appState.api.checkinLocation(
+            _appState.session!,
+            widget.job.id,
+            lat: widget.job.latitude!,
+            lng: widget.job.longitude!,
+            address: widget.job.customerAddress,
+          );
+        }
+      }, 'Onsite started');
+      return;
+    }
+    if (_canRetry(status, configStatus) && status == 'failed') {
+      await _run(
+        () => _appState.api.retryActivation(
+          _appState.session!,
+          widget.job.id,
+          note: 'Retry from installer app after config failure',
+        ),
+        'Retry requested',
+      );
+      return;
+    }
+    if (_canActivate(status)) {
+      final serial = _serialController.text.trim();
+      if (serial.isEmpty) {
+        _show('Enter ONT serial first');
+        return;
+      }
+      _startActivationCountdown();
+      await _run(() => _appState.runActivationFlow(widget.job.id, serial), 'Activation requested');
+      return;
+    }
+    if (_canSubmitProof(status, _routerPhotoReady, _cablePhotoReady)) {
+      await _run(
+        () => _appState.api.uploadProof(
+          _appState.session!,
+          widget.job.id,
+          routerPhotoUrl: _routerPhotoPath != null
+              ? Uri.file(_routerPhotoPath!).toString()
+              : 'https://justfiber.local/proof/${widget.job.id}/router.jpg',
+          cablePhotoUrl: _cablePhotoPath != null
+              ? Uri.file(_cablePhotoPath!).toString()
+              : 'https://justfiber.local/proof/${widget.job.id}/cable.jpg',
+        ),
+        'Installation proof submitted',
+      );
+      return;
+    }
+    if (_canSendInstallOtp(status, proofUploaded, _routerPhotoReady, _cablePhotoReady)) {
+      setState(() => _busy = true);
+      try {
+        final otp = await _appState.api.sendCompletionOtp(_appState.session!, widget.job.id);
+        _show(otp == null ? 'Completion OTP sent' : 'Completion OTP: $otp');
+        await _loadAll();
+      } catch (e) {
+        _show(e.toString());
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      return;
+    }
+    if (_canCompleteInstall(status, _otpController.text.trim())) {
+      final otp = _otpController.text.trim();
+      await _run(() async {
+        await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
+        await _appState.api.completeJob(_appState.session!, widget.job.id);
+      }, 'Installation completed');
+      return;
+    }
+    _show('No installer action available right now');
+  }
 
   String _nextActionText({
     required String status,
