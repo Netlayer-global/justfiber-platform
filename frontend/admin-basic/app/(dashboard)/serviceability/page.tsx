@@ -83,6 +83,15 @@ export default function ServiceabilityPage() {
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null)
   const [mapMode, setMapMode] = useState<'polygon' | 'center'>('polygon')
   const [form, setForm] = useState<ZoneFormState>(initialForm)
+  const coverageMetrics: Array<{
+    label: string
+    value: string
+    Icon: typeof ShieldCheck
+  }> = [
+    { label: 'Active', value: String(zones.filter((z) => z.status === 'active').length), Icon: ShieldCheck },
+    { label: 'Planned', value: String(zones.filter((z) => z.status === 'planned').length), Icon: Map },
+    { label: 'Total', value: String(zones.length), Icon: MapPin },
+  ]
 
   useEffect(() => {
     void loadZones()
@@ -230,11 +239,7 @@ export default function ServiceabilityPage() {
           <div className="mt-3 text-5xl font-black">{zones.length}</div>
           <div className="mt-2 text-sm text-black/60">Zones currently defined for serviceability and booking eligibility</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              ['Active', String(zones.filter((z) => z.status === 'active').length), ShieldCheck],
-              ['Planned', String(zones.filter((z) => z.status === 'planned').length), Map],
-              ['Total', String(zones.length), MapPin],
-            ].map(([label, value, Icon]) => (
+            {coverageMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
