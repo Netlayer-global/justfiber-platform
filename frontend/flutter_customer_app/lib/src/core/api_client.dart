@@ -495,6 +495,11 @@ class ApiClient {
         completionOtpVerifiedAt: (map['completionOtpVerifiedAt'] ?? '').toString(),
         wifiSsid24: (map['wifiSsid24'] ?? '').toString(),
         wifiSsid5: (map['wifiSsid5'] ?? '').toString(),
+        complaintResolutionCode: (map['resolutionCode'] ?? '').toString(),
+        complaintResolutionNote: (map['resolutionNote'] ?? '').toString(),
+        complaintReplacedDevice: map['replacedDevice'] == true,
+        oldSerialNumber: (map['oldSerialNumber'] ?? '').toString(),
+        newSerialNumber: (map['newSerialNumber'] ?? '').toString(),
       );
     }).toList(), (item) => item.lastUpdateAt.isNotEmpty ? item.lastUpdateAt : item.createdAt);
   }

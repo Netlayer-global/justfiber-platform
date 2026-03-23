@@ -454,6 +454,11 @@ class InstallerVisitItem {
     required this.completionOtpVerifiedAt,
     required this.wifiSsid24,
     required this.wifiSsid5,
+    required this.complaintResolutionCode,
+    required this.complaintResolutionNote,
+    required this.complaintReplacedDevice,
+    required this.oldSerialNumber,
+    required this.newSerialNumber,
   });
 
   final String jobNumber;
@@ -480,6 +485,11 @@ class InstallerVisitItem {
   final String completionOtpVerifiedAt;
   final String wifiSsid24;
   final String wifiSsid5;
+  final String complaintResolutionCode;
+  final String complaintResolutionNote;
+  final bool complaintReplacedDevice;
+  final String oldSerialNumber;
+  final String newSerialNumber;
 }
 
 class ConnectedDevice {

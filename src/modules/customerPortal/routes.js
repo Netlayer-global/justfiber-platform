@@ -669,7 +669,12 @@ function buildInstallerVisitSummary(job) {
     cablePhotoUploaded: Boolean(job.proof?.cablePhotoUrl),
     completionOtpVerifiedAt: job.otp?.verifiedAt || null,
     wifiSsid24: job.activation?.preparedCredentials?.wifi?.ssid24 || "",
-    wifiSsid5: job.activation?.preparedCredentials?.wifi?.ssid5 || ""
+    wifiSsid5: job.activation?.preparedCredentials?.wifi?.ssid5 || "",
+    resolutionCode: job.complaint?.resolutionCode || "",
+    resolutionNote: job.complaint?.note || "",
+    replacedDevice: Boolean(job.complaint?.replacedDevice),
+    oldSerialNumber: job.deviceContext?.oldSerialNumber || "",
+    newSerialNumber: job.deviceContext?.finalSerialNumber || job.deviceContext?.manualSerialNumber || ""
   };
 }
 

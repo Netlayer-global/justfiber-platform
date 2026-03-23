@@ -264,6 +264,14 @@ class ServiceTrackingScreen extends StatelessWidget {
                                   'Wi-Fi',
                                   '${visit.wifiSsid24.isEmpty ? '-' : visit.wifiSsid24}${visit.wifiSsid5.isEmpty ? '' : ' / ${visit.wifiSsid5}'}',
                                 ),
+                              if (visit.complaintResolutionCode.isNotEmpty) _visitInfo('Resolution', visit.complaintResolutionCode),
+                              if (visit.complaintReplacedDevice) _visitInfo('ONT replaced', 'Yes'),
+                              if (visit.oldSerialNumber.isNotEmpty || visit.newSerialNumber.isNotEmpty)
+                                _visitInfo(
+                                  'ONT swap',
+                                  '${visit.oldSerialNumber.isEmpty ? '-' : visit.oldSerialNumber} -> ${visit.newSerialNumber.isEmpty ? '-' : visit.newSerialNumber}',
+                                ),
+                              if (visit.complaintResolutionNote.isNotEmpty) _visitInfo('Resolution note', visit.complaintResolutionNote),
                               _visitInfo('Latest update', visit.lastUpdateNote.isEmpty ? visit.latestEventCode : visit.lastUpdateNote),
                               _visitInfo('Updated at', visit.lastUpdateAt.isEmpty ? '-' : visit.lastUpdateAt),
                               if (visit.mapUrl.isNotEmpty) ...[
