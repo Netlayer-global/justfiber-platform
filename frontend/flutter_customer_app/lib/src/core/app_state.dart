@@ -139,23 +139,79 @@ class AppState extends ChangeNotifier {
     busy = true;
     error = null;
     notifyListeners();
+    String? firstError;
     try {
-      dashboard = await api.fetchDashboard(current);
-      wifi = await api.fetchWifi(current);
-      billing = await api.fetchBilling(current);
-      requests = await api.fetchRequests(current);
-      tickets = await api.fetchTickets(current);
-      notifications = await api.fetchNotifications(current);
-      faqs = await api.fetchFaqs();
-      addons = await api.fetchAddons(current);
-      connectedDevices = await api.fetchConnectedDevices(current);
-      installerVisits = await api.fetchServiceVisits(current);
-      parentalRules = await api.fetchParentalRules(current);
-      speedTest = await api.fetchSpeedTest(current);
-      networkQuality = await api.fetchNetworkQuality(current);
-      planChangeOptions = await api.fetchPlanChangeOptions(current);
-    } catch (e) {
-      error = e.toString();
+      try {
+        dashboard = await api.fetchDashboard(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        wifi = await api.fetchWifi(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        billing = await api.fetchBilling(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        requests = await api.fetchRequests(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        tickets = await api.fetchTickets(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        notifications = await api.fetchNotifications(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        faqs = await api.fetchFaqs();
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        addons = await api.fetchAddons(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        connectedDevices = await api.fetchConnectedDevices(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        installerVisits = await api.fetchServiceVisits(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        parentalRules = await api.fetchParentalRules(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        speedTest = await api.fetchSpeedTest(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        networkQuality = await api.fetchNetworkQuality(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        planChangeOptions = await api.fetchPlanChangeOptions(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      error = firstError;
     } finally {
       busy = false;
       notifyListeners();
@@ -503,6 +559,7 @@ class AppState extends ChangeNotifier {
         subject: subject,
         description: description,
       );
+      await refresh();
       return ticketNumber;
     } catch (e) {
       error = e.toString();
