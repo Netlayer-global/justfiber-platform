@@ -407,6 +407,7 @@ class SupportHistoryScreen extends StatelessWidget {
     final subjectController = TextEditingController();
     final descriptionController = TextEditingController();
     String category = 'technical';
+    bool submitting = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -453,19 +454,21 @@ class SupportHistoryScreen extends StatelessWidget {
                             backgroundColor: const Color(0xFF10151A),
                             selectedColor: const Color(0xFFE6FF3C),
                             side: const BorderSide(color: Color(0x66E6FF3C)),
-                            onSelected: (_) => setModalState(() => category = item),
+                            onSelected: submitting ? null : (_) => setModalState(() => category = item),
                           );
                         }).toList(),
                       ),
                       const SizedBox(height: 14),
                       TextField(
                         controller: subjectController,
+                        enabled: !submitting,
                         style: const TextStyle(color: const Color(0xFFEFEEE8)),
                         decoration: const InputDecoration(labelText: 'Subject'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: descriptionController,
+                        enabled: !submitting,
                         style: const TextStyle(color: const Color(0xFFEFEEE8)),
                         minLines: 3,
                         maxLines: 5,
@@ -475,7 +478,9 @@ class SupportHistoryScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
-                          onPressed: () async {
+                          onPressed: submitting
+                              ? null
+                              : () async {
                             final subject = subjectController.text.trim();
                             final description = descriptionController.text.trim();
                             if (subject.isEmpty || description.isEmpty) {
@@ -484,16 +489,27 @@ class SupportHistoryScreen extends StatelessWidget {
                               );
                               return;
                             }
-                            Navigator.pop(sheetContext);
-                            await _raiseQuickTicket(
-                              context,
-                              appState,
+                            setModalState(() => submitting = true);
+                            final ticketNumber = await appState.raiseComplaint(
                               category: category,
                               subject: subject,
                               description: description,
                             );
+                            if (!context.mounted) return;
+                            if (ticketNumber != null) {
+                              Navigator.pop(sheetContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Support ticket created: $ticketNumber')),
+                              );
+                              await appState.refresh();
+                              return;
+                            }
+                            setModalState(() => submitting = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(appState.error ?? 'Unable to create support ticket')),
+                            );
                           },
-                          child: const Text('Submit ticket'),
+                          child: Text(submitting ? 'Submitting...' : 'Submit ticket'),
                         ),
                       ),
                     ],
@@ -510,6 +526,7 @@ class SupportHistoryScreen extends StatelessWidget {
   Future<void> _showCreateRequestSheet(BuildContext context, AppState appState) async {
     final noteController = TextEditingController();
     String requestType = 'complaint';
+    bool submitting = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -556,13 +573,14 @@ class SupportHistoryScreen extends StatelessWidget {
                             backgroundColor: const Color(0xFF10151A),
                             selectedColor: const Color(0xFFE6FF3C),
                             side: const BorderSide(color: Color(0x66E6FF3C)),
-                            onSelected: (_) => setModalState(() => requestType = item),
+                            onSelected: submitting ? null : (_) => setModalState(() => requestType = item),
                           );
                         }).toList(),
                       ),
                       const SizedBox(height: 14),
                       TextField(
                         controller: noteController,
+                        enabled: !submitting,
                         style: const TextStyle(color: const Color(0xFFEFEEE8)),
                         minLines: 3,
                         maxLines: 5,
@@ -572,7 +590,9 @@ class SupportHistoryScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
-                          onPressed: () async {
+                          onPressed: submitting
+                              ? null
+                              : () async {
                             final note = noteController.text.trim();
                             if (note.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -580,15 +600,26 @@ class SupportHistoryScreen extends StatelessWidget {
                               );
                               return;
                             }
-                            Navigator.pop(sheetContext);
-                            await _createServiceRequest(
-                              context,
-                              appState,
+                            setModalState(() => submitting = true);
+                            final requestNumber = await appState.submitServiceRequest(
                               type: requestType,
                               note: note,
                             );
+                            if (!context.mounted) return;
+                            if (requestNumber != null) {
+                              Navigator.pop(sheetContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Request created: $requestNumber')),
+                              );
+                              await appState.refresh();
+                              return;
+                            }
+                            setModalState(() => submitting = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(appState.error ?? 'Unable to create request')),
+                            );
                           },
-                          child: const Text('Submit request'),
+                          child: Text(submitting ? 'Submitting...' : 'Submit request'),
                         ),
                       ),
                     ],
