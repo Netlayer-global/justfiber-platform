@@ -49,11 +49,11 @@ class PaymentDetailScreen extends StatelessWidget {
                       width: 58,
                       height: 58,
                       decoration: BoxDecoration(
-                        color: const Color(0x1439FF14),
+                        color: const Color(0x14E6FF3C),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x6639FF14)),
+                        border: Border.all(color: const Color(0x66E6FF3C)),
                       ),
-                      child: const Icon(Icons.check_circle_rounded, color: Color(0xFF39FF14), size: 34),
+                      child: const Icon(Icons.check_circle_rounded, color: Color(0xFFE6FF3C), size: 34),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -62,13 +62,13 @@ class PaymentDetailScreen extends StatelessWidget {
                         children: [
                           const Text('Broadband payment', style: TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700)),
                           const SizedBox(height: 4),
-                          Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Colors.white)),
+                          Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: const Color(0xFFEFEEE8))),
                         ],
                       ),
                     ),
                     Text(
                       'Rs ${payment.amount.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFF39FF14)),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFFE6FF3C)),
                     ),
                   ],
                 ),
@@ -84,7 +84,7 @@ class PaymentDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(0xFFEFEEE8),
               borderRadius: BorderRadius.circular(28),
               boxShadow: const [
                 BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
@@ -141,7 +141,7 @@ class PaymentDetailScreen extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
+              style: const TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFFEFEEE8)),
             ),
           ),
         ],

@@ -14,22 +14,29 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool darkCard = gradient != null;
     return Container(
       padding: padding,
       decoration: BoxDecoration(
         gradient: gradient,
-        color: gradient == null ? Colors.white : null,
+        color: gradient == null ? const Color(0xFFEFEEE8) : null,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: gradient == null ? const Color(0xFFDDFCF8) : Colors.transparent,
+          color: gradient == null ? const Color(0x14000000) : const Color(0x14FFFFFF),
           width: 1,
         ),
         boxShadow: const [
-          BoxShadow(color: Color(0x16030B14), blurRadius: 28, offset: Offset(0, 14)),
-          BoxShadow(color: Color(0x1239FF14), blurRadius: 6, offset: Offset(0, 0)),
+          BoxShadow(color: Color(0x26000000), blurRadius: 34, offset: Offset(0, 20)),
+          BoxShadow(color: Color(0x12E6FF3C), blurRadius: 10, offset: Offset(0, 0)),
         ],
       ),
-      child: child,
+      child: IconTheme(
+        data: IconThemeData(color: darkCard ? const Color(0xFFF5F5F5) : const Color(0xFF111111)),
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: darkCard ? const Color(0xFFF5F5F5) : const Color(0xFF111111)),
+          child: child,
+        ),
+      ),
     );
   }
 }

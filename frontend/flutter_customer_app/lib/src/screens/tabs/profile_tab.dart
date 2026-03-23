@@ -29,7 +29,7 @@ class ProfileTab extends StatelessWidget {
                 Text(
                   dashboard.customerName.isEmpty ? 'Customer account' : dashboard.customerName,
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
+                    color: const Color(0xFFEFEEE8),
                     fontSize: 28,
                   ),
                 ),
@@ -105,7 +105,7 @@ class ProfileTab extends StatelessWidget {
           onPressed: appState.logout,
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF0B0F19),
-            foregroundColor: Colors.white,
+            foregroundColor: const Color(0xFFEFEEE8),
           ),
           child: const Text('Logout'),
         ),
@@ -118,19 +118,19 @@ class ProfileTab extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0x1439FF14), Color(0x0CFFFFFF)],
+          colors: [Color(0x14E6FF3C), Color(0x0CFFFFFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x6639FF14)),
+        border: Border.all(color: const Color(0x66E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFFEFEEE8))),
         ],
       ),
     );
@@ -155,9 +155,9 @@ class ProfileTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FBFF),
+          color: const Color(0xFFEFEEE8),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0x2239FF14)),
+          border: Border.all(color: const Color(0x22E6FF3C)),
         ),
         child: Row(
           children: [

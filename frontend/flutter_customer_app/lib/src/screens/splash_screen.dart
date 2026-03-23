@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'auth_gate.dart';
 
@@ -52,18 +53,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: FadeTransition(
-          opacity: _logoFade,
-          child: ScaleTransition(
-            scale: _logoScale,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                _JustFiberBrandMark(),
-                SizedBox(height: 22),
-                _JustFiberWordmark(),
-              ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF0D1008), Color(0xFF050505)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: FadeTransition(
+            opacity: _logoFade,
+            child: ScaleTransition(
+              scale: _logoScale,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _JustFiberBrandMark(),
+                  const SizedBox(height: 22),
+                  const _JustFiberWordmark(),
+                  const SizedBox(height: 12),
+                  Text(
+                    'CUSTOMER ACCESS',
+                    style: GoogleFonts.dmSans(
+                      color: const Color(0x88EFEEE8),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -83,6 +103,16 @@ class _JustFiberBrandMark extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          Container(
+            width: 132,
+            height: 132,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [Color(0x33E6FF3C), Color(0x00000000)],
+              ),
+            ),
+          ),
           Transform.rotate(
             angle: 0.34,
             child: Container(
@@ -102,7 +132,7 @@ class _JustFiberBrandMark extends StatelessWidget {
                 width: 34,
                 height: 96,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF39FF14),
+                  color: const Color(0xFFE6FF3C),
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
@@ -116,7 +146,7 @@ class _JustFiberBrandMark extends StatelessWidget {
                 width: 34,
                 height: 96,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF39FF14),
+                  color: const Color(0xFFE6FF3C),
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
@@ -141,8 +171,8 @@ class _JustFiberWordmark extends StatelessWidget {
           letterSpacing: -1.2,
         ),
         children: [
-          TextSpan(text: 'Just', style: TextStyle(color: Colors.white)),
-          TextSpan(text: 'Fiber', style: TextStyle(color: Color(0xFF39FF14))),
+          TextSpan(text: 'Just', style: TextStyle(color: const Color(0xFFEFEEE8))),
+          TextSpan(text: 'Fiber', style: TextStyle(color: Color(0xFFE6FF3C))),
         ],
       ),
     );

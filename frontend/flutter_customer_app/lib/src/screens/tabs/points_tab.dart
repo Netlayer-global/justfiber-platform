@@ -36,7 +36,7 @@ class PointsTab extends StatelessWidget {
                 value: 0.7,
                 minHeight: 7,
                 color: const Color(0xFF3D9BFF),
-                backgroundColor: Colors.white24,
+                backgroundColor: const Color(0x3DEFEEE8),
                 borderRadius: BorderRadius.circular(999),
               ),
             ],

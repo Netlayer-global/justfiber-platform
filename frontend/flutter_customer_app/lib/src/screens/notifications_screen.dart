@@ -10,7 +10,7 @@ import 'support_history_screen.dart';
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
-  static const _accent = Color(0xFF39FF14);
+  static const _accent = Color(0xFFE6FF3C);
 
   _AlertKind _kindFor(NotificationItem item) {
     final type = item.type.toLowerCase();
@@ -66,7 +66,7 @@ class NotificationsScreen extends StatelessWidget {
   Color _badgeBackgroundFor(_AlertKind kind) {
     switch (kind) {
       case _AlertKind.billing:
-        return const Color(0x1439FF14);
+        return const Color(0x14E6FF3C);
       case _AlertKind.support:
         return const Color(0x1A00C2FF);
       case _AlertKind.tracking:
@@ -158,7 +158,7 @@ class NotificationsScreen extends StatelessWidget {
               children: [
                 Text(
                   'Stay updated',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 28),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFEFEEE8), fontSize: 28),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -174,7 +174,7 @@ class NotificationsScreen extends StatelessWidget {
                   children: [
                     FilledButton(
                       onPressed: appState.busy ? null : appState.refresh,
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF39FF14), foregroundColor: const Color(0xFF031B17)),
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
                       child: const Text('Refresh'),
                     ),
                     OutlinedButton(
@@ -182,8 +182,8 @@ class NotificationsScreen extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x6639FF14)),
+                        foregroundColor: const Color(0xFFEFEEE8),
+                        side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Open Support Center'),
                     ),
@@ -192,7 +192,7 @@ class NotificationsScreen extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        foregroundColor: const Color(0xFFEFEEE8),
                         side: const BorderSide(color: Color(0x3322D3EE)),
                       ),
                       child: const Text('Open Billing'),
@@ -232,7 +232,7 @@ class NotificationsScreen extends StatelessWidget {
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: const Color(0x2239FF14)),
+                            border: Border.all(color: const Color(0x22E6FF3C)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,7 +261,7 @@ class NotificationsScreen extends StatelessWidget {
                                       width: 10,
                                       height: 10,
                                       decoration: const BoxDecoration(
-                                        color: Color(0xFF39FF14),
+                                        color: Color(0xFFE6FF3C),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -301,7 +301,7 @@ class NotificationsScreen extends StatelessWidget {
                                     onPressed: () => _openPrimaryAction(context, appState, item),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: const Color(0xFF111827),
-                                      foregroundColor: Colors.white,
+                                      foregroundColor: const Color(0xFFEFEEE8),
                                     ),
                                     child: Text(_primaryActionLabelFor(kind)),
                                   ),
@@ -316,7 +316,7 @@ class NotificationsScreen extends StatelessWidget {
                                     },
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: const Color(0xFF111827),
-                                      side: const BorderSide(color: Color(0x2239FF14)),
+                                      side: const BorderSide(color: Color(0x22E6FF3C)),
                                     ),
                                     child: Text(item.readAt.isEmpty ? 'Mark as read' : 'Refresh alerts'),
                                   ),
@@ -340,12 +340,12 @@ class NotificationsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x3339FF14)),
+        border: Border.all(color: const Color(0x33E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
         ],

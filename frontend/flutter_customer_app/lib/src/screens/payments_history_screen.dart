@@ -46,7 +46,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
               children: [
                 Text(
                   'Payment timeline',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 28),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFEFEEE8), fontSize: 28),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -99,7 +99,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0x1439FF14)),
+                    border: Border.all(color: const Color(0x14E6FF3C)),
                     boxShadow: const [
                       BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
                     ],
@@ -116,7 +116,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               color: const Color(0xFF0B0F19),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF39FF14)),
+                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFFE6FF3C)),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -199,16 +199,16 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF0B0F19) : Colors.white,
+          color: selected ? const Color(0xFF0B0F19) : const Color(0xFFEFEEE8),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: selected ? const Color(0xFF39FF14) : const Color(0xFFE2E4F0)),
+          border: Border.all(color: selected ? const Color(0xFFE6FF3C) : const Color(0xFFE2E4F0)),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: selected ? const Color(0xFF39FF14) : const Color(0xFF40444F),
+            color: selected ? const Color(0xFFE6FF3C) : const Color(0xFF40444F),
           ),
         ),
       ),
@@ -221,12 +221,12 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x3339FF14)),
+        border: Border.all(color: const Color(0x33E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
         ],
@@ -254,7 +254,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
         color: const Color(0xFF0B0F19),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(text, style: const TextStyle(color: Color(0xFF39FF14), fontWeight: FontWeight.w600)),
+      child: Text(text, style: const TextStyle(color: Color(0xFFE6FF3C), fontWeight: FontWeight.w600)),
     );
   }
 

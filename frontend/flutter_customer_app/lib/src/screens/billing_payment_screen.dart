@@ -140,7 +140,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     children: [
                       const Text(
                         'Razorpay checkout',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 22),
+                        style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800, fontSize: 22),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -162,13 +162,13 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0x1439FF14),
+                    color: const Color(0x14E6FF3C),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x6639FF14)),
+                    border: Border.all(color: const Color(0x66E6FF3C)),
                   ),
                   child: Icon(
                     paymentError == null ? Icons.payments_rounded : Icons.error_outline_rounded,
-                    color: paymentError == null ? const Color(0xFF39FF14) : const Color(0xFFFF8A80),
+                    color: paymentError == null ? const Color(0xFFE6FF3C) : const Color(0xFFFF8A80),
                   ),
                 ),
               ],
@@ -185,7 +185,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF08131B),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x3339FF14)),
+                      border: Border.all(color: const Color(0x33E6FF3C)),
                     ),
                     child: Text(
                       walletHint!,

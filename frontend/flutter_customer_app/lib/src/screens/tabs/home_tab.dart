@@ -35,7 +35,7 @@ class HomeTab extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: const Color(0x2239FF14)),
+            border: Border.all(color: const Color(0x22E6FF3C)),
             boxShadow: const [
               BoxShadow(color: Color(0x26030B14), blurRadius: 26, offset: Offset(0, 12)),
             ],
@@ -53,7 +53,7 @@ class HomeTab extends StatelessWidget {
                         Text(
                           'Hi, $displayName',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
+                                color: const Color(0xFFEFEEE8),
                                 fontSize: 30,
                               ),
                         ),
@@ -74,12 +74,12 @@ class HomeTab extends StatelessWidget {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: const Color(0x1439FF14),
+                      color: const Color(0x14E6FF3C),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x6639FF14)),
+                      border: Border.all(color: const Color(0x66E6FF3C)),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.support_agent_rounded, color: Color(0xFF39FF14)),
+                      icon: const Icon(Icons.support_agent_rounded, color: Color(0xFFE6FF3C)),
                       onPressed: () => onNavigate(3),
                     ),
                   ),
@@ -117,8 +117,8 @@ class HomeTab extends StatelessWidget {
                                 MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
                               ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x5539FF14)),
+                        foregroundColor: const Color(0xFFEFEEE8),
+                        side: const BorderSide(color: Color(0x55E6FF3C)),
                       ),
                       child: Text(hasService ? 'Open billing' : 'Track request'),
                     ),
@@ -144,10 +144,10 @@ class HomeTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: hasService ? const Color(0x1439FF14) : const Color(0x120B0F19),
+                      color: hasService ? const Color(0x14E6FF3C) : const Color(0x120B0F19),
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(
-                        color: hasService ? const Color(0x6639FF14) : const Color(0x1A0B0F19),
+                        color: hasService ? const Color(0x66E6FF3C) : const Color(0x1A0B0F19),
                       ),
                     ),
                     child: Text(
@@ -213,9 +213,9 @@ class HomeTab extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0x1439FF14),
+                        color: const Color(0x14E6FF3C),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0x6639FF14)),
+                        border: Border.all(color: const Color(0x66E6FF3C)),
                       ),
                       child: const Text('DUE', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0B0F19))),
                     ),
@@ -304,14 +304,14 @@ class HomeTab extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x2239FF14)),
+        border: Border.all(color: const Color(0x22E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -340,7 +340,7 @@ class HomeTab extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(icon, color: const Color(0xFF39FF14)),
+              child: Icon(icon, color: const Color(0xFFE6FF3C)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -366,11 +366,11 @@ class HomeTab extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x3339FF14)),
+        border: Border.all(color: const Color(0x33E6FF3C)),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: const Color(0xFFEFEEE8)),
           children: [
             TextSpan(text: '$value ', style: const TextStyle(fontWeight: FontWeight.w800)),
             TextSpan(text: label, style: const TextStyle(color: Color(0xFF94A3B8))),
@@ -386,9 +386,9 @@ class HomeTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FBFF),
+          color: const Color(0xFFEFEEE8),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0x2239FF14)),
+          border: Border.all(color: const Color(0x22E6FF3C)),
         ),
         child: Row(
           children: [
@@ -425,7 +425,7 @@ class HomeTab extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0x1439FF14)),
+        border: Border.all(color: const Color(0x14E6FF3C)),
         boxShadow: const [
           BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
         ],

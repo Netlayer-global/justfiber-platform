@@ -45,7 +45,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
       appBar: AppBar(
         title: Text(widget.title),
         backgroundColor: const Color(0xFF090C1A),
-        foregroundColor: Colors.white,
+        foregroundColor: const Color(0xFFEFEEE8),
       ),
       backgroundColor: const Color(0xFF060816),
       body: Stack(
@@ -59,10 +59,10 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xCC0B0F19),
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: const Color(0x6639FF14)),
+                  border: Border.all(color: const Color(0x66E6FF3C)),
                 ),
                 child: const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF39FF14)),
+                  child: CircularProgressIndicator(color: Color(0xFFE6FF3C)),
                 ),
               ),
             ),

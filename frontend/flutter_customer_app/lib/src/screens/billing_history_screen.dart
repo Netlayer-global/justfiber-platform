@@ -38,14 +38,14 @@ class BillingHistoryScreen extends StatelessWidget {
                 Text(
                   'Current bill',
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
+                    color: const Color(0xFFEFEEE8),
                     fontSize: 28,
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Rs ${billing.dueAmount.toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 38, color: Color(0xFF39FF14), letterSpacing: -1),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 38, color: Color(0xFFE6FF3C), letterSpacing: -1),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -75,9 +75,9 @@ class BillingHistoryScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FBFF),
+                    color: const Color(0xFFEFEEE8),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x2239FF14)),
+                    border: Border.all(color: const Color(0x22E6FF3C)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,7 +114,7 @@ class BillingHistoryScreen extends StatelessWidget {
                         onPressed: appState.busy || billing.dueAmount <= 0
                             ? null
                             : () => _payNow(context, appState, amount: billing.dueAmount),
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF39FF14), foregroundColor: const Color(0xFF031B17)),
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
                         child: Text(billing.pendingPlanChange != null ? 'Pay to switch plan' : 'Pay now'),
                       ),
                     ),
@@ -171,9 +171,9 @@ class BillingHistoryScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FBFF),
+                color: const Color(0xFFEFEEE8),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0x2239FF14)),
+                border: Border.all(color: const Color(0x22E6FF3C)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,7 +208,7 @@ class BillingHistoryScreen extends StatelessWidget {
                       if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
                         FilledButton.tonal(
                           onPressed: () => _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl),
-                          style: FilledButton.styleFrom(backgroundColor: const Color(0x1439FF14), foregroundColor: const Color(0xFF0B0F19)),
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0x14E6FF3C), foregroundColor: const Color(0xFF0B0F19)),
                           child: const Text('Latest receipt'),
                         ),
                     ],
@@ -251,9 +251,9 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FBFF),
+        color: const Color(0xFFEFEEE8),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x2239FF14)),
+        border: Border.all(color: const Color(0x22E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,13 +270,13 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: dark ? const Color(0x1439FF14) : const Color(0xFFF8FBFF),
+        color: dark ? const Color(0x14E6FF3C) : const Color(0xFFEFEEE8),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: dark ? const Color(0x6639FF14) : const Color(0x2239FF14)),
+        border: Border.all(color: dark ? const Color(0x66E6FF3C) : const Color(0x22E6FF3C)),
       ),
       child: RichText(
         text: TextSpan(
-          style: TextStyle(color: dark ? Colors.white : const Color(0xFF1F2937)),
+          style: TextStyle(color: dark ? const Color(0xFFEFEEE8) : const Color(0xFF1F2937)),
           children: [
             TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
             TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -332,7 +332,7 @@ class BillingHistoryScreen extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0x2239FF14)),
+        border: Border.all(color: const Color(0x22E6FF3C)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

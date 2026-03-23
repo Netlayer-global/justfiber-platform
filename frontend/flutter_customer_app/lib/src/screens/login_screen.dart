@@ -60,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       width: 42,
@@ -68,12 +69,32 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: const Color(0xFF0B0F19),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(Icons.wifi_rounded, color: Color(0xFF39FF14), size: 22),
+                      child: const Icon(Icons.wifi_rounded, color: Color(0xFFE6FF3C), size: 22),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      'JustFiber',
-                      style: theme.textTheme.titleLarge?.copyWith(fontSize: 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'JUSTFIBER CONSOLE',
+                            style: TextStyle(
+                              color: Color(0x88EFEEE8),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 3.2,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Customer Access',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontSize: 24,
+                              color: const Color(0xFFEFEEE8),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -98,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: activePage == index ? 24 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: activePage == index ? const Color(0xFF39FF14) : const Color(0xFFD5DAE5),
+                        color: activePage == index ? const Color(0xFFE6FF3C) : const Color(0xFFD5DAE5),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -109,9 +130,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color(0xFFEFEEE8),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: const Color(0x1439FF14)),
+                  border: Border.all(color: const Color(0x14E6FF3C)),
                   boxShadow: const [
                     BoxShadow(color: Color(0x14030B14), blurRadius: 20, offset: Offset(0, 10)),
                   ],
@@ -191,6 +212,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           MaterialPageRoute(
                             builder: (_) => BookingFlowScreen(initialMobile: mobileController.text.trim()),
                           ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF111111),
+                          side: const BorderSide(color: Color(0x14000000)),
+                          backgroundColor: const Color(0xFFF5F4ED),
                         ),
                         child: const Text('Book new connection'),
                       ),
@@ -295,12 +321,12 @@ class _AuthShowcaseCard extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFFFFFF), Color(0xFFF4FFF8)],
+                  colors: [Color(0xFFF4F3EC), Color(0xFFECEAE1)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
                 borderRadius: BorderRadius.circular(34),
-                border: Border.all(color: const Color(0x1439FF14)),
+                border: Border.all(color: const Color(0x14E6FF3C)),
                 boxShadow: const [
                   BoxShadow(color: Color(0x12030B14), blurRadius: 24, offset: Offset(0, 10)),
                 ],
@@ -315,12 +341,12 @@ class _AuthShowcaseCard extends StatelessWidget {
                           alignment: Alignment.center,
                           children: [
                             Container(
-                              width: 220,
-                              height: 220,
+                              width: 240,
+                              height: 240,
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(
-                                  colors: [Color(0x1539FF14), Color(0x00FFFFFF)],
+                                  colors: [Color(0x22E6FF3C), Color(0x00000000)],
                                 ),
                               ),
                             ),
@@ -344,11 +370,11 @@ class _AuthShowcaseCard extends StatelessWidget {
                                         children: const [
                                           Expanded(
                                             child: Text(
-                                              'Overview',
+                                              'Control',
                                               style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700),
                                             ),
                                           ),
-                                          Icon(Icons.more_horiz_rounded, color: Colors.white54),
+                                          Icon(Icons.more_horiz_rounded, color: const Color(0x8AEFEEE8)),
                                         ],
                                       ),
                                       const SizedBox(height: 16),
@@ -358,23 +384,32 @@ class _AuthShowcaseCard extends StatelessWidget {
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF171F2E),
                                           borderRadius: BorderRadius.circular(18),
-                                          border: Border.all(color: const Color(0x1439FF14)),
+                                          border: Border.all(color: const Color(0x14E6FF3C)),
                                         ),
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Icon(slide.icon, color: const Color(0xFF39FF14), size: 22),
+                                            Icon(slide.icon, color: const Color(0xFFE6FF3C), size: 22),
                                             const SizedBox(height: 10),
                                             const Text(
-                                              'Control',
-                                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                                              'Live sync',
+                                              style: TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800),
                                             ),
                                             const SizedBox(height: 6),
                                             Container(
                                               height: 6,
                                               decoration: BoxDecoration(
-                                                color: const Color(0x1439FF14),
+                                                color: const Color(0x14E6FF3C),
                                                 borderRadius: BorderRadius.circular(999),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 10),
+                                            const Text(
+                                              'Billing, plans, support, and bookings in one stream.',
+                                              style: TextStyle(
+                                                color: Color(0xFF94A3B8),
+                                                fontSize: 11,
+                                                height: 1.35,
                                               ),
                                             ),
                                           ],
@@ -392,9 +427,9 @@ class _AuthShowcaseCard extends StatelessWidget {
                                 width: 160,
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: const Color(0xFFF6F4ED),
                                   borderRadius: BorderRadius.circular(22),
-                                  border: Border.all(color: const Color(0x1439FF14)),
+                                  border: Border.all(color: const Color(0x14E6FF3C)),
                                   boxShadow: const [
                                     BoxShadow(color: Color(0x12030B14), blurRadius: 20, offset: Offset(0, 8)),
                                   ],

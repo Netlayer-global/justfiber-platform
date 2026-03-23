@@ -31,7 +31,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 Text(
                   'Get instant support',
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
+                    color: const Color(0xFFEFEEE8),
                     fontSize: 28,
                   ),
                 ),
@@ -121,8 +121,8 @@ class SupportHistoryScreen extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                       ),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0x2239FF14),
-                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0x22E6FF3C),
+                        foregroundColor: const Color(0xFFEFEEE8),
                       ),
                       child: const Text('Open alerts center'),
                     ),
@@ -196,13 +196,13 @@ class SupportHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0x1439FF14),
+        color: const Color(0x14E6FF3C),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x6639FF14)),
+        border: Border.all(color: const Color(0x66E6FF3C)),
       ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Colors.white)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: const Color(0xFFEFEEE8))),
           const SizedBox(height: 4),
           Text(
             label,
@@ -248,9 +248,9 @@ class SupportHistoryScreen extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0x2239FF14)),
+          border: Border.all(color: const Color(0x22E6FF3C)),
           boxShadow: const [
-            BoxShadow(color: Color(0x0A39FF14), blurRadius: 10, offset: Offset(0, 2)),
+            BoxShadow(color: Color(0x0AE6FF3C), blurRadius: 10, offset: Offset(0, 2)),
           ],
         ),
         child: Row(
@@ -355,7 +355,7 @@ class SupportHistoryScreen extends StatelessWidget {
                     children: [
                       const Text(
                         'Create support ticket',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white),
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFFEFEEE8)),
                       ),
                       const SizedBox(height: 10),
                       const Text(
@@ -372,12 +372,12 @@ class SupportHistoryScreen extends StatelessWidget {
                             label: Text(item),
                             selected: selected,
                             labelStyle: TextStyle(
-                              color: selected ? const Color(0xFF031B17) : Colors.white,
+                              color: selected ? const Color(0xFF031B17) : const Color(0xFFEFEEE8),
                               fontWeight: FontWeight.w700,
                             ),
-                            backgroundColor: const Color(0x2239FF14),
-                            selectedColor: const Color(0xFF39FF14),
-                            side: const BorderSide(color: Color(0x6639FF14)),
+                            backgroundColor: const Color(0x22E6FF3C),
+                            selectedColor: const Color(0xFFE6FF3C),
+                            side: const BorderSide(color: Color(0x66E6FF3C)),
                             onSelected: (_) => setModalState(() => category = item),
                           );
                         }).toList(),
@@ -385,13 +385,13 @@ class SupportHistoryScreen extends StatelessWidget {
                       const SizedBox(height: 14),
                       TextField(
                         controller: subjectController,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: const Color(0xFFEFEEE8)),
                         decoration: const InputDecoration(labelText: 'Subject'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: descriptionController,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: const Color(0xFFEFEEE8)),
                         minLines: 3,
                         maxLines: 5,
                         decoration: const InputDecoration(labelText: 'Describe the issue'),
@@ -453,7 +453,7 @@ class SupportHistoryScreen extends StatelessWidget {
                     children: [
                       const Text(
                         'Create service request',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white),
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFFEFEEE8)),
                       ),
                       const SizedBox(height: 10),
                       const Text(
@@ -470,12 +470,12 @@ class SupportHistoryScreen extends StatelessWidget {
                             label: Text(item),
                             selected: selected,
                             labelStyle: TextStyle(
-                              color: selected ? const Color(0xFF031B17) : Colors.white,
+                              color: selected ? const Color(0xFF031B17) : const Color(0xFFEFEEE8),
                               fontWeight: FontWeight.w700,
                             ),
-                            backgroundColor: const Color(0x2239FF14),
-                            selectedColor: const Color(0xFF39FF14),
-                            side: const BorderSide(color: Color(0x6639FF14)),
+                            backgroundColor: const Color(0x22E6FF3C),
+                            selectedColor: const Color(0xFFE6FF3C),
+                            side: const BorderSide(color: Color(0x66E6FF3C)),
                             onSelected: (_) => setModalState(() => requestType = item),
                           );
                         }).toList(),
@@ -483,7 +483,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       const SizedBox(height: 14),
                       TextField(
                         controller: noteController,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: const Color(0xFFEFEEE8)),
                         minLines: 3,
                         maxLines: 5,
                         decoration: const InputDecoration(labelText: 'Request note'),
@@ -595,7 +595,7 @@ class _DetailSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white)),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFFEFEEE8))),
               const SizedBox(height: 6),
               Text(subtitle, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
