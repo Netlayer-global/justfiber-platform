@@ -250,6 +250,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final planCode = widget.job.planCode.isEmpty ? (preview['planCode'] ?? '').toString() : widget.job.planCode;
     final planCategory = widget.job.planCategory.isEmpty ? (preview['planCategory'] ?? 'home').toString() : widget.job.planCategory;
     final planPrice = widget.job.monthlyPrice > 0 ? widget.job.monthlyPrice : double.tryParse('${preview['monthlyPrice'] ?? 0}') ?? 0;
+    final planDownload = widget.job.downloadSpeedMbps > 0 ? widget.job.downloadSpeedMbps : double.tryParse('${preview['speedMbps'] ?? 0}') ?? 0;
+    final planUpload = widget.job.uploadSpeedMbps > 0 ? widget.job.uploadSpeedMbps : double.tryParse('${preview['uploadSpeedMbps'] ?? 0}') ?? 0;
+    final planDataLimit = widget.job.dataLimitGb > 0 ? widget.job.dataLimitGb : double.tryParse('${preview['dataLimitGb'] ?? 0}') ?? 0;
+    final planFupSpeed = widget.job.fupSpeedMbps > 0 ? widget.job.fupSpeedMbps : double.tryParse('${preview['fupSpeedMbps'] ?? 0}') ?? 0;
+    final planDataPolicy = widget.job.dataPolicy.isNotEmpty ? widget.job.dataPolicy : (preview['dataPolicy'] ?? 'unlimited').toString();
     final planOtc = widget.job.otcCharge > 0 ? widget.job.otcCharge : double.tryParse('${preview['otcCharge'] ?? 0}') ?? 0;
     final planInstall = widget.job.installationCharge > 0 ? widget.job.installationCharge : double.tryParse('${preview['installationCharge'] ?? 0}') ?? 0;
     final planTags = widget.job.tags.isNotEmpty
@@ -341,6 +346,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           Expanded(child: _chip('Plan code', planCode.isEmpty ? '-' : planCode)),
                           const SizedBox(width: 10),
                           Expanded(child: _chip('Monthly', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-')),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(child: _chip('Downlink', planDownload > 0 ? '${planDownload.toStringAsFixed(0)} Mbps' : '-')),
+                          const SizedBox(width: 10),
+                          Expanded(child: _chip('Uplink', planUpload > 0 ? '${planUpload.toStringAsFixed(0)} Mbps' : '-')),
                         ],
                       ),
                       const SizedBox(height: 14),
@@ -670,7 +683,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       const SizedBox(height: 12),
                       _row('Plan lane', planCategory),
                       _row('Plan code', planCode.isEmpty ? '-' : planCode),
+                      _row('Download', planDownload > 0 ? '${planDownload.toStringAsFixed(0)} Mbps' : '-'),
+                      _row('Upload', planUpload > 0 ? '${planUpload.toStringAsFixed(0)} Mbps' : '-'),
                       _row('Monthly price', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-'),
+                      _row('Data policy', _dataPolicyLabel(planDataPolicy)),
+                      _row('Data cap', planDataPolicy == 'unlimited' ? 'Unlimited' : (planDataLimit > 0 ? '${planDataLimit.toStringAsFixed(0)} GB' : '-')),
+                      _row('FUP speed', planFupSpeed > 0 ? '${planFupSpeed.toStringAsFixed(0)} Mbps' : '-'),
                       _row('OTC', planOtc > 0 ? 'Rs ${planOtc.toStringAsFixed(0)}' : '-'),
                       _row('Installation', planInstall > 0 ? 'Rs ${planInstall.toStringAsFixed(0)}' : '-'),
                     ],
@@ -2233,6 +2251,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return 'Complaint is closed. Review replacement summary and final timeline.';
       default:
         return 'Continue the complaint workflow from the next guided action.';
+    }
+  }
+
+  String _dataPolicyLabel(String policy) {
+    switch (policy) {
+      case 'fup':
+        return 'FUP';
+      case 'hard_cap':
+        return 'Hard cap';
+      default:
+        return 'Unlimited';
     }
   }
 

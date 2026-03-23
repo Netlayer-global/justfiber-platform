@@ -50,6 +50,11 @@ class InstallerJob {
     required this.planCode,
     required this.planCategory,
     required this.monthlyPrice,
+    required this.downloadSpeedMbps,
+    required this.uploadSpeedMbps,
+    required this.dataLimitGb,
+    required this.fupSpeedMbps,
+    required this.dataPolicy,
     required this.otcCharge,
     required this.installationCharge,
     required this.tags,
@@ -75,6 +80,11 @@ class InstallerJob {
   final String planCode;
   final String planCategory;
   final double monthlyPrice;
+  final double downloadSpeedMbps;
+  final double uploadSpeedMbps;
+  final double dataLimitGb;
+  final double fupSpeedMbps;
+  final String dataPolicy;
   final double otcCharge;
   final double installationCharge;
   final List<String> tags;
@@ -103,6 +113,11 @@ class ProvisioningPreview {
     required this.planName,
     required this.planCategory,
     required this.monthlyPrice,
+    required this.downloadSpeedMbps,
+    required this.uploadSpeedMbps,
+    required this.dataLimitGb,
+    required this.fupSpeedMbps,
+    required this.dataPolicy,
     required this.otcCharge,
     required this.installationCharge,
     required this.tags,
@@ -121,6 +136,11 @@ class ProvisioningPreview {
   final String planName;
   final String planCategory;
   final double monthlyPrice;
+  final double downloadSpeedMbps;
+  final double uploadSpeedMbps;
+  final double dataLimitGb;
+  final double fupSpeedMbps;
+  final String dataPolicy;
   final double otcCharge;
   final double installationCharge;
   final List<String> tags;
