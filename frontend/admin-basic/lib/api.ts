@@ -860,7 +860,7 @@ export const adminAPI = {
       data: res.data ? mapTicket(res.data) : undefined,
     }
   },
-  updateTicket: (id: string, data: Partial<Ticket>) =>
+  updateTicket: (id: string, data: Partial<Ticket> & { note?: string }) =>
     request<Ticket>(`/api/v1/admin/tickets/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),

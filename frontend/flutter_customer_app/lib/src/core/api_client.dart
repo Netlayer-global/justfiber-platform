@@ -63,6 +63,22 @@ class ApiClient {
     return sorted;
   }
 
+  Map<String, dynamic> _latestTimelineEntry(dynamic rawTimeline) {
+    final items = _asList(rawTimeline)
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
+    if (items.isEmpty) return const <String, dynamic>{};
+    items.sort((left, right) {
+      final rightDate = _parseDate((right['at'] ?? right['createdAt'] ?? '').toString());
+      final leftDate = _parseDate((left['at'] ?? left['createdAt'] ?? '').toString());
+      if (rightDate == null && leftDate == null) return 0;
+      if (rightDate == null) return -1;
+      if (leftDate == null) return 1;
+      return rightDate.compareTo(leftDate);
+    });
+    return items.first;
+  }
+
   Future<String> sendOtp(String mobile) async {
     final data = _asMap(await _request('/api/v1/customer/auth/send-otp', method: 'POST', body: {'mobile': mobile}));
     return (data['demoOtp'] ?? '').toString();
@@ -201,12 +217,15 @@ class ApiClient {
     return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
       final payload = _asMap(map['payload']);
+      final latestTimeline = _latestTimelineEntry(map['timeline']);
       return RequestItem(
         id: (map['_id'] ?? '').toString(),
         referenceNumber: (map['requestNumber'] ?? '').toString(),
         title: (map['subject'] ?? map['title'] ?? map['requestType'] ?? map['type'] ?? 'Customer request').toString(),
         type: (map['type'] ?? 'request').toString(),
         note: (payload['note'] ?? payload['description'] ?? '').toString(),
+        latestUpdateNote: (latestTimeline['note'] ?? '').toString(),
+        latestUpdateAt: (latestTimeline['at'] ?? latestTimeline['createdAt'] ?? '').toString(),
         status: (map['status'] ?? 'open').toString(),
         createdAt: (map['createdAt'] ?? '').toString(),
       );
@@ -217,12 +236,15 @@ class ApiClient {
     final list = _asList(await _request('/api/v1/customer/tickets', token: session.accessToken));
     return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
+      final latestTimeline = _latestTimelineEntry(map['timeline']);
       return SupportTicketItem(
         id: (map['_id'] ?? '').toString(),
         ticketNumber: (map['ticketNumber'] ?? '').toString(),
         category: (map['category'] ?? '').toString(),
         subject: (map['subject'] ?? 'Support ticket').toString(),
         description: (map['description'] ?? '').toString(),
+        latestUpdateNote: (latestTimeline['note'] ?? map['resolutionSummary'] ?? '').toString(),
+        latestUpdateAt: (latestTimeline['at'] ?? latestTimeline['createdAt'] ?? '').toString(),
         status: (map['status'] ?? 'open').toString(),
         priority: (map['priority'] ?? 'medium').toString(),
         createdAt: (map['createdAt'] ?? '').toString(),

@@ -155,6 +155,8 @@ class RequestItem {
     required this.title,
     required this.type,
     required this.note,
+    required this.latestUpdateNote,
+    required this.latestUpdateAt,
     required this.status,
     required this.createdAt,
   });
@@ -164,6 +166,8 @@ class RequestItem {
   final String title;
   final String type;
   final String note;
+  final String latestUpdateNote;
+  final String latestUpdateAt;
   final String status;
   final String createdAt;
 }
@@ -195,6 +199,8 @@ class SupportTicketItem {
     required this.category,
     required this.subject,
     required this.description,
+    required this.latestUpdateNote,
+    required this.latestUpdateAt,
     required this.status,
     required this.priority,
     required this.createdAt,
@@ -205,6 +211,8 @@ class SupportTicketItem {
   final String category;
   final String subject;
   final String description;
+  final String latestUpdateNote;
+  final String latestUpdateAt;
   final String status;
   final String priority;
   final String createdAt;

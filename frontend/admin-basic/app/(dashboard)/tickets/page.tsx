@@ -44,9 +44,10 @@ export default function TicketsPage() {
   async function updateRequestStatus(requestId: string, status: string) {
     try {
       setRequestBusyId(requestId)
+      const note = window.prompt('Optional request update note', `Updated from admin support queue to ${status}`) ?? `Updated from admin support queue to ${status}`
       const response = await adminAPI.updateSupportRequest(requestId, {
         status,
-        note: `Updated from admin support queue to ${status}`,
+        note,
       })
       if (response.success) {
         await loadTickets()
@@ -61,7 +62,8 @@ export default function TicketsPage() {
   async function updateTicketStatus(ticketId: string, status: string) {
     try {
       setTicketBusyId(ticketId)
-      const response = await adminAPI.updateTicket(ticketId, { status })
+      const note = window.prompt('Optional ticket update note', `Ticket moved to ${status}`) ?? `Ticket moved to ${status}`
+      const response = await adminAPI.updateTicket(ticketId, { status, note })
       if (response.success) {
         await loadTickets()
       }

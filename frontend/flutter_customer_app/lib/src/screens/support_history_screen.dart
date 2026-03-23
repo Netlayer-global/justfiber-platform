@@ -711,6 +711,8 @@ class SupportHistoryScreen extends StatelessWidget {
           'Priority: ${item.priority}',
           'Created: ${item.createdAt.isEmpty ? '-' : item.createdAt}',
           'Description: ${item.description.isEmpty ? '-' : item.description}',
+          'Latest update: ${item.latestUpdateNote.isEmpty ? '-' : item.latestUpdateNote}',
+          'Updated at: ${item.latestUpdateAt.isEmpty ? '-' : item.latestUpdateAt}',
         ],
       ),
     );
@@ -730,6 +732,8 @@ class SupportHistoryScreen extends StatelessWidget {
           'Created: ${item.createdAt.isEmpty ? '-' : item.createdAt}',
           'Type: ${item.type}',
           'Note: ${item.note.isEmpty ? '-' : item.note}',
+          'Latest update: ${item.latestUpdateNote.isEmpty ? '-' : item.latestUpdateNote}',
+          'Updated at: ${item.latestUpdateAt.isEmpty ? '-' : item.latestUpdateAt}',
         ],
       ),
     );
