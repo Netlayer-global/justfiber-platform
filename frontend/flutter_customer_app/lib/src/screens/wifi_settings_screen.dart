@@ -48,7 +48,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
         title: Text('Wi-Fi Settings', style: Theme.of(context).textTheme.headlineSmall),
         centerTitle: true,
         backgroundColor: const Color(0xFF050505),
-        foregroundColor: const Color(0xFF17181C),
+        foregroundColor: const Color(0xFFEFEEE8),
       ),
       backgroundColor: const Color(0xFF050505),
       body: ListView(
@@ -68,6 +68,15 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'NETWORK CONSOLE',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: const Color(0xFF9CA3AF),
+                        letterSpacing: 3.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
@@ -487,6 +496,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFEFEEE8),
+                      backgroundColor: const Color(0xFF0E1520),
                       side: const BorderSide(color: Color(0x66E6FF3C)),
                     ),
                     child: const Text('Refresh device list'),

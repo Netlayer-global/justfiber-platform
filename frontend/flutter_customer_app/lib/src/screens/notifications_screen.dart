@@ -157,6 +157,15 @@ class NotificationsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'ALERTS CENTER',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: const Color(0xFF9CA3AF),
+                        letterSpacing: 3.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
                   'Stay updated',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFEFEEE8), fontSize: 28),
                 ),
@@ -183,6 +192,7 @@ class NotificationsScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
+                        backgroundColor: const Color(0xFF0E1520),
                         side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Open Support Center'),
@@ -193,6 +203,7 @@ class NotificationsScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
+                        backgroundColor: const Color(0xFF0E1520),
                         side: const BorderSide(color: Color(0x3322D3EE)),
                       ),
                       child: const Text('Open Billing'),
@@ -300,8 +311,8 @@ class NotificationsScreen extends StatelessWidget {
                                   FilledButton(
                                     onPressed: () => _openPrimaryAction(context, appState, item),
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFF111827),
-                                      foregroundColor: const Color(0xFFEFEEE8),
+                                      backgroundColor: const Color(0xFFE6FF3C),
+                                      foregroundColor: const Color(0xFF111111),
                                     ),
                                     child: Text(_primaryActionLabelFor(kind)),
                                   ),
@@ -315,8 +326,9 @@ class NotificationsScreen extends StatelessWidget {
                                       }
                                     },
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFF111827),
-                                      side: const BorderSide(color: Color(0x22E6FF3C)),
+                                      foregroundColor: const Color(0xFF111111),
+                                      backgroundColor: const Color(0xFFF3F1E9),
+                                      side: const BorderSide(color: Color(0x14000000)),
                                     ),
                                     child: Text(item.readAt.isEmpty ? 'Mark as read' : 'Refresh alerts'),
                                   ),

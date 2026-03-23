@@ -45,6 +45,15 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'PAYMENT CONSOLE',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: const Color(0xFF9CA3AF),
+                        letterSpacing: 3.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
                   'Payment timeline',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFEFEEE8), fontSize: 28),
                 ),
@@ -162,21 +171,37 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: payment)),
                             ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF111111),
+                            ),
                             child: const Text('View Details'),
                           ),
                           OutlinedButton(
                             onPressed: payment.viewUrl.isEmpty ? null : () => _openDocument(context, appState, payment.transactionId, payment.viewUrl),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF111111),
+                              backgroundColor: const Color(0xFFF3F1E9),
+                              side: const BorderSide(color: Color(0x14000000)),
+                            ),
                             child: const Text('Open Receipt'),
                           ),
                           FilledButton(
                             onPressed: payment.pdfUrl.isEmpty ? null : () => _openDocument(context, appState, '${payment.transactionId} PDF', payment.pdfUrl),
-                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFE6FF3C),
+                              foregroundColor: const Color(0xFF111111),
+                            ),
                             child: const Text('View PDF'),
                           ),
                           if (payment.paidAt.isEmpty || payment.reference.toLowerCase().contains('failed'))
                             OutlinedButton(
                               onPressed: () => Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFEFEEE8),
+                                backgroundColor: const Color(0xFF0E1520),
+                                side: const BorderSide(color: Color(0x33E6FF3C)),
                               ),
                               child: const Text('Need Help'),
                             ),

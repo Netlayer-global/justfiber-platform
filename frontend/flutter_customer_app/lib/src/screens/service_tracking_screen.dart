@@ -40,6 +40,15 @@ class ServiceTrackingScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'TRACKING CONSOLE',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: const Color(0xFF9CA3AF),
+                        letterSpacing: 3.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
                   'Current booking',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFEFEEE8), fontSize: 28),
                 ),
@@ -77,6 +86,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
+                        backgroundColor: const Color(0xFF0E1520),
                         side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Book another connection'),
@@ -87,6 +97,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
+                        backgroundColor: const Color(0xFF0E1520),
                         side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Need support'),
@@ -208,6 +219,11 @@ class ServiceTrackingScreen extends StatelessWidget {
                                 const SizedBox(height: 10),
                                 OutlinedButton(
                                   onPressed: () => _openMap(visit.mapUrl),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF111111),
+                                    backgroundColor: const Color(0xFFF3F1E9),
+                                    side: const BorderSide(color: Color(0x14000000)),
+                                  ),
                                   child: const Text('Open location'),
                                 ),
                               ],
@@ -261,6 +277,11 @@ class ServiceTrackingScreen extends StatelessWidget {
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                     ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFEFEEE8),
+                      backgroundColor: const Color(0xFF0E1520),
+                      side: const BorderSide(color: Color(0x55E6FF3C)),
+                    ),
                     child: const Text('Open all alerts'),
                   ),
                 ),
@@ -285,7 +306,10 @@ class ServiceTrackingScreen extends StatelessWidget {
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
                     ),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0B0F19)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFE6FF3C),
+                      foregroundColor: const Color(0xFF111111),
+                    ),
                     child: const Text('Open Support Center'),
                   ),
                 ),
