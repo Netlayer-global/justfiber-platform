@@ -134,7 +134,10 @@ export default function CustomerDetailPage() {
   )
   const pendingPlanChange = billingSummary.pendingPlanChange as Record<string, any> | undefined
   const adminApiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
-  const currentPlanCode = customer?.plan.planCode || customer?.plan.id
+  const currentPlanCode =
+    customer?.plan && 'planCode' in customer.plan
+      ? customer.plan.planCode || customer.plan.id
+      : customer?.plan?.id
 
   async function handleCustomerUpdate(patch: Partial<Customer>) {
     if (!customer) return
