@@ -439,11 +439,21 @@ class InstallerVisitItem {
     required this.installerName,
     required this.installerPhone,
     required this.planName,
+    required this.planCode,
+    required this.planCategory,
+    required this.planTags,
     required this.lastUpdateAt,
     required this.lastUpdateNote,
     required this.latestEventCode,
     required this.mapUrl,
     required this.etaText,
+    required this.configStatus,
+    required this.proofUploadedAt,
+    required this.routerPhotoUploaded,
+    required this.cablePhotoUploaded,
+    required this.completionOtpVerifiedAt,
+    required this.wifiSsid24,
+    required this.wifiSsid5,
   });
 
   final String jobNumber;
@@ -455,11 +465,21 @@ class InstallerVisitItem {
   final String installerName;
   final String installerPhone;
   final String planName;
+  final String planCode;
+  final String planCategory;
+  final List<String> planTags;
   final String lastUpdateAt;
   final String lastUpdateNote;
   final String latestEventCode;
   final String mapUrl;
   final String etaText;
+  final String configStatus;
+  final String proofUploadedAt;
+  final bool routerPhotoUploaded;
+  final bool cablePhotoUploaded;
+  final String completionOtpVerifiedAt;
+  final String wifiSsid24;
+  final String wifiSsid5;
 }
 
 class ConnectedDevice {

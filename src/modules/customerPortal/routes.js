@@ -655,11 +655,21 @@ function buildInstallerVisitSummary(job) {
       ? (job.installerId.phone || "")
       : "",
     planName: job.customerSnapshot?.planName || "",
+    planCode: job.customerSnapshot?.planCode || "",
+    planCategory: job.customerSnapshot?.planCategory || "home",
+    planTags: Array.isArray(job.customerSnapshot?.tags) ? job.customerSnapshot.tags : [],
     lastUpdateAt: latestTimeline?.at || job.updatedAt || job.createdAt,
     lastUpdateNote: latestTimeline?.note || latestTimeline?.event || "",
     latestEventCode: latestTimeline?.event || "",
     mapUrl: locationMapUrl,
-    etaText: etaTextByStatus[job.status] || "Installation team update pending."
+    etaText: etaTextByStatus[job.status] || "Installation team update pending.",
+    configStatus: job.activation?.configStatus || "",
+    proofUploadedAt: job.proof?.uploadedAt || null,
+    routerPhotoUploaded: Boolean(job.proof?.routerPhotoUrl),
+    cablePhotoUploaded: Boolean(job.proof?.cablePhotoUrl),
+    completionOtpVerifiedAt: job.otp?.verifiedAt || null,
+    wifiSsid24: job.activation?.preparedCredentials?.wifi?.ssid24 || "",
+    wifiSsid5: job.activation?.preparedCredentials?.wifi?.ssid5 || ""
   };
 }
 

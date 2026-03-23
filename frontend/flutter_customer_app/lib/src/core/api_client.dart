@@ -480,11 +480,21 @@ class ApiClient {
         installerName: (map['installerName'] ?? '').toString(),
         installerPhone: (map['installerPhone'] ?? '').toString(),
         planName: (map['planName'] ?? '').toString(),
+        planCode: (map['planCode'] ?? '').toString(),
+        planCategory: (map['planCategory'] ?? 'home').toString(),
+        planTags: _asList(map['planTags']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
         lastUpdateAt: (map['lastUpdateAt'] ?? '').toString(),
         lastUpdateNote: (map['lastUpdateNote'] ?? '').toString(),
         latestEventCode: (map['latestEventCode'] ?? '').toString(),
         mapUrl: (map['mapUrl'] ?? '').toString(),
         etaText: (map['etaText'] ?? '').toString(),
+        configStatus: (map['configStatus'] ?? '').toString(),
+        proofUploadedAt: (map['proofUploadedAt'] ?? '').toString(),
+        routerPhotoUploaded: map['routerPhotoUploaded'] == true,
+        cablePhotoUploaded: map['cablePhotoUploaded'] == true,
+        completionOtpVerifiedAt: (map['completionOtpVerifiedAt'] ?? '').toString(),
+        wifiSsid24: (map['wifiSsid24'] ?? '').toString(),
+        wifiSsid5: (map['wifiSsid5'] ?? '').toString(),
       );
     }).toList(), (item) => item.lastUpdateAt.isNotEmpty ? item.lastUpdateAt : item.createdAt);
   }

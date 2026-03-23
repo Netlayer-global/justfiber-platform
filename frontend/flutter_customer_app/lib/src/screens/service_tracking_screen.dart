@@ -253,7 +253,17 @@ class ServiceTrackingScreen extends StatelessWidget {
                               _visitInfo('Installer', visit.installerName.isEmpty ? 'Assigned team' : visit.installerName),
                               if (visit.installerPhone.isNotEmpty) _visitInfo('Phone', visit.installerPhone),
                               if (visit.planName.isNotEmpty) _visitInfo('Plan', visit.planName),
+                              if (visit.planCode.isNotEmpty) _visitInfo('Plan code', visit.planCode),
+                              if (visit.planTags.isNotEmpty) _visitInfo('Plan tags', visit.planTags.take(3).join(' | ')),
                               _visitInfo('ETA', visit.etaText.isEmpty ? '-' : visit.etaText),
+                              if (visit.configStatus.isNotEmpty) _visitInfo('Config', visit.configStatus),
+                              if (visit.proofUploadedAt.isNotEmpty) _visitInfo('Proof uploaded', visit.proofUploadedAt),
+                              if (visit.completionOtpVerifiedAt.isNotEmpty) _visitInfo('OTP verified', visit.completionOtpVerifiedAt),
+                              if (visit.wifiSsid24.isNotEmpty || visit.wifiSsid5.isNotEmpty)
+                                _visitInfo(
+                                  'Wi-Fi',
+                                  '${visit.wifiSsid24.isEmpty ? '-' : visit.wifiSsid24}${visit.wifiSsid5.isEmpty ? '' : ' / ${visit.wifiSsid5}'}',
+                                ),
                               _visitInfo('Latest update', visit.lastUpdateNote.isEmpty ? visit.latestEventCode : visit.lastUpdateNote),
                               _visitInfo('Updated at', visit.lastUpdateAt.isEmpty ? '-' : visit.lastUpdateAt),
                               if (visit.mapUrl.isNotEmpty) ...[

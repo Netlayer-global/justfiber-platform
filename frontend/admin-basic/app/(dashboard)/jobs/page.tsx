@@ -316,6 +316,14 @@ export default function JobsPage() {
                     <p className="text-slate-500 text-xs">Config</p>
                     <p className="font-semibold">{job.configStatus || '-'}</p>
                   </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Proof</p>
+                    <p className="font-semibold">{job.proofUploadedAt ? 'Uploaded' : '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">OTP</p>
+                    <p className="font-semibold">{job.completionOtpVerifiedAt ? 'Verified' : '-'}</p>
+                  </div>
                   {job.scheduledDate ? (
                     <div className="col-span-2 flex items-center gap-2 text-slate-500">
                       <Calendar className="w-3 h-3" />
@@ -348,12 +356,32 @@ export default function JobsPage() {
                         Config: {job.configStatus}
                       </span>
                     ) : null}
+                    {job.proofUploadedAt ? (
+                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                        Proof uploaded
+                      </span>
+                    ) : null}
+                    {job.completionOtpVerifiedAt ? (
+                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                        OTP verified
+                      </span>
+                    ) : null}
                     {job.latestEventCode ? (
                       <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
                         Event: {job.latestEventCode}
                       </span>
                     ) : null}
                   </div>
+                  {(job.wifiSsid24 || job.wifiSsid5) ? (
+                    <div className="mt-3 grid gap-2 text-xs text-slate-300 md:grid-cols-2">
+                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                        Wi-Fi 2.4G: {job.wifiSsid24 || '-'}
+                      </div>
+                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                        Wi-Fi 5G: {job.wifiSsid5 || '-'}
+                      </div>
+                    </div>
+                  ) : null}
                   {job.latestEventNote ? (
                     <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
                       {job.latestEventNote}

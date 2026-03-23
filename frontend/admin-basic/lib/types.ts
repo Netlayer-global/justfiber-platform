@@ -281,6 +281,12 @@ export interface Job {
   mapUrl?: string
   finalSerialNumber?: string
   configStatus?: string
+  proofUploadedAt?: string
+  routerPhotoUploaded?: boolean
+  cablePhotoUploaded?: boolean
+  completionOtpVerifiedAt?: string
+  wifiSsid24?: string
+  wifiSsid5?: string
   latestEventCode?: string
   latestEventNote?: string
   scheduledDate?: string
