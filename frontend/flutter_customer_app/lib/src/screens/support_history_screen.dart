@@ -126,9 +126,14 @@ class SupportHistoryScreen extends StatelessWidget {
                       onTap: () => _showCreateRequestSheet(context, appState),
                     ),
                     FilledButton.tonal(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                      ),
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFFE6FF3C),
                         foregroundColor: const Color(0xFF111111),

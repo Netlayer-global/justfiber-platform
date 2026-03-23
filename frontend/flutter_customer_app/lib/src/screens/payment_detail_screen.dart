@@ -103,7 +103,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     leading: const Icon(Icons.receipt_long_rounded),
                     title: const Text('Open payment receipt'),
                     subtitle: const Text('View the receipt inside the app'),
-                    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
+                    trailing: const SizedBox.shrink(),
                     onTap: () => _openDocument(context, appState, 'Receipt', payment.viewUrl),
                   ),
                 if (payment.pdfUrl.isNotEmpty)
@@ -115,7 +115,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     leading: const Icon(Icons.picture_as_pdf_rounded),
                     title: const Text('Open PDF'),
                     subtitle: const Text('View the payment receipt PDF'),
-                    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
+                    trailing: const SizedBox.shrink(),
                     onTap: () => _openDocument(context, appState, 'Receipt PDF', payment.pdfUrl),
                   ),
                 ListTile(
@@ -126,7 +126,7 @@ class PaymentDetailScreen extends StatelessWidget {
                   leading: const Icon(Icons.copy_rounded),
                   title: const Text('Copy transaction ID'),
                   subtitle: const Text('Keep the payment reference handy for support'),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
+                  trailing: const SizedBox.shrink(),
                   onTap: () => _copyText(context, payment.transactionId, 'Transaction ID copied'),
                 ),
                 if (payment.reference.isNotEmpty)
@@ -138,7 +138,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     leading: const Icon(Icons.tag_rounded),
                     title: const Text('Copy payment reference'),
                     subtitle: const Text('Use this if you need to verify payment manually'),
-                    trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
+                    trailing: const SizedBox.shrink(),
                     onTap: () => _copyText(context, payment.reference, 'Payment reference copied'),
                   ),
                 ListTile(
@@ -153,7 +153,7 @@ class PaymentDetailScreen extends StatelessWidget {
                         ? 'Send this receipt link to someone else'
                         : 'Share transaction details even if receipt is not generated yet',
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFEFEEE8)),
+                  trailing: const SizedBox.shrink(),
                   onTap: () => _shareDocumentWithFeedback(context, appState),
                 ),
               ],

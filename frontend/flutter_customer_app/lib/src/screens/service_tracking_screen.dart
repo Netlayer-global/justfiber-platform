@@ -236,7 +236,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                               if (visit.mapUrl.isNotEmpty) ...[
                                 const SizedBox(height: 10),
                                 OutlinedButton(
-                                  onPressed: () => _openMap(visit.mapUrl),
+                                  onPressed: () => _openMap(context, visit.mapUrl),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFFE6FF3C),
                                     backgroundColor: const Color(0xFF111827),
@@ -438,10 +438,22 @@ class ServiceTrackingScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _openMap(String mapUrl) async {
+  Future<void> _openMap(BuildContext context, String mapUrl) async {
     final uri = Uri.tryParse(mapUrl);
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (uri == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location link is not available right now.')),
+        );
+      }
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open installer location right now.')),
+      );
+    }
   }
 }
 
