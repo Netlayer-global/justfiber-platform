@@ -462,6 +462,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         MaterialPageRoute(builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)),
       );
     }
+    if (context.mounted) {
+      await appState.refresh();
+    }
   }
 }
 

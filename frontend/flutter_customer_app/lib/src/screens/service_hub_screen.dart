@@ -491,6 +491,9 @@ class ServiceHubScreen extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(request == null ? (appState.error ?? 'Unable to submit add-on request') : '$addonName request created')),
     );
+    if (request != null) {
+      await appState.refresh();
+    }
   }
 
   Future<void> _showShiftConnectionSheet(BuildContext context, AppState appState) async {
@@ -565,6 +568,9 @@ class ServiceHubScreen extends StatelessWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text(request == null ? (appState.error ?? 'Unable to create shift request') : 'Shift request submitted')),
                               );
+                              if (request != null) {
+                                await appState.refresh();
+                              }
                             },
                       child: const Text('Proceed'),
                     ),
