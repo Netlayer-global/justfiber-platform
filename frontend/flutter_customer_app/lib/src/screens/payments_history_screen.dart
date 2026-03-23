@@ -114,7 +114,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0x14E6FF3C)),
+                    border: Border.all(color: const Color(0x33E6FF3C)),
                     boxShadow: const [
                       BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
                     ],
@@ -230,7 +230,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFEFEEE8),
-                                backgroundColor: const Color(0xFF0E1520),
+                                backgroundColor: const Color(0xFF10151A),
                                 side: const BorderSide(color: Color(0x33E6FF3C)),
                               ),
                               child: const Text('Need Help'),

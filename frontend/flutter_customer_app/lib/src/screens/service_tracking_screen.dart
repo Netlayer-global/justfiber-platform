@@ -99,7 +99,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
-                        backgroundColor: const Color(0xFF0E1520),
+                        backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Book another connection'),
@@ -115,7 +115,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
-                        backgroundColor: const Color(0xFF0E1520),
+                        backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x66E6FF3C)),
                       ),
                       child: const Text('Need support'),
@@ -337,7 +337,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFEFEEE8),
-                      backgroundColor: const Color(0xFF0E1520),
+                      backgroundColor: const Color(0xFF10151A),
                       side: const BorderSide(color: Color(0x55E6FF3C)),
                     ),
                     child: const Text('Open all alerts'),
