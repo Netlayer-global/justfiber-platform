@@ -26,6 +26,7 @@ import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { env } from "../../config/env.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
+import { CustomerUser } from "../../models/CustomerUser.js";
 
 export const adminOpsRouter = Router();
 
@@ -49,6 +50,21 @@ function parseCsvRows(rawText = "") {
       return acc;
     }, {});
   });
+}
+
+async function notifyLinkedCustomerUsers(customerId, { type, title, body, payload }) {
+  if (!customerId) return;
+  const users = await CustomerUser.find({ linkedCustomerIds: customerId }).select({ _id: 1 }).lean();
+  if (!users.length) return;
+  await CustomerNotification.insertMany(
+    users.map((user) => ({
+      customerUserId: user._id,
+      type,
+      title,
+      body,
+      payload,
+    }))
+  );
 }
 
 function buildInvoiceHtml(invoice) {
@@ -1685,6 +1701,17 @@ adminOpsRouter.post(
       lastPaidAt: new Date()
     };
     await customer.save();
+    await notifyLinkedCustomerUsers(customer.customerId, {
+      type: "billing_payment_confirmed",
+      title: "Payment confirmed",
+      body: `We recorded your payment of Rs ${amount.toFixed(2)}.`,
+      payload: {
+        customerId: customer.customerId,
+        amount,
+        transactionId,
+        invoiceId: settledInvoice?.invoiceId || null
+      }
+    });
 
     return ok(res, {
       customerId: customer.customerId,
@@ -1965,6 +1992,17 @@ adminOpsRouter.post(
         lastReconciledPaymentId: payment.transactionId
       };
       await customer.save();
+      await notifyLinkedCustomerUsers(customer.customerId, {
+        type: "billing_payment_reconciled",
+        title: "Payment reconciled",
+        body: `Your payment of Rs ${Number(payment.amount || 0).toFixed(2)} was reconciled against invoice ${invoice.invoiceNumber || invoice.invoiceId}.`,
+        payload: {
+          customerId: customer.customerId,
+          transactionId: payment.transactionId,
+          invoiceId: invoice.invoiceId,
+          amount: Number(payment.amount || 0)
+        }
+      });
     }
 
     const existingLedger = await BillingLedgerEntry.findOne({ paymentId: payment.transactionId }).lean();
@@ -2300,6 +2338,17 @@ adminOpsRouter.post(
       lastRefundAt: new Date()
     };
     await customer.save();
+    await notifyLinkedCustomerUsers(customer.customerId, {
+      type: "billing_refund_created",
+      title: "Refund posted",
+      body: `A refund of Rs ${amount.toFixed(2)} has been posted to your account.`,
+      payload: {
+        customerId: customer.customerId,
+        refundId,
+        amount,
+        paymentId: req.body?.paymentId || null
+      }
+    });
     await auditFromRequest(req, {
       action: "billing.refund.created",
       entityType: "customer",
@@ -2396,6 +2445,18 @@ adminOpsRouter.post(
       lastRefundAt: new Date()
     };
     await customer.save();
+    await notifyLinkedCustomerUsers(customer.customerId, {
+      type: "billing_refund_created",
+      title: "Refund initiated",
+      body: `A Razorpay refund of Rs ${requestedAmount.toFixed(2)} has been initiated for your payment.`,
+      payload: {
+        customerId: customer.customerId,
+        refundId,
+        razorpayRefundId: refund.id,
+        amount: requestedAmount,
+        paymentId: payment.transactionId
+      }
+    });
     await auditFromRequest(req, {
       action: "billing.razorpay_refund.created",
       entityType: "customer",
