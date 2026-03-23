@@ -88,6 +88,11 @@ const planSchema = z.object({
     defaultPppoePassword: z.string().optional(),
     wifiNamePrefix: z.string().optional()
   }).optional(),
+  merchandising: z.object({
+    featured: z.boolean().optional(),
+    recommended: z.boolean().optional(),
+    spotlightLabel: z.string().optional()
+  }).optional(),
   active: z.boolean().optional(),
   sortOrder: z.number().optional()
 });

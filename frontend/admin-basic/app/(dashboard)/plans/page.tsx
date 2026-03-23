@@ -58,6 +58,9 @@ type PlanFormState = {
   pppoeRealm: string
   defaultPppoePassword: string
   wifiNamePrefix: string
+  featured: boolean
+  recommended: boolean
+  spotlightLabel: string
   sortOrder: string
 }
 
@@ -99,6 +102,9 @@ const initialForm: PlanFormState = {
   pppoeRealm: '',
   defaultPppoePassword: '123456',
   wifiNamePrefix: 'JustFiber',
+  featured: false,
+  recommended: false,
+  spotlightLabel: '',
   sortOrder: '1',
 }
 
@@ -182,6 +188,9 @@ function toForm(plan?: Plan | null): PlanFormState {
     pppoeRealm: plan.provisioning?.pppoeRealm || '',
     defaultPppoePassword: plan.provisioning?.defaultPppoePassword || '123456',
     wifiNamePrefix: plan.provisioning?.wifiNamePrefix || 'JustFiber',
+    featured: Boolean(plan.merchandising?.featured),
+    recommended: Boolean(plan.merchandising?.recommended),
+    spotlightLabel: plan.merchandising?.spotlightLabel || '',
     sortOrder: String(plan.sortOrder || 1),
   }
 }
@@ -195,6 +204,7 @@ export default function PlansPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'home' | 'business' | 'enterprise'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [merchFilter, setMerchFilter] = useState<'all' | 'featured' | 'recommended'>('all')
   const [form, setForm] = useState<PlanFormState>(initialForm)
 
   useEffect(() => {
@@ -230,14 +240,18 @@ export default function PlansPage() {
           .some((value) => String(value).toLowerCase().includes(needle))
         const matchesCategory = categoryFilter === 'all' || plan.category === categoryFilter
         const matchesStatus = statusFilter === 'all' || plan.status === statusFilter
-        return matchesQuery && matchesCategory && matchesStatus
+        const matchesMerch =
+          merchFilter === 'all' ||
+          (merchFilter === 'featured' && plan.merchandising?.featured) ||
+          (merchFilter === 'recommended' && plan.merchandising?.recommended)
+        return matchesQuery && matchesCategory && matchesStatus && matchesMerch
       })
       .sort((left, right) => {
         const orderDiff = Number(left.sortOrder || 1) - Number(right.sortOrder || 1)
         if (orderDiff !== 0) return orderDiff
         return left.name.localeCompare(right.name)
       })
-  }, [plans, query, categoryFilter, statusFilter])
+  }, [plans, query, categoryFilter, statusFilter, merchFilter])
 
   const selectedPlan =
     plans.find((plan) => plan.id === selectedPlanId) ||
@@ -312,6 +326,11 @@ export default function PlansPage() {
           channels: Number(form.voiceChannels || 0),
           extraPrice: Number(form.voiceExtraPrice || 0),
         },
+      },
+      merchandising: {
+        featured: form.featured,
+        recommended: form.recommended,
+        spotlightLabel: form.spotlightLabel.trim(),
       },
       provisioning: {
         accessProfileCode: form.accessProfileCode.trim(),
@@ -539,7 +558,17 @@ export default function PlansPage() {
               <input type="checkbox" checked={form.pricesExcludeGst} onChange={(e) => setForm({ ...form, pricesExcludeGst: e.target.checked })} />
               Show pricing as GST exclusive
             </label>
+            <label className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+              <input type="checkbox" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
+              Mark as featured lane
+            </label>
+            <label className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+              <input type="checkbox" checked={form.recommended} onChange={(e) => setForm({ ...form, recommended: e.target.checked })} />
+              Mark as recommended lane
+            </label>
           </div>
+
+          <input className="input" placeholder="Spotlight label (Best Seller, Gamer Pick, OTT Plus)" value={form.spotlightLabel} onChange={(e) => setForm({ ...form, spotlightLabel: e.target.value })} />
 
           <div className="grid gap-4 xl:grid-cols-3">
             <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
@@ -622,6 +651,13 @@ export default function PlansPage() {
                   </button>
                 ))}
               </div>
+              <div className="flex flex-wrap gap-2">
+                {(['all', 'featured', 'recommended'] as const).map((value) => (
+                  <button key={value} type="button" onClick={() => setMerchFilter(value)} className={value === merchFilter ? 'btn-primary' : 'btn-secondary'}>
+                    {value === 'all' ? 'All lanes' : value}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -639,6 +675,12 @@ export default function PlansPage() {
                 <div className={`rounded-full px-3 py-1 text-xs font-semibold ${preview.status === 'inactive' ? 'bg-red-500/15 text-red-200' : 'bg-[#d8ff16]/15 text-[#d8ff16]'}`}>
                   {preview.status === 'inactive' ? 'Hidden' : 'Live'}
                 </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {preview.featured ? <span className="rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#d8ff16]">Featured</span> : null}
+                {preview.recommended ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Recommended</span> : null}
+                {preview.spotlightLabel.trim().isNotEmpty ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.spotlightLabel}</span> : null}
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
@@ -766,6 +808,21 @@ export default function PlansPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                {plan.merchandising?.featured ? (
+                  <span className="rounded-full border border-[#d8ff16]/20 bg-[#d8ff16]/10 px-3 py-1 text-xs text-[#d8ff16]">
+                    Featured
+                  </span>
+                ) : null}
+                {plan.merchandising?.recommended ? (
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    Recommended
+                  </span>
+                ) : null}
+                {plan.merchandising?.spotlightLabel ? (
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    {plan.merchandising.spotlightLabel}
+                  </span>
+                ) : null}
                 {(plan.tags || []).slice(0, 4).map((tag) => (
                   <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
                     {tag}

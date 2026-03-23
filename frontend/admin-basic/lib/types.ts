@@ -65,6 +65,11 @@ export interface Plan {
     defaultPppoePassword?: string
     wifiNamePrefix?: string
   }
+  merchandising?: {
+    featured?: boolean
+    recommended?: boolean
+    spotlightLabel?: string
+  }
   sortOrder?: number
   type: string
   status: 'active' | 'inactive'

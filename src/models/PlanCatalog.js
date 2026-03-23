@@ -50,6 +50,11 @@ const planCatalogSchema = new mongoose.Schema(
       defaultPppoePassword: String,
       wifiNamePrefix: String
     },
+    merchandising: {
+      featured: { type: Boolean, default: false },
+      recommended: { type: Boolean, default: false },
+      spotlightLabel: String
+    },
     active: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 1 }
   },
