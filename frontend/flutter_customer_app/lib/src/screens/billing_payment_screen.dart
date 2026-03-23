@@ -5,6 +5,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
+import 'support_history_screen.dart';
 
 class BillingPaymentScreen extends StatefulWidget {
   const BillingPaymentScreen({super.key, required this.paymentOrder});
@@ -18,6 +19,7 @@ class BillingPaymentScreen extends StatefulWidget {
 class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   late final Razorpay _razorpay;
   bool launching = false;
+  bool helping = false;
   String? paymentError;
   String? walletHint;
   int retryCount = 0;
@@ -45,22 +47,60 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
       paymentError = null;
       walletHint = null;
     });
-    _razorpay.open({
-      'key': widget.paymentOrder.keyId,
-      'amount': widget.paymentOrder.amountPaise,
-      'currency': widget.paymentOrder.currency,
-      'name': 'JustFiber',
-      'description': 'Bill payment',
-      'order_id': widget.paymentOrder.orderId,
-      'prefill': {
-        'contact': widget.paymentOrder.customerPhone,
-        'email': widget.paymentOrder.customerEmail,
-        'name': widget.paymentOrder.customerName,
-      },
-      'theme': {
-        'color': '#E6FF3C',
-      },
-    });
+    try {
+      _razorpay.open({
+        'key': widget.paymentOrder.keyId,
+        'amount': widget.paymentOrder.amountPaise,
+        'currency': widget.paymentOrder.currency,
+        'name': 'JustFiber',
+        'description': 'Bill payment',
+        'order_id': widget.paymentOrder.orderId,
+        'prefill': {
+          'contact': widget.paymentOrder.customerPhone,
+          'email': widget.paymentOrder.customerEmail,
+          'name': widget.paymentOrder.customerName,
+        },
+        'theme': {
+          'color': '#E6FF3C',
+        },
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        launching = false;
+        paymentError = 'Unable to launch checkout right now. Please retry or raise a billing ticket.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<void> _openSupportCenter() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+    );
+    if (!mounted) return;
+    await AppStateScope.of(context).refresh();
+  }
+
+  Future<void> _requestPaymentHelp() async {
+    if (helping) return;
+    final appState = AppStateScope.of(context);
+    setState(() => helping = true);
+    final ticketNumber = await appState.raiseComplaint(
+      category: 'billing',
+      subject: 'Payment failed for bill',
+      description:
+          'Payment failed while trying to pay Rs ${widget.paymentOrder.amount.toStringAsFixed(0)} for order ${widget.paymentOrder.orderId}. Please assist with billing/payment confirmation.',
+    );
+    if (!mounted) return;
+    setState(() => helping = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ticketNumber == null ? (appState.error ?? 'Unable to create support request') : 'Support ticket created: $ticketNumber'),
+      ),
+    );
   }
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
@@ -98,22 +138,6 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     setState(() {
       walletHint = 'Continue payment in ${response.walletName ?? 'wallet'} and return here after completion.';
     });
-  }
-
-  Future<void> _requestPaymentHelp() async {
-    final appState = AppStateScope.of(context);
-    final ticketNumber = await appState.raiseComplaint(
-      category: 'billing',
-      subject: 'Payment failed for bill',
-      description:
-          'Payment failed while trying to pay Rs ${widget.paymentOrder.amount.toStringAsFixed(0)} for order ${widget.paymentOrder.orderId}. Please assist with billing/payment confirmation.',
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ticketNumber == null ? (appState.error ?? 'Unable to create support request') : 'Support ticket created: $ticketNumber'),
-      ),
-    );
   }
 
   Future<void> _copyOrderReference() async {
@@ -245,8 +269,16 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: _requestPaymentHelp,
-                      child: const Text('Raise billing ticket'),
+                      onPressed: helping ? null : _requestPaymentHelp,
+                      child: Text(helping ? 'Creating ticket...' : 'Raise billing ticket'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _openSupportCenter,
+                      child: const Text('Open support center'),
                     ),
                   ),
                   const SizedBox(height: 10),

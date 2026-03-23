@@ -6,6 +6,7 @@ import '../widgets/app_card.dart';
 import 'billing_payment_screen.dart';
 import 'document_viewer_screen.dart';
 import 'payments_history_screen.dart';
+import 'support_history_screen.dart';
 
 class BillingHistoryScreen extends StatelessWidget {
   const BillingHistoryScreen({super.key});
@@ -532,11 +533,31 @@ class BillingHistoryScreen extends StatelessWidget {
 
   Future<void> _payNow(BuildContext context, AppState appState, {double? amount}) async {
     final messenger = ScaffoldMessenger.of(context);
+    if (appState.session == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Please login again to continue bill payment.')),
+      );
+      return;
+    }
     final paymentOrder = await appState.loadBillingPaymentOrder(amount: amount);
     if (!context.mounted) return;
     if (paymentOrder == null) {
+      final errorMessage = appState.error ?? 'Unable to create payment order';
       messenger.showSnackBar(
-        SnackBar(content: Text(appState.error ?? 'Unable to create payment order')),
+        SnackBar(
+          content: Text(errorMessage),
+          action: SnackBarAction(
+            label: 'Get help',
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+              );
+              if (context.mounted) {
+                await appState.refresh();
+              }
+            },
+          ),
+        ),
       );
       return;
     }
