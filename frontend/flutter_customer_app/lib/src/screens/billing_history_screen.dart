@@ -18,9 +18,6 @@ class BillingHistoryScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final latestInvoice = billing.invoices.isEmpty ? null : billing.invoices.first;
     final latestPayment = billing.payments.isEmpty ? null : billing.payments.first;
-    final invoiceCount = billing.invoices.length;
-    final paymentCount = billing.payments.length;
-    final noteCount = billing.notes.length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Billing')),
@@ -145,15 +142,6 @@ class BillingHistoryScreen extends StatelessWidget {
                         child: const Text('Refresh'),
                       ),
                     ),
-                  ],
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _countChip('Invoices', invoiceCount.toString(), dark: true),
-                    _countChip('Payments', paymentCount.toString(), dark: true),
-                    _countChip('Notes', noteCount.toString(), dark: true),
                   ],
                 ),
               ],
@@ -326,26 +314,6 @@ class BillingHistoryScreen extends StatelessWidget {
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
         ],
-      ),
-    );
-  }
-
-  Widget _countChip(String label, String value, {bool dark = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: dark ? const Color(0xFF10151A) : const Color(0xFF10151A),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: dark ? const Color(0x66E6FF3C) : const Color(0x33E6FF3C)),
-      ),
-      child: RichText(
-        text: TextSpan(
-          style: TextStyle(color: dark ? const Color(0xFFEFEEE8) : const Color(0xFFEFEEE8)),
-          children: [
-            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
-            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
-          ],
-        ),
       ),
     );
   }
