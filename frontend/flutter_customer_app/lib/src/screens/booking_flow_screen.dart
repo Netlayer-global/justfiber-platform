@@ -34,6 +34,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   String? _locationError;
   bool _locationPermissionDeniedForever = false;
   bool _locationServiceDisabled = false;
+  bool _usedCurrentLocation = false;
   final nameController = TextEditingController();
   final mobileController = TextEditingController();
   final addressController = TextEditingController();
@@ -147,6 +148,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         _selectedLocation = point;
                         _hasPickedLocation = true;
                         _locationError = null;
+                        _usedCurrentLocation = false;
                       });
                     },
                   ),
@@ -183,6 +185,38 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 : 'Tap on the map to drop the exact install location pin.',
             style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600),
           ),
+          if (_hasPickedLocation) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10151A),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: const Color(0x55E6FF3C)),
+                  ),
+                  child: Text(
+                    _usedCurrentLocation ? 'Current GPS pin' : 'Manual map pin',
+                    style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+                  ),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _hasPickedLocation = false;
+                      _usedCurrentLocation = false;
+                      _locationError = null;
+                      _selectedLocation = const LatLng(28.6139, 77.2090);
+                    });
+                  },
+                  child: const Text('Reset pin'),
+                ),
+              ],
+            ),
+          ],
           if ((_locationError ?? '').isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(_locationError!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w700)),
@@ -635,7 +669,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       setState(() {
         _selectedLocation = LatLng(position.latitude, position.longitude);
         _hasPickedLocation = true;
+        _usedCurrentLocation = true;
       });
+      _showLocationFeedback('Current location pinned on the map.');
     } catch (e) {
       setState(() {
         _locationError = e.toString().replaceFirst('Exception: ', '');
@@ -647,6 +683,11 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         });
       }
     }
+  }
+
+  void _showLocationFeedback(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _stepper() {
