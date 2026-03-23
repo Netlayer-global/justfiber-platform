@@ -18,10 +18,19 @@ class JobDetailScreen extends StatefulWidget {
 }
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
+  static const List<String> _complaintResolutionCodes = [
+    'ont_replace',
+    'fiber_patch',
+    'low_power_fix',
+    'wifi_reconfig',
+    'port_reprovision',
+  ];
+
   final _serialController = TextEditingController();
   final _otpController = TextEditingController();
   final _replaceSerialController = TextEditingController();
   final _complaintNoteController = TextEditingController(text: 'Visited site and started complaint handling.');
+  String _complaintResolutionCode = 'ont_replace';
   bool _busy = false;
   bool _routerPhotoReady = false;
   bool _cablePhotoReady = false;
@@ -148,6 +157,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final detail = _detail;
     final snapshot = (detail?['customerSnapshot'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final activation = (detail?['activation'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final complaint = (detail?['complaint'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final deviceContext = (detail?['deviceContext'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final proof = (detail?['proof'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final optical = (detail?['opticalReadings'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
@@ -163,6 +173,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final linkedSerial = (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
+    final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
     final proofUploaded = proof.isNotEmpty;
     final canAccept = _canAccept(status);
     final canStartTravel = _canStartTravel(status);
@@ -504,8 +515,59 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       children: [
                         Text('Complaint workflow', style: theme.textTheme.titleLarge),
                         const SizedBox(height: 12),
+                        if (complaint.isNotEmpty || deviceContext['oldSerialNumber'] != null || deviceContext['finalSerialNumber'] != null) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10151A),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0x22E6FF3C)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Replacement summary',
+                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 10),
+                                _row('Resolution code', complaintResolution.replaceAll('_', ' ')),
+                                _row('Old serial', '${deviceContext['oldSerialNumber'] ?? '-'}'),
+                                _row('New serial', '${deviceContext['finalSerialNumber'] ?? '-'}'),
+                                _row('Complaint note', '${complaint['note'] ?? _complaintNoteController.text.trim()}'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        Text(
+                          'Issue type',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _complaintResolutionCodes
+                              .map(
+                                (code) => ChoiceChip(
+                                  label: Text(code.replaceAll('_', ' ')),
+                                  selected: _complaintResolutionCode == code,
+                                  onSelected: _busy
+                                      ? null
+                                      : (selected) {
+                                          if (!selected) return;
+                                          setState(() => _complaintResolutionCode = code);
+                                        },
+                                ),
+                              )
+                              .toList(),
+                        ),
+                        const SizedBox(height: 12),
                         TextField(
                           controller: _complaintNoteController,
+                          onChanged: (_) => setState(() {}),
                           decoration: const InputDecoration(labelText: 'Complaint note'),
                         ),
                         const SizedBox(height: 12),
@@ -526,6 +588,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         () => _appState.api.startComplaint(
                                           _appState.session!,
                                           widget.job.id,
+                                          resolutionCode: _complaintResolutionCode,
                                           note: _complaintNoteController.text.trim().isEmpty
                                               ? 'Installer started complaint work'
                                               : _complaintNoteController.text.trim(),
@@ -591,6 +654,30 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: const Text('Resolve complaint'),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10151A),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x22E6FF3C)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Complaint closure checklist',
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 10),
+                              _checkRow('Issue identified', complaint['note'] != null || _complaintNoteController.text.trim().isNotEmpty),
+                              _checkRow('Resolution selected', _complaintResolutionCode.isNotEmpty),
+                              _checkRow('ONT replaced if needed', deviceContext['finalSerialNumber'] != null || !canReplaceOnt),
+                              _checkRow('Customer OTP entered', _otpController.text.trim().length == 6),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -772,6 +859,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             child: Text(
               value.isEmpty ? '-' : value,
               style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _checkRow(String label, bool done) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            size: 18,
+            color: done ? const Color(0xFFE6FF3C) : const Color(0xFF9CA3AF),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600),
             ),
           ),
         ],
