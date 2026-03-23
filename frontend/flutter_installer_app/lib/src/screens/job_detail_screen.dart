@@ -7,6 +7,7 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
 import '../widgets/field_background.dart';
+import 'serial_scan_screen.dart';
 
 class JobDetailScreen extends StatefulWidget {
   const JobDetailScreen({super.key, required this.job});
@@ -149,6 +150,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (!opened) {
       _show(fallback ?? 'Unable to open right now');
     }
+  }
+
+  Future<void> _scanSerial({
+    required TextEditingController controller,
+    required String title,
+    required String subtitle,
+  }) async {
+    final scanned = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => SerialScanScreen(
+          title: title,
+          subtitle: subtitle,
+        ),
+      ),
+    );
+    if (!mounted || scanned == null || scanned.trim().isEmpty) return;
+    setState(() {
+      controller.text = scanned.trim();
+    });
+    _show('Serial scanned: ${scanned.trim()}');
   }
 
   @override
@@ -374,6 +395,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         runSpacing: 10,
                         children: [
                           OutlinedButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _scanSerial(
+                                      controller: _serialController,
+                                      title: 'Scan ONT serial',
+                                      subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                                    ),
+                            child: const Text('Scan barcode'),
+                          ),
+                          OutlinedButton(
                             onPressed: _busy ? null : () => _run(() => _appState.api.fetchProvisioningPreview(_appState.session!, widget.job.id), 'Preview refreshed'),
                             child: const Text('Load preview'),
                           ),
@@ -581,6 +612,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           spacing: 10,
                           runSpacing: 10,
                           children: [
+                            OutlinedButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () => _scanSerial(
+                                        controller: _replaceSerialController,
+                                        title: 'Scan replacement ONT',
+                                        subtitle: 'Scan the replacement router barcode or QR code to capture the new serial for complaint resolution.',
+                                      ),
+                              child: const Text('Scan barcode'),
+                            ),
                             OutlinedButton(
                               onPressed: _busy || !canStartComplaint
                                   ? null
