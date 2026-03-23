@@ -287,6 +287,10 @@ export interface Job {
   completionOtpVerifiedAt?: string
   wifiSsid24?: string
   wifiSsid5?: string
+  complaintResolutionCode?: string
+  complaintResolutionNote?: string
+  complaintReplacedDevice?: boolean
+  oldSerialNumber?: string
   latestEventCode?: string
   latestEventNote?: string
   scheduledDate?: string

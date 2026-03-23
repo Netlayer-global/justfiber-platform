@@ -317,6 +317,14 @@ export default function JobsPage() {
                     <p className="font-semibold">{job.configStatus || '-'}</p>
                   </div>
                   <div>
+                    <p className="text-slate-500 text-xs">Resolution</p>
+                    <p className="font-semibold">{job.complaintResolutionCode || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">ONT replace</p>
+                    <p className="font-semibold">{job.complaintReplacedDevice ? 'Yes' : '-'}</p>
+                  </div>
+                  <div>
                     <p className="text-slate-500 text-xs">Proof</p>
                     <p className="font-semibold">{job.proofUploadedAt ? 'Uploaded' : '-'}</p>
                   </div>
@@ -366,6 +374,16 @@ export default function JobsPage() {
                         OTP verified
                       </span>
                     ) : null}
+                    {job.complaintResolutionCode ? (
+                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                        Resolution: {job.complaintResolutionCode}
+                      </span>
+                    ) : null}
+                    {job.complaintReplacedDevice ? (
+                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                        ONT replaced
+                      </span>
+                    ) : null}
                     {job.latestEventCode ? (
                       <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
                         Event: {job.latestEventCode}
@@ -380,6 +398,21 @@ export default function JobsPage() {
                       <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
                         Wi-Fi 5G: {job.wifiSsid5 || '-'}
                       </div>
+                    </div>
+                  ) : null}
+                  {(job.oldSerialNumber || job.finalSerialNumber) ? (
+                    <div className="mt-3 grid gap-2 text-xs text-slate-300 md:grid-cols-2">
+                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                        Old ONT: {job.oldSerialNumber || '-'}
+                      </div>
+                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                        New ONT: {job.finalSerialNumber || '-'}
+                      </div>
+                    </div>
+                  ) : null}
+                  {job.complaintResolutionNote ? (
+                    <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                      Complaint note: {job.complaintResolutionNote}
                     </div>
                   ) : null}
                   {job.latestEventNote ? (
