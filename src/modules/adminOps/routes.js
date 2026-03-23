@@ -1510,6 +1510,46 @@ adminOpsRouter.get(
   })
 );
 
+adminOpsRouter.patch(
+  "/support/requests/:requestId",
+  requirePermission(permissions.ticketWrite),
+  asyncHandler(async (req, res) => {
+    const requestItem = await ServiceRequest.findById(req.params.requestId);
+    if (!requestItem) {
+      throw new ApiError(404, "Service request not found");
+    }
+
+    const nextStatus = String(req.body?.status || "").trim();
+    const note = String(req.body?.note || "").trim();
+
+    if (nextStatus) {
+      requestItem.status = nextStatus;
+    }
+    if (!Array.isArray(requestItem.timeline)) {
+      requestItem.timeline = [];
+    }
+    if (nextStatus || note) {
+      requestItem.timeline.push({
+        type: nextStatus ? "status_updated" : "note_added",
+        actorType: "admin",
+        actorId: req.admin?._id?.toString(),
+        note: note || `Request moved to ${nextStatus}`,
+        at: new Date(),
+      });
+    }
+
+    await requestItem.save();
+    await auditFromRequest(req, {
+      action: "support.request.updated",
+      entityType: "service_request",
+      entityId: requestItem._id.toString(),
+      metadata: { status: nextStatus || undefined },
+    });
+
+    return ok(res, requestItem);
+  })
+);
+
 adminOpsRouter.get(
   "/customers/:customerId/billing",
   requirePermission(permissions.billingRead),

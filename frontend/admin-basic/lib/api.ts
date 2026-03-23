@@ -332,6 +332,14 @@ function mapSupportQueueRequest(request: any): SupportQueueRequest {
     serviceId: request.serviceId || '',
     note: request.note || request.payload?.note || request.timeline?.[0]?.note || '',
     createdAt: request.createdAt || new Date().toISOString(),
+    timeline: Array.isArray(request.timeline)
+      ? request.timeline.map((item: any) => ({
+          type: item.type,
+          actorType: item.actorType,
+          note: item.note,
+          at: item.at,
+        }))
+      : [],
   }
 }
 
@@ -862,6 +870,11 @@ export const adminAPI = {
         : undefined,
     }
   },
+  updateSupportRequest: (id: string, data: { status?: string; note?: string }) =>
+    request(`/api/v1/admin/support/requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 
   // Installers
   getInstallers: async (page = 1, limit = 20) => {

@@ -9,6 +9,7 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [requests, setRequests] = useState<SupportQueueRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [requestBusyId, setRequestBusyId] = useState<string | null>(null)
   const queueMetrics: Array<{
     label: string
     value: string
@@ -36,6 +37,23 @@ export default function TicketsPage() {
       console.error('[v0] Failed to load tickets:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function updateRequestStatus(requestId: string, status: string) {
+    try {
+      setRequestBusyId(requestId)
+      const response = await adminAPI.updateSupportRequest(requestId, {
+        status,
+        note: `Updated from admin support queue to ${status}`,
+      })
+      if (response.success) {
+        await loadTickets()
+      }
+    } catch (error) {
+      console.error('[v0] Failed to update service request:', error)
+    } finally {
+      setRequestBusyId(null)
     }
   }
 
@@ -140,6 +158,7 @@ export default function TicketsPage() {
                   <th className="table-header">Type</th>
                   <th className="table-header">Status</th>
                   <th className="table-header">Created</th>
+                  <th className="table-header">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -158,11 +177,30 @@ export default function TicketsPage() {
                     <td className="table-cell">
                       {new Date(request.createdAt).toLocaleDateString()}
                     </td>
+                    <td className="table-cell">
+                      <select
+                        className="rounded-xl border border-white/10 bg-black px-3 py-2 text-xs text-white outline-none"
+                        defaultValue=""
+                        disabled={requestBusyId === request.id}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          if (!value) return
+                          void updateRequestStatus(request.id, value)
+                          event.currentTarget.value = ''
+                        }}
+                      >
+                        <option value="">Update</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="closed">Closed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
                   </tr>
                 ))}
                 {requests.length === 0 ? (
                   <tr>
-                    <td className="table-cell text-white/55" colSpan={4}>No service requests in the queue.</td>
+                    <td className="table-cell text-white/55" colSpan={5}>No service requests in the queue.</td>
                   </tr>
                 ) : null}
               </tbody>

@@ -229,6 +229,12 @@ export interface SupportQueueRequest {
   serviceId?: string
   note?: string
   createdAt: string
+  timeline?: Array<{
+    type?: string
+    actorType?: string
+    note?: string
+    at?: string
+  }>
 }
 
 export interface Installer {
