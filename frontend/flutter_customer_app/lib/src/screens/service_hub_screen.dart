@@ -108,7 +108,7 @@ class ServiceHubScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   '$planName | $displayWifiName',
-                  style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -379,9 +379,9 @@ class ServiceHubScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
           border: Border(
-            bottom: last ? BorderSide.none : const BorderSide(color: Color(0xFFE8EAF1)),
-          ),
+          bottom: last ? BorderSide.none : const BorderSide(color: Color(0x22E6FF3C)),
         ),
+      ),
         child: Row(
           children: [
             Container(

@@ -289,11 +289,15 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     final pending = payment.paidAt.isEmpty;
     final failed = payment.reference.toLowerCase().contains('failed');
     final label = failed ? 'Failed' : (pending ? 'Pending' : 'Success');
-    final color = failed ? const Color(0xFFFEE2E2) : (pending ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7));
-    final text = failed ? const Color(0xFFB91C1C) : (pending ? const Color(0xFF92400E) : const Color(0xFF166534));
+    final color = failed ? const Color(0xFF2A1114) : (pending ? const Color(0xFF2A2310) : const Color(0xFF122315));
+    final text = failed ? const Color(0xFFFF8A80) : (pending ? const Color(0xFFFACC15) : const Color(0xFFE6FF3C));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: text.withOpacity(0.28)),
+      ),
       child: Text(label, style: TextStyle(color: text, fontWeight: FontWeight.w700)),
     );
   }
@@ -311,7 +315,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
 
   Future<void> _openDocument(BuildContext context, AppState appState, String title, String relativeUrl) async {
     final session = appState.session;
-    if (session == null) return;
+    if (session == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please login again to open this receipt.')),
+        );
+      }
+      return;
+    }
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
     await Navigator.of(context).push(
