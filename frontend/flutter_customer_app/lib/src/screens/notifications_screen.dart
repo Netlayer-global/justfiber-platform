@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
+import '../core/models.dart';
 import '../widgets/app_card.dart';
 import 'billing_history_screen.dart';
 import 'support_history_screen.dart';
