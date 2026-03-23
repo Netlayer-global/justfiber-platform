@@ -119,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: activePage == index ? 24 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: activePage == index ? const Color(0xFFE6FF3C) : const Color(0xFFD5DAE5),
+                        color: activePage == index ? const Color(0xFFE6FF3C) : const Color(0xFF2A3442),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -208,11 +208,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => BookingFlowScreen(initialMobile: mobileController.text.trim()),
-                          ),
-                        ),
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => BookingFlowScreen(initialMobile: mobileController.text.trim()),
+                            ),
+                          );
+                          if (context.mounted) {
+                            await appState.refresh();
+                          }
+                        },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFEFEEE8),
                           side: const BorderSide(color: Color(0x55E6FF3C)),
@@ -321,7 +326,7 @@ class _AuthShowcaseCard extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF090D15), Color(0xFF111827)],
+                  colors: [Color(0xFF05070B), Color(0xFF0B1020)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -341,13 +346,21 @@ class _AuthShowcaseCard extends StatelessWidget {
                           alignment: Alignment.center,
                           children: [
                             Container(
-                              width: 240,
-                              height: 240,
+                              width: 260,
+                              height: 260,
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(
-                                  colors: [Color(0x22E6FF3C), Color(0x00000000)],
+                                  colors: [Color(0x33E6FF3C), Color(0x00000000)],
                                 ),
+                              ),
+                            ),
+                            Container(
+                              width: 200,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0x33E6FF3C)),
                               ),
                             ),
                             Transform.rotate(
@@ -356,7 +369,11 @@ class _AuthShowcaseCard extends StatelessWidget {
                                 width: 150,
                                 height: 230,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF101722),
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF0B0F19), Color(0xFF141A25)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
                                   borderRadius: BorderRadius.circular(28),
                                   boxShadow: const [
                                     BoxShadow(color: Color(0x26030B14), blurRadius: 24, offset: Offset(0, 10)),
@@ -382,9 +399,9 @@ class _AuthShowcaseCard extends StatelessWidget {
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF171F2E),
+                                          color: const Color(0xFF0A121A),
                                           borderRadius: BorderRadius.circular(18),
-                                          border: Border.all(color: const Color(0x14E6FF3C)),
+                                          border: Border.all(color: const Color(0x33E6FF3C)),
                                         ),
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,7 +416,9 @@ class _AuthShowcaseCard extends StatelessWidget {
                                             Container(
                                               height: 6,
                                               decoration: BoxDecoration(
-                                                color: const Color(0x14E6FF3C),
+                                                gradient: const LinearGradient(
+                                                  colors: [Color(0xFFE6FF3C), Color(0x660B0F19)],
+                                                ),
                                                 borderRadius: BorderRadius.circular(999),
                                               ),
                                             ),
@@ -427,9 +446,13 @@ class _AuthShowcaseCard extends StatelessWidget {
                                 width: 160,
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEFEEE8),
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF101722), Color(0xFF151B27)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
                                   borderRadius: BorderRadius.circular(22),
-                                  border: Border.all(color: const Color(0x14E6FF3C)),
+                                  border: Border.all(color: const Color(0x33E6FF3C)),
                                   boxShadow: const [
                                     BoxShadow(color: Color(0x12030B14), blurRadius: 20, offset: Offset(0, 8)),
                                   ],
@@ -441,7 +464,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                       slide.title,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFEFEEE8)),
                                     ),
                                     const SizedBox(height: 10),
                                     Row(
@@ -499,9 +522,9 @@ class _MiniStat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFE6FF3C))),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+        Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
       ],
     );
   }
