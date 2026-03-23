@@ -25,6 +25,7 @@ import { notificationDispatcher } from "../../integrations/notificationDispatche
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { env } from "../../config/env.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
+import { CustomerNotification } from "../../models/CustomerNotification.js";
 
 export const adminOpsRouter = Router();
 
@@ -1539,6 +1540,19 @@ adminOpsRouter.patch(
     }
 
     await requestItem.save();
+    if (requestItem.customerUserId) {
+      await CustomerNotification.create({
+        customerUserId: requestItem.customerUserId,
+        type: "service_request_updated",
+        title: "Service request updated",
+        body: `${requestItem.requestNumber} is now ${requestItem.status}.`,
+        payload: {
+          requestId: requestItem._id.toString(),
+          requestNumber: requestItem.requestNumber,
+          status: requestItem.status
+        }
+      });
+    }
     await auditFromRequest(req, {
       action: "support.request.updated",
       entityType: "service_request",

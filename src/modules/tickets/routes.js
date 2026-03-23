@@ -9,10 +9,27 @@ import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
 import { createTicketSchema, assignTicketSchema, resolveTicketSchema, updateTicketSchema, closeTicketSchema } from "./schemas.js";
 import { auditFromRequest } from "../../common/audit.js";
+import { CustomerUser } from "../../models/CustomerUser.js";
+import { CustomerNotification } from "../../models/CustomerNotification.js";
 
 export const ticketsRouter = Router();
 
 ticketsRouter.use(requireAuth);
+
+async function notifyTicketCustomer(ticket, { type, title, body, payload }) {
+  if (!ticket?.customerId) return;
+  const users = await CustomerUser.find({ linkedCustomerIds: ticket.customerId }).select({ _id: 1 }).lean();
+  if (!users.length) return;
+  await CustomerNotification.insertMany(
+    users.map((user) => ({
+      customerUserId: user._id,
+      type,
+      title,
+      body,
+      payload,
+    }))
+  );
+}
 
 ticketsRouter.get(
   "/",
@@ -102,6 +119,14 @@ ticketsRouter.patch(
       entityId: ticket._id.toString(),
       metadata: payload
     });
+    if (payload.status) {
+      await notifyTicketCustomer(ticket, {
+        type: "ticket_updated",
+        title: "Support ticket updated",
+        body: `${ticket.subject} is now ${ticket.status}.`,
+        payload: { ticketId: ticket._id.toString(), ticketNumber: ticket.ticketNumber, status: ticket.status }
+      });
+    }
     return ok(res, ticket);
   })
 );
@@ -128,6 +153,12 @@ ticketsRouter.post(
       action: "ticket.assigned",
       entityType: "ticket",
       entityId: ticket._id.toString()
+    });
+    await notifyTicketCustomer(ticket, {
+      type: "ticket_assigned",
+      title: "Support ticket assigned",
+      body: `${ticket.subject} is now assigned to the support team.`,
+      payload: { ticketId: ticket._id.toString(), ticketNumber: ticket.ticketNumber, status: ticket.status }
     });
     return ok(res, ticket);
   })
@@ -156,6 +187,12 @@ ticketsRouter.post(
       entityType: "ticket",
       entityId: ticket._id.toString()
     });
+    await notifyTicketCustomer(ticket, {
+      type: "ticket_resolved",
+      title: "Support ticket resolved",
+      body: `${ticket.subject} has been marked resolved.`,
+      payload: { ticketId: ticket._id.toString(), ticketNumber: ticket.ticketNumber, status: ticket.status }
+    });
     return ok(res, ticket);
   })
 );
@@ -182,6 +219,12 @@ ticketsRouter.post(
       action: "ticket.closed",
       entityType: "ticket",
       entityId: ticket._id.toString()
+    });
+    await notifyTicketCustomer(ticket, {
+      type: "ticket_closed",
+      title: "Support ticket closed",
+      body: `${ticket.subject} has been closed.`,
+      payload: { ticketId: ticket._id.toString(), ticketNumber: ticket.ticketNumber, status: ticket.status }
     });
     return ok(res, ticket);
   })

@@ -20,6 +20,7 @@ import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { ConnectionBooking } from "../../models/ConnectionBooking.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
+import { CustomerNotification } from "../../models/CustomerNotification.js";
 
 export const customersRouter = Router();
 
@@ -311,6 +312,19 @@ customersRouter.patch(
     }
 
     await booking.save();
+    if (booking.customerUserId) {
+      await CustomerNotification.create({
+        customerUserId: booking.customerUserId,
+        type: "booking_updated",
+        title: "Booking updated",
+        body: `Booking ${booking.bookingNumber} is now ${booking.status}.`,
+        payload: {
+          bookingId: booking._id.toString(),
+          bookingNumber: booking.bookingNumber,
+          status: booking.status
+        }
+      });
+    }
     await auditFromRequest(req, {
       action: "customer.booking.updated",
       entityType: "booking",
