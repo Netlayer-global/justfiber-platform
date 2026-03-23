@@ -31,6 +31,15 @@ export default function DevicesPage() {
   }
 
   const onlineCount = devices.filter((device) => device.status === 'online').length
+  const deviceMetrics: Array<{
+    label: string
+    value: string
+    Icon: typeof Activity
+  }> = [
+    { label: 'Online', value: String(onlineCount), Icon: Activity },
+    { label: 'Routers', value: String(devices.filter((d) => d.type?.toLowerCase().includes('router')).length), Icon: Router },
+    { label: 'Total', value: String(devices.length), Icon: HardDrive },
+  ]
 
   return (
     <div className="space-y-6">
@@ -50,11 +59,7 @@ export default function DevicesPage() {
           <div className="mt-3 text-5xl font-black">{devices.length}</div>
           <div className="mt-2 text-sm text-black/60">Provisioned devices in current inventory view</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              ['Online', String(onlineCount), Activity],
-              ['Routers', String(devices.filter((d) => d.type?.toLowerCase().includes('router')).length), Router],
-              ['Total', String(devices.length), HardDrive],
-            ].map(([label, value, Icon]) => (
+            {deviceMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
