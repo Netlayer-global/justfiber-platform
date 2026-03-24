@@ -29,7 +29,7 @@ class SupportHistoryScreen extends StatelessWidget {
           children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -39,7 +39,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 Text(
                   'SUPPORT DESK',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF6E6A67),
+                    color: const Color(0xFFE9D5FF),
                     letterSpacing: 3.2,
                     fontWeight: FontWeight.w700,
                   ),
@@ -48,14 +48,14 @@ class SupportHistoryScreen extends StatelessWidget {
                 Text(
                   'Get instant support',
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFF131313),
+                    color: const Color(0xFFFFFFFF),
                     fontSize: 28,
                   ),
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   'Raise broadband, billing, shift connection, and service complaints from one place.',
-                  style: TextStyle(color: Color(0xFF5F5A56), height: 1.45),
+                  style: TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -71,7 +71,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 const Text(
                   'Quick actions',
                   style: TextStyle(
-                    color: Color(0xFF6E6A67),
+                    color: Color(0xFFE9D5FF),
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.3,
                   ),
@@ -172,7 +172,7 @@ class SupportHistoryScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF111816),
+                      color: const Color(0xFFFFFFFF),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x558224E3)),
                     ),
@@ -267,8 +267,8 @@ class SupportHistoryScreen extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label),
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF131313),
-        backgroundColor: const Color(0xFF0E1520),
+        foregroundColor: const Color(0xFF8224E3),
+        backgroundColor: const Color(0xFFFFFFFF),
         side: const BorderSide(color: Color(0x338224E3)),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -280,7 +280,7 @@ class SupportHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF10151A),
+        color: const Color(0x26FFFFFF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x668224E3)),
       ),
@@ -291,7 +291,7 @@ class SupportHistoryScreen extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFFE9D5FF), fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -323,7 +323,7 @@ class SupportHistoryScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B0F19),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -363,7 +363,7 @@ class SupportHistoryScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+            colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -389,7 +389,7 @@ class SupportHistoryScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF94A3B8))),
+                  Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF6E6A67))),
                 ],
               ),
             ),

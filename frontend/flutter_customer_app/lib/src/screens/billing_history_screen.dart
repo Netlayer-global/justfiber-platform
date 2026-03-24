@@ -33,7 +33,7 @@ class BillingHistoryScreen extends StatelessWidget {
           children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -43,7 +43,7 @@ class BillingHistoryScreen extends StatelessWidget {
                 Text(
                   'BILLING CONSOLE',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF6E6A67),
+                    color: const Color(0xFFE9D5FF),
                     letterSpacing: 3.2,
                     fontWeight: FontWeight.w700,
                   ),
@@ -52,7 +52,7 @@ class BillingHistoryScreen extends StatelessWidget {
                 Text(
                   'Current bill',
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFF131313),
+                    color: const Color(0xFFFFFFFF),
                     fontSize: 28,
                   ),
                 ),
@@ -66,7 +66,7 @@ class BillingHistoryScreen extends StatelessWidget {
                   billing.paymentStatus.isEmpty
                       ? 'Your active billing snapshot for this cycle'
                       : 'Status: ${billing.paymentStatus}',
-                  style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -163,7 +163,7 @@ class BillingHistoryScreen extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: (billing.usageGb / billing.usageCapGb).clamp(0, 1),
                               minHeight: 10,
-                              backgroundColor: const Color(0xFF111827),
+                              backgroundColor: const Color(0xFFF1E8FF),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 billing.usageCapReached ? const Color(0xFFFF6B6B) : const Color(0xFF8224E3),
                               ),
@@ -196,7 +196,7 @@ class BillingHistoryScreen extends StatelessWidget {
                           billing.usageCapReached
                               ? 'Upgrade now to restore headroom and avoid slower service or cap restrictions.'
                               : 'Move to a faster plan before cap or FUP controls affect your connection.',
-                          style: const TextStyle(color: Color(0xFF5F5A56), height: 1.4),
+                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -282,7 +282,7 @@ class BillingHistoryScreen extends StatelessWidget {
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF1B2311),
                           foregroundColor: const Color(0xFF8224E3),
-                          disabledBackgroundColor: const Color(0xFF111827),
+                          disabledBackgroundColor: const Color(0xFFF2ECE6),
                           disabledForegroundColor: const Color(0xFF6B7280),
                         ),
                         child: const Text('Refresh'),
@@ -361,7 +361,7 @@ class BillingHistoryScreen extends StatelessWidget {
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF8224E3),
-                            backgroundColor: const Color(0xFF111827),
+                            backgroundColor: const Color(0xFFFFFFFF),
                             side: const BorderSide(color: Color(0x668224E3)),
                           ),
                           child: const Text('Open payments history'),
@@ -376,7 +376,7 @@ class BillingHistoryScreen extends StatelessWidget {
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF8224E3),
-                            backgroundColor: const Color(0xFF111827),
+                            backgroundColor: const Color(0xFFFFFFFF),
                             side: const BorderSide(color: Color(0x668224E3)),
                           ),
                           child: const Text('Latest invoice'),
@@ -389,7 +389,7 @@ class BillingHistoryScreen extends StatelessWidget {
                               await appState.refresh();
                             }
                           },
-                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFF0B0F19)),
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
                           child: const Text('Latest receipt'),
                         ),
                     ],
@@ -489,7 +489,7 @@ class BillingHistoryScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B0F19),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -541,7 +541,7 @@ class BillingHistoryScreen extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+          colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -568,7 +568,7 @@ class BillingHistoryScreen extends StatelessWidget {
                 children: [
                   Text(amount, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF8224E3))),
                   const SizedBox(height: 4),
-                  Text(meta, style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700)),
+                  Text(meta, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
                 ],
               ),
             ],
@@ -589,7 +589,7 @@ class BillingHistoryScreen extends StatelessWidget {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF8224E3),
-                      backgroundColor: const Color(0xFF111827),
+                      backgroundColor: const Color(0xFFFFFFFF),
                       side: const BorderSide(color: Color(0x668224E3)),
                     ),
                     child: const Text('Open'),
