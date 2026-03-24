@@ -47,37 +47,75 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
               children: [
                 const SizedBox(height: 36),
-                Container(
-                  width: 78,
-                  height: 78,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: const Color(0x338224E3)),
-                  ),
-                  child: const Icon(
-                    Icons.network_check_rounded,
-                    color: Color(0xFF8224E3),
-                    size: 34,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 78,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFFFF),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(color: const Color(0x338224E3)),
+                      ),
+                      child: const Icon(
+                        Icons.network_check_rounded,
+                        color: Color(0xFF8224E3),
+                        size: 34,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F4FF),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: const Color(0x228224E3)),
+                      ),
+                      child: const Text(
+                        'Field ready',
+                        style: TextStyle(
+                          color: Color(0xFF8224E3),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 28),
-                Text(
-                  'INSTALLER CONSOLE',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF6E6A67),
-                    letterSpacing: 3.2,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: const Color(0x1F8224E3)),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text('Sign in to field operations', style: theme.textTheme.headlineMedium),
-                const SizedBox(height: 12),
-                Text(
-                  'Access assigned jobs, provisioning preview, route links, and activation controls from one installer app.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF6E6A67),
-                    height: 1.45,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'INSTALLER CONSOLE',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: const Color(0xFFE9D5FF),
+                          letterSpacing: 3.2,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text('Sign in to field operations', style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Access assigned jobs, provisioning preview, route links, and activation controls from one installer app.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFFF3E8FF),
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 22),
@@ -166,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Text(
                       appState.error!,
-                      style: const TextStyle(color: Color(0xFFFCA5A5), height: 1.4),
+                      style: const TextStyle(color: Color(0xFFB91C1C), height: 1.4, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -189,18 +227,58 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       SizedBox(height: 10),
-                      Text('1. Sign in with installer credentials.', style: TextStyle(color: Color(0xFF6E6A67))),
-                      SizedBox(height: 8),
-                      Text('2. Open assigned jobs and load provisioning preview.', style: TextStyle(color: Color(0xFF6E6A67))),
-                      SizedBox(height: 8),
-                      Text('3. Reach site, enter serial, and run activation.', style: TextStyle(color: Color(0xFF6E6A67))),
                     ],
                   ),
                 ),
+                const SizedBox(height: 12),
+                _flowRow('1', 'Sign in with installer credentials.'),
+                _flowRow('2', 'Open assigned jobs and load provisioning preview.'),
+                _flowRow('3', 'Reach site, enter serial, and run activation.'),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _flowRow(String index, String text) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F4FF),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0x228224E3)),
+            ),
+            child: Text(
+              index,
+              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                text,
+                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

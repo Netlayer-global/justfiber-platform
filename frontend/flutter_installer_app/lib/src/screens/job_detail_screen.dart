@@ -721,9 +721,40 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _row('Internet', status == 'active' ? 'Active' : 'Pending'),
                       if (activationLive) ...[
                         const SizedBox(height: 12),
-                        Text(
-                          'Customer handover',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                        Row(
+                          children: [
+                            Text(
+                              'Customer handover',
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8F4FF),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: const Color(0x228224E3)),
+                              ),
+                              child: const Text(
+                                'Live',
+                                style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F4FF),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x228224E3)),
+                          ),
+                          child: const Text(
+                            'Share Wi-Fi names, Wi-Fi password, and PPPoE details with the customer before closing the visit.',
+                            style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Wrap(
@@ -796,7 +827,38 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Complaint workflow', style: theme.textTheme.titleLarge),
+                        Row(
+                          children: [
+                            Text('Complaint workflow', style: theme.textTheme.titleLarge),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8F4FF),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: const Color(0x228224E3)),
+                              ),
+                              child: const Text(
+                                'Guided',
+                                style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F4FF),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x228224E3)),
+                          ),
+                          child: const Text(
+                            'Choose the issue type, record the complaint note, replace ONT if needed, and verify customer OTP before resolution.',
+                            style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         if (complaint.isNotEmpty || deviceContext['oldSerialNumber'] != null || deviceContext['finalSerialNumber'] != null) ...[
                           Container(
@@ -981,7 +1043,38 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Installation completion', style: theme.textTheme.titleLarge),
+                        Row(
+                          children: [
+                            Text('Installation completion', style: theme.textTheme.titleLarge),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8F4FF),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: const Color(0x228224E3)),
+                              ),
+                              child: const Text(
+                                'Final stage',
+                                style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F4FF),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x228224E3)),
+                          ),
+                          child: const Text(
+                            'Capture router and cable proof, submit the proof payload, then verify customer OTP to complete installation cleanly.',
+                            style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         Row(
                           children: [
