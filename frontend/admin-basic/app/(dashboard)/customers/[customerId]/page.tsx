@@ -149,6 +149,9 @@ export default function CustomerDetailPage() {
     () => customer?.billingSnapshot || {},
     [customer]
   )
+  const usageGb = Number(billingSummary.usageGb || 0)
+  const usageCapGb = Number(billingSummary.usageCapGb || billingSummary.dataLimitGb || 0)
+  const usagePercent = usageCapGb > 0 ? Math.min(100, Math.round((usageGb / usageCapGb) * 100)) : 0
   const pendingPlanChange = billingSummary.pendingPlanChange as Record<string, any> | undefined
   const adminApiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
   const currentPlanCode =
@@ -522,6 +525,11 @@ export default function CustomerDetailPage() {
       value: String((customer.tickets?.length || 0) + (customer.serviceRequests?.length || 0) + (customer.bookings?.length || 0)),
       hint: `${customer.tickets?.length || 0} tickets / ${customer.serviceRequests?.length || 0} requests / ${customer.bookings?.length || 0} bookings`,
     },
+    {
+      label: 'Usage policy',
+      value: String(billingSummary.dataPolicy || 'unlimited').toUpperCase(),
+      hint: usageCapGb > 0 ? `${usageGb.toFixed(2)} GB / ${usageCapGb.toFixed(0)} GB` : 'No capped policy',
+    },
   ]
 
   return (
@@ -747,6 +755,46 @@ export default function CustomerDetailPage() {
                     <p className="text-xs uppercase tracking-[0.22em] text-black/40">Adjustment / payable</p>
                     <p className="text-lg font-semibold">Rs {Number(billingSummary.adjustmentPreview || billingSummary.dueAmount || 0)}</p>
                   </div>
+                </div>
+                <div className="card p-5 space-y-4">
+                  <h2 className="text-lg font-semibold">Usage & FUP State</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="metric-tile p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-black/40">Download / upload</p>
+                      <p className="text-lg font-semibold">
+                        {Number(billingSummary.speedMbps || 0).toFixed(0)} / {Number(billingSummary.uploadSpeedMbps || 0).toFixed(0)} Mbps
+                      </p>
+                    </div>
+                    <div className="metric-tile p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-black/40">Policy</p>
+                      <p className="text-lg font-semibold">{String(billingSummary.dataPolicy || 'unlimited').toUpperCase()}</p>
+                    </div>
+                    <div className="metric-tile p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-black/40">Usage</p>
+                      <p className="text-lg font-semibold">{usageGb.toFixed(2)} GB</p>
+                    </div>
+                    <div className="metric-tile p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-black/40">Cap status</p>
+                      <p className="text-lg font-semibold">
+                        {usageCapGb > 0 ? `${usagePercent}% of ${usageCapGb.toFixed(0)} GB` : 'Unlimited'}
+                      </p>
+                    </div>
+                  </div>
+                  {usageCapGb > 0 ? (
+                    <div className="space-y-2">
+                      <div className="h-3 w-full overflow-hidden rounded-full bg-[#0a0e27]">
+                        <div
+                          className={`h-full ${billingSummary.usageCapReached ? 'bg-red-400' : 'bg-[#d8ff16]'}`}
+                          style={{ width: `${usagePercent}%` }}
+                        />
+                      </div>
+                      <p className="text-sm text-slate-400">
+                        {billingSummary.usageCapReached
+                          ? `Cap reached. ${billingSummary.dataPolicy === 'fup' ? `FUP speed ${Number(billingSummary.fupSpeedMbps || 0).toFixed(0)} Mbps should be active.` : 'Hard-cap policy should be active.'}`
+                          : `Last usage update ${billingSummary.usageLastUpdatedAt ? new Date(billingSummary.usageLastUpdatedAt).toLocaleString() : '-'}`}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
                 {pendingPlanChange ? (
                   <div className="card p-5 space-y-3">

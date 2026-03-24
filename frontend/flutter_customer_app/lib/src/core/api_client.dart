@@ -174,6 +174,16 @@ class ApiClient {
       paymentStatus: (data['paymentStatus'] ?? 'unknown').toString(),
       lastPaymentDate: (data['lastPaymentDate'] ?? payments.firstOrNull?.paidAt ?? '').toString(),
       adjustmentPreview: double.tryParse('${data['adjustmentPreview'] ?? 0}') ?? 0,
+      speedMbps: double.tryParse('${data['speedMbps'] ?? 0}') ?? 0,
+      uploadSpeedMbps: double.tryParse('${data['uploadSpeedMbps'] ?? 0}') ?? 0,
+      dataPolicy: (data['dataPolicy'] ?? 'unlimited').toString(),
+      dataLimitGb: double.tryParse('${data['dataLimitGb'] ?? 0}') ?? 0,
+      fupSpeedMbps: double.tryParse('${data['fupSpeedMbps'] ?? 0}') ?? 0,
+      usageGb: double.tryParse('${data['usageGb'] ?? 0}') ?? 0,
+      usageCapGb: double.tryParse('${data['usageCapGb'] ?? data['dataLimitGb'] ?? 0}') ?? 0,
+      usageCapReached: data['usageCapReached'] == true,
+      usageCycleStartedAt: (data['usageCycleStartedAt'] ?? '').toString(),
+      usageLastUpdatedAt: (data['usageLastUpdatedAt'] ?? '').toString(),
       pendingPlanChange: pendingPlanChangeMap.isEmpty
           ? null
           : PendingPlanChange(

@@ -81,6 +81,14 @@ class BillingHistoryScreen extends StatelessWidget {
                     Expanded(child: _summaryTile('Mode', billing.billMode)),
                   ],
                 ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _summaryTile('Download', '${billing.speedMbps.toStringAsFixed(0)} Mbps')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryTile('Upload', '${billing.uploadSpeedMbps.toStringAsFixed(0)} Mbps')),
+                  ],
+                ),
                 const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
@@ -102,6 +110,67 @@ class BillingHistoryScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (billing.dataPolicy != 'unlimited' || billing.usageCapGb > 0) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0C1018),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x22E6FF3C)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text('Usage policy', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
+                            ),
+                            Text(
+                              billing.usageCapReached ? 'Cap reached' : billing.dataPolicy.toUpperCase(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: billing.usageCapReached ? const Color(0xFFFF8A8A) : const Color(0xFFE6FF3C),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        _billBreakupRow('Usage', '${billing.usageGb.toStringAsFixed(2)} GB'),
+                        _billBreakupRow(
+                          'Plan limit',
+                          billing.usageCapGb > 0 ? '${billing.usageCapGb.toStringAsFixed(0)} GB' : 'Unlimited',
+                        ),
+                        _billBreakupRow(
+                          'Policy',
+                          billing.dataPolicy == 'fup'
+                              ? 'FUP at ${billing.fupSpeedMbps > 0 ? '${billing.fupSpeedMbps.toStringAsFixed(0)} Mbps' : 'reduced speed'}'
+                              : billing.dataPolicy == 'hard_cap'
+                                  ? 'Hard cap'
+                                  : 'Unlimited',
+                        ),
+                        if (billing.usageLastUpdatedAt.isNotEmpty)
+                          _billBreakupRow('Last updated', billing.usageLastUpdatedAt),
+                        if (billing.usageCapGb > 0) ...[
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              value: (billing.usageGb / billing.usageCapGb).clamp(0, 1),
+                              minHeight: 10,
+                              backgroundColor: const Color(0xFF111827),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                billing.usageCapReached ? const Color(0xFFFF6B6B) : const Color(0xFFE6FF3C),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
                 if (billing.pendingPlanChange != null) ...[
                   const SizedBox(height: 14),
                   Container(

@@ -66,6 +66,16 @@ class BillingData {
     required this.paymentStatus,
     required this.lastPaymentDate,
     required this.adjustmentPreview,
+    required this.speedMbps,
+    required this.uploadSpeedMbps,
+    required this.dataPolicy,
+    required this.dataLimitGb,
+    required this.fupSpeedMbps,
+    required this.usageGb,
+    required this.usageCapGb,
+    required this.usageCapReached,
+    required this.usageCycleStartedAt,
+    required this.usageLastUpdatedAt,
     required this.pendingPlanChange,
     required this.invoices,
     required this.payments,
@@ -82,6 +92,16 @@ class BillingData {
   final String paymentStatus;
   final String lastPaymentDate;
   final double adjustmentPreview;
+  final double speedMbps;
+  final double uploadSpeedMbps;
+  final String dataPolicy;
+  final double dataLimitGb;
+  final double fupSpeedMbps;
+  final double usageGb;
+  final double usageCapGb;
+  final bool usageCapReached;
+  final String usageCycleStartedAt;
+  final String usageLastUpdatedAt;
   final PendingPlanChange? pendingPlanChange;
   final List<BillingInvoiceItem> invoices;
   final List<BillingPaymentItem> payments;
