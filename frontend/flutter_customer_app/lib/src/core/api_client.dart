@@ -8,6 +8,7 @@ class ApiClient {
   ApiClient({required this.baseUrl});
 
   final String baseUrl;
+  static const Duration _requestTimeout = Duration(seconds: 25);
 
   Uri _uri(String path) => Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
 
@@ -21,13 +22,38 @@ class ApiClient {
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
-    late http.Response response;
-    if (method == 'POST') {
-      response = await http.post(_uri(path), headers: headers, body: jsonEncode(body ?? {}));
-    } else {
-      response = await http.get(_uri(path), headers: headers);
+    final uri = _uri(path);
+    http.Response response;
+    try {
+      if (method == 'POST') {
+        response = await http
+            .post(uri, headers: headers, body: jsonEncode(body ?? {}))
+            .timeout(_requestTimeout);
+      } else {
+        response = await http.get(uri, headers: headers).timeout(_requestTimeout);
+      }
+    } on FormatException {
+      throw Exception('Invalid server URL. Check app API configuration.');
+    } on http.ClientException {
+      throw Exception('Unable to connect to server. Check network or server status.');
+    } on Exception catch (error) {
+      final message = error.toString().toLowerCase();
+      if (message.contains('timeout')) {
+        throw Exception('Server took too long to respond. Please try again.');
+      }
+      rethrow;
     }
-    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    Map<String, dynamic> payload;
+    try {
+      final decoded = jsonDecode(response.body);
+      payload = decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+    } on FormatException {
+      throw Exception(
+        response.statusCode >= 500
+            ? 'Server returned an invalid response. Please try again shortly.'
+            : 'Unexpected response from server. Please retry.',
+      );
+    }
     if (response.statusCode >= 400 || payload['success'] == false) {
       throw Exception(payload['error']?['message'] ?? 'Request failed');
     }

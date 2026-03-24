@@ -4,7 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'models.dart';
 
-const defaultApiBase = 'http://103.139.191.114:4000';
+const defaultApiBase = String.fromEnvironment(
+  'JUSTFIBER_API_BASE',
+  defaultValue: 'http://103.139.191.114:4000',
+);
 const _mobileKey = 'justfiber.mobile';
 const _accessTokenKey = 'justfiber.access_token';
 const _refreshTokenKey = 'justfiber.refresh_token';
