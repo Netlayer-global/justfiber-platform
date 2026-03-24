@@ -302,7 +302,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               children: [
                 AppCard(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF090D15), Color(0xFF111827)],
+                    colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -312,7 +312,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       Text(
                         isComplaint ? 'COMPLAINT JOB' : 'INSTALLATION JOB',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFF9CA3AF),
+                          color: const Color(0xFFE9D5FF),
                           letterSpacing: 3.2,
                           fontWeight: FontWeight.w700,
                         ),
@@ -322,7 +322,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       const SizedBox(height: 8),
                       Text(
                         snapshot['address']?.toString() ?? widget.job.customerAddress,
-                        style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                        style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
                       ),
                       const SizedBox(height: 14),
                       Row(
@@ -1127,16 +1127,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF11161D),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x338224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
+          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -1146,14 +1146,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF141A22),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0x338224E3)),
       ),
       child: Text(
         label,
         style: const TextStyle(
-          color: Color(0xFFEFEEE8),
+          color: Color(0xFF131313),
           fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
@@ -1169,12 +1169,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(color: Color(0xFF9CA3AF))),
+            child: Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
           ),
           Expanded(
             child: Text(
               value.isEmpty ? '-' : value,
-              style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+              style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -1187,7 +1187,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       width: 140,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFF10151A),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -1202,9 +1202,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 File(path),
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFF141A22),
+                  color: const Color(0xFFF2ECE6),
                   alignment: Alignment.center,
-                  child: const Icon(Icons.image_not_supported_rounded, color: Color(0xFF9CA3AF)),
+                  child: const Icon(Icons.image_not_supported_rounded, color: Color(0xFF6E6A67)),
                 ),
               ),
             ),
@@ -1212,7 +1212,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -1259,7 +1259,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           Text(
             'WORKFLOW PAGES',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF9CA3AF),
+              color: const Color(0xFF6E6A67),
               letterSpacing: 2.8,
               fontWeight: FontWeight.w700,
             ),
@@ -1276,7 +1276,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                     decoration: BoxDecoration(
-                      color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFF10151A),
+                      color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFFF8F4FF),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0x228224E3)),
                     ),
@@ -1285,7 +1285,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         Text(
                           '${index + 1}',
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFF020617) : const Color(0xFF8224E3),
+                            color: _workflowPage == index ? const Color(0xFFFFFFFF) : const Color(0xFF8224E3),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -1294,7 +1294,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           pages[index],
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFF020617) : const Color(0xFFD1D5DB),
+                            color: _workflowPage == index ? const Color(0xFFFFFFFF) : const Color(0xFF6E6A67),
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -1820,7 +1820,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF10151A),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -1832,7 +1832,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
             ),
             const SizedBox(height: 14),
             ...children,
@@ -1894,7 +1894,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF141A22),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x558224E3)),
       ),
@@ -1904,7 +1904,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           Text(
             isComplaint ? 'GUIDED COMPLAINT FLOW' : 'GUIDED INSTALL FLOW',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF9CA3AF),
+              color: const Color(0xFF6E6A67),
               letterSpacing: 2.8,
               fontWeight: FontWeight.w700,
             ),
@@ -1917,7 +1917,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           const SizedBox(height: 6),
           Text(
             nextSubtitle,
-            style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+            style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
