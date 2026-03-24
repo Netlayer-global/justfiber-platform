@@ -180,7 +180,7 @@ class BillingHistoryScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF111816),
+                      color: const Color(0xFFFFFFFF),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x558224E3)),
                     ),
@@ -231,7 +231,7 @@ class BillingHistoryScreen extends StatelessWidget {
                                 },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF8224E3),
-                                  backgroundColor: const Color(0xFF0F141D),
+                                  backgroundColor: const Color(0xFFFFFFFF),
                                   side: const BorderSide(color: Color(0x668224E3)),
                                 ),
                                 child: const Text('Need help'),

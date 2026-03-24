@@ -13,15 +13,15 @@ ThemeData buildJustFiberTheme() {
   const cardSurface = Color(0xFFFFFFFF);
   const cardText = Color(0xFF131313);
   final base = ThemeData.light(useMaterial3: true);
-  final textTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme).copyWith(
-    headlineMedium: GoogleFonts.spaceGrotesk(fontSize: 30, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.8),
-    headlineSmall: GoogleFonts.spaceGrotesk(fontSize: 24, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.6),
-    titleLarge: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.4),
-    titleMedium: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.w700, color: text),
-    bodyLarge: GoogleFonts.dmSans(fontSize: 16, color: muted, height: 1.45),
-    bodyMedium: GoogleFonts.dmSans(fontSize: 14, color: muted, height: 1.45),
-    labelLarge: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w700, color: text),
-    labelMedium: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w700, color: muted, letterSpacing: 0.2),
+  final textTheme = GoogleFonts.openSansTextTheme(base.textTheme).copyWith(
+    headlineMedium: GoogleFonts.openSans(fontSize: 30, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.6),
+    headlineSmall: GoogleFonts.openSans(fontSize: 24, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.4),
+    titleLarge: GoogleFonts.openSans(fontSize: 20, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.2),
+    titleMedium: GoogleFonts.openSans(fontSize: 16, fontWeight: FontWeight.w700, color: text),
+    bodyLarge: GoogleFonts.openSans(fontSize: 16, color: muted, height: 1.45),
+    bodyMedium: GoogleFonts.openSans(fontSize: 14, color: muted, height: 1.45),
+    labelLarge: GoogleFonts.openSans(fontSize: 14, fontWeight: FontWeight.w700, color: text),
+    labelMedium: GoogleFonts.openSans(fontSize: 12, fontWeight: FontWeight.w700, color: muted, letterSpacing: 0.2),
   );
 
   return ThemeData(
@@ -46,12 +46,12 @@ ThemeData buildJustFiberTheme() {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
-      titleTextStyle: GoogleFonts.spaceGrotesk(fontSize: 22, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.5),
+      titleTextStyle: GoogleFonts.openSans(fontSize: 22, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.3),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: surfaceAlt,
-      labelStyle: GoogleFonts.dmSans(color: muted, fontWeight: FontWeight.w600),
+      labelStyle: GoogleFonts.openSans(color: muted, fontWeight: FontWeight.w600),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: Color(0x338224E3)),
@@ -64,7 +64,7 @@ ThemeData buildJustFiberTheme() {
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: accent, width: 1.4),
       ),
-      hintStyle: GoogleFonts.dmSans(color: muted),
+      hintStyle: GoogleFonts.openSans(color: muted),
     ),
     cardTheme: CardThemeData(
       color: cardSurface,
@@ -75,7 +75,7 @@ ThemeData buildJustFiberTheme() {
       backgroundColor: const Color(0xFFFFFFFF),
       selectedItemColor: accent,
       unselectedItemColor: muted,
-      selectedLabelStyle: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
+      selectedLabelStyle: GoogleFonts.openSans(fontWeight: FontWeight.w700),
       showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
     ),
@@ -85,7 +85,7 @@ ThemeData buildJustFiberTheme() {
         foregroundColor: const Color(0xFFEFEEE8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-        textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700, fontSize: 15),
+        textStyle: GoogleFonts.openSans(fontWeight: FontWeight.w700, fontSize: 15),
         elevation: 0,
         shadowColor: const Color(0x338224E3),
       ),
@@ -97,18 +97,18 @@ ThemeData buildJustFiberTheme() {
         side: const BorderSide(color: Color(0x998224E3), width: 1.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-        textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700, fontSize: 15),
+        textStyle: GoogleFonts.openSans(fontWeight: FontWeight.w700, fontSize: 15),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: tertiary,
-        textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700),
+        textStyle: GoogleFonts.openSans(fontWeight: FontWeight.w700),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: const Color(0xFFFFFFFF),
-      contentTextStyle: GoogleFonts.dmSans(color: text, fontWeight: FontWeight.w600),
+      contentTextStyle: GoogleFonts.openSans(color: text, fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       behavior: SnackBarBehavior.floating,
     ),
