@@ -42,7 +42,7 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      backgroundColor: const Color(0xFF0B0F14),
+      backgroundColor: const Color(0xFFFCFAF7),
       body: SafeArea(
         child: Column(
           children: [
@@ -84,9 +84,16 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xCC0F141B),
+                        color: const Color(0xF2FFFFFF),
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: const Color(0x338224E3)),
+                        border: Border.all(color: const Color(0x228224E3)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x16000000),
+                            blurRadius: 18,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,7 +101,7 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                           Text(
                             widget.subtitle,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFFD1D5DB),
+                              color: const Color(0xFF6E6A67),
                               height: 1.45,
                             ),
                           ),
@@ -102,7 +109,7 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                           Text(
                             _latestCode.isEmpty ? 'Point camera at barcode or QR code.' : _latestCode,
                             style: const TextStyle(
-                              color: Color(0xFFEFEEE8),
+                              color: Color(0xFF131313),
                               fontWeight: FontWeight.w800,
                             ),
                           ),

@@ -171,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: const Color(0xFF9CA3AF),
+                        color: const Color(0xFF6E6A67),
                       ),
                     ),
                   ),

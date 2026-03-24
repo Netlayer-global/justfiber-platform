@@ -27,9 +27,9 @@ class AuthGate extends StatelessWidget {
                         width: 68,
                         height: 68,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF141A22),
+                          color: const Color(0xFFF8F4FF),
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0x558224E3)),
+                          border: Border.all(color: const Color(0x228224E3)),
                         ),
                         child: const Padding(
                           padding: EdgeInsets.all(16),
@@ -48,7 +48,7 @@ class AuthGate extends StatelessWidget {
                       const SizedBox(height: 8),
                       const Text(
                         'Checking saved credentials and loading your assigned field queue.',
-                        style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                         textAlign: TextAlign.center,
                       ),
                     ],

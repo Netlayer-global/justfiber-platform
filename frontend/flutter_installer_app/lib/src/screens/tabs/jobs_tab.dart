@@ -277,7 +277,7 @@ class _JobsTabState extends State<JobsTab> {
     final hasPinnedLocation = job.latitude != null && job.longitude != null;
     final hasLinkedRouter = job.finalSerialNumber.isNotEmpty;
     final nextVisitLabel = _nextVisitLabel(job);
-    final exceptionTone = hasConfigFailure ? const Color(0xFFFCD34D) : const Color(0xFFD1D5DB);
+    final exceptionTone = hasConfigFailure ? const Color(0xFFB45309) : const Color(0xFF6E6A67);
 
     return InkWell(
       borderRadius: BorderRadius.circular(28),
