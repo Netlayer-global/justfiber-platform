@@ -22,6 +22,9 @@ class HomeTab extends StatelessWidget {
     final planName = billing.currentPlan.isNotEmpty ? billing.currentPlan : (dashboard.planName.isNotEmpty ? dashboard.planName : 'No active plan yet');
     final wifiName = wifi.ssid24.isNotEmpty ? wifi.ssid24 : (dashboard.wifiName.isNotEmpty ? dashboard.wifiName : 'Wi-Fi not configured');
     final hasService = billing.currentPlan.isNotEmpty || wifi.ssid24.isNotEmpty || dashboard.planName.isNotEmpty;
+    final usageGb = billing.usageGb > 0 ? billing.usageGb : dashboard.usedGb;
+    final usageCapGb = billing.usageCapGb > 0 ? billing.usageCapGb : dashboard.totalGb;
+    final usagePercent = usageCapGb > 0 ? (usageGb / usageCapGb).clamp(0, 1) : 0.0;
 
     return RefreshIndicator(
       color: const Color(0xFFE6FF3C),
@@ -182,6 +185,72 @@ class HomeTab extends StatelessWidget {
                   Expanded(child: _summaryBox('Wi-Fi name', wifiName)),
                 ],
               ),
+              if (usageCapGb > 0 || billing.dataPolicy != 'unlimited') ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0C1018),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x22E6FF3C)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Usage meter',
+                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8)),
+                            ),
+                          ),
+                          Text(
+                            billing.dataPolicy == 'unlimited' ? 'LIVE' : billing.dataPolicy.toUpperCase(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: billing.usageCapReached ? const Color(0xFFFF8A8A) : const Color(0xFFE6FF3C),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        usageCapGb > 0
+                            ? '${usageGb.toStringAsFixed(2)} GB of ${usageCapGb.toStringAsFixed(0)} GB used'
+                            : 'Unlimited usage policy active',
+                        style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.4),
+                      ),
+                      if (usageCapGb > 0) ...[
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: usagePercent,
+                            minHeight: 10,
+                            backgroundColor: const Color(0xFF111827),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              billing.usageCapReached ? const Color(0xFFFF6B6B) : const Color(0xFFE6FF3C),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (billing.fupSpeedMbps > 0 || billing.usageCapReached) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          billing.usageCapReached
+                              ? (billing.dataPolicy == 'fup'
+                                  ? 'FUP active at ${billing.fupSpeedMbps.toStringAsFixed(0)} Mbps'
+                                  : 'Hard-cap policy active')
+                              : 'Base plan speed active',
+                          style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

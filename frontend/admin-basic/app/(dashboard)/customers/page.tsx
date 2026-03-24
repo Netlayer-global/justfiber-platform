@@ -50,6 +50,19 @@ export default function CustomersPage() {
     () => customers.filter((customer) => customer.status === 'active').length,
     [customers]
   )
+
+  function usageRisk(customer: Customer) {
+    const snapshot = customer.billingSnapshot || {}
+    const policy = String(snapshot.dataPolicy || 'unlimited')
+    const used = Number(snapshot.usageGb || 0)
+    const cap = Number(snapshot.usageCapGb || snapshot.dataLimitGb || 0)
+    if (snapshot.usageCapReached) return { label: 'Cap reached', tone: 'bg-red-900 text-red-100' }
+    if (policy === 'unlimited' || cap <= 0) return { label: 'Unlimited', tone: 'bg-slate-700 text-slate-100' }
+    const ratio = used / cap
+    if (ratio >= 0.9) return { label: 'High usage', tone: 'bg-yellow-900 text-yellow-100' }
+    if (ratio >= 0.65) return { label: 'Watch', tone: 'bg-[#324014] text-[#e6ff3c]' }
+    return { label: 'Normal', tone: 'bg-green-900 text-green-100' }
+  }
   const portfolioMetrics: Array<{
     label: string
     value: string
@@ -159,7 +172,7 @@ export default function CustomersPage() {
                 <th className="table-header">Contact</th>
                 <th className="table-header">Plan / PPPoE</th>
                 <th className="table-header">Address</th>
-                <th className="table-header">Status</th>
+                <th className="table-header">Status / Usage</th>
                 <th className="table-header text-right">Actions</th>
               </tr>
             </thead>
@@ -182,15 +195,33 @@ export default function CustomersPage() {
                   </td>
                   <td className="table-cell">{customer.address}</td>
                   <td className="table-cell">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      customer.status === 'active'
-                        ? 'bg-green-900 text-green-200'
-                        : customer.status === 'suspended'
-                          ? 'bg-yellow-900 text-yellow-200'
-                          : 'bg-slate-700 text-slate-100'
-                    }`}>
-                      {customer.status}
-                    </span>
+                    {(() => {
+                      const risk = usageRisk(customer)
+                      const snapshot = customer.billingSnapshot || {}
+                      const used = Number(snapshot.usageGb || 0)
+                      const cap = Number(snapshot.usageCapGb || snapshot.dataLimitGb || 0)
+                      return (
+                        <div className="space-y-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            customer.status === 'active'
+                              ? 'bg-green-900 text-green-200'
+                              : customer.status === 'suspended'
+                                ? 'bg-yellow-900 text-yellow-200'
+                                : 'bg-slate-700 text-slate-100'
+                          }`}>
+                            {customer.status}
+                          </span>
+                          <div>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${risk.tone}`}>
+                              {risk.label}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {cap > 0 ? `${used.toFixed(2)} GB / ${cap.toFixed(0)} GB` : String(snapshot.dataPolicy || 'unlimited')}
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </td>
                   <td className="table-cell text-right">
                     <Link href={`/customers/${customer.id}`}>
