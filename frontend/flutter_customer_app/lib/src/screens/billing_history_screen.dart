@@ -277,13 +277,12 @@ class BillingHistoryScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: FilledButton(
+                      child: OutlinedButton(
                         onPressed: appState.busy ? null : appState.refresh,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF1B2311),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFFFFF),
                           foregroundColor: const Color(0xFF8224E3),
-                          disabledBackgroundColor: const Color(0xFFF2ECE6),
-                          disabledForegroundColor: const Color(0xFF6B7280),
+                          side: const BorderSide(color: Color(0x668224E3)),
                         ),
                         child: const Text('Refresh'),
                       ),

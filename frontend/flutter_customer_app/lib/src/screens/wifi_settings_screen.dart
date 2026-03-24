@@ -207,9 +207,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: const Color(0xFF131313))),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFFFFFFF))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.4)),
                 ],
               ),
             ),
@@ -229,7 +229,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: const Color(0xFF131313)),
+          style: const TextStyle(color: Color(0xFFFFFFFF)),
           children: [
             TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
             TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),

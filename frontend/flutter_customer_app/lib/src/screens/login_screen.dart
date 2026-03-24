@@ -327,7 +327,7 @@ class _AuthShowcaseCard extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF0F131B), Color(0xFF151A24)],
+                  colors: [Color(0xFFFFFFFF), Color(0xFFF8F4FF)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
