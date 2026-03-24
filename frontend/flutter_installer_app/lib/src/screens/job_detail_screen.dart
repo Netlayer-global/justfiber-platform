@@ -156,6 +156,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  Future<bool> _runAndClose(Future<dynamic> Function() action, String success) async {
+    final ok = await _run(action, success);
+    if (!mounted || !ok) return ok;
+    Navigator.of(context).pop(true);
+    return ok;
+  }
+
   void _show(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -1001,7 +1008,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      _run(() async {
+                                      _runAndClose(() async {
                                         await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
                                         await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
                                       }, 'Complaint resolved');
@@ -1195,7 +1202,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       _show('Enter 6-digit OTP');
                                       return;
                                     }
-                                    _run(() async {
+                                    _runAndClose(() async {
                                       await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
                                       await _appState.api.completeJob(_appState.session!, widget.job.id);
                                     }, 'Installation completed');
@@ -1582,13 +1589,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      final ok = await _run(() async {
+                                      await _runAndClose(() async {
                                         await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
                                         await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
                                       }, 'Complaint resolved');
-                                      if (ok && mounted) {
-                                        Navigator.of(context).pop();
-                                      }
                                     },
                             child: const Text('Resolve complaint'),
                           ),
@@ -1857,13 +1861,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      final ok = await _run(() async {
+                                      await _runAndClose(() async {
                                         await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
                                         await _appState.api.completeJob(_appState.session!, widget.job.id);
                                       }, 'Installation completed');
-                                      if (ok && mounted) {
-                                        Navigator.of(context).pop();
-                                      }
                                     },
                             child: const Text('Complete installation'),
                           ),
@@ -2448,13 +2449,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
       if (_canResolveComplaint(status, _otpController.text.trim())) {
         final otp = _otpController.text.trim();
-        final ok = await _run(() async {
+        await _runAndClose(() async {
           await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
           await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
         }, 'Complaint resolved');
-        if (ok && mounted) {
-          Navigator.of(context).pop();
-        }
         return;
       }
       _show('No complaint action available right now');
@@ -2536,13 +2534,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
     if (_canCompleteInstall(status, _otpController.text.trim())) {
       final otp = _otpController.text.trim();
-      final ok = await _run(() async {
+      await _runAndClose(() async {
         await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
         await _appState.api.completeJob(_appState.session!, widget.job.id);
       }, 'Installation completed');
-      if (ok && mounted) {
-        Navigator.of(context).pop();
-      }
       return;
     }
     _show('No installer action available right now');

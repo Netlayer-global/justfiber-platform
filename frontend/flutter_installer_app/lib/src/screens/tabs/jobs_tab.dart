@@ -219,6 +219,14 @@ class _JobsTabState extends State<JobsTab> {
     );
   }
 
+  Future<void> _openJobWorkflow(BuildContext context, InstallerAppState appState, InstallerJob job) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
+    );
+    if (!mounted) return;
+    await appState.refresh();
+  }
+
   Widget _sectionLabel(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -281,9 +289,7 @@ class _JobsTabState extends State<JobsTab> {
 
     return InkWell(
       borderRadius: BorderRadius.circular(28),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
-      ),
+      onTap: () => _openJobWorkflow(context, appState, job),
       child: AppCard(
         color: const Color(0xFFFFFFFF),
         borderColor: const Color(0x228224E3),
@@ -446,9 +452,7 @@ class _JobsTabState extends State<JobsTab> {
                   label: const Text('Quick preview'),
                 ),
                 FilledButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
-                  ),
+                  onPressed: () => _openJobWorkflow(context, appState, job),
                   child: const Text('Open workflow'),
                 ),
               ],
