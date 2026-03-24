@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/app_state.dart';
 import 'core/theme.dart';
-import 'screens/splash_screen.dart';
+import 'screens/auth_gate.dart';
 
 class JustFiberCustomerApp extends StatefulWidget {
   const JustFiberCustomerApp({super.key});
@@ -25,7 +25,7 @@ class _JustFiberCustomerAppState extends State<JustFiberCustomerApp> {
             debugShowCheckedModeBanner: false,
             title: 'JustFiber',
             theme: buildJustFiberTheme(),
-            home: const SplashScreen(),
+            home: const AuthGate(),
           ),
         );
       },

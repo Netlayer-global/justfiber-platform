@@ -619,13 +619,12 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   Widget _heroBanner() {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: const Color(0x228224E3)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
+        ],
       ),
       child: Row(
         children: [
@@ -644,9 +643,12 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         ),
                   ),
                   const SizedBox(height: 10),
-                  const Text('Book new Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF8224E3))),
+                  const Text('Book new Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313))),
                   const SizedBox(height: 6),
-                  const Text('Select your plan, confirm address, and create a live booking with an exact install map pin.', style: TextStyle(color: Color(0xFFF3E8FF), height: 1.4)),
+                  const Text(
+                    'Select your plan, confirm address, and create a live booking with an exact install map pin.',
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                  ),
                 ],
               ),
             ),
@@ -656,7 +658,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             height: 120,
             margin: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1E8FF),
+              color: const Color(0xFFF8F4FF),
               borderRadius: BorderRadius.circular(26),
               border: Border.all(color: const Color(0x668224E3)),
             ),
@@ -858,7 +860,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const Color(0xFF08131B),
+        fillColor: const Color(0xFFFFFFFF),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: Color(0x228224E3)),
@@ -960,9 +962,9 @@ class _MapHint extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF08131B).withValues(alpha: 0.94),
+        color: const Color(0xFFFFFFFF).withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x448224E3)),
+        border: Border.all(color: const Color(0x338224E3)),
       ),
       child: const Text(
         'Tap map to drop the exact install pin. This live lat/lng will be saved for installer allocation.',
