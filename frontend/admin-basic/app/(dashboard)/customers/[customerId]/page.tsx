@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import type { AdminPlanChangePreview, Customer, CustomerDevice, Installer, Plan } from '@/lib/types'
 import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet } from 'lucide-react'
@@ -27,6 +27,7 @@ const tabIcons: Record<TabKey, any> = {
 
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>()
+  const searchParams = useSearchParams()
   const customerId = params.customerId
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -71,6 +72,13 @@ export default function CustomerDetailPage() {
     void loadPlans()
     void loadInstallers()
   }, [customerId])
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && tabs.some((item) => item.key === tab)) {
+      setActiveTab(tab as TabKey)
+    }
+  }, [searchParams])
 
   async function loadCustomer() {
     try {

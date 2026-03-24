@@ -270,11 +270,24 @@ export default function CustomersPage() {
                     })()}
                   </td>
                   <td className="table-cell text-right">
-                    <Link href={`/customers/${customer.id}`}>
-                      <button className="p-1 hover:bg-[#2a2f4a] rounded" title="View customer">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </Link>
+                    <div className="flex justify-end gap-2">
+                      {(() => {
+                        const risk = usageRisk(customer)
+                        const shouldRecommendUpgrade = risk.label === 'Watch' || risk.label === 'High usage' || risk.label === 'Cap reached'
+                        return shouldRecommendUpgrade ? (
+                          <Link href={`/customers/${customer.id}?tab=billing`}>
+                            <button className="rounded border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs font-semibold text-[#d8ff16] transition hover:bg-[#d8ff16]/20">
+                              Upgrade review
+                            </button>
+                          </Link>
+                        ) : null
+                      })()}
+                      <Link href={`/customers/${customer.id}`}>
+                        <button className="p-1 hover:bg-[#2a2f4a] rounded" title="View customer">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
