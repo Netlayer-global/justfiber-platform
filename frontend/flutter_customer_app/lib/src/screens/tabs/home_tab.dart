@@ -31,7 +31,7 @@ class HomeTab extends StatelessWidget {
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFFF7F8FC),
+      backgroundColor: const Color(0xFF18181B),
       onRefresh: appState.refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -194,7 +194,7 @@ class HomeTab extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF7F8FC),
+                    color: const Color(0xFF16181D),
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x228224E3)),
                   ),
@@ -232,7 +232,7 @@ class HomeTab extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: usagePercent,
                             minHeight: 10,
-                            backgroundColor: const Color(0xFF111827),
+                            backgroundColor: const Color(0xFF26282D),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               billing.usageCapReached ? const Color(0xFFFF6B6B) : const Color(0xFF8224E3),
                             ),
@@ -444,9 +444,9 @@ class HomeTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(color: Color(0xFFF7F7F8), fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -462,7 +462,7 @@ class HomeTab extends StatelessWidget {
       borderRadius: BorderRadius.circular(28),
       onTap: onTap,
       child: AppCard(
-        color: const Color(0xFFF7F8FC),
+        color: const Color(0xFF1A1B1F),
         borderColor: const Color(0x228224E3),
         child: Row(
           children: [
@@ -484,9 +484,9 @@ class HomeTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFF7F7F8))),
                   const SizedBox(height: 6),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.35)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.35)),
                 ],
               ),
             ),
@@ -522,7 +522,7 @@ class HomeTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF7F8FC),
+          color: const Color(0xFF16181D),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0x228224E3)),
         ),
@@ -531,7 +531,7 @@ class HomeTab extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600),
+                style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(width: 10),
@@ -541,7 +541,7 @@ class HomeTab extends StatelessWidget {
                 textAlign: TextAlign.right,
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: highlight ? const Color(0xFF8224E3) : const Color(0xFFEFEEE8),
+                  color: highlight ? const Color(0xFFB277FF) : const Color(0xFFF7F7F8),
                 ),
               ),
             ),
@@ -553,7 +553,7 @@ class HomeTab extends StatelessWidget {
 
   Widget _lightPanel({required Widget child}) {
     return AppCard(
-      color: const Color(0xFFF7F8FC),
+      color: const Color(0xFF1A1B1F),
       borderColor: const Color(0x228224E3),
       padding: const EdgeInsets.all(20),
       child: child,
