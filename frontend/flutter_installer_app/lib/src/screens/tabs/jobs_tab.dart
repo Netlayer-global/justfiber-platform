@@ -47,7 +47,7 @@ class _JobsTabState extends State<JobsTab> {
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF090D15), Color(0xFF111827)],
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -57,7 +57,7 @@ class _JobsTabState extends State<JobsTab> {
                 Text(
                   'FIELD JOBS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
+                        color: const Color(0xFFE9D5FF),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -68,7 +68,7 @@ class _JobsTabState extends State<JobsTab> {
                 Text(
                   'Open any job card to continue the full field workflow: accept, travel, onsite, router link, activation, proof, OTP, and completion.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFFD1D5DB),
+                        color: const Color(0xFFF3E8FF),
                         height: 1.45,
                       ),
                 ),
@@ -209,9 +209,9 @@ class _JobsTabState extends State<JobsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF10151A),
+        color: const Color(0x26FFFFFF),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x558224E3)),
+        border: Border.all(color: const Color(0x40FFFFFF)),
       ),
       child: Column(
         children: [
@@ -220,13 +220,13 @@ class _JobsTabState extends State<JobsTab> {
             style: const TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 20,
-              color: Color(0xFFEFEEE8),
+              color: Color(0xFFFFFFFF),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFFE9D5FF), fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -257,7 +257,7 @@ class _JobsTabState extends State<JobsTab> {
         MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
       ),
       child: AppCard(
-        color: const Color(0xFFF7F8FC),
+        color: const Color(0xFFFFFFFF),
         borderColor: const Color(0x228224E3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +274,7 @@ class _JobsTabState extends State<JobsTab> {
                       Text(
                         job.customerName,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: const Color(0xFFEFEEE8),
+                              color: const Color(0xFF131313),
                             ),
                       ),
                       if (job.customerPhone.isNotEmpty) ...[
@@ -282,7 +282,7 @@ class _JobsTabState extends State<JobsTab> {
                         Text(
                           job.customerPhone,
                           style: const TextStyle(
-                            color: Color(0xFF9CA3AF),
+                            color: Color(0xFF6E6A67),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -293,7 +293,7 @@ class _JobsTabState extends State<JobsTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF141A22),
+                    color: const Color(0xFFF8F4FF),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: const Color(0x558224E3)),
                   ),
@@ -311,7 +311,7 @@ class _JobsTabState extends State<JobsTab> {
             const SizedBox(height: 8),
             Text(
               job.customerAddress,
-              style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
             ),
             if (job.planName.isNotEmpty || job.scheduledAt.isNotEmpty || nextVisitLabel != '-') ...[
               const SizedBox(height: 12),
@@ -350,7 +350,7 @@ class _JobsTabState extends State<JobsTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10151A),
+                  color: const Color(0xFFFFF8E8),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: hasConfigFailure ? const Color(0x66F59E0B) : const Color(0x228224E3),
@@ -435,16 +435,16 @@ class _JobsTabState extends State<JobsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF10151A),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
+          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -454,13 +454,13 @@ class _JobsTabState extends State<JobsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF10151A),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0x558224E3)),
       ),
       child: Text(
         label,
-        style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700, fontSize: 12),
+        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700, fontSize: 12),
       ),
     );
   }

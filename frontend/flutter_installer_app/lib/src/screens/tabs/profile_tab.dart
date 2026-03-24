@@ -35,12 +35,12 @@ class _ProfileTabState extends State<ProfileTab> {
                 children: [
                   Text(
                     'Start leave',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFFEFEEE8)),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF131313)),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Use this only when no active jobs are open. Expected return is set to 8 hours from now.',
-                    style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -107,7 +107,7 @@ class _ProfileTabState extends State<ProfileTab> {
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF090D15), Color(0xFF111827)],
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -117,7 +117,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 Text(
                   'INSTALLER CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
+                        color: const Color(0xFFE9D5FF),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -130,7 +130,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 const SizedBox(height: 8),
                 Text(
                   'Manage job readiness, availability, and provisioning workflow details.',
-                  style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                  style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -239,7 +239,7 @@ class _ProfileTabState extends State<ProfileTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF11161D),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x338224E3)),
       ),
@@ -262,7 +262,7 @@ class _ProfileTabState extends State<ProfileTab> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF141A22),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -272,7 +272,7 @@ class _ProfileTabState extends State<ProfileTab> {
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -290,7 +290,7 @@ class _ProfileTabState extends State<ProfileTab> {
             height: 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFF141A22),
+              color: const Color(0xFFF8F4FF),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: const Color(0x558224E3)),
             ),
@@ -305,7 +305,7 @@ class _ProfileTabState extends State<ProfileTab> {
               padding: const EdgeInsets.only(top: 3),
               child: Text(
                 text,
-                style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
               ),
             ),
           ),

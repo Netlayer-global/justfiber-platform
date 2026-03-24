@@ -26,22 +26,23 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFCFAF7),
       body: FieldBackground(
         child: SafeArea(child: pages[index]),
       ),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF18181B),
+          color: const Color(0xFFFFFFFF),
           borderRadius: BorderRadius.circular(26),
           border: Border.all(color: const Color(0x228224E3)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x44000000),
+              color: Color(0x18000000),
               blurRadius: 26,
               offset: Offset(0, 16),
             ),
-            BoxShadow(color: Color(0x108224E3), blurRadius: 14, offset: Offset(0, 6)),
+            BoxShadow(color: Color(0x0A8224E3), blurRadius: 10, offset: Offset(0, 4)),
           ],
         ),
         child: ClipRRect(

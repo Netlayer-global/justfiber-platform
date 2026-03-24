@@ -24,7 +24,7 @@ class DashboardTab extends StatelessWidget {
         children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF090D15), Color(0xFF111827)],
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -34,7 +34,7 @@ class DashboardTab extends StatelessWidget {
                 Text(
                   'FIELD DASHBOARD',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
+                        color: const Color(0xFFE9D5FF),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -53,13 +53,13 @@ class DashboardTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10151A),
+                    color: const Color(0x26FFFFFF),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0x558224E3)),
+                    border: Border.all(color: const Color(0x40FFFFFF)),
                   ),
                   child: Text(
                     'Availability: ${dashboard.availabilityStatus}',
-                    style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700),
+                    style: const TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -77,17 +77,18 @@ class DashboardTab extends StatelessWidget {
           _metric(context, 'Completed', '$completedJobs'),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFFF7F8FC),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Today focus', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFFEFEEE8))),
+                Text('Today focus', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFF131313))),
                 const SizedBox(height: 12),
-                const Text('1. Accept assigned jobs immediately.', style: TextStyle(color: Color(0xFFD1D5DB))),
+                const Text('1. Accept assigned jobs immediately.', style: TextStyle(color: Color(0xFF6E6A67))),
                 const SizedBox(height: 8),
-                const Text('2. Capture correct ONT serial before activation.', style: TextStyle(color: Color(0xFFD1D5DB))),
+                const Text('2. Capture correct ONT serial before activation.', style: TextStyle(color: Color(0xFF6E6A67))),
                 const SizedBox(height: 8),
-                const Text('3. Finish optical check and checklist before closing the job.', style: TextStyle(color: Color(0xFFD1D5DB))),
+                const Text('3. Finish optical check and checklist before closing the job.', style: TextStyle(color: Color(0xFF6E6A67))),
               ],
             ),
           ),
@@ -98,7 +99,8 @@ class DashboardTab extends StatelessWidget {
 
   Widget _metric(BuildContext context, String label, String value) {
     return AppCard(
-      color: const Color(0xFFF7F8FC),
+      color: const Color(0xFFFFFFFF),
+      borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

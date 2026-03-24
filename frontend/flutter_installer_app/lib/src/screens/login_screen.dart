@@ -51,9 +51,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: 78,
                   height: 78,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF141A22),
+                    color: const Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: const Color(0x558224E3)),
+                    border: Border.all(color: const Color(0x338224E3)),
                   ),
                   child: const Icon(
                     Icons.network_check_rounded,
@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'INSTALLER CONSOLE',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF9CA3AF),
+                    color: const Color(0xFF6E6A67),
                     letterSpacing: 3.2,
                     fontWeight: FontWeight.w700,
                   ),
@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'Access assigned jobs, provisioning preview, route links, and activation controls from one installer app.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFFD1D5DB),
+                    color: const Color(0xFF6E6A67),
                     height: 1.45,
                   ),
                 ),
@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10151A),
+                    color: const Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0x338224E3)),
                   ),
@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
                       const Text(
                         'Use installer credentials provided by admin. Default local demo credentials are prefilled for quick testing.',
-                        style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),
                     ],
                   ),
@@ -160,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF211113),
+                      color: const Color(0xFFFFF1F2),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: const Color(0x66EF4444)),
                     ),
@@ -174,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10151A),
+                    color: const Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0x228224E3)),
                   ),
@@ -184,16 +184,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Sign-in flow',
                         style: TextStyle(
-                          color: Color(0xFFEFEEE8),
+                          color: Color(0xFF131313),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       SizedBox(height: 10),
-                      Text('1. Sign in with installer credentials.', style: TextStyle(color: Color(0xFFD1D5DB))),
+                      Text('1. Sign in with installer credentials.', style: TextStyle(color: Color(0xFF6E6A67))),
                       SizedBox(height: 8),
-                      Text('2. Open assigned jobs and load provisioning preview.', style: TextStyle(color: Color(0xFFD1D5DB))),
+                      Text('2. Open assigned jobs and load provisioning preview.', style: TextStyle(color: Color(0xFF6E6A67))),
                       SizedBox(height: 8),
-                      Text('3. Reach site, enter serial, and run activation.', style: TextStyle(color: Color(0xFFD1D5DB))),
+                      Text('3. Reach site, enter serial, and run activation.', style: TextStyle(color: Color(0xFF6E6A67))),
                     ],
                   ),
                 ),
