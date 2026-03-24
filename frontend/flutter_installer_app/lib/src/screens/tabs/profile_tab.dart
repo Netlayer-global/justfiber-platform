@@ -114,6 +114,38 @@ class _ProfileTabState extends State<ProfileTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: const Color(0x26FFFFFF),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x36FFFFFF)),
+                      ),
+                      child: const Icon(Icons.engineering_rounded, color: Colors.white, size: 28),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0x1FFFFFFF),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: const Color(0x2CFFFFFF)),
+                      ),
+                      child: Text(
+                        isOnLeave ? 'On leave' : 'Ready for dispatch',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
                 Text(
                   'INSTALLER CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -160,13 +192,59 @@ class _ProfileTabState extends State<ProfileTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Availability controls', style: Theme.of(context).textTheme.titleLarge),
+                Row(
+                  children: [
+                    Text('Availability controls', style: Theme.of(context).textTheme.titleLarge),
+                    const Spacer(),
+                    _sectionChip(
+                      isOnLeave ? 'On leave' : 'Available',
+                      icon: isOnLeave ? Icons.pause_circle_outline_rounded : Icons.check_circle_outline_rounded,
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 Text(
                   isOnLeave
                       ? 'Installer is currently marked on leave.'
                       : 'Installer is currently available for dispatch.',
-                  style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F4FF),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0x228224E3)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFFFF),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0x228224E3)),
+                        ),
+                        child: Icon(
+                          isOnLeave ? Icons.event_busy_rounded : Icons.local_shipping_outlined,
+                          color: const Color(0xFF8224E3),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          isOnLeave
+                              ? 'Jobs should not be accepted until leave is ended. Dispatch can restore availability from this tab.'
+                              : 'Use leave only when no active field work is in progress. The dispatch queue will reflect your live availability.',
+                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Wrap(
@@ -201,10 +279,10 @@ class _ProfileTabState extends State<ProfileTab> {
               children: [
                 Text('Account information', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 14),
-                _infoRow('Full name', profile.fullName.isEmpty ? '-' : profile.fullName),
-                _infoRow('Phone', profile.phone.isEmpty ? '-' : profile.phone),
-                _infoRow('Installer code', profile.installerCode.isEmpty ? '-' : profile.installerCode),
-                _infoRow('Availability', profile.availabilityStatus),
+                _infoRow(Icons.badge_outlined, 'Full name', profile.fullName.isEmpty ? '-' : profile.fullName),
+                _infoRow(Icons.call_outlined, 'Phone', profile.phone.isEmpty ? '-' : profile.phone),
+                _infoRow(Icons.qr_code_rounded, 'Installer code', profile.installerCode.isEmpty ? '-' : profile.installerCode),
+                _infoRow(Icons.event_available_rounded, 'Availability', profile.availabilityStatus),
               ],
             ),
           ),
@@ -215,10 +293,10 @@ class _ProfileTabState extends State<ProfileTab> {
               children: [
                 Text('Field workflow', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 14),
-                _workflowStep('1', 'Open assigned job and verify customer location.'),
-                _workflowStep('2', 'Accept, travel, and check in onsite.'),
-                _workflowStep('3', 'Link ONT, activate service, and verify optical health.'),
-                _workflowStep('4', 'Capture proof, verify OTP, and close job.'),
+                _workflowStep('1', 'Review job and customer details', 'Check location, plan, and customer contact before starting field action.'),
+                _workflowStep('2', 'Accept and move to site', 'Accept the job, start travel, and mark onsite after reaching the address.'),
+                _workflowStep('3', 'Link and verify device health', 'Scan ONT serial, review RX/TX power, and confirm provisioning readiness.'),
+                _workflowStep('4', 'Activate and complete handover', 'Run activation, capture proof, verify OTP, and close the job cleanly.'),
               ],
             ),
           ),
@@ -246,7 +324,7 @@ class _ProfileTabState extends State<ProfileTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           Text(
             value,
@@ -257,7 +335,29 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _sectionChip(String label, {required IconData icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFF8224E3)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -268,18 +368,36 @@ class _ProfileTabState extends State<ProfileTab> {
       ),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF))),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F4FF),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0x228224E3)),
+            ),
+            child: Icon(icon, size: 18, color: const Color(0xFF8224E3)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _workflowStep(String index, String text) {
+  Widget _workflowStep(String index, String title, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -303,9 +421,19 @@ class _ProfileTabState extends State<ProfileTab> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(top: 3),
-              child: Text(
-                text,
-                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    text,
+                    style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                  ),
+                ],
               ),
             ),
           ),
