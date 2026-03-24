@@ -26,8 +26,8 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [
-          BoxShadow(color: Color(0x1A0F172A), blurRadius: 34, offset: Offset(0, 20)),
-          BoxShadow(color: Color(0x0D8224E3), blurRadius: 18, offset: Offset(0, 8)),
+          BoxShadow(color: Color(0x120F172A), blurRadius: 24, offset: Offset(0, 14)),
+          BoxShadow(color: Color(0x06FFFFFF), blurRadius: 6, offset: Offset(0, -2)),
         ],
       ),
       child: Container(
@@ -38,28 +38,28 @@ class AppCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  resolvedBackground,
-                  Color.alphaBlend(const Color(0x0C8224E3), resolvedBackground),
+                  Color.alphaBlend(const Color(0x06FFFFFF), resolvedBackground),
+                  Color.alphaBlend(const Color(0x038224E3), resolvedBackground),
                 ],
               ),
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color: borderColor ?? const Color(0x268224E3),
-            width: 1.1,
+            color: borderColor ?? const Color(0x140F172A),
+            width: 1,
           ),
         ),
         child: Stack(
           children: [
             Positioned(
-              top: -32,
-              right: -10,
+              top: -18,
+              right: 18,
               child: Container(
-                width: 120,
-                height: 120,
+                width: 72,
+                height: 72,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [Color(0x268224E3), Color(0x008224E3)],
+                    colors: [Color(0x0F8224E3), Color(0x008224E3)],
                   ),
                 ),
               ),
