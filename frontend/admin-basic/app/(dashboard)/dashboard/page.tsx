@@ -113,41 +113,6 @@ export default function DashboardPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex h-[70vh] items-center justify-center">
-        <Loader className="h-7 w-7 animate-spin text-[#d8ff16]" />
-      </div>
-    )
-  }
-
-  const summary = [
-    {
-      label: 'Total customers',
-      value: stats?.totalCustomers?.toLocaleString() ?? '0',
-      detail: 'Full subscriber base',
-      icon: Users,
-    },
-    {
-      label: 'Active connections',
-      value: stats?.activeConnections?.toLocaleString() ?? '0',
-      detail: 'Live broadband sessions',
-      icon: Activity,
-    },
-    {
-      label: 'Monthly revenue',
-      value: `$${stats?.monthlyRevenue?.toLocaleString() ?? '0'}`,
-      detail: 'Current collection pulse',
-      icon: Wallet,
-    },
-    {
-      label: 'System health',
-      value: `${stats?.systemHealth ?? 0}%`,
-      detail: 'Provisioning and device health',
-      icon: ShieldCheck,
-    },
-  ]
-
   const usageMetrics = useMemo(() => {
     let watch = 0
     let high = 0
@@ -176,6 +141,41 @@ export default function DashboardPage() {
     { title: 'Cap reached', value: String(usageMetrics.capReached), desc: 'Customers already throttled or capped', Icon: ShieldCheck },
     { title: 'Unlimited base', value: String(usageMetrics.unlimited), desc: 'Subscribers on unlimited policy', Icon: Users },
   ]
+
+  const summary = [
+    {
+      label: 'Total customers',
+      value: stats?.totalCustomers?.toLocaleString() ?? '0',
+      detail: 'Full subscriber base',
+      icon: Users,
+    },
+    {
+      label: 'Active connections',
+      value: stats?.activeConnections?.toLocaleString() ?? '0',
+      detail: 'Live broadband sessions',
+      icon: Activity,
+    },
+    {
+      label: 'Monthly revenue',
+      value: `$${stats?.monthlyRevenue?.toLocaleString() ?? '0'}`,
+      detail: 'Current collection pulse',
+      icon: Wallet,
+    },
+    {
+      label: 'System health',
+      value: `${stats?.systemHealth ?? 0}%`,
+      detail: 'Provisioning and device health',
+      icon: ShieldCheck,
+    },
+  ]
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[70vh] items-center justify-center">
+        <Loader className="h-7 w-7 animate-spin text-[#d8ff16]" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
