@@ -811,6 +811,194 @@ worker.on("completed", (job) => {
 console.log("Admin worker started");
 
 let billingSchedulerRunning = false;
+let usagePolicySchedulerRunning = false;
+
+function resolveUsageCycleStart(service, customer) {
+  const resetPolicy = service?.metadata?.networkProfile?.fairUsageResetPolicy || "monthly";
+  const now = new Date();
+  if (resetPolicy === "rolling_30") {
+    return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+  if (resetPolicy === "billing_cycle") {
+    const invoiceDate = customer?.invoiceSummary?.lastInvoiceDate
+      ? new Date(customer.invoiceSummary.lastInvoiceDate)
+      : null;
+    if (invoiceDate && !Number.isNaN(invoiceDate.getTime())) {
+      return invoiceDate;
+    }
+  }
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+}
+
+async function notifyCustomerPolicyChange(customer, type, title, body, payload = {}) {
+  if (!customer?.customerId) return;
+  const customerUser = await CustomerUser.findOne({ linkedCustomerIds: customer.customerId }).lean();
+  if (!customerUser?._id) return;
+  await CustomerNotification.create({
+    customerUserId: customerUser._id,
+    type,
+    title,
+    body,
+    payload
+  });
+}
+
+async function runRecurringUsagePolicyTasks() {
+  if (usagePolicySchedulerRunning) return;
+  usagePolicySchedulerRunning = true;
+  try {
+    const services = await SubscriberService.find({
+      status: "active",
+      "metadata.networkProfile.dataPolicy": { $in: ["fup", "hard_cap"] },
+      "metadata.networkProfile.dataLimitGb": { $gt: 0 }
+    }).limit(250);
+
+    for (const service of services) {
+      const networkProfile = service.metadata?.networkProfile || {};
+      const dataPolicy = String(networkProfile.dataPolicy || "unlimited");
+      const dataLimitGb = Number(networkProfile.dataLimitGb || 0) || 0;
+      if (!dataLimitGb) continue;
+
+      const customer = await Customer.findOne({ customerId: service.customerId });
+      const cycleStart = resolveUsageCycleStart(service, customer);
+      const usage = await radiusServiceManager.getSubscriberUsageSummary({
+        serviceId: service.serviceId,
+        radiusUsername: service.radiusUsername,
+        since: cycleStart
+      });
+      const capOctets = Math.round(dataLimitGb * 1024 * 1024 * 1024);
+      const exceeded = usage.totalOctets >= capOctets;
+      const nextPolicyState = exceeded
+        ? dataPolicy === "fup"
+          ? "fup_active"
+          : "hard_cap_reached"
+        : "base";
+      const previousPolicyState = service.metadata?.usagePolicyState || "base";
+
+      if (customer) {
+        customer.billingSnapshot = {
+          ...(customer.billingSnapshot || {}),
+          usageOctets: usage.totalOctets,
+          usageGb: Number((usage.totalOctets / (1024 * 1024 * 1024)).toFixed(2)),
+          usageCapGb: dataLimitGb,
+          usageCapReached: exceeded,
+          dataPolicy,
+          fupSpeedMbps: Number(networkProfile.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null,
+          fairUsageResetPolicy: networkProfile.fairUsageResetPolicy || customer.billingSnapshot?.fairUsageResetPolicy || "monthly",
+          usageCycleStartedAt: cycleStart,
+          usageLastUpdatedAt: usage.latestUpdateAt || new Date()
+        };
+        await customer.save();
+      }
+
+      service.metadata = {
+        ...(service.metadata || {}),
+        usageSummary: {
+          totalOctets: usage.totalOctets,
+          totalInputOctets: usage.totalInputOctets,
+          totalOutputOctets: usage.totalOutputOctets,
+          cycleStartedAt: cycleStart,
+          lastUpdatedAt: usage.latestUpdateAt || new Date(),
+          capOctets,
+          exceeded
+        },
+        usagePolicyState: nextPolicyState
+      };
+
+      if (dataPolicy === "fup" && exceeded && previousPolicyState !== "fup_active") {
+        const throttledSpeed = Number(networkProfile.fupSpeedMbps || 0) || Math.min(10, Number(networkProfile.speedMbps || 10));
+        const baseNetworkProfile = service.metadata?.baseNetworkProfile || networkProfile;
+        const throttledProfile = {
+          ...baseNetworkProfile,
+          speedMbps: throttledSpeed,
+          uploadSpeedMbps: Math.max(1, Math.min(Number(baseNetworkProfile.uploadSpeedMbps || throttledSpeed), throttledSpeed)),
+          burstDownloadMbps: null,
+          burstUploadMbps: null
+        };
+        service.metadata = {
+          ...(service.metadata || {}),
+          baseNetworkProfile,
+          networkProfile: throttledProfile,
+          appliedFupAt: new Date(),
+          usagePolicyState: "fup_active",
+          usageSummary: service.metadata?.usageSummary
+        };
+        await radiusServiceManager.createSubscriberAccess({
+          serviceId: service.serviceId,
+          customerId: service.customerId,
+          radiusUsername: service.radiusUsername,
+          radiusPassword: service.metadata?.radiusPassword,
+          accessProfileCode: service.accessProfileCode,
+          billingProfileCode: service.billingProfileCode,
+          bngNodeCode: service.bngNodeCode,
+          metadata: {
+            ...(service.metadata || {}),
+            networkProfile: throttledProfile,
+            baseNetworkProfile
+          }
+        });
+        if (customer) {
+          await notifyCustomerPolicyChange(
+            customer,
+            "fup_applied",
+            "FUP speed applied",
+            `Your plan usage crossed ${dataLimitGb} GB. Speed is now running at ${throttledSpeed} Mbps until reset.`,
+            { serviceId: service.serviceId, dataLimitGb, fupSpeedMbps: throttledSpeed }
+          );
+        }
+      }
+
+      if (dataPolicy === "fup" && !exceeded && previousPolicyState === "fup_active") {
+        const restoredProfile = service.metadata?.baseNetworkProfile || networkProfile;
+        service.metadata = {
+          ...(service.metadata || {}),
+          networkProfile: restoredProfile,
+          restoredFromFupAt: new Date(),
+          usagePolicyState: "base",
+          usageSummary: service.metadata?.usageSummary
+        };
+        await radiusServiceManager.createSubscriberAccess({
+          serviceId: service.serviceId,
+          customerId: service.customerId,
+          radiusUsername: service.radiusUsername,
+          radiusPassword: service.metadata?.radiusPassword,
+          accessProfileCode: service.accessProfileCode,
+          billingProfileCode: service.billingProfileCode,
+          bngNodeCode: service.bngNodeCode,
+          metadata: {
+            ...(service.metadata || {}),
+            networkProfile: restoredProfile
+          }
+        });
+        if (customer) {
+          await notifyCustomerPolicyChange(
+            customer,
+            "fup_restored",
+            "Base plan speed restored",
+            "Your plan usage cycle reset and base broadband speed is active again.",
+            { serviceId: service.serviceId, dataLimitGb }
+          );
+        }
+      }
+
+      if (dataPolicy === "hard_cap" && exceeded && previousPolicyState !== "hard_cap_reached" && customer) {
+        await notifyCustomerPolicyChange(
+          customer,
+          "data_cap_reached",
+          "Data cap reached",
+          `Your plan usage crossed ${dataLimitGb} GB. Service is now running under hard-cap policy until reset.`,
+          { serviceId: service.serviceId, dataLimitGb }
+        );
+      }
+
+      await service.save();
+    }
+  } catch (error) {
+    console.error("[worker] recurring usage policy task failed:", error.message);
+  } finally {
+    usagePolicySchedulerRunning = false;
+  }
+}
 
 async function findBestInvoiceForPayment(payment) {
   const exactRef = String(payment.reference || "").trim();
@@ -1125,3 +1313,9 @@ setInterval(() => {
 }, 15 * 60 * 1000);
 
 void runRecurringBillingTasks();
+
+setInterval(() => {
+  void runRecurringUsagePolicyTasks();
+}, 15 * 60 * 1000);
+
+void runRecurringUsagePolicyTasks();

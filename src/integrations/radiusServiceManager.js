@@ -79,6 +79,47 @@ async function getServiceOrThrow(serviceId) {
 }
 
 export class RadiusServiceManager {
+  async getSubscriberUsageSummary({ serviceId, radiusUsername, since } = {}) {
+    const service =
+      (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
+      (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
+    const username = radiusUsername || service?.radiusUsername;
+    if (!username) {
+      throw new Error("Radius username is required for usage summary");
+    }
+    const connection = await getPool().getConnection();
+    try {
+      const [rows] = await connection.execute(
+        `SELECT
+          COALESCE(SUM(
+            (COALESCE(acctinputgigawords, 0) * 4294967296) + COALESCE(acctinputoctets, 0)
+          ), 0) AS totalInputOctets,
+          COALESCE(SUM(
+            (COALESCE(acctoutputgigawords, 0) * 4294967296) + COALESCE(acctoutputoctets, 0)
+          ), 0) AS totalOutputOctets,
+          MAX(acctstarttime) AS latestSessionStart,
+          MAX(acctupdatetime) AS latestUpdateAt
+        FROM radacct
+        WHERE username = ?
+          AND (? IS NULL OR acctstarttime >= ?)`,
+        [username, since || null, since || null]
+      );
+      const row = Array.isArray(rows) ? rows[0] || {} : {};
+      const totalInputOctets = Number(row.totalInputOctets || 0);
+      const totalOutputOctets = Number(row.totalOutputOctets || 0);
+      return {
+        username,
+        totalInputOctets,
+        totalOutputOctets,
+        totalOctets: totalInputOctets + totalOutputOctets,
+        latestSessionStart: row.latestSessionStart || null,
+        latestUpdateAt: row.latestUpdateAt || null
+      };
+    } finally {
+      connection.release();
+    }
+  }
+
   async createSubscriberAccess({
     serviceId,
     customerId,
