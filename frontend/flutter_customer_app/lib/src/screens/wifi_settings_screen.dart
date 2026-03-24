@@ -61,9 +61,12 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFFFF),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: const Color(0x228224E3)),
               boxShadow: const [BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8))],
             ),
             child: Column(
@@ -72,7 +75,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 Text(
                   'NETWORK CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF6E6A67),
+                        color: const Color(0xFFE9D5FF),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -84,11 +87,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF131313))),
+                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFFFFFFFF))),
                           const SizedBox(height: 6),
                           Text(
                             'Quality: ${appState.networkQuality.quality} | Devices: ${wifi.connectedDevicesCount}',
-                            style: const TextStyle(color: Color(0xFF6E6A67)),
+                            style: const TextStyle(color: Color(0xFFF3E8FF)),
                           ),
                         ],
                       ),
@@ -96,14 +99,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F4FF),
+                        color: const Color(0x26FFFFFF),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: wifi.paused ? const Color(0x55FFCDD2) : const Color(0x338224E3)),
+                        border: Border.all(color: wifi.paused ? const Color(0x55FFCDD2) : const Color(0x40FFFFFF)),
                       ),
                       child: Text(
                         wifi.paused ? 'Paused' : 'Online',
                         style: TextStyle(
-                          color: wifi.paused ? const Color(0xFFD81F26) : const Color(0xFF8224E3),
+                          color: const Color(0xFFFFFFFF),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -204,9 +207,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFFFFFFF))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.4)),
                 ],
               ),
             ),
@@ -226,7 +229,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFF131313)),
+          style: const TextStyle(color: Color(0xFFFFFFFF)),
           children: [
             TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
             TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),

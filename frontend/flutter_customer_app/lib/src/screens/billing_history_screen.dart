@@ -231,7 +231,7 @@ class BillingHistoryScreen extends StatelessWidget {
                                 },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF8224E3),
-                                  backgroundColor: const Color(0xFFFFFFFF),
+                                  backgroundColor: const Color(0xFF0F141D),
                                   side: const BorderSide(color: Color(0x668224E3)),
                                 ),
                                 child: const Text('Need help'),

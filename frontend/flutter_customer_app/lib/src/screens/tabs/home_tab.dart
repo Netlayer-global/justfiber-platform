@@ -39,11 +39,15 @@ class HomeTab extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFFFFF),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: const Color(0x228224E3)),
+            border: Border.all(color: const Color(0x338224E3)),
             boxShadow: const [
-              BoxShadow(color: Color(0x18000000), blurRadius: 24, offset: Offset(0, 12)),
+              BoxShadow(color: Color(0x308224E3), blurRadius: 26, offset: Offset(0, 12)),
             ],
           ),
           child: Column(
@@ -59,7 +63,7 @@ class HomeTab extends StatelessWidget {
                         Text(
                           'CUSTOMER DASHBOARD',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: const Color(0xFF6E6A67),
+                                color: const Color(0xFFE9D5FF),
                                 letterSpacing: 3.2,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -68,7 +72,7 @@ class HomeTab extends StatelessWidget {
                         Text(
                           'Hi, $displayName',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: const Color(0xFF131313),
+                                color: const Color(0xFFF7F7F8),
                                 fontSize: 30,
                               ),
                         ),
@@ -78,7 +82,7 @@ class HomeTab extends StatelessWidget {
                               ? 'Monitor your broadband, due amount, and active requests from one clean control surface.'
                               : 'Check feasibility, pick a plan, and start your broadband booking in a few steps.',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: const Color(0xFF6E6A67),
+                                color: const Color(0xFFD6D3D1),
                               ),
                         ),
                       ],
@@ -492,16 +496,16 @@ class HomeTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0x26FFFFFF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x338224E3)),
+        border: Border.all(color: const Color(0x40FFFFFF)),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFF131313)),
+          style: const TextStyle(color: Color(0xFFFFFFFF)),
           children: [
             TextSpan(text: '$value ', style: const TextStyle(fontWeight: FontWeight.w800)),
-            TextSpan(text: label, style: const TextStyle(color: Color(0xFF6E6A67))),
+            TextSpan(text: label, style: const TextStyle(color: Color(0xFFE9D5FF))),
           ],
         ),
       ),
