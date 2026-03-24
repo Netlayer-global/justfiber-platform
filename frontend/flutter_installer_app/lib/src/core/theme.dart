@@ -58,12 +58,14 @@ ThemeData buildInstallerTheme() {
         backgroundColor: primary,
         foregroundColor: const Color(0xFFEFEEE8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        elevation: 0,
+        shadowColor: const Color(0x338224E3),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: text,
-        backgroundColor: surface,
+        backgroundColor: const Color(0xFFFDFDFF),
         side: const BorderSide(color: Color(0x668224E3)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),

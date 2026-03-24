@@ -86,12 +86,14 @@ ThemeData buildJustFiberTheme() {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700, fontSize: 15),
+        elevation: 0,
+        shadowColor: const Color(0x338224E3),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFFFFFFF),
+        backgroundColor: const Color(0xFFFDFDFF),
         side: const BorderSide(color: Color(0x998224E3), width: 1.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
