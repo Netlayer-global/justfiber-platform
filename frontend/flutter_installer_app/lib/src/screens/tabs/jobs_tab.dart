@@ -54,6 +54,34 @@ class _JobsTabState extends State<JobsTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: const Color(0x26FFFFFF),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x36FFFFFF)),
+                      ),
+                      child: const Icon(Icons.assignment_rounded, color: Colors.white, size: 28),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0x1FFFFFFF),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: const Color(0x2CFFFFFF)),
+                      ),
+                      child: Text(
+                        '${activeJobs.length} active',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
                 Text(
                   'FIELD JOBS',
                   style: theme.textTheme.labelSmall?.copyWith(
@@ -121,11 +149,11 @@ class _JobsTabState extends State<JobsTab> {
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: AppCard(
-                color: const Color(0xFF211113),
+                color: const Color(0xFFFFF5F5),
                 borderColor: const Color(0x66EF4444),
                 child: Text(
                   appState.error!,
-                  style: const TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -138,7 +166,7 @@ class _JobsTabState extends State<JobsTab> {
                   const SizedBox(height: 8),
                   const Text(
                     'Pull to refresh when dispatch assigns the next installation or complaint visit.',
-                    style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                   ),
                 ],
               ),
@@ -152,7 +180,7 @@ class _JobsTabState extends State<JobsTab> {
                   const SizedBox(height: 8),
                   const Text(
                     'Try clearing the search or switching to another queue filter.',
-                    style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                   ),
                 ],
               ),
@@ -197,7 +225,7 @@ class _JobsTabState extends State<JobsTab> {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF9CA3AF),
+              color: const Color(0xFF6E6A67),
               letterSpacing: 2.8,
               fontWeight: FontWeight.w700,
             ),
@@ -416,13 +444,19 @@ class _JobsTabState extends State<JobsTab> {
                           ),
                   child: const Text('Quick preview'),
                 ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
+                  ),
+                  child: const Text('Open workflow'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
             Text(
               'Tap card to open full workflow',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: const Color(0xFF9CA3AF),
+                    color: const Color(0xFF6E6A67),
                   ),
             ),
           ],

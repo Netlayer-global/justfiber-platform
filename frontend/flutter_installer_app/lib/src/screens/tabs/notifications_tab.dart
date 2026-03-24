@@ -28,6 +28,34 @@ class NotificationsTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: const Color(0x26FFFFFF),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x36FFFFFF)),
+                      ),
+                      child: const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 28),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0x1FFFFFFF),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: const Color(0x2CFFFFFF)),
+                      ),
+                      child: Text(
+                        unreadCount == 0 ? 'All clear' : '$unreadCount unread',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
                 Text(
                   'ALERT CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -66,7 +94,7 @@ class NotificationsTab extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text(
                     'Pull down to refresh when new jobs, dispatch updates, or activation notices come in.',
-                    style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                   ),
                 ],
               ),
@@ -133,7 +161,7 @@ class NotificationsTab extends StatelessWidget {
                         const SizedBox(height: 10),
                         Text(
                           _formatTime(item.createdAt),
-                          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+                          style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12),
                         ),
                       ],
                     ),
