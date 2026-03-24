@@ -221,9 +221,20 @@ const worker = new Worker(
               bootstrap.plan?.uploadSpeedMbps ||
               bootstrap.accessProfile?.upMbps ||
               jobRecord.customerSnapshot?.uploadSpeedMbps,
+            burstDownloadMbps:
+              bootstrap.plan?.burstDownloadMbps ||
+              bootstrap.accessProfile?.burstDownMbps ||
+              jobRecord.customerSnapshot?.burstDownloadMbps,
+            burstUploadMbps:
+              bootstrap.plan?.burstUploadMbps ||
+              bootstrap.accessProfile?.burstUpMbps ||
+              jobRecord.customerSnapshot?.burstUploadMbps,
             dataPolicy: bootstrap.plan?.dataPolicy || jobRecord.customerSnapshot?.dataPolicy || "unlimited",
             dataLimitGb: Number(bootstrap.plan?.dataLimitGb || jobRecord.customerSnapshot?.dataLimitGb || 0) || null,
-            fupSpeedMbps: Number(bootstrap.plan?.fupSpeedMbps || jobRecord.customerSnapshot?.fupSpeedMbps || 0) || null
+            fupSpeedMbps: Number(bootstrap.plan?.fupSpeedMbps || jobRecord.customerSnapshot?.fupSpeedMbps || 0) || null,
+            fairUsageResetPolicy: bootstrap.plan?.fairUsageResetPolicy || jobRecord.customerSnapshot?.fairUsageResetPolicy || "monthly",
+            latencyClass: bootstrap.plan?.latencyClass || jobRecord.customerSnapshot?.latencyClass || "standard",
+            contentionRatio: bootstrap.plan?.contentionRatio || jobRecord.customerSnapshot?.contentionRatio || null
           };
         }
         const deviceId =
@@ -271,9 +282,22 @@ const worker = new Worker(
                 bootstrap?.accessProfile?.upMbps ||
                 jobRecord.customerSnapshot?.uploadSpeedMbps ||
                 0,
+              burstDownloadMbps:
+                bootstrap?.plan?.burstDownloadMbps ||
+                bootstrap?.accessProfile?.burstDownMbps ||
+                jobRecord.customerSnapshot?.burstDownloadMbps ||
+                null,
+              burstUploadMbps:
+                bootstrap?.plan?.burstUploadMbps ||
+                bootstrap?.accessProfile?.burstUpMbps ||
+                jobRecord.customerSnapshot?.burstUploadMbps ||
+                null,
               dataPolicy: bootstrap?.plan?.dataPolicy || jobRecord.customerSnapshot?.dataPolicy || "unlimited",
               dataLimitGb: Number(bootstrap?.plan?.dataLimitGb || jobRecord.customerSnapshot?.dataLimitGb || 0) || null,
-              fupSpeedMbps: Number(bootstrap?.plan?.fupSpeedMbps || jobRecord.customerSnapshot?.fupSpeedMbps || 0) || null
+              fupSpeedMbps: Number(bootstrap?.plan?.fupSpeedMbps || jobRecord.customerSnapshot?.fupSpeedMbps || 0) || null,
+              fairUsageResetPolicy: bootstrap?.plan?.fairUsageResetPolicy || jobRecord.customerSnapshot?.fairUsageResetPolicy || "monthly",
+              latencyClass: bootstrap?.plan?.latencyClass || jobRecord.customerSnapshot?.latencyClass || "standard",
+              contentionRatio: bootstrap?.plan?.contentionRatio || jobRecord.customerSnapshot?.contentionRatio || null
             }
           }
         });

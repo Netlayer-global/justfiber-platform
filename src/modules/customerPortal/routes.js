@@ -569,9 +569,17 @@ async function createConnectionBooking({ customerUser, payload }) {
       totalAmount: amount,
       speedMbps: Number(plan.speedMbps || 0),
       uploadSpeedMbps: Number(plan.uploadSpeedMbps || 0),
+      burstDownloadMbps: Number(plan.burstDownloadMbps || 0) || null,
+      burstUploadMbps: Number(plan.burstUploadMbps || 0) || null,
       dataPolicy: plan.dataPolicy || "unlimited",
       dataLimitGb: Number(plan.dataLimitGb || 0) || null,
-      fupSpeedMbps: Number(plan.fupSpeedMbps || 0) || null
+      fupSpeedMbps: Number(plan.fupSpeedMbps || 0) || null,
+      fairUsageResetPolicy: plan.fairUsageResetPolicy || "monthly",
+      latencyClass: plan.latencyClass || "standard",
+      contentionRatio: plan.contentionRatio || null,
+      routerIncluded: Boolean(plan.routerIncluded),
+      routerModel: plan.routerModel || "",
+      routerRental: Number(plan.routerRental || 0) || null
     },
     feasibility: {
       ...feasibility,
@@ -967,9 +975,17 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
       installationCharge: Number(plan.installationCharge || 0),
       speedMbps: Number(plan.speedMbps || 0),
       uploadSpeedMbps: Number(plan.uploadSpeedMbps || 0),
+      burstDownloadMbps: Number(plan.burstDownloadMbps || 0) || null,
+      burstUploadMbps: Number(plan.burstUploadMbps || 0) || null,
       dataPolicy: plan.dataPolicy || "unlimited",
       dataLimitGb: Number(plan.dataLimitGb || 0) || null,
       fupSpeedMbps: Number(plan.fupSpeedMbps || 0) || null,
+      fairUsageResetPolicy: plan.fairUsageResetPolicy || "monthly",
+      latencyClass: plan.latencyClass || "standard",
+      contentionRatio: plan.contentionRatio || null,
+      routerIncluded: Boolean(plan.routerIncluded),
+      routerModel: plan.routerModel || "",
+      routerRental: Number(plan.routerRental || 0) || null,
       tags: Array.isArray(plan.tags) ? plan.tags : [],
       staticBenefits: Array.isArray(plan.staticBenefits) ? plan.staticBenefits : [],
       features: Array.isArray(plan.features)
@@ -977,6 +993,7 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
         : typeof plan.features === "string"
           ? [plan.features]
           : [],
+      ottApps: Array.isArray(plan.ottApps) ? plan.ottApps : [],
       planProvisioning: plan.provisioning || null
     },
     timeline: [

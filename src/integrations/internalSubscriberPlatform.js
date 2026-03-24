@@ -29,17 +29,27 @@ function normalizePlanNetworkProfile(plan = {}, accessProfile = null) {
   const uploadSpeedMbps =
     Number(plan?.uploadSpeedMbps || accessProfile?.upMbps || 0) ||
     (speedMbps ? Math.max(2, Math.round(speedMbps * 0.35)) : 0);
+  const burstDownloadMbps = Number(plan?.burstDownloadMbps || accessProfile?.burstDownMbps || 0) || null;
+  const burstUploadMbps = Number(plan?.burstUploadMbps || accessProfile?.burstUpMbps || 0) || null;
   const dataPolicy = ["unlimited", "fup", "hard_cap"].includes(plan?.dataPolicy)
     ? plan.dataPolicy
     : "unlimited";
   const dataLimitGb = Number(plan?.dataLimitGb || 0) || null;
   const fupSpeedMbps = Number(plan?.fupSpeedMbps || 0) || null;
+  const fairUsageResetPolicy = plan?.fairUsageResetPolicy || "monthly";
+  const latencyClass = plan?.latencyClass || "standard";
+  const contentionRatio = String(plan?.contentionRatio || "").trim() || null;
   return {
     speedMbps,
     uploadSpeedMbps,
+    burstDownloadMbps,
+    burstUploadMbps,
     dataPolicy,
     dataLimitGb,
-    fupSpeedMbps
+    fupSpeedMbps,
+    fairUsageResetPolicy,
+    latencyClass,
+    contentionRatio
   };
 }
 

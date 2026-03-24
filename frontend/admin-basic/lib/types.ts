@@ -22,9 +22,14 @@ export interface Plan {
   category?: 'home' | 'business' | 'enterprise'
   speed: number
   uploadSpeed?: number
+  burstDownloadMbps?: number
+  burstUploadMbps?: number
   dataLimitGb?: number
   fupSpeedMbps?: number
   dataPolicy?: 'unlimited' | 'fup' | 'hard_cap'
+  fairUsageResetPolicy?: 'monthly' | 'billing_cycle' | 'rolling_30'
+  latencyClass?: 'standard' | 'gaming' | 'voice' | 'enterprise'
+  contentionRatio?: string
   price: number
   quarterlyPrice?: number
   halfYearlyPrice?: number
@@ -37,6 +42,10 @@ export interface Plan {
   tags?: string[]
   staticBenefits?: string[]
   features?: string[]
+  ottApps?: string[]
+  routerIncluded?: boolean
+  routerModel?: string
+  routerRental?: number
   validityOptions?: {
     monthly: boolean
     quarterly: boolean

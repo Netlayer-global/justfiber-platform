@@ -26,9 +26,14 @@ type PlanFormState = {
   category: 'home' | 'business' | 'enterprise'
   speed: string
   uploadSpeed: string
+  burstDownloadMbps: string
+  burstUploadMbps: string
   dataLimitGb: string
   fupSpeedMbps: string
   dataPolicy: 'unlimited' | 'fup' | 'hard_cap'
+  fairUsageResetPolicy: 'monthly' | 'billing_cycle' | 'rolling_30'
+  latencyClass: 'standard' | 'gaming' | 'voice' | 'enterprise'
+  contentionRatio: string
   price: string
   quarterlyPrice: string
   halfYearlyPrice: string
@@ -42,6 +47,10 @@ type PlanFormState = {
   tags: string
   staticBenefits: string
   features: string
+  ottApps: string
+  routerIncluded: boolean
+  routerModel: string
+  routerRental: string
   validityMonthly: boolean
   validityQuarterly: boolean
   validityHalfYearly: boolean
@@ -74,9 +83,14 @@ const initialForm: PlanFormState = {
   category: 'home',
   speed: '',
   uploadSpeed: '',
+  burstDownloadMbps: '',
+  burstUploadMbps: '',
   dataLimitGb: '',
   fupSpeedMbps: '',
   dataPolicy: 'unlimited',
+  fairUsageResetPolicy: 'monthly',
+  latencyClass: 'standard',
+  contentionRatio: '1:8',
   price: '',
   quarterlyPrice: '',
   halfYearlyPrice: '',
@@ -90,6 +104,10 @@ const initialForm: PlanFormState = {
   tags: '',
   staticBenefits: '',
   features: '',
+  ottApps: '',
+  routerIncluded: false,
+  routerModel: '',
+  routerRental: '',
   validityMonthly: true,
   validityQuarterly: false,
   validityHalfYearly: false,
@@ -164,9 +182,14 @@ function toForm(plan?: Plan | null): PlanFormState {
     category: plan.category || 'home',
     speed: String(plan.speed || ''),
     uploadSpeed: String(plan.uploadSpeed || ''),
+    burstDownloadMbps: String(plan.burstDownloadMbps || ''),
+    burstUploadMbps: String(plan.burstUploadMbps || ''),
     dataLimitGb: String(plan.dataLimitGb || ''),
     fupSpeedMbps: String(plan.fupSpeedMbps || ''),
     dataPolicy: plan.dataPolicy || 'unlimited',
+    fairUsageResetPolicy: plan.fairUsageResetPolicy || 'monthly',
+    latencyClass: plan.latencyClass || 'standard',
+    contentionRatio: plan.contentionRatio || '1:8',
     price: String(plan.price || ''),
     quarterlyPrice: String(plan.quarterlyPrice || ''),
     halfYearlyPrice: String(plan.halfYearlyPrice || ''),
@@ -180,6 +203,10 @@ function toForm(plan?: Plan | null): PlanFormState {
     tags: (plan.tags || []).join(', '),
     staticBenefits: (plan.staticBenefits || []).join(', '),
     features: (plan.features || []).join('\n'),
+    ottApps: (plan.ottApps || []).join(', '),
+    routerIncluded: Boolean(plan.routerIncluded),
+    routerModel: plan.routerModel || '',
+    routerRental: String(plan.routerRental || ''),
     validityMonthly: plan.validityOptions?.monthly !== false,
     validityQuarterly: Boolean(plan.validityOptions?.quarterly),
     validityHalfYearly: Boolean(plan.validityOptions?.halfYearly),
@@ -303,9 +330,14 @@ export default function PlansPage() {
       category: form.category,
       speed: Number(form.speed || 0),
       uploadSpeed: Number(form.uploadSpeed || 0),
+      burstDownloadMbps: Number(form.burstDownloadMbps || 0),
+      burstUploadMbps: Number(form.burstUploadMbps || 0),
       dataLimitGb: Number(form.dataLimitGb || 0),
       fupSpeedMbps: Number(form.fupSpeedMbps || 0),
       dataPolicy: form.dataPolicy,
+      fairUsageResetPolicy: form.fairUsageResetPolicy,
+      latencyClass: form.latencyClass,
+      contentionRatio: form.contentionRatio.trim(),
       price: Number(form.price || 0),
       quarterlyPrice: Number(form.quarterlyPrice || 0),
       halfYearlyPrice: Number(form.halfYearlyPrice || 0),
@@ -319,6 +351,10 @@ export default function PlansPage() {
       tags: splitCsv(form.tags),
       staticBenefits: splitCsv(form.staticBenefits),
       features: splitLines(form.features),
+      ottApps: splitCsv(form.ottApps),
+      routerIncluded: form.routerIncluded,
+      routerModel: form.routerModel.trim(),
+      routerRental: Number(form.routerRental || 0),
       validityOptions: {
         monthly: form.validityMonthly,
         quarterly: form.validityQuarterly,
@@ -556,6 +592,8 @@ export default function PlansPage() {
             </select>
             <input className="input" placeholder="Speed Mbps" type="number" value={form.speed} onChange={(e) => setForm({ ...form, speed: e.target.value })} />
             <input className="input" placeholder="Upload Mbps" type="number" value={form.uploadSpeed} onChange={(e) => setForm({ ...form, uploadSpeed: e.target.value })} />
+            <input className="input" placeholder="Burst download Mbps" type="number" value={form.burstDownloadMbps} onChange={(e) => setForm({ ...form, burstDownloadMbps: e.target.value })} />
+            <input className="input" placeholder="Burst upload Mbps" type="number" value={form.burstUploadMbps} onChange={(e) => setForm({ ...form, burstUploadMbps: e.target.value })} />
             <select className="input" value={form.dataPolicy} onChange={(e) => setForm({ ...form, dataPolicy: e.target.value as PlanFormState['dataPolicy'] })}>
               <option value="unlimited">Unlimited</option>
               <option value="fup">FUP</option>
@@ -563,6 +601,18 @@ export default function PlansPage() {
             </select>
             <input className="input" placeholder="Data limit (GB)" type="number" value={form.dataLimitGb} onChange={(e) => setForm({ ...form, dataLimitGb: e.target.value })} />
             <input className="input" placeholder="FUP speed Mbps" type="number" value={form.fupSpeedMbps} onChange={(e) => setForm({ ...form, fupSpeedMbps: e.target.value })} />
+            <select className="input" value={form.fairUsageResetPolicy} onChange={(e) => setForm({ ...form, fairUsageResetPolicy: e.target.value as PlanFormState['fairUsageResetPolicy'] })}>
+              <option value="monthly">FUP reset monthly</option>
+              <option value="billing_cycle">FUP reset on billing cycle</option>
+              <option value="rolling_30">Rolling 30 days</option>
+            </select>
+            <select className="input" value={form.latencyClass} onChange={(e) => setForm({ ...form, latencyClass: e.target.value as PlanFormState['latencyClass'] })}>
+              <option value="standard">Standard latency</option>
+              <option value="gaming">Gaming latency</option>
+              <option value="voice">Voice priority</option>
+              <option value="enterprise">Enterprise SLA</option>
+            </select>
+            <input className="input" placeholder="Contention ratio (1:8)" value={form.contentionRatio} onChange={(e) => setForm({ ...form, contentionRatio: e.target.value })} />
             <input className="input" placeholder="Monthly price" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             <input className="input" placeholder="Quarterly price" type="number" value={form.quarterlyPrice} onChange={(e) => setForm({ ...form, quarterlyPrice: e.target.value })} />
             <input className="input" placeholder="Half-yearly price" type="number" value={form.halfYearlyPrice} onChange={(e) => setForm({ ...form, halfYearlyPrice: e.target.value })} />
@@ -623,6 +673,13 @@ export default function PlansPage() {
             <input className="input" placeholder="Voice package" value={form.voicePackageName} onChange={(e) => setForm({ ...form, voicePackageName: e.target.value })} />
             <input className="input" placeholder="Voice channels" type="number" value={form.voiceChannels} onChange={(e) => setForm({ ...form, voiceChannels: e.target.value })} />
             <input className="input" placeholder="Voice extra price" type="number" value={form.voiceExtraPrice} onChange={(e) => setForm({ ...form, voiceExtraPrice: e.target.value })} />
+          </div>
+
+          <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 grid gap-4 xl:grid-cols-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-white"><input type="checkbox" checked={form.routerIncluded} onChange={(e) => setForm({ ...form, routerIncluded: e.target.checked })} /> Router included</label>
+            <input className="input" placeholder="Router model" value={form.routerModel} onChange={(e) => setForm({ ...form, routerModel: e.target.value })} />
+            <input className="input" placeholder="Router rental / month" type="number" value={form.routerRental} onChange={(e) => setForm({ ...form, routerRental: e.target.value })} />
+            <input className="input" placeholder="OTT apps, comma separated" value={form.ottApps} onChange={(e) => setForm({ ...form, ottApps: e.target.value })} />
           </div>
 
           <div className="rounded-[24px] border border-[#d8ff16]/20 bg-white/5 p-4">
@@ -705,6 +762,8 @@ export default function PlansPage() {
                 {preview.featured ? <span className="rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#d8ff16]">Featured</span> : null}
                 {preview.recommended ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Recommended</span> : null}
                 {preview.spotlightLabel.trim().length > 0 ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.spotlightLabel}</span> : null}
+                {preview.routerIncluded ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Router bundled</span> : null}
+                {preview.latencyClass ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.latencyClass}</span> : null}
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
@@ -742,6 +801,9 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between"><span>Data policy</span><span>{preview.dataPolicy}</span></div>
                     <div className="flex items-center justify-between"><span>Data cap</span><span>{preview.dataPolicy === 'unlimited' ? 'Unlimited' : `${preview.dataLimitGb || '0'} GB`}</span></div>
                     <div className="flex items-center justify-between"><span>FUP speed</span><span>{preview.fupSpeedMbps ? `${preview.fupSpeedMbps} Mbps` : '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>FUP reset</span><span>{preview.fairUsageResetPolicy || 'monthly'}</span></div>
+                    <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'BYOD / optional'}</span></div>
+                    <div className="flex items-center justify-between"><span>OTT apps</span><span>{splitCsv(preview.ottApps).slice(0, 3).join(', ') || '-'}</span></div>
                   </div>
                 </div>
                 <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
@@ -752,6 +814,9 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between"><span>PPPoE</span><span>{buildPppoePreview(preview)}</span></div>
                     <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{preview.wifiNamePrefix || '-'}</span></div>
                     <div className="flex items-center justify-between"><span>Password</span><span>{preview.defaultPppoePassword || '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>Burst</span><span>{preview.burstDownloadMbps || preview.burstUploadMbps ? `${preview.burstDownloadMbps || 0}/${preview.burstUploadMbps || 0} Mbps` : '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>Latency class</span><span>{preview.latencyClass || 'standard'}</span></div>
+                    <div className="flex items-center justify-between"><span>Contention</span><span>{preview.contentionRatio || '-'}</span></div>
                     <div className="flex items-center justify-between"><span>Sort order</span><span>{preview.sortOrder || '1'}</span></div>
                   </div>
                 </div>
@@ -763,6 +828,7 @@ export default function PlansPage() {
                   <div className="mt-4 space-y-2 text-sm text-white/70">
                     <div className="flex items-center justify-between"><span>PPPoE username</span><span>{buildPppoePreview(preview)}</span></div>
                     <div className="flex items-center justify-between"><span>Wi-Fi names</span><span>{buildWifiPreview(preview)}</span></div>
+                    <div className="flex items-center justify-between"><span>Plan burst</span><span>{preview.burstDownloadMbps || preview.burstUploadMbps ? `${preview.burstDownloadMbps || 0}/${preview.burstUploadMbps || 0} Mbps` : 'Base profile'}</span></div>
                   </div>
                 </div>
                 <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
@@ -771,6 +837,7 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between"><span>State</span><span>{preview.status}</span></div>
                     <div className="flex items-center justify-between"><span>GST mode</span><span>{preview.pricesExcludeGst ? 'Exclusive' : 'Inclusive / retail'}</span></div>
                     <div className="flex items-center justify-between"><span>Launch lane</span><span>#{preview.sortOrder || '1'}</span></div>
+                    <div className="flex items-center justify-between"><span>Router rental</span><span>{preview.routerIncluded ? formatCurrency(Number(preview.routerRental || 0)) : '-'}</span></div>
                   </div>
                 </div>
               </div>
@@ -872,6 +939,16 @@ export default function PlansPage() {
                     {plan.merchandising.spotlightLabel}
                   </span>
                 ) : null}
+                {plan.routerIncluded ? (
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    Router
+                  </span>
+                ) : null}
+                {plan.latencyClass ? (
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    {plan.latencyClass}
+                  </span>
+                ) : null}
                 {(plan.tags || []).slice(0, 4).map((tag) => (
                   <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
                     {tag}
@@ -889,6 +966,9 @@ export default function PlansPage() {
                 <div className="flex items-center justify-between"><span>VLAN</span><span>{plan.provisioning?.vlanId || '-'}</span></div>
                 <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{plan.provisioning?.wifiNamePrefix || '-'}</span></div>
                 <div className="flex items-center justify-between"><span>FUP</span><span>{plan.fupSpeedMbps ? `${plan.fupSpeedMbps} Mbps` : '-'}</span></div>
+                <div className="flex items-center justify-between"><span>Burst</span><span>{plan.burstDownloadMbps || plan.burstUploadMbps ? `${plan.burstDownloadMbps || 0}/${plan.burstUploadMbps || 0}` : '-'}</span></div>
+                <div className="flex items-center justify-between"><span>Latency</span><span>{plan.latencyClass || 'standard'}</span></div>
+                <div className="flex items-center justify-between"><span>Contention</span><span>{plan.contentionRatio || '-'}</span></div>
               </div>
 
               <div className="mt-6 flex flex-wrap gap-2">

@@ -93,9 +93,14 @@ function mapPlan(plan: any): Plan {
     category: plan.category || 'home',
     speed: Number(plan.speedMbps || 0),
     uploadSpeed: Number(plan.uploadSpeedMbps || 0),
+    burstDownloadMbps: Number(plan.burstDownloadMbps || 0),
+    burstUploadMbps: Number(plan.burstUploadMbps || 0),
     dataLimitGb: Number(plan.dataLimitGb || 0),
     fupSpeedMbps: Number(plan.fupSpeedMbps || 0),
     dataPolicy: plan.dataPolicy || 'unlimited',
+    fairUsageResetPolicy: plan.fairUsageResetPolicy || 'monthly',
+    latencyClass: plan.latencyClass || 'standard',
+    contentionRatio: plan.contentionRatio || '',
     price: Number(plan.monthlyPrice || 0),
     quarterlyPrice: Number(plan.quarterlyPrice || 0),
     halfYearlyPrice: Number(plan.halfYearlyPrice || 0),
@@ -112,6 +117,10 @@ function mapPlan(plan: any): Plan {
       : typeof plan.features === 'string'
         ? [plan.features]
         : [],
+    ottApps: Array.isArray(plan.ottApps) ? plan.ottApps : [],
+    routerIncluded: Boolean(plan.routerIncluded),
+    routerModel: plan.routerModel || '',
+    routerRental: Number(plan.routerRental || 0),
     validityOptions: {
       monthly: plan.validityOptions?.monthly !== false,
       quarterly: Boolean(plan.validityOptions?.quarterly),

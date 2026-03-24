@@ -415,9 +415,17 @@ customersRouter.post(
       installationCharge: Number(planRecord?.installationCharge || 0),
       speedMbps: Number(planRecord?.speedMbps || booking.selectedPlan?.speedMbps || 0),
       uploadSpeedMbps: Number(planRecord?.uploadSpeedMbps || booking.selectedPlan?.uploadSpeedMbps || 0),
+      burstDownloadMbps: Number(planRecord?.burstDownloadMbps || booking.selectedPlan?.burstDownloadMbps || 0) || null,
+      burstUploadMbps: Number(planRecord?.burstUploadMbps || booking.selectedPlan?.burstUploadMbps || 0) || null,
       dataPolicy: planRecord?.dataPolicy || booking.selectedPlan?.dataPolicy || "unlimited",
       dataLimitGb: Number(planRecord?.dataLimitGb || booking.selectedPlan?.dataLimitGb || 0) || null,
       fupSpeedMbps: Number(planRecord?.fupSpeedMbps || booking.selectedPlan?.fupSpeedMbps || 0) || null,
+      fairUsageResetPolicy: planRecord?.fairUsageResetPolicy || booking.selectedPlan?.fairUsageResetPolicy || "monthly",
+      latencyClass: planRecord?.latencyClass || booking.selectedPlan?.latencyClass || "standard",
+      contentionRatio: planRecord?.contentionRatio || booking.selectedPlan?.contentionRatio || null,
+      routerIncluded: Boolean(planRecord?.routerIncluded || booking.selectedPlan?.routerIncluded),
+      routerModel: planRecord?.routerModel || booking.selectedPlan?.routerModel || "",
+      routerRental: Number(planRecord?.routerRental || booking.selectedPlan?.routerRental || 0) || null,
       tags: Array.isArray(planRecord?.tags) ? planRecord.tags : [],
       staticBenefits: Array.isArray(planRecord?.staticBenefits) ? planRecord.staticBenefits : [],
       features: Array.isArray(planRecord?.features)
@@ -425,6 +433,7 @@ customersRouter.post(
         : typeof planRecord?.features === "string"
           ? [planRecord.features]
           : [],
+      ottApps: Array.isArray(planRecord?.ottApps) ? planRecord.ottApps : [],
       planProvisioning: planRecord?.provisioning || null
     };
 
