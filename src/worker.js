@@ -13,6 +13,7 @@ import { env } from "./config/env.js";
 import { IntegrationEventLog } from "./models/IntegrationEventLog.js";
 import { KycVerificationRequest } from "./models/KycVerificationRequest.js";
 import { OttSubscription } from "./models/OttSubscription.js";
+import { PlanCatalog } from "./models/PlanCatalog.js";
 import { genieacsClient } from "./integrations/genieacsClient.js";
 import { AutomationTrigger } from "./models/AutomationTrigger.js";
 import { ScheduledReport } from "./models/ScheduledReport.js";
@@ -874,6 +875,36 @@ async function runRecurringUsagePolicyTasks() {
           : "hard_cap_reached"
         : "base";
       const previousPolicyState = service.metadata?.usagePolicyState || "base";
+      const servicePlanCode =
+        service.metadata?.planCode ||
+        service.metadata?.planSnapshot?.planCode ||
+        customer?.planCode ||
+        customer?.billingSnapshot?.planCode ||
+        null;
+      const currentSpeedMbps = Number(networkProfile.speedMbps || customer?.billingSnapshot?.speedMbps || 0) || null;
+      const recommendedPlan = await PlanCatalog.findOne({
+        active: true,
+        ...(currentSpeedMbps > 0 ? { speedMbps: { $gt: currentSpeedMbps } } : {}),
+        ...(servicePlanCode ? { planCode: { $ne: servicePlanCode } } : {})
+      })
+        .sort({ speedMbps: 1, sortOrder: 1, monthlyPrice: 1, createdAt: 1 })
+        .lean();
+      const upgradePayload = recommendedPlan
+        ? {
+            currentPlanCode: servicePlanCode,
+            currentSpeedMbps,
+            recommendedPlanCode: recommendedPlan.planCode,
+            recommendedPlanName: recommendedPlan.name,
+            recommendedSpeedMbps: Number(recommendedPlan.speedMbps || 0) || null,
+            recommendedUploadSpeedMbps: Number(recommendedPlan.uploadSpeedMbps || 0) || null,
+            recommendedPrice: Number(recommendedPlan.monthlyPrice || 0) || null,
+            upgradeRecommended: true
+          }
+        : {
+            currentPlanCode: servicePlanCode,
+            currentSpeedMbps,
+            upgradeRecommended: false
+          };
 
       if (customer) {
         customer.billingSnapshot = {
@@ -943,7 +974,7 @@ async function runRecurringUsagePolicyTasks() {
             "fup_applied",
             "FUP speed applied",
             `Your plan usage crossed ${dataLimitGb} GB. Speed is now running at ${throttledSpeed} Mbps until reset.`,
-            { serviceId: service.serviceId, dataLimitGb, fupSpeedMbps: throttledSpeed }
+            { serviceId: service.serviceId, dataLimitGb, fupSpeedMbps: throttledSpeed, ...upgradePayload }
           );
         }
       }
@@ -976,7 +1007,7 @@ async function runRecurringUsagePolicyTasks() {
             "fup_restored",
             "Base plan speed restored",
             "Your plan usage cycle reset and base broadband speed is active again.",
-            { serviceId: service.serviceId, dataLimitGb }
+            { serviceId: service.serviceId, dataLimitGb, ...upgradePayload }
           );
         }
       }
@@ -987,7 +1018,7 @@ async function runRecurringUsagePolicyTasks() {
           "data_cap_reached",
           "Data cap reached",
           `Your plan usage crossed ${dataLimitGb} GB. Service is now running under hard-cap policy until reset.`,
-          { serviceId: service.serviceId, dataLimitGb }
+          { serviceId: service.serviceId, dataLimitGb, ...upgradePayload }
         );
       }
 

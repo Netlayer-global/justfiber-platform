@@ -4,6 +4,7 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
 import 'billing_history_screen.dart';
+import 'plan_catalog_screen.dart';
 import 'service_tracking_screen.dart';
 import 'support_history_screen.dart';
 
@@ -102,6 +103,11 @@ class NotificationsScreen extends StatelessWidget {
     }
   }
 
+  bool _hasUpgradeOffer(NotificationItem item) {
+    return item.payload['upgradeRecommended'] == true ||
+        (item.payload['recommendedPlanCode'] ?? '').toString().isNotEmpty;
+  }
+
   List<String> _detailLines(NotificationItem item) {
     final payload = item.payload;
     final lines = <String>[];
@@ -112,6 +118,9 @@ class NotificationsScreen extends StatelessWidget {
     final configStatus = (payload['configStatus'] ?? '').toString();
     final resolutionCode = (payload['resolutionCode'] ?? '').toString();
     final resolutionNote = (payload['resolutionNote'] ?? '').toString();
+    final recommendedPlanName = (payload['recommendedPlanName'] ?? '').toString();
+    final recommendedSpeed = (payload['recommendedSpeedMbps'] ?? '').toString();
+    final recommendedPrice = (payload['recommendedPrice'] ?? '').toString();
     final replacedDevice = payload['replacedDevice'] == true;
     final oldSerial = (payload['oldSerialNumber'] ?? '').toString();
     final newSerial = (payload['newSerialNumber'] ?? '').toString();
@@ -133,6 +142,11 @@ class NotificationsScreen extends StatelessWidget {
     if (resolutionNote.isNotEmpty) {
       lines.add('Note: $resolutionNote');
     }
+    if (recommendedPlanName.isNotEmpty) {
+      final speedSuffix = recommendedSpeed.isEmpty ? '' : ' | ${recommendedSpeed.replaceAll('.0', '')} Mbps';
+      final priceSuffix = recommendedPrice.isEmpty ? '' : ' | Rs ${recommendedPrice.replaceAll('.0', '')}';
+      lines.add('Suggested upgrade: $recommendedPlanName$speedSuffix$priceSuffix');
+    }
     if (replacedDevice) {
       lines.add('ONT replaced: ${newSerial.isEmpty ? 'Yes' : newSerial}');
       if (oldSerial.isNotEmpty) {
@@ -145,6 +159,13 @@ class NotificationsScreen extends StatelessWidget {
   Future<void> _openPrimaryAction(BuildContext context, AppState appState, NotificationItem item) async {
     if (item.id.isNotEmpty) {
       await appState.markNotificationRead(item.id);
+    }
+    if (_hasUpgradeOffer(item) && context.mounted) {
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
+      if (context.mounted) {
+        await appState.refresh();
+      }
+      return;
     }
     switch (_kindFor(item)) {
       case _AlertKind.billing:
@@ -396,7 +417,7 @@ class NotificationsScreen extends StatelessWidget {
                                       backgroundColor: const Color(0xFFE6FF3C),
                                       foregroundColor: const Color(0xFF111111),
                                     ),
-                                    child: Text(_primaryActionLabelFor(kind)),
+                                    child: Text(_hasUpgradeOffer(item) ? 'Upgrade plan' : _primaryActionLabelFor(kind)),
                                   ),
                                   OutlinedButton(
                                     onPressed: () async {
