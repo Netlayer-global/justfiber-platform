@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'Jobs',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.notifications_none_rounded),
+                icon: Icon(Icons.notifications_active_outlined),
                 label: 'Alerts',
               ),
               BottomNavigationBarItem(

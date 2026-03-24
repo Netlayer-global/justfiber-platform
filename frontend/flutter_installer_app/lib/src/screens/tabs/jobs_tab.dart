@@ -433,7 +433,7 @@ class _JobsTabState extends State<JobsTab> {
                           ),
                   child: const Text('Start travel'),
                 ),
-                OutlinedButton(
+                OutlinedButton.icon(
                   onPressed: appState.busy || !_canQuickPreview(job)
                       ? null
                       : () => _runAction(
@@ -442,7 +442,8 @@ class _JobsTabState extends State<JobsTab> {
                             successMessage: 'Preview loaded',
                             action: () => appState.loadPreview(job.id),
                           ),
-                  child: const Text('Quick preview'),
+                  icon: const Icon(Icons.remove_red_eye_outlined, size: 18),
+                  label: const Text('Quick preview'),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(context).push(
@@ -451,13 +452,6 @@ class _JobsTabState extends State<JobsTab> {
                   child: const Text('Open workflow'),
                 ),
               ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Tap card to open full workflow',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: const Color(0xFF6E6A67),
-                  ),
             ),
           ],
         ),
@@ -493,7 +487,7 @@ class _JobsTabState extends State<JobsTab> {
         border: Border.all(color: const Color(0x558224E3)),
       ),
       child: Text(
-        label,
+        label[0].toUpperCase() + label.substring(1),
         style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700, fontSize: 12),
       ),
     );

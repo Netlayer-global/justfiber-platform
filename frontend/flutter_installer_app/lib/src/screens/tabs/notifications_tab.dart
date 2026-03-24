@@ -142,13 +142,24 @@ class NotificationsTab extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(color: item.readAt == null ? const Color(0x558224E3) : const Color(0x221F2937)),
                               ),
-                              child: Text(
-                                item.readAt == null ? 'Unread' : 'Read',
-                                style: TextStyle(
-                                  color: item.readAt == null ? const Color(0xFF8224E3) : const Color(0xFF9CA3AF),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    item.readAt == null ? Icons.circle_notifications_rounded : Icons.mark_email_read_rounded,
+                                    size: 14,
+                                    color: item.readAt == null ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    item.readAt == null ? 'Unread' : 'Read',
+                                    style: TextStyle(
+                                      color: item.readAt == null ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

@@ -86,7 +86,7 @@ class DashboardTab extends StatelessWidget {
                     border: Border.all(color: const Color(0x40FFFFFF)),
                   ),
                   child: Text(
-                    'Availability: ${dashboard.availabilityStatus}',
+                    'Availability active',
                     style: const TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -121,9 +121,16 @@ class DashboardTab extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(color: const Color(0x228224E3)),
                       ),
-                      child: const Text(
-                        'Field discipline',
-                        style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.track_changes_rounded, size: 14, color: Color(0xFF8224E3)),
+                          SizedBox(width: 6),
+                          Text(
+                            'Field discipline',
+                            style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+                          ),
+                        ],
                       ),
                     ),
                   ],
