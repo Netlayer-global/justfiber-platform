@@ -5,6 +5,7 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
 import 'notifications_screen.dart';
+import 'plan_catalog_screen.dart';
 
 class SupportHistoryScreen extends StatelessWidget {
   const SupportHistoryScreen({super.key});
@@ -13,6 +14,9 @@ class SupportHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final theme = Theme.of(context);
+    final billing = appState.billing;
+    final usageRatio = billing.usageCapGb > 0 ? (billing.usageGb / billing.usageCapGb).clamp(0, 1) : 0.0;
+    final showUpgradePrompt = billing.usageCapReached || (billing.usageCapGb > 0 && usageRatio >= 0.65);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Support & requests')),
@@ -144,8 +148,42 @@ class SupportHistoryScreen extends StatelessWidget {
                       ),
                       child: const Text('Open alerts center'),
                     ),
+                    if (showUpgradePrompt)
+                      FilledButton(
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+                          );
+                          if (context.mounted) {
+                            await appState.refresh();
+                          }
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFE6FF3C),
+                          foregroundColor: const Color(0xFF111111),
+                        ),
+                        child: Text(billing.usageCapReached ? 'Upgrade capped plan' : 'Upgrade before FUP'),
+                      ),
                   ],
                 ),
+                if (showUpgradePrompt) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF111816),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x55E6FF3C)),
+                    ),
+                    child: Text(
+                      billing.usageCapReached
+                          ? 'Your current plan has reached its data policy threshold. Upgrade from here if you want faster service restored.'
+                          : 'You are close to your current plan limit. Upgrade now if you want to avoid reduced speed or cap action.',
+                      style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

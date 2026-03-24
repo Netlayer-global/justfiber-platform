@@ -6,6 +6,7 @@ import '../widgets/app_card.dart';
 import 'billing_payment_screen.dart';
 import 'document_viewer_screen.dart';
 import 'payments_history_screen.dart';
+import 'plan_catalog_screen.dart';
 import 'support_history_screen.dart';
 
 class BillingHistoryScreen extends StatelessWidget {
@@ -18,6 +19,8 @@ class BillingHistoryScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final latestInvoice = billing.invoices.isEmpty ? null : billing.invoices.first;
     final latestPayment = billing.payments.isEmpty ? null : billing.payments.first;
+    final usageRatio = billing.usageCapGb > 0 ? (billing.usageGb / billing.usageCapGb).clamp(0, 1) : 0.0;
+    final showUpgradePrompt = billing.usageCapReached || (billing.usageCapGb > 0 && usageRatio >= 0.65);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Billing')),
@@ -167,6 +170,75 @@ class BillingHistoryScreen extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ],
+                    ),
+                  ),
+                ],
+                if (showUpgradePrompt) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF111816),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x55E6FF3C)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          billing.usageCapReached ? 'Your current plan has hit its limit.' : 'You are nearing your data policy threshold.',
+                          style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8)),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          billing.usageCapReached
+                              ? 'Upgrade now to restore headroom and avoid slower service or cap restrictions.'
+                              : 'Move to a faster plan before cap or FUP controls affect your connection.',
+                          style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+                                  );
+                                  if (context.mounted) {
+                                    await appState.refresh();
+                                  }
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFE6FF3C),
+                                  foregroundColor: const Color(0xFF111111),
+                                ),
+                                child: const Text('Upgrade plan'),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                                  );
+                                  if (context.mounted) {
+                                    await appState.refresh();
+                                  }
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFE6FF3C),
+                                  backgroundColor: const Color(0xFF0F141D),
+                                  side: const BorderSide(color: Color(0x66E6FF3C)),
+                                ),
+                                child: const Text('Need help'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
