@@ -213,6 +213,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFFFFFFFF)),
           ],
         ),
       ),
@@ -688,7 +690,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF08131B),
+                              color: const Color(0xFFF8F4FF),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(color: const Color(0x338224E3)),
                             ),

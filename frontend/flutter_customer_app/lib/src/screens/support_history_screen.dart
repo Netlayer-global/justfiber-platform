@@ -286,7 +286,7 @@ class SupportHistoryScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: const Color(0xFF131313))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Color(0xFFFFFFFF))),
           const SizedBox(height: 4),
           Text(
             label,
@@ -393,7 +393,16 @@ class SupportHistoryScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: color.withValues(alpha: 0.28)),
+              ),
+              child: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+            ),
           ],
         ),
       ),
@@ -857,7 +866,7 @@ class _DetailSheet extends StatelessWidget {
               for (final line in lines)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(line, style: const TextStyle(height: 1.45, color: Color(0xFFE5E7EB))),
+                  child: Text(line, style: const TextStyle(height: 1.45, color: Color(0xFF6E6A67))),
                 ),
             ],
           ),
