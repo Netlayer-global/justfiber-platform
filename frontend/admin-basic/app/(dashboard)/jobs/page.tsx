@@ -159,7 +159,7 @@ export default function JobsPage() {
           <div className="text-xs uppercase tracking-[0.25em] text-white/45">Dispatch control</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
             Jobs,
-            <span className="text-[#d8ff16]"> dispatched with live oversight.</span>
+            <span className="text-[#8224E3]"> dispatched with live oversight.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">Live installer jobs, complaint assignment, and manual dispatch.</p>
         </div>
@@ -258,7 +258,7 @@ export default function JobsPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#d8ff16]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#8224E3]" />
         </div>
       ) : (
         <div className="space-y-4">
@@ -349,7 +349,7 @@ export default function JobsPage() {
                         href={job.mapUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-[#d8ff16]"
+                        className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-[#8224E3]"
                       >
                         Open map
                       </a>

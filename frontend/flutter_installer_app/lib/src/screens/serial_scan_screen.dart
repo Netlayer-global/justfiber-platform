@@ -66,10 +66,10 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                       height: 180,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: const Color(0xFFE6FF3C), width: 2),
+                        border: Border.all(color: const Color(0xFF8224E3), width: 2),
                         boxShadow: const [
                           BoxShadow(
-                            color: Color(0x44E6FF3C),
+                            color: Color(0x448224E3),
                             blurRadius: 24,
                             spreadRadius: 2,
                           ),
@@ -86,7 +86,7 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xCC0F141B),
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: const Color(0x33E6FF3C)),
+                        border: Border.all(color: const Color(0x338224E3)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

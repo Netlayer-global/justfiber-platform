@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="hidden w-[290px] shrink-0 border-r border-white/10 bg-black/55 p-5 xl:flex xl:flex-col">
         <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
           <div className="text-2xl font-black tracking-tight">
-            Just<span className="text-[#d8ff16]">Fiber</span>
+            Just<span className="text-[#8224E3]">Fiber</span>
           </div>
           <div className="mt-1 text-xs uppercase tracking-[0.25em] text-white/40">Admin command</div>
         </div>
@@ -65,7 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 className={`flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm font-medium transition-all ${
                   isActive
-                    ? 'border-[#d8ff16]/35 bg-[#d8ff16] text-black shadow-[0_14px_50px_rgba(216,255,22,0.18)]'
+                    ? 'border-[#8224E3]/35 bg-[#8224E3] text-black shadow-[0_14px_50px_rgba(130,36,227,0.18)]'
                     : 'border-white/10 bg-white/5 text-white/70 hover:border-white/20 hover:bg-white/8 hover:text-white'
                 }`}
               >
@@ -94,7 +94,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-4 py-2 text-sm font-semibold text-[#d8ff16] md:block">
+              <div className="hidden rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-4 py-2 text-sm font-semibold text-[#8224E3] md:block">
                 Live system
               </div>
               <Link href="/" className="btn-secondary px-5 py-3">

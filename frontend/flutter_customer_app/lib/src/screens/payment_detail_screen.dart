@@ -27,7 +27,7 @@ class PaymentDetailScreen extends StatelessWidget {
         title: Text('Payment Details', style: Theme.of(context).textTheme.headlineSmall),
       ),
       body: RefreshIndicator(
-        color: const Color(0xFFE6FF3C),
+        color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF0C1018),
         onRefresh: appState.refresh,
         child: ListView(
@@ -50,9 +50,9 @@ class PaymentDetailScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFF10151A),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x66E6FF3C)),
+                        border: Border.all(color: const Color(0x668224E3)),
                       ),
-                      child: const Icon(Icons.check_circle_rounded, color: Color(0xFFE6FF3C), size: 34),
+                      child: const Icon(Icons.check_circle_rounded, color: Color(0xFF8224E3), size: 34),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -67,7 +67,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     ),
                     Text(
                       'Rs ${payment.amount.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFFE6FF3C)),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFF8224E3)),
                     ),
                   ],
                 ),
@@ -83,7 +83,7 @@ class PaymentDetailScreen extends StatelessWidget {
           const SizedBox(height: 18),
           AppCard(
             color: const Color(0xFF0C1018),
-            borderColor: const Color(0x22E6FF3C),
+            borderColor: const Color(0x228224E3),
             textColor: const Color(0xFFEFEEE8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +101,7 @@ class PaymentDetailScreen extends StatelessWidget {
                 if (payment.viewUrl.isNotEmpty)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    iconColor: const Color(0xFFE6FF3C),
+                    iconColor: const Color(0xFF8224E3),
                     textColor: const Color(0xFFEFEEE8),
                     subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
                     leading: const Icon(Icons.receipt_long_rounded),
@@ -113,7 +113,7 @@ class PaymentDetailScreen extends StatelessWidget {
                 if (payment.pdfUrl.isNotEmpty)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    iconColor: const Color(0xFFE6FF3C),
+                    iconColor: const Color(0xFF8224E3),
                     textColor: const Color(0xFFEFEEE8),
                     subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
                     leading: const Icon(Icons.picture_as_pdf_rounded),
@@ -124,7 +124,7 @@ class PaymentDetailScreen extends StatelessWidget {
                   ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  iconColor: const Color(0xFFE6FF3C),
+                  iconColor: const Color(0xFF8224E3),
                   textColor: const Color(0xFFEFEEE8),
                   subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
                   leading: const Icon(Icons.copy_rounded),
@@ -136,7 +136,7 @@ class PaymentDetailScreen extends StatelessWidget {
                 if (payment.reference.isNotEmpty)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    iconColor: const Color(0xFFE6FF3C),
+                    iconColor: const Color(0xFF8224E3),
                     textColor: const Color(0xFFEFEEE8),
                     subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
                     leading: const Icon(Icons.tag_rounded),
@@ -147,7 +147,7 @@ class PaymentDetailScreen extends StatelessWidget {
                   ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  iconColor: const Color(0xFFE6FF3C),
+                  iconColor: const Color(0xFF8224E3),
                   textColor: const Color(0xFFEFEEE8),
                   subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
                   leading: const Icon(Icons.share_rounded),

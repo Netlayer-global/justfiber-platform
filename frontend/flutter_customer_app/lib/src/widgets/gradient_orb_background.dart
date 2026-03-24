@@ -17,8 +17,8 @@ class GradientOrbBackground extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned(top: -80, right: -30, child: _orb(const Color(0x14E6FF3C), 220)),
-          Positioned(top: 240, left: -70, child: _orb(const Color(0x0CE6FF3C), 180)),
+          Positioned(top: -80, right: -30, child: _orb(const Color(0x148224E3), 220)),
+          Positioned(top: 240, left: -70, child: _orb(const Color(0x0C8224E3), 180)),
           Positioned(bottom: -90, right: -40, child: _orb(const Color(0x2212161A), 200)),
           child,
         ],

@@ -43,13 +43,13 @@ export default function LoginPage() {
       <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="card flex min-h-[680px] flex-col justify-between p-8 md:p-10">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#d8ff16]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#8224E3]">
               <ShieldCheck className="h-4 w-4" />
               Secure access
             </div>
             <h1 className="mt-6 text-5xl font-black tracking-[-0.05em] text-white md:text-6xl">
               Neon-grade control for
-              <span className="text-[#d8ff16]"> fiber operations.</span>
+              <span className="text-[#8224E3]"> fiber operations.</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-8 text-white/60">
               Manage customers, field teams, devices, tickets, and billing from a sharper JustFiber admin cockpit.
@@ -72,7 +72,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="card flex min-h-[680px] flex-col justify-between p-8 md:p-10">
           <div>
             <div className="text-2xl font-black tracking-tight text-white">
-              Just<span className="text-[#d8ff16]">Fiber</span>
+              Just<span className="text-[#8224E3]">Fiber</span>
             </div>
             <div className="mt-1 text-xs uppercase tracking-[0.25em] text-white/40">Admin sign in</div>
 
@@ -94,7 +94,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   className="input w-full"
                 />
               </div>

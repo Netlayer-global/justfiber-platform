@@ -78,7 +78,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       ),
       backgroundColor: const Color(0xFF0C1018),
       body: RefreshIndicator(
-        color: const Color(0xFFE6FF3C),
+        color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF0C1018),
         onRefresh: appState.refresh,
         child: ListView(
@@ -136,7 +136,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             height: 260,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0x33E6FF3C)),
+              border: Border.all(color: const Color(0x338224E3)),
             ),
             clipBehavior: Clip.antiAlias,
             child: Stack(
@@ -198,7 +198,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF10151A),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0x55E6FF3C)),
+                    border: Border.all(color: const Color(0x558224E3)),
                   ),
                   child: Text(
                     _usedCurrentLocation ? 'Current GPS pin' : 'Manual map pin',
@@ -253,13 +253,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 color: feasibility.feasible ? const Color(0xFF0D1A12) : const Color(0xFF220B0B),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: feasibility.feasible ? const Color(0x66E6FF3C) : const Color(0x66EF4444),
+                  color: feasibility.feasible ? const Color(0x668224E3) : const Color(0x66EF4444),
                 ),
               ),
               child: Text(
                 feasibility.message,
                 style: TextStyle(
-                  color: feasibility.feasible ? const Color(0xFFE6FF3C) : const Color(0xFFFCA5A5),
+                  color: feasibility.feasible ? const Color(0xFF8224E3) : const Color(0xFFFCA5A5),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -287,7 +287,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         );
                       }
                     },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFEFEEE8)),
               child: Text(appState.bookingBusy ? 'Checking...' : 'Confirm & View Plans'),
             ),
           ),
@@ -319,8 +319,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             child: FilledButton(
               onPressed: selectedPlanCode == null ? null : () => setState(() => step = 2),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFE6FF3C),
-                foregroundColor: const Color(0xFF111111),
+                backgroundColor: const Color(0xFF8224E3),
+                foregroundColor: const Color(0xFFEFEEE8),
               ),
               child: const Text('Continue to Booking'),
             ),
@@ -378,8 +378,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   label: Text(_formatDate(date)),
                   selected: selectedDate,
                   backgroundColor: const Color(0xFF10151A),
-                  selectedColor: const Color(0xFFE6FF3C),
-                  side: BorderSide(color: selectedDate ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C)),
+                  selectedColor: const Color(0xFF8224E3),
+                  side: BorderSide(color: selectedDate ? const Color(0xFF8224E3) : const Color(0x228224E3)),
                   labelStyle: TextStyle(
                     color: selectedDate ? const Color(0xFF111111) : const Color(0xFFEFEEE8),
                     fontWeight: FontWeight.w700,
@@ -403,8 +403,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 label: Text(slot.$2),
                 selected: selectedSlot,
                 backgroundColor: const Color(0xFF10151A),
-                selectedColor: const Color(0xFFE6FF3C),
-                side: BorderSide(color: selectedSlot ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C)),
+                selectedColor: const Color(0xFF8224E3),
+                side: BorderSide(color: selectedSlot ? const Color(0xFF8224E3) : const Color(0x228224E3)),
                 labelStyle: TextStyle(
                   color: selectedSlot ? const Color(0xFF111111) : const Color(0xFFEFEEE8),
                   fontWeight: FontWeight.w700,
@@ -448,7 +448,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         );
                       }
                     },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFEFEEE8)),
               child: Text(appState.bookingBusy ? 'Booking...' : 'Create Booking'),
             ),
           ),
@@ -484,7 +484,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             ),
             child: Text(
               'Booking ${latestBooking.bookingNumber} is ${latestBooking.status}.',
-              style: const TextStyle(color: Color(0xFFE6FF3C), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(height: 16),
@@ -513,7 +513,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF0C1018),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0x22E6FF3C)),
+              border: Border.all(color: const Color(0x228224E3)),
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,7 +552,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     if (!context.mounted) return;
                     Navigator.of(context).pop();
                   },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF111111)),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFEFEEE8)),
                   child: const Text('Done'),
                 ),
               ),
@@ -603,7 +603,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x55E6FF3C)),
+        border: Border.all(color: const Color(0x558224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,7 +625,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Row(
         children: [
@@ -644,7 +644,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         ),
                   ),
                   const SizedBox(height: 10),
-                  const Text('Book new Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFFE6FF3C))),
+                  const Text('Book new Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF8224E3))),
                   const SizedBox(height: 6),
                   const Text('Select your plan, confirm address, and create a live booking with an exact install map pin.', style: TextStyle(color: Color(0xFFD1D5DB), height: 1.4)),
                 ],
@@ -658,9 +658,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF10151A),
               borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0x66E6FF3C)),
+              border: Border.all(color: const Color(0x668224E3)),
             ),
-            child: const Icon(Icons.wifi_rounded, color: Color(0xFFE6FF3C), size: 56),
+            child: const Icon(Icons.wifi_rounded, color: Color(0xFF8224E3), size: 56),
           ),
         ],
       ),
@@ -674,7 +674,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -702,7 +702,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           Icon(
             done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
             size: 18,
-            color: done ? const Color(0xFFE6FF3C) : const Color(0xFF6B7280),
+            color: done ? const Color(0xFF8224E3) : const Color(0xFF6B7280),
           ),
           const SizedBox(width: 8),
           Text(
@@ -813,7 +813,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 height: 4,
                 margin: EdgeInsets.only(left: index == 0 ? 24 : 0, right: index == labels.length - 1 ? 24 : 0),
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFFE6FF3C) : const Color(0xFF1F2937),
+                  color: active ? const Color(0xFF8224E3) : const Color(0xFF1F2937),
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -835,7 +835,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
       color: const Color(0xFF0C1018),
-      borderColor: const Color(0x22E6FF3C),
+      borderColor: const Color(0x228224E3),
       textColor: const Color(0xFFEFEEE8),
       padding: const EdgeInsets.all(22),
       child: Column(
@@ -861,15 +861,15 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         fillColor: const Color(0xFF08131B),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0x22E6FF3C)),
+          borderSide: const BorderSide(color: Color(0x228224E3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0x22E6FF3C)),
+          borderSide: const BorderSide(color: Color(0x228224E3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0x66E6FF3C)),
+          borderSide: const BorderSide(color: Color(0x668224E3)),
         ),
       ),
     );
@@ -893,7 +893,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: selected ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C), width: 1.5),
+        border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x228224E3), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -914,9 +914,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               OutlinedButton(
                 onPressed: onSelect,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: selected ? const Color(0xFFE6FF3C) : const Color(0xFFEFEEE8),
+                  foregroundColor: selected ? const Color(0xFF8224E3) : const Color(0xFFEFEEE8),
                   backgroundColor: selected ? const Color(0xFF10151A) : const Color(0xFF15181C),
-                  side: BorderSide(color: selected ? const Color(0x66E6FF3C) : const Color(0x22E6FF3C)),
+                  side: BorderSide(color: selected ? const Color(0x668224E3) : const Color(0x228224E3)),
                 ),
                 child: Text(selected ? 'Selected' : 'Select Plan'),
               ),
@@ -962,7 +962,7 @@ class _MapHint extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF08131B).withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x44E6FF3C)),
+        border: Border.all(color: const Color(0x448224E3)),
       ),
       child: const Text(
         'Tap map to drop the exact install pin. This live lat/lng will be saved for installer allocation.',

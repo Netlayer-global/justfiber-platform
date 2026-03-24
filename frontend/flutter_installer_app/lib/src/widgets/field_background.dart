@@ -17,7 +17,7 @@ class FieldBackground extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned(top: -70, right: -40, child: _orb(const Color(0x22E6FF3C), 220)),
+          Positioned(top: -70, right: -40, child: _orb(const Color(0x228224E3), 220)),
           Positioned(top: 180, left: -60, child: _orb(const Color(0x111B2311), 180)),
           child,
         ],

@@ -16,7 +16,7 @@ class DashboardTab extends StatelessWidget {
     final pendingJobs = appState.jobs.where((job) => !_isTodayJob(job) && job.status != 'completed').length;
     final completedJobs = appState.jobs.where((job) => job.status == 'completed').length;
     return RefreshIndicator(
-      color: const Color(0xFFE6FF3C),
+      color: const Color(0xFF8224E3),
       backgroundColor: const Color(0xFF0C1018),
       onRefresh: appState.refresh,
       child: ListView(
@@ -46,7 +46,7 @@ class DashboardTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${profile.installerCode.isEmpty ? '-' : profile.installerCode} • ${profile.phone.isEmpty ? '-' : profile.phone}',
+                  '${profile.installerCode.isEmpty ? '-' : profile.installerCode} â€¢ ${profile.phone.isEmpty ? '-' : profile.phone}',
                   style: const TextStyle(color: Color(0xFFD1D5DB)),
                 ),
                 const SizedBox(height: 12),
@@ -55,11 +55,11 @@ class DashboardTab extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFF10151A),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0x55E6FF3C)),
+                    border: Border.all(color: const Color(0x558224E3)),
                   ),
                   child: Text(
                     'Availability: ${dashboard.availabilityStatus}',
-                    style: const TextStyle(color: Color(0xFFE6FF3C), fontWeight: FontWeight.w700),
+                    style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700),
                   ),
                 ),
               ],

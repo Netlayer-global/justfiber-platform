@@ -27,7 +27,7 @@ export default function DevicesPage() {
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-96"><Loader className="w-6 h-6 animate-spin text-[#d8ff16]" /></div>
+    return <div className="flex items-center justify-center h-96"><Loader className="w-6 h-6 animate-spin text-[#8224E3]" /></div>
   }
 
   const onlineCount = devices.filter((device) => device.status === 'online').length
@@ -48,7 +48,7 @@ export default function DevicesPage() {
           <div className="text-xs uppercase tracking-[0.25em] text-white/45">Network inventory</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
             Devices,
-            <span className="text-[#d8ff16]"> visible in one grid.</span>
+            <span className="text-[#8224E3]"> visible in one grid.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
             Track routers, access devices, and operational endpoints with status-first visibility.

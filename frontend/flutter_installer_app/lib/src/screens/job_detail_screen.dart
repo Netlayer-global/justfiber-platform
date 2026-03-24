@@ -294,7 +294,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       body: FieldBackground(
         child: SafeArea(
           child: RefreshIndicator(
-            color: const Color(0xFFE6FF3C),
+            color: const Color(0xFF8224E3),
             backgroundColor: const Color(0xFF0C1018),
             onRefresh: _loadAll,
             child: ListView(
@@ -447,11 +447,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF141A22),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x55E6FF3C)),
+                            border: Border.all(color: const Color(0x558224E3)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.router_rounded, color: Color(0xFFE6FF3C)),
+                              const Icon(Icons.router_rounded, color: Color(0xFF8224E3)),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
@@ -474,7 +474,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFF10151A),
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0x22E6FF3C)),
+                          border: Border.all(color: const Color(0x228224E3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +622,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF141A22),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x33E6FF3C)),
+                            border: Border.all(color: const Color(0x338224E3)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,7 +641,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 value: (90 - _activationCountdown) / 90,
                                 minHeight: 8,
                                 backgroundColor: const Color(0xFF0C1018),
-                                valueColor: const AlwaysStoppedAnimation(Color(0xFFE6FF3C)),
+                                valueColor: const AlwaysStoppedAnimation(Color(0xFF8224E3)),
                               ),
                             ],
                           ),
@@ -655,11 +655,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF141A22),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x55E6FF3C)),
+                            border: Border.all(color: const Color(0x558224E3)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.check_circle_rounded, color: Color(0xFFE6FF3C)),
+                              const Icon(Icons.check_circle_rounded, color: Color(0xFF8224E3)),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
@@ -797,7 +797,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFF10151A),
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0x22E6FF3C)),
+                              border: Border.all(color: const Color(0x228224E3)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -947,7 +947,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF10151A),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x22E6FF3C)),
+                            border: Border.all(color: const Color(0x228224E3)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1121,7 +1121,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF11161D),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x33E6FF3C)),
+        border: Border.all(color: const Color(0x338224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1140,7 +1140,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF141A22),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x33E6FF3C)),
+        border: Border.all(color: const Color(0x338224E3)),
       ),
       child: Text(
         label,
@@ -1181,7 +1181,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1260,16 +1260,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                     decoration: BoxDecoration(
-                      color: _workflowPage == index ? const Color(0xFFE6FF3C) : const Color(0xFF10151A),
+                      color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFF10151A),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _workflowPage == index ? const Color(0xFFE6FF3C) : const Color(0x22E6FF3C)),
+                      border: Border.all(color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0x228224E3)),
                     ),
                     child: Column(
                       children: [
                         Text(
                           '${index + 1}',
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFF020617) : const Color(0xFFE6FF3C),
+                            color: _workflowPage == index ? const Color(0xFF020617) : const Color(0xFF8224E3),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -1806,7 +1806,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -1880,7 +1880,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF141A22),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x55E6FF3C)),
+        border: Border.all(color: const Color(0x558224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1908,7 +1908,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             value: nextStepNumber / totalSteps,
             minHeight: 8,
             backgroundColor: const Color(0xFF0C1018),
-            valueColor: const AlwaysStoppedAnimation(Color(0xFFE6FF3C)),
+            valueColor: const AlwaysStoppedAnimation(Color(0xFF8224E3)),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -1952,7 +1952,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             width: 10,
             height: 10,
             decoration: const BoxDecoration(
-              color: Color(0xFFE6FF3C),
+              color: Color(0xFF8224E3),
               shape: BoxShape.circle,
             ),
           ),
@@ -1963,7 +1963,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF10151A),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0x22E6FF3C)),
+                border: Border.all(color: const Color(0x228224E3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1981,7 +1981,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ],
                   const SizedBox(height: 8),
                   Text(
-                    '${actor.isEmpty ? 'system' : actor} • ${at.isEmpty ? '-' : at}',
+                    '${actor.isEmpty ? 'system' : actor} â€¢ ${at.isEmpty ? '-' : at}',
                     style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -2001,7 +2001,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           Icon(
             done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
             size: 18,
-            color: done ? const Color(0xFFE6FF3C) : const Color(0xFF9CA3AF),
+            color: done ? const Color(0xFF8224E3) : const Color(0xFF9CA3AF),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -2075,13 +2075,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             color: done ? const Color(0xFF1B2311) : const Color(0xFF141A22),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: done ? const Color(0x55E6FF3C) : const Color(0x221F2937),
+              color: done ? const Color(0x558224E3) : const Color(0x221F2937),
             ),
           ),
           child: Text(
             stages[index].$2,
             style: TextStyle(
-              color: done ? const Color(0xFFE6FF3C) : const Color(0xFF9CA3AF),
+              color: done ? const Color(0xFF8224E3) : const Color(0xFF9CA3AF),
               fontWeight: FontWeight.w700,
               fontSize: 12,
             ),

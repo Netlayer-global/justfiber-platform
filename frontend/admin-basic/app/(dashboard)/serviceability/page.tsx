@@ -228,7 +228,7 @@ export default function ServiceabilityPage() {
           <div className="text-xs uppercase tracking-[0.25em] text-white/45">Coverage control</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
             Serviceability,
-            <span className="text-[#d8ff16]"> mapped for real bookings.</span>
+            <span className="text-[#8224E3]"> mapped for real bookings.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
             Mark feasible service areas on the map. Customer feasibility and booking flow will use these active zones.
@@ -338,7 +338,7 @@ export default function ServiceabilityPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#d8ff16]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#8224E3]" />
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

@@ -15,7 +15,7 @@ class ProfileTab extends StatelessWidget {
     final theme = Theme.of(context);
 
     return RefreshIndicator(
-      color: const Color(0xFFE6FF3C),
+      color: const Color(0xFF8224E3),
       backgroundColor: const Color(0xFF0C1018),
       onRefresh: appState.refresh,
       child: ListView(
@@ -117,8 +117,8 @@ class ProfileTab extends StatelessWidget {
         FilledButton.tonal(
           onPressed: appState.logout,
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFE6FF3C),
-            foregroundColor: const Color(0xFF111111),
+            backgroundColor: const Color(0xFF8224E3),
+            foregroundColor: const Color(0xFFEFEEE8),
           ),
           child: const Text('Logout'),
         ),
@@ -133,7 +133,7 @@ class ProfileTab extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF12161A),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x66E6FF3C)),
+        border: Border.all(color: const Color(0x668224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,7 +167,7 @@ class ProfileTab extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF12161A),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0x22E6FF3C)),
+          border: Border.all(color: const Color(0x228224E3)),
         ),
         child: Row(
           children: [

@@ -99,7 +99,7 @@ class _ProfileTabState extends State<ProfileTab> {
     final isOnLeave = profile.availabilityStatus == 'on_leave';
 
     return RefreshIndicator(
-      color: const Color(0xFFE6FF3C),
+      color: const Color(0xFF8224E3),
       backgroundColor: const Color(0xFF0C1018),
       onRefresh: appState.refresh,
       child: ListView(
@@ -241,7 +241,7 @@ class _ProfileTabState extends State<ProfileTab> {
       decoration: BoxDecoration(
         color: const Color(0xFF11161D),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x33E6FF3C)),
+        border: Border.all(color: const Color(0x338224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +264,7 @@ class _ProfileTabState extends State<ProfileTab> {
       decoration: BoxDecoration(
         color: const Color(0xFF141A22),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Row(
         children: [
@@ -292,11 +292,11 @@ class _ProfileTabState extends State<ProfileTab> {
             decoration: BoxDecoration(
               color: const Color(0xFF141A22),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0x55E6FF3C)),
+              border: Border.all(color: const Color(0x558224E3)),
             ),
             child: Text(
               index,
-              style: const TextStyle(color: Color(0xFFE6FF3C), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 12),

@@ -30,7 +30,7 @@ class _AuthGateLoading extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: AppCard(
             color: const Color(0xFF0C1018),
-            borderColor: const Color(0x22E6FF3C),
+            borderColor: const Color(0x228224E3),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: const [
@@ -39,7 +39,7 @@ class _AuthGateLoading extends StatelessWidget {
                   height: 34,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.6,
-                    valueColor: AlwaysStoppedAnimation(Color(0xFFE6FF3C)),
+                    valueColor: AlwaysStoppedAnimation(Color(0xFF8224E3)),
                   ),
                 ),
                 SizedBox(height: 18),

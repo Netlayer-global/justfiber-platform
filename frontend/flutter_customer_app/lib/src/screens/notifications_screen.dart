@@ -11,7 +11,7 @@ import 'support_history_screen.dart';
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
-  static const _accent = Color(0xFFE6FF3C);
+  static const _accent = Color(0xFF8224E3);
 
   _AlertKind _kindFor(NotificationItem item) {
     final type = item.type.toLowerCase();
@@ -215,7 +215,7 @@ class NotificationsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Alerts & updates')),
       body: RefreshIndicator(
-        color: const Color(0xFFE6FF3C),
+        color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF0C1018),
         onRefresh: appState.refresh,
         child: ListView(
@@ -257,7 +257,7 @@ class NotificationsScreen extends StatelessWidget {
                   children: [
                     FilledButton(
                       onPressed: appState.busy ? null : appState.refresh,
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE6FF3C), foregroundColor: const Color(0xFF031B17)),
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFEFEEE8)),
                       child: const Text('Refresh'),
                     ),
                     OutlinedButton(
@@ -272,7 +272,7 @@ class NotificationsScreen extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
                         backgroundColor: const Color(0xFF10151A),
-                        side: const BorderSide(color: Color(0x66E6FF3C)),
+                        side: const BorderSide(color: Color(0x668224E3)),
                       ),
                       child: const Text('Open Support Center'),
                     ),
@@ -288,7 +288,7 @@ class NotificationsScreen extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
                         backgroundColor: const Color(0xFF10151A),
-                        side: const BorderSide(color: Color(0x66E6FF3C)),
+                        side: const BorderSide(color: Color(0x668224E3)),
                       ),
                       child: const Text('Open Billing'),
                     ),
@@ -311,7 +311,7 @@ class NotificationsScreen extends StatelessWidget {
           const SizedBox(height: 18),
           AppCard(
             color: const Color(0xFF0C1018),
-            borderColor: const Color(0x22E6FF3C),
+            borderColor: const Color(0x228224E3),
             child: notifications.isEmpty
                 ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFF9CA3AF)))
                 : Column(
@@ -329,7 +329,7 @@ class NotificationsScreen extends StatelessWidget {
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: const Color(0x22E6FF3C)),
+                            border: Border.all(color: const Color(0x228224E3)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,7 +358,7 @@ class NotificationsScreen extends StatelessWidget {
                                       width: 10,
                                       height: 10,
                                       decoration: const BoxDecoration(
-                                        color: Color(0xFFE6FF3C),
+                                        color: Color(0xFF8224E3),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -385,7 +385,7 @@ class NotificationsScreen extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF10151A),
                                     borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(color: const Color(0x33E6FF3C)),
+                                    border: Border.all(color: const Color(0x338224E3)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,8 +414,8 @@ class NotificationsScreen extends StatelessWidget {
                                   FilledButton(
                                     onPressed: () => _openPrimaryAction(context, appState, item),
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFFE6FF3C),
-                                      foregroundColor: const Color(0xFF111111),
+                                      backgroundColor: const Color(0xFF8224E3),
+                                      foregroundColor: const Color(0xFFEFEEE8),
                                     ),
                                     child: Text(_hasUpgradeOffer(item) ? 'Upgrade plan' : _primaryActionLabelFor(kind)),
                                   ),
@@ -431,7 +431,7 @@ class NotificationsScreen extends StatelessWidget {
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: const Color(0xFFEFEEE8),
                                       backgroundColor: const Color(0xFF10151A),
-                                      side: const BorderSide(color: Color(0x33E6FF3C)),
+                                      side: const BorderSide(color: Color(0x338224E3)),
                                     ),
                                     child: Text(item.readAt.isEmpty ? 'Mark as read' : 'Refresh alerts'),
                                   ),
@@ -456,7 +456,7 @@ class NotificationsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x33E6FF3C)),
+        border: Border.all(color: const Color(0x338224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

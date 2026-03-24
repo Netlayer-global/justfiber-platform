@@ -81,7 +81,7 @@ export default function TicketsPage() {
           <div className="text-xs uppercase tracking-[0.25em] text-white/45">Support command</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
             Tickets,
-            <span className="text-[#d8ff16]"> resolved with clarity.</span>
+            <span className="text-[#8224E3]"> resolved with clarity.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">Manage customer support requests with priority-first visibility.</p>
         </div>
@@ -102,7 +102,7 @@ export default function TicketsPage() {
       </section>
 
       {isLoading ? (
-        <div className="card p-6 text-center"><Loader className="mx-auto h-6 w-6 animate-spin text-[#d8ff16]" /></div>
+        <div className="card p-6 text-center"><Loader className="mx-auto h-6 w-6 animate-spin text-[#8224E3]" /></div>
       ) : (
         <div className="grid gap-6 xl:grid-cols-2">
           <div className="overflow-x-auto card">

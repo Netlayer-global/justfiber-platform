@@ -567,16 +567,16 @@ export default function CustomerDetailPage() {
         <section className="card p-6 md:p-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs uppercase tracking-[0.32em] text-[#d8ff16]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs uppercase tracking-[0.32em] text-[#8224E3]">
                 Subscriber command center
               </div>
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">{customer.name}</h1>
                 <p className="mt-2 text-sm text-[#b4bcc4]">
-                  {customer.customerId || customer.id} • {customer.phone} • {customer.email}
+                  {customer.customerId || customer.id} â€¢ {customer.phone} â€¢ {customer.email}
                 </p>
                 <p className="mt-2 text-sm text-[#b4bcc4]">
-                  Plan {customer.plan.name} • PPPoE {customer.pppoeUsername || '-'} • Service {customer.serviceId || '-'}
+                  Plan {customer.plan.name} â€¢ PPPoE {customer.pppoeUsername || '-'} â€¢ Service {customer.serviceId || '-'}
                 </p>
               </div>
             </div>
@@ -590,7 +590,7 @@ export default function CustomerDetailPage() {
                   : 'No active commercial blocker on this account'}
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-[#d8ff16]">
+                <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-[#8224E3]">
                   {billingSummary.billMode || 'prepaid'}
                 </span>
                 <span className="rounded-full border border-black/15 px-3 py-1 text-xs font-medium text-black/80">
@@ -734,7 +734,7 @@ export default function CustomerDetailPage() {
                               ))}
                             </select>
                             <button
-                              className="rounded-full border border-[#d8ff16]/40 bg-[#d8ff16]/10 px-3 py-1 text-xs font-semibold text-[#d8ff16] transition hover:bg-[#d8ff16]/20"
+                              className="rounded-full border border-[#8224E3]/40 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3] transition hover:bg-[#8224E3]/20"
                               disabled={bookingBusyId === booking.id}
                               onClick={() => void handleAssignBookingInstaller(booking.id)}
                             >
@@ -813,7 +813,7 @@ export default function CustomerDetailPage() {
                     <div className="space-y-2">
                       <div className="h-3 w-full overflow-hidden rounded-full bg-[#0a0e27]">
                         <div
-                          className={`h-full ${billingSummary.usageCapReached ? 'bg-red-400' : 'bg-[#d8ff16]'}`}
+                          className={`h-full ${billingSummary.usageCapReached ? 'bg-red-400' : 'bg-[#8224E3]'}`}
                           style={{ width: `${usagePercent}%` }}
                         />
                       </div>
@@ -859,7 +859,7 @@ export default function CustomerDetailPage() {
                           ? 'bg-red-500/15 text-red-300'
                           : usagePressureState === 'high_usage'
                             ? 'bg-amber-500/15 text-amber-300'
-                            : 'bg-[#d8ff16]/10 text-[#d8ff16]'
+                            : 'bg-[#8224E3]/10 text-[#8224E3]'
                       }`}>
                         {usagePressureState === 'cap_reached'
                           ? 'Cap reached'

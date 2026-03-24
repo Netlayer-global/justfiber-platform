@@ -183,7 +183,7 @@ class _SplashOrb extends StatelessWidget {
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
-                colors: [Color(0x33E6FF3C), Color(0x00000000)],
+                colors: [Color(0x338224E3), Color(0x00000000)],
               ),
             ),
           ),
@@ -192,9 +192,9 @@ class _SplashOrb extends StatelessWidget {
             height: 182,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0x99E6FF3C), width: 2),
+              border: Border.all(color: const Color(0x998224E3), width: 2),
               boxShadow: const [
-                BoxShadow(color: Color(0x55E6FF3C), blurRadius: 30, spreadRadius: 4),
+                BoxShadow(color: Color(0x558224E3), blurRadius: 30, spreadRadius: 4),
               ],
             ),
           ),
@@ -216,7 +216,7 @@ class _SplashOrb extends StatelessWidget {
               height: 156,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0x55E6FF3C), width: 1.6),
+                border: Border.all(color: const Color(0x558224E3), width: 1.6),
               ),
             ),
           ),
@@ -239,7 +239,7 @@ class _BottomGlow extends StatelessWidget {
             center: Alignment(0, 0.95),
             radius: 0.95,
             colors: [
-              Color(0xAAE6FF3C),
+              Color(0xAA8224E3),
               Color(0x44B4D82B),
               Color(0x1612161A),
               Color(0x00000000),
@@ -268,7 +268,7 @@ class _JustFiberBrandMark extends StatelessWidget {
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
-                colors: [Color(0x33E6FF3C), Color(0x00000000)],
+                colors: [Color(0x338224E3), Color(0x00000000)],
               ),
             ),
           ),
@@ -291,7 +291,7 @@ class _JustFiberBrandMark extends StatelessWidget {
                 width: 34,
                 height: 96,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE6FF3C),
+                  color: const Color(0xFF8224E3),
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
@@ -305,7 +305,7 @@ class _JustFiberBrandMark extends StatelessWidget {
                 width: 34,
                 height: 96,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE6FF3C),
+                  color: const Color(0xFF8224E3),
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
@@ -331,7 +331,7 @@ class _JustFiberWordmark extends StatelessWidget {
         ),
         children: [
           TextSpan(text: 'Just', style: TextStyle(color: const Color(0xFFEFEEE8))),
-          TextSpan(text: 'Fiber', style: TextStyle(color: Color(0xFFE6FF3C))),
+          TextSpan(text: 'Fiber', style: TextStyle(color: Color(0xFF8224E3))),
         ],
       ),
     );

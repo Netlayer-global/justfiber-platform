@@ -33,7 +33,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
         title: Text('Payments', style: Theme.of(context).textTheme.headlineSmall),
       ),
       body: RefreshIndicator(
-        color: const Color(0xFFE6FF3C),
+        color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF0C1018),
         onRefresh: appState.refresh,
         child: ListView(
@@ -95,7 +95,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
           if (payments.isEmpty)
             const AppCard(
               color: Color(0xFF0C1018),
-              borderColor: Color(0x22E6FF3C),
+              borderColor: Color(0x228224E3),
               child: Padding(
                 padding: EdgeInsets.all(20),
                 child: Text('No payments found for this filter.', style: TextStyle(color: Color(0xFF9CA3AF))),
@@ -114,7 +114,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0x33E6FF3C)),
+                    border: Border.all(color: const Color(0x338224E3)),
                     boxShadow: const [
                       BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
                     ],
@@ -131,7 +131,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               color: const Color(0xFF0B0F19),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFFE6FF3C)),
+                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF8224E3)),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -154,7 +154,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                           ),
                           Text(
                             'Rs ${payment.amount.toStringAsFixed(0)}',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFFE6FF3C)),
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF8224E3)),
                           ),
                         ],
                       ),
@@ -183,7 +183,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               }
                             },
                             style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFFE6FF3C),
+                              foregroundColor: const Color(0xFF8224E3),
                             ),
                             child: const Text('View Details'),
                           ),
@@ -197,9 +197,9 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                                     }
                                   },
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFE6FF3C),
+                              foregroundColor: const Color(0xFF8224E3),
                               backgroundColor: const Color(0xFF111827),
-                              side: const BorderSide(color: Color(0x66E6FF3C)),
+                              side: const BorderSide(color: Color(0x668224E3)),
                             ),
                             child: const Text('Open Receipt'),
                           ),
@@ -213,8 +213,8 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                                     }
                                   },
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFE6FF3C),
-                              foregroundColor: const Color(0xFF111111),
+                              backgroundColor: const Color(0xFF8224E3),
+                              foregroundColor: const Color(0xFFEFEEE8),
                             ),
                             child: const Text('View PDF'),
                           ),
@@ -231,7 +231,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFEFEEE8),
                                 backgroundColor: const Color(0xFF10151A),
-                                side: const BorderSide(color: Color(0x33E6FF3C)),
+                                side: const BorderSide(color: Color(0x338224E3)),
                               ),
                               child: const Text('Need Help'),
                             ),
@@ -257,14 +257,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF0B0F19) : const Color(0xFF111827),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: selected ? const Color(0xFFE6FF3C) : const Color(0x33E6FF3C)),
+          border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x338224E3)),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: selected ? const Color(0xFFE6FF3C) : const Color(0xFFCBD5E1),
+            color: selected ? const Color(0xFF8224E3) : const Color(0xFFCBD5E1),
           ),
         ),
       ),
@@ -277,7 +277,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x33E6FF3C)),
+        border: Border.all(color: const Color(0x338224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,7 +295,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     final failed = payment.reference.toLowerCase().contains('failed');
     final label = failed ? 'Failed' : (pending ? 'Pending' : 'Success');
     final color = failed ? const Color(0xFF2A1114) : (pending ? const Color(0xFF2A2310) : const Color(0xFF122315));
-    final text = failed ? const Color(0xFFFF8A80) : (pending ? const Color(0xFFFACC15) : const Color(0xFFE6FF3C));
+    final text = failed ? const Color(0xFFFF8A80) : (pending ? const Color(0xFFFACC15) : const Color(0xFF8224E3));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -314,7 +314,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
         color: const Color(0xFF0B0F19),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(text, style: const TextStyle(color: Color(0xFFE6FF3C), fontWeight: FontWeight.w600)),
+      child: Text(text, style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w600)),
     );
   }
 

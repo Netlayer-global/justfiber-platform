@@ -4,8 +4,8 @@ ThemeData buildInstallerTheme() {
   const background = Color(0xFF0C1018);
   const surface = Color(0xFF10151A);
   const surfaceAlt = Color(0xFF111827);
-  const primary = Color(0xFFE6FF3C);
-  const accent = Color(0xFF1B2311);
+  const primary = Color(0xFF8224E3);
+  const accent = Color(0xFF8224E3);
   const text = Color(0xFFEFEEE8);
   const muted = Color(0xFF9CA3AF);
 
@@ -38,11 +38,11 @@ ThemeData buildInstallerTheme() {
       fillColor: surfaceAlt,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: Color(0x33E6FF3C)),
+        borderSide: const BorderSide(color: Color(0x338224E3)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: Color(0x33E6FF3C)),
+        borderSide: const BorderSide(color: Color(0x338224E3)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
@@ -54,7 +54,7 @@ ThemeData buildInstallerTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: primary,
-        foregroundColor: const Color(0xFF111111),
+        foregroundColor: const Color(0xFFEFEEE8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
     ),
@@ -62,7 +62,7 @@ ThemeData buildInstallerTheme() {
       style: OutlinedButton.styleFrom(
         foregroundColor: text,
         backgroundColor: surface,
-        side: const BorderSide(color: Color(0x66E6FF3C)),
+        side: const BorderSide(color: Color(0x668224E3)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
     ),

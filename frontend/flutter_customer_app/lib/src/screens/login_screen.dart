@@ -68,9 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF12161A),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0x22E6FF3C)),
+                        border: Border.all(color: const Color(0x228224E3)),
                       ),
-                      child: const Icon(Icons.wifi_rounded, color: Color(0xFFE6FF3C), size: 22),
+                      child: const Icon(Icons.wifi_rounded, color: Color(0xFF8224E3), size: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: activePage == index ? 24 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: activePage == index ? const Color(0xFFE6FF3C) : const Color(0xFF2A3442),
+                        color: activePage == index ? const Color(0xFF8224E3) : const Color(0xFF2A3442),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -133,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF12161A),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: const Color(0x33E6FF3C)),
+                  border: Border.all(color: const Color(0x338224E3)),
                   boxShadow: const [
                     BoxShadow(color: Color(0x26000000), blurRadius: 20, offset: Offset(0, 10)),
                   ],
@@ -221,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFEFEEE8),
-                          side: const BorderSide(color: Color(0x55E6FF3C)),
+                          side: const BorderSide(color: Color(0x558224E3)),
                           backgroundColor: const Color(0xFF0E1520),
                         ),
                         child: const Text('Book new connection'),
@@ -332,7 +332,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(34),
-                border: Border.all(color: const Color(0x22E6FF3C)),
+                border: Border.all(color: const Color(0x228224E3)),
                 boxShadow: const [
                   BoxShadow(color: Color(0x22030B14), blurRadius: 24, offset: Offset(0, 10)),
                 ],
@@ -352,7 +352,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(
-                                  colors: [Color(0x33E6FF3C), Color(0x00000000)],
+                                  colors: [Color(0x338224E3), Color(0x00000000)],
                                 ),
                               ),
                             ),
@@ -361,7 +361,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                               height: 200,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: const Color(0x33E6FF3C)),
+                                border: Border.all(color: const Color(0x338224E3)),
                               ),
                             ),
                             Transform.rotate(
@@ -402,12 +402,12 @@ class _AuthShowcaseCard extends StatelessWidget {
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF0A121A),
                                           borderRadius: BorderRadius.circular(18),
-                                          border: Border.all(color: const Color(0x33E6FF3C)),
+                                          border: Border.all(color: const Color(0x338224E3)),
                                         ),
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Icon(slide.icon, color: const Color(0xFFE6FF3C), size: 22),
+                                            Icon(slide.icon, color: const Color(0xFF8224E3), size: 22),
                                             const SizedBox(height: 10),
                                             const Text(
                                               'Live sync',
@@ -418,7 +418,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                               height: 6,
                                               decoration: BoxDecoration(
                                                 gradient: const LinearGradient(
-                                                  colors: [Color(0xFFE6FF3C), Color(0x660B0F19)],
+                                                  colors: [Color(0xFF8224E3), Color(0x660B0F19)],
                                                 ),
                                                 borderRadius: BorderRadius.circular(999),
                                               ),
@@ -453,7 +453,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                     end: Alignment.bottomRight,
                                   ),
                                   borderRadius: BorderRadius.circular(22),
-                                  border: Border.all(color: const Color(0x33E6FF3C)),
+                                  border: Border.all(color: const Color(0x338224E3)),
                                   boxShadow: const [
                                     BoxShadow(color: Color(0x12030B14), blurRadius: 20, offset: Offset(0, 8)),
                                   ],
@@ -523,7 +523,7 @@ class _MiniStat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFE6FF3C))),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF8224E3))),
         const SizedBox(height: 2),
         Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
       ],

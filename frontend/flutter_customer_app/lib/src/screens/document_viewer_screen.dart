@@ -59,10 +59,10 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xCC0B0F19),
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: const Color(0x66E6FF3C)),
+                  border: Border.all(color: const Color(0x668224E3)),
                 ),
                 child: const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFE6FF3C)),
+                  child: CircularProgressIndicator(color: Color(0xFF8224E3)),
                 ),
               ),
             ),

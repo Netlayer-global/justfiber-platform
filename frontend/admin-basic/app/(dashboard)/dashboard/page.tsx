@@ -17,9 +17,9 @@ function MiniBarChart() {
           <div className="mt-2 text-3xl font-black">$124,426</div>
           <div className="mt-1 text-sm text-black/55">20 Jan to 26 Jan</div>
         </div>
-        <div className="rounded-full border border-black/15 bg-black px-2 py-2 text-xs font-semibold text-[#d8ff16]">
+        <div className="rounded-full border border-black/15 bg-black px-2 py-2 text-xs font-semibold text-[#8224E3]">
           <div className="grid grid-cols-3 gap-1">
-            <span className="rounded-full bg-[#d8ff16] px-3 py-1 text-black">Week</span>
+            <span className="rounded-full bg-[#8224E3] px-3 py-1 text-black">Week</span>
             <span className="px-3 py-1 text-white/75">Month</span>
             <span className="px-3 py-1 text-white/75">Year</span>
           </div>
@@ -31,7 +31,7 @@ function MiniBarChart() {
           <div key={days[index]} className="text-center">
             <div
               className={`mx-auto flex w-full max-w-[56px] items-start justify-center rounded-[18px] pt-3 text-xs font-semibold ${
-                index === 2 ? 'bg-black text-[#d8ff16]' : 'bg-black/15 text-black/65'
+                index === 2 ? 'bg-black text-[#8224E3]' : 'bg-black/15 text-black/65'
               }`}
               style={{ height: `${height * 2.2}px` }}
             >
@@ -172,7 +172,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
-        <Loader className="h-7 w-7 animate-spin text-[#d8ff16]" />
+        <Loader className="h-7 w-7 animate-spin text-[#8224E3]" />
       </div>
     )
   }
@@ -187,7 +187,7 @@ export default function DashboardPage() {
             <div className="text-xs uppercase tracking-[0.3em] text-white/45">Control tower</div>
             <h1 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
               Run fiber ops with
-              <span className="text-[#d8ff16]"> one sharp console.</span>
+              <span className="text-[#8224E3]"> one sharp console.</span>
             </h1>
             <p className="mt-4 max-w-lg text-base leading-7 text-white/60">
               Billing, activation, installers, tickets, and serviceability all aligned in a high-signal dashboard
@@ -200,7 +200,7 @@ export default function DashboardPage() {
               <div className="text-xs uppercase tracking-[0.2em] text-white/45">Revenue growth</div>
               <div className="mt-3 flex items-center gap-2 text-3xl font-bold text-white">
                 +18.4%
-                <ArrowUpRight className="h-5 w-5 text-[#d8ff16]" />
+                <ArrowUpRight className="h-5 w-5 text-[#8224E3]" />
               </div>
             </div>
             <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
@@ -229,7 +229,7 @@ export default function DashboardPage() {
           <div key={title} className="card p-6">
             <div className="flex items-center justify-between">
               <div className="text-xs uppercase tracking-[0.2em] text-white/45">{title}</div>
-              <Icon className="h-5 w-5 text-[#d8ff16]" />
+              <Icon className="h-5 w-5 text-[#8224E3]" />
             </div>
             <div className="mt-6 text-4xl font-black tracking-[-0.04em] text-white">{value}</div>
             <div className="mt-2 text-sm leading-6 text-white/55">{desc}</div>
@@ -244,7 +244,7 @@ export default function DashboardPage() {
               <div className="text-xs uppercase tracking-[0.2em] text-white/45">Focus board</div>
               <div className="mt-2 text-2xl font-bold text-white">Today's priorities</div>
             </div>
-            <div className="rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs font-semibold text-[#d8ff16]">
+            <div className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3]">
               Live
             </div>
           </div>
@@ -319,7 +319,7 @@ export default function DashboardPage() {
                   <div className="font-semibold text-white">{title}</div>
                   <div className="mt-1 text-sm text-white/55">{desc}</div>
                 </div>
-                <div className="rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs font-semibold text-[#d8ff16]">
+                <div className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3]">
                   {state}
                 </div>
               </div>
@@ -335,7 +335,7 @@ export default function DashboardPage() {
               <div className="text-xs uppercase tracking-[0.2em] text-white/45">Customer auth helper</div>
               <div className="mt-2 text-2xl font-bold text-white">Demo OTP lookup</div>
             </div>
-            <div className="rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs font-semibold text-[#d8ff16]">
+            <div className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3]">
               Test login
             </div>
           </div>
@@ -350,7 +350,7 @@ export default function DashboardPage() {
             <button
               onClick={handleLookupOtp}
               disabled={otpBusy || !otpMobile.trim()}
-              className="rounded-[20px] bg-[#d8ff16] px-5 py-4 font-semibold text-black transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[20px] bg-[#8224E3] px-5 py-4 font-semibold text-black transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {otpBusy ? 'Fetching...' : 'Show OTP'}
             </button>
@@ -358,7 +358,7 @@ export default function DashboardPage() {
 
           <div className="mt-4 rounded-[22px] border border-white/10 bg-black/35 p-5">
             <div className="text-xs uppercase tracking-[0.2em] text-white/45">Current OTP</div>
-            <div className="mt-3 text-4xl font-black tracking-[0.12em] text-[#d8ff16]">
+            <div className="mt-3 text-4xl font-black tracking-[0.12em] text-[#8224E3]">
               {otpValue || '------'}
             </div>
             <div className="mt-2 text-sm text-white/55">

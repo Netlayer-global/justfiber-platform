@@ -506,7 +506,7 @@ export default function PlansPage() {
           <div className="text-xs uppercase tracking-[0.28em] text-white/45">Plan command</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
             Build real broadband packs,
-            <span className="text-[#d8ff16]"> not flat rows.</span>
+            <span className="text-[#8224E3]"> not flat rows.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
             This catalog drives customer app plans, sales discovery, plan change, and installer provisioning defaults.
@@ -518,7 +518,7 @@ export default function PlansPage() {
               { label: 'Premium packs', value: String(plans.filter((plan) => plan.price >= 1500).length), Icon: WalletCards },
             ].map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[24px] border border-white/10 bg-white/5 p-4">
-                <Icon className="h-4 w-4 text-[#d8ff16]" />
+                <Icon className="h-4 w-4 text-[#8224E3]" />
                 <div className="mt-4 text-3xl font-black text-white">{value}</div>
                 <div className="text-xs uppercase tracking-[0.2em] text-white/45">{label}</div>
               </div>
@@ -682,9 +682,9 @@ export default function PlansPage() {
             <input className="input" placeholder="OTT apps, comma separated" value={form.ottApps} onChange={(e) => setForm({ ...form, ottApps: e.target.value })} />
           </div>
 
-          <div className="rounded-[24px] border border-[#d8ff16]/20 bg-white/5 p-4">
+          <div className="rounded-[24px] border border-[#8224E3]/20 bg-white/5 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <ShieldCheck className="h-4 w-4 text-[#d8ff16]" />
+              <ShieldCheck className="h-4 w-4 text-[#8224E3]" />
               Provisioning defaults
             </div>
             <p className="mt-2 text-sm leading-6 text-white/55">
@@ -747,19 +747,19 @@ export default function PlansPage() {
             <div className="mt-4 rounded-[28px] border border-white/10 bg-[#0c0f15] p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#d8ff16]/20 bg-[#d8ff16]/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[#d8ff16]">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[#8224E3]/20 bg-[#8224E3]/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[#8224E3]">
                     {renderCategoryLabel(preview.category)}
                   </div>
                   <div className="mt-4 text-3xl font-black tracking-[-0.04em] text-white">{preview.name || 'Plan preview'}</div>
                   <div className="mt-2 text-sm uppercase tracking-[0.22em] text-white/40">{preview.planCode || 'PLAN_CODE'}</div>
                 </div>
-                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${preview.status === 'inactive' ? 'bg-red-500/15 text-red-200' : 'bg-[#d8ff16]/15 text-[#d8ff16]'}`}>
+                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${preview.status === 'inactive' ? 'bg-red-500/15 text-red-200' : 'bg-[#8224E3]/15 text-[#8224E3]'}`}>
                   {preview.status === 'inactive' ? 'Hidden' : 'Live'}
                 </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {preview.featured ? <span className="rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#d8ff16]">Featured</span> : null}
+                {preview.featured ? <span className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#8224E3]">Featured</span> : null}
                 {preview.recommended ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Recommended</span> : null}
                 {preview.spotlightLabel.trim().length > 0 ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.spotlightLabel}</span> : null}
                 {preview.routerIncluded ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Router bundled</span> : null}
@@ -881,14 +881,14 @@ export default function PlansPage() {
 
       {isLoading ? (
         <div className="card p-8 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#d8ff16]" />
+          <Loader className="mx-auto h-6 w-6 animate-spin text-[#8224E3]" />
         </div>
       ) : (
         <section className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {filteredPlans.map((plan) => (
             <article
               key={plan.id}
-              className={`card p-6 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-[#d8ff16]/40' : ''}`}
+              className={`card p-6 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-[#8224E3]/40' : ''}`}
               onMouseEnter={() => setSelectedPlanId(plan.id)}
             >
               <div className="flex items-start justify-between gap-4">
@@ -897,7 +897,7 @@ export default function PlansPage() {
                   <div className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">{plan.name}</div>
                   <div className="mt-2 text-sm text-white/45">{plan.planCode || plan.id}</div>
                 </div>
-                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.status === 'active' ? 'bg-[#d8ff16]/15 text-[#d8ff16]' : 'bg-red-500/15 text-red-200'}`}>
+                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.status === 'active' ? 'bg-[#8224E3]/15 text-[#8224E3]' : 'bg-red-500/15 text-red-200'}`}>
                   {plan.status}
                 </div>
               </div>
@@ -925,7 +925,7 @@ export default function PlansPage() {
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {plan.merchandising?.featured ? (
-                  <span className="rounded-full border border-[#d8ff16]/20 bg-[#d8ff16]/10 px-3 py-1 text-xs text-[#d8ff16]">
+                  <span className="rounded-full border border-[#8224E3]/20 bg-[#8224E3]/10 px-3 py-1 text-xs text-[#8224E3]">
                     Featured
                   </span>
                 ) : null}
@@ -1001,7 +1001,7 @@ export default function PlansPage() {
                 <button
                   type="button"
                   onClick={() => void togglePlanStatus(plan)}
-                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-200' : 'border-[#d8ff16]/30 text-[#d8ff16]'}`}
+                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-200' : 'border-[#8224E3]/30 text-[#8224E3]'}`}
                 >
                   {plan.status === 'active' ? <Trash2 className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
                   {plan.status === 'active' ? 'Hide' : 'Activate'}

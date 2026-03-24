@@ -37,7 +37,7 @@ class ServiceHubScreen extends StatelessWidget {
       ),
       backgroundColor: const Color(0xFF0C1018),
       body: RefreshIndicator(
-        color: const Color(0xFFE6FF3C),
+        color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF0C1018),
         onRefresh: appState.refresh,
         child: ListView(
@@ -52,7 +52,7 @@ class ServiceHubScreen extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: const Color(0x22E6FF3C)),
+              border: Border.all(color: const Color(0x228224E3)),
               boxShadow: const [
                 BoxShadow(color: Color(0x26030B14), blurRadius: 24, offset: Offset(0, 10)),
               ],
@@ -96,9 +96,9 @@ class ServiceHubScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFF10151A),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0x66E6FF3C)),
+                    border: Border.all(color: const Color(0x668224E3)),
                   ),
-                  child: const Icon(Icons.wifi_rounded, color: Color(0xFFE6FF3C), size: 42),
+                  child: const Icon(Icons.wifi_rounded, color: Color(0xFF8224E3), size: 42),
                 ),
               ],
             ),
@@ -299,7 +299,7 @@ class ServiceHubScreen extends StatelessWidget {
                                 end: Alignment.bottomRight,
                               ),
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: const Color(0x22E6FF3C)),
+                              border: Border.all(color: const Color(0x228224E3)),
                             ),
                             child: Row(
                               children: [
@@ -309,9 +309,9 @@ class ServiceHubScreen extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF10151A),
                                     borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(color: const Color(0x33E6FF3C)),
+                                    border: Border.all(color: const Color(0x338224E3)),
                                   ),
-                                  child: const Icon(Icons.add_box_outlined, size: 32, color: Color(0xFFE6FF3C)),
+                                  child: const Icon(Icons.add_box_outlined, size: 32, color: Color(0xFF8224E3)),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
@@ -349,7 +349,7 @@ class ServiceHubScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x33E6FF3C)),
+        border: Border.all(color: const Color(0x338224E3)),
       ),
       child: RichText(
         text: TextSpan(
@@ -366,7 +366,7 @@ class ServiceHubScreen extends StatelessWidget {
   Widget _lightPanel({required Widget child}) {
     return AppCard(
       color: const Color(0xFF0C1018),
-      borderColor: const Color(0x22E6FF3C),
+      borderColor: const Color(0x228224E3),
       padding: const EdgeInsets.all(20),
       child: child,
     );
@@ -378,7 +378,7 @@ class ServiceHubScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,7 +397,7 @@ class ServiceHubScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF101722),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,7 +420,7 @@ class ServiceHubScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
           border: Border(
-          bottom: last ? BorderSide.none : const BorderSide(color: Color(0x22E6FF3C)),
+          bottom: last ? BorderSide.none : const BorderSide(color: Color(0x228224E3)),
         ),
       ),
         child: Row(
@@ -436,7 +436,7 @@ class ServiceHubScreen extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(icon, color: const Color(0xFFE6FF3C)),
+              child: Icon(icon, color: const Color(0xFF8224E3)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -460,7 +460,7 @@ class ServiceHubScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         border: Border(
-          bottom: last ? BorderSide.none : const BorderSide(color: Color(0x22E6FF3C)),
+          bottom: last ? BorderSide.none : const BorderSide(color: Color(0x228224E3)),
         ),
       ),
       child: Row(
@@ -471,9 +471,9 @@ class ServiceHubScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF101722),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0x22E6FF3C)),
+              border: Border.all(color: const Color(0x228224E3)),
             ),
-            child: Icon(icon, color: const Color(0xFFE6FF3C)),
+            child: Icon(icon, color: const Color(0xFF8224E3)),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -521,7 +521,7 @@ class ServiceHubScreen extends StatelessWidget {
                     child: Container(
                       width: 52,
                       height: 6,
-                      decoration: BoxDecoration(color: const Color(0x33E6FF3C), borderRadius: BorderRadius.circular(99)),
+                      decoration: BoxDecoration(color: const Color(0x338224E3), borderRadius: BorderRadius.circular(99)),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -552,7 +552,7 @@ class ServiceHubScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFF111827),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x55E6FF3C)),
+                      border: Border.all(color: const Color(0x558224E3)),
                     ),
                     child: const Text('Shift your Wi-Fi connection for free!', style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
                   ),
@@ -605,7 +605,7 @@ class ServiceHubScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF111827),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: selected ? const Color(0xFFE6FF3C) : const Color(0x33E6FF3C), width: 1.5),
+          border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x338224E3), width: 1.5),
         ),
         child: Row(
           children: [

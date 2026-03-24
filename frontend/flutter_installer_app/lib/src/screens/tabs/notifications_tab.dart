@@ -13,7 +13,7 @@ class NotificationsTab extends StatelessWidget {
     final unreadCount = appState.notifications.where((item) => item.readAt == null).length;
 
     return RefreshIndicator(
-      color: const Color(0xFFE6FF3C),
+      color: const Color(0xFF8224E3),
       backgroundColor: const Color(0xFF0C1018),
       onRefresh: appState.refresh,
       child: ListView(
@@ -98,7 +98,7 @@ class NotificationsTab extends StatelessWidget {
                   },
                   child: AppCard(
                     color: item.readAt == null ? const Color(0xFF11161D) : const Color(0xFF0C1018),
-                    borderColor: item.readAt == null ? const Color(0x55E6FF3C) : const Color(0x22E6FF3C),
+                    borderColor: item.readAt == null ? const Color(0x558224E3) : const Color(0x228224E3),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -112,12 +112,12 @@ class NotificationsTab extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: const Color(0xFF141A22),
                                 borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: item.readAt == null ? const Color(0x55E6FF3C) : const Color(0x221F2937)),
+                                border: Border.all(color: item.readAt == null ? const Color(0x558224E3) : const Color(0x221F2937)),
                               ),
                               child: Text(
                                 item.readAt == null ? 'Unread' : 'Read',
                                 style: TextStyle(
-                                  color: item.readAt == null ? const Color(0xFFE6FF3C) : const Color(0xFF9CA3AF),
+                                  color: item.readAt == null ? const Color(0xFF8224E3) : const Color(0xFF9CA3AF),
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -152,7 +152,7 @@ class NotificationsTab extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF11161D),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x33E6FF3C)),
+        border: Border.all(color: const Color(0x338224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

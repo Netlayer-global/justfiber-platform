@@ -39,7 +39,7 @@ class _JobsTabState extends State<JobsTab> {
     final exceptionJobs = activeJobs.where((job) => job.configStatus == 'failed').length;
 
     return RefreshIndicator(
-      color: const Color(0xFFE6FF3C),
+      color: const Color(0xFF8224E3),
       backgroundColor: const Color(0xFF0C1018),
       onRefresh: appState.refresh,
       child: ListView(
@@ -211,7 +211,7 @@ class _JobsTabState extends State<JobsTab> {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x55E6FF3C)),
+        border: Border.all(color: const Color(0x558224E3)),
       ),
       child: Column(
         children: [
@@ -258,7 +258,7 @@ class _JobsTabState extends State<JobsTab> {
       ),
       child: AppCard(
         color: const Color(0xFF0C1018),
-        borderColor: const Color(0x22E6FF3C),
+        borderColor: const Color(0x228224E3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -295,12 +295,12 @@ class _JobsTabState extends State<JobsTab> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF141A22),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0x55E6FF3C)),
+                    border: Border.all(color: const Color(0x558224E3)),
                   ),
                   child: Text(
                     primaryAction,
                     style: const TextStyle(
-                      color: Color(0xFFE6FF3C),
+                      color: Color(0xFF8224E3),
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
                     ),
@@ -353,7 +353,7 @@ class _JobsTabState extends State<JobsTab> {
                   color: const Color(0xFF10151A),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: hasConfigFailure ? const Color(0x66F59E0B) : const Color(0x22E6FF3C),
+                    color: hasConfigFailure ? const Color(0x66F59E0B) : const Color(0x228224E3),
                   ),
                 ),
                 child: Text(
@@ -437,7 +437,7 @@ class _JobsTabState extends State<JobsTab> {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,7 +456,7 @@ class _JobsTabState extends State<JobsTab> {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x55E6FF3C)),
+        border: Border.all(color: const Color(0x558224E3)),
       ),
       child: Text(
         label,

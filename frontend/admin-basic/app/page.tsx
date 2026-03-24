@@ -73,7 +73,7 @@ export default function RootPage() {
           <nav className="mb-6 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-black/40 px-5 py-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="text-2xl font-black tracking-tight">
-                Just<span className="text-[#d8ff16]">Fiber</span>
+                Just<span className="text-[#8224E3]">Fiber</span>
               </div>
               <div className="text-xs uppercase tracking-[0.3em] text-white/45">Operations Cloud</div>
             </div>
@@ -91,7 +91,7 @@ export default function RootPage() {
           <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="card flex min-h-[640px] flex-col justify-between p-8 md:p-12">
               <div className="max-w-2xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#d8ff16]">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#8224E3]">
                   <Sparkles className="h-4 w-4" />
                   Admin landing
                 </div>
@@ -99,7 +99,7 @@ export default function RootPage() {
                   Broadband ops,
                   <br />
                   simplified in
-                  <span className="text-[#d8ff16]"> neon clarity.</span>
+                  <span className="text-[#8224E3]"> neon clarity.</span>
                 </h1>
                 <p className="mt-6 max-w-xl text-lg leading-8 text-white/65">
                   Control serviceability, installer operations, billing intelligence, and customer growth from one
@@ -119,7 +119,7 @@ export default function RootPage() {
               <div className="grid gap-3 pt-10 md:grid-cols-3">
                 {heroFeatures.map(({ title, desc, Icon }) => (
                   <div key={title} className="rounded-[24px] border border-white/10 bg-white/5 p-5">
-                    <Icon className="h-5 w-5 text-[#d8ff16]" />
+                    <Icon className="h-5 w-5 text-[#8224E3]" />
                     <div className="mt-4 text-lg font-semibold">{title}</div>
                     <div className="mt-2 text-sm leading-6 text-white/55">{desc}</div>
                   </div>
@@ -129,7 +129,7 @@ export default function RootPage() {
 
             <div className="card flex min-h-[640px] items-center justify-center overflow-hidden p-8">
               <div className="relative flex scale-[0.88] items-center justify-center gap-4 md:scale-100">
-                <div className="absolute inset-x-12 top-10 h-44 rounded-full bg-[#d8ff16]/20 blur-3xl" />
+                <div className="absolute inset-x-12 top-10 h-44 rounded-full bg-[#8224E3]/20 blur-3xl" />
                 <MockPhone />
                 <MockPhone right />
               </div>
@@ -143,7 +143,7 @@ export default function RootPage() {
                   <div className="text-3xl font-bold tracking-tight">Your operations, safe and fast.</div>
                   <div className="mt-2 text-white/55">Field execution, billing intelligence, and customer growth.</div>
                 </div>
-                <div className="rounded-full border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-4 py-2 text-sm text-[#d8ff16]">
+                <div className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-4 py-2 text-sm text-[#8224E3]">
                   Live now
                 </div>
               </div>
@@ -210,7 +210,7 @@ export default function RootPage() {
 
           <footer className="mt-4 rounded-[28px] border border-white/10 bg-black/55 px-5 py-4 text-sm text-white/50 md:flex md:items-center md:justify-between">
             <div>
-              Just<span className="text-[#d8ff16]">Fiber</span> Admin Experience
+              Just<span className="text-[#8224E3]">Fiber</span> Admin Experience
             </div>
             <div className="mt-2 flex flex-wrap gap-4 md:mt-0">
               <span>Operations</span>

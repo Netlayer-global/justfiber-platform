@@ -52,7 +52,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       ),
       backgroundColor: const Color(0xFF0C1018),
       body: RefreshIndicator(
-        color: const Color(0xFFE6FF3C),
+        color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF0C1018),
         onRefresh: appState.refresh,
         child: ListView(
@@ -101,12 +101,12 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       decoration: BoxDecoration(
                         color: wifi.paused ? const Color(0xFF1E1111) : const Color(0xFF10151A),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: wifi.paused ? const Color(0x66EF4444) : const Color(0x66E6FF3C)),
+                        border: Border.all(color: wifi.paused ? const Color(0x66EF4444) : const Color(0x668224E3)),
                       ),
                       child: Text(
                         wifi.paused ? 'Paused' : 'Online',
                         style: TextStyle(
-                          color: wifi.paused ? const Color(0xFFFCA5A5) : const Color(0xFFE6FF3C),
+                          color: wifi.paused ? const Color(0xFFFCA5A5) : const Color(0xFF8224E3),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -198,9 +198,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF10151A),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0x66E6FF3C)),
+                border: Border.all(color: const Color(0x668224E3)),
               ),
-              child: Icon(icon, color: const Color(0xFFE6FF3C)),
+              child: Icon(icon, color: const Color(0xFF8224E3)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -225,7 +225,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x66E6FF3C)),
+        border: Border.all(color: const Color(0x668224E3)),
       ),
       child: RichText(
         text: TextSpan(
@@ -259,7 +259,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 Icon(
                   wifi.paused ? Icons.play_circle_fill_rounded : Icons.pause_circle_filled_rounded,
                   size: 80,
-                  color: wifi.paused ? const Color(0xFFE6FF3C) : const Color(0xFFFF8A80),
+                  color: wifi.paused ? const Color(0xFF8224E3) : const Color(0xFFFF8A80),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -495,7 +495,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF08131B),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x33E6FF3C)),
+                        border: Border.all(color: const Color(0x338224E3)),
                       ),
                       child: Row(
                         children: [
@@ -512,7 +512,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           if (accessMode)
                             Switch(
                               value: !device.blocked,
-                              activeColor: const Color(0xFFE6FF3C),
+                              activeColor: const Color(0xFF8224E3),
                               onChanged: appState.busy
                                   ? null
                                   : (allowed) async {
@@ -551,7 +551,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFEFEEE8),
                       backgroundColor: const Color(0xFF0E1520),
-                      side: const BorderSide(color: Color(0x66E6FF3C)),
+                      side: const BorderSide(color: Color(0x668224E3)),
                     ),
                     child: const Text('Refresh device list'),
                   ),
@@ -601,7 +601,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       title: const Text('Enable guest network', style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
                       subtitle: const Text('Separate guests from your main home network', style: TextStyle(color: Color(0xFFD1D5DB))),
                       value: enabled,
-                      activeColor: const Color(0xFFE6FF3C),
+                      activeColor: const Color(0xFF8224E3),
                       inactiveThumbColor: const Color(0xFF9CA3AF),
                       inactiveTrackColor: const Color(0xFF1F2937),
                       onChanged: (value) => setLocalState(() => enabled = value),
@@ -706,7 +706,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFF08131B),
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0x33E6FF3C)),
+                              border: Border.all(color: const Color(0x338224E3)),
                             ),
                             child: Row(
                               children: [
@@ -726,14 +726,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                     color: rule.blocked ? const Color(0xFF2A1108) : const Color(0xFF0D1A12),
                                     borderRadius: BorderRadius.circular(99),
                                     border: Border.all(
-                                      color: rule.blocked ? const Color(0x66F59E0B) : const Color(0x66E6FF3C),
+                                      color: rule.blocked ? const Color(0x66F59E0B) : const Color(0x668224E3),
                                     ),
                                   ),
                                   child: Text(
                                     rule.blocked ? 'Blocked' : 'Allowed',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      color: rule.blocked ? const Color(0xFFFDE68A) : const Color(0xFFE6FF3C),
+                                      color: rule.blocked ? const Color(0xFFFDE68A) : const Color(0xFF8224E3),
                                     ),
                                   ),
                                 ),
@@ -845,7 +845,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.router_rounded, size: 88, color: Color(0xFFE6FF3C)),
+                const Icon(Icons.router_rounded, size: 88, color: Color(0xFF8224E3)),
                 const SizedBox(height: 16),
                 const Text('Restart router?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFFEFEEE8)), textAlign: TextAlign.center),
                 const SizedBox(height: 10),
@@ -879,7 +879,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFEFEEE8),
                       backgroundColor: const Color(0xFF0E1520),
-                      side: const BorderSide(color: Color(0x22E6FF3C)),
+                      side: const BorderSide(color: Color(0x228224E3)),
                     ),
                     child: const Text('Maybe Later'),
                   ),

@@ -21,7 +21,7 @@ class SupportHistoryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Support & requests')),
       body: RefreshIndicator(
-        color: const Color(0xFFE6FF3C),
+        color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF0C1018),
         onRefresh: appState.refresh,
         child: ListView(
@@ -143,8 +143,8 @@ class SupportHistoryScreen extends StatelessWidget {
                         }
                       },
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFE6FF3C),
-                        foregroundColor: const Color(0xFF111111),
+                        backgroundColor: const Color(0xFF8224E3),
+                        foregroundColor: const Color(0xFFEFEEE8),
                       ),
                       child: const Text('Open alerts center'),
                     ),
@@ -159,8 +159,8 @@ class SupportHistoryScreen extends StatelessWidget {
                           }
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFE6FF3C),
-                          foregroundColor: const Color(0xFF111111),
+                          backgroundColor: const Color(0xFF8224E3),
+                          foregroundColor: const Color(0xFFEFEEE8),
                         ),
                         child: Text(billing.usageCapReached ? 'Upgrade capped plan' : 'Upgrade before FUP'),
                       ),
@@ -174,7 +174,7 @@ class SupportHistoryScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFF111816),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x55E6FF3C)),
+                      border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x558224E3)),
                     ),
                     child: Text(
                       billing.usageCapReached
@@ -269,7 +269,7 @@ class SupportHistoryScreen extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         foregroundColor: const Color(0xFFEFEEE8),
         backgroundColor: const Color(0xFF0E1520),
-        side: const BorderSide(color: Color(0x33E6FF3C)),
+        side: const BorderSide(color: Color(0x338224E3)),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
@@ -282,7 +282,7 @@ class SupportHistoryScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF10151A),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x66E6FF3C)),
+        border: Border.all(color: const Color(0x668224E3)),
       ),
       child: Column(
         children: [
@@ -301,7 +301,7 @@ class SupportHistoryScreen extends StatelessWidget {
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
       color: const Color(0xFF0C1018),
-      borderColor: const Color(0x22E6FF3C),
+      borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -325,7 +325,7 @@ class SupportHistoryScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0B0F19),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x22E6FF3C)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,8 +337,8 @@ class SupportHistoryScreen extends StatelessWidget {
           FilledButton(
             onPressed: onTap,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE6FF3C),
-              foregroundColor: const Color(0xFF111111),
+              backgroundColor: const Color(0xFF8224E3),
+              foregroundColor: const Color(0xFFEFEEE8),
             ),
             child: Text(actionLabel),
           ),
@@ -368,9 +368,9 @@ class SupportHistoryScreen extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0x22E6FF3C)),
+          border: Border.all(color: const Color(0x228224E3)),
           boxShadow: const [
-            BoxShadow(color: Color(0x0AE6FF3C), blurRadius: 10, offset: Offset(0, 2)),
+            BoxShadow(color: Color(0x0A8224E3), blurRadius: 10, offset: Offset(0, 2)),
           ],
         ),
         child: Row(
@@ -545,8 +545,8 @@ class SupportHistoryScreen extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                             backgroundColor: const Color(0xFF10151A),
-                            selectedColor: const Color(0xFFE6FF3C),
-                            side: const BorderSide(color: Color(0x66E6FF3C)),
+                            selectedColor: const Color(0xFF8224E3),
+                            side: const BorderSide(color: Color(0x668224E3)),
                             onSelected: submitting ? null : (_) => setModalState(() => category = item),
                           );
                         }).toList(),
@@ -661,8 +661,8 @@ class SupportHistoryScreen extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                             backgroundColor: const Color(0xFF10151A),
-                            selectedColor: const Color(0xFFE6FF3C),
-                            side: const BorderSide(color: Color(0x66E6FF3C)),
+                            selectedColor: const Color(0xFF8224E3),
+                            side: const BorderSide(color: Color(0x668224E3)),
                             onSelected: submitting ? null : (_) => setModalState(() => requestType = item),
                           );
                         }).toList(),

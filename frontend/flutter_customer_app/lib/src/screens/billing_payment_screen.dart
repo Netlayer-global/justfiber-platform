@@ -61,7 +61,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
           'name': widget.paymentOrder.customerName,
         },
         'theme': {
-          'color': '#E6FF3C',
+          'color': '#8224E3',
         },
       });
     } catch (e) {
@@ -157,7 +157,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
         title: const Text('Bill Payment'),
       ),
       body: RefreshIndicator(
-        color: const Color(0xFFE6FF3C),
+        color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF0C1018),
         onRefresh: AppStateScope.of(context).refresh,
         child: ListView(
@@ -199,13 +199,13 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0x14E6FF3C),
+                    color: const Color(0x148224E3),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x66E6FF3C)),
+                    border: Border.all(color: const Color(0x668224E3)),
                   ),
                   child: Icon(
                     paymentError == null ? Icons.payments_rounded : Icons.error_outline_rounded,
-                    color: paymentError == null ? const Color(0xFFE6FF3C) : const Color(0xFFFF8A80),
+                    color: paymentError == null ? const Color(0xFF8224E3) : const Color(0xFFFF8A80),
                   ),
                 ),
               ],
@@ -222,7 +222,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF10151A),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x55E6FF3C)),
+                      border: Border.all(color: const Color(0x558224E3)),
                     ),
                     child: Text(
                       walletHint!,
@@ -297,7 +297,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEFEEE8),
                         backgroundColor: const Color(0xFF10151A),
-                        side: const BorderSide(color: Color(0x55E6FF3C)),
+                        side: const BorderSide(color: Color(0x558224E3)),
                       ),
                       child: const Text('Back to app'),
                     ),

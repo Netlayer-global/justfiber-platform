@@ -53,11 +53,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF141A22),
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: const Color(0x55E6FF3C)),
+                    border: Border.all(color: const Color(0x558224E3)),
                   ),
                   child: const Icon(
                     Icons.network_check_rounded,
-                    color: Color(0xFFE6FF3C),
+                    color: Color(0xFF8224E3),
                     size: 34,
                   ),
                 ),
@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF10151A),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0x33E6FF3C)),
+                    border: Border.all(color: const Color(0x338224E3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF10151A),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0x22E6FF3C)),
+                    border: Border.all(color: const Color(0x228224E3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

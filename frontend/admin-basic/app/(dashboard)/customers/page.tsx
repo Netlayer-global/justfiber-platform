@@ -61,7 +61,7 @@ export default function CustomersPage() {
     if (policy === 'unlimited' || cap <= 0) return { label: 'Unlimited', tone: 'bg-slate-700 text-slate-100' }
     const ratio = used / cap
     if (ratio >= 0.9) return { label: 'High usage', tone: 'bg-yellow-900 text-yellow-100' }
-    if (ratio >= 0.65) return { label: 'Watch', tone: 'bg-[#324014] text-[#e6ff3c]' }
+    if (ratio >= 0.65) return { label: 'Watch', tone: 'bg-[#324014] text-[#8224E3]' }
     return { label: 'Normal', tone: 'bg-green-900 text-green-100' }
   }
 
@@ -112,7 +112,7 @@ export default function CustomersPage() {
           <div className="text-xs uppercase tracking-[0.25em] text-white/45">Subscriber control</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
             Customers,
-            <span className="text-[#d8ff16]"> organized for action.</span>
+            <span className="text-[#8224E3]"> organized for action.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
             Search by name, mobile, email, customer ID, account number or PPPoE username.
@@ -207,7 +207,7 @@ export default function CustomersPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-96">
-          <Loader className="h-6 w-6 animate-spin text-[#d8ff16]" />
+          <Loader className="h-6 w-6 animate-spin text-[#8224E3]" />
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -276,7 +276,7 @@ export default function CustomersPage() {
                         const shouldRecommendUpgrade = risk.label === 'Watch' || risk.label === 'High usage' || risk.label === 'Cap reached'
                         return shouldRecommendUpgrade ? (
                           <Link href={`/customers/${customer.id}?tab=billing`}>
-                            <button className="rounded border border-[#d8ff16]/30 bg-[#d8ff16]/10 px-3 py-1 text-xs font-semibold text-[#d8ff16] transition hover:bg-[#d8ff16]/20">
+                            <button className="rounded border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3] transition hover:bg-[#8224E3]/20">
                               Upgrade review
                             </button>
                           </Link>

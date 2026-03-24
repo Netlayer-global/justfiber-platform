@@ -5,9 +5,9 @@ ThemeData buildJustFiberTheme() {
   const background = Color(0xFF0C1018);
   const surface = Color(0xFF0C1018);
   const surfaceAlt = Color(0xFF12161A);
-  const primary = Color(0xFFE6FF3C);
-  const accent = Color(0xFFE6FF3C);
-  const tertiary = Color(0xFFE6FF3C);
+  const primary = Color(0xFF8224E3);
+  const accent = Color(0xFF8224E3);
+  const tertiary = Color(0xFF8224E3);
   const text = Color(0xFFF5F5F5);
   const muted = Color(0xFF8A92A3);
   const cardSurface = Color(0xFF15181C);
@@ -33,8 +33,8 @@ ThemeData buildJustFiberTheme() {
       background: background,
       surface: surface,
       onSurface: const Color(0xFFF5F5F5),
-      onPrimary: Color(0xFF111111),
-      onSecondary: Color(0xFF111111),
+      onPrimary: Color(0xFFEFEEE8),
+      onSecondary: Color(0xFFEFEEE8),
       onBackground: const Color(0xFFF5F5F5),
     ),
     scaffoldBackgroundColor: background,
@@ -54,11 +54,11 @@ ThemeData buildJustFiberTheme() {
       labelStyle: GoogleFonts.dmSans(color: const Color(0xFF9CA3AF), fontWeight: FontWeight.w600),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Color(0x33E6FF3C)),
+        borderSide: const BorderSide(color: Color(0x338224E3)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Color(0x33E6FF3C)),
+        borderSide: const BorderSide(color: Color(0x338224E3)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
@@ -82,7 +82,7 @@ ThemeData buildJustFiberTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: primary,
-        foregroundColor: const Color(0xFF111111),
+        foregroundColor: const Color(0xFFEFEEE8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700, fontSize: 15),
@@ -90,9 +90,9 @@ ThemeData buildJustFiberTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFFE6FF3C),
+        foregroundColor: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFF111418),
-        side: const BorderSide(color: Color(0x99E6FF3C), width: 1.2),
+        side: const BorderSide(color: Color(0x998224E3), width: 1.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700, fontSize: 15),
