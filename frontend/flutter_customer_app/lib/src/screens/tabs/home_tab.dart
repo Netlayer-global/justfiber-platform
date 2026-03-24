@@ -25,6 +25,8 @@ class HomeTab extends StatelessWidget {
     final usageGb = billing.usageGb > 0 ? billing.usageGb : dashboard.usedGb;
     final usageCapGb = billing.usageCapGb > 0 ? billing.usageCapGb : dashboard.totalGb;
     final usagePercent = usageCapGb > 0 ? (usageGb / usageCapGb).clamp(0, 1) : 0.0;
+    final hasUsagePressure = billing.usageCapReached || (usageCapGb > 0 && usagePercent >= 0.65);
+    final showUpgradePrompt = hasService && hasUsagePressure;
 
     return RefreshIndicator(
       color: const Color(0xFFE6FF3C),
@@ -245,6 +247,30 @@ class HomeTab extends StatelessWidget {
                                   : 'Hard-cap policy active')
                               : 'Base plan speed active',
                           style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                      if (showUpgradePrompt) ...[
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+                                  );
+                                  if (context.mounted) {
+                                    await appState.refresh();
+                                  }
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFE6FF3C),
+                                  foregroundColor: const Color(0xFF111111),
+                                ),
+                                child: Text(billing.usageCapReached ? 'Upgrade plan now' : 'Explore faster plans'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],

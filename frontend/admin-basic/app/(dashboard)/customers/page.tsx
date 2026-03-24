@@ -14,6 +14,7 @@ export default function CustomersPage() {
   const [status, setStatus] = useState('')
   const [planCode, setPlanCode] = useState('')
   const [city, setCity] = useState('')
+  const [usageState, setUsageState] = useState('')
 
   useEffect(() => {
     void loadCustomers()
@@ -63,13 +64,44 @@ export default function CustomersPage() {
     if (ratio >= 0.65) return { label: 'Watch', tone: 'bg-[#324014] text-[#e6ff3c]' }
     return { label: 'Normal', tone: 'bg-green-900 text-green-100' }
   }
+
+  const filteredCustomers = useMemo(() => {
+    if (!usageState) return customers
+    return customers.filter((customer) => {
+      const risk = usageRisk(customer)
+      switch (usageState) {
+        case 'unlimited':
+          return risk.label === 'Unlimited'
+        case 'watch':
+          return risk.label === 'Watch'
+        case 'high':
+          return risk.label === 'High usage'
+        case 'cap':
+          return risk.label === 'Cap reached'
+        default:
+          return true
+      }
+    })
+  }, [customers, usageState])
+
+  const watchCount = useMemo(
+    () => customers.filter((customer) => usageRisk(customer).label === 'Watch').length,
+    [customers]
+  )
+
+  const capReachedCount = useMemo(
+    () => customers.filter((customer) => usageRisk(customer).label === 'Cap reached').length,
+    [customers]
+  )
+
   const portfolioMetrics: Array<{
     label: string
     value: string
     Icon: typeof Wifi
   }> = [
     { label: 'Active', value: String(activeCount), Icon: Wifi },
-    { label: 'Paused', value: String(customers.length - activeCount), Icon: UserX },
+    { label: 'Usage watch', value: String(watchCount), Icon: Loader },
+    { label: 'Cap reached', value: String(capReachedCount), Icon: UserX },
     { label: 'Base', value: String(customers.length), Icon: Users },
   ]
 
@@ -90,7 +122,7 @@ export default function CustomersPage() {
           <div className="text-xs uppercase tracking-[0.25em] text-black/55">Portfolio pulse</div>
           <div className="mt-3 text-5xl font-black">{customers.length}</div>
           <div className="mt-2 text-sm text-black/60">Customers loaded across active service zones</div>
-          <div className="mt-8 grid grid-cols-3 gap-3">
+          <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
             {portfolioMetrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
@@ -109,7 +141,7 @@ export default function CustomersPage() {
         </button>
       </div>
 
-      <form onSubmit={handleSearch} className="card p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+      <form onSubmit={handleSearch} className="card p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
         <div className="xl:col-span-2">
           <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Search</label>
           <div className="relative">
@@ -139,23 +171,37 @@ export default function CustomersPage() {
           <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">City</label>
           <input className="input w-full" placeholder="Lucknow" value={city} onChange={(e) => setCity(e.target.value)} />
         </div>
-        <div className="xl:col-span-5">
+        <div>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Usage risk</label>
+          <select className="input w-full" value={usageState} onChange={(e) => setUsageState(e.target.value)}>
+            <option value="">All usage states</option>
+            <option value="unlimited">Unlimited</option>
+            <option value="watch">Watch</option>
+            <option value="high">High usage</option>
+            <option value="cap">Cap reached</option>
+          </select>
+        </div>
+        <div className="xl:col-span-6">
           <button type="submit" className="btn-primary">Search Customers</button>
         </div>
       </form>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="metric-tile">
-          <p className="text-xs uppercase tracking-[0.18em] text-black/45">Loaded customers</p>
-          <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{customers.length}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-black/45">Visible customers</p>
+          <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{filteredCustomers.length}</p>
         </div>
         <div className="metric-tile">
           <p className="text-xs uppercase tracking-[0.18em] text-black/45">Active</p>
           <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{activeCount}</p>
         </div>
         <div className="metric-tile">
-          <p className="text-xs uppercase tracking-[0.18em] text-black/45">Suspended / inactive</p>
-          <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{customers.length - activeCount}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-black/45">Usage watch</p>
+          <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{watchCount}</p>
+        </div>
+        <div className="metric-tile">
+          <p className="text-xs uppercase tracking-[0.18em] text-black/45">Cap reached</p>
+          <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{capReachedCount}</p>
         </div>
       </div>
 
@@ -177,7 +223,7 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody>
-              {customers.map((customer) => (
+              {filteredCustomers.map((customer) => (
                 <tr key={customer.id} className="border-t border-[#2a2f4a] hover:bg-[#1a1f3a] align-top">
                   <td className="table-cell">
                     <div className="font-semibold">{customer.name}</div>
@@ -234,7 +280,7 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
-          {customers.length === 0 ? <div className="p-8 text-center text-[#b4bcc4]">No customers found</div> : null}
+          {filteredCustomers.length === 0 ? <div className="p-8 text-center text-[#b4bcc4]">No customers found</div> : null}
         </div>
       )}
     </div>
