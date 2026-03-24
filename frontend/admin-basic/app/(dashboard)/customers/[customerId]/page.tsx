@@ -158,6 +158,26 @@ export default function CustomerDetailPage() {
     customer?.plan && 'planCode' in customer.plan
       ? customer.plan.planCode || customer.plan.id
       : customer?.plan?.id
+  const currentSpeedMbps = Number(billingSummary.speedMbps || 0)
+  const usagePressureState = billingSummary.usageCapReached
+    ? 'cap_reached'
+    : usageCapGb > 0 && usagePercent >= 90
+      ? 'high_usage'
+      : usageCapGb > 0 && usagePercent >= 65
+        ? 'watch'
+        : 'normal'
+  const recommendedUpgradePlan = useMemo(() => {
+    const candidatePlans = availablePlans
+      .filter((plan) => plan.status === 'active')
+      .filter((plan) => (plan.planCode || plan.id) !== currentPlanCode)
+      .filter((plan) => Number(plan.speed || 0) > currentSpeedMbps)
+      .sort((left, right) => {
+        const speedDiff = Number(left.speed || 0) - Number(right.speed || 0)
+        if (speedDiff !== 0) return speedDiff
+        return Number(left.price || 0) - Number(right.price || 0)
+      })
+    return candidatePlans[0] || null
+  }, [availablePlans, currentPlanCode, currentSpeedMbps])
 
   async function handleCustomerUpdate(patch: Partial<Customer>) {
     if (!customer) return
@@ -333,15 +353,16 @@ export default function CustomerDetailPage() {
     }
   }
 
-  async function handlePreviewPlanChange() {
-    if (!customer || !planCode) {
+  async function handlePreviewPlanChange(targetPlanCode?: string) {
+    const nextPlanCode = targetPlanCode || planCode
+    if (!customer || !nextPlanCode) {
       toast.error('Select a target plan')
       return
     }
     try {
       setIsSaving(true)
       const res = await adminAPI.previewCustomerPlanChange(customer.id, {
-        planCode,
+        planCode: nextPlanCode,
         effectiveMode: planChangeMode,
       })
       if (!res.success || !res.data) {
@@ -810,6 +831,81 @@ export default function CustomerDetailPage() {
                     <p className="text-sm text-slate-400">
                       Positive adjustment remains payable before switch. On successful payment, pending plan change should auto-apply.
                     </p>
+                  </div>
+                ) : null}
+                {usagePressureState !== 'normal' && recommendedUpgradePlan ? (
+                  <div className="card p-5 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h2 className="text-lg font-semibold">Upgrade Recommended</h2>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {usagePressureState === 'cap_reached'
+                            ? 'Customer has already hit the active usage policy. Move them to a faster plan or higher cap.'
+                            : usagePressureState === 'high_usage'
+                              ? 'Customer is above 90% of plan allowance. Good candidate for immediate upgrade.'
+                              : 'Customer is nearing usage threshold. Preemptive upgrade can reduce support load.'}
+                        </p>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        usagePressureState === 'cap_reached'
+                          ? 'bg-red-500/15 text-red-300'
+                          : usagePressureState === 'high_usage'
+                            ? 'bg-amber-500/15 text-amber-300'
+                            : 'bg-[#d8ff16]/10 text-[#d8ff16]'
+                      }`}>
+                        {usagePressureState === 'cap_reached'
+                          ? 'Cap reached'
+                          : usagePressureState === 'high_usage'
+                            ? 'High usage'
+                            : 'Watch'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="metric-tile p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-black/40">Current</p>
+                        <p className="text-lg font-semibold">{customer.plan.name}</p>
+                        <p className="mt-1 text-sm text-black/55">{currentSpeedMbps.toFixed(0)} Mbps</p>
+                      </div>
+                      <div className="metric-tile p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-black/40">Suggested plan</p>
+                        <p className="text-lg font-semibold">{recommendedUpgradePlan.name}</p>
+                        <p className="mt-1 text-sm text-black/55">{Number(recommendedUpgradePlan.speed || 0).toFixed(0)} Mbps</p>
+                      </div>
+                      <div className="metric-tile p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-black/40">Current cap</p>
+                        <p className="text-lg font-semibold">{usageCapGb > 0 ? `${usageCapGb.toFixed(0)} GB` : 'Unlimited'}</p>
+                        <p className="mt-1 text-sm text-black/55">{usageGb.toFixed(2)} GB used</p>
+                      </div>
+                      <div className="metric-tile p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-black/40">Commercial delta</p>
+                        <p className="text-lg font-semibold">Rs {Number(recommendedUpgradePlan.price || 0)}</p>
+                        <p className="mt-1 text-sm text-black/55">Suggested monthly rate</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="btn-primary"
+                        onClick={() => {
+                          setPlanCode(recommendedUpgradePlan.planCode || recommendedUpgradePlan.id)
+                          setPlanChangePreview(null)
+                          toast.success(`Recommended plan ${recommendedUpgradePlan.name} loaded into plan change control`)
+                        }}
+                      >
+                        Load recommended plan
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => {
+                          setPlanCode(recommendedUpgradePlan.planCode || recommendedUpgradePlan.id)
+                          setPlanChangeMode('immediate')
+                          setPlanChangePreview(null)
+                          void handlePreviewPlanChange(recommendedUpgradePlan.planCode || recommendedUpgradePlan.id)
+                        }}
+                        disabled={isSaving}
+                      >
+                        Preview recommended switch
+                      </button>
+                    </div>
                   </div>
                 ) : null}
                 <div className="card p-5 space-y-4">
