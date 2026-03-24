@@ -22,7 +22,7 @@ class SupportHistoryScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Support & requests')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF0C1018),
+        backgroundColor: const Color(0xFFF7F8FC),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -300,7 +300,7 @@ class SupportHistoryScreen extends StatelessWidget {
 
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
-      color: const Color(0xFF0C1018),
+      color: const Color(0xFFF7F8FC),
       borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -878,4 +878,3 @@ class _DetailSheet extends StatelessWidget {
     );
   }
 }
-

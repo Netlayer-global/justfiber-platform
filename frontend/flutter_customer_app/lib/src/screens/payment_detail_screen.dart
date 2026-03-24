@@ -28,7 +28,7 @@ class PaymentDetailScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF0C1018),
+        backgroundColor: const Color(0xFFF7F8FC),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -82,7 +82,7 @@ class PaymentDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFF0C1018),
+            color: const Color(0xFFF7F8FC),
             borderColor: const Color(0x228224E3),
             textColor: const Color(0xFFEFEEE8),
             child: Column(
@@ -247,4 +247,3 @@ class PaymentDetailScreen extends StatelessWidget {
     );
   }
 }
-

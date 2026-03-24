@@ -17,7 +17,7 @@ class _ProfileTabState extends State<ProfileTab> {
 
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF7F8FC),
       isScrollControlled: true,
       builder: (context) {
         return StatefulBuilder(
@@ -100,7 +100,7 @@ class _ProfileTabState extends State<ProfileTab> {
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),

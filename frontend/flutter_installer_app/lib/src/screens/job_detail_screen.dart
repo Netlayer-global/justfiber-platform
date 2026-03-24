@@ -295,7 +295,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         child: SafeArea(
           child: RefreshIndicator(
             color: const Color(0xFF8224E3),
-            backgroundColor: const Color(0xFF0C1018),
+            backgroundColor: const Color(0xFFF7F8FC),
             onRefresh: _loadAll,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -640,7 +640,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               LinearProgressIndicator(
                                 value: (90 - _activationCountdown) / 90,
                                 minHeight: 8,
-                                backgroundColor: const Color(0xFF0C1018),
+                                backgroundColor: const Color(0xFFF7F8FC),
                                 valueColor: const AlwaysStoppedAnimation(Color(0xFF8224E3)),
                               ),
                             ],
@@ -1907,7 +1907,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           LinearProgressIndicator(
             value: nextStepNumber / totalSteps,
             minHeight: 8,
-            backgroundColor: const Color(0xFF0C1018),
+            backgroundColor: const Color(0xFFF7F8FC),
             valueColor: const AlwaysStoppedAnimation(Color(0xFF8224E3)),
           ),
           const SizedBox(height: 14),
@@ -1981,7 +1981,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ],
                   const SizedBox(height: 8),
                   Text(
-                    '${actor.isEmpty ? 'system' : actor} â€¢ ${at.isEmpty ? '-' : at}',
+                    '${actor.isEmpty ? 'system' : actor} Ã¢â‚¬Â¢ ${at.isEmpty ? '-' : at}',
                     style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],

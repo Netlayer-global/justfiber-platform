@@ -40,7 +40,7 @@ class _JobsTabState extends State<JobsTab> {
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -257,7 +257,7 @@ class _JobsTabState extends State<JobsTab> {
         MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
       ),
       child: AppCard(
-        color: const Color(0xFF0C1018),
+        color: const Color(0xFFF7F8FC),
         borderColor: const Color(0x228224E3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

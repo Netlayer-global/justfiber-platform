@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildInstallerTheme() {
-  const background = Color(0xFF0C1018);
-  const surface = Color(0xFF10151A);
-  const surfaceAlt = Color(0xFF111827);
+  const background = Color(0xFFF7F8FC);
+  const surface = Color(0xFFFFFFFF);
+  const surfaceAlt = Color(0xFFF1F4FA);
   const primary = Color(0xFF8224E3);
   const accent = Color(0xFF8224E3);
-  const text = Color(0xFFEFEEE8);
-  const muted = Color(0xFF9CA3AF);
+  const text = Color(0xFF111827);
+  const muted = Color(0xFF6B7280);
 
   return ThemeData(
-    colorScheme: const ColorScheme.dark(
+    colorScheme: const ColorScheme.light(
       primary: primary,
       secondary: accent,
+      background: background,
       surface: surface,
       onSurface: text,
+      onBackground: text,
     ),
     scaffoldBackgroundColor: background,
     useMaterial3: true,
@@ -67,7 +69,7 @@ ThemeData buildInstallerTheme() {
       ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: Color(0xFF0C1018),
+      backgroundColor: background,
       selectedItemColor: primary,
       unselectedItemColor: muted,
       showUnselectedLabels: true,

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 ThemeData buildJustFiberTheme() {
-  const background = Color(0xFF0C1018);
-  const surface = Color(0xFF0C1018);
-  const surfaceAlt = Color(0xFF12161A);
+  const background = Color(0xFFF7F8FC);
+  const surface = Color(0xFFFFFFFF);
+  const surfaceAlt = Color(0xFFF1F4FA);
   const primary = Color(0xFF8224E3);
   const accent = Color(0xFF8224E3);
   const tertiary = Color(0xFF8224E3);
-  const text = Color(0xFFF5F5F5);
-  const muted = Color(0xFF8A92A3);
-  const cardSurface = Color(0xFF15181C);
-  const cardText = Color(0xFFF5F5F5);
+  const text = Color(0xFF111827);
+  const muted = Color(0xFF6B7280);
+  const cardSurface = Color(0xFFFFFFFF);
+  const cardText = Color(0xFF111827);
   final base = ThemeData.light(useMaterial3: true);
   final textTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme).copyWith(
     headlineMedium: GoogleFonts.spaceGrotesk(fontSize: 30, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.8),
@@ -32,26 +32,26 @@ ThemeData buildJustFiberTheme() {
       error: Color(0xFFDC2626),
       background: background,
       surface: surface,
-      onSurface: const Color(0xFFF5F5F5),
+      onSurface: text,
       onPrimary: Color(0xFFEFEEE8),
       onSecondary: Color(0xFFEFEEE8),
-      onBackground: const Color(0xFFF5F5F5),
+      onBackground: text,
     ),
     scaffoldBackgroundColor: background,
     useMaterial3: true,
     textTheme: textTheme,
     appBarTheme: AppBarTheme(
       backgroundColor: background,
-      foregroundColor: const Color(0xFFF5F5F5),
+      foregroundColor: text,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
-      titleTextStyle: GoogleFonts.spaceGrotesk(fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFFF5F5F5), letterSpacing: -0.5),
+      titleTextStyle: GoogleFonts.spaceGrotesk(fontSize: 22, fontWeight: FontWeight.w700, color: text, letterSpacing: -0.5),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: surfaceAlt,
-      labelStyle: GoogleFonts.dmSans(color: const Color(0xFF9CA3AF), fontWeight: FontWeight.w600),
+      labelStyle: GoogleFonts.dmSans(color: muted, fontWeight: FontWeight.w600),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: Color(0x338224E3)),
@@ -64,7 +64,7 @@ ThemeData buildJustFiberTheme() {
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: accent, width: 1.4),
       ),
-      hintStyle: GoogleFonts.dmSans(color: const Color(0xFF7C8492)),
+      hintStyle: GoogleFonts.dmSans(color: muted),
     ),
     cardTheme: CardThemeData(
       color: cardSurface,
@@ -72,7 +72,7 @@ ThemeData buildJustFiberTheme() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFFFFFFF),
       selectedItemColor: accent,
       unselectedItemColor: muted,
       selectedLabelStyle: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
@@ -91,7 +91,7 @@ ThemeData buildJustFiberTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF111418),
+        backgroundColor: const Color(0xFFFFFFFF),
         side: const BorderSide(color: Color(0x998224E3), width: 1.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
@@ -105,8 +105,8 @@ ThemeData buildJustFiberTheme() {
       ),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: const Color(0xFF12161A),
-      contentTextStyle: GoogleFonts.dmSans(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w600),
+      backgroundColor: const Color(0xFFFFFFFF),
+      contentTextStyle: GoogleFonts.dmSans(color: text, fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       behavior: SnackBarBehavior.floating,
     ),
@@ -114,4 +114,3 @@ ThemeData buildJustFiberTheme() {
     iconTheme: const IconThemeData(color: cardText),
   );
 }
-

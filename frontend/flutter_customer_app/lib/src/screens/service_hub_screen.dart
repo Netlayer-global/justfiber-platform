@@ -32,13 +32,13 @@ class ServiceHubScreen extends StatelessWidget {
           ],
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF0C1018),
+        backgroundColor: const Color(0xFFF7F8FC),
         foregroundColor: const Color(0xFFEFEEE8),
       ),
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF7F8FC),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF0C1018),
+        backgroundColor: const Color(0xFFF7F8FC),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 34),
@@ -365,7 +365,7 @@ class ServiceHubScreen extends StatelessWidget {
 
   Widget _lightPanel({required Widget child}) {
     return AppCard(
-      color: const Color(0xFF0C1018),
+      color: const Color(0xFFF7F8FC),
       borderColor: const Color(0x228224E3),
       padding: const EdgeInsets.all(20),
       child: child,

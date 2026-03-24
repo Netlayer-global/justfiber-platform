@@ -24,12 +24,12 @@ class _AuthGateLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF7F8FC),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: AppCard(
-            color: const Color(0xFF0C1018),
+            color: const Color(0xFFF7F8FC),
             borderColor: const Color(0x228224E3),
             child: Column(
               mainAxisSize: MainAxisSize.min,

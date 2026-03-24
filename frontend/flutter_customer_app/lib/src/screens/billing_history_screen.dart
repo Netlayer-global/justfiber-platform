@@ -26,7 +26,7 @@ class BillingHistoryScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Billing')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF0C1018),
+        backgroundColor: const Color(0xFFF7F8FC),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -97,7 +97,7 @@ class BillingHistoryScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0C1018),
+                    color: const Color(0xFFF7F8FC),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0x228224E3)),
                   ),
@@ -119,7 +119,7 @@ class BillingHistoryScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0C1018),
+                      color: const Color(0xFFF7F8FC),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x228224E3)),
                     ),
@@ -249,7 +249,7 @@ class BillingHistoryScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0C1018),
+                      color: const Color(0xFFF7F8FC),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: const Color(0x228224E3)),
                     ),
@@ -330,7 +330,7 @@ class BillingHistoryScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0C1018),
+                color: const Color(0xFFF7F8FC),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0x228224E3)),
               ),
@@ -449,7 +449,7 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF0C1018),
+        color: const Color(0xFFF7F8FC),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -466,7 +466,7 @@ class BillingHistoryScreen extends StatelessWidget {
 
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
-      color: const Color(0xFF0C1018),
+      color: const Color(0xFFF7F8FC),
       borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -704,4 +704,3 @@ class BillingHistoryScreen extends StatelessWidget {
     );
   }
 }
-

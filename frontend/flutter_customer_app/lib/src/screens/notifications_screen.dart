@@ -216,7 +216,7 @@ class NotificationsScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Alerts & updates')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF0C1018),
+        backgroundColor: const Color(0xFFF7F8FC),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -310,7 +310,7 @@ class NotificationsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFF0C1018),
+            color: const Color(0xFFF7F8FC),
             borderColor: const Color(0x228224E3),
             child: notifications.isEmpty
                 ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFF9CA3AF)))

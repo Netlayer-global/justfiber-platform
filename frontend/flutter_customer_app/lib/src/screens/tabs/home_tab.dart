@@ -4,6 +4,7 @@ import '../../core/app_state.dart';
 import '../../widgets/app_card.dart';
 import '../billing_payment_screen.dart';
 import '../booking_flow_screen.dart';
+import '../plan_catalog_screen.dart';
 import '../service_tracking_screen.dart';
 
 class HomeTab extends StatelessWidget {
@@ -24,13 +25,13 @@ class HomeTab extends StatelessWidget {
     final hasService = billing.currentPlan.isNotEmpty || wifi.ssid24.isNotEmpty || dashboard.planName.isNotEmpty;
     final usageGb = billing.usageGb > 0 ? billing.usageGb : dashboard.usedGb;
     final usageCapGb = billing.usageCapGb > 0 ? billing.usageCapGb : dashboard.totalGb;
-    final usagePercent = usageCapGb > 0 ? (usageGb / usageCapGb).clamp(0, 1) : 0.0;
+    final double usagePercent = usageCapGb > 0 ? (usageGb / usageCapGb).clamp(0.0, 1.0).toDouble() : 0.0;
     final hasUsagePressure = billing.usageCapReached || (usageCapGb > 0 && usagePercent >= 0.65);
     final showUpgradePrompt = hasService && hasUsagePressure;
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -193,7 +194,7 @@ class HomeTab extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0C1018),
+                    color: const Color(0xFFF7F8FC),
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x228224E3)),
                   ),
@@ -461,7 +462,7 @@ class HomeTab extends StatelessWidget {
       borderRadius: BorderRadius.circular(28),
       onTap: onTap,
       child: AppCard(
-        color: const Color(0xFF0C1018),
+        color: const Color(0xFFF7F8FC),
         borderColor: const Color(0x228224E3),
         child: Row(
           children: [
@@ -521,7 +522,7 @@ class HomeTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF0C1018),
+          color: const Color(0xFFF7F8FC),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0x228224E3)),
         ),
@@ -552,7 +553,7 @@ class HomeTab extends StatelessWidget {
 
   Widget _lightPanel({required Widget child}) {
     return AppCard(
-      color: const Color(0xFF0C1018),
+      color: const Color(0xFFF7F8FC),
       borderColor: const Color(0x228224E3),
       padding: const EdgeInsets.all(20),
       child: child,

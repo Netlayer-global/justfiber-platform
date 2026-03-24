@@ -73,13 +73,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           ],
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF0C1018),
+        backgroundColor: const Color(0xFFF7F8FC),
         foregroundColor: const Color(0xFFEFEEE8),
       ),
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF7F8FC),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF0C1018),
+        backgroundColor: const Color(0xFFF7F8FC),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
@@ -511,7 +511,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF0C1018),
+              color: const Color(0xFFF7F8FC),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0x228224E3)),
             ),
@@ -834,7 +834,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
-      color: const Color(0xFF0C1018),
+      color: const Color(0xFFF7F8FC),
       borderColor: const Color(0x228224E3),
       textColor: const Color(0xFFEFEEE8),
       padding: const EdgeInsets.all(22),
@@ -971,4 +971,3 @@ class _MapHint extends StatelessWidget {
     );
   }
 }
-

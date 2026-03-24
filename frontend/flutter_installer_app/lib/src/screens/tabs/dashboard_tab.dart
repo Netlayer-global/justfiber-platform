@@ -17,7 +17,7 @@ class DashboardTab extends StatelessWidget {
     final completedJobs = appState.jobs.where((job) => job.status == 'completed').length;
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -46,7 +46,7 @@ class DashboardTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${profile.installerCode.isEmpty ? '-' : profile.installerCode} â€¢ ${profile.phone.isEmpty ? '-' : profile.phone}',
+                  '${profile.installerCode.isEmpty ? '-' : profile.installerCode} Ã¢â‚¬Â¢ ${profile.phone.isEmpty ? '-' : profile.phone}',
                   style: const TextStyle(color: Color(0xFFD1D5DB)),
                 ),
                 const SizedBox(height: 12),
@@ -77,7 +77,7 @@ class DashboardTab extends StatelessWidget {
           _metric(context, 'Completed', '$completedJobs'),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFF0C1018),
+            color: const Color(0xFFF7F8FC),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -98,7 +98,7 @@ class DashboardTab extends StatelessWidget {
 
   Widget _metric(BuildContext context, String label, String value) {
     return AppCard(
-      color: const Color(0xFF0C1018),
+      color: const Color(0xFFF7F8FC),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
