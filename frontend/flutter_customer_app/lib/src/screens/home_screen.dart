@@ -42,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const ProfileTab(),
     ];
     return Scaffold(
+      backgroundColor: const Color(0xFFFCFAF7),
       body: GradientOrbBackground(
         child: SafeArea(child: pages[index]),
       ),
