@@ -34,7 +34,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       ),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFFF6F1EB),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -51,7 +51,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                 Text(
                   'PAYMENT CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFA1A1AA),
+                        color: const Color(0xFF6E6A67),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -59,14 +59,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                 const SizedBox(height: 10),
                 Text(
                   'Payment timeline',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFEFEEE8), fontSize: 28),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFF7F7F8), fontSize: 28),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   payments.isEmpty
                       ? 'No payment activity found right now.'
                       : 'Track successful, pending, and failed broadband payments from one place.',
-                  style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -98,7 +98,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
               borderColor: Color(0x228224E3),
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: Text('No payments found for this filter.', style: TextStyle(color: Color(0xFFA1A1AA))),
+                child: Text('No payments found for this filter.', style: TextStyle(color: Color(0xFF6E6A67))),
               ),
             )
           else
@@ -140,14 +140,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               children: [
                                 const Text(
                                   'Bill Payment - Broadband',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFFA1A1AA)),
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF6E6A67)),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20, color: Color(0xFFEFEEE8))),
+                                Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20, color: Color(0xFF131313))),
                                 const SizedBox(height: 4),
                                 Text(
                                   payment.paidAt.isEmpty ? payment.provider.toUpperCase() : payment.paidAt,
-                                  style: const TextStyle(color: Color(0xFFA1A1AA)),
+                                  style: const TextStyle(color: Color(0xFF6E6A67)),
                                 ),
                               ],
                             ),
@@ -214,7 +214,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                                   },
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF8224E3),
-                              foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                             ),
                             child: const Text('View PDF'),
                           ),
@@ -229,7 +229,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                                 }
                               },
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFFEFEEE8),
+                                foregroundColor: const Color(0xFF131313),
                                 backgroundColor: const Color(0xFF10151A),
                                 side: const BorderSide(color: Color(0x338224E3)),
                               ),
@@ -282,7 +282,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
         ],
@@ -341,4 +341,9 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     );
   }
 }
+
+
+
+
+
 

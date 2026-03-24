@@ -27,13 +27,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       appBar: AppBar(
         title: const Text('Choose your plan'),
         centerTitle: true,
-        backgroundColor: const Color(0xFF121212),
-        foregroundColor: const Color(0xFFEFEEE8),
+        backgroundColor: const Color(0xFFF6F1EB),
+        foregroundColor: const Color(0xFF131313),
       ),
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: const Color(0xFFF6F1EB),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFFF6F1EB),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -89,27 +89,27 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFEEE8).withValues(alpha: 0.12),
+              color: const Color(0xFF131313).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: const Color(0x668224E3)),
             ),
             child: const Text(
               'Plan studio',
-              style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+              style: TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 16),
           Text(
             wifiName,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: const Color(0xFFEFEEE8),
+                  color: const Color(0xFF131313),
                   fontWeight: FontWeight.w800,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
             currentPlanName.isEmpty ? 'Pick a plan for this connection.' : 'Current plan: $currentPlanName',
-            style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+            style: const TextStyle(color: Color(0xFF5F5A56), height: 1.45),
           ),
           const SizedBox(height: 18),
           Row(
@@ -163,7 +163,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             Text(
               title,
               style: TextStyle(
-                color: active ? const Color(0xFFEFEEE8) : const Color(0xFFEFEEE8),
+                color: active ? const Color(0xFF131313) : const Color(0xFF131313),
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -171,7 +171,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             Text(
               subtitle,
               style: TextStyle(
-                color: active ? const Color(0xFFD1D5DB) : const Color(0xFF6B7280),
+                color: active ? const Color(0xFF5F5A56) : const Color(0xFF6B7280),
                 fontSize: 12,
                 height: 1.35,
               ),
@@ -234,13 +234,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                           _badge(
                             featured ? 'Recommended' : (effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
                             featured ? const Color(0x148224E3) : const Color(0x14111818),
-                            featured ? const Color(0xFF8224E3) : const Color(0xFFD1D5DB),
+                            featured ? const Color(0xFF8224E3) : const Color(0xFF5F5A56),
                             borderColor: featured ? const Color(0x668224E3) : const Color(0x338224E3),
                           ),
                         ],
                       ),
                       const SizedBox(height: 14),
-                      Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFFEFEEE8))),
+                      Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF131313))),
                       const SizedBox(height: 6),
                       Text(
                         '${_formatPlanHeadline(plan)} / month',
@@ -262,7 +262,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                   ),
                   child: Icon(
                     featured ? Icons.rocket_launch_rounded : Icons.wifi_rounded,
-                    color: const Color(0xFFEFEEE8),
+                    color: const Color(0xFF131313),
                     size: 30,
                   ),
                 ),
@@ -304,7 +304,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 children: [
                   const Text(
                     'Plan economics',
-                    style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8)),
+                    style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
                   ),
                   const SizedBox(height: 10),
                   _planPriceRow('Monthly', plan.monthlyPrice),
@@ -333,7 +333,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 Expanded(
                   child: FilledButton(
                     onPressed: appState.busy ? null : () => _applyPlan(context, appState, plan),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFEFEEE8)),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
                     child: Text(isCurrent ? 'Change duration' : 'Select plan'),
                   ),
                 ),
@@ -361,7 +361,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(color: Color(0xFF8A92A3))),
       ],
@@ -394,7 +394,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: const Color(0x668224E3)),
             ),
-            child: Text(chip, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFEFEEE8))),
+            child: Text(chip, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF131313))),
           ),
         )
         .toList();
@@ -450,11 +450,11 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB))),
+          Text(label, style: const TextStyle(color: Color(0xFF5F5A56))),
           const Spacer(),
           Text(
             'Rs ${amount.toStringAsFixed(0)}',
-            style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -466,11 +466,11 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB))),
+          Text(label, style: const TextStyle(color: Color(0xFF5F5A56))),
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -500,14 +500,14 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               const SizedBox(height: 18),
               Text(
                 preview.nextPlanName,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30, color: Color(0xFFEFEEE8)),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30, color: Color(0xFF131313)),
               ),
               const SizedBox(height: 10),
               Text(
                 effectiveMode == 'next_cycle'
                     ? 'This switch will queue for the next billing cycle.'
                     : 'This switch applies with current-cycle adjustment rules.',
-                style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                style: const TextStyle(color: Color(0xFF5F5A56), height: 1.4),
               ),
               const SizedBox(height: 16),
               _previewRow('Current price', 'Rs ${preview.currentPrice.toStringAsFixed(0)}'),
@@ -526,7 +526,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF8224E3),
-                    foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                   ),
                   child: const Text('Continue with this plan'),
                 ),
@@ -543,9 +543,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB))),
+          Text(label, style: const TextStyle(color: Color(0xFF5F5A56))),
           const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
         ],
       ),
     );
@@ -601,12 +601,17 @@ class _HeroMetric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800, fontSize: 16)),
+          Text(value, style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 12)),
+          Text(label, style: const TextStyle(color: Color(0xFF5F5A56), fontSize: 12)),
         ],
       ),
     );
   }
 }
+
+
+
+
+
 

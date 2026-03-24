@@ -32,13 +32,13 @@ class ServiceHubScreen extends StatelessWidget {
           ],
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF121212),
-        foregroundColor: const Color(0xFFEFEEE8),
+        backgroundColor: const Color(0xFFF6F1EB),
+        foregroundColor: const Color(0xFF131313),
       ),
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: const Color(0xFFF6F1EB),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFFF6F1EB),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 34),
@@ -67,14 +67,14 @@ class ServiceHubScreen extends StatelessWidget {
                       Text(
                         'Your broadband control center',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: const Color(0xFFEFEEE8),
+                              color: const Color(0xFF131313),
                               fontSize: 28,
                             ),
                       ),
                       const SizedBox(height: 8),
                       const Text(
                         'Manage service actions here only: Wi-Fi controls, devices, diagnostics, shifts, and plan changes.',
-                        style: TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                        style: TextStyle(color: Color(0xFF5F5A56), height: 1.4),
                       ),
                       const SizedBox(height: 18),
                       Wrap(
@@ -112,7 +112,7 @@ class ServiceHubScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   '$planName | $displayWifiName',
-                  style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -318,9 +318,9 @@ class ServiceHubScreen extends StatelessWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
+                                      Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
                                       const SizedBox(height: 4),
-                                      Text(addon.description, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.4)),
+                                      Text(addon.description, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
                                     ],
                                   ),
                                 ),
@@ -353,7 +353,7 @@ class ServiceHubScreen extends StatelessWidget {
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: const Color(0xFFEFEEE8)),
+          style: const TextStyle(color: const Color(0xFF131313)),
           children: [
             TextSpan(text: '$value ', style: const TextStyle(fontWeight: FontWeight.w800)),
             TextSpan(text: label, style: const TextStyle(color: Color(0xFF94A3B8))),
@@ -365,7 +365,7 @@ class ServiceHubScreen extends StatelessWidget {
 
   Widget _lightPanel({required Widget child}) {
     return AppCard(
-      color: const Color(0xFF1A1B1F),
+      color: const Color(0xFFFFFFFF),
       borderColor: const Color(0x228224E3),
       padding: const EdgeInsets.all(20),
       child: child,
@@ -385,7 +385,7 @@ class ServiceHubScreen extends StatelessWidget {
         children: [
           Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
         ],
       ),
     );
@@ -406,7 +406,7 @@ class ServiceHubScreen extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value.isEmpty ? '-' : value,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8)),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313)),
           ),
         ],
       ),
@@ -443,9 +443,9 @@ class ServiceHubScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.4)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
                 ],
               ),
             ),
@@ -482,7 +482,7 @@ class ServiceHubScreen extends StatelessWidget {
               children: [
                 Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
-                Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFEFEEE8))),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313))),
               ],
             ),
           ),
@@ -527,7 +527,7 @@ class ServiceHubScreen extends StatelessWidget {
                   const SizedBox(height: 18),
                   const Text(
                     'Shift Wi-Fi',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 30, color: Color(0xFFEFEEE8)),
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 30, color: Color(0xFF131313)),
                   ),
                   const SizedBox(height: 14),
                   _radioCard(
@@ -554,7 +554,7 @@ class ServiceHubScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: const Color(0x558224E3)),
                     ),
-                    child: const Text('Shift your Wi-Fi connection for free!', style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
+                    child: const Text('Shift your Wi-Fi connection for free!', style: TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(height: 14),
                   SizedBox(
@@ -615,10 +615,10 @@ class ServiceHubScreen extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFEFEEE8)),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313)),
                   ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFFD1D5DB))),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF5F5A56))),
                 ],
               ),
             ),
@@ -629,4 +629,8 @@ class ServiceHubScreen extends StatelessWidget {
     );
   }
 }
+
+
+
+
 

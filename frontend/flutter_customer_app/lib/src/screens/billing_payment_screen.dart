@@ -158,7 +158,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
       ),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFFF6F1EB),
         onRefresh: AppStateScope.of(context).refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
@@ -177,7 +177,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     children: [
                       const Text(
                         'Razorpay checkout',
-                        style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800, fontSize: 22),
+                        style: TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w800, fontSize: 22),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -189,7 +189,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                         paymentError == null
                             ? 'The secure payment window opens automatically.'
                             : 'Your payment attempt needs attention before completion.',
-                        style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                        style: const TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                       ),
                     ],
                   ),
@@ -226,7 +226,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     ),
                     child: Text(
                       walletHint!,
-                      style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w600, height: 1.4),
+                      style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w600, height: 1.4),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -295,7 +295,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFF131313),
                         backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x558224E3)),
                       ),
@@ -312,4 +312,9 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     );
   }
 }
+
+
+
+
+
 

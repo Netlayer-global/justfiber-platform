@@ -82,11 +82,11 @@ class NotificationsScreen extends StatelessWidget {
       case _AlertKind.billing:
         return _accent;
       case _AlertKind.support:
-        return const Color(0xFFEFEEE8);
+        return const Color(0xFF131313);
       case _AlertKind.tracking:
         return const Color(0xFFF59E0B);
       case _AlertKind.general:
-        return const Color(0xFFD1D5DB);
+        return const Color(0xFF5F5A56);
     }
   }
 
@@ -216,7 +216,7 @@ class NotificationsScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Alerts & updates')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFFF6F1EB),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -233,7 +233,7 @@ class NotificationsScreen extends StatelessWidget {
                 Text(
                   'ALERTS CENTER',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFA1A1AA),
+                        color: const Color(0xFF6E6A67),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -241,14 +241,14 @@ class NotificationsScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   'Stay updated',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFEFEEE8), fontSize: 28),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFF7F7F8), fontSize: 28),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   notifications.isEmpty
                       ? 'There are no active alerts right now.'
                       : 'You have ${notifications.length} recent service, billing, or support alerts.',
-                  style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -257,7 +257,7 @@ class NotificationsScreen extends StatelessWidget {
                   children: [
                     FilledButton(
                       onPressed: appState.busy ? null : appState.refresh,
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFEFEEE8)),
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
                       child: const Text('Refresh'),
                     ),
                     OutlinedButton(
@@ -270,7 +270,7 @@ class NotificationsScreen extends StatelessWidget {
                         }
                       },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFF131313),
                         backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x668224E3)),
                       ),
@@ -286,7 +286,7 @@ class NotificationsScreen extends StatelessWidget {
                         }
                       },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFF131313),
                         backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x668224E3)),
                       ),
@@ -310,10 +310,10 @@ class NotificationsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFF1A1B1F),
+            color: const Color(0xFFFFFFFF),
             borderColor: const Color(0x228224E3),
             child: notifications.isEmpty
-                ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFFA1A1AA)))
+                ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFF6E6A67)))
                 : Column(
                     children: notifications.map((item) {
                       final kind = _kindFor(item);
@@ -366,7 +366,7 @@ class NotificationsScreen extends StatelessWidget {
                                   Text(
                                     _relativeTime(item),
                                     style: const TextStyle(
-                                      color: Color(0xFFA1A1AA),
+                                      color: Color(0xFF6E6A67),
                                       fontWeight: FontWeight.w700,
                                       fontSize: 12,
                                     ),
@@ -374,9 +374,9 @@ class NotificationsScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFEFEEE8))),
+                              Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF131313))),
                               const SizedBox(height: 6),
-                              Text(item.body, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.45)),
+                              Text(item.body, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45)),
                               if (_detailLines(item).isNotEmpty) ...[
                                 const SizedBox(height: 12),
                                 Container(
@@ -396,7 +396,7 @@ class NotificationsScreen extends StatelessWidget {
                                             child: Text(
                                               line,
                                               style: const TextStyle(
-                                                color: Color(0xFFEFEEE8),
+                                                color: Color(0xFF131313),
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
@@ -415,7 +415,7 @@ class NotificationsScreen extends StatelessWidget {
                                     onPressed: () => _openPrimaryAction(context, appState, item),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: const Color(0xFF8224E3),
-                                      foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                                     ),
                                     child: Text(_hasUpgradeOffer(item) ? 'Upgrade plan' : _primaryActionLabelFor(kind)),
                                   ),
@@ -429,7 +429,7 @@ class NotificationsScreen extends StatelessWidget {
                                       }
                                     },
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFFEFEEE8),
+                                      foregroundColor: const Color(0xFF131313),
                                       backgroundColor: const Color(0xFF10151A),
                                       side: const BorderSide(color: Color(0x338224E3)),
                                     ),
@@ -461,7 +461,7 @@ class NotificationsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
         ],
@@ -476,4 +476,9 @@ enum _AlertKind {
   tracking,
   general,
 }
+
+
+
+
+
 

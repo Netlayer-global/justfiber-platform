@@ -22,7 +22,7 @@ class SupportHistoryScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Support & requests')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFFF6F1EB),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -39,7 +39,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 Text(
                   'SUPPORT DESK',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFFA1A1AA),
+                    color: const Color(0xFF6E6A67),
                     letterSpacing: 3.2,
                     fontWeight: FontWeight.w700,
                   ),
@@ -48,14 +48,14 @@ class SupportHistoryScreen extends StatelessWidget {
                 Text(
                   'Get instant support',
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFFEFEEE8),
+                    color: const Color(0xFF131313),
                     fontSize: 28,
                   ),
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   'Raise broadband, billing, shift connection, and service complaints from one place.',
-                  style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                  style: TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -71,7 +71,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 const Text(
                   'Quick actions',
                   style: TextStyle(
-                    color: Color(0xFFA1A1AA),
+                    color: Color(0xFF6E6A67),
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.3,
                   ),
@@ -144,7 +144,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       },
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                       ),
                       child: const Text('Open alerts center'),
                     ),
@@ -160,7 +160,7 @@ class SupportHistoryScreen extends StatelessWidget {
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF8224E3),
-                          foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                         ),
                         child: Text(billing.usageCapReached ? 'Upgrade capped plan' : 'Upgrade before FUP'),
                       ),
@@ -180,7 +180,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       billing.usageCapReached
                           ? 'Your current plan has reached its data policy threshold. Upgrade from here if you want faster service restored.'
                           : 'You are close to your current plan limit. Upgrade now if you want to avoid reduced speed or cap action.',
-                      style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4, fontWeight: FontWeight.w600),
+                      style: const TextStyle(color: Color(0xFF5F5A56), height: 1.4, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -267,7 +267,7 @@ class SupportHistoryScreen extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label),
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFFEFEEE8),
+        foregroundColor: const Color(0xFF131313),
         backgroundColor: const Color(0xFF0E1520),
         side: const BorderSide(color: Color(0x338224E3)),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -286,12 +286,12 @@ class SupportHistoryScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: const Color(0xFFEFEEE8))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: const Color(0xFF131313))),
           const SizedBox(height: 4),
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -300,12 +300,12 @@ class SupportHistoryScreen extends StatelessWidget {
 
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
-      color: const Color(0xFF1A1B1F),
+      color: const Color(0xFFFFFFFF),
       borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFEFEEE8))),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313))),
           const SizedBox(height: 14),
           child,
         ],
@@ -330,15 +330,15 @@ class SupportHistoryScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
+          Text(title, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.45)),
+          Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45)),
           const SizedBox(height: 12),
           FilledButton(
             onPressed: onTap,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF8224E3),
-              foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
             ),
             child: Text(actionLabel),
           ),
@@ -385,9 +385,9 @@ class SupportHistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFEFEEE8))),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF131313))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
                   Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF94A3B8))),
                 ],
@@ -524,12 +524,12 @@ class SupportHistoryScreen extends StatelessWidget {
                     children: [
                       const Text(
                         'Create support ticket',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFFEFEEE8)),
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFF131313)),
                       ),
                       const SizedBox(height: 10),
                       const Text(
                         'Open a broadband or billing support case and keep the conversation inside one ticket.',
-                        style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                        style: TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                       ),
                       const SizedBox(height: 14),
                       Wrap(
@@ -541,7 +541,7 @@ class SupportHistoryScreen extends StatelessWidget {
                             label: Text(item),
                             selected: selected,
                             labelStyle: TextStyle(
-                              color: selected ? const Color(0xFF031B17) : const Color(0xFFEFEEE8),
+                              color: selected ? const Color(0xFF031B17) : const Color(0xFF131313),
                               fontWeight: FontWeight.w700,
                             ),
                             backgroundColor: const Color(0xFF10151A),
@@ -555,14 +555,14 @@ class SupportHistoryScreen extends StatelessWidget {
                       TextField(
                         controller: subjectController,
                         enabled: !submitting,
-                        style: const TextStyle(color: const Color(0xFFEFEEE8)),
+                        style: const TextStyle(color: const Color(0xFF131313)),
                         decoration: const InputDecoration(labelText: 'Subject'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: descriptionController,
                         enabled: !submitting,
-                        style: const TextStyle(color: const Color(0xFFEFEEE8)),
+                        style: const TextStyle(color: const Color(0xFF131313)),
                         minLines: 3,
                         maxLines: 5,
                         decoration: const InputDecoration(labelText: 'Describe the issue'),
@@ -640,12 +640,12 @@ class SupportHistoryScreen extends StatelessWidget {
                     children: [
                       const Text(
                         'Create service request',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFFEFEEE8)),
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFF131313)),
                       ),
                       const SizedBox(height: 10),
                       const Text(
                         'Use a service request for shift, disconnect, linkage, or other connection changes.',
-                        style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                        style: TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                       ),
                       const SizedBox(height: 14),
                       Wrap(
@@ -657,7 +657,7 @@ class SupportHistoryScreen extends StatelessWidget {
                             label: Text(item),
                             selected: selected,
                             labelStyle: TextStyle(
-                              color: selected ? const Color(0xFF031B17) : const Color(0xFFEFEEE8),
+                              color: selected ? const Color(0xFF031B17) : const Color(0xFF131313),
                               fontWeight: FontWeight.w700,
                             ),
                             backgroundColor: const Color(0xFF10151A),
@@ -671,7 +671,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       TextField(
                         controller: noteController,
                         enabled: !submitting,
-                        style: const TextStyle(color: const Color(0xFFEFEEE8)),
+                        style: const TextStyle(color: const Color(0xFF131313)),
                         minLines: 3,
                         maxLines: 5,
                         decoration: const InputDecoration(labelText: 'Request note'),
@@ -835,9 +835,9 @@ class _DetailSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFFEFEEE8))),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFF131313))),
               const SizedBox(height: 6),
-              Text(subtitle, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700)),
+              Text(subtitle, style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -878,4 +878,9 @@ class _DetailSheet extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
 

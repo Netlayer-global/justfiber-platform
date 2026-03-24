@@ -47,13 +47,13 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       appBar: AppBar(
         title: Text('Wi-Fi Settings', style: Theme.of(context).textTheme.headlineSmall),
         centerTitle: true,
-        backgroundColor: const Color(0xFF121212),
-        foregroundColor: const Color(0xFFEFEEE8),
+        backgroundColor: const Color(0xFFF6F1EB),
+        foregroundColor: const Color(0xFF131313),
       ),
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: const Color(0xFFF6F1EB),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFFF6F1EB),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -75,7 +75,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 Text(
                   'NETWORK CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFA1A1AA),
+                        color: const Color(0xFF6E6A67),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -87,11 +87,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFFEFEEE8))),
+                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFF131313))),
                           const SizedBox(height: 6),
                           Text(
                             'Quality: ${appState.networkQuality.quality} | Devices: ${wifi.connectedDevicesCount}',
-                            style: const TextStyle(color: Color(0xFFD1D5DB)),
+                            style: const TextStyle(color: Color(0xFF5F5A56)),
                           ),
                         ],
                       ),
@@ -207,9 +207,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: const Color(0xFFEFEEE8))),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: const Color(0xFF131313))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF5F5A56), height: 1.4)),
                 ],
               ),
             ),
@@ -229,7 +229,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: const Color(0xFFEFEEE8)),
+          style: const TextStyle(color: const Color(0xFF131313)),
           children: [
             TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
             TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -264,7 +264,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 const SizedBox(height: 16),
                 Text(
                   wifi.paused ? 'Resume internet on this connection?' : 'Pause internet on this connection?',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: const Color(0xFFEFEEE8)),
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: const Color(0xFF131313)),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 10),
@@ -273,7 +273,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       ? 'Your router and service will start working again after confirmation.'
                       : 'This will temporarily disable active internet access until you resume it again.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 SizedBox(
@@ -321,24 +321,24 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Wi-Fi name & password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFFEFEEE8))),
+                    const Text('Wi-Fi name & password', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFF131313))),
                     const SizedBox(height: 10),
                     const Text(
                       'Rename your Wi-Fi and set a stronger password for secure usage.',
-                      style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                      style: TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                     ),
                     const SizedBox(height: 18),
                     TextField(
                       controller: _nameController,
                       enabled: !submitting,
-                      style: const TextStyle(color: Color(0xFFEFEEE8)),
+                      style: const TextStyle(color: Color(0xFF131313)),
                       decoration: const InputDecoration(labelText: 'Wi-Fi name'),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _passwordController,
                       enabled: !submitting,
-                      style: const TextStyle(color: Color(0xFFEFEEE8)),
+                      style: const TextStyle(color: Color(0xFF131313)),
                       obscureText: true,
                       decoration: const InputDecoration(labelText: 'Password'),
                     ),
@@ -411,7 +411,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Diagnostics summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFFEFEEE8))),
+                const Text('Diagnostics summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFF131313))),
                 const SizedBox(height: 18),
                 _diagnosticRow('Download speed', '${appState.speedTest.downloadMbps.toStringAsFixed(1)} Mbps'),
                 _diagnosticRow('Upload speed', '${appState.speedTest.uploadMbps.toStringAsFixed(1)} Mbps'),
@@ -467,7 +467,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(accessMode ? 'Manage Wi-Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFFEFEEE8))),
+                Text(accessMode ? 'Manage Wi-Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFF131313))),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
@@ -484,7 +484,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     padding: EdgeInsets.symmetric(vertical: 20),
                     child: Text(
                       'No connected device at the moment. Try reconnecting to Wi-Fi or refresh later.',
-                      style: TextStyle(color: Color(0xFFD1D5DB)),
+                      style: TextStyle(color: Color(0xFF5F5A56)),
                     ),
                   )
                 else
@@ -503,9 +503,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: const Color(0xFFEFEEE8))),
+                                Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: const Color(0xFF131313))),
                                 const SizedBox(height: 4),
-                                Text('${device.connectionType} | ${device.signal}', style: const TextStyle(color: Color(0xFFD1D5DB))),
+                                Text('${device.connectionType} | ${device.signal}', style: const TextStyle(color: Color(0xFF5F5A56))),
                               ],
                             ),
                           ),
@@ -549,7 +549,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             await _showConnectedDevices(context, appState, accessMode: accessMode);
                           },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFEFEEE8),
+                      foregroundColor: const Color(0xFF131313),
                       backgroundColor: const Color(0xFF0E1520),
                       side: const BorderSide(color: Color(0x668224E3)),
                     ),
@@ -589,26 +589,26 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Guest Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFFEFEEE8))),
+                    const Text('Guest Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFF131313))),
                     const SizedBox(height: 10),
                     const Text(
                       'Create a separate guest network with its own name and password.',
-                      style: TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                      style: TextStyle(color: Color(0xFF5F5A56), height: 1.45),
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Enable guest network', style: TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w700)),
-                      subtitle: const Text('Separate guests from your main home network', style: TextStyle(color: Color(0xFFD1D5DB))),
+                      title: const Text('Enable guest network', style: TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w700)),
+                      subtitle: const Text('Separate guests from your main home network', style: TextStyle(color: Color(0xFF5F5A56))),
                       value: enabled,
                       activeColor: const Color(0xFF8224E3),
-                      inactiveThumbColor: const Color(0xFFA1A1AA),
+                      inactiveThumbColor: const Color(0xFF6E6A67),
                       inactiveTrackColor: const Color(0xFF1F2937),
                       onChanged: (value) => setLocalState(() => enabled = value),
                     ),
-                    TextField(controller: _guestSsidController, style: const TextStyle(color: const Color(0xFFEFEEE8)), decoration: const InputDecoration(labelText: 'Guest Wi-Fi name')),
+                    TextField(controller: _guestSsidController, style: const TextStyle(color: const Color(0xFF131313)), decoration: const InputDecoration(labelText: 'Guest Wi-Fi name')),
                     const SizedBox(height: 12),
-                    TextField(controller: _guestPasswordController, style: const TextStyle(color: const Color(0xFFEFEEE8)), obscureText: true, decoration: const InputDecoration(labelText: 'Guest password')),
+                    TextField(controller: _guestPasswordController, style: const TextStyle(color: const Color(0xFF131313)), obscureText: true, decoration: const InputDecoration(labelText: 'Guest password')),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -687,14 +687,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Parental controls', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Color(0xFFEFEEE8))),
+                    const Text('Parental controls', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Color(0xFF131313))),
                     const SizedBox(height: 10),
                     if (rules.isEmpty)
                       const Padding(
                         padding: EdgeInsets.only(bottom: 16),
                         child: Text(
                           'No active rules right now. Add a schedule to automatically restrict Wi-Fi access.',
-                          style: TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                          style: TextStyle(color: Color(0xFF5F5A56), height: 1.4),
                         ),
                       )
                     else
@@ -714,9 +714,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(rule.targetName, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
+                                      Text(rule.targetName, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
                                       const SizedBox(height: 4),
-                                      Text('${rule.startTime} - ${rule.endTime}', style: const TextStyle(color: Color(0xFFD1D5DB))),
+                                      Text('${rule.startTime} - ${rule.endTime}', style: const TextStyle(color: Color(0xFF5F5A56))),
                                     ],
                                   ),
                                 ),
@@ -746,7 +746,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     TextField(
                       controller: targetController,
                       enabled: !submitting,
-                      style: const TextStyle(color: Color(0xFFEFEEE8)),
+                      style: const TextStyle(color: Color(0xFF131313)),
                       decoration: const InputDecoration(labelText: 'Rule or device name'),
                     ),
                     const SizedBox(height: 12),
@@ -756,7 +756,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           child: TextField(
                             controller: startController,
                             enabled: !submitting,
-                            style: const TextStyle(color: Color(0xFFEFEEE8)),
+                            style: const TextStyle(color: Color(0xFF131313)),
                             decoration: const InputDecoration(labelText: 'Start time (HH:MM)'),
                           ),
                         ),
@@ -765,7 +765,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           child: TextField(
                             controller: endController,
                             enabled: !submitting,
-                            style: const TextStyle(color: Color(0xFFEFEEE8)),
+                            style: const TextStyle(color: Color(0xFF131313)),
                             decoration: const InputDecoration(labelText: 'End time (HH:MM)'),
                           ),
                         ),
@@ -847,11 +847,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               children: [
                 const Icon(Icons.router_rounded, size: 88, color: Color(0xFF8224E3)),
                 const SizedBox(height: 16),
-                const Text('Restart router?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFFEFEEE8)), textAlign: TextAlign.center),
+                const Text('Restart router?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFF131313)), textAlign: TextAlign.center),
                 const SizedBox(height: 10),
                 const Text(
                   'This may take a few minutes, during which your Wi-Fi connection will be affected. Inform active users beforehand.',
-                  style: TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                  style: TextStyle(color: Color(0xFF5F5A56), height: 1.4),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 18),
@@ -877,7 +877,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFEFEEE8),
+                      foregroundColor: const Color(0xFF131313),
                       backgroundColor: const Color(0xFF0E1520),
                       side: const BorderSide(color: Color(0x228224E3)),
                     ),
@@ -900,11 +900,15 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       ),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600))),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFFEFEEE8))),
+          Expanded(child: Text(label, style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w600))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFF131313))),
         ],
       ),
     );
   }
 }
+
+
+
+
 

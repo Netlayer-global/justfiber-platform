@@ -23,13 +23,13 @@ class ServiceTrackingScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Requests & Tracking'),
-        backgroundColor: const Color(0xFF121212),
-        foregroundColor: const Color(0xFFEFEEE8),
+        backgroundColor: const Color(0xFFF6F1EB),
+        foregroundColor: const Color(0xFF131313),
       ),
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: const Color(0xFFF6F1EB),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFFF6F1EB),
         onRefresh: appState.refreshBookingTracking,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -46,7 +46,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                 Text(
                   'TRACKING CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFA1A1AA),
+                        color: const Color(0xFF6E6A67),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -54,7 +54,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   'Current booking',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFEFEEE8), fontSize: 28),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFF7F7F8), fontSize: 28),
                 ),
                 const SizedBox(height: 12),
                 _row('Booking no.', latestBooking?.bookingNumber ?? '-'),
@@ -80,7 +80,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                       : () async {
                           await _refreshTrackingWithFeedback(context, appState);
                         },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFEFEEE8)),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
                   child: const Text('Refresh tracking'),
                 ),
                 const SizedBox(height: 10),
@@ -98,7 +98,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                         }
                       },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFF131313),
                         backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x668224E3)),
                       ),
@@ -114,7 +114,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                         }
                       },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFF131313),
                         backgroundColor: const Color(0xFF10151A),
                         side: const BorderSide(color: Color(0x668224E3)),
                       ),
@@ -127,7 +127,7 @@ class ServiceTrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFF1A1B1F),
+            color: const Color(0xFFFFFFFF),
             borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,9 +170,9 @@ class ServiceTrackingScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(step.code.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
+                                Text(step.code.replaceAll('_', ' '), style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
                                 const SizedBox(height: 4),
-                                Text(step.at.isEmpty ? 'Pending' : step.at, style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 12)),
+                                Text(step.at.isEmpty ? 'Pending' : step.at, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
                                 if (entry.key == 0 && latestBooking?.preferredSlotLabel.isNotEmpty == true) ...[
                                   const SizedBox(height: 4),
                                   Text(
@@ -193,7 +193,7 @@ class ServiceTrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFF1A1B1F),
+            color: const Color(0xFFFFFFFF),
             borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,11 +230,11 @@ class ServiceTrackingScreen extends StatelessWidget {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(visit.jobNumber, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
+                                        Text(visit.jobNumber, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
                                         const SizedBox(height: 4),
                                         Text(
                                           '${visit.type} | ${visit.priority} | ${visit.createdAt.isEmpty ? '-' : visit.createdAt}',
-                                          style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 12),
+                                          style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12),
                                         ),
                                       ],
                                     ),
@@ -244,7 +244,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                                     children: [
                                       Text(visit.status, style: TextStyle(color: _stepColor(visit.status), fontWeight: FontWeight.w600)),
                                       if (visit.completedAt.isNotEmpty)
-                                        Text(visit.completedAt, style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 12)),
+                                        Text(visit.completedAt, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
                                     ],
                                   ),
                                 ],
@@ -295,7 +295,7 @@ class ServiceTrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFF1A1B1F),
+            color: const Color(0xFFFFFFFF),
             borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,9 +335,9 @@ class ServiceTrackingScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
+                            Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
                             const SizedBox(height: 6),
-                            Text(item.body, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.4)),
+                            Text(item.body, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
                           ],
                         ),
                       ),
@@ -356,7 +356,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                       }
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFEFEEE8),
+                      foregroundColor: const Color(0xFF131313),
                       backgroundColor: const Color(0xFF10151A),
                       side: const BorderSide(color: Color(0x558224E3)),
                     ),
@@ -368,7 +368,7 @@ class ServiceTrackingScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFF1A1B1F),
+            color: const Color(0xFFFFFFFF),
             borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,7 +393,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF8224E3),
-                      foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                     ),
                     child: const Text('Open Support Center'),
                   ),
@@ -418,7 +418,7 @@ class ServiceTrackingScreen extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w600),
+              style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -436,7 +436,7 @@ class ServiceTrackingScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text('$count', style: const TextStyle(color: const Color(0xFFEFEEE8), fontWeight: FontWeight.w800, fontSize: 18)),
+          Text('$count', style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w800, fontSize: 18)),
           const SizedBox(height: 2),
           Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
         ],
@@ -458,9 +458,9 @@ class ServiceTrackingScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 13),
+          style: const TextStyle(color: Color(0xFF5F5A56), fontSize: 13),
           children: [
-            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
+            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
             TextSpan(text: value),
           ],
         ),
@@ -477,14 +477,14 @@ class ServiceTrackingScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8))),
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
           ),
           const SizedBox(width: 16),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600),
+              style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -509,15 +509,15 @@ class ServiceTrackingScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
+          Text(title, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.45)),
+          Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45)),
           const SizedBox(height: 12),
           FilledButton(
             onPressed: onTap,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF8224E3),
-              foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
             ),
             child: Text(actionLabel),
           ),
@@ -559,4 +559,9 @@ class ServiceTrackingScreen extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
 

@@ -31,7 +31,7 @@ class HomeTab extends StatelessWidget {
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFF18181B),
+      backgroundColor: const Color(0xFFFFFFFF),
       onRefresh: appState.refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -72,7 +72,7 @@ class HomeTab extends StatelessWidget {
                         Text(
                           'Hi, $displayName',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: const Color(0xFFEFEEE8),
+                                color: const Color(0xFFF7F7F8),
                                 fontSize: 30,
                               ),
                         ),
@@ -82,7 +82,7 @@ class HomeTab extends StatelessWidget {
                               ? 'Monitor your broadband, due amount, and active requests from one clean control surface.'
                               : 'Check feasibility, pick a plan, and start your broadband booking in a few steps.',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: const Color(0xFFD1D5DB),
+                                color: const Color(0xFFD6D3D1),
                               ),
                         ),
                       ],
@@ -117,7 +117,7 @@ class HomeTab extends StatelessWidget {
                             },
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                       ),
                       child: Text(hasService ? 'Open services' : 'Book connection'),
                     ),
@@ -153,7 +153,7 @@ class HomeTab extends StatelessWidget {
                   const Expanded(
                     child: Text(
                       'Live connection snapshot',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8)),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
                     ),
                   ),
                   Container(
@@ -194,7 +194,7 @@ class HomeTab extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF16181D),
+                    color: const Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x228224E3)),
                   ),
@@ -206,7 +206,7 @@ class HomeTab extends StatelessWidget {
                           const Expanded(
                             child: Text(
                               'Usage meter',
-                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8)),
+                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313)),
                             ),
                           ),
                           Text(
@@ -247,7 +247,7 @@ class HomeTab extends StatelessWidget {
                                   ? 'FUP active at ${billing.fupSpeedMbps.toStringAsFixed(0)} Mbps'
                                   : 'Hard-cap policy active')
                               : 'Base plan speed active',
-                          style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700),
                         ),
                       ],
                       if (showUpgradePrompt) ...[
@@ -266,7 +266,7 @@ class HomeTab extends StatelessWidget {
                                 },
                                 style: FilledButton.styleFrom(
                                   backgroundColor: const Color(0xFF8224E3),
-                                  foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                                 ),
                                 child: Text(billing.usageCapReached ? 'Upgrade plan now' : 'Explore faster plans'),
                               ),
@@ -392,7 +392,7 @@ class HomeTab extends StatelessWidget {
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF8224E3),
-                    foregroundColor: const Color(0xFFEFEEE8),
+                        foregroundColor: const Color(0xFFFFFFFF),
                   ),
                   child: const Text('Track booking'),
                 ),
@@ -421,7 +421,7 @@ class HomeTab extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: const Color(0xFFEFEEE8),
+                color: const Color(0xFF131313),
                 fontWeight: FontWeight.w800,
               ),
         ),
@@ -444,7 +444,7 @@ class HomeTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(color: Color(0xFFF7F7F8), fontWeight: FontWeight.w800)),
         ],
@@ -462,7 +462,7 @@ class HomeTab extends StatelessWidget {
       borderRadius: BorderRadius.circular(28),
       onTap: onTap,
       child: AppCard(
-        color: const Color(0xFF1A1B1F),
+        color: const Color(0xFFFFFFFF),
         borderColor: const Color(0x228224E3),
         child: Row(
           children: [
@@ -486,7 +486,7 @@ class HomeTab extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFF7F7F8))),
                   const SizedBox(height: 6),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.35)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35)),
                 ],
               ),
             ),
@@ -506,7 +506,7 @@ class HomeTab extends StatelessWidget {
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: const Color(0xFFEFEEE8)),
+          style: const TextStyle(color: const Color(0xFF131313)),
           children: [
             TextSpan(text: '$value ', style: const TextStyle(fontWeight: FontWeight.w800)),
             TextSpan(text: label, style: const TextStyle(color: Color(0xFF94A3B8))),
@@ -522,7 +522,7 @@ class HomeTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF16181D),
+          color: const Color(0xFFFFFFFF),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0x228224E3)),
         ),
@@ -531,7 +531,7 @@ class HomeTab extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w600),
+                style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(width: 10),
@@ -553,7 +553,7 @@ class HomeTab extends StatelessWidget {
 
   Widget _lightPanel({required Widget child}) {
     return AppCard(
-      color: const Color(0xFF1A1B1F),
+      color: const Color(0xFFFFFFFF),
       borderColor: const Color(0x228224E3),
       padding: const EdgeInsets.all(20),
       child: child,
@@ -578,3 +578,8 @@ class HomeTab extends StatelessWidget {
     await appState.refresh();
   }
 }
+
+
+
+
+
