@@ -432,7 +432,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       const SizedBox(height: 8),
                       const Text(
                         'Use this only when you need deeper diagnostics, timeline, or full raw workflow panels.',
-                        style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
@@ -453,7 +453,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF141A22),
+                            color: const Color(0xFFF8F4FF),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: const Color(0x558224E3)),
                           ),
@@ -464,7 +464,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               Expanded(
                                 child: Text(
                                   'Router linked: $linkedSerial',
-                                  style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800),
+                                  style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
                                 ),
                               ),
                             ],
@@ -480,7 +480,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10151A),
+                          color: const Color(0xFFFFFFFF),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0x228224E3)),
                         ),
@@ -500,7 +500,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 activationLive: activationLive,
                                 proofUploaded: proofUploaded,
                               ),
-                              style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                             ),
                           ],
                         ),
@@ -628,7 +628,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF141A22),
+                            color: const Color(0xFFF8F4FF),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: const Color(0x338224E3)),
                           ),
@@ -642,7 +642,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 'Waiting for backend config push and ONT read-back. Approx time left: ${_activationCountdown}s',
-                                style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                               ),
                               const SizedBox(height: 12),
                               LinearProgressIndicator(
@@ -661,7 +661,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF141A22),
+                            color: const Color(0xFFF8F4FF),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: const Color(0x558224E3)),
                           ),
@@ -672,7 +672,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               Expanded(
                                 child: Text(
                                   'Internet is active. Customer notification should be triggered from backend activation flow.',
-                                  style: const TextStyle(color: Color(0xFFEFEEE8), height: 1.4, fontWeight: FontWeight.w700),
+                                  style: const TextStyle(color: Color(0xFF131313), height: 1.4, fontWeight: FontWeight.w700),
                                 ),
                               ),
                             ],
@@ -783,7 +783,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       if (timeline.isEmpty)
                         const Text(
                           'No field updates recorded yet.',
-                          style: TextStyle(color: Color(0xFF9CA3AF)),
+                          style: TextStyle(color: Color(0xFF6E6A67)),
                         )
                       else
                         ...timeline.reversed.take(8).map(_timelineRow),
@@ -803,7 +803,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10151A),
+                              color: const Color(0xFFFFFFFF),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(color: const Color(0x228224E3)),
                             ),
@@ -953,7 +953,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10151A),
+                            color: const Color(0xFFFFFFFF),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: const Color(0x228224E3)),
                           ),
@@ -1977,7 +1977,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF10151A),
+                color: const Color(0xFFF8F4FF),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0x228224E3)),
               ),
@@ -1986,19 +1986,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 children: [
                   Text(
                     event.isEmpty ? 'timeline update' : event,
-                    style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800),
+                    style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
                   ),
                   if (note.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
                       note,
-                      style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.4),
+                      style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
                     ),
                   ],
                   const SizedBox(height: 8),
                   Text(
                     '${actor.isEmpty ? 'system' : actor} Ã¢â‚¬Â¢ ${at.isEmpty ? '-' : at}',
-                    style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
+                    style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -2017,13 +2017,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           Icon(
             done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
             size: 18,
-            color: done ? const Color(0xFF8224E3) : const Color(0xFF9CA3AF),
+            color: done ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: Color(0xFFD1D5DB), fontWeight: FontWeight.w600),
+              style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -2088,7 +2088,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: done ? const Color(0xFF1B2311) : const Color(0xFF141A22),
+            color: done ? const Color(0xFFF1E8FF) : const Color(0xFFF8F4FF),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: done ? const Color(0x558224E3) : const Color(0x221F2937),
@@ -2097,7 +2097,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           child: Text(
             stages[index].$2,
             style: TextStyle(
-              color: done ? const Color(0xFF8224E3) : const Color(0xFF9CA3AF),
+              color: done ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
               fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
