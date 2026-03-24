@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Activity, ArrowUpRight, Loader, ShieldCheck, Users, Wallet } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Activity, AlertTriangle, ArrowUpRight, Gauge, Loader, ShieldCheck, Users, Wallet } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
-import { DashboardStats } from '@/lib/types'
+import type { Customer, DashboardStats } from '@/lib/types'
 
 function MiniBarChart() {
   const bars = [62, 44, 88, 56, 74, 24, 18]
@@ -47,6 +47,7 @@ function MiniBarChart() {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [otpMobile, setOtpMobile] = useState('')
   const [otpValue, setOtpValue] = useState<string | null>(null)
@@ -59,15 +60,34 @@ export default function DashboardPage() {
 
   async function loadStats() {
     try {
-      const res = await adminAPI.getDashboardStats()
-      if (res.success && res.data) {
-        setStats(res.data)
+      const [statsRes, customersRes] = await Promise.all([
+        adminAPI.getDashboardStats(),
+        adminAPI.getCustomers(1, 100),
+      ])
+      if (statsRes.success && statsRes.data) {
+        setStats(statsRes.data)
+      }
+      if (customersRes.success && customersRes.data?.items) {
+        setCustomers(customersRes.data.items)
       }
     } catch (error) {
       console.log('[dashboard] Error loading stats:', error)
     } finally {
       setIsLoading(false)
     }
+  }
+
+  function usageRisk(customer: Customer) {
+    const snapshot = customer.billingSnapshot || {}
+    const policy = String(snapshot.dataPolicy || 'unlimited')
+    const used = Number(snapshot.usageGb || 0)
+    const cap = Number(snapshot.usageCapGb || snapshot.dataLimitGb || 0)
+    if (snapshot.usageCapReached) return 'Cap reached'
+    if (policy === 'unlimited' || cap <= 0) return 'Unlimited'
+    const ratio = used / cap
+    if (ratio >= 0.9) return 'High usage'
+    if (ratio >= 0.65) return 'Watch'
+    return 'Normal'
   }
 
   async function handleLookupOtp() {
@@ -128,6 +148,35 @@ export default function DashboardPage() {
     },
   ]
 
+  const usageMetrics = useMemo(() => {
+    let watch = 0
+    let high = 0
+    let capReached = 0
+    let unlimited = 0
+
+    customers.forEach((customer) => {
+      const risk = usageRisk(customer)
+      if (risk === 'Watch') watch += 1
+      if (risk === 'High usage') high += 1
+      if (risk === 'Cap reached') capReached += 1
+      if (risk === 'Unlimited') unlimited += 1
+    })
+
+    return { watch, high, capReached, unlimited }
+  }, [customers])
+
+  const usageSummaryTiles: Array<{
+    title: string
+    value: string
+    desc: string
+    Icon: typeof Gauge
+  }> = [
+    { title: 'Usage watch', value: String(usageMetrics.watch), desc: 'Customers approaching cap threshold', Icon: Gauge },
+    { title: 'High usage', value: String(usageMetrics.high), desc: 'Customers above 90% of plan cap', Icon: AlertTriangle },
+    { title: 'Cap reached', value: String(usageMetrics.capReached), desc: 'Customers already throttled or capped', Icon: ShieldCheck },
+    { title: 'Unlimited base', value: String(usageMetrics.unlimited), desc: 'Subscribers on unlimited policy', Icon: Users },
+  ]
+
   return (
     <div className="space-y-6">
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -175,6 +224,19 @@ export default function DashboardPage() {
         ))}
       </section>
 
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {usageSummaryTiles.map(({ title, value, desc, Icon }) => (
+          <div key={title} className="card p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-xs uppercase tracking-[0.2em] text-white/45">{title}</div>
+              <Icon className="h-5 w-5 text-[#d8ff16]" />
+            </div>
+            <div className="mt-6 text-4xl font-black tracking-[-0.04em] text-white">{value}</div>
+            <div className="mt-2 text-sm leading-6 text-white/55">{desc}</div>
+          </div>
+        ))}
+      </section>
+
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="card p-6">
           <div className="flex items-center justify-between">
@@ -190,7 +252,7 @@ export default function DashboardPage() {
           <div className="mt-6 space-y-3">
             {[
               ['Installer dispatch', '12 jobs assigned, 3 awaiting confirmation'],
-              ['Billing collection', '7 overdue accounts crossing follow-up threshold'],
+              ['Billing collection', `${usageMetrics.high + usageMetrics.capReached} accounts need plan or usage follow-up`],
               ['Network incidents', '2 low-signal clusters flagged in serviceability zones'],
             ].map(([title, desc]) => (
               <div key={title} className="rounded-[22px] border border-white/10 bg-black/35 p-4">
@@ -205,8 +267,8 @@ export default function DashboardPage() {
           {[
             ['Collection score', '92.4%', 'Healthy month-to-date collections'],
             ['Installer SLA', '87%', 'Average same-day completion quality'],
-            ['Ticket clearance', '74%', 'Support queue progressing steadily'],
-            ['Zone readiness', '46 zones', 'Mapped for bookings and serviceability'],
+            ['Usage pressure', `${usageMetrics.watch + usageMetrics.high}`, 'Subscribers nearing usage policy action'],
+            ['Cap enforcement', `${usageMetrics.capReached}`, 'Subscribers already in capped or FUP state'],
           ].map(([title, value, desc]) => (
             <div key={title} className="card p-6">
               <div className="text-xs uppercase tracking-[0.2em] text-white/45">{title}</div>
