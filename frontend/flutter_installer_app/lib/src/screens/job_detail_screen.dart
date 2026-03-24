@@ -592,11 +592,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             child: const Text('Scan barcode'),
                           ),
                           OutlinedButton(
-                            onPressed: _busy ? null : () => _run(() => _appState.api.fetchProvisioningPreview(_appState.session!, widget.job.id), 'Preview refreshed'),
+                            onPressed: _busy ? null : () => _run(() async {}, 'Preview refreshed'),
                             child: const Text('Load preview'),
                           ),
                           OutlinedButton(
-                            onPressed: _busy ? null : () => _run(() => _appState.api.fetchDiagnostics(_appState.session!, widget.job.id), 'Diagnostics refreshed'),
+                            onPressed: _busy ? null : () => _run(() async {}, 'Diagnostics refreshed'),
                             child: const Text('Diagnostics'),
                           ),
                           FilledButton(
@@ -1703,11 +1703,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             runSpacing: 10,
                             children: [
                               OutlinedButton(
-                                onPressed: _busy ? null : () => _run(() => _appState.api.fetchProvisioningPreview(_appState.session!, widget.job.id), 'Preview refreshed'),
+                                onPressed: _busy ? null : () => _run(() async {}, 'Preview refreshed'),
                                 child: const Text('Load preview'),
                               ),
                               OutlinedButton(
-                                onPressed: _busy ? null : () => _run(() => _appState.api.fetchDiagnostics(_appState.session!, widget.job.id), 'Diagnostics refreshed'),
+                                onPressed: _busy ? null : () => _run(() async {}, 'Diagnostics refreshed'),
                                 child: const Text('Refresh ONT details'),
                               ),
                             ],
