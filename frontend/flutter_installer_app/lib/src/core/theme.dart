@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildInstallerTheme() {
-  const background = Color(0xFFF7F8FC);
-  const surface = Color(0xFFFFFFFF);
-  const surfaceAlt = Color(0xFFF1F4FA);
+  const background = Color(0xFF121212);
+  const surface = Color(0xFF181818);
+  const surfaceAlt = Color(0xFF202020);
   const primary = Color(0xFF8224E3);
   const accent = Color(0xFF8224E3);
-  const text = Color(0xFF111827);
-  const muted = Color(0xFF6B7280);
+  const text = Color(0xFFF7F7F8);
+  const muted = Color(0xFFA1A1AA);
 
   return ThemeData(
-    colorScheme: const ColorScheme.light(
+    colorScheme: const ColorScheme.dark(
       primary: primary,
       secondary: accent,
       background: background,
@@ -65,7 +65,7 @@ ThemeData buildInstallerTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: text,
-        backgroundColor: const Color(0xFFFDFDFF),
+        backgroundColor: const Color(0xFF1E1E20),
         side: const BorderSide(color: Color(0x668224E3)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),

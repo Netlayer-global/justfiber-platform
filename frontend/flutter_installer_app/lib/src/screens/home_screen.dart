@@ -32,16 +32,16 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
+          color: const Color(0xFF18181B),
           borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: const Color(0x140F172A)),
+          border: Border.all(color: const Color(0x228224E3)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x140F172A),
-              blurRadius: 24,
-              offset: Offset(0, 14),
+              color: Color(0x44000000),
+              blurRadius: 26,
+              offset: Offset(0, 16),
             ),
-            BoxShadow(color: Color(0x08FFFFFF), blurRadius: 6, offset: Offset(0, -2)),
+            BoxShadow(color: Color(0x108224E3), blurRadius: 14, offset: Offset(0, 6)),
           ],
         ),
         child: ClipRRect(

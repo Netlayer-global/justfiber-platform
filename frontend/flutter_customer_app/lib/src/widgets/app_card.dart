@@ -20,14 +20,14 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedBackground = color ?? const Color(0xFFFFFFFF);
-    final resolvedTextColor = textColor ?? const Color(0xFF111827);
+    final resolvedBackground = color ?? const Color(0xFF1B1B1D);
+    final resolvedTextColor = textColor ?? const Color(0xFFF7F7F8);
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [
-          BoxShadow(color: Color(0x120F172A), blurRadius: 24, offset: Offset(0, 14)),
-          BoxShadow(color: Color(0x06FFFFFF), blurRadius: 6, offset: Offset(0, -2)),
+          BoxShadow(color: Color(0x46000000), blurRadius: 26, offset: Offset(0, 18)),
+          BoxShadow(color: Color(0x108224E3), blurRadius: 14, offset: Offset(0, 6)),
         ],
       ),
       child: Container(
@@ -38,13 +38,13 @@ class AppCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color.alphaBlend(const Color(0x06FFFFFF), resolvedBackground),
-                  Color.alphaBlend(const Color(0x038224E3), resolvedBackground),
+                  Color.alphaBlend(const Color(0x12FFFFFF), resolvedBackground),
+                  Color.alphaBlend(const Color(0x0A8224E3), resolvedBackground),
                 ],
               ),
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color: borderColor ?? const Color(0x140F172A),
+            color: borderColor ?? const Color(0x228224E3),
             width: 1,
           ),
         ),
@@ -59,7 +59,7 @@ class AppCard extends StatelessWidget {
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [Color(0x0F8224E3), Color(0x008224E3)],
+                    colors: [Color(0x1A8224E3), Color(0x008224E3)],
                   ),
                 ),
               ),
