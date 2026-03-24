@@ -296,7 +296,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF131313),
-                        backgroundColor: const Color(0xFF10151A),
+                        backgroundColor: const Color(0xFFFFFFFF),
                         side: const BorderSide(color: Color(0x558224E3)),
                       ),
                       child: const Text('Back to app'),

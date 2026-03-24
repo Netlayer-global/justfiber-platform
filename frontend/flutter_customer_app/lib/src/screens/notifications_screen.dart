@@ -69,11 +69,11 @@ class NotificationsScreen extends StatelessWidget {
       case _AlertKind.billing:
         return const Color(0xFFF8F4FF);
       case _AlertKind.support:
-        return const Color(0xFF15181C);
+        return const Color(0xFFFFFFFF);
       case _AlertKind.tracking:
         return const Color(0xFF1A1510);
       case _AlertKind.general:
-        return const Color(0xFF15181C);
+        return const Color(0xFFFFFFFF);
     }
   }
 

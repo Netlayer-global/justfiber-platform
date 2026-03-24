@@ -247,7 +247,7 @@ class HomeTab extends StatelessWidget {
                                   ? 'FUP active at ${billing.fupSpeedMbps.toStringAsFixed(0)} Mbps'
                                   : 'Hard-cap policy active')
                               : 'Base plan speed active',
-                          style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
                         ),
                       ],
                       if (showUpgradePrompt) ...[

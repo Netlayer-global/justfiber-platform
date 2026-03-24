@@ -180,7 +180,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       billing.usageCapReached
                           ? 'Your current plan has reached its data policy threshold. Upgrade from here if you want faster service restored.'
                           : 'You are close to your current plan limit. Upgrade now if you want to avoid reduced speed or cap action.',
-                      style: const TextStyle(color: Color(0xFF5F5A56), height: 1.4, fontWeight: FontWeight.w600),
+                      style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -513,11 +513,7 @@ class SupportHistoryScreen extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(12, 16, 12, 12 + MediaQuery.of(sheetContext).viewInsets.bottom),
                 child: AppCard(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF09111D), Color(0xFF111827)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: const Color(0xFFFFFFFF),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +525,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       const SizedBox(height: 10),
                       const Text(
                         'Open a broadband or billing support case and keep the conversation inside one ticket.',
-                        style: TextStyle(color: Color(0xFF5F5A56), height: 1.45),
+                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),
                       const SizedBox(height: 14),
                       Wrap(
@@ -544,7 +540,7 @@ class SupportHistoryScreen extends StatelessWidget {
                               color: selected ? const Color(0xFF031B17) : const Color(0xFF131313),
                               fontWeight: FontWeight.w700,
                             ),
-                            backgroundColor: const Color(0xFF10151A),
+                            backgroundColor: const Color(0xFFF8F4FF),
                             selectedColor: const Color(0xFF8224E3),
                             side: const BorderSide(color: Color(0x668224E3)),
                             onSelected: submitting ? null : (_) => setModalState(() => category = item),
@@ -629,11 +625,7 @@ class SupportHistoryScreen extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(12, 16, 12, 12 + MediaQuery.of(sheetContext).viewInsets.bottom),
                 child: AppCard(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF09111D), Color(0xFF111827)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: const Color(0xFFFFFFFF),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -645,7 +637,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       const SizedBox(height: 10),
                       const Text(
                         'Use a service request for shift, disconnect, linkage, or other connection changes.',
-                        style: TextStyle(color: Color(0xFF5F5A56), height: 1.45),
+                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),
                       const SizedBox(height: 14),
                       Wrap(
@@ -660,7 +652,7 @@ class SupportHistoryScreen extends StatelessWidget {
                               color: selected ? const Color(0xFF031B17) : const Color(0xFF131313),
                               fontWeight: FontWeight.w700,
                             ),
-                            backgroundColor: const Color(0xFF10151A),
+                            backgroundColor: const Color(0xFFF8F4FF),
                             selectedColor: const Color(0xFF8224E3),
                             side: const BorderSide(color: Color(0x668224E3)),
                             onSelected: submitting ? null : (_) => setModalState(() => requestType = item),
@@ -826,18 +818,14 @@ class _DetailSheet extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
         child: AppCard(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF09111D), Color(0xFF111827)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: const Color(0xFFFFFFFF),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: const Color(0xFF131313))),
               const SizedBox(height: 6),
-              Text(subtitle, style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700)),
+              Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
               Row(
                 children: [

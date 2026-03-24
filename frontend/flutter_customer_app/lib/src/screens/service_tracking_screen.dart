@@ -325,7 +325,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+                              colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -357,7 +357,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF131313),
-                      backgroundColor: const Color(0xFF10151A),
+                      backgroundColor: const Color(0xFFFFFFFF),
                       side: const BorderSide(color: Color(0x558224E3)),
                     ),
                     child: const Text('Open all alerts'),

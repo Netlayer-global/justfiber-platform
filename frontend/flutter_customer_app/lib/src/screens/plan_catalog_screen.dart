@@ -234,7 +234,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                           _badge(
                             featured ? 'Recommended' : (effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
                             featured ? const Color(0x148224E3) : const Color(0x14111818),
-                            featured ? const Color(0xFF8224E3) : const Color(0xFF5F5A56),
+                            featured ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
                             borderColor: featured ? const Color(0x668224E3) : const Color(0x338224E3),
                           ),
                         ],
