@@ -40,14 +40,14 @@ class HomeTab extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF090D15), Color(0xFF111827)],
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: const Color(0x228224E3)),
+            border: Border.all(color: const Color(0x338224E3)),
             boxShadow: const [
-              BoxShadow(color: Color(0x26030B14), blurRadius: 26, offset: Offset(0, 12)),
+              BoxShadow(color: Color(0x308224E3), blurRadius: 26, offset: Offset(0, 12)),
             ],
           ),
           child: Column(
@@ -63,7 +63,7 @@ class HomeTab extends StatelessWidget {
                         Text(
                           'CUSTOMER DASHBOARD',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: const Color(0xFF9CA3AF),
+                                color: const Color(0xFFE9D5FF),
                                 letterSpacing: 3.2,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -500,16 +500,16 @@ class HomeTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF101722),
+        color: const Color(0x26FFFFFF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x338224E3)),
+        border: Border.all(color: const Color(0x40FFFFFF)),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: const Color(0xFF131313)),
+          style: const TextStyle(color: Color(0xFFFFFFFF)),
           children: [
             TextSpan(text: '$value ', style: const TextStyle(fontWeight: FontWeight.w800)),
-            TextSpan(text: label, style: const TextStyle(color: Color(0xFF94A3B8))),
+            TextSpan(text: label, style: const TextStyle(color: Color(0xFFE9D5FF))),
           ],
         ),
       ),
@@ -541,7 +541,7 @@ class HomeTab extends StatelessWidget {
                 textAlign: TextAlign.right,
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: highlight ? const Color(0xFFB277FF) : const Color(0xFFF7F7F8),
+                  color: highlight ? const Color(0xFF8224E3) : const Color(0xFF131313),
                 ),
               ),
             ),
