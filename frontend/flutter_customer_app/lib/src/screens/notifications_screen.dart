@@ -216,7 +216,7 @@ class NotificationsScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Alerts & updates')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -233,7 +233,7 @@ class NotificationsScreen extends StatelessWidget {
                 Text(
                   'ALERTS CENTER',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
+                        color: const Color(0xFFA1A1AA),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -310,10 +310,10 @@ class NotificationsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFFF7F8FC),
+            color: const Color(0xFF1A1B1F),
             borderColor: const Color(0x228224E3),
             child: notifications.isEmpty
-                ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFF9CA3AF)))
+                ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFFA1A1AA)))
                 : Column(
                     children: notifications.map((item) {
                       final kind = _kindFor(item);
@@ -366,7 +366,7 @@ class NotificationsScreen extends StatelessWidget {
                                   Text(
                                     _relativeTime(item),
                                     style: const TextStyle(
-                                      color: Color(0xFF9CA3AF),
+                                      color: Color(0xFFA1A1AA),
                                       fontWeight: FontWeight.w700,
                                       fontSize: 12,
                                     ),
@@ -376,7 +376,7 @@ class NotificationsScreen extends StatelessWidget {
                               const SizedBox(height: 12),
                               Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFEFEEE8))),
                               const SizedBox(height: 6),
-                              Text(item.body, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45)),
+                              Text(item.body, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.45)),
                               if (_detailLines(item).isNotEmpty) ...[
                                 const SizedBox(height: 12),
                                 Container(
@@ -476,3 +476,4 @@ enum _AlertKind {
   tracking,
   general,
 }
+

@@ -47,13 +47,13 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       appBar: AppBar(
         title: Text('Wi-Fi Settings', style: Theme.of(context).textTheme.headlineSmall),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         foregroundColor: const Color(0xFFEFEEE8),
       ),
-      backgroundColor: const Color(0xFFF7F8FC),
+      backgroundColor: const Color(0xFF121212),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -75,7 +75,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 Text(
                   'NETWORK CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
+                        color: const Color(0xFFA1A1AA),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -602,7 +602,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       subtitle: const Text('Separate guests from your main home network', style: TextStyle(color: Color(0xFFD1D5DB))),
                       value: enabled,
                       activeColor: const Color(0xFF8224E3),
-                      inactiveThumbColor: const Color(0xFF9CA3AF),
+                      inactiveThumbColor: const Color(0xFFA1A1AA),
                       inactiveTrackColor: const Color(0xFF1F2937),
                       onChanged: (value) => setLocalState(() => enabled = value),
                     ),
@@ -907,3 +907,4 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     );
   }
 }
+

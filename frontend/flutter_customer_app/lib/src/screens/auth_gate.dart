@@ -24,12 +24,12 @@ class _AuthGateLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FC),
+      backgroundColor: const Color(0xFF121212),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: AppCard(
-            color: const Color(0xFFF7F8FC),
+            color: const Color(0xFF1A1B1F),
             borderColor: const Color(0x228224E3),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -56,7 +56,7 @@ class _AuthGateLoading extends StatelessWidget {
                 Text(
                   'Checking saved login, latest booking, and customer console state.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                  style: TextStyle(color: Color(0xFFA1A1AA), height: 1.45),
                 ),
               ],
             ),
@@ -66,3 +66,4 @@ class _AuthGateLoading extends StatelessWidget {
     );
   }
 }
+

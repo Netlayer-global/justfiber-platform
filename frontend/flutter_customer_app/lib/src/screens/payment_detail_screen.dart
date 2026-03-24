@@ -28,7 +28,7 @@ class PaymentDetailScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -82,7 +82,7 @@ class PaymentDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           AppCard(
-            color: const Color(0xFFF7F8FC),
+            color: const Color(0xFF1A1B1F),
             borderColor: const Color(0x228224E3),
             textColor: const Color(0xFFEFEEE8),
             child: Column(
@@ -103,7 +103,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     iconColor: const Color(0xFF8224E3),
                     textColor: const Color(0xFFEFEEE8),
-                    subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+                    subtitleTextStyle: const TextStyle(color: Color(0xFFA1A1AA)),
                     leading: const Icon(Icons.receipt_long_rounded),
                     title: const Text('Open payment receipt'),
                     subtitle: const Text('View the receipt inside the app'),
@@ -115,7 +115,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     iconColor: const Color(0xFF8224E3),
                     textColor: const Color(0xFFEFEEE8),
-                    subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+                    subtitleTextStyle: const TextStyle(color: Color(0xFFA1A1AA)),
                     leading: const Icon(Icons.picture_as_pdf_rounded),
                     title: const Text('Open PDF'),
                     subtitle: const Text('View the payment receipt PDF'),
@@ -126,7 +126,7 @@ class PaymentDetailScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   iconColor: const Color(0xFF8224E3),
                   textColor: const Color(0xFFEFEEE8),
-                  subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+                  subtitleTextStyle: const TextStyle(color: Color(0xFFA1A1AA)),
                   leading: const Icon(Icons.copy_rounded),
                   title: const Text('Copy transaction ID'),
                   subtitle: const Text('Keep the payment reference handy for support'),
@@ -138,7 +138,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     iconColor: const Color(0xFF8224E3),
                     textColor: const Color(0xFFEFEEE8),
-                    subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+                    subtitleTextStyle: const TextStyle(color: Color(0xFFA1A1AA)),
                     leading: const Icon(Icons.tag_rounded),
                     title: const Text('Copy payment reference'),
                     subtitle: const Text('Use this if you need to verify payment manually'),
@@ -149,7 +149,7 @@ class PaymentDetailScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   iconColor: const Color(0xFF8224E3),
                   textColor: const Color(0xFFEFEEE8),
-                  subtitleTextStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+                  subtitleTextStyle: const TextStyle(color: Color(0xFFA1A1AA)),
                   leading: const Icon(Icons.share_rounded),
                   title: const Text('Share payment'),
                   subtitle: Text(
@@ -247,3 +247,4 @@ class PaymentDetailScreen extends StatelessWidget {
     );
   }
 }
+

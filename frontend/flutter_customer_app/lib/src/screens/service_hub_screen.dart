@@ -32,13 +32,13 @@ class ServiceHubScreen extends StatelessWidget {
           ],
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         foregroundColor: const Color(0xFFEFEEE8),
       ),
-      backgroundColor: const Color(0xFFF7F8FC),
+      backgroundColor: const Color(0xFF121212),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 34),
@@ -112,7 +112,7 @@ class ServiceHubScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   '$planName | $displayWifiName',
-                  style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                  style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -320,7 +320,7 @@ class ServiceHubScreen extends StatelessWidget {
                                     children: [
                                       Text(addon.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
                                       const SizedBox(height: 4),
-                                      Text(addon.description, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.4)),
+                                      Text(addon.description, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.4)),
                                     ],
                                   ),
                                 ),
@@ -365,7 +365,7 @@ class ServiceHubScreen extends StatelessWidget {
 
   Widget _lightPanel({required Widget child}) {
     return AppCard(
-      color: const Color(0xFFF7F8FC),
+      color: const Color(0xFF1A1B1F),
       borderColor: const Color(0x228224E3),
       padding: const EdgeInsets.all(20),
       child: child,
@@ -445,7 +445,7 @@ class ServiceHubScreen extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFEFEEE8))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.4)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.4)),
                 ],
               ),
             ),
@@ -629,3 +629,4 @@ class ServiceHubScreen extends StatelessWidget {
     );
   }
 }
+

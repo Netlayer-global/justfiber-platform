@@ -27,13 +27,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       appBar: AppBar(
         title: const Text('Choose your plan'),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         foregroundColor: const Color(0xFFEFEEE8),
       ),
-      backgroundColor: const Color(0xFFF7F8FC),
+      backgroundColor: const Color(0xFF121212),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -609,3 +609,4 @@ class _HeroMetric extends StatelessWidget {
     );
   }
 }
+

@@ -16,7 +16,7 @@ class ProfileTab extends StatelessWidget {
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFFF7F8FC),
+      backgroundColor: const Color(0xFF121212),
       onRefresh: appState.refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
@@ -33,7 +33,7 @@ class ProfileTab extends StatelessWidget {
                 Text(
                   'ACCOUNT CONSOLE',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF9CA3AF),
+                    color: const Color(0xFFA1A1AA),
                     letterSpacing: 3.2,
                     fontWeight: FontWeight.w700,
                   ),
@@ -174,7 +174,7 @@ class ProfileTab extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600),
+                style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(width: 12),
@@ -191,3 +191,4 @@ class ProfileTab extends StatelessWidget {
     );
   }
 }
+

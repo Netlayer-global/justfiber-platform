@@ -34,7 +34,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       ),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -51,7 +51,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                 Text(
                   'PAYMENT CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF9CA3AF),
+                        color: const Color(0xFFA1A1AA),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -98,7 +98,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
               borderColor: Color(0x228224E3),
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: Text('No payments found for this filter.', style: TextStyle(color: Color(0xFF9CA3AF))),
+                child: Text('No payments found for this filter.', style: TextStyle(color: Color(0xFFA1A1AA))),
               ),
             )
           else
@@ -140,14 +140,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               children: [
                                 const Text(
                                   'Bill Payment - Broadband',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF9CA3AF)),
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFFA1A1AA)),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20, color: Color(0xFFEFEEE8))),
                                 const SizedBox(height: 4),
                                 Text(
                                   payment.paidAt.isEmpty ? payment.provider.toUpperCase() : payment.paidAt,
-                                  style: const TextStyle(color: Color(0xFF9CA3AF)),
+                                  style: const TextStyle(color: Color(0xFFA1A1AA)),
                                 ),
                               ],
                             ),
@@ -341,3 +341,4 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     );
   }
 }
+

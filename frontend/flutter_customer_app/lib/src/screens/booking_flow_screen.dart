@@ -73,13 +73,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           ],
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         foregroundColor: const Color(0xFFEFEEE8),
       ),
-      backgroundColor: const Color(0xFFF7F8FC),
+      backgroundColor: const Color(0xFF121212),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
@@ -511,7 +511,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F8FC),
+              color: const Color(0xFF1A1B1F),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0x228224E3)),
             ),
@@ -608,7 +608,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 11, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
         ],
@@ -638,7 +638,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   Text(
                     'BOOKING CONSOLE',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFF9CA3AF),
+                          color: const Color(0xFFA1A1AA),
                           letterSpacing: 3.2,
                           fontWeight: FontWeight.w700,
                         ),
@@ -708,7 +708,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           Text(
             label,
             style: TextStyle(
-              color: done ? const Color(0xFFEFEEE8) : const Color(0xFF9CA3AF),
+              color: done ? const Color(0xFFEFEEE8) : const Color(0xFFA1A1AA),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -834,7 +834,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
-      color: const Color(0xFFF7F8FC),
+      color: const Color(0xFF1A1B1F),
       borderColor: const Color(0x228224E3),
       textColor: const Color(0xFFEFEEE8),
       padding: const EdgeInsets.all(22),
@@ -933,7 +933,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       children: [
         Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Color(0xFF9CA3AF))),
+        Text(label, style: const TextStyle(color: Color(0xFFA1A1AA))),
       ],
     );
   }
@@ -943,7 +943,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF))),
+          Text(label, style: const TextStyle(color: Color(0xFFA1A1AA))),
           const Spacer(),
           Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEFEEE8)))),
         ],
@@ -971,3 +971,4 @@ class _MapHint extends StatelessWidget {
     );
   }
 }
+

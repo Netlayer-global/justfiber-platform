@@ -26,7 +26,7 @@ class BillingHistoryScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Billing')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -43,7 +43,7 @@ class BillingHistoryScreen extends StatelessWidget {
                 Text(
                   'BILLING CONSOLE',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF9CA3AF),
+                    color: const Color(0xFFA1A1AA),
                     letterSpacing: 3.2,
                     fontWeight: FontWeight.w700,
                   ),
@@ -97,7 +97,7 @@ class BillingHistoryScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF7F8FC),
+                    color: const Color(0xFF1A1B1F),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0x228224E3)),
                   ),
@@ -119,7 +119,7 @@ class BillingHistoryScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF7F8FC),
+                      color: const Color(0xFF1A1B1F),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x228224E3)),
                     ),
@@ -249,7 +249,7 @@ class BillingHistoryScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF7F8FC),
+                      color: const Color(0xFF1A1B1F),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: const Color(0x228224E3)),
                     ),
@@ -330,7 +330,7 @@ class BillingHistoryScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F8FC),
+                color: const Color(0xFF1A1B1F),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0x228224E3)),
               ),
@@ -343,7 +343,7 @@ class BillingHistoryScreen extends StatelessWidget {
                     billing.payments.isEmpty
                         ? 'No payment history available yet.'
                         : 'Latest payment: ${billing.payments.first.amount.toStringAsFixed(2)} | ${billing.payments.first.paidAt.isEmpty ? billing.payments.first.provider.toUpperCase() : billing.payments.first.paidAt}',
-                    style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.4),
+                    style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.4),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -449,14 +449,14 @@ class BillingHistoryScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F8FC),
+        color: const Color(0xFF1A1B1F),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
         ],
@@ -466,7 +466,7 @@ class BillingHistoryScreen extends StatelessWidget {
 
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
-      color: const Color(0xFFF7F8FC),
+      color: const Color(0xFF1A1B1F),
       borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,7 +498,7 @@ class BillingHistoryScreen extends StatelessWidget {
         children: [
           Text(title, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45)),
+          Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.45)),
           const SizedBox(height: 12),
           FilledButton(
             onPressed: onTap,
@@ -519,7 +519,7 @@ class BillingHistoryScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700)),
+            child: Text(label, style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w700)),
           ),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEFEEE8))),
         ],
@@ -559,7 +559,7 @@ class BillingHistoryScreen extends StatelessWidget {
                   children: [
                     Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: Color(0xFFEFEEE8))),
                     const SizedBox(height: 4),
-                    Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF))),
+                    Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA))),
                   ],
                 ),
               ),
@@ -704,3 +704,4 @@ class BillingHistoryScreen extends StatelessWidget {
     );
   }
 }
+

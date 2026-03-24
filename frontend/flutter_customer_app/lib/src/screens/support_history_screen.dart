@@ -22,7 +22,7 @@ class SupportHistoryScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Support & requests')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF7F8FC),
+        backgroundColor: const Color(0xFF121212),
         onRefresh: appState.refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
@@ -39,7 +39,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 Text(
                   'SUPPORT DESK',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF9CA3AF),
+                    color: const Color(0xFFA1A1AA),
                     letterSpacing: 3.2,
                     fontWeight: FontWeight.w700,
                   ),
@@ -71,7 +71,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 const Text(
                   'Quick actions',
                   style: TextStyle(
-                    color: Color(0xFF9CA3AF),
+                    color: Color(0xFFA1A1AA),
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.3,
                   ),
@@ -300,7 +300,7 @@ class SupportHistoryScreen extends StatelessWidget {
 
   Widget _sectionCard({required String title, required Widget child}) {
     return AppCard(
-      color: const Color(0xFFF7F8FC),
+      color: const Color(0xFF1A1B1F),
       borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,7 +332,7 @@ class SupportHistoryScreen extends StatelessWidget {
         children: [
           Text(title, style: const TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45)),
+          Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.45)),
           const SizedBox(height: 12),
           FilledButton(
             onPressed: onTap,
@@ -387,7 +387,7 @@ class SupportHistoryScreen extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFEFEEE8))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
                   Text(createdAt.isEmpty ? '-' : createdAt, style: const TextStyle(color: Color(0xFF94A3B8))),
                 ],
@@ -878,3 +878,4 @@ class _DetailSheet extends StatelessWidget {
     );
   }
 }
+
