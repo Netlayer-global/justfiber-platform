@@ -23,7 +23,7 @@ class ProfileTab extends StatelessWidget {
         children: [
         AppCard(
           gradient: const LinearGradient(
-            colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+            colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -33,7 +33,7 @@ class ProfileTab extends StatelessWidget {
                 Text(
                   'ACCOUNT CONSOLE',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF6E6A67),
+                    color: const Color(0xFFE9D5FF),
                     letterSpacing: 3.2,
                     fontWeight: FontWeight.w700,
                   ),
@@ -42,19 +42,19 @@ class ProfileTab extends StatelessWidget {
                 Text(
                   dashboard.customerName.isEmpty ? 'Customer account' : dashboard.customerName,
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFF131313),
+                    color: const Color(0xFFFFFFFF),
                     fontSize: 28,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   appState.session?.mobile ?? '-',
-                  style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700),
+                  style: const TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Your account console for connection, billing, and registered service details.',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFFCBD5E1)),
+                  style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFFF3E8FF)),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -131,14 +131,14 @@ class ProfileTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF12161A),
+        color: const Color(0x26FFFFFF),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x668224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFFE9D5FF), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFF131313))),
         ],
@@ -165,7 +165,7 @@ class ProfileTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF12161A),
+          color: const Color(0xFFF8F4FF),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0x228224E3)),
         ),

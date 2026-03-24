@@ -35,7 +35,7 @@ class PaymentDetailScreen extends StatelessWidget {
           children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -48,7 +48,7 @@ class PaymentDetailScreen extends StatelessWidget {
                       width: 58,
                       height: 58,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10151A),
+                        color: const Color(0x26FFFFFF),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: const Color(0x668224E3)),
                       ),
@@ -59,9 +59,9 @@ class PaymentDetailScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Broadband payment', style: TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w700)),
+                          const Text('Broadband payment', style: TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w700)),
                           const SizedBox(height: 4),
-                          Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: const Color(0xFF131313))),
+                          Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFFFFFFF))),
                         ],
                       ),
                     ),
@@ -175,7 +175,7 @@ class PaymentDetailScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Color(0xFF5F5A56), fontWeight: FontWeight.w600)),
+            child: Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600)),
           ),
           Flexible(
             child: Text(

@@ -434,7 +434,7 @@ class HomeTab extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0B0F19), Color(0xFF151B27)],
+          colors: [Color(0xFFF8F4FF), Color(0xFFFFFFFF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -446,7 +446,7 @@ class HomeTab extends StatelessWidget {
         children: [
           Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(color: Color(0xFFF7F7F8), fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -470,11 +470,7 @@ class HomeTab extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0B0F19), Color(0xFF141A25)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: const Color(0xFFF8F4FF),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Icon(icon, color: const Color(0xFF8224E3)),
@@ -484,7 +480,7 @@ class HomeTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFF7F7F8))),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
                   const SizedBox(height: 6),
                   Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35)),
                 ],

@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF12161A),
+                        color: const Color(0xFFFFFFFF),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0x228224E3)),
                       ),
@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Text(
                             'JUSTFIBER CONSOLE',
                             style: TextStyle(
-                              color: Color(0x88EFEEE8),
+                              color: Color(0xFF6E6A67),
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 3.2,
@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Customer Access',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontSize: 24,
-                              color: const Color(0xFFEFEEE8),
+                              color: const Color(0xFF131313),
                             ),
                           ),
                         ],
@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: activePage == index ? 24 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: activePage == index ? const Color(0xFF8224E3) : const Color(0xFF2A3442),
+                        color: activePage == index ? const Color(0xFF8224E3) : const Color(0xFFD9D1E9),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -131,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF12161A),
+                  color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: const Color(0x338224E3)),
                   boxShadow: const [
@@ -144,14 +144,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       otpRequested ? 'Enter OTP to continue' : 'Login with mobile number',
-                      style: theme.textTheme.titleLarge?.copyWith(color: const Color(0xFFEFEEE8)),
+                      style: theme.textTheme.titleLarge?.copyWith(color: const Color(0xFF131313)),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       otpRequested
                           ? 'We sent a one-time password to your registered mobile number.'
                           : 'Use your registered number to receive an OTP and access your broadband account.',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFFD1D5DB)),
+                      style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFF6E6A67)),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -220,9 +220,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         },
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFEFEEE8),
+                          foregroundColor: const Color(0xFF8224E3),
                           side: const BorderSide(color: Color(0x558224E3)),
-                          backgroundColor: const Color(0xFF0E1520),
+                          backgroundColor: const Color(0xFFFFFFFF),
                         ),
                         child: const Text('Book new connection'),
                       ),
@@ -371,7 +371,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                 height: 230,
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF0B0F19), Color(0xFF141A25)],
+                                    colors: [Color(0xFFF8F4FF), Color(0xFFFFFFFF)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -389,10 +389,10 @@ class _AuthShowcaseCard extends StatelessWidget {
                                           Expanded(
                                             child: Text(
                                               'Control',
-                                              style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700),
+                                              style: TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
                                             ),
                                           ),
-                                          Icon(Icons.more_horiz_rounded, color: const Color(0x8AEFEEE8)),
+                                          Icon(Icons.more_horiz_rounded, color: const Color(0x886E6A67)),
                                         ],
                                       ),
                                       const SizedBox(height: 16),
@@ -400,7 +400,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF0A121A),
+                                          color: const Color(0xFFF8F4FF),
                                           borderRadius: BorderRadius.circular(18),
                                           border: Border.all(color: const Color(0x338224E3)),
                                         ),
@@ -411,14 +411,14 @@ class _AuthShowcaseCard extends StatelessWidget {
                                             const SizedBox(height: 10),
                                             const Text(
                                               'Live sync',
-                                              style: TextStyle(color: Color(0xFFEFEEE8), fontWeight: FontWeight.w800),
+                                              style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
                                             ),
                                             const SizedBox(height: 6),
                                             Container(
                                               height: 6,
                                               decoration: BoxDecoration(
                                                 gradient: const LinearGradient(
-                                                  colors: [Color(0xFF8224E3), Color(0x660B0F19)],
+                                                  colors: [Color(0xFF8224E3), Color(0x338224E3)],
                                                 ),
                                                 borderRadius: BorderRadius.circular(999),
                                               ),
@@ -427,7 +427,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                             const Text(
                                               'Billing, plans, support, and bookings in one stream.',
                                               style: TextStyle(
-                                                color: Color(0xFF94A3B8),
+                                                color: Color(0xFF6E6A67),
                                                 fontSize: 11,
                                                 height: 1.35,
                                               ),
@@ -448,7 +448,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF101722), Color(0xFF151B27)],
+                                    colors: [Color(0xFFFFFFFF), Color(0xFFF8F4FF)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -465,7 +465,7 @@ class _AuthShowcaseCard extends StatelessWidget {
                                       slide.title,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFEFEEE8)),
+                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF131313)),
                                     ),
                                     const SizedBox(height: 10),
                                     Row(
@@ -525,7 +525,7 @@ class _MiniStat extends StatelessWidget {
       children: [
         Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF8224E3))),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+        Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 11)),
       ],
     );
   }

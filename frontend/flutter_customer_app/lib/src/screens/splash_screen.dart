@@ -60,14 +60,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0C1018),
+      backgroundColor: const Color(0xFFF6F1EB),
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
           return Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF0C1018), Color(0xFF10141C), Color(0xFF12161A)],
+                colors: [Color(0xFFF9F5EF), Color(0xFFF6F1EB), Color(0xFFF1EBE3)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       gradient: RadialGradient(
                         center: Alignment(0, -0.2),
                         radius: 0.72,
-                        colors: [Color(0x22161B27), Color(0x00000000)],
+                        colors: [Color(0x128224E3), Color(0x00000000)],
                       ),
                     ),
                   ),
@@ -124,7 +124,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           Text(
                             'CUSTOMER CONSOLE',
                             style: GoogleFonts.dmSans(
-                              color: const Color(0x88EFEEE8),
+                              color: const Color(0xFF6E6A67),
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 4.2,
@@ -135,7 +135,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             'Broadband access,\nbilling, and support.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.spaceGrotesk(
-                              color: const Color(0xFFEFEEE8),
+                              color: const Color(0xFF131313),
                               fontSize: 34,
                               fontWeight: FontWeight.w700,
                               height: 1.05,
@@ -147,7 +147,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             'Live connection status in one sharp customer app.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.dmSans(
-                              color: const Color(0xFF9CA3AF),
+                              color: const Color(0xFF6E6A67),
                               fontSize: 15,
                               height: 1.45,
                             ),
@@ -240,8 +240,8 @@ class _BottomGlow extends StatelessWidget {
             radius: 0.95,
             colors: [
               Color(0xAA8224E3),
-              Color(0x44B4D82B),
-              Color(0x1612161A),
+              Color(0x228224E3),
+              Color(0x00FFFFFF),
               Color(0x00000000),
             ],
           ),
@@ -330,7 +330,7 @@ class _JustFiberWordmark extends StatelessWidget {
           letterSpacing: -1.2,
         ),
         children: [
-          TextSpan(text: 'Just', style: TextStyle(color: const Color(0xFFEFEEE8))),
+          TextSpan(text: 'Just', style: TextStyle(color: Color(0xFF131313))),
           TextSpan(text: 'Fiber', style: TextStyle(color: Color(0xFF8224E3))),
         ],
       ),

@@ -41,7 +41,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
           children: [
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF090D15), Color(0xFF111827)],
+              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -51,7 +51,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                 Text(
                   'PAYMENT CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF6E6A67),
+                        color: const Color(0xFFE9D5FF),
                         letterSpacing: 3.2,
                         fontWeight: FontWeight.w700,
                       ),
@@ -59,14 +59,14 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                 const SizedBox(height: 10),
                 Text(
                   'Payment timeline',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFF7F7F8), fontSize: 28),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFFFFFFF), fontSize: 28),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   payments.isEmpty
                       ? 'No payment activity found right now.'
                       : 'Track successful, pending, and failed broadband payments from one place.',
-                  style: const TextStyle(color: Color(0xFF5F5A56), height: 1.45),
+                  style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -94,7 +94,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
           const SizedBox(height: 18),
           if (payments.isEmpty)
             const AppCard(
-              color: Color(0xFF0C1018),
+              color: Color(0xFFFFFFFF),
               borderColor: Color(0x228224E3),
               child: Padding(
                 padding: EdgeInsets.all(20),
@@ -109,7 +109,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+                      colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -128,7 +128,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0B0F19),
+                              color: const Color(0xFFF8F4FF),
                               borderRadius: BorderRadius.circular(18),
                             ),
                             child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF8224E3)),
@@ -198,7 +198,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                                   },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF8224E3),
-                              backgroundColor: const Color(0xFF111827),
+                              backgroundColor: const Color(0xFFFFFFFF),
                               side: const BorderSide(color: Color(0x668224E3)),
                             ),
                             child: const Text('Open Receipt'),
@@ -229,8 +229,8 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                                 }
                               },
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF131313),
-                                backgroundColor: const Color(0xFF10151A),
+                                foregroundColor: const Color(0xFF8224E3),
+                                backgroundColor: const Color(0xFFFFFFFF),
                                 side: const BorderSide(color: Color(0x338224E3)),
                               ),
                               child: const Text('Need Help'),
@@ -255,7 +255,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF0B0F19) : const Color(0xFF111827),
+          color: selected ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x338224E3)),
         ),
@@ -264,7 +264,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
           label,
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: selected ? const Color(0xFF8224E3) : const Color(0xFFCBD5E1),
+            color: selected ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
           ),
         ),
       ),
@@ -275,7 +275,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF101722),
+        color: const Color(0x26FFFFFF),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0x338224E3)),
       ),
@@ -284,7 +284,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
         children: [
           Text(value, style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
+          Text(label, style: const TextStyle(color: Color(0xFFE9D5FF))),
         ],
       ),
     );
@@ -311,7 +311,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B0F19),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(text, style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w600)),

@@ -123,7 +123,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 child: FilledButton.tonal(
                   onPressed: _locationBusy ? null : _fetchCurrentLocation,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0E1520),
+                    backgroundColor: const Color(0xFFFFFFFF),
                     foregroundColor: const Color(0xFF131313),
                   ),
                   child: Text(_locationBusy ? 'Fetching location...' : 'Use Current Location'),
@@ -196,7 +196,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10151A),
+                    color: const Color(0xFFF8F4FF),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: const Color(0x558224E3)),
                   ),
@@ -476,7 +476,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF0B0F19), Color(0xFF111827)],
+                colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -520,11 +520,11 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               children: [
                 Text('What happens next?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF131313))),
                 SizedBox(height: 8),
-                Text('1. Operations and installer teams can now see this booking.', style: TextStyle(color: Color(0xFF5F5A56))),
+                Text('1. Operations and installer teams can now see this booking.', style: TextStyle(color: Color(0xFF6E6A67))),
                 SizedBox(height: 4),
-                Text('2. The exact map pin and preferred install slot are attached to the job.', style: TextStyle(color: Color(0xFF5F5A56))),
+                Text('2. The exact map pin and preferred install slot are attached to the job.', style: TextStyle(color: Color(0xFF6E6A67))),
                 SizedBox(height: 4),
-                Text('3. You can track updates from the booking and service tracking screen.', style: TextStyle(color: Color(0xFF5F5A56))),
+                Text('3. You can track updates from the booking and service tracking screen.', style: TextStyle(color: Color(0xFF6E6A67))),
               ],
             ),
           ),
@@ -620,7 +620,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF090D15), Color(0xFF111827)],
+          colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -646,7 +646,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   const SizedBox(height: 10),
                   const Text('Book new Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF8224E3))),
                   const SizedBox(height: 6),
-                  const Text('Select your plan, confirm address, and create a live booking with an exact install map pin.', style: TextStyle(color: Color(0xFF5F5A56), height: 1.4)),
+                  const Text('Select your plan, confirm address, and create a live booking with an exact install map pin.', style: TextStyle(color: Color(0xFFF3E8FF), height: 1.4)),
                 ],
               ),
             ),
@@ -656,7 +656,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             height: 120,
             margin: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF10151A),
+              color: const Color(0xFFF1E8FF),
               borderRadius: BorderRadius.circular(26),
               border: Border.all(color: const Color(0x668224E3)),
             ),
@@ -672,7 +672,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF10151A),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -888,7 +888,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0C1018), Color(0xFF111827)],
+          colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -915,7 +915,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 onPressed: onSelect,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: selected ? const Color(0xFF8224E3) : const Color(0xFF131313),
-                  backgroundColor: selected ? const Color(0xFF10151A) : const Color(0xFF15181C),
+                  backgroundColor: selected ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
                   side: BorderSide(color: selected ? const Color(0x668224E3) : const Color(0x228224E3)),
                 ),
                 child: Text(selected ? 'Selected' : 'Select Plan'),
