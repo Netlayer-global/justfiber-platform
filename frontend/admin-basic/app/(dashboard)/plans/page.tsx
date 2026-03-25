@@ -725,29 +725,6 @@ export default function PlansPage() {
             <input className="input" placeholder="OTT apps, comma separated" value={form.ottApps} onChange={(e) => setForm({ ...form, ottApps: e.target.value })} />
           </div>
 
-          <div className="rounded-[24px] border border-[#8224E3]/20 bg-white/5 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <ShieldCheck className="h-4 w-4 text-[#8224E3]" />
-              Provisioning defaults
-            </div>
-            <p className="mt-2 text-sm leading-6 text-white/55">
-              These values shape PPPoE username generation, VLAN application, and Wi-Fi naming during activation.
-            </p>
-            <div className="mt-4 grid gap-4 xl:grid-cols-3">
-              <input className="input" placeholder="Access profile code" value={form.accessProfileCode} onChange={(e) => setForm({ ...form, accessProfileCode: e.target.value })} />
-              <input className="input" placeholder="VLAN ID" type="number" value={form.vlanId} onChange={(e) => setForm({ ...form, vlanId: e.target.value })} />
-              <input className="input" placeholder="PPPoE prefix" value={form.pppoePrefix} onChange={(e) => setForm({ ...form, pppoePrefix: e.target.value })} />
-              <input className="input" placeholder="PPPoE realm" value={form.pppoeRealm} onChange={(e) => setForm({ ...form, pppoeRealm: e.target.value })} />
-              <input className="input" placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
-              <input className="input" placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
-            </div>
-            {!provisioningReady ? (
-              <div className="mt-4 rounded-[18px] border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                {currentProvisioningIssues.join(' | ')}
-              </div>
-            ) : null}
-          </div>
-
           <div className="grid gap-4 xl:grid-cols-2">
             <textarea className="input min-h-28" placeholder="Tags, comma separated" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
             <textarea className="input min-h-28" placeholder="Static benefits, comma separated" value={form.staticBenefits} onChange={(e) => setForm({ ...form, staticBenefits: e.target.value })} />
@@ -812,8 +789,8 @@ export default function PlansPage() {
                 <div className="text-xs uppercase tracking-[0.18em] text-white/45">Plan essentials</div>
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'Optional'}</span></div>
-                  <div className="flex items-center justify-between"><span>Wi‑Fi</span><span>{buildWifiPreview(preview)}</span></div>
                   <div className="flex items-center justify-between"><span>Latency</span><span>{preview.latencyClass || '-'}</span></div>
+                  <div className="flex items-center justify-between"><span>Template</span><span>{provisioningReady ? 'Ready' : 'Pending'}</span></div>
                 </div>
               </div>
             </div>
@@ -925,6 +902,60 @@ export default function PlansPage() {
                 {splitCsv(preview.tags).length === 0 ? (
                   <span className="rounded-full border border-dashed border-white/10 px-3 py-1 text-xs text-white/35">No catalog tags yet</span>
                 ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="card p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Provisioning templates</div>
+              <div className="mt-2 text-2xl font-black text-white">Keep PPPoE and VLAN controls separate</div>
+              <p className="mt-2 text-sm leading-6 text-white/55">
+                Plan create flow simple rakha gaya hai. Provisioning template yahan maintain hoga and same plan ke activation defaults ko control karega.
+              </p>
+            </div>
+            <div className={`rounded-full px-3 py-1 text-xs font-semibold ${provisioningReady ? 'bg-emerald-400/15 text-emerald-200' : 'bg-amber-300/15 text-amber-100'}`}>
+              {provisioningReady ? 'Template ready' : 'Template incomplete'}
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 xl:grid-cols-3">
+            <input className="input" placeholder="Access profile code" value={form.accessProfileCode} onChange={(e) => setForm({ ...form, accessProfileCode: e.target.value })} />
+            <input className="input" placeholder="VLAN ID" type="number" value={form.vlanId} onChange={(e) => setForm({ ...form, vlanId: e.target.value })} />
+            <input className="input" placeholder="PPPoE prefix" value={form.pppoePrefix} onChange={(e) => setForm({ ...form, pppoePrefix: e.target.value })} />
+            <input className="input" placeholder="PPPoE realm" value={form.pppoeRealm} onChange={(e) => setForm({ ...form, pppoeRealm: e.target.value })} />
+            <input className="input" placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
+            <input className="input" placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
+          </div>
+
+          {!provisioningReady ? (
+            <div className="mt-4 rounded-[18px] border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
+              {currentProvisioningIssues.join(' | ')}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.24em] text-white/45">Template summary</div>
+          <div className="mt-4 space-y-3 text-sm text-white/70">
+            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/45">PPPoE sample</div>
+              <div className="mt-2 text-lg font-bold text-white break-all">{buildPppoePreview(form)}</div>
+            </div>
+            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/45">Wi-Fi naming</div>
+              <div className="mt-2 text-lg font-bold text-white">{buildWifiPreview(form)}</div>
+            </div>
+            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between"><span>Selected plan</span><span>{preview.name || 'No plan selected'}</span></div>
+                <div className="flex items-center justify-between"><span>Visibility</span><span>{preview.status === 'active' && provisioningReady ? 'Apps ready' : 'Blocked / draft'}</span></div>
+                <div className="flex items-center justify-between"><span>VLAN</span><span>{form.vlanId || '-'}</span></div>
+                <div className="flex items-center justify-between"><span>Access profile</span><span>{form.accessProfileCode || '-'}</span></div>
               </div>
             </div>
           </div>
