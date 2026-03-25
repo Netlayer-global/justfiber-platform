@@ -31,6 +31,7 @@ import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { Installer } from "../../models/Installer.js";
 import { InstallerJob } from "../../models/InstallerJob.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
+import { SubscriberService } from "../../models/SubscriberService.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
@@ -232,7 +233,7 @@ customersRouter.get(
         ...(customer.phone ? [{ "personalDetails.mobile": customer.phone }] : [])
       ]
     };
-    const [devices, tickets, invoices, payments, actions, billingNotes, serviceRequests, bookings] = await Promise.all([
+    const [devices, tickets, invoices, payments, actions, billingNotes, serviceRequests, bookings, subscriberService] = await Promise.all([
       DeviceOperationalCache.find({ customerId: customer.customerId }).lean(),
       SupportTicket.find({ customerId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean()
       ,
@@ -243,9 +244,38 @@ customersRouter.get(
       ServiceRequest.find({ customerId: customer.customerId }).sort({ createdAt: -1 }).limit(20).lean(),
       bookingFilter.$or.length
         ? ConnectionBooking.find(bookingFilter).sort({ createdAt: -1 }).limit(12).lean()
-        : Promise.resolve([])
+        : Promise.resolve([]),
+      SubscriberService.findOne({
+        $or: [
+          ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : []),
+          { customerId: customer.customerId }
+        ]
+      }).lean()
     ]);
-    return ok(res, { ...customer, devices, tickets, invoices, payments, actions, billingNotes, serviceRequests, bookings });
+    return ok(res, {
+      ...customer,
+      devices,
+      tickets,
+      invoices,
+      payments,
+      actions,
+      billingNotes,
+      serviceRequests,
+      bookings,
+      radiusService: subscriberService
+        ? {
+            serviceId: subscriberService.serviceId,
+            radiusUsername: subscriberService.radiusUsername,
+            accessProfileCode: subscriberService.accessProfileCode,
+            billingProfileCode: subscriberService.billingProfileCode,
+            bngNodeCode: subscriberService.bngNodeCode,
+            status: subscriberService.status,
+            activatedAt: subscriberService.activatedAt,
+            suspendedAt: subscriberService.suspendedAt,
+            updatedAt: subscriberService.updatedAt
+          }
+        : null
+    });
   })
 );
 

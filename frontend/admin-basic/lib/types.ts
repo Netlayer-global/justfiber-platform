@@ -127,6 +127,17 @@ export interface Customer {
     state?: string
     pinCode?: string
   }
+  radiusService?: {
+    serviceId?: string
+    radiusUsername?: string
+    accessProfileCode?: string
+    billingProfileCode?: string
+    bngNodeCode?: string
+    status?: 'draft' | 'active' | 'suspended' | 'expired' | 'terminated' | 'pending_installation'
+    activatedAt?: string
+    suspendedAt?: string
+    updatedAt?: string
+  } | null
 }
 
 export interface CustomerBooking {

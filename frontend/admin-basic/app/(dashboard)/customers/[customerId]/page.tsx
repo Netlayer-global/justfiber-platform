@@ -167,6 +167,7 @@ export default function CustomerDetailPage() {
       ? customer.plan.planCode || customer.plan.id
       : customer?.plan?.id
   const currentSpeedMbps = Number(billingSummary.speedMbps || 0)
+  const radiusService = customer?.radiusService || null
   const usagePressureState = billingSummary.usageCapReached
     ? 'cap_reached'
     : usageCapGb > 0 && usagePercent >= 90
@@ -744,6 +745,52 @@ export default function CustomerDetailPage() {
                     <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>Retry Provisioning</button>
                     <button className="btn-secondary" onClick={() => void handleCustomerUpdate({ status: 'active' })} disabled={isSaving}>Mark Active</button>
                   </div>
+                </div>
+                <div className="card p-5 space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold">PPPoE / FreeRADIUS</h2>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Subscriber access state and latest RADIUS sync snapshot.
+                      </p>
+                    </div>
+                    <span
+                      className={
+                        radiusService?.status === 'active'
+                          ? 'rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700'
+                          : radiusService?.status === 'suspended'
+                            ? 'rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700'
+                            : 'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600'
+                      }
+                    >
+                      {radiusService?.status || 'not synced'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Radius username</p>
+                      <p className="mt-2 text-base font-semibold text-slate-900">{radiusService?.radiusUsername || customer.pppoeUsername || '-'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Service ID</p>
+                      <p className="mt-2 text-base font-semibold text-slate-900">{radiusService?.serviceId || customer.serviceId || '-'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Access profile</p>
+                      <p className="mt-2 text-base font-semibold text-slate-900">{radiusService?.accessProfileCode || '-'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Last sync</p>
+                      <p className="mt-2 text-base font-semibold text-slate-900">
+                        {radiusService?.updatedAt ? new Date(radiusService.updatedAt).toLocaleString() : '-'}
+                      </p>
+                    </div>
+                  </div>
+                  {radiusService?.suspendedAt ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      PPPoE access suspended on {new Date(radiusService.suspendedAt).toLocaleString()}.
+                    </div>
+                  ) : null}
                 </div>
                 <div className="card p-5 space-y-3">
                   <h2 className="text-lg font-semibold">Booking pipeline</h2>

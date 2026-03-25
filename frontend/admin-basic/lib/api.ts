@@ -248,6 +248,19 @@ function mapCustomer(customer: any): Customer {
     serviceRequests: Array.isArray(customer.serviceRequests)
       ? customer.serviceRequests.map(mapCustomerServiceRequest)
       : undefined,
+    radiusService: customer.radiusService
+      ? {
+          serviceId: customer.radiusService.serviceId || '',
+          radiusUsername: customer.radiusService.radiusUsername || '',
+          accessProfileCode: customer.radiusService.accessProfileCode || '',
+          billingProfileCode: customer.radiusService.billingProfileCode || '',
+          bngNodeCode: customer.radiusService.bngNodeCode || '',
+          status: customer.radiusService.status || 'draft',
+          activatedAt: customer.radiusService.activatedAt,
+          suspendedAt: customer.radiusService.suspendedAt,
+          updatedAt: customer.radiusService.updatedAt,
+        }
+      : null,
     rawAddress: customer.address && typeof customer.address === 'object'
       ? {
           line1: customer.address.line1,
