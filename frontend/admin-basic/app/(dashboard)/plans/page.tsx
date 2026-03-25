@@ -351,10 +351,8 @@ export default function PlansPage() {
       return
     }
     const currentIssues = provisioningIssues(form)
-    if (form.status === 'active' && currentIssues.length > 0) {
-      toast.error(`Complete provisioning fields first: ${currentIssues.join(', ')}`)
-      return
-    }
+    const shouldDowngradeToDraft = form.status === 'active' && currentIssues.length > 0
+    const nextStatus: PlanFormState['status'] = shouldDowngradeToDraft ? 'inactive' : form.status
 
     const payload: Partial<Plan> = {
       id: form.planCode.trim(),
@@ -380,7 +378,7 @@ export default function PlansPage() {
       taxIncluded: form.taxIncluded,
       gstRate: Number(form.gstRate || 0),
       pricesExcludeGst: form.pricesExcludeGst,
-      status: form.status,
+      status: nextStatus,
       tags: splitCsv(form.tags),
       staticBenefits: splitCsv(form.staticBenefits),
       features: splitLines(form.features),
@@ -439,7 +437,11 @@ export default function PlansPage() {
         return
       }
 
-      toast.success(editingPlanId ? 'Plan updated' : 'Plan created')
+      if (shouldDowngradeToDraft) {
+        toast.success('Plan saved as draft. Complete provisioning template before activation.')
+      } else {
+        toast.success(editingPlanId ? 'Plan updated' : 'Plan created')
+      }
       cancelEdit()
       await loadPlans()
     } catch (error) {
