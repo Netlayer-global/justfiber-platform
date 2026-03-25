@@ -723,7 +723,7 @@ export const adminAPI = {
     }
   },
   getCustomerDemoOtp: (lookup: string) =>
-    request<CustomerOtpLookup>(`/api/v1/admin/ops/customer-auth/demo-otp?mobile=${encodeURIComponent(lookup)}`),
+    request<CustomerOtpLookup>(`/api/v1/admin/customer-auth/demo-otp?mobile=${encodeURIComponent(lookup)}`),
   // Plans
   getPlans: async () => {
     const res = await request<any[]>('/api/v1/admin/catalog/plans')
