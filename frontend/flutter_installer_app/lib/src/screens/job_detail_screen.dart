@@ -466,6 +466,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ),
                 const SizedBox(height: 16),
                 AppCard(
+                  color: const Color(0xFFFFFFFF),
+                  borderColor: const Color(0x228224E3),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1384,8 +1386,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool proofUploaded,
   }) {
     final pages = isComplaint
-        ? ['1 Briefing', '2 Onsite', '3 Resolution', '4 Closure']
-        : ['1 Details', '2 ONT Scan', '3 ONT Details', '4 Activation', '5 Proof', '6 Complete'];
+        ? ['Briefing', 'Onsite', 'Resolution', 'Closure']
+        : ['Details', 'ONT Scan', 'ONT Details', 'Activation', 'Proof', 'Complete'];
     return AppCard(
       color: const Color(0xFFFFFFFF),
       borderColor: const Color(0x228224E3),
@@ -1410,7 +1412,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 child: Padding(
                   padding: EdgeInsets.only(right: index == pages.length - 1 ? 0 : 8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    height: 76,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     decoration: BoxDecoration(
                       color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFFF8F4FF),
                       borderRadius: BorderRadius.circular(16),
@@ -1429,6 +1432,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         Text(
                           pages[index],
                           textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: _workflowPage == index ? const Color(0xFFFFFFFF) : const Color(0xFF6E6A67),
                             fontWeight: FontWeight.w700,
