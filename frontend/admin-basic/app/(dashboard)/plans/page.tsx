@@ -255,6 +255,7 @@ export default function PlansPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [query, setQuery] = useState('')
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null)
+  const [composerMode, setComposerMode] = useState<'create' | 'edit' | 'clone' | null>(null)
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'home' | 'business' | 'enterprise'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
@@ -313,24 +314,28 @@ export default function PlansPage() {
     plans[0] ||
     null
 
-  const preview = editingPlanId ? form : toForm(selectedPlan)
+  const composerOpen = composerMode !== null
+  const preview = composerOpen ? form : toForm(selectedPlan)
   const currentProvisioningIssues = provisioningIssues(preview)
   const provisioningReady = currentProvisioningIssues.length === 0
 
   function beginCreate() {
     setEditingPlanId(null)
     setForm(initialForm)
+    setComposerMode('create')
   }
 
   function beginEdit(plan: Plan) {
     setEditingPlanId(plan.id)
     setSelectedPlanId(plan.id)
     setForm(toForm(plan))
+    setComposerMode('edit')
   }
 
   function cancelEdit() {
     setEditingPlanId(null)
     setForm(initialForm)
+    setComposerMode(null)
   }
 
   async function handleSavePlan(e: React.FormEvent) {
@@ -439,22 +444,6 @@ export default function PlansPage() {
     }
   }
 
-  async function deactivatePlan(plan: Plan) {
-    if (!confirm(`Deactivate ${plan.name}?`)) return
-    try {
-      const res = await adminAPI.deletePlan(plan.planCode || plan.id)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to deactivate plan')
-        return
-      }
-      toast.success('Plan deactivated')
-      await loadPlans()
-    } catch (error) {
-      console.error('[plans] Failed to deactivate plan:', error)
-      toast.error('Failed to deactivate plan')
-    }
-  }
-
   async function togglePlanStatus(plan: Plan) {
     try {
       setIsSaving(true)
@@ -487,6 +476,32 @@ export default function PlansPage() {
       status: 'inactive',
       sortOrder: String((plan.sortOrder || 1) + 1),
     })
+    setComposerMode('clone')
+  }
+
+  async function removePlan(plan: Plan) {
+    if (!confirm(`Remove ${plan.name} from the catalog?`)) return
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.deletePlan(plan.planCode || plan.id)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to remove plan')
+        return
+      }
+      toast.success('Plan removed from catalog')
+      if (selectedPlanId === plan.id) {
+        setSelectedPlanId(null)
+      }
+      if (editingPlanId === plan.id) {
+        cancelEdit()
+      }
+      await loadPlans()
+    } catch (error) {
+      console.error('[plans] Failed to remove plan:', error)
+      toast.error('Failed to remove plan')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   async function movePlan(plan: Plan, direction: 'up' | 'down') {
@@ -546,6 +561,16 @@ export default function PlansPage() {
               </div>
             ))}
           </div>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New plan
+            </button>
+            <button type="button" onClick={() => void loadPlans()} className="btn-secondary inline-flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh catalog
+            </button>
+          </div>
         </div>
 
         <div className="neon-panel p-8">
@@ -568,14 +593,15 @@ export default function PlansPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        {composerOpen ? (
         <form onSubmit={handleSavePlan} className="card space-y-6 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <div className="text-xs uppercase tracking-[0.24em] text-white/45">
-                {editingPlanId ? 'Edit live pack' : 'Create pack'}
+                {composerMode === 'edit' ? 'Edit live pack' : composerMode === 'clone' ? 'Clone pack' : 'Create pack'}
               </div>
               <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">
-                {editingPlanId ? 'Refine a broadband lane' : 'Launch a new plan lane'}
+                {composerMode === 'edit' ? 'Refine a broadband lane' : composerMode === 'clone' ? 'Duplicate and refine a broadband lane' : 'Launch a new plan lane'}
               </h2>
               <p className="mt-2 text-sm leading-6 text-white/55">
                 Pricing, validity, tags, addons, and provisioning stay controlled in one surface.
@@ -586,15 +612,10 @@ export default function PlansPage() {
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </button>
-              {editingPlanId ? (
+              {composerOpen ? (
                 <button type="button" onClick={cancelEdit} className="btn-secondary inline-flex items-center gap-2">
                   <X className="h-4 w-4" />
                   Cancel
-                </button>
-              ) : (
-                <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  New plan
                 </button>
               )}
             </div>
@@ -740,10 +761,65 @@ export default function PlansPage() {
               </div>
             ) : null}
             <button type="submit" disabled={isSaving} className="btn-primary">
-              {isSaving ? 'Saving...' : editingPlanId ? 'Update plan' : 'Create plan'}
+              {isSaving ? 'Saving...' : editingPlanId ? 'Update plan' : composerMode === 'clone' ? 'Create cloned plan' : 'Create plan'}
             </button>
           </div>
         </form>
+        ) : (
+        <div className="card p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan composer</div>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">Create new plans only when needed</h2>
+              <p className="mt-2 text-sm leading-6 text-white/55">
+                Existing plans neeche dashboard me visible rahenge. Naya plan banane ke liye top-right `New plan` use karo.
+              </p>
+            </div>
+            <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New plan
+            </button>
+          </div>
+
+          <div className="mt-6 rounded-[28px] border border-white/10 bg-[#0c0f15] p-6">
+            <div className="text-xs uppercase tracking-[0.2em] text-white/45">App preview template</div>
+            <div className="mt-3 text-3xl font-black text-white">{preview.name || 'Select a plan'}</div>
+            <div className="mt-2 text-sm text-white/50">{preview.planCode || 'PLAN_CODE'} • {preview.status === 'active' && provisioningReady ? 'Visible in apps' : 'Draft / blocked'}</div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-[22px] bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Speed</div>
+                <div className="mt-2 text-2xl font-black text-white">{preview.speed || '0'} Mbps</div>
+                <div className="text-sm text-white/55">Up {preview.uploadSpeed || '0'} Mbps</div>
+              </div>
+              <div className="rounded-[22px] bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Price</div>
+                <div className="mt-2 text-2xl font-black text-white">{formatCurrency(Number(preview.price || 0))}</div>
+                <div className="text-sm text-white/55">{preview.dataPolicy === 'unlimited' ? 'Unlimited data' : `${preview.dataLimitGb || '0'} GB`}</div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2 text-sm text-white/70">
+              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Customer template</div>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between"><span>Badge</span><span>{preview.featured ? 'Featured' : preview.recommended ? 'Recommended' : 'Standard'}</span></div>
+                  <div className="flex items-center justify-between"><span>OTT</span><span>{splitCsv(preview.ottApps).slice(0, 2).join(', ') || '-'}</span></div>
+                  <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'Optional'}</span></div>
+                </div>
+              </div>
+              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Provisioning template</div>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between"><span>PPPoE</span><span>{buildPppoePreview(preview)}</span></div>
+                  <div className="flex items-center justify-between"><span>Wi‑Fi</span><span>{buildWifiPreview(preview)}</span></div>
+                  <div className="flex items-center justify-between"><span>VLAN</span><span>{preview.vlanId || '-'}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
 
         <div className="space-y-6">
           <div className="card p-6">
@@ -922,12 +998,48 @@ export default function PlansPage() {
           <Loader className="mx-auto h-6 w-6 animate-spin text-[#8224E3]" />
         </div>
       ) : (
-        <section className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+        <section className="space-y-4">
+          {selectedPlan ? (
+            <div className="card flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-[0.22em] text-white/45">Selected plan</div>
+                <div className="mt-2 text-2xl font-black text-white">{selectedPlan.name}</div>
+                <div className="mt-2 text-sm text-white/55">
+                  {selectedPlan.planCode} - {renderCategoryLabel(selectedPlan.category)} - {selectedPlan.visibleInCustomerApp ? 'Visible in apps' : 'Hidden from apps'}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => beginEdit(selectedPlan)} className="btn-secondary inline-flex items-center gap-2">
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </button>
+                <button type="button" onClick={() => clonePlan(selectedPlan)} className="btn-secondary inline-flex items-center gap-2">
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void togglePlanStatus(selectedPlan)}
+                  className={`btn-secondary inline-flex items-center gap-2 ${selectedPlan.status === 'active' ? 'border-amber-300/20 text-amber-100' : 'border-[#8224E3]/30 text-[#8224E3]'}`}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {selectedPlan.status === 'active' ? 'Deactivate' : 'Activate'}
+                </button>
+                <button type="button" onClick={() => void removePlan(selectedPlan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-200">
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {filteredPlans.map((plan) => (
             <article
               key={plan.id}
               className={`card p-6 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-[#8224E3]/40' : ''}`}
               onMouseEnter={() => setSelectedPlanId(plan.id)}
+              onClick={() => setSelectedPlanId(plan.id)}
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1053,14 +1165,12 @@ export default function PlansPage() {
                   className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-200' : 'border-[#8224E3]/30 text-[#8224E3]'}`}
                 >
                   {plan.status === 'active' ? <Trash2 className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                  {plan.status === 'active' ? 'Hide' : 'Activate'}
+                  {plan.status === 'active' ? 'Deactivate' : 'Activate'}
                 </button>
-                {plan.status === 'active' ? (
-                  <button type="button" onClick={() => void deactivatePlan(plan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-200">
-                    <Trash2 className="h-4 w-4" />
-                    Deactivate
-                  </button>
-                ) : null}
+                <button type="button" onClick={() => void removePlan(plan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-200">
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </button>
               </div>
             </article>
           ))}
@@ -1070,6 +1180,7 @@ export default function PlansPage() {
               No plans found for the current search and filter combination.
             </div>
           ) : null}
+          </div>
         </section>
       )}
     </div>
