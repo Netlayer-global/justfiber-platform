@@ -218,8 +218,13 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         _loading = false;
         _messages.add(
           _ChatMessage.bot(
-            '${_humanHeadline(diagnosis)}\n\n${diagnosis.summary}\n\n${diagnosis.recommendation}',
+            '${_humanHeadline(diagnosis)}\n\n${diagnosis.summary}',
             actions: actions,
+          ),
+        );
+        _messages.add(
+          _ChatMessage.bot(
+            _diagnosisSnapshotText(diagnosis),
           ),
         );
         if (diagnosis.steps.isNotEmpty) {
@@ -278,6 +283,19 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     return [
       _ChatAction(label: 'Check again', onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType), primary: true),
     ];
+  }
+
+  String _diagnosisSnapshotText(SupportDiagnosis diagnosis) {
+    final opticalText = diagnosis.opticalRxPower == null ? '-' : '${diagnosis.opticalRxPower!.toStringAsFixed(1)} dBm';
+    return 'Recommended next step: ${diagnosis.recommendation}\n\n'
+        'Live snapshot\n'
+        '- Internet: ${diagnosis.internetStatus}\n'
+        '- Wi-Fi: ${diagnosis.wifiStatus}\n'
+        '- Line: ${diagnosis.lineStatus}\n'
+        '- Estimated speed: ${diagnosis.estimatedSpeedMbps.toStringAsFixed(0)} Mbps\n'
+        '- Latency: ${diagnosis.latencyMs.toStringAsFixed(0)} ms\n'
+        '- Packet loss: ${diagnosis.packetLossPercent.toStringAsFixed(1)} %\n'
+        '- Optical RX: $opticalText';
   }
 
   String _humanHeadline(SupportDiagnosis diagnosis) {
@@ -760,6 +778,13 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
               ticket.subject,
               style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
             ),
+            if (ticket.latestUpdateNote.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Latest update: ${ticket.latestUpdateNote}',
+                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4, fontWeight: FontWeight.w600),
+              ),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
