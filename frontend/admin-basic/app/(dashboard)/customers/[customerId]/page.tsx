@@ -464,7 +464,7 @@ export default function CustomerDetailPage() {
         toast.error(res.error || 'Failed to update WAN')
         return
       }
-      toast.success('WAN config pushed')
+      toast.success(res.data?.radiusSynced ? 'WAN config pushed and FreeRADIUS synced' : 'WAN config pushed')
       await loadCustomer()
     } catch (error) {
       console.error('[v0] Failed to update WAN:', error)
@@ -1095,6 +1095,9 @@ export default function CustomerDetailPage() {
 
                         <div className="rounded border border-[#2a2f4a] p-4 space-y-4">
                           <h3 className="font-semibold">WAN Management</h3>
+                          <p className="text-sm text-slate-500">
+                            PPPoE update ke saath FreeRADIUS subscriber access bhi sync hoga.
+                          </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input className="input" placeholder="PPPoE Username" value={form?.pppoeUsername || ''} onChange={(e) => updateWifiForm(device.deviceId, { pppoeUsername: e.target.value })} />
                             <input className="input" placeholder="PPPoE Password" type="password" value={form?.pppoePassword || ''} onChange={(e) => updateWifiForm(device.deviceId, { pppoePassword: e.target.value })} />
@@ -1103,7 +1106,7 @@ export default function CustomerDetailPage() {
                             <input type="checkbox" checked={form?.natEnabled ?? true} onChange={(e) => updateWifiForm(device.deviceId, { natEnabled: e.target.checked })} />
                             NAT Enabled
                           </label>
-                          <button className="btn-primary" onClick={() => void handleDeviceWanUpdate(device)} disabled={isSaving}>Apply WAN Only</button>
+                          <button className="btn-primary" onClick={() => void handleDeviceWanUpdate(device)} disabled={isSaving}>Apply WAN + FreeRADIUS</button>
                         </div>
                       </div>
 

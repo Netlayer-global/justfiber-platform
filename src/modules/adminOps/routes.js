@@ -28,6 +28,9 @@ import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
 import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../common/customerPortalOtpStore.js";
+import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { SubscriberService } from "../../models/SubscriberService.js";
+import { PlanCatalog } from "../../models/PlanCatalog.js";
 
 export const adminOpsRouter = Router();
 
@@ -1785,11 +1788,66 @@ adminOpsRouter.patch(
     const pppoeUsername = req.body?.pppoeUsername || device?.wanInfo?.pppoeUsernameMasked;
     const pppoePassword = req.body?.pppoePassword;
     const natEnabled = req.body?.natEnabled ?? device?.wifiInfo?.natEnabled ?? true;
+    const syncRadius = req.body?.syncRadius !== false;
     const brand = detectOntBrand({
       serialNumber: device?.serialNumber,
       productClass: device?.productClass,
       deviceId: targetDeviceId
     });
+
+    let radiusSynced = false;
+    let radiusServiceId = null;
+    let radiusUsername = pppoeUsername || null;
+
+    if (syncRadius && device?.customerId && pppoeUsername) {
+      const customer = await Customer.findOne({ customerId: device.customerId }).lean();
+      if (!customer?.serviceId) {
+        throw new ApiError(400, "Customer serviceId missing for FreeRADIUS sync");
+      }
+
+      const existingService =
+        (await SubscriberService.findOne({ serviceId: customer.serviceId })) ||
+        (await SubscriberService.findOne({ customerId: customer.customerId }));
+      const storedPassword = existingService?.metadata?.radiusPassword;
+      const effectivePassword = pppoePassword || storedPassword;
+
+      if (!effectivePassword) {
+        throw new ApiError(400, "PPPoE password is required for FreeRADIUS sync");
+      }
+
+      const plan = customer.planCode
+        ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean()
+        : null;
+
+      await radiusServiceManager.createSubscriberAccess({
+        serviceId: customer.serviceId,
+        customerId: customer.customerId,
+        radiusUsername: pppoeUsername,
+        radiusPassword: effectivePassword,
+        accessProfileCode:
+          plan?.provisioning?.accessProfileCode ||
+          existingService?.accessProfileCode,
+        billingProfileCode: existingService?.billingProfileCode,
+        bngNodeCode: existingService?.bngNodeCode,
+        metadata: {
+          ...(existingService?.metadata || {}),
+          source: "admin_device_management",
+          networkProfile: {
+            speedMbps: Number(customer.billingSnapshot?.speedMbps || plan?.speedMbps || 0) || 0,
+            uploadSpeedMbps:
+              Number(customer.billingSnapshot?.uploadSpeedMbps || plan?.uploadSpeedMbps || 0) || 0,
+            dataPolicy: customer.billingSnapshot?.dataPolicy || plan?.dataPolicy || "unlimited",
+            dataLimitGb:
+              Number(customer.billingSnapshot?.dataLimitGb || plan?.dataLimitGb || 0) || 0,
+            fupSpeedMbps:
+              Number(customer.billingSnapshot?.fupSpeedMbps || plan?.fupSpeedMbps || 0) || 0,
+          }
+        }
+      });
+      radiusSynced = true;
+      radiusServiceId = customer.serviceId;
+    }
+
     await genieacsClient.pushAccessConfig({
       deviceId: targetDeviceId,
       brand,
@@ -1818,7 +1876,18 @@ adminOpsRouter.patch(
       };
       await device.save();
     }
-    return ok(res, { deviceId: targetDeviceId, ssid24, ssid5, pppoeUsername, natEnabled, updated: true, cacheBacked: Boolean(device) });
+    return ok(res, {
+      deviceId: targetDeviceId,
+      ssid24,
+      ssid5,
+      pppoeUsername,
+      natEnabled,
+      updated: true,
+      cacheBacked: Boolean(device),
+      radiusSynced,
+      radiusServiceId,
+      radiusUsername
+    });
   })
 );
 
