@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
-import '../widgets/app_card.dart';
 import 'billing_history_screen.dart';
 import 'plan_catalog_screen.dart';
 
 class SupportAssistantScreen extends StatefulWidget {
   const SupportAssistantScreen({
     super.key,
-    this.issueType = 'internet',
+    this.issueType = 'general',
   });
 
   final String issueType;
@@ -19,69 +18,221 @@ class SupportAssistantScreen extends StatefulWidget {
 }
 
 class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
-  SupportDiagnosis? _diagnosis;
-  bool _loading = true;
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final List<_ChatMessage> _messages = [];
+
+  SupportDiagnosis? _lastDiagnosis;
+  bool _loading = false;
   bool _raisingTicket = false;
-  String? _error;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _loadDiagnosis();
-      }
+      if (!mounted) return;
+      _seedConversation();
     });
   }
 
-  Future<void> _loadDiagnosis() async {
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _seedConversation() {
+    if (_messages.isNotEmpty) return;
+    final prompt = _defaultPromptFor(widget.issueType);
+    setState(() {
+      _messages.add(
+        _ChatMessage.bot(
+          'We are here to help you out. Tell me what is happening with your connection, billing, Wi-Fi, or speed.',
+        ),
+      );
+      if (widget.issueType != 'general') {
+        _messages.add(_ChatMessage.user(prompt));
+      }
+    });
+    _scrollToBottom();
+    if (widget.issueType != 'general') {
+      _sendUserIntent(prompt, issueTypeOverride: widget.issueType);
+    }
+  }
+
+  String _defaultPromptFor(String issueType) {
+    switch (issueType) {
+      case 'billing':
+        return 'I have a billing issue';
+      case 'plan':
+        return 'I have a plan issue';
+      case 'wifi':
+        return 'I have a Wi-Fi issue';
+      case 'speed':
+        return 'My internet speed is slow';
+      case 'internet':
+        return 'I have an internet issue';
+      default:
+        return 'I need help';
+    }
+  }
+
+  String _inferIssueType(String text) {
+    final query = text.toLowerCase();
+    if (query.contains('bill') ||
+        query.contains('billing') ||
+        query.contains('due') ||
+        query.contains('payment') ||
+        query.contains('recharge')) {
+      return 'billing';
+    }
+    if (query.contains('wifi') ||
+        query.contains('wi-fi') ||
+        query.contains('ssid') ||
+        query.contains('router') ||
+        query.contains('password')) {
+      return 'wifi';
+    }
+    if (query.contains('slow') ||
+        query.contains('speed') ||
+        query.contains('latency') ||
+        query.contains('ping')) {
+      return 'speed';
+    }
+    if (query.contains('plan') ||
+        query.contains('fup') ||
+        query.contains('data') ||
+        query.contains('upgrade') ||
+        query.contains('cap')) {
+      return 'plan';
+    }
+    return 'internet';
+  }
+
+  Future<void> _sendUserIntent(String text, {String? issueTypeOverride}) async {
     final appState = AppStateScope.of(context);
     final session = appState.session;
     if (session == null) {
       setState(() {
-        _error = 'Please login again to continue support diagnostics.';
-        _loading = false;
+        _messages.add(
+          _ChatMessage.bot('Please login again so I can check your account and connection health.'),
+        );
       });
       return;
     }
+
+    final issueType = issueTypeOverride ?? _inferIssueType(text);
     setState(() {
       _loading = true;
-      _error = null;
     });
+    _scrollToBottom();
+
     try {
-      final result = await appState.api.fetchSupportDiagnosis(
+      final diagnosis = await appState.api.fetchSupportDiagnosis(
         session,
         customerId: appState.selectedCustomerId,
-        issueType: widget.issueType,
+        issueType: issueType,
       );
       if (!mounted) return;
+      final actions = _actionsForDiagnosis(diagnosis);
       setState(() {
-        _diagnosis = result;
+        _lastDiagnosis = diagnosis;
         _loading = false;
+        _messages.add(
+          _ChatMessage.bot(
+            '${diagnosis.headline}\n\n${diagnosis.summary}\n\n${diagnosis.recommendation}',
+            actions: actions,
+          ),
+        );
+        if (diagnosis.steps.isNotEmpty) {
+          _messages.add(
+            _ChatMessage.bot(
+              diagnosis.steps.asMap().entries.map((entry) => '${entry.key + 1}. ${entry.value}').join('\n'),
+            ),
+          );
+        }
       });
+      _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
         _loading = false;
+        _messages.add(
+          _ChatMessage.bot(
+            'I could not complete the checks right now. Please try again, or raise a complaint if the issue is urgent.',
+            actions: [
+              _ChatAction(label: 'Check again', onTap: () => _sendUserIntent(text, issueTypeOverride: issueType)),
+              _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
+            ],
+          ),
+        );
       });
+      _scrollToBottom();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
+  }
+
+  List<_ChatAction> _actionsForDiagnosis(SupportDiagnosis diagnosis) {
+    if (diagnosis.diagnosisCode == 'billing_suspended' ||
+        diagnosis.diagnosisCode == 'payment_pending') {
+      return [
+        _ChatAction(label: 'Open billing', onTap: _openBilling),
+        _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
+      ];
+    }
+    if (diagnosis.diagnosisCode == 'data_limit_reached' ||
+        diagnosis.diagnosisCode == 'fup_applied' ||
+        diagnosis.diagnosisCode == 'speed_fup_limited' ||
+        diagnosis.diagnosisCode == 'speed_hard_cap') {
+      return [
+        _ChatAction(label: 'Open plans', onTap: _openPlans),
+        _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
+      ];
+    }
+    if (diagnosis.needsTicket) {
+      return [
+        _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
+        _ChatAction(label: 'Check again', onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType)),
+      ];
+    }
+    return [
+      _ChatAction(label: 'Check again', onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType)),
+    ];
+  }
+
+  Future<void> _openBilling() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+    );
+    if (!mounted) return;
+    await AppStateScope.of(context).refresh();
+  }
+
+  Future<void> _openPlans() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+    );
+    if (!mounted) return;
+    await AppStateScope.of(context).refresh();
   }
 
   Future<void> _raiseComplaint() async {
     final appState = AppStateScope.of(context);
-    final diagnosis = _diagnosis;
-    if (diagnosis == null) return;
+    final diagnosis = _lastDiagnosis;
+    if (diagnosis == null || _raisingTicket) return;
     setState(() => _raisingTicket = true);
     final ticketNumber = await appState.raiseComplaint(
-      category: widget.issueType == 'billing' ? 'billing' : 'technical',
-      subject: widget.issueType == 'billing'
+      category: diagnosis.issueType == 'billing' ? 'billing' : 'technical',
+      subject: diagnosis.issueType == 'billing'
           ? 'Billing issue detected'
-          : widget.issueType == 'plan'
+          : diagnosis.issueType == 'plan'
               ? 'Plan issue detected'
-              : widget.issueType == 'wifi'
+              : diagnosis.issueType == 'wifi'
                   ? 'Wi-Fi issue detected'
-                  : widget.issueType == 'speed'
+                  : diagnosis.issueType == 'speed'
                       ? 'Slow speed detected'
                       : 'Internet issue detected',
       description:
@@ -99,349 +250,279 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
           '- Optical RX: ${diagnosis.opticalRxPower == null ? '-' : '${diagnosis.opticalRxPower!.toStringAsFixed(1)} dBm'}',
     );
     if (!mounted) return;
-    setState(() => _raisingTicket = false);
-    if (ticketNumber != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Complaint raised: $ticketNumber')),
+    setState(() {
+      _raisingTicket = false;
+      _messages.add(
+        _ChatMessage.bot(
+          ticketNumber != null
+              ? 'Your complaint has been raised successfully. Reference: $ticketNumber'
+              : (appState.error ?? 'I could not raise the complaint right now. Please try again shortly.'),
+        ),
       );
+    });
+    _scrollToBottom();
+    if (ticketNumber != null) {
       await appState.refresh();
-      return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(appState.error ?? 'Unable to raise complaint right now')),
-    );
+  }
+
+  void _submitComposer() {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _loading) return;
+    setState(() {
+      _messages.add(_ChatMessage.user(text));
+      _controller.clear();
+    });
+    _scrollToBottom();
+    _sendUserIntent(text);
+  }
+
+  String _timeLabel() {
+    final now = TimeOfDay.now();
+    final hour = now.hourOfPeriod == 0 ? 12 : now.hourOfPeriod;
+    final minute = now.minute.toString().padLeft(2, '0');
+    final suffix = now.period == DayPeriod.am ? 'am' : 'pm';
+    return '$hour:$minute $suffix';
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent + 120,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final appState = AppStateScope.of(context);
-    final billing = appState.billing;
-    final assistantTitle = switch (widget.issueType) {
-      'billing' => 'Billing assistant',
-      'plan' => 'Plan assistant',
-      'wifi' => 'Wi-Fi assistant',
-      'speed' => 'Speed assistant',
-      _ => 'Internet assistant',
-    };
-    final assistantHeadline = switch (widget.issueType) {
-      'billing' => 'Let me check your billing first',
-      'plan' => 'Let me review your plan first',
-      'wifi' => 'Let me inspect your Wi-Fi health first',
-      'speed' => 'Let me inspect your speed first',
-      _ => 'Let me check your line first',
-    };
-    final assistantSummary = switch (widget.issueType) {
-      'billing' => 'We will detect dues, suspension, payment state, and the quickest billing fix before raising a complaint.',
-      'plan' => 'We will check plan limits, FUP, and upgrade need before suggesting the next step.',
-      'wifi' => 'We will check line reachability, Wi-Fi quality, and device-side issues before raising a complaint.',
-      'speed' => 'We will check if speed is being limited by plan, FUP, line quality, or router conditions before raising a complaint.',
-      _ => 'We will first detect the likely reason, suggest fixes, and only then raise a complaint if needed.',
-    };
     return Scaffold(
-      appBar: AppBar(title: Text(assistantTitle)),
-      body: RefreshIndicator(
-        color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF6F1EB),
-        onRefresh: _loadDiagnosis,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+      backgroundColor: const Color(0xFFF7F3FF),
+      appBar: AppBar(
+        titleSpacing: 0,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppCard(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+            Text(
+              'justfiber chat',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'get help 24x7',
+              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xFF6E6A67)),
+            ),
+          ],
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+                itemCount: _messages.length + (_loading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (_loading && index == _messages.length) {
+                    return _assistantTypingBubble();
+                  }
+                  final message = _messages[index];
+                  return _chatBubble(message);
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF1ECFF),
+                border: Border(top: BorderSide(color: Color(0x14000000))),
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    'SMART SUPPORT',
-                    style: TextStyle(
-                      color: Color(0xFFE9D5FF),
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 3.1,
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFFFF),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0x228224E3)),
                     ),
+                    child: const Icon(Icons.menu_rounded, color: Color(0xFF8224E3)),
                   ),
-                  SizedBox(height: 10),
-                  Text(
-                    assistantHeadline,
-                    style: TextStyle(
-                      color: Color(0xFFFFFFFF),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 28,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFFFF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0x228224E3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              minLines: 1,
+                              maxLines: 4,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _submitComposer(),
+                              decoration: const InputDecoration(
+                                hintText: 'Type your query here...',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _loading ? null : _submitComposer,
+                            icon: Icon(
+                              Icons.send_rounded,
+                              color: _loading ? const Color(0xFFB9B2C5) : const Color(0xFF8224E3),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    assistantSummary,
-                    style: TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
-            if (_loading)
-              AppCard(
-                color: Color(0xFFFFFFFF),
-                borderColor: Color(0x228224E3),
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-                      SizedBox(height: 12),
-                      CircularProgressIndicator(color: Color(0xFF8224E3)),
-                      SizedBox(height: 16),
-                      Text(
-                        widget.issueType == 'billing'
-                            ? 'Checking due amount, payment state, and service suspension...'
-                            : widget.issueType == 'plan'
-                                ? 'Checking data policy, cap usage, and upgrade triggers...'
-                                : widget.issueType == 'wifi'
-                                    ? 'Checking Wi-Fi quality, line reachability, and device state...'
-                                    : widget.issueType == 'speed'
-                                        ? 'Checking current plan speed, FUP state, and line quality...'
-                                : 'Checking billing, line status, speed, and device quality...',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else if (_error != null)
-              AppCard(
-                color: const Color(0xFFFFFFFF),
-                borderColor: const Color(0x22D81F26),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Unable to complete checks',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313)),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(_error!, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45)),
-                    const SizedBox(height: 14),
-                    FilledButton(
-                      onPressed: _loadDiagnosis,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-                      ),
-                      child: const Text('Run checks again'),
-                    ),
-                  ],
-                ),
-              )
-            else if (_diagnosis != null) ...[
-              _assistantMessage(
-                speaker: 'Assistant',
-                text: _diagnosis!.headline,
-                emphasis: true,
-              ),
-              _assistantMessage(
-                speaker: 'Diagnosis',
-                text: _diagnosis!.summary,
-              ),
-              _sectionCard(
-                title: 'Live checks',
-                child: Column(
-                  children: [
-                    _detailRow('Internet', _diagnosis!.internetStatus),
-                    _detailRow('Wi-Fi', _diagnosis!.wifiStatus),
-                    _detailRow('Line status', _diagnosis!.lineStatus),
-                    _detailRow('Estimated speed', '${_diagnosis!.estimatedSpeedMbps.toStringAsFixed(0)} Mbps'),
-                    _detailRow('Latency', '${_diagnosis!.latencyMs.toStringAsFixed(0)} ms'),
-                    _detailRow('Packet loss', '${_diagnosis!.packetLossPercent.toStringAsFixed(1)} %'),
-                    _detailRow(
-                      'Optical RX',
-                      _diagnosis!.opticalRxPower == null ? '-' : '${_diagnosis!.opticalRxPower!.toStringAsFixed(1)} dBm',
-                      last: true,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              _sectionCard(
-                title: 'What you should do now',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _diagnosis!.recommendation,
-                      style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 14),
-                    ..._diagnosis!.steps.asMap().entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 26,
-                              height: 26,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8F4FF),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: const Color(0x228224E3)),
-                              ),
-                              child: Text(
-                                '${entry.key + 1}',
-                                style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                entry.value,
-                                style: const TextStyle(color: Color(0xFF131313), height: 1.45),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              if (_diagnosis!.diagnosisCode == 'billing_suspended' || _diagnosis!.diagnosisCode == 'payment_pending')
-                _sectionCard(
-                  title: 'Fastest fix',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pending amount: Rs ${billing.dueAmount.toStringAsFixed(2)}',
-                        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
-                          );
-                          if (mounted) {
-                            await _loadDiagnosis();
-                          }
-                        },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF8224E3),
-                          foregroundColor: const Color(0xFFFFFFFF),
-                        ),
-                        child: const Text('Open billing and pay now'),
-                      ),
-                    ],
-                  ),
-                )
-              else if (_diagnosis!.diagnosisCode == 'data_limit_reached' || _diagnosis!.diagnosisCode == 'fup_applied')
-                _sectionCard(
-                  title: 'Upgrade option',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Your issue looks plan-related. You can upgrade immediately from here.',
-                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
-                          );
-                          if (mounted) {
-                            await _loadDiagnosis();
-                          }
-                        },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF8224E3),
-                          foregroundColor: const Color(0xFFFFFFFF),
-                        ),
-                        child: const Text('Open plans'),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                _sectionCard(
-                  title: 'Still not resolved?',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _diagnosis!.needsTicket
-                            ? 'We already found a likely issue. Raise a complaint and the team can follow up with the right context.'
-                            : 'If the issue still continues after the above steps, raise a complaint from here.',
-                        style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: _raisingTicket ? null : _raiseComplaint,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF8224E3),
-                          foregroundColor: const Color(0xFFFFFFFF),
-                        ),
-                        child: Text(_raisingTicket ? 'Raising complaint...' : 'Raise complaint'),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _assistantMessage({
-    required String speaker,
-    required String text,
-    bool emphasis = false,
-  }) {
+  Widget _chatBubble(_ChatMessage message) {
+    final alignment = message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final bubbleColor = message.isUser ? const Color(0xFFEFE9FF) : const Color(0xFFFFFFFF);
+    final borderColor = message.isUser ? const Color(0x338224E3) : const Color(0x22000000);
+    final radius = BorderRadius.only(
+      topLeft: const Radius.circular(22),
+      topRight: const Radius.circular(22),
+      bottomLeft: Radius.circular(message.isUser ? 22 : 8),
+      bottomRight: Radius.circular(message.isUser ? 8 : 22),
+    );
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: alignment,
+        children: [
+          Row(
+            mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!message.isUser) ...[
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0x22000000)),
+                  ),
+                  child: const Icon(Icons.support_agent_rounded, color: Color(0xFF8224E3)),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    borderRadius: radius,
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Text(
+                    message.text,
+                    style: const TextStyle(color: Color(0xFF131313), height: 1.42, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: EdgeInsets.only(left: message.isUser ? 0 : 52, right: message.isUser ? 8 : 0),
+            child: Text(
+              _timeLabel(),
+              style: const TextStyle(color: Color(0xFF8E8898), fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ),
+          if (message.actions.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(left: 52),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: message.actions
+                    .map(
+                      (action) => OutlinedButton(
+                        onPressed: action.onTap,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF1860D9),
+                          backgroundColor: const Color(0xFFF8F6FF),
+                          side: const BorderSide(color: Color(0x22000000)),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        ),
+                        child: Text(
+                          action.label,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _assistantTypingBubble() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF8224E3),
+              color: const Color(0xFFFFFFFF),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0x22000000)),
             ),
-            child: const Icon(Icons.support_agent_rounded, color: Color(0xFFFFFFFF), size: 20),
+            child: const Icon(Icons.support_agent_rounded, color: Color(0xFF8224E3)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0x228224E3)),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFFFF),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(22),
+                topRight: Radius.circular(22),
+                bottomLeft: Radius.circular(8),
+                bottomRight: Radius.circular(22),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              border: Border.all(color: const Color(0x22000000)),
+            ),
+            child: const SizedBox(
+              width: 56,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    speaker,
-                    style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, fontSize: 12),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    text,
-                    style: TextStyle(
-                      color: const Color(0xFF131313),
-                      height: 1.45,
-                      fontWeight: emphasis ? FontWeight.w800 : FontWeight.w600,
-                      fontSize: emphasis ? 18 : 14,
-                    ),
-                  ),
+                  _TypingDot(),
+                  _TypingDot(),
+                  _TypingDot(),
                 ],
               ),
             ),
@@ -450,42 +531,46 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       ),
     );
   }
+}
 
-  Widget _sectionCard({required String title, required Widget child}) {
-    return AppCard(
-      color: const Color(0xFFFFFFFF),
-      borderColor: const Color(0x228224E3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313))),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
-  }
+class _ChatMessage {
+  _ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.actions = const [],
+  });
 
-  Widget _detailRow(String label, String value, {bool last = false}) {
+  factory _ChatMessage.user(String text) => _ChatMessage(text: text, isUser: true);
+
+  factory _ChatMessage.bot(String text, {List<_ChatAction> actions = const []}) =>
+      _ChatMessage(text: text, isUser: false, actions: actions);
+
+  final String text;
+  final bool isUser;
+  final List<_ChatAction> actions;
+}
+
+class _ChatAction {
+  const _ChatAction({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+}
+
+class _TypingDot extends StatelessWidget {
+  const _TypingDot();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: Border(bottom: last ? BorderSide.none : const BorderSide(color: Color(0x228224E3))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
+      width: 8,
+      height: 8,
+      decoration: const BoxDecoration(
+        color: Color(0xFFB4AFC0),
+        shape: BoxShape.circle,
       ),
     );
   }
