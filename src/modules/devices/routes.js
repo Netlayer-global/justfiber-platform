@@ -11,6 +11,7 @@ import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
+import { syncCachedDevicesFromGenie, syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
 
 export const devicesRouter = Router();
 
@@ -20,6 +21,9 @@ devicesRouter.get(
   "/",
   requirePermission(permissions.deviceRead),
   asyncHandler(async (req, res) => {
+    if (String(req.query.sync || "") === "true") {
+      await syncCachedDevicesFromGenie({ limit: Number(req.query.syncLimit || 50) });
+    }
     const { page, limit, skip } = buildPagination(req.query);
     const filter = {};
     if (req.query.search) {
@@ -51,11 +55,34 @@ devicesRouter.get(
   "/:deviceId",
   requirePermission(permissions.deviceRead),
   asyncHandler(async (req, res) => {
+    const deviceRecord = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId });
+    if (!deviceRecord) {
+      throw new ApiError(404, "Device not found");
+    }
+    if (String(req.query.sync || "") === "true") {
+      try {
+        await syncDeviceFromGenie(deviceRecord);
+      } catch (error) {
+        console.error("[devices] Genie sync failed:", error);
+      }
+    }
     const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId }).lean();
     if (!device) {
       throw new ApiError(404, "Device not found");
     }
     return ok(res, device);
+  })
+);
+
+devicesRouter.post(
+  "/sync-genie",
+  requirePermission(permissions.deviceRead),
+  asyncHandler(async (req, res) => {
+    const result = await syncCachedDevicesFromGenie({
+      deviceId: req.body?.deviceId,
+      limit: req.body?.limit || 50
+    });
+    return ok(res, result);
   })
 );
 

@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import { Device } from '@/lib/types'
-import { Activity, HardDrive, Loader, Router } from 'lucide-react'
+import { Activity, HardDrive, Loader, RefreshCw, Router } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   useEffect(() => {
     loadDevices()
@@ -23,6 +25,24 @@ export default function DevicesPage() {
       console.log('[v0] Error loading devices:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function syncFromGenie() {
+    try {
+      setIsSyncing(true)
+      const res = await adminAPI.syncDevicesFromGenie({ limit: 100 })
+      if (!res.success || !res.data) {
+        toast.error(typeof res.error === 'string' ? res.error : 'Genie sync failed')
+        return
+      }
+      toast.success(`Genie sync complete: ${res.data.synced}/${res.data.scanned} updated`)
+      await loadDevices()
+    } catch (error) {
+      console.log('[devices] Genie sync failed:', error)
+      toast.error('Genie sync failed')
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -53,6 +73,12 @@ export default function DevicesPage() {
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
             Track routers, access devices, and operational endpoints with status-first visibility.
           </p>
+          <div className="mt-6">
+            <button type="button" onClick={() => void syncFromGenie()} disabled={isSyncing} className="btn-primary inline-flex items-center gap-2">
+              <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Syncing from Genie...' : 'Sync from Genie'}
+            </button>
+          </div>
         </div>
         <div className="neon-panel p-8">
           <div className="text-xs uppercase tracking-[0.25em] text-black/55">Device pulse</div>

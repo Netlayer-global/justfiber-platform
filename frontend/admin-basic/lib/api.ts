@@ -936,6 +936,16 @@ export const adminAPI = {
       data: res.data ? mapDevice(res.data) : undefined,
     }
   },
+  syncDevicesFromGenie: (payload?: { deviceId?: string; limit?: number }) =>
+    request<{
+      scanned: number
+      synced: number
+      failed: number
+      results: Array<{ deviceId: string; ok: boolean; reason?: string; onlineStatus?: string }>
+    }>('/api/v1/admin/devices/sync-genie', {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    }),
   updateDeviceWifi: (deviceId: string, data: {
     ssid24?: string
     ssid5?: string
