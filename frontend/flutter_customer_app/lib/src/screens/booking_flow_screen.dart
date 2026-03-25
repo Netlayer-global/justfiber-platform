@@ -32,6 +32,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   String? _selectedSlotCode = 'morning';
   String? _selectedSlotLabel = '10 AM - 1 PM';
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
+  final MapController _mapController = MapController();
   LatLng _selectedLocation = const LatLng(28.6139, 77.2090);
   bool _hasPickedLocation = false;
   bool _locationBusy = false;
@@ -147,6 +148,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             child: Stack(
               children: [
                 FlutterMap(
+                  mapController: _mapController,
                   options: MapOptions(
                     initialCenter: _selectedLocation,
                     initialZoom: 16,
@@ -157,6 +159,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         _locationError = null;
                         _usedCurrentLocation = false;
                       });
+                      _mapController.move(point, 16);
                     },
                   ),
                   children: [
@@ -218,6 +221,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       _locationError = null;
                       _selectedLocation = const LatLng(28.6139, 77.2090);
                     });
+                    _mapController.move(_selectedLocation, 14);
                   },
                   child: const Text('Reset pin'),
                 ),
@@ -948,6 +952,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         _hasPickedLocation = true;
         _usedCurrentLocation = true;
       });
+      _mapController.move(_selectedLocation, 17);
       _showLocationFeedback('Current location pinned on the map.');
     } catch (e) {
       setState(() {
