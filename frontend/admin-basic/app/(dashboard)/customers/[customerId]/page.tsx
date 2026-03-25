@@ -1260,6 +1260,39 @@ export default function CustomerDetailPage() {
 
             {activeTab === 'devices' ? (
               <div className="space-y-4">
+                <div className="card p-4 md:p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">PPPoE control strip</p>
+                      <h2 className="mt-2 text-lg font-semibold">FreeRADIUS subscriber status</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className={radiusService?.status === 'active' ? 'rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700' : radiusService?.status === 'suspended' ? 'rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700' : 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'}>
+                        {radiusService?.status || 'not synced'}
+                      </span>
+                      <span className={radiusRejectState ? 'rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700' : 'rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700'}>
+                        {radiusRejectState ? 'Reject auth active' : 'Auth open'}
+                      </span>
+                      <span className={radiusRateLimit ? 'rounded-full bg-violet-50 px-3 py-1 font-medium text-violet-700' : 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'}>
+                        {radiusRateLimit || 'No rate-limit attr'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Radius username</p>
+                      <p className="mt-2 font-semibold text-slate-900">{radiusService?.radiusUsername || customer.pppoeUsername || '-'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Access profile</p>
+                      <p className="mt-2 font-semibold text-slate-900">{radiusService?.accessProfileCode || '-'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Last sync</p>
+                      <p className="mt-2 font-semibold text-slate-900">{radiusService?.updatedAt ? new Date(radiusService.updatedAt).toLocaleString() : '-'}</p>
+                    </div>
+                  </div>
+                </div>
                 {(customer.devices || []).length ? customer.devices?.map((device) => {
                   const form = wifiForms[device.deviceId]
                   const rxPower = Number(device.opticalInfo?.rxPower ?? NaN)
