@@ -23,6 +23,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
   final List<_ChatMessage> _messages = [];
 
   SupportDiagnosis? _lastDiagnosis;
+  SupportTicketItem? _latestTicket;
   bool _loading = false;
   bool _raisingTicket = false;
 
@@ -46,6 +47,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     if (_messages.isNotEmpty) return;
     final prompt = _defaultPromptFor(widget.issueType);
     final appState = AppStateScope.of(context);
+    _latestTicket = appState.tickets.isNotEmpty ? appState.tickets.first : null;
     setState(() {
       _messages.add(
         _ChatMessage.bot(
@@ -57,11 +59,10 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
           'You can type things like: internet not working, Wi-Fi problem, slow speed, bill issue, or plan issue.',
         ),
       );
-      if (appState.tickets.isNotEmpty) {
-        final latestTicket = appState.tickets.first;
+      if (_latestTicket != null) {
         _messages.add(
           _ChatMessage.bot(
-            'Your latest support case is ${latestTicket.ticketNumber} with status ${latestTicket.status}. If this is about the same issue, type still not resolved.',
+            'Your latest support case is ${_latestTicket!.ticketNumber} with status ${_latestTicket!.status}. If this is about the same issue, type still not resolved.',
           ),
         );
       }
@@ -162,8 +163,8 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         _messages.add(
           _ChatMessage.bot(
             diagnosis.needsTicket
-                ? 'The issue still looks service-side. The best next step is to raise a complaint so the team can act on this diagnosis.'
-                : 'I can run the line checks again, or you can raise a complaint if you want the team to investigate manually.',
+                ? 'This still looks like a service-side issue from our checks. The fastest next step is to raise a complaint so the support team can act on the diagnosis directly.'
+                : 'I can run the checks again for you, or I can raise a complaint if you want a manual investigation.',
             actions: [
               if (diagnosis.needsTicket)
                 _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint, primary: true)
@@ -217,7 +218,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         _loading = false;
         _messages.add(
           _ChatMessage.bot(
-            '${diagnosis.headline}\n\n${diagnosis.summary}\n\n${diagnosis.recommendation}',
+            '${_humanHeadline(diagnosis)}\n\n${diagnosis.summary}\n\n${diagnosis.recommendation}',
             actions: actions,
           ),
         );
@@ -279,6 +280,37 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     ];
   }
 
+  String _humanHeadline(SupportDiagnosis diagnosis) {
+    switch (diagnosis.diagnosisCode) {
+      case 'billing_suspended':
+        return 'Your connection looks paused because there is a billing due on this account.';
+      case 'payment_pending':
+        return 'I can see a pending billing issue on this connection.';
+      case 'data_limit_reached':
+        return 'This connection has reached its current data limit.';
+      case 'fup_applied':
+        return 'Your connection is currently under reduced speed because FUP is active.';
+      case 'device_offline':
+      case 'speed_router_offline':
+      case 'wifi_backhaul_down':
+        return 'The router or line does not look fully online right now.';
+      case 'degraded_link':
+      case 'speed_below_expected':
+        return 'I am seeing line or speed quality below the expected level.';
+      case 'wifi_access_control':
+        return 'This looks like a Wi-Fi device access issue rather than a full network outage.';
+      case 'wifi_quality_weak':
+        return 'The issue looks more like local Wi-Fi quality than a complete line failure.';
+      case 'healthy_connection':
+      case 'billing_clear':
+      case 'plan_healthy':
+      case 'speed_normal':
+        return 'The connection checks mostly look healthy from our side.';
+      default:
+        return diagnosis.headline;
+    }
+  }
+
   Future<void> _openBilling() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
@@ -336,6 +368,26 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         ),
       );
       if (ticketNumber != null) {
+        _latestTicket = SupportTicketItem(
+          id: '',
+          ticketNumber: ticketNumber,
+          category: diagnosis.issueType == 'billing' ? 'billing' : 'technical',
+          subject: diagnosis.issueType == 'billing'
+              ? 'Billing issue detected'
+              : diagnosis.issueType == 'plan'
+                  ? 'Plan issue detected'
+                  : diagnosis.issueType == 'wifi'
+                      ? 'Wi-Fi issue detected'
+                      : diagnosis.issueType == 'speed'
+                          ? 'Slow speed detected'
+                          : 'Internet issue detected',
+          description: diagnosis.summary,
+          latestUpdateNote: 'Complaint created from support chat',
+          latestUpdateAt: '',
+          status: 'open',
+          priority: diagnosis.needsTicket ? 'high' : 'normal',
+          createdAt: '',
+        );
         _messages.add(
           _ChatMessage.bot(
             'Our support team will now review your connection snapshot and continue the case from this reference. You can track updates from Support & requests.',
@@ -418,12 +470,19 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                itemCount: (selectedConnection == null ? 0 : 1) + _messages.length + (_loading ? 1 : 0),
+                itemCount: (selectedConnection == null ? 0 : 1) +
+                    (_latestTicket == null ? 0 : 1) +
+                    _messages.length +
+                    (_loading ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (selectedConnection != null && index == 0) {
                     return _connectionCard(selectedConnection);
                   }
-                  final messageIndex = index - (selectedConnection == null ? 0 : 1);
+                  final ticketOffset = selectedConnection == null ? 0 : 1;
+                  if (_latestTicket != null && index == ticketOffset) {
+                    return _ticketCard(_latestTicket!);
+                  }
+                  final messageIndex = index - ticketOffset - (_latestTicket == null ? 0 : 1);
                   if (_loading && messageIndex == _messages.length) {
                     return _assistantTypingBubble();
                   }
@@ -660,6 +719,59 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       child: Text(
         '$label: $value',
         style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Widget _ticketCard(SupportTicketItem ticket) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0x228224E3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'LATEST TICKET',
+              style: TextStyle(
+                color: Color(0xFF8224E3),
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.2,
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              ticket.ticketNumber,
+              style: const TextStyle(
+                color: Color(0xFF131313),
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              ticket.subject,
+              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _connectionPill('Status', ticket.status),
+                _connectionPill('Priority', ticket.priority),
+                _connectionPill('Category', ticket.category),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
