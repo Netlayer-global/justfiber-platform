@@ -24,7 +24,7 @@ class PaymentDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Payment Details', style: Theme.of(context).textTheme.headlineSmall),
+        title: Text('Payment Receipt', style: Theme.of(context).textTheme.headlineSmall),
       ),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
@@ -77,6 +77,34 @@ class PaymentDetailScreen extends StatelessWidget {
                 _detailRow('Provider', provider),
                 _detailRow('Reference', reference),
                 _detailRow('Receipt access', payment.pdfUrl.isNotEmpty || payment.viewUrl.isNotEmpty ? 'Available' : 'Not generated yet'),
+                const SizedBox(height: 6),
+                const Text(
+                  'Your service and billing records have been updated for this payment.',
+                  style: TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            color: const Color(0xFFF8F4FF),
+            borderColor: const Color(0x228224E3),
+            textColor: const Color(0xFF131313),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Back to billing'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _shareDocumentWithFeedback(context, appState),
+                    child: const Text('Share receipt'),
+                  ),
+                ),
               ],
             ),
           ),

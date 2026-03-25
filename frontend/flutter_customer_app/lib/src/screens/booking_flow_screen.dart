@@ -674,7 +674,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
@@ -683,9 +683,41 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               ),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(
-              'Booking ${latestBooking.bookingNumber} is ${latestBooking.status}.',
-              style: const TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: const Color(0x26FFFFFF),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0x55FFFFFF)),
+                      ),
+                      child: const Icon(Icons.event_available_rounded, color: Color(0xFFFFFFFF)),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Payment received',
+                        style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w900, fontSize: 22),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Booking ${latestBooking.bookingNumber} is ${latestBooking.status}.',
+                  style: const TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Pick your preferred date and install slot so operations can schedule the visit correctly.',
+                  style: TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -703,6 +735,29 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
           _summaryRow('Duration', latestBooking.durationLabel),
           _summaryRow('Current step', latestBooking.currentStep),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F4FF),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0x228224E3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Install summary',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF131313)),
+                ),
+                const SizedBox(height: 10),
+                _summaryRow('Install address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
+                _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
+                _summaryRow('Map pin', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           const Text('Choose install date', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 10),
@@ -760,9 +815,6 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           const SizedBox(height: 16),
           _summaryRow('Preferred date', _formatDate(_preferredDate)),
           _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
-          _summaryRow('Install address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
-          _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
-          _summaryRow('Map pin', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
@@ -806,7 +858,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       );
                     },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-              child: const Text('Confirm booking'),
+              child: const Text('Save slot and confirm'),
             ),
           ),
           const SizedBox(height: 12),
