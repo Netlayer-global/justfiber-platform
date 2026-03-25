@@ -168,6 +168,9 @@ export default function CustomerDetailPage() {
       : customer?.plan?.id
   const currentSpeedMbps = Number(billingSummary.speedMbps || 0)
   const radiusService = customer?.radiusService || null
+  const radiusRejectState = radiusService?.radcheck?.some((row) => row.attribute === 'Auth-Type' && row.value === 'Reject') || false
+  const radiusPasswordPresent = radiusService?.radcheck?.some((row) => row.attribute === 'Cleartext-Password') || false
+  const radiusRateLimit = radiusService?.radreply?.find((row) => row.attribute === 'Mikrotik-Rate-Limit')?.value || ''
   const usagePressureState = billingSummary.usageCapReached
     ? 'cap_reached'
     : usageCapGb > 0 && usagePercent >= 90
@@ -764,6 +767,17 @@ export default function CustomerDetailPage() {
                       }
                     >
                       {radiusService?.status || 'not synced'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className={radiusRejectState ? 'rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700' : 'rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700'}>
+                      {radiusRejectState ? 'Reject auth active' : 'Auth open'}
+                    </span>
+                    <span className={radiusPasswordPresent ? 'rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700' : 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'}>
+                      {radiusPasswordPresent ? 'Password present' : 'No password attr'}
+                    </span>
+                    <span className={radiusRateLimit ? 'rounded-full bg-violet-50 px-3 py-1 font-medium text-violet-700' : 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'}>
+                      {radiusRateLimit || 'No rate-limit attr'}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
