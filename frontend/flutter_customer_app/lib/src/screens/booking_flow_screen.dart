@@ -40,6 +40,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   bool _locationPermissionDeniedForever = false;
   bool _locationServiceDisabled = false;
   bool _usedCurrentLocation = false;
+  bool _showUnavailableState = false;
   final nameController = TextEditingController();
   final mobileController = TextEditingController();
   final emailController = TextEditingController();
@@ -108,6 +109,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   Widget _addressStep(AppState appState) {
     final feasibility = appState.feasibility;
+    if (_showUnavailableState && feasibility != null && !feasibility.feasible) {
+      return _unavailableState(appState, feasibility.message);
+    }
     return _sectionCard(
       title: 'Confirm service address',
       child: Column(
@@ -293,6 +297,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       );
                       if (!mounted) return;
                       if (ok) {
+                        setState(() => _showUnavailableState = false);
                         setState(() => step = 1);
                       } else {
                         final leadNumber = await appState.submitFeasibilityLead(
@@ -303,15 +308,16 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                           lat: _selectedLocation.latitude,
                           lng: _selectedLocation.longitude,
                         );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              leadNumber == null
-                                  ? (appState.bookingError ?? 'We are not live in this area right now. Your request has been noted for rollout updates.')
-                                  : 'We are not live in this area right now. Lead $leadNumber has been created for manual follow-up.',
+                        if (!mounted) return;
+                        setState(() => _showUnavailableState = true);
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        if (leadNumber != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Lead $leadNumber has been created for manual follow-up.'),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       }
                     },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
@@ -319,6 +325,87 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _unavailableState(AppState appState, String message) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 520),
+      alignment: Alignment.center,
+      child: AppCard(
+        color: const Color(0xFFFFFFFF),
+        borderColor: const Color(0x22EF4444),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 74,
+              height: 74,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDF2F2),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0x33EF4444)),
+              ),
+              child: const Icon(Icons.location_off_rounded, color: Color(0xFFDC2626), size: 38),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'We are not live here yet',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF131313)),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message.isEmpty ? 'This address is outside our live serviceability map right now.' : message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.5, fontSize: 15),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Your inquiry has been captured for rollout and manual follow-up.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => setState(() => _showUnavailableState = false),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF8224E3),
+                  foregroundColor: const Color(0xFFFFFFFF),
+                ),
+                child: const Text('Update address or pin'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: appState.bookingBusy
+                    ? null
+                    : () async {
+                        final ok = await appState.checkFeasibility(
+                          address: addressController.text.trim(),
+                          pinCode: pinController.text.trim(),
+                          lat: _selectedLocation.latitude,
+                          lng: _selectedLocation.longitude,
+                        );
+                        if (!mounted) return;
+                        if (ok) {
+                          setState(() {
+                            _showUnavailableState = false;
+                            step = 1;
+                          });
+                        }
+                      },
+                child: const Text('Check again'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

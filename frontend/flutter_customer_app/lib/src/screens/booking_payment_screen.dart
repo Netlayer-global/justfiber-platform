@@ -178,17 +178,44 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                   const SizedBox(height: 16),
                   const Text('Launching secure checkout...', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
                 ] else ...[
-                  Text(
-                    paymentError ?? 'Razorpay checkout is ready.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: paymentError == null ? const Color(0xFFF8F4FF) : const Color(0xFFFDF2F2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: paymentError == null ? const Color(0x228224E3) : const Color(0x22EF4444),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          paymentError == null ? Icons.lock_rounded : Icons.error_outline_rounded,
+                          color: paymentError == null ? const Color(0xFF8224E3) : const Color(0xFFDC2626),
+                          size: 34,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          paymentError == null ? 'Secure checkout ready' : 'Payment could not be completed',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800, fontSize: 18),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          paymentError ?? 'Open Razorpay checkout to complete this booking payment.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 18),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: _openCheckout,
-                      child: const Text('Open checkout'),
+                      child: Text(paymentError == null ? 'Open checkout' : 'Retry payment'),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -196,24 +223,25 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                     width: double.infinity,
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Back to checkout'),
+                      child: const Text('Back'),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: helping ? null : _requestPaymentHelp,
-                      child: Text(helping ? 'Creating ticket...' : 'Raise support ticket'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _openSupportCenter,
-                      child: const Text('Open support center'),
-                    ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: helping ? null : _requestPaymentHelp,
+                          child: Text(helping ? 'Creating ticket...' : 'Need help?'),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton(
+                          onPressed: _openSupportCenter,
+                          child: const Text('Support center'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
