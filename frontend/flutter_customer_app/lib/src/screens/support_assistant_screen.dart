@@ -220,6 +220,11 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
           _ChatMessage.bot(
             '${_humanHeadline(diagnosis)}\n\n${diagnosis.summary}',
             actions: actions,
+            meta: [
+              _ChatMetaChip(label: 'Internet', value: diagnosis.internetStatus),
+              _ChatMetaChip(label: 'Wi-Fi', value: diagnosis.wifiStatus),
+              _ChatMetaChip(label: 'Line', value: diagnosis.lineStatus),
+            ],
           ),
         );
         _messages.add(
@@ -409,6 +414,11 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         _messages.add(
           _ChatMessage.bot(
             'Our support team will now review your connection snapshot and continue the case from this reference. You can track updates from Support & requests.',
+          ),
+        );
+        _messages.add(
+          _ChatMessage.bot(
+            'Complaint progress\n1. Complaint created\n2. Diagnostics attached\n3. Support review pending',
           ),
         );
       }
@@ -664,6 +674,36 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
               ),
             ),
           ],
+          if (message.meta.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(left: 52),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: message.meta
+                    .map(
+                      (item) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8F4FF),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: const Color(0x228224E3)),
+                        ),
+                        child: Text(
+                          '${item.label}: ${item.value}',
+                          style: const TextStyle(
+                            color: Color(0xFF131313),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -895,16 +935,21 @@ class _ChatMessage {
     required this.text,
     required this.isUser,
     this.actions = const [],
+    this.meta = const [],
   });
 
   factory _ChatMessage.user(String text) => _ChatMessage(text: text, isUser: true);
 
-  factory _ChatMessage.bot(String text, {List<_ChatAction> actions = const []}) =>
-      _ChatMessage(text: text, isUser: false, actions: actions);
+  factory _ChatMessage.bot(
+    String text, {
+    List<_ChatAction> actions = const [],
+    List<_ChatMetaChip> meta = const [],
+  }) => _ChatMessage(text: text, isUser: false, actions: actions, meta: meta);
 
   final String text;
   final bool isUser;
   final List<_ChatAction> actions;
+  final List<_ChatMetaChip> meta;
 }
 
 class _ChatAction {
@@ -917,6 +962,16 @@ class _ChatAction {
   final String label;
   final VoidCallback onTap;
   final bool primary;
+}
+
+class _ChatMetaChip {
+  const _ChatMetaChip({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
 }
 
 class _TypingDot extends StatelessWidget {
