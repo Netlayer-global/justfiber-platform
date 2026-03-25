@@ -171,6 +171,11 @@ export default function CustomerDetailPage() {
   const radiusRejectState = radiusService?.radcheck?.some((row) => row.attribute === 'Auth-Type' && row.value === 'Reject') || false
   const radiusPasswordPresent = radiusService?.radcheck?.some((row) => row.attribute === 'Cleartext-Password') || false
   const radiusRateLimit = radiusService?.radreply?.find((row) => row.attribute === 'Mikrotik-Rate-Limit')?.value || ''
+  const radiusTimeline = [
+    radiusService?.activatedAt ? { label: 'Provisioned', at: radiusService.activatedAt, tone: 'emerald' } : null,
+    radiusService?.suspendedAt ? { label: 'Suspended', at: radiusService.suspendedAt, tone: 'amber' } : null,
+    radiusService?.updatedAt ? { label: 'Last sync', at: radiusService.updatedAt, tone: 'violet' } : null,
+  ].filter(Boolean) as Array<{ label: string; at: string; tone: 'emerald' | 'amber' | 'violet' }>
   const usagePressureState = billingSummary.usageCapReached
     ? 'cap_reached'
     : usageCapGb > 0 && usagePercent >= 90
@@ -833,6 +838,34 @@ export default function CustomerDetailPage() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    </div>
+                  ) : null}
+                  {radiusTimeline.length ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">RADIUS audit timeline</p>
+                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">
+                          {radiusTimeline.length} events
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {radiusTimeline.map((event) => (
+                          <div key={`${event.label}-${event.at}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                            <span
+                              className={
+                                event.tone === 'emerald'
+                                  ? 'rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700'
+                                  : event.tone === 'amber'
+                                    ? 'rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700'
+                                    : 'rounded-full bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700'
+                              }
+                            >
+                              {event.label}
+                            </span>
+                            <span className="text-sm font-medium text-slate-900">{new Date(event.at).toLocaleString()}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ) : null}
