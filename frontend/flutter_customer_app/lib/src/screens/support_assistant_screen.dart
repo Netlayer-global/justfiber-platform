@@ -742,6 +742,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
   }
 
   Widget _ticketCard(SupportTicketItem ticket) {
+    final statusColor = _ticketStatusColor(ticket.status);
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Container(
@@ -765,13 +766,34 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              ticket.ticketNumber,
-              style: const TextStyle(
-                color: Color(0xFF131313),
-                fontWeight: FontWeight.w800,
-                fontSize: 18,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    ticket.ticketNumber,
+                    style: const TextStyle(
+                      color: Color(0xFF131313),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.26)),
+                  ),
+                  child: Text(
+                    ticket.status,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(
@@ -780,9 +802,18 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
             ),
             if (ticket.latestUpdateNote.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(
-                'Latest update: ${ticket.latestUpdateNote}',
-                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4, fontWeight: FontWeight.w600),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F4FF),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0x228224E3)),
+                ),
+                child: Text(
+                  'Latest update: ${ticket.latestUpdateNote}',
+                  style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -790,15 +821,26 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _connectionPill('Status', ticket.status),
                 _connectionPill('Priority', ticket.priority),
                 _connectionPill('Category', ticket.category),
+                if (ticket.createdAt.isNotEmpty) _connectionPill('Opened', ticket.createdAt),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Color _ticketStatusColor(String status) {
+    final normalized = status.toLowerCase();
+    if (normalized.contains('closed') || normalized.contains('resolved') || normalized.contains('done')) {
+      return const Color(0xFF16A34A);
+    }
+    if (normalized.contains('open') || normalized.contains('pending') || normalized.contains('progress')) {
+      return const Color(0xFFF59E0B);
+    }
+    return const Color(0xFF8224E3);
   }
 
   Widget _assistantTypingBubble() {
