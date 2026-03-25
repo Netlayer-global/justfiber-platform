@@ -6,6 +6,7 @@ import '../core/models.dart';
 import '../widgets/app_card.dart';
 import 'notifications_screen.dart';
 import 'plan_catalog_screen.dart';
+import 'support_assistant_screen.dart';
 
 class SupportHistoryScreen extends StatelessWidget {
   const SupportHistoryScreen({super.key});
@@ -95,13 +96,14 @@ class SupportHistoryScreen extends StatelessWidget {
                     _issueButton(
                       label: 'Internet issue',
                       icon: Icons.wifi_tethering_error_rounded,
-                      onTap: () => _raiseQuickTicket(
-                        context,
-                        appState,
-                        category: 'technical',
-                        subject: 'Internet issue',
-                        description: 'Customer is facing internet or connectivity issues.',
-                      ),
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportAssistantScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
                     ),
                     _issueButton(
                       label: 'Billing issue',

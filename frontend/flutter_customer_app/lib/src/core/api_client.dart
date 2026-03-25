@@ -787,6 +787,32 @@ class ApiClient {
     );
   }
 
+  Future<SupportDiagnosis> fetchSupportDiagnosis(CustomerSession session, {String? customerId}) async {
+    final data = _asMap(
+      await _request(
+        _withCustomerId('/api/v1/customer/help/diagnose', customerId),
+        method: 'POST',
+        token: session.accessToken,
+        body: const {},
+      ),
+    );
+    return SupportDiagnosis(
+      diagnosisCode: (data['diagnosisCode'] ?? 'general_check').toString(),
+      headline: (data['headline'] ?? 'Connection check complete').toString(),
+      summary: (data['summary'] ?? '').toString(),
+      internetStatus: (data['internetStatus'] ?? 'unknown').toString(),
+      wifiStatus: (data['wifiStatus'] ?? 'unknown').toString(),
+      lineStatus: (data['lineStatus'] ?? 'unknown').toString(),
+      recommendation: (data['recommendation'] ?? '').toString(),
+      needsTicket: data['needsTicket'] == true,
+      steps: _asList(data['steps']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+      opticalRxPower: double.tryParse('${data['opticalRxPower']}'),
+      latencyMs: double.tryParse('${data['latencyMs'] ?? 0}') ?? 0,
+      packetLossPercent: double.tryParse('${data['packetLossPercent'] ?? 0}') ?? 0,
+      estimatedSpeedMbps: double.tryParse('${data['estimatedSpeedMbps'] ?? 0}') ?? 0,
+    );
+  }
+
   Future<void> setGuestWifi(
     CustomerSession session, {
     String? customerId,

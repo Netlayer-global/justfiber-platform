@@ -649,3 +649,35 @@ class BillingPaymentOrder {
   final String customerEmail;
   final String customerPhone;
 }
+
+class SupportDiagnosis {
+  const SupportDiagnosis({
+    required this.diagnosisCode,
+    required this.headline,
+    required this.summary,
+    required this.internetStatus,
+    required this.wifiStatus,
+    required this.lineStatus,
+    required this.recommendation,
+    required this.needsTicket,
+    required this.steps,
+    required this.opticalRxPower,
+    required this.latencyMs,
+    required this.packetLossPercent,
+    required this.estimatedSpeedMbps,
+  });
+
+  final String diagnosisCode;
+  final String headline;
+  final String summary;
+  final String internetStatus;
+  final String wifiStatus;
+  final String lineStatus;
+  final String recommendation;
+  final bool needsTicket;
+  final List<String> steps;
+  final double? opticalRxPower;
+  final double latencyMs;
+  final double packetLossPercent;
+  final double estimatedSpeedMbps;
+}

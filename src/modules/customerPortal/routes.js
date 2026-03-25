@@ -2622,16 +2622,93 @@ customerPortalRouter.post(
     }
     const online = device.onlineStatus === "online";
     const { speedMbps, latencyMs, packetLossPercent, rxPower } = estimateNetworkMetrics({ customer, device });
+    const dueAmount = Number(customer?.billingSnapshot?.dueAmount || 0);
+    const usageCapReached = customer?.billingSnapshot?.usageCapReached === true;
+    const dataPolicy = String(customer?.billingSnapshot?.dataPolicy || "unlimited");
+    const serviceSuspended = String(customer?.operationalStatus || "").toLowerCase() === "suspended";
+    let diagnosisCode = "healthy_connection";
+    let headline = "Your connection looks reachable";
+    let summary = "We checked your current line state and the service is responding normally right now.";
+    let recommendation = "If one device is slow, restart the router once and test on 5 GHz from the Wi-Fi section.";
+    let needsTicket = false;
+    let steps = [
+      "Restart the router once and wait for 60 seconds.",
+      "Reconnect the affected device and test on 5 GHz Wi-Fi if available.",
+      "Run Wi-Fi diagnostics from the Wi-Fi settings screen.",
+    ];
+
+    if (serviceSuspended && dueAmount > 0) {
+      diagnosisCode = "billing_suspended";
+      headline = "Your service is suspended due to pending payment";
+      summary = `An unpaid amount of Rs ${dueAmount.toFixed(2)} is blocking this connection right now.`;
+      recommendation = "Pay the pending bill now. Service should resume automatically after successful payment.";
+      needsTicket = false;
+      steps = [
+        "Open Billing and complete the pending payment.",
+        "Wait a short moment for automatic service resume.",
+        "If payment succeeded but service stays off, raise a complaint from support.",
+      ];
+    } else if (usageCapReached && dataPolicy === "hard_cap") {
+      diagnosisCode = "data_limit_reached";
+      headline = "Your current plan data limit has been reached";
+      summary = "Internet may be blocked because the current billing cycle usage cap is exhausted.";
+      recommendation = "Upgrade the plan or wait for the next cycle reset if this is a capped plan.";
+      needsTicket = false;
+      steps = [
+        "Open Billing to review current usage and cap status.",
+        "Upgrade to a higher plan if you need service immediately.",
+        "If usage data looks wrong, raise a billing ticket for review.",
+      ];
+    } else if (usageCapReached && dataPolicy === "fup") {
+      diagnosisCode = "fup_applied";
+      headline = "Your plan has moved into FUP speed";
+      summary = "Internet is working, but speed may feel slower because fair-usage policy is active.";
+      recommendation = "Upgrade to a faster plan if you need full speed restored now.";
+      needsTicket = false;
+      steps = [
+        "Check current usage and FUP speed in Billing.",
+        "Upgrade the plan if you need higher speed immediately.",
+        "Raise a complaint only if service is fully down.",
+      ];
+    } else if (!online) {
+      diagnosisCode = "device_offline";
+      headline = "Your router is currently offline";
+      summary = "We could not see the device online. This usually means power, fiber, or ONT link issue.";
+      recommendation = "Check router power, fiber cable, and LOS/PON lights. If the line stays offline, raise a complaint.";
+      needsTicket = true;
+      steps = [
+        "Check that the router and ONT power lights are on.",
+        "Check LOS/PON/fiber lights for red or blinking status.",
+        "Make sure the fiber patch cord is not loose.",
+        "If the line stays offline after a restart, raise a complaint ticket.",
+      ];
+    } else if (packetLossPercent >= 2 || latencyMs >= 60 || Number(rxPower) < -26) {
+      diagnosisCode = "degraded_link";
+      headline = "Your line is up, but quality looks weak";
+      summary = "We detected higher latency, packet loss, or weaker optical levels that can cause internet issues.";
+      recommendation = "Run Wi-Fi diagnostics and check fiber quality. If the issue continues, raise a complaint ticket.";
+      needsTicket = true;
+      steps = [
+        "Restart the router and test again after one minute.",
+        "Use Wi-Fi diagnostics to compare signal quality and packet loss.",
+        "Move closer to the router or test with a wired device if possible.",
+        "Raise a complaint if calls, streaming, or browsing still fail.",
+      ];
+    }
     return ok(res, {
+      diagnosisCode,
+      headline,
+      summary,
       internetStatus: online ? "reachable" : "unreachable",
       wifiStatus: online ? "stable" : "unstable",
+      lineStatus: serviceSuspended ? "suspended" : online ? "online" : "offline",
       opticalRxPower: rxPower ?? null,
       latencyMs,
       packetLossPercent,
       estimatedSpeedMbps: speedMbps,
-      recommendation: online
-        ? "Internet looks stable. If speed is low, reboot router and test on 5 GHz."
-        : "Device appears offline. Check power/fiber and request installer support."
+      recommendation,
+      needsTicket,
+      steps
     });
   })
 );
