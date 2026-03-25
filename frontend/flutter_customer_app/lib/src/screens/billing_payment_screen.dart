@@ -5,6 +5,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
+import 'payment_detail_screen.dart';
 import 'support_history_screen.dart';
 
 class BillingPaymentScreen extends StatefulWidget {
@@ -31,7 +32,6 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _openCheckout());
   }
 
   @override
@@ -118,7 +118,16 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
       ),
     );
     if (ok) {
-      Navigator.of(context).pop();
+      await appState.refresh();
+      if (!mounted) return;
+      final latestPayment = appState.billing.payments.isNotEmpty ? appState.billing.payments.first : null;
+      if (latestPayment != null) {
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: latestPayment)),
+        );
+      } else {
+        Navigator.of(context).pop(true);
+      }
     } else {
       setState(() => launching = false);
     }
@@ -187,7 +196,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                       const SizedBox(height: 6),
                       Text(
                         paymentError == null
-                            ? 'The secure payment window opens automatically.'
+                            ? 'Review the bill details below and continue to secure payment.'
                             : 'Your payment attempt needs attention before completion.',
                         style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
                       ),
@@ -208,6 +217,26 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     color: paymentError == null ? const Color(0xFF8224E3) : const Color(0xFFFF8A80),
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Checkout details',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313)),
+                ),
+                const SizedBox(height: 14),
+                _detailRow('Customer', widget.paymentOrder.customerName.isEmpty ? '-' : widget.paymentOrder.customerName),
+                _detailRow('Mobile', widget.paymentOrder.customerPhone.isEmpty ? '-' : widget.paymentOrder.customerPhone),
+                _detailRow('Email', widget.paymentOrder.customerEmail.isEmpty ? '-' : widget.paymentOrder.customerEmail),
+                _detailRow('Provider', widget.paymentOrder.provider.toUpperCase()),
+                _detailRow('Order reference', widget.paymentOrder.orderId),
+                _detailRow('Currency', widget.paymentOrder.currency),
+                _detailRow('Payable now', 'Rs ${widget.paymentOrder.amount.toStringAsFixed(2)}'),
               ],
             ),
           ),
@@ -262,7 +291,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: _openCheckout,
-                      child: Text(retryCount > 0 ? 'Retry payment' : 'Open checkout'),
+                      child: Text(retryCount > 0 ? 'Retry payment' : 'Pay now'),
                     ),
                   ),
                   const SizedBox(height: 10),

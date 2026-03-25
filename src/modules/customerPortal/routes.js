@@ -31,6 +31,7 @@ import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
+import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
 import { env } from "../../config/env.js";
 import PDFDocument from "pdfkit";
@@ -941,7 +942,54 @@ async function finalizeSuccessfulBillingPayment({
     lastPaidAt: new Date(),
     lastPaymentProvider: provider
   };
+  if (customer.operationalStatus === "suspended" && customer.serviceId) {
+    await radiusServiceManager.resumeSubscriberAccess({
+      serviceId: customer.serviceId
+    }).catch(() => null);
+    const device = await DeviceOperationalCache.findOne({ customerId: customer.customerId }).lean();
+    if (device?.deviceId) {
+      await genieacsClient.applyPreset({
+        deviceId: device.deviceId,
+        presetName: "SERVICE_RESUME",
+        correlationId: `billing-${customer.customerId}-resume`
+      }).catch(() => null);
+    }
+    customer.operationalStatus = "active";
+  }
   await customer.save();
+
+  if (customerUserId) {
+    await CustomerNotification.create({
+      customerUserId,
+      type: "bill_payment_success",
+      title: "Payment received",
+      body: `We received Rs ${Number(amount || 0).toFixed(2)} for your broadband account.`,
+      payload: {
+        customerId: customer.customerId,
+        amount,
+        paymentStatus: "paid",
+        serviceStatus: customer.operationalStatus
+      }
+    });
+  }
+  await notificationDispatcher.dispatchEvent({
+    eventKey: "paid_invoice",
+    recipients: {
+      sms: customer.phone,
+      email: customer.email
+    },
+    subject: "JustFiber payment received",
+    body: `Dear ${customer.fullName}, we received Rs ${Number(amount || 0).toFixed(2)}. Your payment status is now paid.`,
+    entityType: "billing_payment",
+    entityId: transactionId,
+    metadata: {
+      customerId: customer.customerId,
+      amount,
+      provider,
+      paymentStatus: "paid",
+      serviceStatus: customer.operationalStatus
+    }
+  }).catch(() => null);
 
   const planChangeRequest = customerUserId ? await finalizePendingPlanChange(customer, customerUserId) : null;
 

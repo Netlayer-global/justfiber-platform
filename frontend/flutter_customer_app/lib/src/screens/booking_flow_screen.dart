@@ -28,7 +28,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   String? selectedPlanCode;
   int _selectedDurationMonths = 1;
   String _selectedDurationLabel = '1 month';
-  String _selectedPaymentMode = 'cash';
+  String _selectedPaymentMode = 'razorpay';
   String? _selectedSlotCode = 'morning';
   String? _selectedSlotLabel = '10 AM - 1 PM';
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
@@ -483,42 +483,31 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           const SizedBox(height: 16),
           const Text('Payment mode', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              ChoiceChip(
-                label: const Text('Cash / offline'),
-                selected: _selectedPaymentMode == 'cash',
-                backgroundColor: const Color(0xFFF8F4FF),
-                selectedColor: const Color(0xFF8224E3),
-                side: BorderSide(color: _selectedPaymentMode == 'cash' ? const Color(0xFF8224E3) : const Color(0x228224E3)),
-                labelStyle: TextStyle(
-                  color: _selectedPaymentMode == 'cash' ? const Color(0xFF111111) : const Color(0xFF131313),
-                  fontWeight: FontWeight.w700,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F4FF),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0x228224E3)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.lock_rounded, color: Color(0xFF8224E3)),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Online payment via Razorpay',
+                    style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+                  ),
                 ),
-                onSelected: (_) => setState(() => _selectedPaymentMode = 'cash'),
-              ),
-              ChoiceChip(
-                label: const Text('Online payment'),
-                selected: _selectedPaymentMode == 'razorpay',
-                backgroundColor: const Color(0xFFF8F4FF),
-                selectedColor: const Color(0xFF8224E3),
-                side: BorderSide(color: _selectedPaymentMode == 'razorpay' ? const Color(0xFF8224E3) : const Color(0x228224E3)),
-                labelStyle: TextStyle(
-                  color: _selectedPaymentMode == 'razorpay' ? const Color(0xFF111111) : const Color(0xFF131313),
-                  fontWeight: FontWeight.w700,
-                ),
-                onSelected: appState.session == null
-                    ? null
-                    : (_) => setState(() => _selectedPaymentMode = 'razorpay'),
-              ),
-            ],
+              ],
+            ),
           ),
           if (appState.session == null) ...[
             const SizedBox(height: 8),
             const Text(
-              'Online payment is available after customer login. Guest bookings continue with cash confirmation.',
+              'Login is required before opening secure payment checkout.',
               style: TextStyle(color: Color(0xFF6B7280), height: 1.4),
             ),
           ],
@@ -526,7 +515,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: appState.bookingBusy
+              onPressed: appState.bookingBusy || appState.session == null
                   ? null
                   : () async {
                       final ok = await appState.createBooking(
