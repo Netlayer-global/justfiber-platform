@@ -49,6 +49,10 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [otpLookup, setOtpLookup] = useState('')
+  const [otpValue, setOtpValue] = useState('')
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpError, setOtpError] = useState('')
 
   useEffect(() => {
     void loadStats()
@@ -70,6 +74,29 @@ export default function DashboardPage() {
       console.log('[dashboard] Error loading stats:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function fetchDemoOtp() {
+    if (!otpLookup.trim()) {
+      setOtpError('Enter mobile number first')
+      setOtpValue('')
+      return
+    }
+    setOtpLoading(true)
+    setOtpError('')
+    setOtpValue('')
+    try {
+      const res = await adminAPI.getCustomerDemoOtp(otpLookup.trim())
+      if (res.success && res.data?.otp) {
+        setOtpValue(res.data.otp)
+      } else {
+        setOtpError(res.error || 'OTP not found')
+      }
+    } catch (error) {
+      setOtpError(error instanceof Error ? error.message : 'OTP lookup failed')
+    } finally {
+      setOtpLoading(false)
     }
   }
 
@@ -332,6 +359,35 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.22em] text-white/45">Customer OTP</div>
+          <div className="mt-2 text-2xl font-bold text-white">Fetch current OTP</div>
+          <div className="mt-4 flex flex-col gap-3 md:flex-row">
+            <input
+              className="input flex-1"
+              placeholder="Enter customer mobile"
+              value={otpLookup}
+              onChange={(e) => setOtpLookup(e.target.value)}
+            />
+            <button type="button" onClick={() => void fetchDemoOtp()} className="btn-primary">
+              {otpLoading ? 'Fetching...' : 'Fetch OTP'}
+            </button>
+          </div>
+          {otpValue ? (
+            <div className="mt-4 rounded-[20px] border border-[#8224E3]/30 bg-[#8224E3]/10 p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-white/45">Current OTP</div>
+              <div className="mt-2 text-3xl font-black tracking-[0.2em] text-white">{otpValue}</div>
+            </div>
+          ) : null}
+          {otpError ? (
+            <div className="mt-4 rounded-[20px] border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+              {otpError}
+            </div>
+          ) : null}
         </div>
       </section>
     </div>

@@ -344,6 +344,12 @@ export interface DashboardStats {
   systemHealth: number
 }
 
+export interface CustomerOtpLookup {
+  lookup: string
+  normalizedKey?: string
+  otp: string
+}
+
 export interface BillingData {
   id: string
   customerId: string
