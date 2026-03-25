@@ -79,6 +79,38 @@ async function getServiceOrThrow(serviceId) {
 }
 
 export class RadiusServiceManager {
+  async getSubscriberAccessSnapshot({ serviceId, radiusUsername } = {}) {
+    const service =
+      (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
+      (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
+    const username = radiusUsername || service?.radiusUsername;
+    if (!username) {
+      throw new Error("Radius username is required for access snapshot");
+    }
+
+    const connection = await getPool().getConnection();
+    try {
+      const [checkRows] = await connection.execute(
+        "SELECT username, attribute, op, value FROM radcheck WHERE username = ? ORDER BY id DESC",
+        [username]
+      );
+      const [replyRows] = await connection.execute(
+        "SELECT username, attribute, op, value FROM radreply WHERE username = ? ORDER BY id DESC",
+        [username]
+      );
+      return {
+        serviceId: service?.serviceId || serviceId || null,
+        customerId: service?.customerId || null,
+        radiusUsername: username,
+        status: service?.status || null,
+        radcheck: Array.isArray(checkRows) ? checkRows : [],
+        radreply: Array.isArray(replyRows) ? replyRows : []
+      };
+    } finally {
+      connection.release();
+    }
+  }
+
   async getSubscriberUsageSummary({ serviceId, radiusUsername, since } = {}) {
     const service =
       (serviceId && (await SubscriberService.findOne({ serviceId }))) ||

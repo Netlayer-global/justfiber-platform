@@ -786,6 +786,42 @@ export default function CustomerDetailPage() {
                       </p>
                     </div>
                   </div>
+                  {(radiusService?.radcheck?.length || radiusService?.radreply?.length) ? (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">radcheck</p>
+                          <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">
+                            {radiusService?.radcheck?.length || 0} attrs
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {(radiusService?.radcheck || []).map((row, index) => (
+                            <div key={`check-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                              <span className="text-slate-500">{row.attribute || '-'}</span>
+                              <span className="font-medium text-slate-900">{row.value || '-'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">radreply</p>
+                          <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">
+                            {radiusService?.radreply?.length || 0} attrs
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {(radiusService?.radreply || []).map((row, index) => (
+                            <div key={`reply-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                              <span className="text-slate-500">{row.attribute || '-'}</span>
+                              <span className="font-medium text-slate-900">{row.value || '-'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                   {radiusService?.suspendedAt ? (
                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                       PPPoE access suspended on {new Date(radiusService.suspendedAt).toLocaleString()}.

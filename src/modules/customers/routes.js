@@ -32,6 +32,7 @@ import { Installer } from "../../models/Installer.js";
 import { InstallerJob } from "../../models/InstallerJob.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
+import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
@@ -252,6 +253,13 @@ customersRouter.get(
         ]
       }).lean()
     ]);
+    const radiusSnapshot =
+      subscriberService?.radiusUsername
+        ? await radiusServiceManager.getSubscriberAccessSnapshot({
+            serviceId: subscriberService.serviceId,
+            radiusUsername: subscriberService.radiusUsername
+          }).catch(() => null)
+        : null;
     return ok(res, {
       ...customer,
       devices,
@@ -272,7 +280,9 @@ customersRouter.get(
             status: subscriberService.status,
             activatedAt: subscriberService.activatedAt,
             suspendedAt: subscriberService.suspendedAt,
-            updatedAt: subscriberService.updatedAt
+            updatedAt: subscriberService.updatedAt,
+            radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
+            radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
           }
         : null
     });

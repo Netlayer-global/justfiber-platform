@@ -137,6 +137,8 @@ export interface Customer {
     activatedAt?: string
     suspendedAt?: string
     updatedAt?: string
+    radcheck?: Array<{ username?: string; attribute?: string; op?: string; value?: string }>
+    radreply?: Array<{ username?: string; attribute?: string; op?: string; value?: string }>
   } | null
 }
 

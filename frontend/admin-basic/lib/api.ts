@@ -259,6 +259,8 @@ function mapCustomer(customer: any): Customer {
           activatedAt: customer.radiusService.activatedAt,
           suspendedAt: customer.radiusService.suspendedAt,
           updatedAt: customer.radiusService.updatedAt,
+          radcheck: Array.isArray(customer.radiusService.radcheck) ? customer.radiusService.radcheck : [],
+          radreply: Array.isArray(customer.radiusService.radreply) ? customer.radiusService.radreply : [],
         }
       : null,
     rawAddress: customer.address && typeof customer.address === 'object'
