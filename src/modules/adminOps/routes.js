@@ -27,26 +27,8 @@ import { env } from "../../config/env.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
-import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../common/customerPortalOtpStore.js";
 
 export const adminOpsRouter = Router();
-
-adminOpsRouter.get(
-  "/customer-auth/demo-otp",
-  asyncHandler(async (req, res) => {
-    const mobile = String(req.query.mobile || "").trim();
-    if (!mobile) {
-      throw new ApiError(400, "Mobile is required");
-    }
-    const normalizedMobile = normalizeCustomerPortalOtpKey(mobile);
-    const otp = getCustomerPortalDemoOtp(normalizedMobile);
-    return ok(res, {
-      mobile: normalizedMobile,
-      otp,
-      available: Boolean(otp),
-    });
-  })
-);
 
 adminOpsRouter.use(requireAuth);
 

@@ -12,7 +12,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final mobileController = TextEditingController(text: '9876543210');
+  final mobileController = TextEditingController();
   final otpController = TextEditingController();
   final pageController = PageController();
   int activePage = 0;

@@ -49,10 +49,6 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [otpMobile, setOtpMobile] = useState('')
-  const [otpValue, setOtpValue] = useState<string | null>(null)
-  const [otpBusy, setOtpBusy] = useState(false)
-  const [otpMessage, setOtpMessage] = useState('Tap Send OTP in the customer app first, then look it up here.')
 
   useEffect(() => {
     void loadStats()
@@ -88,29 +84,6 @@ export default function DashboardPage() {
     if (ratio >= 0.9) return 'High usage'
     if (ratio >= 0.65) return 'Watch'
     return 'Normal'
-  }
-
-  async function handleLookupOtp() {
-    if (!otpMobile.trim()) return
-    try {
-      setOtpBusy(true)
-      setOtpMessage('Checking current OTP...')
-      const res = await adminAPI.getCustomerDemoOtp(otpMobile.trim())
-      if (res.success && res.data) {
-        setOtpValue(res.data.otp)
-        setOtpMessage(
-          res.data.available
-            ? `OTP found for ${res.data.mobile}.`
-            : 'No OTP found yet. Use Send OTP in the app first, then retry here.'
-        )
-      }
-    } catch (error) {
-      console.log('[dashboard] Error loading OTP:', error)
-      setOtpValue(null)
-      setOtpMessage('Unable to fetch OTP right now.')
-    } finally {
-      setOtpBusy(false)
-    }
   }
 
   const usageMetrics = useMemo(() => {
@@ -329,58 +302,32 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs uppercase tracking-[0.2em] text-white/45">Customer auth helper</div>
-              <div className="mt-2 text-2xl font-bold text-white">Demo OTP lookup</div>
-            </div>
-            <div className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3]">
-              Test login
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 md:grid-cols-[1fr_auto]">
-            <input
-              value={otpMobile}
-              onChange={(event) => setOtpMobile(event.target.value)}
-              placeholder="Enter customer mobile after tapping Send OTP in app"
-              className="rounded-[20px] border border-white/10 bg-black/35 px-4 py-4 text-white outline-none placeholder:text-white/30"
-            />
-            <button
-              onClick={handleLookupOtp}
-              disabled={otpBusy || !otpMobile.trim()}
-              className="rounded-[20px] bg-[#8224E3] px-5 py-4 font-semibold text-black transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {otpBusy ? 'Fetching...' : 'Show OTP'}
-            </button>
-          </div>
-
-          <div className="mt-4 rounded-[22px] border border-white/10 bg-black/35 p-5">
-            <div className="text-xs uppercase tracking-[0.2em] text-white/45">Current OTP</div>
-            <div className="mt-3 text-4xl font-black tracking-[0.12em] text-[#8224E3]">
-              {otpValue || '------'}
-            </div>
-            <div className="mt-2 text-sm text-white/55">
-              {otpMessage}
-            </div>
-            <div className="mt-2 text-xs text-white/35">
-              Customer app me pehle mobile daal kar <span className="font-semibold text-white">Send OTP</span> tap karo.
-              Fir yahan same mobile number se current OTP dekh kar login test karo.
-            </div>
-          </div>
-        </div>
-
         <div className="neon-panel p-6">
           <div className="text-xs uppercase tracking-[0.22em] text-black/55">Launch checklist</div>
           <div className="mt-2 text-3xl font-black tracking-[-0.04em]">Customer app alignment</div>
           <div className="mt-4 space-y-3">
             {[
               'Black shell, ivory cards, and neon accent applied across the customer app.',
-              'Admin-side OTP helper now available for mobile-based login testing.',
+              'Customer auth now follows normal OTP entry flow without admin-side OTP exposure.',
               'Booking, support, billing, and alerts are wired into the same backend flow.',
             ].map((item) => (
               <div key={item} className="rounded-[20px] border border-black/10 bg-black/10 p-4 text-sm font-medium text-black/70">
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.22em] text-white/45">Release hardening</div>
+          <div className="mt-2 text-2xl font-bold text-white">Production cleanup status</div>
+          <div className="mt-4 space-y-3">
+            {[
+              'Installer app no longer ships with prefilled demo credentials.',
+              'Customer login screen no longer opens with a seeded mobile number.',
+              'Demo OTP responses are hidden by default unless EXPOSE_DEMO_OTP=true is enabled for local testing.',
+            ].map((item) => (
+              <div key={item} className="rounded-[20px] border border-white/10 bg-black/35 p-4 text-sm text-white/70">
                 {item}
               </div>
             ))}
