@@ -908,6 +908,7 @@ export default function PlansPage() {
         </div>
       </section>
 
+      {!composerOpen ? (
       <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="card p-6">
           <div className="flex items-start justify-between gap-4">
@@ -961,6 +962,7 @@ export default function PlansPage() {
           </div>
         </div>
       </section>
+      ) : null}
 
       {isLoading ? (
         <div className="card p-8 text-center">
