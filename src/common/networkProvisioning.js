@@ -236,7 +236,6 @@ export function normalizeCustomerId(value) {
 export function getPlanProvisioningIssues(plan = {}) {
   const provisioning = plan?.provisioning || {};
   const issues = [];
-  if (!String(provisioning.accessProfileCode || "").trim()) issues.push("accessProfileCode");
   if (!(Number(provisioning.vlanId || 0) > 0)) issues.push("vlanId");
   if (!String(provisioning.pppoePrefix || "").trim()) issues.push("pppoePrefix");
   if (!String(provisioning.defaultPppoePassword || "").trim()) issues.push("defaultPppoePassword");
