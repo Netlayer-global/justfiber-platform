@@ -367,6 +367,7 @@ class AppState extends ChangeNotifier {
     required String planCode,
     required String fullName,
     required String mobile,
+    String? email,
     required String address,
     required String pinCode,
     required double lat,
@@ -388,6 +389,7 @@ class AppState extends ChangeNotifier {
         planCode: planCode,
         fullName: fullName,
         mobile: current?.mobile ?? mobile,
+        email: email,
         address: address,
         pinCode: pinCode,
         lat: lat,
@@ -418,6 +420,36 @@ class AppState extends ChangeNotifier {
       return false;
     } finally {
       bookingBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> saveBookingPreferences({
+    required String bookingNumber,
+    String? preferredDate,
+    String? preferredSlotCode,
+    String? preferredSlotLabel,
+  }) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.saveBookingPreferences(
+        current,
+        bookingNumber: bookingNumber,
+        preferredDate: preferredDate,
+        preferredSlotCode: preferredSlotCode,
+        preferredSlotLabel: preferredSlotLabel,
+      );
+      await refreshBookingTracking();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
       notifyListeners();
     }
   }

@@ -39,6 +39,7 @@ import {
   bookingSchema,
   bookingPaymentConfirmSchema,
   bookingPaymentOrderSchema,
+  bookingPreferenceSchema,
   bookingPaymentVerifySchema,
   bookingPaymentLinkSchema,
   billingPaymentConfirmSchema,
@@ -1317,6 +1318,54 @@ customerPortalRouter.get(
       throw new ApiError(404, "Booking not found");
     }
     return ok(res, booking.tracking || {});
+  })
+);
+
+customerPortalRouter.post(
+  "/bookings/:bookingNumber/preferences",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = bookingPreferenceSchema.parse(req.body || {});
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+    booking.personalDetails = {
+      ...(booking.personalDetails || {}),
+      preferredSlot: payload.preferredSlotCode
+        ? {
+            code: payload.preferredSlotCode,
+            label: payload.preferredSlotLabel || payload.preferredSlotCode,
+            date: payload.preferredDate || null
+          }
+        : null
+    };
+    booking.timeline = [
+      ...(booking.timeline || []),
+      {
+        event: "booking.slot_preference.saved",
+        actorType: "customer",
+        actorId: String(req.customerUser._id),
+        note: payload.preferredSlotCode
+          ? `Preferred slot saved: ${payload.preferredSlotLabel || payload.preferredSlotCode}`
+          : "Preferred slot cleared",
+        at: new Date()
+      }
+    ];
+    if (booking.tracking?.steps) {
+      const hasSlotStep = booking.tracking.steps.some((step) => step.code === "slot_preference_saved");
+      if (!hasSlotStep) {
+        booking.tracking.steps.push({
+          code: "slot_preference_saved",
+          status: "done",
+          at: new Date()
+        });
+      }
+      booking.tracking.currentStep = "slot_preference_saved";
+    }
+    await booking.save();
+    return ok(res, {
+      bookingNumber: booking.bookingNumber,
+      preferredSlot: booking.personalDetails?.preferredSlot || null,
+      tracking: booking.tracking || {}
+    });
   })
 );
 

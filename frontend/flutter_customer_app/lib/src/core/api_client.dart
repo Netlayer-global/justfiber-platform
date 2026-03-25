@@ -385,6 +385,7 @@ class ApiClient {
     required String planCode,
     required String fullName,
     required String mobile,
+    String? email,
     required String address,
     required String pinCode,
     required double lat,
@@ -400,6 +401,7 @@ class ApiClient {
       'planCode': planCode,
       'fullName': fullName,
       'mobile': mobile,
+      if ((email ?? '').trim().isNotEmpty) 'email': email,
       'fullAddress': address,
       'pinCode': pinCode,
       'lat': lat,
@@ -447,6 +449,25 @@ class ApiClient {
       preferredSlotLabel: preferredSlotLabel ?? '',
       durationMonths: int.tryParse('${selectedPlan['durationMonths'] ?? durationMonths ?? 1}') ?? 1,
       durationLabel: (selectedPlan['durationLabel'] ?? durationLabel ?? '${durationMonths ?? 1} month').toString(),
+    );
+  }
+
+  Future<void> saveBookingPreferences(
+    CustomerSession session, {
+    required String bookingNumber,
+    String? preferredDate,
+    String? preferredSlotCode,
+    String? preferredSlotLabel,
+  }) async {
+    await _request(
+      '/api/v1/customer/bookings/$bookingNumber/preferences',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        if (preferredDate != null && preferredDate.isNotEmpty) 'preferredDate': preferredDate,
+        if (preferredSlotCode != null && preferredSlotCode.isNotEmpty) 'preferredSlotCode': preferredSlotCode,
+        if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty) 'preferredSlotLabel': preferredSlotLabel,
+      },
     );
   }
 

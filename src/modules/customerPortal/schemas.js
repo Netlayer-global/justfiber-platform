@@ -67,6 +67,12 @@ export const bookingPaymentVerifySchema = z.object({
   notes: z.string().optional()
 });
 
+export const bookingPreferenceSchema = z.object({
+  preferredDate: z.string().min(4).optional(),
+  preferredSlotCode: z.string().min(2).optional(),
+  preferredSlotLabel: z.string().min(2).optional()
+});
+
 export const billingPaymentLinkSchema = z.object({
   customerId: z.string().optional()
 });

@@ -42,6 +42,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   bool _usedCurrentLocation = false;
   final nameController = TextEditingController();
   final mobileController = TextEditingController();
+  final emailController = TextEditingController();
   final addressController = TextEditingController();
   final pinController = TextEditingController();
 
@@ -49,6 +50,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   void dispose() {
     nameController.dispose();
     mobileController.dispose();
+    emailController.dispose();
     addressController.dispose();
     pinController.dispose();
     super.dispose();
@@ -118,6 +120,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _field('Full name', nameController),
           const SizedBox(height: 12),
           _field('Mobile number', mobileController, keyboardType: TextInputType.phone),
+          const SizedBox(height: 12),
+          _field('Email address', emailController, keyboardType: TextInputType.emailAddress),
           const SizedBox(height: 12),
           _field('Address', addressController, maxLines: 3),
           const SizedBox(height: 12),
@@ -311,7 +315,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       }
                     },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-              child: Text(appState.bookingBusy ? 'Checking...' : 'Confirm & View Plans'),
+                              child: Text(appState.bookingBusy ? 'Checking...' : 'Confirm & View Plans'),
             ),
           ),
         ],
@@ -397,7 +401,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           Text(
             selected == null
                 ? 'Select a plan first to continue.'
-                : 'Pick billing duration for ${selected.name}. Booking amount will update automatically.',
+                : 'Pick billing duration for ${selected.name}. Total payable will update automatically.',
             style: const TextStyle(color: Color(0xFF6B7280), height: 1.45),
           ),
           const SizedBox(height: 16),
@@ -455,79 +459,27 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     }
 
     return _sectionCard(
-      title: 'Book installation',
+      title: 'Review checkout',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'We will create the booking and assign the installation team. Slot confirmation can follow from support or installer assignment.',
+            'Check customer details, plan, and payable amount before opening secure payment.',
             style: TextStyle(color: Color(0xFF6B7280), height: 1.45),
           ),
           const SizedBox(height: 16),
           _summaryRow('Customer', nameController.text.trim().isEmpty ? '-' : nameController.text.trim()),
+          _summaryRow('Mobile', mobileController.text.trim().isEmpty ? '-' : mobileController.text.trim()),
+          _summaryRow('Email', emailController.text.trim().isEmpty ? '-' : emailController.text.trim()),
           _summaryRow('Address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
           _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
           _summaryRow('Pinned coordinates', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
           _summaryRow('Plan', selected?.name ?? '-'),
+          _summaryRow('Speed', selected == null ? '-' : '${selected.speedMbps.toStringAsFixed(0)} Mbps'),
+          _summaryRow('Upload', selected == null ? '-' : '${selected.uploadSpeedMbps.toStringAsFixed(0)} Mbps'),
           _summaryRow('Duration', _selectedDurationLabel),
           _summaryRow('Payment mode', _selectedPaymentMode == 'razorpay' ? 'Online payment' : 'Cash / offline'),
           _summaryRow('Payable now', 'Rs ${_bookingAmountFor(selected).toStringAsFixed(0)}'),
-          _summaryRow('Preferred date', _formatDate(_preferredDate)),
-          _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
-          const SizedBox(height: 16),
-          const Text('Preferred install date', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (_, index) {
-                final date = DateTime.now().add(Duration(days: index + 1));
-                final selectedDate = _isSameDate(date, _preferredDate);
-                return ChoiceChip(
-                  label: Text(_formatDate(date)),
-                  selected: selectedDate,
-                  backgroundColor: const Color(0xFFF8F4FF),
-                  selectedColor: const Color(0xFF8224E3),
-                  side: BorderSide(color: selectedDate ? const Color(0xFF8224E3) : const Color(0x228224E3)),
-                  labelStyle: TextStyle(
-                    color: selectedDate ? const Color(0xFF111111) : const Color(0xFF131313),
-                    fontWeight: FontWeight.w700,
-                  ),
-                  onSelected: (_) => setState(() => _preferredDate = date),
-                );
-              },
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemCount: 5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text('Preferred install slot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: _slotOptions.map((slot) {
-              final selectedSlot = _selectedSlotCode == slot.$1;
-              return ChoiceChip(
-                label: Text(slot.$2),
-                selected: selectedSlot,
-                backgroundColor: const Color(0xFFF8F4FF),
-                selectedColor: const Color(0xFF8224E3),
-                side: BorderSide(color: selectedSlot ? const Color(0xFF8224E3) : const Color(0x228224E3)),
-                labelStyle: TextStyle(
-                  color: selectedSlot ? const Color(0xFF111111) : const Color(0xFF131313),
-                  fontWeight: FontWeight.w700,
-                ),
-                onSelected: (_) {
-                  setState(() {
-                    _selectedSlotCode = slot.$1;
-                    _selectedSlotLabel = slot.$2;
-                  });
-                },
-              );
-            }).toList(),
-          ),
           const SizedBox(height: 16),
           const Text('Payment mode', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 10),
@@ -581,15 +533,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         planCode: selectedPlanCode!,
                         fullName: nameController.text.trim(),
                         mobile: mobileController.text.trim(),
+                        email: emailController.text.trim(),
                         address: addressController.text.trim(),
                         pinCode: pinController.text.trim(),
                         lat: _selectedLocation.latitude,
                         lng: _selectedLocation.longitude,
                         durationMonths: _selectedDurationMonths,
                         durationLabel: _selectedDurationLabel,
-                        preferredDate: _preferredDate.toIso8601String(),
-                        preferredSlotCode: _selectedSlotCode,
-                        preferredSlotLabel: _selectedSlotLabel,
                         paymentMode: _selectedPaymentMode,
                       );
                       if (!mounted) return;
@@ -601,7 +551,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                           );
                           if (!mounted) return;
                           if (order != null) {
-                            await Navigator.of(context).push(
+                            final paid = await Navigator.of(context).push<bool>(
                               MaterialPageRoute(
                                 builder: (_) => BookingPaymentScreen(
                                   bookingNumber: appState.latestBooking!.bookingNumber,
@@ -610,15 +560,20 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                               ),
                             );
                             if (!mounted) return;
+                            if (paid == true) {
+                              await appState.refresh();
+                              setState(() => step = 4);
+                            }
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(appState.error ?? 'Unable to start booking payment')),
                             );
                           }
+                        } else {
+                          await appState.refresh();
+                          if (!mounted) return;
+                          setState(() => step = 4);
                         }
-                        await appState.refresh();
-                        if (!mounted) return;
-                        setState(() => step = 4);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(appState.bookingError ?? 'Unable to create booking')),
@@ -626,7 +581,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       }
                     },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-              child: Text(appState.bookingBusy ? 'Booking...' : 'Create Booking'),
+              child: Text(appState.bookingBusy ? 'Opening checkout...' : (_selectedPaymentMode == 'razorpay' ? 'Pay now' : 'Continue to confirmation')),
             ),
           ),
           const SizedBox(height: 10),
@@ -644,7 +599,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   Widget _successStep(dynamic latestBooking) {
     return _sectionCard(
-      title: 'Booking created',
+      title: 'Confirm install slot',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -661,7 +616,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             ),
             child: Text(
               'Booking ${latestBooking.bookingNumber} is ${latestBooking.status}.',
-              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(height: 16),
@@ -669,10 +624,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             spacing: 10,
             runSpacing: 10,
             children: [
+              _successChip('Booking ID', latestBooking.bookingNumber),
               _successChip('Status', latestBooking.status.replaceAll('_', ' ')),
-              _successChip('Step', latestBooking.currentStep),
               _successChip('Duration', latestBooking.durationLabel),
-              _successChip('Slot', _selectedSlotLabel ?? '-'),
             ],
           ),
           const SizedBox(height: 16),
@@ -680,6 +634,61 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
           _summaryRow('Duration', latestBooking.durationLabel),
           _summaryRow('Current step', latestBooking.currentStep),
+          const SizedBox(height: 16),
+          const Text('Choose install date', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, index) {
+                final date = DateTime.now().add(Duration(days: index + 1));
+                final selectedDate = _isSameDate(date, _preferredDate);
+                return ChoiceChip(
+                  label: Text(_formatDate(date)),
+                  selected: selectedDate,
+                  backgroundColor: const Color(0xFFF8F4FF),
+                  selectedColor: const Color(0xFF8224E3),
+                  side: BorderSide(color: selectedDate ? const Color(0xFF8224E3) : const Color(0x228224E3)),
+                  labelStyle: TextStyle(
+                    color: selectedDate ? const Color(0xFF111111) : const Color(0xFF131313),
+                    fontWeight: FontWeight.w700,
+                  ),
+                  onSelected: (_) => setState(() => _preferredDate = date),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemCount: 5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('Choose install slot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _slotOptions.map((slot) {
+              final selectedSlot = _selectedSlotCode == slot.$1;
+              return ChoiceChip(
+                label: Text(slot.$2),
+                selected: selectedSlot,
+                backgroundColor: const Color(0xFFF8F4FF),
+                selectedColor: const Color(0xFF8224E3),
+                side: BorderSide(color: selectedSlot ? const Color(0xFF8224E3) : const Color(0x228224E3)),
+                labelStyle: TextStyle(
+                  color: selectedSlot ? const Color(0xFF111111) : const Color(0xFF131313),
+                  fontWeight: FontWeight.w700,
+                ),
+                onSelected: (_) {
+                  setState(() {
+                    _selectedSlotCode = slot.$1;
+                    _selectedSlotLabel = slot.$2;
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
           _summaryRow('Preferred date', _formatDate(_preferredDate)),
           _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
           _summaryRow('Install address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
@@ -708,6 +717,30 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: AppStateScope.of(context).busy
+                  ? null
+                  : () async {
+                      final ok = await AppStateScope.of(context).saveBookingPreferences(
+                        bookingNumber: latestBooking.bookingNumber,
+                        preferredDate: _preferredDate.toIso8601String(),
+                        preferredSlotCode: _selectedSlotCode,
+                        preferredSlotLabel: _selectedSlotLabel,
+                      );
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(ok ? 'Booking confirmed and slot saved.' : (AppStateScope.of(context).error ?? 'Unable to save slot preference')),
+                        ),
+                      );
+                    },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
+              child: const Text('Confirm booking'),
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -987,7 +1020,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   }
 
   Widget _stepper() {
-    final labels = ['Address', 'Select Plan', 'Duration', 'Booking', 'Track'];
+    final labels = ['Address', 'Select Plan', 'Duration', 'Checkout', 'Confirm'];
     return Row(
       children: List.generate(labels.length, (index) {
         final active = index <= step;

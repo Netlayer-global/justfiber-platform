@@ -4,7 +4,6 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
-import 'service_tracking_screen.dart';
 import 'support_history_screen.dart';
 
 class BookingPaymentScreen extends StatefulWidget {
@@ -91,10 +90,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
       ),
     );
     if (ok) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
-        (route) => route.isFirst,
-      );
+      Navigator.of(context).pop(true);
     } else {
       setState(() => launching = false);
     }
@@ -193,6 +189,14 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                     child: FilledButton(
                       onPressed: _openCheckout,
                       child: const Text('Open checkout'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Back to checkout'),
                     ),
                   ),
                   const SizedBox(height: 10),
