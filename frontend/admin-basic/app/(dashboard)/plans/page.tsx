@@ -782,38 +782,38 @@ export default function PlansPage() {
           </div>
 
           <div className="mt-6 rounded-[28px] border border-white/10 bg-[#0c0f15] p-6">
-            <div className="text-xs uppercase tracking-[0.2em] text-white/45">App preview template</div>
+            <div className="text-xs uppercase tracking-[0.2em] text-white/45">Quick plan template</div>
             <div className="mt-3 text-3xl font-black text-white">{preview.name || 'Select a plan'}</div>
-            <div className="mt-2 text-sm text-white/50">{preview.planCode || 'PLAN_CODE'} • {preview.status === 'active' && provisioningReady ? 'Visible in apps' : 'Draft / blocked'}</div>
+            <div className="mt-2 text-sm text-white/50">{preview.planCode || 'PLAN_CODE'} - {preview.status === 'active' && provisioningReady ? 'Visible in apps' : 'Draft / blocked'}</div>
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-[22px] bg-white/5 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-white/45">Speed</div>
                 <div className="mt-2 text-2xl font-black text-white">{preview.speed || '0'} Mbps</div>
-                <div className="text-sm text-white/55">Up {preview.uploadSpeed || '0'} Mbps</div>
+                <div className="text-sm text-white/55">Upload {preview.uploadSpeed || '0'} Mbps</div>
               </div>
               <div className="rounded-[22px] bg-white/5 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-white/45">Price</div>
                 <div className="mt-2 text-2xl font-black text-white">{formatCurrency(Number(preview.price || 0))}</div>
-                <div className="text-sm text-white/55">{preview.dataPolicy === 'unlimited' ? 'Unlimited data' : `${preview.dataLimitGb || '0'} GB`}</div>
+                <div className="text-sm text-white/55">{preview.dataPolicy === 'unlimited' ? 'Unlimited data' : `${preview.dataLimitGb || '0'} GB cap`}</div>
               </div>
             </div>
 
             <div className="mt-5 grid gap-3 md:grid-cols-2 text-sm text-white/70">
               <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Customer template</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">App visibility</div>
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between"><span>Badge</span><span>{preview.featured ? 'Featured' : preview.recommended ? 'Recommended' : 'Standard'}</span></div>
-                  <div className="flex items-center justify-between"><span>OTT</span><span>{splitCsv(preview.ottApps).slice(0, 2).join(', ') || '-'}</span></div>
-                  <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'Optional'}</span></div>
+                  <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
+                  <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
                 </div>
               </div>
               <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Provisioning template</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Plan essentials</div>
                 <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between"><span>PPPoE</span><span>{buildPppoePreview(preview)}</span></div>
+                  <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'Optional'}</span></div>
                   <div className="flex items-center justify-between"><span>Wi‑Fi</span><span>{buildWifiPreview(preview)}</span></div>
-                  <div className="flex items-center justify-between"><span>VLAN</span><span>{preview.vlanId || '-'}</span></div>
+                  <div className="flex items-center justify-between"><span>Latency</span><span>{preview.latencyClass || '-'}</span></div>
                 </div>
               </div>
             </div>
@@ -851,7 +851,7 @@ export default function PlansPage() {
           </div>
 
           <div className="card p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Live preview</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan summary</div>
             <div className="mt-4 rounded-[28px] border border-white/10 bg-[#0c0f15] p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -900,81 +900,19 @@ export default function PlansPage() {
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Commercial view</div>
-                  <div className="mt-4 space-y-2 text-sm text-white/70">
-                    <div className="flex items-center justify-between"><span>Quarterly</span><span>{formatCurrency(Number(preview.quarterlyPrice || 0))}</span></div>
-                    <div className="flex items-center justify-between"><span>Half yearly</span><span>{formatCurrency(Number(preview.halfYearlyPrice || 0))}</span></div>
-                    <div className="flex items-center justify-between"><span>Yearly</span><span>{formatCurrency(Number(preview.yearlyPrice || 0))}</span></div>
-                    <div className="flex items-center justify-between"><span>Installation</span><span>{formatCurrency(Number(preview.installationCharge || 0))}</span></div>
-                    <div className="flex items-center justify-between"><span>OTC</span><span>{formatCurrency(Number(preview.otcCharge || 0))}</span></div>
-                    <div className="flex items-center justify-between"><span>Data policy</span><span>{preview.dataPolicy}</span></div>
-                    <div className="flex items-center justify-between"><span>Data cap</span><span>{preview.dataPolicy === 'unlimited' ? 'Unlimited' : `${preview.dataLimitGb || '0'} GB`}</span></div>
-                    <div className="flex items-center justify-between"><span>FUP speed</span><span>{preview.fupSpeedMbps ? `${preview.fupSpeedMbps} Mbps` : '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>FUP reset</span><span>{preview.fairUsageResetPolicy || 'monthly'}</span></div>
-                    <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'BYOD / optional'}</span></div>
-                    <div className="flex items-center justify-between"><span>OTT apps</span><span>{splitCsv(preview.ottApps).slice(0, 3).join(', ') || '-'}</span></div>
-                  </div>
-                </div>
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Provisioning view</div>
-                  <div className="mt-4 space-y-2 text-sm text-white/70">
-                    <div className="flex items-center justify-between"><span>Access profile</span><span>{preview.accessProfileCode || '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>VLAN</span><span>{preview.vlanId || '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>PPPoE</span><span>{buildPppoePreview(preview)}</span></div>
-                    <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{preview.wifiNamePrefix || '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>Password</span><span>{preview.defaultPppoePassword || '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>Burst</span><span>{preview.burstDownloadMbps || preview.burstUploadMbps ? `${preview.burstDownloadMbps || 0}/${preview.burstUploadMbps || 0} Mbps` : '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>Latency class</span><span>{preview.latencyClass || 'standard'}</span></div>
-                    <div className="flex items-center justify-between"><span>Contention</span><span>{preview.contentionRatio || '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>Sort order</span><span>{preview.sortOrder || '1'}</span></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Provisioning sample</div>
-                  <div className="mt-4 space-y-2 text-sm text-white/70">
-                    <div className="flex items-center justify-between"><span>PPPoE username</span><span>{buildPppoePreview(preview)}</span></div>
-                    <div className="flex items-center justify-between"><span>Wi-Fi names</span><span>{buildWifiPreview(preview)}</span></div>
-                    <div className="flex items-center justify-between"><span>Plan burst</span><span>{preview.burstDownloadMbps || preview.burstUploadMbps ? `${preview.burstDownloadMbps || 0}/${preview.burstUploadMbps || 0} Mbps` : 'Base profile'}</span></div>
-                  </div>
-                </div>
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Catalog ops</div>
-                  <div className="mt-4 space-y-2 text-sm text-white/70">
-                    <div className="flex items-center justify-between"><span>State</span><span>{preview.status}</span></div>
-                    <div className="flex items-center justify-between"><span>GST mode</span><span>{preview.pricesExcludeGst ? 'Exclusive' : 'Inclusive / retail'}</span></div>
-                    <div className="flex items-center justify-between"><span>Launch lane</span><span>#{preview.sortOrder || '1'}</span></div>
-                    <div className="flex items-center justify-between"><span>Router rental</span><span>{preview.routerIncluded ? formatCurrency(Number(preview.routerRental || 0)) : '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
-                    <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
-                    <div className="flex items-center justify-between"><span>Provisioning</span><span>{provisioningReady ? 'Ready' : 'Blocked'}</span></div>
-                  </div>
-                </div>
-              </div>
-
               <div className="mt-4 rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Lane compare</div>
-                <div className="mt-4 grid gap-3 md:grid-cols-3 text-sm text-white/70">
-                  <div className="rounded-[18px] bg-black/20 p-3">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/35">Monthly</div>
-                    <div className="mt-2 text-xl font-black text-white">{formatCurrency(Number(preview.price || 0))}</div>
-                  </div>
-                  <div className="rounded-[18px] bg-black/20 p-3">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/35">Quarterly uplift</div>
-                    <div className="mt-2 text-xl font-black text-white">
-                      {Number(preview.quarterlyPrice || 0) > 0 ? formatCurrency(Number(preview.quarterlyPrice || 0) - Number(preview.price || 0) * 3) : '-'}
-                    </div>
-                  </div>
-                  <div className="rounded-[18px] bg-black/20 p-3">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/35">Setup revenue</div>
-                    <div className="mt-2 text-xl font-black text-white">
-                      {formatCurrency(Number(preview.installationCharge || 0) + Number(preview.otcCharge || 0))}
-                    </div>
-                  </div>
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Plan highlights</div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2 text-sm text-white/70">
+                  <div className="flex items-center justify-between"><span>Quarterly</span><span>{formatCurrency(Number(preview.quarterlyPrice || 0))}</span></div>
+                  <div className="flex items-center justify-between"><span>Yearly</span><span>{formatCurrency(Number(preview.yearlyPrice || 0))}</span></div>
+                  <div className="flex items-center justify-between"><span>Installation</span><span>{formatCurrency(Number(preview.installationCharge || 0))}</span></div>
+                  <div className="flex items-center justify-between"><span>OTC</span><span>{formatCurrency(Number(preview.otcCharge || 0))}</span></div>
+                  <div className="flex items-center justify-between"><span>Data policy</span><span>{preview.dataPolicy}</span></div>
+                  <div className="flex items-center justify-between"><span>FUP speed</span><span>{preview.fupSpeedMbps ? `${preview.fupSpeedMbps} Mbps` : '-'}</span></div>
+                  <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'Optional'}</span></div>
+                  <div className="flex items-center justify-between"><span>OTT apps</span><span>{splitCsv(preview.ottApps).slice(0, 3).join(', ') || '-'}</span></div>
+                  <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
+                  <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
                 </div>
               </div>
 
