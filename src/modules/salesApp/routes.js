@@ -125,7 +125,7 @@ salesAppRouter.get(
   "/plans",
   requireSalesAuth,
   asyncHandler(async (_req, res) => {
-    const plans = (await PlanCatalog.find({ active: true }).sort({ sortOrder: 1 }).lean()).filter(isPlanProvisioningReady);
+    const plans = (await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean()).filter(isPlanProvisioningReady);
     return ok(res, plans);
   })
 );

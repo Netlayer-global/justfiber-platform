@@ -296,7 +296,7 @@ adminCatalogRouter.get(
   "/catalog/plans",
   requirePermission(permissions.configRead),
   asyncHandler(async (_req, res) => {
-    const plans = await PlanCatalog.find().sort({ sortOrder: 1 }).lean();
+    const plans = await PlanCatalog.find({ archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean();
     return ok(res, plans.map(decoratePlanCatalogItem));
   })
 );
@@ -308,6 +308,7 @@ adminCatalogRouter.post(
     const payload = planSchema.parse(req.body);
     payload.planCode = normalizePlanCode(payload.planCode);
     ensureActivePlanProvisioning(payload);
+    payload.archivedAt = undefined;
     await PlanCatalog.updateOne({ planCode: payload.planCode }, { $set: payload }, { upsert: true });
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode }).lean();
     return ok(res, decoratePlanCatalogItem(plan), { created: true });
@@ -336,7 +337,7 @@ adminCatalogRouter.patch(
     }
     ensureActivePlanProvisioning(merged);
     const plan = await PlanCatalog.findOneAndUpdate(
-      { planCode: req.params.planCode },
+      { planCode: req.params.planCode, archivedAt: { $exists: false } },
       { $set: payload.planCode ? { ...payload, planCode: merged.planCode } : payload },
       { new: true }
     ).lean();
@@ -352,8 +353,8 @@ adminCatalogRouter.delete(
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const plan = await PlanCatalog.findOneAndUpdate(
-      { planCode: req.params.planCode },
-      { $set: { active: false } },
+      { planCode: req.params.planCode, archivedAt: { $exists: false } },
+      { $set: { active: false, archivedAt: new Date() } },
       { new: true }
     ).lean();
     if (!plan) {

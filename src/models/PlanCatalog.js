@@ -69,6 +69,7 @@ const planCatalogSchema = new mongoose.Schema(
       spotlightLabel: String
     },
     active: { type: Boolean, default: true },
+    archivedAt: Date,
     sortOrder: { type: Number, default: 1 }
   },
   { timestamps: true }
