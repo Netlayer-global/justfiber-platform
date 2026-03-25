@@ -339,6 +339,11 @@ export default function PlansPage() {
       toast.error('Plan code and plan name are required')
       return
     }
+    const currentIssues = provisioningIssues(form)
+    if (form.status === 'active' && currentIssues.length > 0) {
+      toast.error(`Complete provisioning fields first: ${currentIssues.join(', ')}`)
+      return
+    }
 
     const payload: Partial<Plan> = {
       id: form.planCode.trim(),
