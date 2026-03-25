@@ -91,7 +91,11 @@ export default function DashboardPage() {
       if (res.success && res.data?.otp) {
         setOtpValue(res.data.otp)
       } else {
-        setOtpError(res.error || 'OTP not found')
+        const message =
+          typeof res.error === 'string'
+            ? res.error
+            : (res.error as { message?: string } | undefined)?.message || 'OTP not found'
+        setOtpError(message)
       }
     } catch (error) {
       setOtpError(error instanceof Error ? error.message : 'OTP lookup failed')
