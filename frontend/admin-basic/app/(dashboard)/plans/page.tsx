@@ -189,6 +189,12 @@ function renderCategoryLabel(category?: Plan['category']) {
   }
 }
 
+function planLaneLabel(plan: Plan) {
+  if (plan.merchandising?.featured) return 'Featured lane'
+  if (plan.merchandising?.recommended) return 'Recommended lane'
+  return 'Standard lane'
+}
+
 function toForm(plan?: Plan | null): PlanFormState {
   if (!plan) return initialForm
   return {
@@ -971,26 +977,39 @@ export default function PlansPage() {
       ) : (
         <section className="space-y-4">
           {selectedPlan ? (
-            <div className="card flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="card grid gap-5 p-5 xl:grid-cols-[1.2fr_0.8fr]">
               <div>
                 <div className="text-xs uppercase tracking-[0.22em] text-white/45">Selected plan</div>
-                <div className="mt-2 text-2xl font-black text-white">{selectedPlan.name}</div>
-                <div className="mt-2 text-sm text-white/55">
-                  {selectedPlan.planCode} - {renderCategoryLabel(selectedPlan.category)} - {selectedPlan.visibleInCustomerApp ? 'Visible in apps' : 'Hidden from apps'}
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <div className="text-2xl font-black text-white">{selectedPlan.name}</div>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    {planLaneLabel(selectedPlan)}
+                  </span>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-xs ${selectedPlan.provisioningReady === false ? 'border-amber-300/30 bg-amber-300/10 text-amber-100' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'}`}>
-                    {selectedPlan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                    {selectedPlan.speed} / {selectedPlan.uploadSpeed || 0} Mbps
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                    {formatCurrency(selectedPlan.price)}
-                  </span>
+                <div className="mt-2 text-sm text-white/55">
+                  {selectedPlan.planCode} • {renderCategoryLabel(selectedPlan.category)} • {selectedPlan.visibleInCustomerApp ? 'Visible in apps' : 'Hidden from apps'}
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/40">Commercial</div>
+                    <div className="mt-2 text-lg font-bold text-white">{formatCurrency(selectedPlan.price)}</div>
+                    <div className="text-sm text-white/55">{selectedPlan.speed} / {selectedPlan.uploadSpeed || 0} Mbps</div>
+                  </div>
+                  <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/40">Visibility</div>
+                    <div className="mt-2 text-lg font-bold text-white">{selectedPlan.visibleInCustomerApp ? 'Customer live' : 'Hidden'}</div>
+                    <div className="text-sm text-white/55">{selectedPlan.visibleInSalesApp ? 'Sales visible' : 'Sales hidden'}</div>
+                  </div>
+                  <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/40">Readiness</div>
+                    <div className={`mt-2 text-lg font-bold ${selectedPlan.provisioningReady === false ? 'text-amber-100' : 'text-emerald-200'}`}>
+                      {selectedPlan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
+                    </div>
+                    <div className="text-sm text-white/55">{selectedPlan.latencyClass || 'standard'} latency</div>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap content-start gap-2 xl:justify-end">
                 <button type="button" onClick={() => beginEdit(selectedPlan)} className="btn-secondary inline-flex items-center gap-2">
                   <Pencil className="h-4 w-4" />
                   Edit
@@ -1059,16 +1078,9 @@ export default function PlansPage() {
                 <span className={`rounded-full border px-3 py-1 text-xs ${plan.provisioningReady === false ? 'border-amber-300/30 bg-amber-300/10 text-amber-100' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'}`}>
                   {plan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
                 </span>
-                {plan.merchandising?.featured ? (
-                  <span className="rounded-full border border-[#8224E3]/20 bg-[#8224E3]/10 px-3 py-1 text-xs text-[#8224E3]">
-                    Featured
-                  </span>
-                ) : null}
-                {plan.merchandising?.recommended ? (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                    Recommended
-                  </span>
-                ) : null}
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                  {planLaneLabel(plan)}
+                </span>
                 {plan.merchandising?.spotlightLabel ? (
                   <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
                     {plan.merchandising.spotlightLabel}
@@ -1106,11 +1118,11 @@ export default function PlansPage() {
                   </div>
                 </div>
                 <div className="rounded-[18px] border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Provisioning</div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Commercial summary</div>
                   <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between"><span>Access profile</span><span>{plan.provisioning?.accessProfileCode || '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>VLAN</span><span>{plan.provisioning?.vlanId || '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{plan.provisioning?.wifiNamePrefix || '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>Quarterly</span><span>{formatCurrency(plan.quarterlyPrice)}</span></div>
+                    <div className="flex items-center justify-between"><span>Installation</span><span>{formatCurrency(plan.installationCharge)}</span></div>
+                    <div className="flex items-center justify-between"><span>Router</span><span>{plan.routerIncluded ? (plan.routerModel || 'Included') : 'Optional'}</span></div>
                     <div className="flex items-center justify-between"><span>FUP</span><span>{plan.fupSpeedMbps ? `${plan.fupSpeedMbps} Mbps` : '-'}</span></div>
                   </div>
                 </div>
@@ -1122,7 +1134,7 @@ export default function PlansPage() {
                 </div>
               ) : null}
 
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-4">
                 <button type="button" onClick={() => beginEdit(plan)} className="btn-secondary inline-flex items-center gap-2">
                   <Pencil className="h-4 w-4" />
                   Edit
