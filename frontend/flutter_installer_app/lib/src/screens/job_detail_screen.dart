@@ -316,6 +316,38 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              color: const Color(0x26FFFFFF),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0x36FFFFFF)),
+                            ),
+                            child: Icon(
+                              isComplaint ? Icons.build_circle_outlined : Icons.router_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0x1FFFFFFF),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: const Color(0x2CFFFFFF)),
+                            ),
+                            child: Text(
+                              status.replaceAll('_', ' '),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
                       Text(
                         isComplaint ? 'COMPLAINT JOB' : 'INSTALLATION JOB',
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -380,19 +412,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         runSpacing: 10,
                         children: [
                           if (widget.job.mapUrl.isNotEmpty || (widget.job.latitude != null && widget.job.longitude != null))
-                            OutlinedButton(
+                            OutlinedButton.icon(
                               onPressed: () => _openUri(
                                 widget.job.mapUrl.isNotEmpty
                                     ? widget.job.mapUrl
                                     : 'https://maps.google.com/?q=${widget.job.latitude},${widget.job.longitude}',
                                 fallback: 'Map not available',
                               ),
-                              child: const Text('Open map'),
+                              icon: const Icon(Icons.map_outlined, size: 18),
+                              label: const Text('Open map'),
                             ),
                           if (phone.isNotEmpty)
-                            OutlinedButton(
+                            OutlinedButton.icon(
                               onPressed: () => _openUri('tel:$phone', fallback: 'Call action not available'),
-                              child: const Text('Call customer'),
+                              icon: const Icon(Icons.call_outlined, size: 18),
+                              label: const Text('Call customer'),
                             ),
                         ],
                       ),

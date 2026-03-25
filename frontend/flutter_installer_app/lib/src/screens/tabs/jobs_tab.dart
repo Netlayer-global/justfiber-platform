@@ -299,6 +299,20 @@ class _JobsTabState extends State<JobsTab> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F4FF),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0x228224E3)),
+                  ),
+                  child: Icon(
+                    isComplaint ? Icons.build_circle_outlined : Icons.router_rounded,
+                    color: const Color(0xFF8224E3),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,17 +366,17 @@ class _JobsTabState extends State<JobsTab> {
               Row(
                 children: [
                   if (job.planName.isNotEmpty)
-                    Expanded(child: _infoBox('Plan', job.planName)),
+                    Expanded(child: _infoBox('Plan', job.planName, icon: Icons.inventory_2_outlined)),
                   if (job.planName.isNotEmpty && (job.scheduledAt.isNotEmpty || nextVisitLabel != '-')) const SizedBox(width: 10),
                   if (job.scheduledAt.isNotEmpty)
-                    Expanded(child: _infoBox('Scheduled', _shortDate(job.scheduledAt)))
+                    Expanded(child: _infoBox('Scheduled', _shortDate(job.scheduledAt), icon: Icons.schedule_rounded))
                   else if (nextVisitLabel != '-')
-                    Expanded(child: _infoBox('Next step', nextVisitLabel)),
+                    Expanded(child: _infoBox('Next step', nextVisitLabel, icon: Icons.arrow_circle_right_outlined)),
                 ],
               ),
               if (job.scheduledAt.isNotEmpty && nextVisitLabel != '-') ...[
                 const SizedBox(height: 10),
-                _infoBox('Next step', nextVisitLabel),
+                _infoBox('Next step', nextVisitLabel, icon: Icons.arrow_circle_right_outlined),
               ],
             ],
             const SizedBox(height: 12),
@@ -408,16 +422,18 @@ class _JobsTabState extends State<JobsTab> {
               runSpacing: 10,
               children: [
                 if (hasPinnedLocation)
-                  OutlinedButton(
+                  OutlinedButton.icon(
                     onPressed: () => _openMap(context, job),
-                    child: const Text('Open map'),
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: const Text('Open map'),
                   ),
                 if (job.customerPhone.isNotEmpty)
-                  OutlinedButton(
+                  OutlinedButton.icon(
                     onPressed: () => _openCall(context, job.customerPhone),
-                    child: const Text('Call customer'),
+                    icon: const Icon(Icons.call_outlined, size: 18),
+                    label: const Text('Call customer'),
                   ),
-                OutlinedButton(
+                OutlinedButton.icon(
                   onPressed: appState.busy || !_canAccept(job)
                       ? null
                       : () => _runAction(
@@ -426,9 +442,10 @@ class _JobsTabState extends State<JobsTab> {
                             successMessage: 'Job accepted',
                             action: () => appState.acceptJob(job.id),
                           ),
-                  child: const Text('Accept'),
+                  icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                  label: const Text('Accept'),
                 ),
-                OutlinedButton(
+                OutlinedButton.icon(
                   onPressed: appState.busy || !_canStartTravel(job)
                       ? null
                       : () => _runAction(
@@ -437,7 +454,8 @@ class _JobsTabState extends State<JobsTab> {
                             successMessage: 'Travel started',
                             action: () => appState.startTravel(job.id),
                           ),
-                  child: const Text('Start travel'),
+                  icon: const Icon(Icons.directions_car_outlined, size: 18),
+                  label: const Text('Start travel'),
                 ),
                 OutlinedButton.icon(
                   onPressed: appState.busy || !_canQuickPreview(job)
@@ -451,9 +469,10 @@ class _JobsTabState extends State<JobsTab> {
                   icon: const Icon(Icons.remove_red_eye_outlined, size: 18),
                   label: const Text('Quick preview'),
                 ),
-                FilledButton(
+                FilledButton.icon(
                   onPressed: () => _openJobWorkflow(context, appState, job),
-                  child: const Text('Open workflow'),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                  label: const Text('Open workflow'),
                 ),
               ],
             ),
@@ -463,7 +482,7 @@ class _JobsTabState extends State<JobsTab> {
     );
   }
 
-  Widget _infoBox(String label, String value) {
+  Widget _infoBox(String label, String value, {required IconData icon}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -474,7 +493,13 @@ class _JobsTabState extends State<JobsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
+          Row(
+            children: [
+              Icon(icon, size: 14, color: const Color(0xFF8224E3)),
+              const SizedBox(width: 6),
+              Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
+            ],
+          ),
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700)),
         ],
