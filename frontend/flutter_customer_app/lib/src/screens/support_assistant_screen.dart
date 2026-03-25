@@ -45,6 +45,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
   void _seedConversation() {
     if (_messages.isNotEmpty) return;
     final prompt = _defaultPromptFor(widget.issueType);
+    final appState = AppStateScope.of(context);
     setState(() {
       _messages.add(
         _ChatMessage.bot(
@@ -56,6 +57,14 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
           'You can type things like: internet not working, Wi-Fi problem, slow speed, bill issue, or plan issue.',
         ),
       );
+      if (appState.tickets.isNotEmpty) {
+        final latestTicket = appState.tickets.first;
+        _messages.add(
+          _ChatMessage.bot(
+            'Your latest support case is ${latestTicket.ticketNumber} with status ${latestTicket.status}. If this is about the same issue, type still not resolved.',
+          ),
+        );
+      }
       if (widget.issueType != 'general') {
         _messages.add(_ChatMessage.user(prompt));
       }
@@ -113,6 +122,68 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       return 'plan';
     }
     return 'internet';
+  }
+
+  bool _isFollowUpIntent(String text) {
+    final query = text.toLowerCase();
+    return query.contains('still') ||
+        query.contains('not resolved') ||
+        query.contains('not fixed') ||
+        query.contains('same issue') ||
+        query.contains('continue') ||
+        query.contains('proceed') ||
+        query == 'yes' ||
+        query.contains('agent') ||
+        query.contains('human');
+  }
+
+  bool _handleContextualReply(String text) {
+    final diagnosis = _lastDiagnosis;
+    if (diagnosis == null) return false;
+    final query = text.toLowerCase();
+
+    if (query.contains('agent') || query.contains('human')) {
+      setState(() {
+        _messages.add(
+          _ChatMessage.bot(
+            'I can prepare the full diagnostic snapshot and hand this over as a complaint for the support team.',
+            actions: [
+              _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint, primary: true),
+            ],
+          ),
+        );
+      });
+      _scrollToBottom();
+      return true;
+    }
+
+    if (_isFollowUpIntent(text)) {
+      setState(() {
+        _messages.add(
+          _ChatMessage.bot(
+            diagnosis.needsTicket
+                ? 'The issue still looks service-side. The best next step is to raise a complaint so the team can act on this diagnosis.'
+                : 'I can run the line checks again, or you can raise a complaint if you want the team to investigate manually.',
+            actions: [
+              if (diagnosis.needsTicket)
+                _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint, primary: true)
+              else
+                _ChatAction(
+                  label: 'Check again',
+                  onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType),
+                  primary: true,
+                ),
+              if (!diagnosis.needsTicket)
+                _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
+            ],
+          ),
+        );
+      });
+      _scrollToBottom();
+      return true;
+    }
+
+    return false;
   }
 
   Future<void> _sendUserIntent(String text, {String? issueTypeOverride}) async {
@@ -286,6 +357,9 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       _controller.clear();
     });
     _scrollToBottom();
+    if (_handleContextualReply(text)) {
+      return;
+    }
     _sendUserIntent(text);
   }
 
