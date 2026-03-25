@@ -18,6 +18,8 @@ const _latestBookingAmountKey = 'justfiber.latest_booking_amount';
 const _latestBookingStepKey = 'justfiber.latest_booking_step';
 const _latestBookingDateKey = 'justfiber.latest_booking_date';
 const _latestBookingSlotKey = 'justfiber.latest_booking_slot';
+const _latestBookingDurationMonthsKey = 'justfiber.latest_booking_duration_months';
+const _latestBookingDurationLabelKey = 'justfiber.latest_booking_duration_label';
 
 class AppState extends ChangeNotifier {
   final api = ApiClient(baseUrl: defaultApiBase);
@@ -367,6 +369,8 @@ class AppState extends ChangeNotifier {
     required String pinCode,
     required double lat,
     required double lng,
+    int? durationMonths,
+    String? durationLabel,
     String? preferredDate,
     String? preferredSlotCode,
     String? preferredSlotLabel,
@@ -385,6 +389,8 @@ class AppState extends ChangeNotifier {
         pinCode: pinCode,
         lat: lat,
         lng: lng,
+        durationMonths: durationMonths,
+        durationLabel: durationLabel,
         preferredDate: preferredDate,
         preferredSlotCode: preferredSlotCode,
         preferredSlotLabel: preferredSlotLabel,
@@ -777,6 +783,8 @@ class AppState extends ChangeNotifier {
       prefs.remove(_latestBookingStepKey);
       prefs.remove(_latestBookingDateKey);
       prefs.remove(_latestBookingSlotKey);
+      prefs.remove(_latestBookingDurationMonthsKey);
+      prefs.remove(_latestBookingDurationLabelKey);
     });
     _resetCustomerState();
     notifyListeners();
@@ -799,6 +807,8 @@ class AppState extends ChangeNotifier {
           currentStep: prefs.getString(_latestBookingStepKey) ?? '',
           preferredDate: prefs.getString(_latestBookingDateKey) ?? '',
           preferredSlotLabel: prefs.getString(_latestBookingSlotKey) ?? '',
+          durationMonths: prefs.getInt(_latestBookingDurationMonthsKey) ?? 1,
+          durationLabel: prefs.getString(_latestBookingDurationLabelKey) ?? '1 month',
         );
         latestBookingLookupMobile = latestBookingMobile;
         if ((latestBookingLookupMobile ?? '').isNotEmpty) {
@@ -856,6 +866,8 @@ class AppState extends ChangeNotifier {
       await prefs.remove(_latestBookingStepKey);
       await prefs.remove(_latestBookingDateKey);
       await prefs.remove(_latestBookingSlotKey);
+      await prefs.remove(_latestBookingDurationMonthsKey);
+      await prefs.remove(_latestBookingDurationLabelKey);
       return;
     }
     await prefs.setString(_latestBookingNumberKey, booking.bookingNumber);
@@ -865,6 +877,8 @@ class AppState extends ChangeNotifier {
     await prefs.setString(_latestBookingStepKey, booking.currentStep);
     await prefs.setString(_latestBookingDateKey, booking.preferredDate);
     await prefs.setString(_latestBookingSlotKey, booking.preferredSlotLabel);
+    await prefs.setInt(_latestBookingDurationMonthsKey, booking.durationMonths);
+    await prefs.setString(_latestBookingDurationLabelKey, booking.durationLabel);
   }
 }
 

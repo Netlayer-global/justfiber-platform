@@ -25,6 +25,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   int step = 0;
   String? selectedPlanCode;
+  int _selectedDurationMonths = 1;
+  String _selectedDurationLabel = '1 month';
   String? _selectedSlotCode = 'morning';
   String? _selectedSlotLabel = '10 AM - 1 PM';
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
@@ -90,8 +92,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           const SizedBox(height: 20),
           if (step == 0) _addressStep(appState),
           if (step == 1) _planStep(appState, plans),
-          if (step == 2) _bookingStep(appState, plans),
-          if (step == 3 && latestBooking != null) _successStep(latestBooking),
+          if (step == 2) _durationStep(plans),
+          if (step == 3) _bookingStep(appState, plans),
+          if (step == 4 && latestBooking != null) _successStep(latestBooking),
           ],
         ),
       ),
@@ -317,12 +320,25 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: selectedPlanCode == null ? null : () => setState(() => step = 2),
+              onPressed: selectedPlanCode == null
+                  ? null
+                  : () {
+                      final selected = plans.cast<dynamic?>().firstWhere(
+                            (item) => item?.planCode == selectedPlanCode,
+                            orElse: () => null,
+                          );
+                      if (selected != null) {
+                        final defaultDuration = _availableDurations(selected).first;
+                        _selectedDurationMonths = defaultDuration.$1;
+                        _selectedDurationLabel = defaultDuration.$2;
+                      }
+                      setState(() => step = 2);
+                    },
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF8224E3),
                         foregroundColor: const Color(0xFFFFFFFF),
               ),
-              child: const Text('Continue to Booking'),
+              child: const Text('Continue to Duration'),
             ),
           ),
           const SizedBox(height: 10),
@@ -331,6 +347,77 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             child: OutlinedButton(
               onPressed: () => setState(() => step = 0),
               child: const Text('Back to Address'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _durationStep(List<dynamic> plans) {
+    dynamic selected;
+    for (final item in plans) {
+      if (item.planCode == selectedPlanCode) {
+        selected = item;
+        break;
+      }
+    }
+    final durations = selected == null ? const <(int, String)>[(1, '1 month')] : _availableDurations(selected);
+    final recurringAmount = selected == null ? 0.0 : _priceForDuration(selected, _selectedDurationMonths);
+    final setupAmount = selected == null
+        ? 0.0
+        : ((selected.otcCharge ?? 0) as num).toDouble() + ((selected.installationCharge ?? 0) as num).toDouble();
+    final totalAmount = recurringAmount + setupAmount;
+
+    return _sectionCard(
+      title: 'Choose plan duration',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            selected == null
+                ? 'Select a plan first to continue.'
+                : 'Pick billing duration for ${selected.name}. Booking amount will update automatically.',
+            style: const TextStyle(color: Color(0xFF6B7280), height: 1.45),
+          ),
+          const SizedBox(height: 16),
+          for (final option in durations)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _durationTile(
+                label: option.$2,
+                recurringAmount: _priceForDuration(selected, option.$1),
+                setupAmount: setupAmount,
+                selected: _selectedDurationMonths == option.$1,
+                onSelect: () => setState(() {
+                  _selectedDurationMonths = option.$1;
+                  _selectedDurationLabel = option.$2;
+                }),
+              ),
+            ),
+          const SizedBox(height: 8),
+          _summaryRow('Selected duration', _selectedDurationLabel),
+          _summaryRow('Recurring amount', 'Rs ${recurringAmount.toStringAsFixed(0)}'),
+          _summaryRow('Setup charges', 'Rs ${setupAmount.toStringAsFixed(0)}'),
+          _summaryRow('Payable now', 'Rs ${totalAmount.toStringAsFixed(0)}'),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: selected == null ? null : () => setState(() => step = 3),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF8224E3),
+                foregroundColor: const Color(0xFFFFFFFF),
+              ),
+              child: const Text('Continue to Booking'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => setState(() => step = 1),
+              child: const Text('Back to Plans'),
             ),
           ),
         ],
@@ -362,6 +449,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
           _summaryRow('Pinned coordinates', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
           _summaryRow('Plan', selected?.name ?? '-'),
+          _summaryRow('Duration', _selectedDurationLabel),
+          _summaryRow('Payable now', 'Rs ${_bookingAmountFor(selected).toStringAsFixed(0)}'),
           _summaryRow('Preferred date', _formatDate(_preferredDate)),
           _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
           const SizedBox(height: 16),
@@ -433,6 +522,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         pinCode: pinController.text.trim(),
                         lat: _selectedLocation.latitude,
                         lng: _selectedLocation.longitude,
+                        durationMonths: _selectedDurationMonths,
+                        durationLabel: _selectedDurationLabel,
                         preferredDate: _preferredDate.toIso8601String(),
                         preferredSlotCode: _selectedSlotCode,
                         preferredSlotLabel: _selectedSlotLabel,
@@ -441,7 +532,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       if (ok) {
                         await appState.refresh();
                         if (!mounted) return;
-                        setState(() => step = 3);
+                        setState(() => step = 4);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(appState.bookingError ?? 'Unable to create booking')),
@@ -457,7 +548,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             width: double.infinity,
             child: OutlinedButton(
               onPressed: appState.bookingBusy ? null : () => setState(() => step = 1),
-              child: const Text('Back to Plans'),
+              child: const Text('Back to Duration'),
             ),
           ),
         ],
@@ -494,12 +585,14 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             children: [
               _successChip('Status', latestBooking.status.replaceAll('_', ' ')),
               _successChip('Step', latestBooking.currentStep),
+              _successChip('Duration', latestBooking.durationLabel),
               _successChip('Slot', _selectedSlotLabel ?? '-'),
             ],
           ),
           const SizedBox(height: 16),
           _summaryRow('Plan', latestBooking.planName),
           _summaryRow('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
+          _summaryRow('Duration', latestBooking.durationLabel),
           _summaryRow('Current step', latestBooking.currentStep),
           _summaryRow('Preferred date', _formatDate(_preferredDate)),
           _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
@@ -565,6 +658,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               onPressed: () => setState(() {
                 step = 0;
                 selectedPlanCode = null;
+                _selectedDurationMonths = 1;
+                _selectedDurationLabel = '1 month';
                 _selectedSlotCode = 'morning';
                 _selectedSlotLabel = '10 AM - 1 PM';
                 _preferredDate = DateTime.now().add(const Duration(days: 1));
@@ -804,7 +899,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   }
 
   Widget _stepper() {
-    final labels = ['Address', 'Select Plan', 'Booking', 'Track'];
+    final labels = ['Address', 'Select Plan', 'Duration', 'Booking', 'Track'];
     return Row(
       children: List.generate(labels.length, (index) {
         final active = index <= step;
@@ -832,6 +927,39 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         );
       }),
     );
+  }
+
+  List<(int, String)> _availableDurations(dynamic plan) {
+    final durations = <(int, String)>[];
+    if (plan.validityMonthly == true) durations.add((1, '1 month'));
+    if (plan.validityQuarterly == true) durations.add((3, '3 months'));
+    if (plan.validityHalfYearly == true) durations.add((6, '6 months'));
+    if (plan.validityYearly == true) durations.add((12, '12 months'));
+    if (durations.isEmpty) {
+      durations.add((1, '1 month'));
+    }
+    return durations;
+  }
+
+  double _priceForDuration(dynamic plan, int months) {
+    if (plan == null) return 0;
+    switch (months) {
+      case 12:
+        return ((plan.yearlyPrice ?? 0) as num).toDouble();
+      case 6:
+        return ((plan.halfYearlyPrice ?? 0) as num).toDouble();
+      case 3:
+        return ((plan.quarterlyPrice ?? 0) as num).toDouble();
+      default:
+        return ((plan.monthlyPrice ?? 0) as num).toDouble();
+    }
+  }
+
+  double _bookingAmountFor(dynamic plan) {
+    if (plan == null) return 0;
+    final recurring = _priceForDuration(plan, _selectedDurationMonths);
+    final setup = ((plan.otcCharge ?? 0) as num).toDouble() + ((plan.installationCharge ?? 0) as num).toDouble();
+    return recurring + setup;
   }
 
   Widget _sectionCard({required String title, required Widget child}) {
@@ -924,6 +1052,48 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _durationTile({
+    required String label,
+    required double recurringAmount,
+    required double setupAmount,
+    required bool selected,
+    required VoidCallback onSelect,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x228224E3), width: selected ? 1.5 : 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
+              ),
+              OutlinedButton(
+                onPressed: onSelect,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: selected ? const Color(0xFF8224E3) : const Color(0xFF131313),
+                  backgroundColor: selected ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
+                  side: BorderSide(color: selected ? const Color(0x668224E3) : const Color(0x228224E3)),
+                ),
+                child: Text(selected ? 'Selected' : 'Choose'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _summaryRow('Plan amount', 'Rs ${recurringAmount.toStringAsFixed(0)}'),
+          _summaryRow('Setup charges', 'Rs ${setupAmount.toStringAsFixed(0)}'),
+          _summaryRow('Payable now', 'Rs ${(recurringAmount + setupAmount).toStringAsFixed(0)}'),
         ],
       ),
     );

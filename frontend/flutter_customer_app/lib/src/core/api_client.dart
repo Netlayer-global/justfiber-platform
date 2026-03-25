@@ -389,6 +389,8 @@ class ApiClient {
     required String pinCode,
     required double lat,
     required double lng,
+    int? durationMonths,
+    String? durationLabel,
     String? preferredDate,
     String? preferredSlotCode,
     String? preferredSlotLabel,
@@ -401,6 +403,8 @@ class ApiClient {
       'pinCode': pinCode,
       'lat': lat,
       'lng': lng,
+      if (durationMonths != null && durationMonths > 0) 'durationMonths': durationMonths,
+      if (durationLabel != null && durationLabel.isNotEmpty) 'durationLabel': durationLabel,
       if (preferredDate != null && preferredDate.isNotEmpty) 'preferredDate': preferredDate,
       if (preferredSlotCode != null && preferredSlotCode.isNotEmpty) 'preferredSlotCode': preferredSlotCode,
       if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty) 'preferredSlotLabel': preferredSlotLabel,
@@ -440,6 +444,8 @@ class ApiClient {
       currentStep: (tracking['currentStep'] ?? 'booking_placed').toString(),
       preferredDate: preferredDate ?? '',
       preferredSlotLabel: preferredSlotLabel ?? '',
+      durationMonths: int.tryParse('${selectedPlan['durationMonths'] ?? durationMonths ?? 1}') ?? 1,
+      durationLabel: (selectedPlan['durationLabel'] ?? durationLabel ?? '${durationMonths ?? 1} month').toString(),
     );
   }
 

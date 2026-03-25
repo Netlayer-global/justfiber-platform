@@ -554,7 +554,17 @@ async function createConnectionBooking({ customerUser, payload }) {
   if (!feasibility.feasible) {
     throw new ApiError(409, feasibility.message || "Selected address is not serviceable");
   }
-  const amount = (plan.monthlyPrice || 0) + (plan.otcCharge || 0);
+  const durationMonths = Number(payload.durationMonths || 1);
+  const recurringAmount =
+    durationMonths === 12
+      ? Number(plan.yearlyPrice || 0)
+      : durationMonths === 6
+        ? Number(plan.halfYearlyPrice || 0)
+        : durationMonths === 3
+          ? Number(plan.quarterlyPrice || 0)
+          : Number(plan.monthlyPrice || 0);
+  const setupAmount = Number(plan.otcCharge || 0) + Number(plan.installationCharge || 0);
+  const amount = recurringAmount + setupAmount;
   const isOfflinePayment = payload.paymentMode === "cash";
 
   const booking = await ConnectionBooking.create({
@@ -565,7 +575,14 @@ async function createConnectionBooking({ customerUser, payload }) {
       planCode: plan.planCode,
       planName: plan.name,
       monthlyPrice: plan.monthlyPrice,
+      quarterlyPrice: plan.quarterlyPrice,
+      halfYearlyPrice: plan.halfYearlyPrice,
+      yearlyPrice: plan.yearlyPrice,
       otcCharge: plan.otcCharge,
+      installationCharge: plan.installationCharge,
+      durationMonths,
+      durationLabel: payload.durationLabel || `${durationMonths} month`,
+      recurringAmount,
       totalAmount: amount,
       speedMbps: Number(plan.speedMbps || 0),
       uploadSpeedMbps: Number(plan.uploadSpeedMbps || 0),
@@ -969,6 +986,10 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
         : null,
       planName: plan.name,
       planCode: plan.planCode,
+      durationMonths: Number(booking.selectedPlan?.durationMonths || payload.durationMonths || 1),
+      durationLabel: booking.selectedPlan?.durationLabel || payload.durationLabel || "1 month",
+      recurringAmount: Number(booking.selectedPlan?.recurringAmount || 0),
+      totalAmount: Number(booking.selectedPlan?.totalAmount || booking.payment?.amount || 0),
       planCategory: plan.category || "home",
       monthlyPrice: Number(plan.monthlyPrice || 0),
       otcCharge: Number(plan.otcCharge || 0),

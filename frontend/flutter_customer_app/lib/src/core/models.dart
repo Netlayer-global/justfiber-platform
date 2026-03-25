@@ -391,6 +391,8 @@ class BookingQuote {
     required this.currentStep,
     required this.preferredDate,
     required this.preferredSlotLabel,
+    required this.durationMonths,
+    required this.durationLabel,
   });
 
   final String bookingNumber;
@@ -400,6 +402,8 @@ class BookingQuote {
   final String currentStep;
   final String preferredDate;
   final String preferredSlotLabel;
+  final int durationMonths;
+  final String durationLabel;
 
   BookingQuote copyWith({
     String? bookingNumber,
@@ -409,6 +413,8 @@ class BookingQuote {
     String? currentStep,
     String? preferredDate,
     String? preferredSlotLabel,
+    int? durationMonths,
+    String? durationLabel,
   }) {
     return BookingQuote(
       bookingNumber: bookingNumber ?? this.bookingNumber,
@@ -418,6 +424,8 @@ class BookingQuote {
       currentStep: currentStep ?? this.currentStep,
       preferredDate: preferredDate ?? this.preferredDate,
       preferredSlotLabel: preferredSlotLabel ?? this.preferredSlotLabel,
+      durationMonths: durationMonths ?? this.durationMonths,
+      durationLabel: durationLabel ?? this.durationLabel,
     );
   }
 }

@@ -30,6 +30,8 @@ export const bookingSchema = z.object({
   preferredDate: z.string().min(4).optional(),
   preferredSlotCode: z.string().min(2).optional(),
   preferredSlotLabel: z.string().min(2).optional(),
+  durationMonths: z.number().int().positive().optional(),
+  durationLabel: z.string().min(2).optional(),
   paymentMode: z.enum(["razorpay", "cash"]).default("razorpay")
 });
 
