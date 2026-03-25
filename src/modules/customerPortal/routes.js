@@ -28,6 +28,7 @@ import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
+import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { detectOntBrand } from "../../common/networkProvisioning.js";
 import { env } from "../../config/env.js";
 import PDFDocument from "pdfkit";
@@ -1057,6 +1058,20 @@ customerPortalRouter.post(
     const key = normalizeCustomerPortalOtpKey(payload.mobile || payload.email);
     const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
     setCustomerPortalDemoOtp(key, otp);
+    if (payload.mobile) {
+      await notificationDispatcher.dispatchEvent({
+        eventKey: "verification_code",
+        recipients: { sms: payload.mobile },
+        subject: "JustFiber verification code",
+        body: `Your JustFiber verification code is ${otp}. It is valid for 10 minutes.`,
+        entityType: "customer_auth",
+        entityId: key,
+        metadata: {
+          mobile: payload.mobile,
+          purpose: "customer_login_otp"
+        }
+      });
+    }
     return ok(res, {
       sent: true,
       ...(env.EXPOSE_DEMO_OTP ? { demoOtp: otp } : {})

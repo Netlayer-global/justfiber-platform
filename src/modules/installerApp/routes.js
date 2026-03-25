@@ -37,6 +37,7 @@ import {
   serialSchema
 } from "./schemas.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
+import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 
 export const installerAppRouter = Router();
 
@@ -633,6 +634,22 @@ async function sendOtp(job, purpose) {
       `OTP has been sent for ${purpose === "complaint_complete" ? "complaint closure" : "installation completion"}.`,
       { bookingNumber: booking.bookingNumber, installerJobId: job._id, purpose }
     );
+  }
+  if (job.customerSnapshot?.phone) {
+    const flowLabel = purpose === "complaint_complete" ? "complaint closure" : "installation completion";
+    await notificationDispatcher.dispatchEvent({
+      eventKey: "verification_code",
+      recipients: { sms: job.customerSnapshot.phone },
+      subject: "JustFiber verification code",
+      body: `Your JustFiber OTP for ${flowLabel} is ${code}. It is valid for 10 minutes.`,
+      entityType: "installer_job",
+      entityId: job._id.toString(),
+      metadata: {
+        purpose,
+        installerJobId: job._id.toString(),
+        customerId: job.customerId
+      }
+    });
   }
   return code;
 }
