@@ -51,6 +51,11 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
           'We are here to help you out. Tell me what is happening with your connection, billing, Wi-Fi, or speed.',
         ),
       );
+      _messages.add(
+        _ChatMessage.bot(
+          'You can type things like: internet not working, Wi-Fi problem, slow speed, bill issue, or plan issue.',
+        ),
+      );
       if (widget.issueType != 'general') {
         _messages.add(_ChatMessage.user(prompt));
       }
@@ -179,7 +184,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     if (diagnosis.diagnosisCode == 'billing_suspended' ||
         diagnosis.diagnosisCode == 'payment_pending') {
       return [
-        _ChatAction(label: 'Open billing', onTap: _openBilling),
+        _ChatAction(label: 'Open billing', onTap: _openBilling, primary: true),
         _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
       ];
     }
@@ -188,18 +193,18 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         diagnosis.diagnosisCode == 'speed_fup_limited' ||
         diagnosis.diagnosisCode == 'speed_hard_cap') {
       return [
-        _ChatAction(label: 'Open plans', onTap: _openPlans),
+        _ChatAction(label: 'Open plans', onTap: _openPlans, primary: true),
         _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
       ];
     }
     if (diagnosis.needsTicket) {
       return [
-        _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
+        _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint, primary: true),
         _ChatAction(label: 'Check again', onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType)),
       ];
     }
     return [
-      _ChatAction(label: 'Check again', onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType)),
+      _ChatAction(label: 'Check again', onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType), primary: true),
     ];
   }
 
@@ -259,6 +264,13 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
               : (appState.error ?? 'I could not raise the complaint right now. Please try again shortly.'),
         ),
       );
+      if (ticketNumber != null) {
+        _messages.add(
+          _ChatMessage.bot(
+            'Our support team will now review your connection snapshot and continue the case from this reference. You can track updates from Support & requests.',
+          ),
+        );
+      }
     });
     _scrollToBottom();
     if (ticketNumber != null) {
@@ -362,7 +374,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0x228224E3)),
                     ),
-                    child: const Icon(Icons.menu_rounded, color: Color(0xFF8224E3)),
+                    child: const Icon(Icons.support_agent_rounded, color: Color(0xFF8224E3)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -476,13 +488,21 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                     .map(
                       (action) => OutlinedButton(
                         onPressed: action.onTap,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF1860D9),
-                          backgroundColor: const Color(0xFFF8F6FF),
-                          side: const BorderSide(color: Color(0x22000000)),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        ),
+                        style: action.primary
+                            ? OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFFFFFFF),
+                                backgroundColor: const Color(0xFF8224E3),
+                                side: const BorderSide(color: Color(0xFF8224E3)),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                              )
+                            : OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF1860D9),
+                                backgroundColor: const Color(0xFFF8F6FF),
+                                side: const BorderSide(color: Color(0x22000000)),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                              ),
                         child: Text(
                           action.label,
                           style: const TextStyle(fontWeight: FontWeight.w800),
@@ -638,10 +658,12 @@ class _ChatAction {
   const _ChatAction({
     required this.label,
     required this.onTap,
+    this.primary = false,
   });
 
   final String label;
   final VoidCallback onTap;
+  final bool primary;
 }
 
 class _TypingDot extends StatelessWidget {
