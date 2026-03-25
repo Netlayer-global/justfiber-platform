@@ -994,7 +994,12 @@ export const adminAPI = {
     pppoePassword?: string
     natEnabled?: boolean
   }) =>
-    request(`/api/v1/admin/network/device-management/${deviceId}/wifi`, {
+    request<{
+      updated?: boolean
+      radiusSynced?: boolean
+      radiusServiceId?: string
+      radiusUsername?: string
+    }>(`/api/v1/admin/network/device-management/${deviceId}/wifi`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
