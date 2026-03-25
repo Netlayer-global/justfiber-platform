@@ -189,6 +189,8 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 18),
           AppCard(
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -274,6 +276,8 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 18),
           AppCard(
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -288,6 +292,8 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 18),
           AppCard(
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

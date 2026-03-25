@@ -1387,6 +1387,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ? ['1 Briefing', '2 Onsite', '3 Resolution', '4 Closure']
         : ['1 Details', '2 ONT Scan', '3 ONT Details', '4 Activation', '5 Proof', '6 Complete'];
     return AppCard(
+      color: const Color(0xFFFFFFFF),
+      borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
