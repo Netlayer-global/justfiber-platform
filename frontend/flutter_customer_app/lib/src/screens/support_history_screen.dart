@@ -98,7 +98,7 @@ class SupportHistoryScreen extends StatelessWidget {
                       icon: Icons.wifi_tethering_error_rounded,
                       onTap: () async {
                         await Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const SupportAssistantScreen()),
+                          MaterialPageRoute(builder: (_) => const SupportAssistantScreen(issueType: 'internet')),
                         );
                         if (context.mounted) {
                           await appState.refresh();
@@ -108,13 +108,14 @@ class SupportHistoryScreen extends StatelessWidget {
                     _issueButton(
                       label: 'Billing issue',
                       icon: Icons.receipt_long_rounded,
-                      onTap: () => _raiseQuickTicket(
-                        context,
-                        appState,
-                        category: 'billing',
-                        subject: 'Billing help needed',
-                        description: 'Customer needs help with bill, payment, or recharge.',
-                      ),
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportAssistantScreen(issueType: 'billing')),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
                     ),
                     _issueButton(
                       label: 'Shift connection',
@@ -129,12 +130,14 @@ class SupportHistoryScreen extends StatelessWidget {
                     _issueButton(
                       label: 'Plan issue',
                       icon: Icons.auto_awesome_motion_rounded,
-                      onTap: () => _createServiceRequest(
-                        context,
-                        appState,
-                        type: 'complaint',
-                        note: 'Customer needs help with current plan or recharge.',
-                      ),
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportAssistantScreen(issueType: 'plan')),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
                     ),
                     _issueButton(
                       label: 'Create ticket',

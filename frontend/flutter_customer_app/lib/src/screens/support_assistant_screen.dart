@@ -7,7 +7,12 @@ import 'billing_history_screen.dart';
 import 'plan_catalog_screen.dart';
 
 class SupportAssistantScreen extends StatefulWidget {
-  const SupportAssistantScreen({super.key});
+  const SupportAssistantScreen({
+    super.key,
+    this.issueType = 'internet',
+  });
+
+  final String issueType;
 
   @override
   State<SupportAssistantScreen> createState() => _SupportAssistantScreenState();
@@ -47,6 +52,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       final result = await appState.api.fetchSupportDiagnosis(
         session,
         customerId: appState.selectedCustomerId,
+        issueType: widget.issueType,
       );
       if (!mounted) return;
       setState(() {
@@ -68,8 +74,12 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     if (diagnosis == null) return;
     setState(() => _raisingTicket = true);
     final ticketNumber = await appState.raiseComplaint(
-      category: 'technical',
-      subject: 'Internet issue detected',
+      category: widget.issueType == 'billing' ? 'billing' : 'technical',
+      subject: widget.issueType == 'billing'
+          ? 'Billing issue detected'
+          : widget.issueType == 'plan'
+              ? 'Plan issue detected'
+              : 'Internet issue detected',
       description: '${diagnosis.headline}\n\n${diagnosis.summary}\n\nRecommendation: ${diagnosis.recommendation}',
     );
     if (!mounted) return;
@@ -90,8 +100,23 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
+    final assistantTitle = switch (widget.issueType) {
+      'billing' => 'Billing assistant',
+      'plan' => 'Plan assistant',
+      _ => 'Internet assistant',
+    };
+    final assistantHeadline = switch (widget.issueType) {
+      'billing' => 'Let me check your billing first',
+      'plan' => 'Let me review your plan first',
+      _ => 'Let me check your line first',
+    };
+    final assistantSummary = switch (widget.issueType) {
+      'billing' => 'We will detect dues, suspension, payment state, and the quickest billing fix before raising a complaint.',
+      'plan' => 'We will check plan limits, FUP, and upgrade need before suggesting the next step.',
+      _ => 'We will first detect the likely reason, suggest fixes, and only then raise a complaint if needed.',
+    };
     return Scaffold(
-      appBar: AppBar(title: const Text('Internet assistant')),
+      appBar: AppBar(title: Text(assistantTitle)),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFFF6F1EB),
@@ -107,7 +132,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'SMART SUPPORT',
                     style: TextStyle(
@@ -118,7 +143,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'Let me check your line first',
+                    assistantHeadline,
                     style: TextStyle(
                       color: Color(0xFFFFFFFF),
                       fontWeight: FontWeight.w800,
@@ -127,7 +152,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'We will first detect the likely reason, suggest fixes, and only then raise a complaint if needed.',
+                    assistantSummary,
                     style: TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
                   ),
                 ],
@@ -146,7 +171,11 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                       CircularProgressIndicator(color: Color(0xFF8224E3)),
                       SizedBox(height: 16),
                       Text(
-                        'Checking billing, line status, speed, and device quality...',
+                        widget.issueType == 'billing'
+                            ? 'Checking due amount, payment state, and service suspension...'
+                            : widget.issueType == 'plan'
+                                ? 'Checking data policy, cap usage, and upgrade triggers...'
+                                : 'Checking billing, line status, speed, and device quality...',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),
@@ -253,7 +282,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              if (_diagnosis!.diagnosisCode == 'billing_suspended')
+              if (_diagnosis!.diagnosisCode == 'billing_suspended' || _diagnosis!.diagnosisCode == 'payment_pending')
                 _sectionCard(
                   title: 'Fastest fix',
                   child: Column(
@@ -319,7 +348,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                     children: [
                       Text(
                         _diagnosis!.needsTicket
-                            ? 'We already found a likely network-side issue. Raise a complaint and the ops team can follow up.'
+                            ? 'We already found a likely issue. Raise a complaint and the team can follow up with the right context.'
                             : 'If the issue still continues after the above steps, raise a complaint from here.',
                         style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),

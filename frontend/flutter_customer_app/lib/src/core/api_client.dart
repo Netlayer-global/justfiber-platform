@@ -787,16 +787,21 @@ class ApiClient {
     );
   }
 
-  Future<SupportDiagnosis> fetchSupportDiagnosis(CustomerSession session, {String? customerId}) async {
+  Future<SupportDiagnosis>(
+    CustomerSession session, {
+    String? customerId,
+    String issueType = 'internet',
+  }) async {
     final data = _asMap(
       await _request(
         _withCustomerId('/api/v1/customer/help/diagnose', customerId),
         method: 'POST',
         token: session.accessToken,
-        body: const {},
+        body: {'issueType': issueType},
       ),
     );
     return SupportDiagnosis(
+      issueType: (data['issueType'] ?? issueType).toString(),
       diagnosisCode: (data['diagnosisCode'] ?? 'general_check').toString(),
       headline: (data['headline'] ?? 'Connection check complete').toString(),
       summary: (data['summary'] ?? '').toString(),

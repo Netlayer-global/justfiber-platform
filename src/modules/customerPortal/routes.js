@@ -2620,6 +2620,7 @@ customerPortalRouter.post(
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
+    const issueType = String(req.body?.issueType || "internet").trim().toLowerCase() || "internet";
     const online = device.onlineStatus === "online";
     const { speedMbps, latencyMs, packetLossPercent, rxPower } = estimateNetworkMetrics({ customer, device });
     const dueAmount = Number(customer?.billingSnapshot?.dueAmount || 0);
@@ -2637,7 +2638,77 @@ customerPortalRouter.post(
       "Run Wi-Fi diagnostics from the Wi-Fi settings screen.",
     ];
 
-    if (serviceSuspended && dueAmount > 0) {
+    if (issueType === "billing") {
+      if (serviceSuspended && dueAmount > 0) {
+        diagnosisCode = "billing_suspended";
+        headline = "Service is suspended because payment is pending";
+        summary = `An unpaid amount of Rs ${dueAmount.toFixed(2)} is stopping this connection right now.`;
+        recommendation = "Pay the pending bill first. Service should resume automatically after successful payment.";
+        needsTicket = false;
+        steps = [
+          "Open Billing and complete the pending payment.",
+          "Wait briefly for automatic service resume.",
+          "If payment succeeded but service does not return, raise a billing complaint.",
+        ];
+      } else if (dueAmount > 0) {
+        diagnosisCode = "payment_pending";
+        headline = "There is a pending bill on this connection";
+        summary = `Current due amount is Rs ${dueAmount.toFixed(2)}. Paying it now will keep the line healthy and avoid suspension.`;
+        recommendation = "Complete the payment from Billing and then recheck service status.";
+        needsTicket = false;
+        steps = [
+          "Open Billing and review the current invoice amount.",
+          "Complete the payment securely using Razorpay.",
+          "If the amount looks wrong, raise a billing complaint with the invoice reference.",
+        ];
+      } else {
+        diagnosisCode = "billing_clear";
+        headline = "No billing block was found";
+        summary = "There is no pending due causing this issue right now.";
+        recommendation = "If you are still facing service problems, use the internet assistant for line checks.";
+        needsTicket = true;
+        steps = [
+          "Review the latest invoice and payment receipt once.",
+          "If billing looks correct, open internet diagnostics next.",
+          "Raise a billing complaint only if amount or receipt details look wrong.",
+        ];
+      }
+    } else if (issueType === "plan") {
+      if (usageCapReached && dataPolicy === "hard_cap") {
+        diagnosisCode = "data_limit_reached";
+        headline = "The current plan data limit is exhausted";
+        summary = "Internet may be blocked because this capped plan has reached its usage threshold.";
+        recommendation = "Upgrade the plan or wait for the next cycle reset if this is a capped plan.";
+        needsTicket = false;
+        steps = [
+          "Open Billing to confirm current usage and cap status.",
+          "Upgrade to a higher plan if you need service immediately.",
+          "Raise a billing or plan complaint only if usage data looks wrong.",
+        ];
+      } else if (usageCapReached && dataPolicy === "fup") {
+        diagnosisCode = "fup_applied";
+        headline = "This connection is now on FUP speed";
+        summary = "Internet is active, but speed may feel lower because fair-usage policy is applied.";
+        recommendation = "Upgrade the plan if you want full speed restored now.";
+        needsTicket = false;
+        steps = [
+          "Review usage and FUP speed in Billing.",
+          "Compare the current plan with higher-speed options.",
+          "Upgrade now if heavy usage is expected this cycle.",
+        ];
+      } else {
+        diagnosisCode = "plan_healthy";
+        headline = "The current plan does not look blocked";
+        summary = "We did not find a plan cap or FUP condition that should stop the connection.";
+        recommendation = "If speed still feels low, use the internet assistant for live line checks or compare faster plans.";
+        needsTicket = true;
+        steps = [
+          "Review your current plan speed and usage first.",
+          "Use internet checks to inspect line quality and packet loss.",
+          "Upgrade only if your usage pattern needs a faster plan.",
+        ];
+      }
+    } else if (serviceSuspended && dueAmount > 0) {
       diagnosisCode = "billing_suspended";
       headline = "Your service is suspended due to pending payment";
       summary = `An unpaid amount of Rs ${dueAmount.toFixed(2)} is blocking this connection right now.`;
@@ -2696,6 +2767,7 @@ customerPortalRouter.post(
       ];
     }
     return ok(res, {
+      issueType,
       diagnosisCode,
       headline,
       summary,

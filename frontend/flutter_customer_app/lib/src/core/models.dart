@@ -652,6 +652,7 @@ class BillingPaymentOrder {
 
 class SupportDiagnosis {
   const SupportDiagnosis({
+    required this.issueType,
     required this.diagnosisCode,
     required this.headline,
     required this.summary,
@@ -667,6 +668,7 @@ class SupportDiagnosis {
     required this.estimatedSpeedMbps,
   });
 
+  final String issueType;
   final String diagnosisCode;
   final String headline;
   final String summary;
