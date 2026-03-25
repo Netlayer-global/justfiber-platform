@@ -11,8 +11,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final loginController = TextEditingController(text: '9000000001');
-  final passwordController = TextEditingController(text: 'Installer123!');
+  final loginController = TextEditingController();
+  final passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
 
@@ -130,12 +130,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Demo field login',
+                        'Installer sign-in',
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Use installer credentials provided by admin. Default local demo credentials are prefilled for quick testing.',
+                        'Use the live installer credentials assigned from admin. No demo credentials are prefilled in this app.',
                         style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),
                     ],

@@ -23,9 +23,9 @@ class InstallerApiClient {
     };
     late http.Response response;
     if (method == 'POST') {
-      response = await http.post(_uri(path), headers: headers, body: jsonEncode(body ?? {}));
+      response = await http.post(_uri(path), headers: headers, body: jsonEncode(body ?? {})).timeout(const Duration(seconds: 20));
     } else {
-      response = await http.get(_uri(path), headers: headers);
+      response = await http.get(_uri(path), headers: headers).timeout(const Duration(seconds: 20));
     }
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400 || payload['success'] == false) {
@@ -52,17 +52,17 @@ class InstallerApiClient {
       todayNewInstallationJobs: int.tryParse('${data['todayNewInstallationJobs'] ?? 0}') ?? 0,
       pendingJobs: int.tryParse('${data['pendingJobs'] ?? 0}') ?? 0,
       completedJobs: int.tryParse('${data['completedJobs'] ?? 0}') ?? 0,
-      availabilityStatus: (data['availabilityStatus'] ?? 'available').toString(),
+      availabilityStatus: (data['availabilityStatus'] ?? '-').toString(),
     );
   }
 
   Future<InstallerProfile> fetchProfile(InstallerSession session) async {
     final data = _asMap(await _request('/api/v1/installer/profile', token: session.accessToken));
     return InstallerProfile(
-      fullName: (data['fullName'] ?? 'Installer').toString(),
+      fullName: (data['fullName'] ?? '').toString(),
       installerCode: (data['installerCode'] ?? '-').toString(),
       phone: (data['phone'] ?? '-').toString(),
-      availabilityStatus: (data['availabilityStatus'] ?? 'available').toString(),
+      availabilityStatus: (data['availabilityStatus'] ?? '-').toString(),
     );
   }
 
@@ -72,11 +72,11 @@ class InstallerApiClient {
       final map = item as Map<String, dynamic>;
       return InstallerJob(
         id: (map['_id'] ?? map['id'] ?? '').toString(),
-        jobNumber: (map['jobNumber'] ?? 'JOB').toString(),
+        jobNumber: (map['jobNumber'] ?? '-').toString(),
         status: (map['status'] ?? 'assigned').toString(),
-        customerName: (map['customerName'] ?? map['customer']?['fullName'] ?? 'Customer').toString(),
+        customerName: (map['customerName'] ?? map['customer']?['fullName'] ?? '-').toString(),
         customerPhone: (map['customerSnapshot']?['phone'] ?? map['phone'] ?? '').toString(),
-        customerAddress: (map['customerAddress'] ?? map['serviceAddress'] ?? 'Address pending').toString(),
+        customerAddress: (map['customerAddress'] ?? map['serviceAddress'] ?? '-').toString(),
         planName: (map['customerSnapshot']?['planName'] ?? '').toString(),
         planCode: (map['customerSnapshot']?['planCode'] ?? '').toString(),
         planCategory: (map['customerSnapshot']?['planCategory'] ?? 'home').toString(),
@@ -120,8 +120,8 @@ class InstallerApiClient {
       brand: (credentials['brand'] ?? data['ontBrand'] ?? 'generic').toString(),
       pppoeUsername: (pppoe['username'] ?? data['pppoeUsername'] ?? '').toString(),
       pppoePassword: (pppoe['password'] ?? data['pppoePassword'] ?? '').toString(),
-      ssid24: (wifi['ssid24'] ?? 'JustFiber').toString(),
-      ssid5: (wifi['ssid5'] ?? 'JustFiber').toString(),
+      ssid24: (wifi['ssid24'] ?? '').toString(),
+      ssid5: (wifi['ssid5'] ?? '').toString(),
       wifiPassword: (wifi['password'] ?? '').toString(),
       vlanId: int.tryParse('${credentials['vlanId'] ?? 100}') ?? 100,
       planCode: (planSummary['planCode'] ?? '').toString(),
