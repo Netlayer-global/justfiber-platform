@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../core/app_state.dart';
+import '../core/models.dart';
 import '../widgets/app_card.dart';
 import 'billing_payment_screen.dart';
 import 'document_viewer_screen.dart';
@@ -17,6 +18,13 @@ class BillingHistoryScreen extends StatelessWidget {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
     final theme = Theme.of(context);
+    CustomerConnection? selectedConnection;
+    for (final item in appState.connections) {
+      if (item.customerId == appState.selectedCustomerId) {
+        selectedConnection = item;
+        break;
+      }
+    }
     final latestInvoice = billing.invoices.isEmpty ? null : billing.invoices.first;
     final latestPayment = billing.payments.isEmpty ? null : billing.payments.first;
     final usageRatio = billing.usageCapGb > 0 ? (billing.usageGb / billing.usageCapGb).clamp(0, 1) : 0.0;
@@ -31,6 +39,10 @@ class BillingHistoryScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
           children: [
+          if (selectedConnection != null) ...[
+            _connectionStrip(selectedConnection),
+            const SizedBox(height: 18),
+          ],
           AppCard(
             gradient: const LinearGradient(
               colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
@@ -500,6 +512,67 @@ class BillingHistoryScreen extends StatelessWidget {
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
         ],
+      ),
+    );
+  }
+
+  Widget _connectionStrip(CustomerConnection connection) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ACTIVE CONNECTION',
+            style: TextStyle(
+              color: Color(0xFF8224E3),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.2,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            connection.planName.isEmpty ? 'Broadband connection' : connection.planName,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            connection.address.isEmpty ? connection.serviceId : connection.address,
+            style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _connectionPill('Service', connection.serviceId.isEmpty ? connection.customerId : connection.serviceId),
+              _connectionPill('Status', connection.status),
+              _connectionPill('Due', 'Rs ${connection.dueAmount.toStringAsFixed(0)}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _connectionPill(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
       ),
     );
   }
