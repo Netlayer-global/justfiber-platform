@@ -171,6 +171,16 @@ export default function CustomerDetailPage() {
   const radiusRejectState = radiusService?.radcheck?.some((row) => row.attribute === 'Auth-Type' && row.value === 'Reject') || false
   const radiusPasswordPresent = radiusService?.radcheck?.some((row) => row.attribute === 'Cleartext-Password') || false
   const radiusRateLimit = radiusService?.radreply?.find((row) => row.attribute === 'Mikrotik-Rate-Limit')?.value || ''
+  const radiusHealthState =
+    radiusService?.status === 'suspended'
+      ? radiusRejectState
+        ? 'suspended_ok'
+        : 'suspended_mismatch'
+      : radiusService?.status === 'active'
+        ? radiusPasswordPresent
+          ? 'active_ok'
+          : 'active_mismatch'
+        : 'unknown'
   const radiusTimeline = [
     radiusService?.activatedAt ? { label: 'Provisioned', at: radiusService.activatedAt, tone: 'emerald' } : null,
     radiusService?.suspendedAt ? { label: 'Suspended', at: radiusService.suspendedAt, tone: 'amber' } : null,
@@ -785,6 +795,26 @@ export default function CustomerDetailPage() {
                       {radiusRateLimit || 'No rate-limit attr'}
                     </span>
                   </div>
+                  {radiusHealthState === 'active_ok' ? (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                      Active state verified. Cleartext password exists and auth is open for this subscriber.
+                    </div>
+                  ) : null}
+                  {radiusHealthState === 'suspended_ok' ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      Suspended state verified. Auth-Type Reject is active in radcheck.
+                    </div>
+                  ) : null}
+                  {radiusHealthState === 'active_mismatch' ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                      Service status is active but Cleartext-Password is missing in radcheck. Run Create / Sync PPPoE again.
+                    </div>
+                  ) : null}
+                  {radiusHealthState === 'suspended_mismatch' ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                      Service status is suspended but Auth-Type Reject was not found. Run Suspend PPPoE again to enforce radius lock.
+                    </div>
+                  ) : null}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                       <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Radius username</p>
