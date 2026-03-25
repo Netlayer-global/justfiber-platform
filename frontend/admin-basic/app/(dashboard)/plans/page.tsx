@@ -155,7 +155,7 @@ function formatCurrency(amount?: number) {
 function buildPppoePreview(form: PlanFormState) {
   const prefix = form.pppoePrefix.trim() || 'jf'
   const realm = form.pppoeRealm.trim()
-  return `${prefix}.demo001${realm ? `@${realm}` : ''}`
+  return `${prefix}.subscriber001${realm ? `@${realm}` : ''}`
 }
 
 function buildWifiPreview(form: PlanFormState) {

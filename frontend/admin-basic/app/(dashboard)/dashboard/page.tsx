@@ -307,7 +307,7 @@ export default function DashboardPage() {
           <div className="mt-2 text-3xl font-black tracking-[-0.04em]">Customer app alignment</div>
           <div className="mt-4 space-y-3">
             {[
-              'Black shell, ivory cards, and neon accent applied across the customer app.',
+              'Customer app now follows the same live backend flows used by admin and installer operations.',
               'Customer auth now follows normal OTP entry flow without admin-side OTP exposure.',
               'Booking, support, billing, and alerts are wired into the same backend flow.',
             ].map((item) => (
