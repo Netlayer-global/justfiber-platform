@@ -722,8 +722,17 @@ export const adminAPI = {
         : undefined,
     }
   },
-  getCustomerDemoOtp: (lookup: string) =>
-    request<CustomerOtpLookup>(`/api/v1/admin/customer-auth/demo-otp?mobile=${encodeURIComponent(lookup)}`),
+  getCustomerDemoOtp: async (lookup: string) => {
+    const encoded = encodeURIComponent(lookup)
+    const primary = await request<CustomerOtpLookup>(`/api/v1/admin/customer-auth/demo-otp?mobile=${encoded}`)
+    if (primary.success) return primary
+    const primaryMessage =
+      typeof primary.error === 'string' ? primary.error : (primary.error as { message?: string } | undefined)?.message
+    if (primaryMessage?.toLowerCase().includes('route not found')) {
+      return request<CustomerOtpLookup>(`/api/v1/admin/ops/customer-auth/demo-otp?mobile=${encoded}`)
+    }
+    return primary
+  },
   // Plans
   getPlans: async () => {
     const res = await request<any[]>('/api/v1/admin/catalog/plans')

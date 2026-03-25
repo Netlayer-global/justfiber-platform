@@ -56,6 +56,29 @@ adminOpsRouter.get(
   })
 );
 
+adminOpsRouter.get(
+  "/ops/customer-auth/demo-otp",
+  requirePermission(permissions.dashboardRead),
+  asyncHandler(async (req, res) => {
+    const mobile = String(req.query.mobile || "").trim();
+    const email = String(req.query.email || "").trim();
+    const lookup = mobile || email;
+    if (!lookup) {
+      throw new ApiError(400, "mobile or email is required");
+    }
+    const normalized = normalizeCustomerPortalOtpKey(lookup);
+    const otp = getCustomerPortalDemoOtp(lookup);
+    if (!otp) {
+      throw new ApiError(404, "No OTP found for the provided customer");
+    }
+    return ok(res, {
+      lookup,
+      normalizedKey: normalized,
+      otp
+    });
+  })
+);
+
 function computeBalanceAfter({ currentBalance, direction, amount }) {
   return currentBalance + (direction === "debit" ? amount : -amount);
 }
