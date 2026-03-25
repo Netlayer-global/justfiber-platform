@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { adminAPI } from '@/lib/api'
+import { adminAPI, getApiBaseUrl } from '@/lib/api'
 import type { AdminPlanChangePreview, Customer, CustomerDevice, Installer, Plan } from '@/lib/types'
 import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
@@ -161,7 +161,7 @@ export default function CustomerDetailPage() {
   const usageCapGb = Number(billingSummary.usageCapGb || billingSummary.dataLimitGb || 0)
   const usagePercent = usageCapGb > 0 ? Math.min(100, Math.round((usageGb / usageCapGb) * 100)) : 0
   const pendingPlanChange = billingSummary.pendingPlanChange as Record<string, any> | undefined
-  const adminApiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
+  const adminApiBase = getApiBaseUrl()
   const currentPlanCode =
     customer?.plan && 'planCode' in customer.plan
       ? customer.plan.planCode || customer.plan.id

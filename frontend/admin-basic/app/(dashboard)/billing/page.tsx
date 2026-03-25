@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { adminAPI } from '@/lib/api'
+import { adminAPI, getApiBaseUrl } from '@/lib/api'
 import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, ShieldCheck, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
@@ -103,7 +103,7 @@ export default function BillingPage() {
     { label: '61-90 Days', value: overview?.agingBuckets?.days61to90 },
     { label: '90+ Days', value: overview?.agingBuckets?.days90plus },
   ]
-  const exportBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
+  const exportBaseUrl = getApiBaseUrl()
   const exportQuery = new URLSearchParams(
     Object.entries(exportFilters).filter(([, value]) => value.trim() !== '')
   ).toString()
@@ -991,7 +991,7 @@ export default function BillingPage() {
                       {item.invoiceId ? (
                         <a
                           className="text-xs text-[#4da3ff] inline-block"
-                          href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
+                          href={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -1224,7 +1224,7 @@ export default function BillingPage() {
                         <div className="text-xs text-slate-500 mt-1">{item.reasonCode || '-'}</div>
                         <a
                           className="text-xs text-[#4da3ff] mt-1 inline-block"
-                          href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/notes/${encodeURIComponent(item.noteNumber)}/pdf`}
+                          href={`${exportBaseUrl}/api/v1/admin/billing/notes/${encodeURIComponent(item.noteNumber)}/pdf`}
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -1268,7 +1268,7 @@ export default function BillingPage() {
                       <div className="text-xs text-slate-500 mt-1">{payment.provider || '-'} | {payment.method || '-'}</div>
                       <a
                         className="text-xs text-[#4da3ff] mt-1 inline-block"
-                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`}
+                        href={`${exportBaseUrl}/api/v1/admin/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`}
                         target="_blank"
                         rel="noreferrer"
                       >
@@ -1337,7 +1337,7 @@ export default function BillingPage() {
                       <div className="text-xs text-slate-500 mt-1">{payment.provider || '-'} | {payment.razorpayRefundId || '-'}</div>
                       <a
                         className="text-xs text-[#4da3ff] mt-1 inline-block"
-                        href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`}
+                        href={`${exportBaseUrl}/api/v1/admin/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`}
                         target="_blank"
                         rel="noreferrer"
                       >
@@ -1390,7 +1390,7 @@ export default function BillingPage() {
                     <div className="text-xs text-slate-500 mt-1">{item.billCycle || '-'}</div>
                     <a
                       className="text-xs text-[#4da3ff] mt-1 inline-block"
-                      href={`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
+                      href={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
                       target="_blank"
                       rel="noreferrer"
                     >

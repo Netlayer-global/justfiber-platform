@@ -33,7 +33,12 @@ import type {
   SupportQueueRequest,
 } from './types'
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:4000'
+export function getApiBaseUrl() {
+  const configured = process.env.NEXT_PUBLIC_API_BASE_URL
+  if (configured && configured.trim()) return configured
+  if (typeof window !== 'undefined') return window.location.origin
+  return ''
+}
 
 let authToken: string | null = null
 
@@ -70,7 +75,7 @@ async function request<T>(
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const response = await fetch(`${baseUrl}${endpoint}`, {
+  const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
     ...options,
     headers,
   })
