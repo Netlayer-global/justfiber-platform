@@ -182,7 +182,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
             ),
             const SizedBox(height: 18),
             if (_loading)
-              const AppCard(
+              AppCard(
                 color: Color(0xFFFFFFFF),
                 borderColor: Color(0x228224E3),
                 child: Padding(

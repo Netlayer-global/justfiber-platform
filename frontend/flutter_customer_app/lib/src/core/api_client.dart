@@ -787,7 +787,7 @@ class ApiClient {
     );
   }
 
-  Future<SupportDiagnosis>(
+  Future<SupportDiagnosis> fetchSupportDiagnosis(
     CustomerSession session, {
     String? customerId,
     String issueType = 'internet',
