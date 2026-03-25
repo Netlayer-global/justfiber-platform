@@ -1386,8 +1386,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool proofUploaded,
   }) {
     final pages = isComplaint
-        ? ['Briefing', 'Onsite', 'Resolution', 'Closure']
-        : ['Details', 'ONT Scan', 'ONT Details', 'Activation', 'Proof', 'Complete'];
+        ? ['Brief', 'Onsite', 'Resolve', 'Close']
+        : ['Details', 'ONT', 'Health', 'Activate', 'Proof', 'Close'];
     return AppCard(
       color: const Color(0xFFFFFFFF),
       borderColor: const Color(0x228224E3),
@@ -1403,7 +1403,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Text('Next-page field flow', style: Theme.of(context).textTheme.titleLarge),
+          Text('Workflow steps', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 6),
+          const Text(
+            'Move one step at a time through the field install flow.',
+            style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+          ),
           const SizedBox(height: 12),
           Row(
             children: List.generate(
@@ -1412,8 +1417,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 child: Padding(
                   padding: EdgeInsets.only(right: index == pages.length - 1 ? 0 : 8),
                   child: Container(
-                    height: 76,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    height: 72,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     decoration: BoxDecoration(
                       color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFFF8F4FF),
                       borderRadius: BorderRadius.circular(16),
@@ -1432,12 +1437,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         Text(
                           pages[index],
                           textAlign: TextAlign.center,
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: _workflowPage == index ? const Color(0xFFFFFFFF) : const Color(0xFF6E6A67),
                             fontWeight: FontWeight.w700,
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
                         ),
                       ],

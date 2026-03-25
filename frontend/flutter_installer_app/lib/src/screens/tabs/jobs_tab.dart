@@ -324,6 +324,8 @@ class _JobsTabState extends State<JobsTab> {
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: const Color(0xFF131313),
                             ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       if (job.customerPhone.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -359,6 +361,8 @@ class _JobsTabState extends State<JobsTab> {
             const SizedBox(height: 8),
             Text(
               job.customerAddress,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
             ),
             if (job.planName.isNotEmpty || job.scheduledAt.isNotEmpty || nextVisitLabel != '-') ...[
@@ -501,7 +505,12 @@ class _JobsTabState extends State<JobsTab> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
