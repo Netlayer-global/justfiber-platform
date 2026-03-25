@@ -25,6 +25,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
   bool launching = false;
   bool helping = false;
   String? paymentError;
+  int retryCount = 0;
 
   @override
   void initState() {
@@ -101,6 +102,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
     setState(() {
       launching = false;
       paymentError = response.message ?? 'Payment failed';
+      retryCount += 1;
     });
   }
 
@@ -177,6 +179,12 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
                   const Text('Launching secure checkout...', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Keep this screen open while Razorpay loads.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF6E6A67)),
+                  ),
                 ] else ...[
                   Container(
                     width: double.infinity,
@@ -215,7 +223,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: _openCheckout,
-                      child: Text(paymentError == null ? 'Open checkout' : 'Retry payment'),
+                      child: Text(retryCount > 0 ? 'Retry payment' : 'Open checkout'),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -232,7 +240,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                       Expanded(
                         child: TextButton(
                           onPressed: helping ? null : _requestPaymentHelp,
-                          child: Text(helping ? 'Creating ticket...' : 'Need help?'),
+                          child: Text(helping ? 'Creating...' : 'Need help?'),
                         ),
                       ),
                       Expanded(
