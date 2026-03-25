@@ -157,6 +157,29 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     );
   }
 
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
