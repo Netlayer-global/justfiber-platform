@@ -12,6 +12,13 @@ class ApiClient {
 
   Uri _uri(String path) => Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
 
+  String _withCustomerId(String path, String? customerId) {
+    final normalized = (customerId ?? '').trim();
+    if (normalized.isEmpty) return path;
+    final separator = path.contains('?') ? '&' : '?';
+    return '$path${separator}customerId=${Uri.encodeQueryComponent(normalized)}';
+  }
+
   Future<dynamic> _request(
     String path, {
     String method = 'GET',
@@ -118,10 +125,35 @@ class ApiClient {
     );
   }
 
-  Future<DashboardData> fetchDashboard(CustomerSession session) async {
-    final dashboard = _asMap(await _request('/api/v1/customer/dashboard', token: session.accessToken));
-    final billing = _asMap(await _request('/api/v1/customer/billing/summary', token: session.accessToken));
-    final wifi = _asMap(await _request('/api/v1/customer/wifi', token: session.accessToken));
+  Future<(String?, List<CustomerConnection>)> fetchConnections(CustomerSession session, {String? selectedCustomerId}) async {
+    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/connections', selectedCustomerId), token: session.accessToken));
+    final selected = (data['selectedCustomerId'] ?? '').toString().trim();
+    final connections = _asList(data['connections']).map((item) {
+      final map = item as Map<String, dynamic>;
+      return CustomerConnection(
+        customerId: (map['customerId'] ?? '').toString(),
+        serviceId: (map['serviceId'] ?? '').toString(),
+        accountNumber: (map['accountNumber'] ?? '').toString(),
+        fullName: (map['fullName'] ?? '').toString(),
+        mobile: (map['mobile'] ?? '').toString(),
+        email: (map['email'] ?? '').toString(),
+        planName: (map['planName'] ?? '').toString(),
+        status: (map['status'] ?? '').toString(),
+        dueAmount: double.tryParse('${map['dueAmount'] ?? 0}') ?? 0,
+        paymentStatus: (map['paymentStatus'] ?? '').toString(),
+        billMode: (map['billMode'] ?? '').toString(),
+        wifiName: (map['wifiName'] ?? '').toString(),
+        onlineStatus: (map['onlineStatus'] ?? '').toString(),
+        address: (map['address'] ?? '').toString(),
+      );
+    }).where((item) => item.customerId.isNotEmpty).toList();
+    return (selected.isEmpty ? null : selected, connections);
+  }
+
+  Future<DashboardData> fetchDashboard(CustomerSession session, {String? customerId}) async {
+    final dashboard = _asMap(await _request(_withCustomerId('/api/v1/customer/dashboard', customerId), token: session.accessToken));
+    final billing = _asMap(await _request(_withCustomerId('/api/v1/customer/billing/summary', customerId), token: session.accessToken));
+    final wifi = _asMap(await _request(_withCustomerId('/api/v1/customer/wifi', customerId), token: session.accessToken));
     return DashboardData(
       customerName: (dashboard['fullName'] ?? dashboard['customerName'] ?? '').toString(),
       planName: (dashboard['currentPlanName'] ?? billing['currentPlanName'] ?? '').toString(),
@@ -135,8 +167,8 @@ class ApiClient {
     );
   }
 
-  Future<WifiData> fetchWifi(CustomerSession session) async {
-    final data = _asMap(await _request('/api/v1/customer/wifi', token: session.accessToken));
+  Future<WifiData> fetchWifi(CustomerSession session, {String? customerId}) async {
+    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/wifi', customerId), token: session.accessToken));
     return WifiData(
       ssid24: (data['ssid24'] ?? '').toString(),
       ssid5: (data['ssid5'] ?? '').toString(),
@@ -148,8 +180,8 @@ class ApiClient {
     );
   }
 
-  Future<BillingData> fetchBilling(CustomerSession session) async {
-    final details = _asMap(await _request('/api/v1/customer/billing/details', token: session.accessToken));
+  Future<BillingData> fetchBilling(CustomerSession session, {String? customerId}) async {
+    final details = _asMap(await _request(_withCustomerId('/api/v1/customer/billing/details', customerId), token: session.accessToken));
     final data = _asMap(details['summary']);
     final invoices = _sortByDateDesc(_asList(details['invoices']).map((item) {
       final map = item as Map<String, dynamic>;
@@ -229,12 +261,13 @@ class ApiClient {
 
   Future<void> updateWifi(
     CustomerSession session, {
+    String? customerId,
     required String password,
     String? ssid24,
     String? ssid5,
   }) async {
     await _request(
-      '/api/v1/customer/wifi/update',
+      _withCustomerId('/api/v1/customer/wifi/update', customerId),
       method: 'POST',
       token: session.accessToken,
       body: {
@@ -247,8 +280,8 @@ class ApiClient {
     );
   }
 
-  Future<List<RequestItem>> fetchRequests(CustomerSession session) async {
-    final list = _asList(await _request('/api/v1/customer/requests', token: session.accessToken));
+  Future<List<RequestItem>> fetchRequests(CustomerSession session, {String? customerId}) async {
+    final list = _asList(await _request(_withCustomerId('/api/v1/customer/requests', customerId), token: session.accessToken));
     return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
       final payload = _asMap(map['payload']);
@@ -267,8 +300,8 @@ class ApiClient {
     }).toList(), (item) => item.createdAt);
   }
 
-  Future<List<SupportTicketItem>> fetchTickets(CustomerSession session) async {
-    final list = _asList(await _request('/api/v1/customer/tickets', token: session.accessToken));
+  Future<List<SupportTicketItem>> fetchTickets(CustomerSession session, {String? customerId}) async {
+    final list = _asList(await _request(_withCustomerId('/api/v1/customer/tickets', customerId), token: session.accessToken));
     return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
       final latestTimeline = _latestTimelineEntry(map['timeline']);
@@ -333,8 +366,8 @@ class ApiClient {
     }).toList();
   }
 
-  Future<List<ConnectedDevice>> fetchConnectedDevices(CustomerSession session) async {
-    final list = _asList(await _request('/api/v1/customer/device/connected-devices', token: session.accessToken));
+  Future<List<ConnectedDevice>> fetchConnectedDevices(CustomerSession session, {String? customerId}) async {
+    final list = _asList(await _request(_withCustomerId('/api/v1/customer/device/connected-devices', customerId), token: session.accessToken));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       return ConnectedDevice(
@@ -561,8 +594,8 @@ class ApiClient {
     );
   }
 
-  Future<List<InstallerVisitItem>> fetchServiceVisits(CustomerSession session) async {
-    final list = _asList(await _request('/api/v1/customer/services/track', token: session.accessToken));
+  Future<List<InstallerVisitItem>> fetchServiceVisits(CustomerSession session, {String? customerId}) async {
+    final list = _asList(await _request(_withCustomerId('/api/v1/customer/services/track', customerId), token: session.accessToken));
     return _sortByDateDesc(list.map((item) {
       final map = item as Map<String, dynamic>;
       return InstallerVisitItem(
@@ -599,10 +632,10 @@ class ApiClient {
     }).toList(), (item) => item.lastUpdateAt.isNotEmpty ? item.lastUpdateAt : item.createdAt);
   }
 
-  Future<BillingPaymentOrder> createBillingPaymentOrder(CustomerSession session, {double? amount}) async {
+  Future<BillingPaymentOrder> createBillingPaymentOrder(CustomerSession session, {String? customerId, double? amount}) async {
     final data = _asMap(
       await _request(
-        '/api/v1/customer/billing/payment/order',
+        _withCustomerId('/api/v1/customer/billing/payment/order', customerId),
         method: 'POST',
         token: session.accessToken,
         body: amount != null ? {'amount': amount} : const {},
@@ -652,13 +685,14 @@ class ApiClient {
 
   Future<void> verifyBillingPayment(
     CustomerSession session, {
+    String? customerId,
     required String orderId,
     required String paymentId,
     required String signature,
     required double amount,
   }) async {
     await _request(
-      '/api/v1/customer/billing/payment/verify',
+      _withCustomerId('/api/v1/customer/billing/payment/verify', customerId),
       method: 'POST',
       token: session.accessToken,
       body: {
@@ -695,13 +729,14 @@ class ApiClient {
 
   Future<String> createSupportTicket(
     CustomerSession session, {
+    String? customerId,
     required String category,
     required String subject,
     required String description,
   }) async {
     final data = _asMap(
       await _request(
-        '/api/v1/customer/tickets',
+        _withCustomerId('/api/v1/customer/tickets', customerId),
         method: 'POST',
         token: session.accessToken,
         body: {
@@ -716,12 +751,13 @@ class ApiClient {
 
   Future<String> createServiceRequest(
     CustomerSession session, {
+    String? customerId,
     required String type,
     required String note,
   }) async {
     final data = _asMap(
       await _request(
-        '/api/v1/customer/requests',
+        _withCustomerId('/api/v1/customer/requests', customerId),
         method: 'POST',
         token: session.accessToken,
         body: {
@@ -733,18 +769,18 @@ class ApiClient {
     return (data['requestNumber'] ?? '').toString();
   }
 
-  Future<void> pauseWifi(CustomerSession session, bool paused) async {
+  Future<void> pauseWifi(CustomerSession session, bool paused, {String? customerId}) async {
     await _request(
-      '/api/v1/customer/wifi/pause',
+      _withCustomerId('/api/v1/customer/wifi/pause', customerId),
       method: 'POST',
       token: session.accessToken,
       body: {'paused': paused},
     );
   }
 
-  Future<void> rebootDevice(CustomerSession session) async {
+  Future<void> rebootDevice(CustomerSession session, {String? customerId}) async {
     await _request(
-      '/api/v1/customer/device/reboot',
+      _withCustomerId('/api/v1/customer/device/reboot', customerId),
       method: 'POST',
       token: session.accessToken,
       body: const {},
@@ -753,20 +789,21 @@ class ApiClient {
 
   Future<void> setGuestWifi(
     CustomerSession session, {
+    String? customerId,
     required bool enabled,
     required String ssid,
     required String password,
   }) async {
     await _request(
-      '/api/v1/customer/wifi/guest',
+      _withCustomerId('/api/v1/customer/wifi/guest', customerId),
       method: 'POST',
       token: session.accessToken,
       body: {'enabled': enabled, 'ssid': ssid, 'password': password},
     );
   }
 
-  Future<List<ParentalRule>> fetchParentalRules(CustomerSession session) async {
-    final data = _asMap(await _request('/api/v1/customer/wifi/parental-controls', token: session.accessToken));
+  Future<List<ParentalRule>> fetchParentalRules(CustomerSession session, {String? customerId}) async {
+    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/wifi/parental-controls', customerId), token: session.accessToken));
     return _asList(data['rules']).map((item) {
       final map = item as Map<String, dynamic>;
       return ParentalRule(
@@ -780,12 +817,13 @@ class ApiClient {
 
   Future<void> addParentalRule(
     CustomerSession session, {
+    String? customerId,
     required String targetName,
     required String startTime,
     required String endTime,
   }) async {
     await _request(
-      '/api/v1/customer/wifi/parental-controls',
+      _withCustomerId('/api/v1/customer/wifi/parental-controls', customerId),
       method: 'POST',
       token: session.accessToken,
       body: {
@@ -805,19 +843,20 @@ class ApiClient {
 
   Future<void> setDeviceBlocked(
     CustomerSession session, {
+    String? customerId,
     required String clientId,
     required bool blocked,
   }) async {
     await _request(
-      '/api/v1/customer/device/access-control',
+      _withCustomerId('/api/v1/customer/device/access-control', customerId),
       method: 'POST',
       token: session.accessToken,
       body: {'clientId': clientId, 'blocked': blocked},
     );
   }
 
-  Future<List<PlanItem>> fetchPlanChangeOptions(CustomerSession session) async {
-    final data = _asMap(await _request('/api/v1/customer/plan/change-options', token: session.accessToken));
+  Future<List<PlanItem>> fetchPlanChangeOptions(CustomerSession session, {String? customerId}) async {
+    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/plan/change-options', customerId), token: session.accessToken));
     return _asList(data['options']).map((item) {
       final map = item as Map<String, dynamic>;
       return PlanItem(
@@ -851,12 +890,13 @@ class ApiClient {
 
   Future<String> submitPlanChangeRequest(
     CustomerSession session, {
+    String? customerId,
     required String planCode,
     required String effectiveMode,
   }) async {
     final data = _asMap(
       await _request(
-        '/api/v1/customer/plan/change-request',
+        _withCustomerId('/api/v1/customer/plan/change-request', customerId),
         method: 'POST',
         token: session.accessToken,
         body: {'planCode': planCode, 'effectiveMode': effectiveMode},
@@ -867,12 +907,13 @@ class ApiClient {
 
   Future<PlanChangePreview> previewPlanChange(
     CustomerSession session, {
+    String? customerId,
     required String planCode,
     required String effectiveMode,
   }) async {
     final data = _asMap(
       await _request(
-        '/api/v1/customer/plan/change/preview',
+        _withCustomerId('/api/v1/customer/plan/change/preview', customerId),
         method: 'POST',
         token: session.accessToken,
         body: {'planCode': planCode, 'effectiveMode': effectiveMode},
@@ -895,12 +936,13 @@ class ApiClient {
 
   Future<PlanChangeApplyResult> applyPlanChange(
     CustomerSession session, {
+    String? customerId,
     required String planCode,
     required String effectiveMode,
   }) async {
     final data = _asMap(
       await _request(
-        '/api/v1/customer/plan/change/apply',
+        _withCustomerId('/api/v1/customer/plan/change/apply', customerId),
         method: 'POST',
         token: session.accessToken,
         body: {'planCode': planCode, 'effectiveMode': effectiveMode},
@@ -917,8 +959,8 @@ class ApiClient {
     );
   }
 
-  Future<SpeedTestData> fetchSpeedTest(CustomerSession session) async {
-    final data = _asMap(await _request('/api/v1/customer/network/speed-test', token: session.accessToken));
+  Future<SpeedTestData> fetchSpeedTest(CustomerSession session, {String? customerId}) async {
+    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/network/speed-test', customerId), token: session.accessToken));
     return SpeedTestData(
       downloadMbps: double.tryParse('${data['downloadMbps'] ?? 0}') ?? 0,
       uploadMbps: double.tryParse('${data['uploadMbps'] ?? 0}') ?? 0,
@@ -928,8 +970,8 @@ class ApiClient {
     );
   }
 
-  Future<NetworkQualityData> fetchNetworkQuality(CustomerSession session) async {
-    final data = _asMap(await _request('/api/v1/customer/network/quality', token: session.accessToken));
+  Future<NetworkQualityData> fetchNetworkQuality(CustomerSession session, {String? customerId}) async {
+    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/network/quality', customerId), token: session.accessToken));
     return NetworkQualityData(
       latencyMs: double.tryParse('${data['latencyMs'] ?? 0}') ?? 0,
       packetLossPercent: double.tryParse('${data['packetLossPercent'] ?? 0}') ?? 0,

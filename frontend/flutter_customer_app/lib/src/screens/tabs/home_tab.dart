@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
+import '../../core/models.dart';
 import '../../widgets/app_card.dart';
 import '../billing_payment_screen.dart';
 import '../booking_flow_screen.dart';
@@ -19,6 +20,14 @@ class HomeTab extends StatelessWidget {
     final billing = appState.billing;
     final wifi = appState.wifi;
     final latestBooking = appState.latestBooking;
+    final connections = appState.connections;
+    CustomerConnection? selectedConnection;
+    for (final item in connections) {
+      if (item.customerId == appState.selectedCustomerId) {
+        selectedConnection = item;
+        break;
+      }
+    }
     final displayName = dashboard.customerName.isEmpty ? 'JustFiber Customer' : dashboard.customerName;
     final planName = billing.currentPlan.isNotEmpty ? billing.currentPlan : (dashboard.planName.isNotEmpty ? dashboard.planName : 'No active plan yet');
     final wifiName = wifi.ssid24.isNotEmpty ? wifi.ssid24 : (dashboard.wifiName.isNotEmpty ? dashboard.wifiName : 'Wi-Fi not configured');
@@ -141,6 +150,107 @@ class HomeTab extends StatelessWidget {
             ],
           ),
         ),
+        if (connections.length > 1) ...[
+          const SizedBox(height: 18),
+          _lightPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'My connections',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Switch between all broadband connections linked to this mobile number.',
+                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  height: 146,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: connections.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (_, index) {
+                      final item = connections[index];
+                      final selected = item.customerId == appState.selectedCustomerId;
+                      return GestureDetector(
+                        onTap: () => appState.selectConnection(item.customerId),
+                        child: Container(
+                          width: 240,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: selected ? const Color(0xFFF8F4FF) : const Color(0xFFFFFFFF),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x228224E3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item.planName.isEmpty ? 'Connection' : item.planName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                  if (selected)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF8224E3),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: const Text('Active', style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800, fontSize: 11)),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                item.serviceId.isEmpty ? item.customerId : item.serviceId,
+                                style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
+                              ),
+                              const Spacer(),
+                              Text(
+                                item.address.isEmpty ? 'Address unavailable' : item.address,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Due Rs ${item.dueAmount.toStringAsFixed(0)}',
+                                      style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                  Text(
+                                    item.status.toUpperCase(),
+                                    style: TextStyle(
+                                      color: item.status == 'active' ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 18),
         _lightPanel(
           child: Column(
@@ -175,7 +285,9 @@ class HomeTab extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                hasService ? '$planName | $wifiName' : 'No active connection yet. Start with a new booking.',
+                hasService
+                    ? '${selectedConnection?.serviceId.isNotEmpty == true ? '${selectedConnection!.serviceId} • ' : ''}$planName | $wifiName'
+                    : 'No active connection yet. Start with a new booking.',
                 style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
               ),
               const SizedBox(height: 18),

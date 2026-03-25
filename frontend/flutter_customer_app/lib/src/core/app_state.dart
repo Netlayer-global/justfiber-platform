@@ -11,6 +11,7 @@ const defaultApiBase = String.fromEnvironment(
 const _mobileKey = 'justfiber.mobile';
 const _accessTokenKey = 'justfiber.access_token';
 const _refreshTokenKey = 'justfiber.refresh_token';
+const _selectedCustomerIdKey = 'justfiber.selected_customer_id';
 const _latestBookingNumberKey = 'justfiber.latest_booking_number';
 const _latestBookingMobileKey = 'justfiber.latest_booking_mobile';
 const _latestBookingPlanKey = 'justfiber.latest_booking_plan';
@@ -25,6 +26,8 @@ class AppState extends ChangeNotifier {
   final api = ApiClient(baseUrl: defaultApiBase);
 
   CustomerSession? session;
+  List<CustomerConnection> connections = const [];
+  String? selectedCustomerId;
   bool busy = false;
   bool restoringSession = true;
   String? error;
@@ -119,6 +122,8 @@ class AppState extends ChangeNotifier {
     final preservedTracking = preserveGuestBooking ? bookingTracking : null;
     final preservedLookupMobile = preserveGuestBooking ? latestBookingLookupMobile : null;
     session = null;
+    connections = const [];
+    selectedCustomerId = null;
     error = null;
     dashboard = const DashboardData(
       customerName: '',
@@ -224,6 +229,8 @@ class AppState extends ChangeNotifier {
       await prefs.setString(_mobileKey, session!.mobile);
       await prefs.setString(_accessTokenKey, session!.accessToken);
       await prefs.setString(_refreshTokenKey, session!.refreshToken);
+      await prefs.remove(_selectedCustomerIdKey);
+      selectedCustomerId = null;
       await refresh();
       return true;
     } catch (e) {
@@ -244,27 +251,34 @@ class AppState extends ChangeNotifier {
     String? firstError;
     try {
       try {
-        dashboard = await api.fetchDashboard(current);
+        final connectionResult = await api.fetchConnections(current, selectedCustomerId: selectedCustomerId);
+        selectedCustomerId = connectionResult.$1;
+        connections = connectionResult.$2;
       } catch (e) {
         firstError ??= e.toString();
       }
       try {
-        wifi = await api.fetchWifi(current);
+        dashboard = await api.fetchDashboard(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
       try {
-        billing = await api.fetchBilling(current);
+        wifi = await api.fetchWifi(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
       try {
-        requests = await api.fetchRequests(current);
+        billing = await api.fetchBilling(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
       try {
-        tickets = await api.fetchTickets(current);
+        requests = await api.fetchRequests(current, customerId: selectedCustomerId);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        tickets = await api.fetchTickets(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
@@ -284,12 +298,12 @@ class AppState extends ChangeNotifier {
         firstError ??= e.toString();
       }
       try {
-        connectedDevices = await api.fetchConnectedDevices(current);
+        connectedDevices = await api.fetchConnectedDevices(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
       try {
-        installerVisits = await api.fetchServiceVisits(current);
+        installerVisits = await api.fetchServiceVisits(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
@@ -302,22 +316,22 @@ class AppState extends ChangeNotifier {
         }
       }
       try {
-        parentalRules = await api.fetchParentalRules(current);
+        parentalRules = await api.fetchParentalRules(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
       try {
-        speedTest = await api.fetchSpeedTest(current);
+        speedTest = await api.fetchSpeedTest(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
       try {
-        networkQuality = await api.fetchNetworkQuality(current);
+        networkQuality = await api.fetchNetworkQuality(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
       try {
-        planChangeOptions = await api.fetchPlanChangeOptions(current);
+        planChangeOptions = await api.fetchPlanChangeOptions(current, customerId: selectedCustomerId);
       } catch (e) {
         firstError ??= e.toString();
       }
@@ -363,6 +377,15 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> selectConnection(String customerId) async {
+    final normalized = customerId.trim();
+    if (normalized.isEmpty || normalized == selectedCustomerId) return;
+    selectedCustomerId = normalized;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_selectedCustomerIdKey, normalized);
+    await refresh();
+  }
+
   Future<bool> createBooking({
     required String planCode,
     required String fullName,
@@ -405,7 +428,7 @@ class AppState extends ChangeNotifier {
       await _persistLatestBookingCache();
       if (current != null) {
         bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
-        installerVisits = await api.fetchServiceVisits(current);
+        installerVisits = await api.fetchServiceVisits(current, customerId: selectedCustomerId);
         await _syncLatestBookingWithTracking();
       } else if (latestBookingLookupMobile != null && latestBookingLookupMobile!.isNotEmpty) {
         bookingTracking = await api.fetchPublicBookingTracking(
@@ -461,7 +484,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.updateWifi(current, password: password, ssid24: wifi.ssid24, ssid5: wifi.ssid5);
+      await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: wifi.ssid24, ssid5: wifi.ssid5);
       await refresh();
     } catch (e) {
       error = e.toString();
@@ -482,7 +505,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.updateWifi(current, password: password, ssid24: ssid24, ssid5: ssid5);
+      await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: ssid24, ssid5: ssid5);
       await refresh();
       return true;
     } catch (e) {
@@ -526,10 +549,10 @@ class AppState extends ChangeNotifier {
     final bookingNumber = latestBooking?.bookingNumber;
     try {
       if (current != null) {
-        installerVisits = await api.fetchServiceVisits(current);
+        installerVisits = await api.fetchServiceVisits(current, customerId: selectedCustomerId);
         notifications = await api.fetchNotifications(current);
-        requests = await api.fetchRequests(current);
-        tickets = await api.fetchTickets(current);
+        requests = await api.fetchRequests(current, customerId: selectedCustomerId);
+        tickets = await api.fetchTickets(current, customerId: selectedCustomerId);
         if ((bookingNumber ?? '').isNotEmpty) {
           bookingTracking = await api.fetchBookingTracking(current, bookingNumber!);
           await _syncLatestBookingWithTracking();
@@ -564,6 +587,7 @@ class AppState extends ChangeNotifier {
     try {
       await api.verifyBillingPayment(
         current,
+        customerId: selectedCustomerId,
         orderId: orderId,
         paymentId: paymentId,
         signature: signature,
@@ -611,7 +635,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      billingPaymentOrder = await api.createBillingPaymentOrder(current, amount: amount);
+      billingPaymentOrder = await api.createBillingPaymentOrder(current, customerId: selectedCustomerId, amount: amount);
       return billingPaymentOrder;
     } catch (e) {
       error = e.toString();
@@ -687,7 +711,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.pauseWifi(current, paused);
+      await api.pauseWifi(current, paused, customerId: selectedCustomerId);
       await refresh();
       return true;
     } catch (e) {
@@ -706,7 +730,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.rebootDevice(current);
+      await api.rebootDevice(current, customerId: selectedCustomerId);
       await refresh();
       return true;
     } catch (e) {
@@ -729,7 +753,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.setGuestWifi(current, enabled: enabled, ssid: ssid, password: password);
+      await api.setGuestWifi(current, customerId: selectedCustomerId, enabled: enabled, ssid: ssid, password: password);
       await refresh();
       return true;
     } catch (e) {
@@ -752,7 +776,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.addParentalRule(current, targetName: targetName, startTime: startTime, endTime: endTime);
+      await api.addParentalRule(current, customerId: selectedCustomerId, targetName: targetName, startTime: startTime, endTime: endTime);
       await refresh();
       return true;
     } catch (e) {
@@ -771,7 +795,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.setDeviceBlocked(current, clientId: clientId, blocked: blocked);
+      await api.setDeviceBlocked(current, customerId: selectedCustomerId, clientId: clientId, blocked: blocked);
       await refresh();
       return true;
     } catch (e) {
@@ -796,6 +820,7 @@ class AppState extends ChangeNotifier {
     try {
       final ticketNumber = await api.createSupportTicket(
         current,
+        customerId: selectedCustomerId,
         category: category,
         subject: subject,
         description: description,
@@ -823,6 +848,7 @@ class AppState extends ChangeNotifier {
     try {
       final requestNumber = await api.createServiceRequest(
         current,
+        customerId: selectedCustomerId,
         type: type,
         note: note,
       );
@@ -849,6 +875,7 @@ class AppState extends ChangeNotifier {
     try {
       final result = await api.applyPlanChange(
         current,
+        customerId: selectedCustomerId,
         planCode: planCode,
         effectiveMode: effectiveMode,
       );
@@ -876,6 +903,7 @@ class AppState extends ChangeNotifier {
     try {
       planChangePreview = await api.previewPlanChange(
         current,
+        customerId: selectedCustomerId,
         planCode: planCode,
         effectiveMode: effectiveMode,
       );
@@ -894,6 +922,7 @@ class AppState extends ChangeNotifier {
       prefs.remove(_mobileKey);
       prefs.remove(_accessTokenKey);
       prefs.remove(_refreshTokenKey);
+      prefs.remove(_selectedCustomerIdKey);
       prefs.remove(_latestBookingNumberKey);
       prefs.remove(_latestBookingMobileKey);
       prefs.remove(_latestBookingPlanKey);
@@ -914,6 +943,7 @@ class AppState extends ChangeNotifier {
       final mobile = prefs.getString(_mobileKey);
       final accessToken = prefs.getString(_accessTokenKey);
       final refreshToken = prefs.getString(_refreshTokenKey);
+      selectedCustomerId = prefs.getString(_selectedCustomerIdKey);
       final latestBookingNumber = prefs.getString(_latestBookingNumberKey);
       final latestBookingMobile = prefs.getString(_latestBookingMobileKey);
       if ((latestBookingNumber ?? '').isNotEmpty) {

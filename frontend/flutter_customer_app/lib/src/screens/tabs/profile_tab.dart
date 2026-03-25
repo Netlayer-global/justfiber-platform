@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
+import '../../core/models.dart';
 import '../../widgets/app_card.dart';
 
 class ProfileTab extends StatelessWidget {
@@ -13,6 +14,14 @@ class ProfileTab extends StatelessWidget {
     final dashboard = appState.dashboard;
     final wifi = appState.wifi;
     final theme = Theme.of(context);
+    final connections = appState.connections;
+    CustomerConnection? selectedConnection;
+    for (final item in connections) {
+      if (item.customerId == appState.selectedCustomerId) {
+        selectedConnection = item;
+        break;
+      }
+    }
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -76,6 +85,79 @@ class ProfileTab extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 18),
+        if (connections.length > 1) ...[
+          _sectionCard(
+            title: 'My connections',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Use one login to manage all linked broadband connections.',
+                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                for (final item in connections)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () => appState.selectConnection(item.customerId),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: item.customerId == appState.selectedCustomerId ? const Color(0xFFF8F4FF) : const Color(0xFFFFFFFF),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: item.customerId == appState.selectedCustomerId ? const Color(0xFF8224E3) : const Color(0x228224E3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.planName.isEmpty ? item.customerId : item.planName,
+                                    style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.serviceId.isEmpty ? item.customerId : item.serviceId,
+                                    style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.address.isEmpty ? 'Address unavailable' : item.address,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (item.customerId == appState.selectedCustomerId)
+                                  const Text('Active', style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800)),
+                                Text(
+                                  'Rs ${item.dueAmount.toStringAsFixed(0)}',
+                                  style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+        ],
         _sectionCard(
           title: 'Account information',
           child: Column(
@@ -83,6 +165,7 @@ class ProfileTab extends StatelessWidget {
             children: [
               _row('Customer name', dashboard.customerName.isEmpty ? '-' : dashboard.customerName),
               _row('Registered mobile', appState.session?.mobile ?? '-'),
+              _row('Connection ID', selectedConnection?.serviceId.isEmpty == false ? selectedConnection!.serviceId : '-'),
               _row('Connection name', dashboard.wifiName.isEmpty ? '-' : dashboard.wifiName),
               _row('Current plan', billing.currentPlan.isEmpty ? '-' : billing.currentPlan),
               _row('Billing mode', billing.billMode.isEmpty ? '-' : billing.billMode),

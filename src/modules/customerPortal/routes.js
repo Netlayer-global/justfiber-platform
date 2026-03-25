@@ -437,17 +437,38 @@ async function getOwnedLinkedCustomer({ customerUser, requestedCustomerId }) {
   return customer;
 }
 
-async function getLinkedCustomerAndDevice(customerUser) {
-  const customerId = customerUser.linkedCustomerIds?.[0];
-  if (!customerId) {
-    throw new ApiError(404, "Linked customer not found");
-  }
-  const customer = await Customer.findOne({ customerId });
-  if (!customer) {
-    throw new ApiError(404, "Customer not found");
-  }
-  const device = await DeviceOperationalCache.findOne({ customerId });
+function getRequestedCustomerId(req) {
+  return String(req.query.customerId || "").trim() || null;
+}
+
+async function getLinkedCustomerAndDevice({ customerUser, requestedCustomerId }) {
+  const customer = await getOwnedLinkedCustomer({ customerUser, requestedCustomerId });
+  const device = await DeviceOperationalCache.findOne({ customerId: customer.customerId });
   return { customer, device };
+}
+
+async function buildCustomerConnectionSummary(customer) {
+  const device = await DeviceOperationalCache.findOne({ customerId: customer.customerId }).lean();
+  return {
+    customerId: customer.customerId,
+    serviceId: customer.serviceId || "",
+    accountNumber: customer.accountNumber || "",
+    fullName: customer.fullName || "",
+    mobile: customer.phone || "",
+    email: customer.email || "",
+    planName: customer.planName || "",
+    status: customer.operationalStatus || "unknown",
+    dueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
+    paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown",
+    billMode: customer.billingSnapshot?.billMode || "",
+    wifiName: device?.wifiInfo?.ssid24 || device?.wifiInfo?.ssid5 || "",
+    onlineStatus: device?.onlineStatus || "unknown",
+    address:
+      customer.address?.fullAddress
+      || customer.address?.line1
+      || customer.address?.address
+      || "",
+  };
 }
 
 function getConnectedDevices(device) {
@@ -1580,10 +1601,45 @@ customerPortalRouter.post(
 );
 
 customerPortalRouter.get(
+  "/connections",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const linkedIds = req.customerUser.linkedCustomerIds || [];
+    if (!linkedIds.length) {
+      return ok(res, {
+        selectedCustomerId: null,
+        connections: []
+      });
+    }
+    const requestedCustomerId = getRequestedCustomerId(req);
+    const customers = await Customer.find({ customerId: { $in: linkedIds } }).sort({ updatedAt: -1, createdAt: -1 }).lean();
+    const byId = new Map(customers.map((item) => [item.customerId, item]));
+    const ordered = linkedIds.map((id) => byId.get(id)).filter(Boolean);
+    const connections = [];
+    for (const customer of ordered) {
+      connections.push(await buildCustomerConnectionSummary(customer));
+    }
+    const selectedCustomerId =
+      requestedCustomerId && linkedIds.includes(requestedCustomerId)
+        ? requestedCustomerId
+        : (connections[0]?.customerId || null);
+    return ok(res, {
+      selectedCustomerId,
+      connections
+    });
+  })
+);
+
+customerPortalRouter.get(
   "/dashboard",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const existingCustomerId = req.customerUser.linkedCustomerIds?.[0];
+    const linkedIds = req.customerUser.linkedCustomerIds || [];
+    const requestedCustomerId = getRequestedCustomerId(req);
+    const existingCustomerId =
+      requestedCustomerId && linkedIds.includes(requestedCustomerId)
+        ? requestedCustomerId
+        : linkedIds[0];
     if (!existingCustomerId) {
       const latestBooking = await ConnectionBooking.findOne({ customerUserId: req.customerUser._id }).sort({ createdAt: -1 }).lean();
       return ok(res, {
@@ -1599,7 +1655,15 @@ customerPortalRouter.get(
     return ok(res, {
       state: "active_customer",
       customerId: customer.customerId,
+      serviceId: customer.serviceId || "",
       currentPlan: customer.planName,
+      fullName: customer.fullName,
+      mobile: customer.phone || "",
+      address:
+        customer.address?.fullAddress
+        || customer.address?.line1
+        || customer.address?.address
+        || "",
       remainingDays: customer.expiryAt ? Math.max(0, Math.ceil((new Date(customer.expiryAt) - Date.now()) / (1000 * 60 * 60 * 24))) : null,
       billDueAmount: customer.billingSnapshot?.lastInvoiceAmount || 0,
       dataLeftMb: 0,
@@ -1615,8 +1679,14 @@ customerPortalRouter.get(
   "/services/track",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
+    const requestedCustomerId = getRequestedCustomerId(req);
+    const linkedCustomerIds = req.customerUser.linkedCustomerIds || [];
+    const customerIds =
+      requestedCustomerId && linkedCustomerIds.includes(requestedCustomerId)
+        ? [requestedCustomerId]
+        : linkedCustomerIds;
     const jobs = await InstallerJob.find({
-      customerId: { $in: req.customerUser.linkedCustomerIds || [] }
+      customerId: { $in: customerIds }
     })
       .populate("installerId", "fullName username phone")
       .sort({ createdAt: -1 })
@@ -1997,7 +2067,10 @@ customerPortalRouter.get(
   "/billing/details",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customerId: req.customerUser.linkedCustomerIds?.[0] }).lean();
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    }).then((item) => item.toObject ? item.toObject() : item);
     if (!customer) {
       throw new ApiError(404, "Billing details not available");
     }
@@ -2120,7 +2193,10 @@ customerPortalRouter.get(
   "/billing/summary",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customerId: req.customerUser.linkedCustomerIds?.[0] }).lean();
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    }).then((item) => item.toObject ? item.toObject() : item);
     if (!customer) {
       throw new ApiError(404, "Billing summary not available");
     }
@@ -2142,7 +2218,10 @@ customerPortalRouter.get(
   "/wifi",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     return ok(res, {
       sameSsidMode: true,
       ssid24: device?.wifiInfo?.ssid24Masked || "JustFiber",
@@ -2164,7 +2243,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = wifiUpdateSchema.parse(req.body);
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2231,7 +2313,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = wifiPauseSchema.parse(req.body);
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2255,7 +2340,10 @@ customerPortalRouter.get(
   "/wifi/guest",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     return ok(res, {
       enabled: Boolean(device?.wifiInfo?.guestWifiEnabled),
       ssid: device?.wifiInfo?.guestSsid || "JustFiber-Guest",
@@ -2269,7 +2357,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = guestWifiSchema.parse(req.body);
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2296,7 +2387,10 @@ customerPortalRouter.get(
   "/wifi/parental-controls",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     return ok(res, {
       rules: device?.lanInfo?.parentalControls || []
     });
@@ -2308,7 +2402,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = parentalControlSchema.parse(req.body);
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2334,7 +2431,10 @@ customerPortalRouter.post(
   "/device/reboot",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2351,7 +2451,10 @@ customerPortalRouter.get(
   "/device/connected-devices",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2365,7 +2468,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = deviceAccessSchema.parse(req.body);
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2449,7 +2555,10 @@ customerPortalRouter.get(
   "/plan/change-options",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customerId: req.customerUser.linkedCustomerIds?.[0] }).lean();
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    }).then((item) => item.toObject ? item.toObject() : item);
     const plans = await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean();
     return ok(res, {
       currentPlanCode: customer?.planCode || null,
@@ -2463,6 +2572,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = planChangeSchema.parse(req.body);
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
     if (!plan) {
       throw new ApiError(404, "Plan not found");
@@ -2470,8 +2583,8 @@ customerPortalRouter.post(
     const request = await ServiceRequest.create({
       requestNumber: `SR${Date.now().toString().slice(-6)}`,
       customerUserId: req.customerUser._id,
-      customerId: req.customerUser.linkedCustomerIds?.[0],
-      serviceId: req.customerUser.linkedCustomerIds?.[0],
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
       type: "plan_change",
       status: "open",
       payload: {
@@ -2500,7 +2613,10 @@ customerPortalRouter.post(
   "/help/diagnose",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2571,7 +2687,10 @@ customerPortalRouter.get(
   "/network/speed-test",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2591,7 +2710,10 @@ customerPortalRouter.get(
   "/network/quality",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const { customer, device } = await getLinkedCustomerAndDevice(req.customerUser);
+    const { customer, device } = await getLinkedCustomerAndDevice({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
@@ -2611,7 +2733,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = planChangeSchema.parse(req.body);
-    const customer = await getOwnedLinkedCustomer({ customerUser: req.customerUser });
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
     if (!plan) {
       throw new ApiError(404, "Plan not found");
@@ -2633,7 +2758,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = planChangeSchema.parse(req.body);
-    const customer = await getOwnedLinkedCustomer({ customerUser: req.customerUser });
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
     if (!plan) {
       throw new ApiError(404, "Plan not found");
@@ -2821,7 +2949,10 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = supportTicketSchema.parse(req.body);
-    const customer = await Customer.findOne({ customerId: req.customerUser.linkedCustomerIds?.[0] }).lean();
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    }).then((item) => item.toObject ? item.toObject() : item);
     const ticket = await SupportTicket.create({
       ticketNumber: `TKT-${Date.now()}`,
       customerId: customer?.customerId || "UNLINKED",
@@ -2842,7 +2973,13 @@ customerPortalRouter.get(
   "/tickets",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const items = await SupportTicket.find({ customerId: { $in: req.customerUser.linkedCustomerIds || [] } }).sort({ createdAt: -1 }).lean();
+    const requestedCustomerId = getRequestedCustomerId(req);
+    const linkedCustomerIds = req.customerUser.linkedCustomerIds || [];
+    const customerIds =
+      requestedCustomerId && linkedCustomerIds.includes(requestedCustomerId)
+        ? [requestedCustomerId]
+        : linkedCustomerIds;
+    const items = await SupportTicket.find({ customerId: { $in: customerIds } }).sort({ createdAt: -1 }).lean();
     return ok(res, items);
   })
 );
@@ -2851,7 +2988,12 @@ customerPortalRouter.get(
   "/requests",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
-    const items = await ServiceRequest.find({ customerUserId: req.customerUser._id }).sort({ createdAt: -1 }).lean();
+    const requestedCustomerId = getRequestedCustomerId(req);
+    const filter = {
+      customerUserId: req.customerUser._id,
+      ...(requestedCustomerId ? { customerId: requestedCustomerId } : {})
+    };
+    const items = await ServiceRequest.find(filter).sort({ createdAt: -1 }).lean();
     return ok(res, items);
   })
 );
@@ -2861,10 +3003,15 @@ customerPortalRouter.post(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const payload = serviceRequestSchema.parse(req.body);
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
     const request = await ServiceRequest.create({
       requestNumber: `SR${Date.now().toString().slice(-6)}`,
       customerUserId: req.customerUser._id,
-      customerId: req.customerUser.linkedCustomerIds?.[0],
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
       type: payload.type,
       status: "open",
       payload: { note: payload.note, ...(payload.payload || {}) },

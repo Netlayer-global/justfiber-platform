@@ -10,6 +10,40 @@ class CustomerSession {
   final String refreshToken;
 }
 
+class CustomerConnection {
+  const CustomerConnection({
+    required this.customerId,
+    required this.serviceId,
+    required this.accountNumber,
+    required this.fullName,
+    required this.mobile,
+    required this.email,
+    required this.planName,
+    required this.status,
+    required this.dueAmount,
+    required this.paymentStatus,
+    required this.billMode,
+    required this.wifiName,
+    required this.onlineStatus,
+    required this.address,
+  });
+
+  final String customerId;
+  final String serviceId;
+  final String accountNumber;
+  final String fullName;
+  final String mobile;
+  final String email;
+  final String planName;
+  final String status;
+  final double dueAmount;
+  final String paymentStatus;
+  final String billMode;
+  final String wifiName;
+  final String onlineStatus;
+  final String address;
+}
+
 class DashboardData {
   const DashboardData({
     required this.customerName,
