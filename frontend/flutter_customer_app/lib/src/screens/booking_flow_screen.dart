@@ -984,6 +984,27 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     'Select your plan, confirm address, and create a live booking with an exact install map pin.',
                     style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
                   ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F4FF),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0x228224E3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.verified_user_rounded, size: 18, color: Color(0xFF8224E3)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Secure booking, live feasibility, and slot confirmation in one flow.',
+                            style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w600, height: 1.35),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1141,32 +1162,51 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   Widget _stepper() {
     final labels = ['Address', 'Select Plan', 'Duration', 'Checkout', 'Confirm'];
-    return Row(
-      children: List.generate(labels.length, (index) {
-        final active = index <= step;
-        return Expanded(
-          child: Column(
-            children: [
-              Container(
-                height: 4,
-                margin: EdgeInsets.only(left: index == 0 ? 24 : 0, right: index == labels.length - 1 ? 24 : 0),
-                decoration: BoxDecoration(
-                  color: active ? const Color(0xFF8224E3) : const Color(0xFF1F2937),
-                  borderRadius: BorderRadius.circular(99),
-                ),
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Step ${step + 1} of ${labels.length}',
+                style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 10),
-              Text(
-                labels[index],
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: active ? const Color(0xFF131313) : const Color(0xFF6B7280),
-                ),
+            ),
+            Text(
+              labels[step],
+              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: List.generate(labels.length, (index) {
+            final active = index <= step;
+            return Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    height: 4,
+                    margin: EdgeInsets.only(left: index == 0 ? 24 : 0, right: index == labels.length - 1 ? 24 : 0),
+                    decoration: BoxDecoration(
+                      color: active ? const Color(0xFF8224E3) : const Color(0xFFD7D3D0),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    labels[index],
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: active ? const Color(0xFF131313) : const Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      }),
+            );
+          }),
+        ),
+      ],
     );
   }
 

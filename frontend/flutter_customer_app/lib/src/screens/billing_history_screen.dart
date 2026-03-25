@@ -231,7 +231,7 @@ class BillingHistoryScreen extends StatelessWidget {
                                 },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF8224E3),
-                                  backgroundColor: const Color(0xFF0F141D),
+                                  backgroundColor: const Color(0xFFFFFFFF),
                                   side: const BorderSide(color: Color(0x668224E3)),
                                 ),
                                 child: const Text('Need help'),
@@ -288,6 +288,47 @@ class BillingHistoryScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F4FF),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0x228224E3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFFFF),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0x228224E3)),
+                        ),
+                        child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF8224E3)),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Need a full payment record?',
+                              style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Open receipts, invoices, and payment history from the sections below.',
+                              style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
