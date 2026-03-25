@@ -86,8 +86,28 @@ async function request<T>(
     window?.location.replace('/auth/login')
   }
 
-  const data = await response.json()
-  return data
+  let data: any
+  try {
+    data = await response.json()
+  } catch {
+    return {
+      success: false,
+      error: 'Invalid server response',
+    }
+  }
+
+  const normalizedError =
+    typeof data?.error === 'string'
+      ? data.error
+      : data?.error?.message ||
+        data?.message ||
+        (Array.isArray(data?.error?.details) ? data.error.details.join(', ') : undefined) ||
+        undefined
+
+  return {
+    ...data,
+    ...(normalizedError ? { error: normalizedError } : {}),
+  }
 }
 
 function mapPlan(plan: any): Plan {
