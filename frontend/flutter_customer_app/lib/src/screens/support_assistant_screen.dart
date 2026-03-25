@@ -298,6 +298,14 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = AppStateScope.of(context);
+    CustomerConnection? selectedConnection;
+    for (final item in appState.connections) {
+      if (item.customerId == appState.selectedCustomerId) {
+        selectedConnection = item;
+        break;
+      }
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF7F3FF),
       appBar: AppBar(
@@ -324,12 +332,16 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                itemCount: _messages.length + (_loading ? 1 : 0),
+                itemCount: (selectedConnection == null ? 0 : 1) + _messages.length + (_loading ? 1 : 0),
                 itemBuilder: (context, index) {
-                  if (_loading && index == _messages.length) {
+                  if (selectedConnection != null && index == 0) {
+                    return _connectionCard(selectedConnection);
+                  }
+                  final messageIndex = index - (selectedConnection == null ? 0 : 1);
+                  if (_loading && messageIndex == _messages.length) {
                     return _assistantTypingBubble();
                   }
-                  final message = _messages[index];
+                  final message = _messages[messageIndex];
                   return _chatBubble(message);
                 },
               ),
@@ -482,6 +494,78 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _connectionCard(CustomerConnection connection) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0x228224E3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'ACTIVE CONNECTION',
+              style: TextStyle(
+                color: Color(0xFF8224E3),
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.2,
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              connection.planName.isEmpty ? 'Broadband connection' : connection.planName,
+              style: const TextStyle(
+                color: Color(0xFF131313),
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              connection.address.isEmpty ? connection.serviceId : connection.address,
+              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _connectionPill('Service', connection.serviceId.isEmpty ? connection.customerId : connection.serviceId),
+                _connectionPill('Status', connection.status.isEmpty ? '-' : connection.status),
+                _connectionPill('Online', connection.onlineStatus.isEmpty ? 'unknown' : connection.onlineStatus),
+                _connectionPill(
+                  'Due',
+                  connection.dueAmount > 0 ? 'Rs ${connection.dueAmount.toStringAsFixed(0)}' : 'clear',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _connectionPill(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
       ),
     );
   }
