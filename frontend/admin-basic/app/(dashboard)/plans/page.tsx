@@ -163,6 +163,17 @@ function buildWifiPreview(form: PlanFormState) {
   return `${prefix}-Home-2.4G / ${prefix}-Home-5G`
 }
 
+function provisioningIssues(form: PlanFormState) {
+  if (form.status === 'inactive') return []
+  const issues: string[] = []
+  if (!form.accessProfileCode.trim()) issues.push('Access profile code missing')
+  if (!(Number(form.vlanId || 0) > 0)) issues.push('VLAN ID missing')
+  if (!form.pppoePrefix.trim()) issues.push('PPPoE prefix missing')
+  if (!form.defaultPppoePassword.trim()) issues.push('Default PPPoE password missing')
+  if (!form.wifiNamePrefix.trim()) issues.push('Wi-Fi SSID prefix missing')
+  return issues
+}
+
 function renderCategoryLabel(category?: Plan['category']) {
   switch (category) {
     case 'business':
@@ -299,6 +310,8 @@ export default function PlansPage() {
     null
 
   const preview = editingPlanId ? form : toForm(selectedPlan)
+  const currentProvisioningIssues = provisioningIssues(preview)
+  const provisioningReady = currentProvisioningIssues.length === 0
 
   function beginCreate() {
     setEditingPlanId(null)
@@ -698,6 +711,11 @@ export default function PlansPage() {
               <input className="input" placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
               <input className="input" placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
             </div>
+            {!provisioningReady ? (
+              <div className="mt-4 rounded-[18px] border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
+                {currentProvisioningIssues.join(' | ')}
+              </div>
+            ) : null}
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
@@ -707,6 +725,11 @@ export default function PlansPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
+            {!provisioningReady ? (
+              <div className="rounded-[18px] border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
+                Active plan publish karne se pehle provisioning fields complete karo.
+              </div>
+            ) : null}
             <button type="submit" disabled={isSaving} className="btn-primary">
               {isSaving ? 'Saving...' : editingPlanId ? 'Update plan' : 'Create plan'}
             </button>
@@ -759,6 +782,9 @@ export default function PlansPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em] ${provisioningReady ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-amber-300/30 bg-amber-300/10 text-amber-100'}`}>
+                  {provisioningReady ? 'Provisioning ready' : 'Provisioning incomplete'}
+                </span>
                 {preview.featured ? <span className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#8224E3]">Featured</span> : null}
                 {preview.recommended ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Recommended</span> : null}
                 {preview.spotlightLabel.trim().length > 0 ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.spotlightLabel}</span> : null}
@@ -838,6 +864,9 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between"><span>GST mode</span><span>{preview.pricesExcludeGst ? 'Exclusive' : 'Inclusive / retail'}</span></div>
                     <div className="flex items-center justify-between"><span>Launch lane</span><span>#{preview.sortOrder || '1'}</span></div>
                     <div className="flex items-center justify-between"><span>Router rental</span><span>{preview.routerIncluded ? formatCurrency(Number(preview.routerRental || 0)) : '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' ? 'Visible' : 'Hidden'}</span></div>
+                    <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' ? 'Visible' : 'Hidden'}</span></div>
+                    <div className="flex items-center justify-between"><span>Provisioning</span><span>{provisioningReady ? 'Ready' : 'Blocked'}</span></div>
                   </div>
                 </div>
               </div>

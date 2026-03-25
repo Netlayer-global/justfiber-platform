@@ -126,6 +126,27 @@ export const adminCatalogRouter = Router();
 
 adminCatalogRouter.use(requireAuth);
 
+function normalizePlanCode(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "-");
+}
+
+function ensureActivePlanProvisioning(payload) {
+  if (payload.active === false) return;
+  const provisioning = payload.provisioning || {};
+  const missing = [];
+  if (!String(provisioning.accessProfileCode || "").trim()) missing.push("accessProfileCode");
+  if (!(Number(provisioning.vlanId || 0) > 0)) missing.push("vlanId");
+  if (!String(provisioning.pppoePrefix || "").trim()) missing.push("pppoePrefix");
+  if (!String(provisioning.defaultPppoePassword || "").trim()) missing.push("defaultPppoePassword");
+  if (!String(provisioning.wifiNamePrefix || "").trim()) missing.push("wifiNamePrefix");
+  if (missing.length) {
+    throw new ApiError(400, `Active plan requires provisioning fields: ${missing.join(", ")}`);
+  }
+}
+
 function normalizeZoneCode(value) {
   return String(value || "")
     .trim()
@@ -276,6 +297,8 @@ adminCatalogRouter.post(
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const payload = planSchema.parse(req.body);
+    payload.planCode = normalizePlanCode(payload.planCode);
+    ensureActivePlanProvisioning(payload);
     await PlanCatalog.updateOne({ planCode: payload.planCode }, { $set: payload }, { upsert: true });
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode }).lean();
     return ok(res, plan, { created: true });
@@ -287,9 +310,25 @@ adminCatalogRouter.patch(
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const payload = planSchema.partial().parse(req.body || {});
+    const existing = await PlanCatalog.findOne({ planCode: req.params.planCode });
+    if (!existing) {
+      throw new ApiError(404, "Plan not found");
+    }
+    const merged = {
+      ...existing.toObject(),
+      ...payload,
+      provisioning: {
+        ...(existing.provisioning || {}),
+        ...(payload.provisioning || {})
+      }
+    };
+    if (payload.planCode) {
+      merged.planCode = normalizePlanCode(payload.planCode);
+    }
+    ensureActivePlanProvisioning(merged);
     const plan = await PlanCatalog.findOneAndUpdate(
       { planCode: req.params.planCode },
-      { $set: payload },
+      { $set: payload.planCode ? { ...payload, planCode: merged.planCode } : payload },
       { new: true }
     ).lean();
     if (!plan) {
