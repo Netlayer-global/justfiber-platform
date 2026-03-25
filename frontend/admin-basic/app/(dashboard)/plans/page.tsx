@@ -617,7 +617,7 @@ export default function PlansPage() {
                   <X className="h-4 w-4" />
                   Cancel
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
 
