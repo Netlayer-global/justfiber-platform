@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, ShieldCheck } from 'lucide-react'
-import { adminAPI, setAuthToken } from '@/lib/api'
+import { ArrowRight, ShieldCheck, Sparkles } from 'lucide-react'
+import { adminAPI, getAuthToken, setAuthToken } from '@/lib/api'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
@@ -12,6 +12,12 @@ export default function LoginPage() {
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    if (getAuthToken()) {
+      router.replace('/dashboard')
+    }
+  }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,12 +32,12 @@ export default function LoginPage() {
       if (res.success && res.data?.accessToken) {
         setAuthToken(res.data.accessToken)
         toast.success('Logged in')
-        router.push('/dashboard')
+        router.replace('/dashboard')
       } else {
-        toast.error(res.error || 'Login failed')
+        toast.error(typeof res.error === 'string' ? res.error : 'Login failed')
       }
     } catch (error: any) {
-      console.log('[login] Error:', error.message)
+      console.log('[login] Error:', error?.message || error)
       toast.error('Login failed')
     } finally {
       setIsLoading(false)
@@ -48,18 +54,18 @@ export default function LoginPage() {
               Secure access
             </div>
             <h1 className="mt-6 text-5xl font-black tracking-[-0.05em] text-white md:text-6xl">
-              Neon-grade control for
-              <span className="text-[#8224E3]"> fiber operations.</span>
+              Control the full
+              <span className="text-[#8224E3]"> JustFiber stack.</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-8 text-white/60">
-              Manage customers, field teams, devices, tickets, and billing from a sharper JustFiber admin cockpit.
+              Manage plans, customers, devices, billing, installers, jobs, and support from one operational console.
             </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             {[
-              ['Billing intelligence', 'Collection, invoices, notes, and recovery from one layer.'],
-              ['Field visibility', 'Bookings, installers, activation jobs, and serviceability zones.'],
+              ['Catalog control', 'Plans, pricing, validity, and merchandising from one dashboard.'],
+              ['Field operations', 'Bookings, installers, activation jobs, and serviceability in one flow.'],
             ].map(([title, desc]) => (
               <div key={title} className="rounded-[24px] border border-white/10 bg-white/5 p-5">
                 <div className="text-lg font-semibold text-white">{title}</div>
@@ -71,10 +77,18 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="card flex min-h-[680px] flex-col justify-between p-8 md:p-10">
           <div>
-            <div className="text-2xl font-black tracking-tight text-white">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs uppercase tracking-[0.22em] text-white/55">
+              <Sparkles className="h-4 w-4 text-[#8224E3]" />
+              Admin sign in
+            </div>
+
+            <div className="mt-6 text-2xl font-black tracking-tight text-white">
               Just<span className="text-[#8224E3]">Fiber</span>
             </div>
-            <div className="mt-1 text-xs uppercase tracking-[0.25em] text-white/40">Admin sign in</div>
+            <div className="mt-1 text-xs uppercase tracking-[0.25em] text-white/40">Operations console</div>
+            <div className="mt-3 text-sm leading-6 text-white/55">
+              Sign in with your admin username or email and password.
+            </div>
 
             <div className="mt-10 space-y-6">
               <div className="space-y-2">
@@ -83,7 +97,7 @@ export default function LoginPage() {
                   type="text"
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
-                  placeholder="admin"
+                  placeholder="admin or admin@justfiber.in"
                   className="input w-full"
                 />
               </div>
@@ -94,7 +108,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="Enter your password"
                   className="input w-full"
                 />
               </div>
@@ -103,7 +117,7 @@ export default function LoginPage() {
                 {isLoading ? 'Signing in...' : 'Enter Admin Console'}
               </button>
 
-              <Link href="/" className="btn-secondary w-full py-4 text-base">
+              <Link href="/" className="btn-secondary inline-flex w-full py-4 text-base">
                 View Landing Page <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </div>
