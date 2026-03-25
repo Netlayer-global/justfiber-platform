@@ -374,7 +374,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Expanded(child: _chip('Customer', phone.isEmpty ? '-' : phone)),
+                          Expanded(child: _chip('Phone', phone.isEmpty ? '-' : phone)),
                           const SizedBox(width: 10),
                           Expanded(child: _chip('Priority', (detail?['priority'] ?? 'medium').toString())),
                         ],
@@ -384,15 +384,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         children: [
                           Expanded(child: _chip('Plan code', planCode.isEmpty ? '-' : planCode)),
                           const SizedBox(width: 10),
-                          Expanded(child: _chip('Monthly', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-')),
+                          Expanded(child: _chip('Price', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-')),
                         ],
                       ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Expanded(child: _chip('Downlink', planDownload > 0 ? '${planDownload.toStringAsFixed(0)} Mbps' : '-')),
+                          Expanded(child: _chip('Down', planDownload > 0 ? '${planDownload.toStringAsFixed(0)} Mbps' : '-')),
                           const SizedBox(width: 10),
-                          Expanded(child: _chip('Uplink', planUpload > 0 ? '${planUpload.toStringAsFixed(0)} Mbps' : '-')),
+                          Expanded(child: _chip('Up', planUpload > 0 ? '${planUpload.toStringAsFixed(0)} Mbps' : '-')),
                         ],
                       ),
                       const SizedBox(height: 14),

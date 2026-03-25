@@ -32,8 +32,8 @@ class AppCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color.alphaBlend(const Color(0x12FFFFFF), color ?? const Color(0xFF1B1B1D)),
-                  Color.alphaBlend(const Color(0x0A8224E3), color ?? const Color(0xFF1B1B1D)),
+                  Color.alphaBlend(const Color(0x10FFFFFF), color ?? const Color(0xFFFFFFFF)),
+                  Color.alphaBlend(const Color(0x088224E3), color ?? const Color(0xFFFFFFFF)),
                 ],
               ),
           borderRadius: BorderRadius.circular(30),
