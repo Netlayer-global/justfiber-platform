@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
 import '../widgets/gradient_orb_background.dart';
-import 'booking_flow_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -203,28 +202,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? (otpRequested ? 'Logging in...' : 'Sending OTP...')
                               : (otpRequested ? 'Submit & Login' : 'Send OTP'),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => BookingFlowScreen(initialMobile: mobileController.text.trim()),
-                            ),
-                          );
-                          if (context.mounted) {
-                            await appState.refresh();
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF8224E3),
-                          side: const BorderSide(color: Color(0x558224E3)),
-                          backgroundColor: const Color(0xFFFFFFFF),
-                        ),
-                        child: const Text('Book new connection'),
                       ),
                     ),
                     if (otpRequested) ...[

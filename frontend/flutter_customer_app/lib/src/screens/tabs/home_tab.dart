@@ -105,21 +105,19 @@ class HomeTab extends StatelessWidget {
                 children: [
                   Expanded(
                     child: FilledButton(
-                      onPressed: hasService
-                          ? () => onNavigate(1)
-                          : () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
-                              );
-                              if (context.mounted) {
-                                await appState.refresh();
-                              }
-                            },
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF8224E3),
                         foregroundColor: const Color(0xFFFFFFFF),
                       ),
-                      child: Text(hasService ? 'Open services' : 'Book connection'),
+                      child: const Text('Book now'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -139,25 +137,6 @@ class HomeTab extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
-                    );
-                    if (context.mounted) {
-                      await appState.refresh();
-                    }
-                  },
-                  icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFFFFFFFF)),
-                  label: const Text(
-                    'Book new connection',
-                    style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w700),
-                  ),
-                ),
               ),
             ],
           ),
