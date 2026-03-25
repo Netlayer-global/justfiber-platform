@@ -5,6 +5,26 @@ import { adminAPI } from '@/lib/api'
 import { SupportQueueRequest, Ticket } from '@/lib/types'
 import { AlertCircle, ClipboardList, Loader, ShieldCheck, Ticket as TicketIcon } from 'lucide-react'
 
+function extractSnapshot(description: string) {
+  const lines = description
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const snapshotIndex = lines.findIndex((line) => line.toLowerCase() === 'snapshot:')
+  if (snapshotIndex === -1) return []
+
+  return lines
+    .slice(snapshotIndex + 1)
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.replace(/^- /, ''))
+}
+
+function extractRecommendation(description: string) {
+  const match = description.match(/Recommendation:\s*(.+)/i)
+  return match?.[1]?.trim() || ''
+}
+
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [requests, setRequests] = useState<SupportQueueRequest[]>([])
@@ -123,7 +143,26 @@ export default function TicketsPage() {
               <tbody>
                 {tickets.map((ticket) => (
                   <tr key={ticket.id} className="border-t border-white/10 hover:bg-white/5">
-                    <td className="table-cell font-medium text-white">{ticket.subject}</td>
+                    <td className="table-cell">
+                      <div className="font-medium text-white">{ticket.subject}</div>
+                      {ticket.customerId ? (
+                        <div className="mt-1 text-xs text-white/45">Customer: {ticket.customerId}</div>
+                      ) : null}
+                      {extractRecommendation(ticket.description) ? (
+                        <div className="mt-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs leading-5 text-white/70">
+                          {extractRecommendation(ticket.description)}
+                        </div>
+                      ) : null}
+                      {extractSnapshot(ticket.description).length ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {extractSnapshot(ticket.description).slice(0, 4).map((item) => (
+                            <span key={item} className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-2 py-1 text-[11px] font-medium text-[#d7b9ff]">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </td>
                     <td className="table-cell">
                       <span
                         className={`text-xs px-2 py-1 rounded-full font-medium ${
