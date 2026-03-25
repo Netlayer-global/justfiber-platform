@@ -937,6 +937,24 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify({ presetName }),
     }),
+  provisionCustomerPppoe: (
+    id: string,
+    data?: { pppoeUsername?: string; pppoePassword?: string }
+  ) =>
+    request(`/api/v1/admin/customers/${id}/pppoe/provision`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+  suspendCustomerPppoe: (id: string, reason?: string) =>
+    request(`/api/v1/admin/customers/${id}/pppoe/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  resumeCustomerPppoe: (id: string) =>
+    request(`/api/v1/admin/customers/${id}/pppoe/resume`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
 
   // Devices
   getDevices: async (page = 1, limit = 20) => {

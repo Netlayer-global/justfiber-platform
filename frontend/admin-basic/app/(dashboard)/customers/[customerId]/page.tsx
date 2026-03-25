@@ -474,6 +474,67 @@ export default function CustomerDetailPage() {
     }
   }
 
+  async function handleProvisionCustomerPppoe(device: CustomerDevice) {
+    if (!customer) return
+    const form = wifiForms[device.deviceId]
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.provisionCustomerPppoe(customer.id, {
+        pppoeUsername: form?.pppoeUsername || undefined,
+        pppoePassword: form?.pppoePassword || undefined,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to create PPPoE in FreeRADIUS')
+        return
+      }
+      toast.success('PPPoE synced to FreeRADIUS')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to provision PPPoE:', error)
+      toast.error('Failed to create PPPoE in FreeRADIUS')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleSuspendCustomerPppoe() {
+    if (!customer) return
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.suspendCustomerPppoe(customer.id, reason || 'Service suspended from admin PPPoE control')
+      if (!res.success) {
+        toast.error(res.error || 'Failed to suspend PPPoE')
+        return
+      }
+      toast.success('PPPoE access suspended')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to suspend PPPoE:', error)
+      toast.error('Failed to suspend PPPoE')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleResumeCustomerPppoe() {
+    if (!customer) return
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.resumeCustomerPppoe(customer.id)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to resume PPPoE')
+        return
+      }
+      toast.success('PPPoE access resumed')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to resume PPPoE:', error)
+      toast.error('Failed to resume PPPoE')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   async function handleDeviceReboot(device: CustomerDevice) {
     try {
       setIsSaving(true)
@@ -1118,6 +1179,25 @@ export default function CustomerDetailPage() {
                           <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_ACTIVATE')} disabled={isSaving}>Activate</button>
                           <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_SUSPEND')} disabled={isSaving}>Suspend Service</button>
                           <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_RESUME')} disabled={isSaving}>Resume Service</button>
+                        </div>
+                        <div className="rounded border border-[#2a2f4a] bg-[#0a0e27] p-4 space-y-3">
+                          <div>
+                            <h4 className="font-semibold text-white">FreeRADIUS PPPoE Control</h4>
+                            <p className="mt-1 text-sm text-slate-400">
+                              Customer service ke liye direct PPPoE create, suspend, aur resume action.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button className="btn-primary" onClick={() => void handleProvisionCustomerPppoe(device)} disabled={isSaving}>
+                              Create / Sync PPPoE
+                            </button>
+                            <button className="btn-secondary" onClick={() => void handleSuspendCustomerPppoe()} disabled={isSaving}>
+                              Suspend PPPoE
+                            </button>
+                            <button className="btn-secondary" onClick={() => void handleResumeCustomerPppoe()} disabled={isSaving}>
+                              Resume PPPoE
+                            </button>
+                          </div>
                         </div>
                       </div>
 

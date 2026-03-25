@@ -1891,6 +1891,117 @@ adminOpsRouter.patch(
   })
 );
 
+adminOpsRouter.post(
+  "/customers/:customerId/pppoe/provision",
+  requirePermission(permissions.deviceApplyPreset),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    if (!customer.serviceId) {
+      throw new ApiError(400, "Customer serviceId missing");
+    }
+
+    const subscriberService =
+      (await SubscriberService.findOne({ serviceId: customer.serviceId })) ||
+      (await SubscriberService.findOne({ customerId: customer.customerId }));
+    const plan = customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null;
+
+    const radiusUsername = String(
+      req.body?.pppoeUsername ||
+      subscriberService?.radiusUsername ||
+      customer.pppoeUsername ||
+      ""
+    ).trim();
+    const radiusPassword = String(
+      req.body?.pppoePassword ||
+      subscriberService?.metadata?.radiusPassword ||
+      ""
+    ).trim();
+
+    if (!radiusUsername || !radiusPassword) {
+      throw new ApiError(400, "PPPoE username and password are required");
+    }
+
+    const result = await radiusServiceManager.createSubscriberAccess({
+      serviceId: customer.serviceId,
+      customerId: customer.customerId,
+      radiusUsername,
+      radiusPassword,
+      accessProfileCode: plan?.provisioning?.accessProfileCode || subscriberService?.accessProfileCode,
+      billingProfileCode: subscriberService?.billingProfileCode,
+      bngNodeCode: subscriberService?.bngNodeCode,
+      metadata: {
+        ...(subscriberService?.metadata || {}),
+        source: "admin_manual_pppoe",
+        networkProfile: {
+          speedMbps: Number(customer.billingSnapshot?.speedMbps || plan?.speedMbps || 0) || 0,
+          uploadSpeedMbps: Number(customer.billingSnapshot?.uploadSpeedMbps || plan?.uploadSpeedMbps || 0) || 0,
+          dataPolicy: customer.billingSnapshot?.dataPolicy || plan?.dataPolicy || "unlimited",
+          dataLimitGb: Number(customer.billingSnapshot?.dataLimitGb || plan?.dataLimitGb || 0) || 0,
+          fupSpeedMbps: Number(customer.billingSnapshot?.fupSpeedMbps || plan?.fupSpeedMbps || 0) || 0,
+        }
+      }
+    });
+
+    return ok(res, {
+      serviceId: result.serviceId,
+      customerId: result.customerId,
+      radiusUsername: result.radiusUsername,
+      status: result.status,
+      updated: true
+    });
+  })
+);
+
+adminOpsRouter.post(
+  "/customers/:customerId/pppoe/suspend",
+  requirePermission(permissions.customerSuspend),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    if (!customer.serviceId) {
+      throw new ApiError(400, "Customer serviceId missing");
+    }
+    const result = await radiusServiceManager.suspendSubscriberAccess({
+      serviceId: customer.serviceId,
+      reason: String(req.body?.reason || "Service suspended from admin PPPoE control").trim()
+    });
+    return ok(res, {
+      serviceId: result.serviceId,
+      customerId: result.customerId,
+      status: result.status,
+      updated: true
+    });
+  })
+);
+
+adminOpsRouter.post(
+  "/customers/:customerId/pppoe/resume",
+  requirePermission(permissions.customerResume),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    if (!customer.serviceId) {
+      throw new ApiError(400, "Customer serviceId missing");
+    }
+    const result = await radiusServiceManager.resumeSubscriberAccess({
+      serviceId: customer.serviceId
+    });
+    return ok(res, {
+      serviceId: result.serviceId,
+      customerId: result.customerId,
+      status: result.status,
+      updated: true
+    });
+  })
+);
+
 adminOpsRouter.get(
   "/billing/ledger",
   requirePermission(permissions.billingRead),
