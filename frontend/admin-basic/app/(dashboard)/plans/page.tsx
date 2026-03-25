@@ -100,7 +100,7 @@ const initialForm: PlanFormState = {
   taxIncluded: true,
   gstRate: '18',
   pricesExcludeGst: false,
-  status: 'active',
+  status: 'inactive',
   tags: '',
   staticBenefits: '',
   features: '',
@@ -321,7 +321,7 @@ export default function PlansPage() {
 
   function beginCreate() {
     setEditingPlanId(null)
-    setForm(initialForm)
+    setForm({ ...initialForm, status: 'inactive' })
     setComposerMode('create')
   }
 
@@ -604,7 +604,7 @@ export default function PlansPage() {
                 {composerMode === 'edit' ? 'Refine a broadband lane' : composerMode === 'clone' ? 'Duplicate and refine a broadband lane' : 'Launch a new plan lane'}
               </h2>
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Pricing, validity, tags, addons, and provisioning stay controlled in one surface.
+                Pricing, validity, tags, and add-ons yahan manage karo. Provisioning template dashboard me alag maintain hoga.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -731,10 +731,10 @@ export default function PlansPage() {
             <textarea className="input min-h-32 xl:col-span-2" placeholder={'Features, one per line\nUnlimited data\n4K streaming\nLow-latency gaming'} value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} />
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            {!provisioningReady ? (
-              <div className="rounded-[18px] border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                Active plan publish karne se pehle provisioning fields complete karo.
+          <div className="flex flex-wrap items-center gap-3">
+            {composerMode === 'create' ? (
+              <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/65">
+                New plans draft mode me start honge. Save ke baad provisioning template section se PPPoE, VLAN, aur Wi-Fi defaults set karo.
               </div>
             ) : null}
             <button type="submit" disabled={isSaving} className="btn-primary">
@@ -878,7 +878,7 @@ export default function PlansPage() {
               </div>
 
               <div className="mt-4 rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Plan highlights</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Commercial highlights</div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2 text-sm text-white/70">
                   <div className="flex items-center justify-between"><span>Quarterly</span><span>{formatCurrency(Number(preview.quarterlyPrice || 0))}</span></div>
                   <div className="flex items-center justify-between"><span>Yearly</span><span>{formatCurrency(Number(preview.yearlyPrice || 0))}</span></div>
@@ -910,15 +910,15 @@ export default function PlansPage() {
 
       {!composerOpen ? (
       <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="card p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Provisioning templates</div>
-              <div className="mt-2 text-2xl font-black text-white">Keep PPPoE and VLAN controls separate</div>
-              <p className="mt-2 text-sm leading-6 text-white/55">
-                Plan create flow simple rakha gaya hai. Provisioning template yahan maintain hoga and same plan ke activation defaults ko control karega.
-              </p>
-            </div>
+          <div className="card p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-xs uppercase tracking-[0.24em] text-white/45">Provisioning templates</div>
+                <div className="mt-2 text-2xl font-black text-white">Keep PPPoE and VLAN controls separate</div>
+                <p className="mt-2 text-sm leading-6 text-white/55">
+                Plan create flow simple rakha gaya hai. Yahan selected plan ke liye activation defaults maintain honge.
+                </p>
+              </div>
             <div className={`rounded-full px-3 py-1 text-xs font-semibold ${provisioningReady ? 'bg-emerald-400/15 text-emerald-200' : 'bg-amber-300/15 text-amber-100'}`}>
               {provisioningReady ? 'Template ready' : 'Template incomplete'}
             </div>
