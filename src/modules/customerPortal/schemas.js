@@ -18,6 +18,16 @@ export const feasibilitySchema = z.object({
   address: z.string().min(5)
 });
 
+export const feasibilityLeadSchema = z.object({
+  fullName: z.string().min(2),
+  mobile: z.string().min(8),
+  email: z.string().email().optional(),
+  address: z.string().min(5),
+  pinCode: z.string().min(4),
+  lat: z.number(),
+  lng: z.number()
+});
+
 export const bookingSchema = z.object({
   planCode: z.string().min(2),
   fullName: z.string().min(2),

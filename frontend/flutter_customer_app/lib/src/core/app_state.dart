@@ -548,6 +548,30 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<String?> submitFeasibilityLead({
+    required String fullName,
+    required String mobile,
+    String? email,
+    required String address,
+    required String pinCode,
+    required double lat,
+    required double lng,
+  }) async {
+    try {
+      return await api.submitFeasibilityLead(
+        fullName: fullName,
+        mobile: mobile,
+        email: email,
+        address: address,
+        pinCode: pinCode,
+        lat: lat,
+        lng: lng,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<BillingPaymentOrder?> loadBillingPaymentOrder({double? amount}) async {
     final current = session;
     if (current == null) return null;

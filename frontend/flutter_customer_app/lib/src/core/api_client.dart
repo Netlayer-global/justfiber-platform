@@ -474,6 +474,34 @@ class ApiClient {
     );
   }
 
+  Future<String?> submitFeasibilityLead({
+    required String fullName,
+    required String mobile,
+    String? email,
+    required String address,
+    required String pinCode,
+    required double lat,
+    required double lng,
+  }) async {
+    final data = _asMap(
+      await _request(
+        '/api/v1/customer/feasibility/lead',
+        method: 'POST',
+        body: {
+          'fullName': fullName,
+          'mobile': mobile,
+          if ((email ?? '').trim().isNotEmpty) 'email': email,
+          'address': address,
+          'pinCode': pinCode,
+          'lat': lat,
+          'lng': lng,
+        },
+      ),
+    );
+    final leadNumber = (data['leadNumber'] ?? '').toString().trim();
+    return leadNumber.isEmpty ? null : leadNumber;
+  }
+
   Future<BookingTrackingData> fetchBookingTracking(CustomerSession session, String bookingNumber) async {
     final data = _asMap(await _request('/api/v1/customer/bookings/$bookingNumber/tracking', token: session.accessToken));
     final steps = _asList(data['steps']).map((item) {

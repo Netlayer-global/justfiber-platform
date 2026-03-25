@@ -140,6 +140,25 @@ class HomeTab extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
+                    );
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
+                  icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFFFFFFFF)),
+                  label: const Text(
+                    'Book new connection',
+                    style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

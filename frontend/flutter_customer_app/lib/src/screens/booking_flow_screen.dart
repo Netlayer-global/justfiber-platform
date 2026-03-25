@@ -291,8 +291,22 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       if (ok) {
                         setState(() => step = 1);
                       } else {
+                        final leadNumber = await appState.submitFeasibilityLead(
+                          fullName: nameController.text.trim(),
+                          mobile: mobileController.text.trim(),
+                          address: addressController.text.trim(),
+                          pinCode: pinController.text.trim(),
+                          lat: _selectedLocation.latitude,
+                          lng: _selectedLocation.longitude,
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(appState.bookingError ?? 'Service is not available at this address yet.')),
+                          SnackBar(
+                            content: Text(
+                              leadNumber == null
+                                  ? (appState.bookingError ?? 'We are not live in this area right now. Your request has been noted for rollout updates.')
+                                  : 'We are not live in this area right now. Lead $leadNumber has been created for manual follow-up.',
+                            ),
+                          ),
                         );
                       }
                     },
@@ -1147,12 +1161,23 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     required bool selected,
     required VoidCallback onSelect,
   }) {
+    final payableNow = recurringAmount + setupAmount;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
+        gradient: selected
+            ? const LinearGradient(
+                colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: selected ? null : const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x228224E3), width: selected ? 1.5 : 1),
+        boxShadow: selected
+            ? const [BoxShadow(color: Color(0x208224E3), blurRadius: 22, offset: Offset(0, 10))]
+            : const [BoxShadow(color: Color(0x0F000000), blurRadius: 10, offset: Offset(0, 6))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1160,25 +1185,61 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                    color: selected ? const Color(0xFFFFFFFF) : const Color(0xFF131313),
+                  ),
+                ),
               ),
-              OutlinedButton(
+              FilledButton.tonal(
                 onPressed: onSelect,
-                style: OutlinedButton.styleFrom(
+                style: FilledButton.styleFrom(
                   foregroundColor: selected ? const Color(0xFF8224E3) : const Color(0xFF131313),
-                  backgroundColor: selected ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
-                  side: BorderSide(color: selected ? const Color(0x668224E3) : const Color(0x228224E3)),
+                  backgroundColor: const Color(0xFFFFFFFF),
+                  elevation: 0,
                 ),
                 child: Text(selected ? 'Selected' : 'Choose'),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _summaryRow('Plan amount', 'Rs ${recurringAmount.toStringAsFixed(0)}'),
-          _summaryRow('Setup charges', 'Rs ${setupAmount.toStringAsFixed(0)}'),
-          _summaryRow('Payable now', 'Rs ${(recurringAmount + setupAmount).toStringAsFixed(0)}'),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: selected ? const Color(0x14FFFFFF) : const Color(0xFFF8F4FF),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: selected ? const Color(0x33FFFFFF) : const Color(0x228224E3)),
+            ),
+            child: Column(
+              children: [
+                _durationSummaryRow('Plan amount', 'Rs ${recurringAmount.toStringAsFixed(0)}', selected),
+                const SizedBox(height: 8),
+                _durationSummaryRow('Setup charges', 'Rs ${setupAmount.toStringAsFixed(0)}', selected),
+                const SizedBox(height: 8),
+                _durationSummaryRow('Payable now', 'Rs ${payableNow.toStringAsFixed(0)}', selected, emphasize: true),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _durationSummaryRow(String label, String value, bool selected, {bool emphasize = false}) {
+    final color = selected ? const Color(0xFFFFFFFF) : const Color(0xFF131313);
+    final muted = selected ? const Color(0xFFE9D5FF) : const Color(0xFF6E6A67);
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: TextStyle(color: muted, fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500))),
+        Text(
+          value,
+          style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: emphasize ? 16 : 14),
+        ),
+      ],
     );
   }
 

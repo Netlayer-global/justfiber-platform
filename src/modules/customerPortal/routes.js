@@ -12,6 +12,7 @@ import { CustomerUser } from "../../models/CustomerUser.js";
 import { InstallerJob } from "../../models/InstallerJob.js";
 import { Installer } from "../../models/Installer.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
+import { Lead } from "../../models/Lead.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { IntegrationEventLog } from "../../models/IntegrationEventLog.js";
@@ -21,6 +22,7 @@ import { BillingNote } from "../../models/BillingNote.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
+import { SalesAgent } from "../../models/SalesAgent.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
@@ -44,6 +46,7 @@ import {
   billingPaymentVerifySchema,
   deviceAccessSchema,
   feasibilitySchema,
+  feasibilityLeadSchema,
   guestWifiSchema,
   parentalControlSchema,
   planChangeSchema,
@@ -481,6 +484,25 @@ function estimateNetworkMetrics({ customer, device }) {
   const latencyMs = online ? Math.max(5, Math.round(8 + Math.abs(rxPower + 20) * 3)) : 999;
   const packetLossPercent = online ? Number((rxPower < -26 ? 2.8 : rxPower < -23 ? 1.2 : 0.2).toFixed(1)) : 100;
   return { speedMbps, uploadMbps, latencyMs, packetLossPercent, rxPower };
+}
+
+async function pickSalesAgentForFeasibility({ feasibility, pinCode, address }) {
+  const agents = await SalesAgent.find({ status: "active" }).sort({ updatedAt: -1, createdAt: 1 }).lean();
+  if (!agents.length) return null;
+  const targetZoneCode = normalizeCode(feasibility?.matchedZone?.zoneCode || feasibility?.matchedZone?.zoneName);
+  const targetArea = normalizeCode(feasibility?.matchedZone?.area || "");
+  const targetCity = normalizeCode(feasibility?.matchedZone?.city || "");
+  const targetPin = String(pinCode || "").trim();
+  const haystack = toLower(address || "");
+  return agents.find((agent) =>
+    agent.assignedAreas?.some((area) =>
+      normalizeCode(area) === targetZoneCode
+      || normalizeCode(area) === targetArea
+      || normalizeCode(area) === targetCity
+      || String(area || "").trim() === targetPin
+      || haystack.includes(toLower(area))
+    )
+  ) || agents[0];
 }
 
 async function notifyCustomerAction(customerUserId, type, title, body, payload) {
@@ -1162,6 +1184,55 @@ customerPortalRouter.post(
     const payload = feasibilitySchema.parse(req.body);
     const result = await evaluateFeasibility(payload);
     return ok(res, result);
+  })
+);
+
+customerPortalRouter.post(
+  "/feasibility/lead",
+  asyncHandler(async (req, res) => {
+    const payload = feasibilityLeadSchema.parse(req.body);
+    const customerUser = await findOrCreatePortalUserForBooking({
+      mobile: payload.mobile,
+      email: payload.email,
+      fullName: payload.fullName
+    });
+    const feasibility = await evaluateFeasibility({
+      lat: payload.lat,
+      lng: payload.lng,
+      address: payload.address,
+      pinCode: payload.pinCode
+    });
+    const salesAgent = await pickSalesAgentForFeasibility({
+      feasibility,
+      pinCode: payload.pinCode,
+      address: payload.address
+    });
+    const lead = await Lead.create({
+      leadNumber: `LD${Date.now().toString().slice(-6)}`,
+      type: "self_booked",
+      status: feasibility.feasible ? "feasible" : "new",
+      source: "customer_app_feasibility",
+      salesAgentId: salesAgent?._id,
+      customerUserId: customerUser?._id,
+      fullName: payload.fullName,
+      mobile: payload.mobile,
+      email: payload.email,
+      address: payload.address,
+      pinCode: payload.pinCode,
+      gps: { lat: payload.lat, lng: payload.lng },
+      zoneId: feasibility?.matchedZone?.zoneCode || feasibility?.matchedZone?.zoneName || null,
+      feasible: feasibility.feasible,
+      notes: feasibility.feasible
+        ? "Customer app feasibility inquiry captured."
+        : `Customer app inquiry captured for non-serviceable area (${feasibility.serviceStatus || "unknown"}).`
+    });
+    return ok(res, {
+      leadNumber: lead.leadNumber,
+      feasible: feasibility.feasible,
+      serviceStatus: feasibility.serviceStatus,
+      message: feasibility.message,
+      assignedSalesAgentId: salesAgent?._id || null
+    }, { created: true });
   })
 );
 
