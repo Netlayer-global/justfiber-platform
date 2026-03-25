@@ -83,6 +83,11 @@ export interface Plan {
     recommended?: boolean
     spotlightLabel?: string
   }
+  provisioningReady?: boolean
+  provisioningIssues?: string[]
+  visibleInCustomerApp?: boolean
+  visibleInSalesApp?: boolean
+  visibleInProvisioning?: boolean
   sortOrder?: number
   type: string
   status: 'active' | 'inactive'

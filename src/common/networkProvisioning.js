@@ -233,6 +233,21 @@ export function normalizeCustomerId(value) {
   return String(value || "").trim();
 }
 
+export function getPlanProvisioningIssues(plan = {}) {
+  const provisioning = plan?.provisioning || {};
+  const issues = [];
+  if (!String(provisioning.accessProfileCode || "").trim()) issues.push("accessProfileCode");
+  if (!(Number(provisioning.vlanId || 0) > 0)) issues.push("vlanId");
+  if (!String(provisioning.pppoePrefix || "").trim()) issues.push("pppoePrefix");
+  if (!String(provisioning.defaultPppoePassword || "").trim()) issues.push("defaultPppoePassword");
+  if (!String(provisioning.wifiNamePrefix || "").trim()) issues.push("wifiNamePrefix");
+  return issues;
+}
+
+export function isPlanProvisioningReady(plan = {}) {
+  return getPlanProvisioningIssues(plan).length === 0;
+}
+
 export function buildPppoeCredentials(customerId, planProvisioning = {}) {
   const normalized = normalizeCustomerId(customerId);
   const digitsOnly = normalized.replace(/\D/g, "");

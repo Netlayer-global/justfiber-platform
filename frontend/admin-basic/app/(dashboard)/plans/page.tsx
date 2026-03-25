@@ -174,6 +174,10 @@ function provisioningIssues(form: PlanFormState) {
   return issues
 }
 
+function isLiveReady(plan: Plan) {
+  return plan.status === 'active' && plan.provisioningReady !== false
+}
+
 function renderCategoryLabel(category?: Plan['category']) {
   switch (category) {
     case 'business':
@@ -547,12 +551,12 @@ export default function PlansPage() {
           </div>
           <div className="mt-8 grid grid-cols-2 gap-3">
             <div className="rounded-[24px] bg-black/10 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-black/55">Provisioned</div>
-              <div className="mt-3 text-2xl font-black">{plans.filter((plan) => plan.provisioning?.accessProfileCode).length}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-black/55">Live in apps</div>
+              <div className="mt-3 text-2xl font-black">{plans.filter(isLiveReady).length}</div>
             </div>
             <div className="rounded-[24px] bg-black/10 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-black/55">Hidden</div>
-              <div className="mt-3 text-2xl font-black">{plans.filter((plan) => plan.status === 'inactive').length}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-black/55">Provisioning blocked</div>
+              <div className="mt-3 text-2xl font-black">{plans.filter((plan) => plan.status === 'active' && plan.provisioningReady === false).length}</div>
             </div>
           </div>
         </div>
@@ -864,8 +868,8 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between"><span>GST mode</span><span>{preview.pricesExcludeGst ? 'Exclusive' : 'Inclusive / retail'}</span></div>
                     <div className="flex items-center justify-between"><span>Launch lane</span><span>#{preview.sortOrder || '1'}</span></div>
                     <div className="flex items-center justify-between"><span>Router rental</span><span>{preview.routerIncluded ? formatCurrency(Number(preview.routerRental || 0)) : '-'}</span></div>
-                    <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' ? 'Visible' : 'Hidden'}</span></div>
-                    <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' ? 'Visible' : 'Hidden'}</span></div>
+                    <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
+                    <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
                     <div className="flex items-center justify-between"><span>Provisioning</span><span>{provisioningReady ? 'Ready' : 'Blocked'}</span></div>
                   </div>
                 </div>
@@ -953,6 +957,9 @@ export default function PlansPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                <span className={`rounded-full border px-3 py-1 text-xs ${plan.provisioningReady === false ? 'border-amber-300/30 bg-amber-300/10 text-amber-100' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'}`}>
+                  {plan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
+                </span>
                 {plan.merchandising?.featured ? (
                   <span className="rounded-full border border-[#8224E3]/20 bg-[#8224E3]/10 px-3 py-1 text-xs text-[#8224E3]">
                     Featured
@@ -998,7 +1005,15 @@ export default function PlansPage() {
                 <div className="flex items-center justify-between"><span>Burst</span><span>{plan.burstDownloadMbps || plan.burstUploadMbps ? `${plan.burstDownloadMbps || 0}/${plan.burstUploadMbps || 0}` : '-'}</span></div>
                 <div className="flex items-center justify-between"><span>Latency</span><span>{plan.latencyClass || 'standard'}</span></div>
                 <div className="flex items-center justify-between"><span>Contention</span><span>{plan.contentionRatio || '-'}</span></div>
+                <div className="flex items-center justify-between"><span>Customer app</span><span>{plan.visibleInCustomerApp ? 'Visible' : 'Hidden'}</span></div>
+                <div className="flex items-center justify-between"><span>Sales app</span><span>{plan.visibleInSalesApp ? 'Visible' : 'Hidden'}</span></div>
               </div>
+
+              {plan.provisioningIssues && plan.provisioningIssues.length > 0 ? (
+                <div className="mt-4 rounded-[18px] border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-xs text-amber-100">
+                  Missing: {plan.provisioningIssues.join(', ')}
+                </div>
+              ) : null}
 
               <div className="mt-6 flex flex-wrap gap-2">
                 <button type="button" onClick={() => beginEdit(plan)} className="btn-secondary inline-flex items-center gap-2">

@@ -12,6 +12,7 @@ import { Lead } from "../../models/Lead.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
+import { getPlanProvisioningIssues, isPlanProvisioningReady } from "../../common/networkProvisioning.js";
 
 const salesAgentSchema = z.object({
   agentCode: z.string().min(3),
@@ -135,16 +136,24 @@ function normalizePlanCode(value) {
 
 function ensureActivePlanProvisioning(payload) {
   if (payload.active === false) return;
-  const provisioning = payload.provisioning || {};
-  const missing = [];
-  if (!String(provisioning.accessProfileCode || "").trim()) missing.push("accessProfileCode");
-  if (!(Number(provisioning.vlanId || 0) > 0)) missing.push("vlanId");
-  if (!String(provisioning.pppoePrefix || "").trim()) missing.push("pppoePrefix");
-  if (!String(provisioning.defaultPppoePassword || "").trim()) missing.push("defaultPppoePassword");
-  if (!String(provisioning.wifiNamePrefix || "").trim()) missing.push("wifiNamePrefix");
+  const missing = getPlanProvisioningIssues(payload);
   if (missing.length) {
     throw new ApiError(400, `Active plan requires provisioning fields: ${missing.join(", ")}`);
   }
+}
+
+function decoratePlanCatalogItem(plan) {
+  const provisioningIssues = getPlanProvisioningIssues(plan);
+  const provisioningReady = isPlanProvisioningReady(plan);
+  const liveInApps = plan.active !== false && provisioningReady;
+  return {
+    ...plan,
+    provisioningIssues,
+    provisioningReady,
+    visibleInCustomerApp: liveInApps,
+    visibleInSalesApp: liveInApps,
+    visibleInProvisioning: liveInApps
+  };
 }
 
 function normalizeZoneCode(value) {
@@ -288,7 +297,7 @@ adminCatalogRouter.get(
   requirePermission(permissions.configRead),
   asyncHandler(async (_req, res) => {
     const plans = await PlanCatalog.find().sort({ sortOrder: 1 }).lean();
-    return ok(res, plans);
+    return ok(res, plans.map(decoratePlanCatalogItem));
   })
 );
 
@@ -301,7 +310,7 @@ adminCatalogRouter.post(
     ensureActivePlanProvisioning(payload);
     await PlanCatalog.updateOne({ planCode: payload.planCode }, { $set: payload }, { upsert: true });
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode }).lean();
-    return ok(res, plan, { created: true });
+    return ok(res, decoratePlanCatalogItem(plan), { created: true });
   })
 );
 
@@ -334,7 +343,7 @@ adminCatalogRouter.patch(
     if (!plan) {
       throw new ApiError(404, "Plan not found");
     }
-    return ok(res, plan);
+    return ok(res, decoratePlanCatalogItem(plan));
   })
 );
 
