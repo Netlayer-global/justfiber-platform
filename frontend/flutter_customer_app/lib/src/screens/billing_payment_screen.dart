@@ -276,13 +276,13 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   ),
                 ] else ...[
                   Text(
-                    retryCount > 0 ? 'Try payment again' : 'Ready to continue payment?',
+                    retryCount > 0 ? 'Retry your bill payment' : 'Review and continue',
                     style: theme.textTheme.titleLarge,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    paymentError ?? 'If checkout did not appear, relaunch it below.',
+                    paymentError ?? 'Confirm the bill details above, then continue to secure payment.',
                     style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -298,38 +298,30 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: helping ? null : _requestPaymentHelp,
-                      child: Text(helping ? 'Creating ticket...' : 'Raise billing ticket'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _openSupportCenter,
-                      child: const Text('Open support center'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _copyOrderReference,
-                      child: const Text('Copy order reference'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF131313),
-                        backgroundColor: const Color(0xFFFFFFFF),
-                        side: const BorderSide(color: Color(0x558224E3)),
-                      ),
-                      child: const Text('Back to app'),
+                      child: const Text('Back to Billing'),
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: helping ? null : _requestPaymentHelp,
+                          child: Text(helping ? 'Creating ticket...' : 'Need help?'),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton(
+                          onPressed: _openSupportCenter,
+                          child: const Text('Support center'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: _copyOrderReference,
+                    child: const Text('Copy order reference'),
                   ),
                 ],
               ],

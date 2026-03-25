@@ -28,7 +28,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   String? selectedPlanCode;
   int _selectedDurationMonths = 1;
   String _selectedDurationLabel = '1 month';
-  String _selectedPaymentMode = 'razorpay';
+  static const String _selectedPaymentMode = 'razorpay';
   String? _selectedSlotCode = 'morning';
   String? _selectedSlotLabel = '10 AM - 1 PM';
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
@@ -565,10 +565,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Speed', selected == null ? '-' : '${selected.speedMbps.toStringAsFixed(0)} Mbps'),
           _summaryRow('Upload', selected == null ? '-' : '${selected.uploadSpeedMbps.toStringAsFixed(0)} Mbps'),
           _summaryRow('Duration', _selectedDurationLabel),
-          _summaryRow('Payment mode', _selectedPaymentMode == 'razorpay' ? 'Online payment' : 'Cash / offline'),
           _summaryRow('Payable now', 'Rs ${_bookingAmountFor(selected).toStringAsFixed(0)}'),
           const SizedBox(height: 16),
-          const Text('Payment mode', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const Text('Secure payment', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 10),
           Container(
             width: double.infinity,
@@ -584,7 +583,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Online payment via Razorpay',
+                    'Razorpay checkout will open next',
                     style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -620,35 +619,29 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       );
                       if (!mounted) return;
                       if (ok) {
-                        if (_selectedPaymentMode == 'razorpay' && appState.session != null) {
-                          final order = await appState.loadBookingPaymentOrder(
-                            bookingNumber: appState.latestBooking!.bookingNumber,
-                            amount: appState.latestBooking!.amount,
+                        final order = await appState.loadBookingPaymentOrder(
+                          bookingNumber: appState.latestBooking!.bookingNumber,
+                          amount: appState.latestBooking!.amount,
+                        );
+                        if (!mounted) return;
+                        if (order != null) {
+                          final paid = await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                              builder: (_) => BookingPaymentScreen(
+                                bookingNumber: appState.latestBooking!.bookingNumber,
+                                paymentOrder: order,
+                              ),
+                            ),
                           );
                           if (!mounted) return;
-                          if (order != null) {
-                            final paid = await Navigator.of(context).push<bool>(
-                              MaterialPageRoute(
-                                builder: (_) => BookingPaymentScreen(
-                                  bookingNumber: appState.latestBooking!.bookingNumber,
-                                  paymentOrder: order,
-                                ),
-                              ),
-                            );
-                            if (!mounted) return;
-                            if (paid == true) {
-                              await appState.refresh();
-                              setState(() => step = 4);
-                            }
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(appState.error ?? 'Unable to start booking payment')),
-                            );
+                          if (paid == true) {
+                            await appState.refresh();
+                            setState(() => step = 4);
                           }
                         } else {
-                          await appState.refresh();
-                          if (!mounted) return;
-                          setState(() => step = 4);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(appState.error ?? 'Unable to start booking payment')),
+                          );
                         }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -657,14 +650,14 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       }
                     },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-              child: Text(appState.bookingBusy ? 'Opening checkout...' : (_selectedPaymentMode == 'razorpay' ? 'Pay now' : 'Continue to confirmation')),
+              child: Text(appState.bookingBusy ? 'Preparing checkout...' : 'Pay now'),
             ),
           ),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: appState.bookingBusy ? null : () => setState(() => step = 1),
+              onPressed: appState.bookingBusy ? null : () => setState(() => step = 2),
               child: const Text('Back to Duration'),
             ),
           ),
@@ -855,7 +848,6 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 selectedPlanCode = null;
                 _selectedDurationMonths = 1;
                 _selectedDurationLabel = '1 month';
-                _selectedPaymentMode = 'cash';
                 _selectedSlotCode = 'morning';
                 _selectedSlotLabel = '10 AM - 1 PM';
                 _preferredDate = DateTime.now().add(const Duration(days: 1));
