@@ -52,7 +52,6 @@ import {
   wifiUpdateSchema
 } from "./schemas.js";
 import {
-  getCustomerPortalDemoOtp,
   normalizeCustomerPortalOtpKey,
   setCustomerPortalDemoOtp,
   verifyCustomerPortalDemoOtp
@@ -1058,7 +1057,10 @@ customerPortalRouter.post(
     const key = normalizeCustomerPortalOtpKey(payload.mobile || payload.email);
     const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
     setCustomerPortalDemoOtp(key, otp);
-    return ok(res, { sent: true, demoOtp: otp });
+    return ok(res, {
+      sent: true,
+      ...(env.EXPOSE_DEMO_OTP ? { demoOtp: otp } : {})
+    });
   })
 );
 

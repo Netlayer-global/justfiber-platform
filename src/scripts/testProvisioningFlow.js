@@ -40,6 +40,14 @@ function printPass(label, details) {
   console.log(`[PASS] ${label}${details ? ` (${details})` : ""}`);
 }
 
+function requireDemoOtp(payload, path) {
+  const otp = payload?.data?.demoOtp;
+  if (!otp) {
+    throw new Error(`${path} did not expose demoOtp. Set EXPOSE_DEMO_OTP=true for local scripted OTP login tests.`);
+  }
+  return otp;
+}
+
 async function waitForAssignment({ bookingNumber, customerToken, timeoutMs = 30000, pollMs = 2000 }) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -73,7 +81,7 @@ async function runProvisioningFlowTest() {
     path: "/api/v1/customer/auth/send-otp",
     body: { mobile }
   });
-  const otp = sendOtp.data.demoOtp;
+  const otp = requireDemoOtp(sendOtp, "/api/v1/customer/auth/send-otp");
   const verify = await requestJson({
     method: "POST",
     path: "/api/v1/customer/auth/verify-otp",

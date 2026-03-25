@@ -18,6 +18,10 @@ const schema = z.object({
     .string()
     .transform((value) => value === "true")
     .default("true"),
+  EXPOSE_DEMO_OTP: z
+    .string()
+    .transform((value) => value === "true")
+    .default("false"),
   SEED_SUPERADMIN_USERNAME: z.string().min(3).default("admin"),
   SEED_SUPERADMIN_EMAIL: z.string().email().default("admin@example.com"),
   SEED_SUPERADMIN_PASSWORD: z.string().min(8).default("Netlayer@1411"),

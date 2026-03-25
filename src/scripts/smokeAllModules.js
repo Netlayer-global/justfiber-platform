@@ -47,6 +47,14 @@ async function requestText({ path, expectedContains }) {
   }
 }
 
+function requireDemoOtp(payload, path) {
+  const otp = payload?.data?.demoOtp;
+  if (!otp) {
+    throw new Error(`${path} did not expose demoOtp. Set EXPOSE_DEMO_OTP=true for local scripted OTP login tests.`);
+  }
+  return otp;
+}
+
 export async function runSmokeAllModules() {
   const checks = [];
 
@@ -246,10 +254,7 @@ export async function runSmokeAllModules() {
       path: "/api/v1/customer/auth/send-otp",
       body: { mobile: customerIdentity }
     });
-    const otp = payload.data.demoOtp;
-    if (!otp) {
-      throw new Error("Missing demo OTP");
-    }
+    const otp = requireDemoOtp(payload, "/api/v1/customer/auth/send-otp");
     const verify = await requestJson({
       method: "POST",
       path: "/api/v1/customer/auth/verify-otp",

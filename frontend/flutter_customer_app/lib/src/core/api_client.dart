@@ -105,9 +105,8 @@ class ApiClient {
     return items.first;
   }
 
-  Future<String> sendOtp(String mobile) async {
-    final data = _asMap(await _request('/api/v1/customer/auth/send-otp', method: 'POST', body: {'mobile': mobile}));
-    return (data['demoOtp'] ?? '').toString();
+  Future<void> sendOtp(String mobile) async {
+    await _request('/api/v1/customer/auth/send-otp', method: 'POST', body: {'mobile': mobile});
   }
 
   Future<CustomerSession> verifyOtp(String mobile, String otp) async {

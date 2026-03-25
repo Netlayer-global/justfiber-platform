@@ -23,7 +23,6 @@ class AppState extends ChangeNotifier {
   final api = ApiClient(baseUrl: defaultApiBase);
 
   CustomerSession? session;
-  String? demoOtp;
   bool busy = false;
   bool restoringSession = true;
   String? error;
@@ -117,7 +116,6 @@ class AppState extends ChangeNotifier {
     final preservedTracking = preserveGuestBooking ? bookingTracking : null;
     final preservedLookupMobile = preserveGuestBooking ? latestBookingLookupMobile : null;
     session = null;
-    demoOtp = null;
     error = null;
     dashboard = const DashboardData(
       customerName: '',
@@ -203,7 +201,7 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      demoOtp = await api.sendOtp(mobile);
+      await api.sendOtp(mobile);
     } catch (e) {
       error = e.toString();
     } finally {

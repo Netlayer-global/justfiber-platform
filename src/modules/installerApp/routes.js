@@ -17,6 +17,7 @@ import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
+import { env } from "../../config/env.js";
 import { buildPagination } from "../../common/pagination.js";
 import {
   buildPppoeCredentials,
@@ -641,7 +642,10 @@ installerAppRouter.post(
   asyncHandler(async (req, res) => {
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
     const otp = await sendOtp(job, "install_complete");
-    return ok(res, { sent: true, demoOtp: otp });
+    return ok(res, {
+      sent: true,
+      ...(env.EXPOSE_DEMO_OTP ? { demoOtp: otp } : {})
+    });
   })
 );
 
@@ -650,7 +654,10 @@ installerAppRouter.post(
   asyncHandler(async (req, res) => {
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
     const otp = await sendOtp(job, "complaint_complete");
-    return ok(res, { sent: true, demoOtp: otp });
+    return ok(res, {
+      sent: true,
+      ...(env.EXPOSE_DEMO_OTP ? { demoOtp: otp } : {})
+    });
   })
 );
 

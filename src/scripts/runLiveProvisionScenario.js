@@ -59,6 +59,14 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function requireDemoOtp(payload, path) {
+  const otp = payload?.data?.demoOtp;
+  if (!otp) {
+    throw new Error(`${path} did not expose demoOtp. Set EXPOSE_DEMO_OTP=true for local scripted OTP login tests.`);
+  }
+  return otp;
+}
+
 async function waitForInstallerAssignment({ bookingNumber, customerToken, timeoutMs = 30000, pollMs = 2000 }) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -105,7 +113,7 @@ export default async function runLiveProvisionScenario() {
     path: "/api/v1/customer/auth/send-otp",
     body: { mobile }
   });
-  const otp = sendOtp.data.demoOtp;
+  const otp = requireDemoOtp(sendOtp, "/api/v1/customer/auth/send-otp");
   const verifyOtp = await requestJson({
     method: "POST",
     path: "/api/v1/customer/auth/verify-otp",
