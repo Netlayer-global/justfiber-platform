@@ -79,8 +79,24 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
           ? 'Billing issue detected'
           : widget.issueType == 'plan'
               ? 'Plan issue detected'
-              : 'Internet issue detected',
-      description: '${diagnosis.headline}\n\n${diagnosis.summary}\n\nRecommendation: ${diagnosis.recommendation}',
+              : widget.issueType == 'wifi'
+                  ? 'Wi-Fi issue detected'
+                  : widget.issueType == 'speed'
+                      ? 'Slow speed detected'
+                      : 'Internet issue detected',
+      description:
+          '${diagnosis.headline}\n\n'
+          '${diagnosis.summary}\n\n'
+          'Recommendation: ${diagnosis.recommendation}\n\n'
+          'Snapshot:\n'
+          '- Issue type: ${diagnosis.issueType}\n'
+          '- Internet: ${diagnosis.internetStatus}\n'
+          '- Wi-Fi: ${diagnosis.wifiStatus}\n'
+          '- Line: ${diagnosis.lineStatus}\n'
+          '- Speed: ${diagnosis.estimatedSpeedMbps.toStringAsFixed(0)} Mbps\n'
+          '- Latency: ${diagnosis.latencyMs.toStringAsFixed(0)} ms\n'
+          '- Packet loss: ${diagnosis.packetLossPercent.toStringAsFixed(1)} %\n'
+          '- Optical RX: ${diagnosis.opticalRxPower == null ? '-' : '${diagnosis.opticalRxPower!.toStringAsFixed(1)} dBm'}',
     );
     if (!mounted) return;
     setState(() => _raisingTicket = false);
@@ -103,16 +119,22 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     final assistantTitle = switch (widget.issueType) {
       'billing' => 'Billing assistant',
       'plan' => 'Plan assistant',
+      'wifi' => 'Wi-Fi assistant',
+      'speed' => 'Speed assistant',
       _ => 'Internet assistant',
     };
     final assistantHeadline = switch (widget.issueType) {
       'billing' => 'Let me check your billing first',
       'plan' => 'Let me review your plan first',
+      'wifi' => 'Let me inspect your Wi-Fi health first',
+      'speed' => 'Let me inspect your speed first',
       _ => 'Let me check your line first',
     };
     final assistantSummary = switch (widget.issueType) {
       'billing' => 'We will detect dues, suspension, payment state, and the quickest billing fix before raising a complaint.',
       'plan' => 'We will check plan limits, FUP, and upgrade need before suggesting the next step.',
+      'wifi' => 'We will check line reachability, Wi-Fi quality, and device-side issues before raising a complaint.',
+      'speed' => 'We will check if speed is being limited by plan, FUP, line quality, or router conditions before raising a complaint.',
       _ => 'We will first detect the likely reason, suggest fixes, and only then raise a complaint if needed.',
     };
     return Scaffold(
@@ -175,6 +197,10 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                             ? 'Checking due amount, payment state, and service suspension...'
                             : widget.issueType == 'plan'
                                 ? 'Checking data policy, cap usage, and upgrade triggers...'
+                                : widget.issueType == 'wifi'
+                                    ? 'Checking Wi-Fi quality, line reachability, and device state...'
+                                    : widget.issueType == 'speed'
+                                        ? 'Checking current plan speed, FUP state, and line quality...'
                                 : 'Checking billing, line status, speed, and device quality...',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),

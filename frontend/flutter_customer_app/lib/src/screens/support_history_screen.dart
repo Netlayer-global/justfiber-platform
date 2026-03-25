@@ -106,6 +106,30 @@ class SupportHistoryScreen extends StatelessWidget {
                       },
                     ),
                     _issueButton(
+                      label: 'Wi-Fi issue',
+                      icon: Icons.router_rounded,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportAssistantScreen(issueType: 'wifi')),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
+                    ),
+                    _issueButton(
+                      label: 'Slow speed',
+                      icon: Icons.speed_rounded,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportAssistantScreen(issueType: 'speed')),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
+                    ),
+                    _issueButton(
                       label: 'Billing issue',
                       icon: Icons.receipt_long_rounded,
                       onTap: () async {

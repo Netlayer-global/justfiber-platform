@@ -2623,6 +2623,8 @@ customerPortalRouter.post(
     const issueType = String(req.body?.issueType || "internet").trim().toLowerCase() || "internet";
     const online = device.onlineStatus === "online";
     const { speedMbps, latencyMs, packetLossPercent, rxPower } = estimateNetworkMetrics({ customer, device });
+    const blockedClients = getConnectedDevices(device).filter((item) => item.blocked).length;
+    const connectedDevices = getConnectedDevices(device).length;
     const dueAmount = Number(customer?.billingSnapshot?.dueAmount || 0);
     const usageCapReached = customer?.billingSnapshot?.usageCapReached === true;
     const dataPolicy = String(customer?.billingSnapshot?.dataPolicy || "unlimited");
@@ -2706,6 +2708,114 @@ customerPortalRouter.post(
           "Review your current plan speed and usage first.",
           "Use internet checks to inspect line quality and packet loss.",
           "Upgrade only if your usage pattern needs a faster plan.",
+        ];
+      }
+    } else if (issueType === "wifi") {
+      if (!online) {
+        diagnosisCode = "wifi_backhaul_down";
+        headline = "Wi-Fi is unavailable because the router is offline";
+        summary = "The Wi-Fi issue is actually caused by the broadband device being offline right now.";
+        recommendation = "Check power, fiber, and ONT status first. Raise a complaint if the router does not come online.";
+        needsTicket = true;
+        steps = [
+          "Check router and ONT power lights.",
+          "Check LOS/PON/fiber lights for red status.",
+          "Restart the router once and wait for reconnect.",
+          "Raise a complaint if Wi-Fi still does not return.",
+        ];
+      } else if (blockedClients > 0) {
+        diagnosisCode = "wifi_access_control";
+        headline = "Some devices may be blocked on this Wi-Fi";
+        summary = `We detected ${blockedClients} blocked device${blockedClients > 1 ? "s" : ""} in access control.`;
+        recommendation = "Review connected devices and unblock the affected one from the Wi-Fi settings page.";
+        needsTicket = false;
+        steps = [
+          "Open Wi-Fi settings and review connected devices.",
+          "Unblock the affected device if it was restricted.",
+          "Reconnect the device and test again.",
+        ];
+      } else if (packetLossPercent >= 2 || Number(rxPower) < -26) {
+        diagnosisCode = "wifi_quality_weak";
+        headline = "Wi-Fi quality looks weak on this connection";
+        summary = "We detected weaker line or packet quality, which can make Wi-Fi feel unstable.";
+        recommendation = "Try diagnostics and stay closer to the router. Raise a complaint if quality stays poor.";
+        needsTicket = true;
+        steps = [
+          "Move closer to the router and test on 5 GHz.",
+          "Run Wi-Fi diagnostics from Wi-Fi settings.",
+          "Restart the router once.",
+          "Raise a complaint if the issue continues across multiple devices.",
+        ];
+      } else {
+        diagnosisCode = "wifi_local_issue";
+        headline = "The line looks up, so this may be a local Wi-Fi issue";
+        summary = `The router is online and we can see ${connectedDevices} connected device${connectedDevices == 1 ? "" : "s"}.`;
+        recommendation = "Refresh Wi-Fi settings, test 5 GHz, and reboot the router if needed.";
+        needsTicket = true;
+        steps = [
+          "Open Wi-Fi settings and verify SSID/password.",
+          "Reconnect the affected device or forget and join again.",
+          "Use 5 GHz for stronger speed if supported.",
+          "Raise a complaint if all devices are affected.",
+        ];
+      }
+    } else if (issueType === "speed") {
+      const planSpeed = Number(customer?.billingSnapshot?.speedMbps || customer?.speedMbps || 100);
+      if (usageCapReached && dataPolicy === "fup") {
+        diagnosisCode = "speed_fup_limited";
+        headline = "Speed is being reduced by fair-usage policy";
+        summary = "The current plan has moved into FUP, so lower speed is expected right now.";
+        recommendation = "Upgrade the plan if you want full speed restored immediately.";
+        needsTicket = false;
+        steps = [
+          "Open Billing to review usage and FUP speed.",
+          "Compare a faster plan from the plan catalog.",
+          "Upgrade now if higher speed is needed today.",
+        ];
+      } else if (usageCapReached && dataPolicy === "hard_cap") {
+        diagnosisCode = "speed_hard_cap";
+        headline = "Speed is blocked because the plan limit is exhausted";
+        summary = "This capped plan has reached its limit, which can stop service or reduce throughput.";
+        recommendation = "Upgrade the plan or wait for the next cycle reset.";
+        needsTicket = false;
+        steps = [
+          "Review current data usage in Billing.",
+          "Upgrade the plan if service is needed immediately.",
+          "Raise a complaint only if usage data appears incorrect.",
+        ];
+      } else if (!online) {
+        diagnosisCode = "speed_router_offline";
+        headline = "Speed is low because the router is offline";
+        summary = "We cannot measure speed properly while the broadband device is offline.";
+        recommendation = "Restore the router connection first, then run a speed check again.";
+        needsTicket = true;
+        steps = [
+          "Check router and ONT power status.",
+          "Restart the router once.",
+          "Raise a complaint if the line does not return online.",
+        ];
+      } else if (speedMbps < Math.max(20, Math.round(planSpeed * 0.55))) {
+        diagnosisCode = "speed_below_expected";
+        headline = "Current speed looks below plan expectation";
+        summary = `The line is delivering about ${speedMbps.toFixed(0)} Mbps against a plan profile near ${planSpeed.toFixed(0)} Mbps.`;
+        recommendation = "Test on 5 GHz or wired mode first. If speed still stays low, raise a complaint.";
+        needsTicket = true;
+        steps = [
+          "Run speed test near the router or on a wired device.",
+          "Use 5 GHz instead of 2.4 GHz if available.",
+          "Restart the router and test again.",
+          "Raise a complaint if speed remains low across devices.",
+        ];
+      } else {
+        diagnosisCode = "speed_normal";
+        headline = "The line speed looks normal right now";
+        summary = `Current estimated throughput is around ${speedMbps.toFixed(0)} Mbps, which looks healthy for this line.`;
+        recommendation = "If only one device is slow, the issue is likely local Wi-Fi or device-side.";
+        needsTicket = false;
+        steps = [
+          "Test on another device to compare speed.",
+          "Reconnect the affected device to 5 GHz Wi-Fi.",
+          "Use Wi-Fi diagnostics if one room or one device is affected.",
         ];
       }
     } else if (serviceSuspended && dueAmount > 0) {
