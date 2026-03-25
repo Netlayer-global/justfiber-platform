@@ -1005,10 +1005,15 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   List<(int, String)> _availableDurations(dynamic plan) {
     final durations = <(int, String)>[];
-    if (plan.validityMonthly == true) durations.add((1, '1 month'));
-    if (plan.validityQuarterly == true) durations.add((3, '3 months'));
-    if (plan.validityHalfYearly == true) durations.add((6, '6 months'));
-    if (plan.validityYearly == true) durations.add((12, '12 months'));
+    final monthlyPrice = ((plan.monthlyPrice ?? 0) as num).toDouble();
+    final quarterlyPrice = ((plan.quarterlyPrice ?? 0) as num).toDouble();
+    final halfYearlyPrice = ((plan.halfYearlyPrice ?? 0) as num).toDouble();
+    final yearlyPrice = ((plan.yearlyPrice ?? 0) as num).toDouble();
+
+    if (plan.validityMonthly == true || monthlyPrice > 0) durations.add((1, '1 month'));
+    if (plan.validityQuarterly == true || quarterlyPrice > 0) durations.add((3, '3 months'));
+    if (plan.validityHalfYearly == true || halfYearlyPrice > 0) durations.add((6, '6 months'));
+    if (plan.validityYearly == true || yearlyPrice > 0) durations.add((12, '12 months'));
     if (durations.isEmpty) {
       durations.add((1, '1 month'));
     }
@@ -1017,15 +1022,19 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   double _priceForDuration(dynamic plan, int months) {
     if (plan == null) return 0;
+    final monthlyPrice = ((plan.monthlyPrice ?? 0) as num).toDouble();
+    final quarterlyPrice = ((plan.quarterlyPrice ?? 0) as num).toDouble();
+    final halfYearlyPrice = ((plan.halfYearlyPrice ?? 0) as num).toDouble();
+    final yearlyPrice = ((plan.yearlyPrice ?? 0) as num).toDouble();
     switch (months) {
       case 12:
-        return ((plan.yearlyPrice ?? 0) as num).toDouble();
+        return yearlyPrice > 0 ? yearlyPrice : monthlyPrice * 12;
       case 6:
-        return ((plan.halfYearlyPrice ?? 0) as num).toDouble();
+        return halfYearlyPrice > 0 ? halfYearlyPrice : monthlyPrice * 6;
       case 3:
-        return ((plan.quarterlyPrice ?? 0) as num).toDouble();
+        return quarterlyPrice > 0 ? quarterlyPrice : monthlyPrice * 3;
       default:
-        return ((plan.monthlyPrice ?? 0) as num).toDouble();
+        return monthlyPrice;
     }
   }
 
