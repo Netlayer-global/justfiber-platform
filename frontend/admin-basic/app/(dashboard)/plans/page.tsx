@@ -945,6 +945,17 @@ export default function PlansPage() {
                 <div className="mt-2 text-sm text-white/55">
                   {selectedPlan.planCode} - {renderCategoryLabel(selectedPlan.category)} - {selectedPlan.visibleInCustomerApp ? 'Visible in apps' : 'Hidden from apps'}
                 </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className={`rounded-full border px-3 py-1 text-xs ${selectedPlan.provisioningReady === false ? 'border-amber-300/30 bg-amber-300/10 text-amber-100' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'}`}>
+                    {selectedPlan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    {selectedPlan.speed} / {selectedPlan.uploadSpeed || 0} Mbps
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    {formatCurrency(selectedPlan.price)}
+                  </span>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => beginEdit(selectedPlan)} className="btn-secondary inline-flex items-center gap-2">
@@ -1051,17 +1062,25 @@ export default function PlansPage() {
                 {(plan.features || []).slice(0, 3).join(' | ') || 'No marketing copy added yet'}
               </div>
 
-              <div className="mt-5 grid gap-2 text-sm text-white/70">
-                <div className="flex items-center justify-between"><span>Sort order</span><span>{plan.sortOrder || 1}</span></div>
-                <div className="flex items-center justify-between"><span>Access profile</span><span>{plan.provisioning?.accessProfileCode || '-'}</span></div>
-                <div className="flex items-center justify-between"><span>VLAN</span><span>{plan.provisioning?.vlanId || '-'}</span></div>
-                <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{plan.provisioning?.wifiNamePrefix || '-'}</span></div>
-                <div className="flex items-center justify-between"><span>FUP</span><span>{plan.fupSpeedMbps ? `${plan.fupSpeedMbps} Mbps` : '-'}</span></div>
-                <div className="flex items-center justify-between"><span>Burst</span><span>{plan.burstDownloadMbps || plan.burstUploadMbps ? `${plan.burstDownloadMbps || 0}/${plan.burstUploadMbps || 0}` : '-'}</span></div>
-                <div className="flex items-center justify-between"><span>Latency</span><span>{plan.latencyClass || 'standard'}</span></div>
-                <div className="flex items-center justify-between"><span>Contention</span><span>{plan.contentionRatio || '-'}</span></div>
-                <div className="flex items-center justify-between"><span>Customer app</span><span>{plan.visibleInCustomerApp ? 'Visible' : 'Hidden'}</span></div>
-                <div className="flex items-center justify-between"><span>Sales app</span><span>{plan.visibleInSalesApp ? 'Visible' : 'Hidden'}</span></div>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Catalog state</div>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between"><span>Sort order</span><span>{plan.sortOrder || 1}</span></div>
+                    <div className="flex items-center justify-between"><span>Customer app</span><span>{plan.visibleInCustomerApp ? 'Visible' : 'Hidden'}</span></div>
+                    <div className="flex items-center justify-between"><span>Sales app</span><span>{plan.visibleInSalesApp ? 'Visible' : 'Hidden'}</span></div>
+                    <div className="flex items-center justify-between"><span>Latency</span><span>{plan.latencyClass || 'standard'}</span></div>
+                  </div>
+                </div>
+                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Provisioning</div>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between"><span>Access profile</span><span>{plan.provisioning?.accessProfileCode || '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>VLAN</span><span>{plan.provisioning?.vlanId || '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>Wi-Fi prefix</span><span>{plan.provisioning?.wifiNamePrefix || '-'}</span></div>
+                    <div className="flex items-center justify-between"><span>FUP</span><span>{plan.fupSpeedMbps ? `${plan.fupSpeedMbps} Mbps` : '-'}</span></div>
+                  </div>
+                </div>
               </div>
 
               {plan.provisioningIssues && plan.provisioningIssues.length > 0 ? (
@@ -1102,7 +1121,7 @@ export default function PlansPage() {
                   onClick={() => void togglePlanStatus(plan)}
                   className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-200' : 'border-[#8224E3]/30 text-[#8224E3]'}`}
                 >
-                  {plan.status === 'active' ? <Trash2 className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                  <ShieldCheck className="h-4 w-4" />
                   {plan.status === 'active' ? 'Deactivate' : 'Activate'}
                 </button>
                 <button type="button" onClick={() => void removePlan(plan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-200">
