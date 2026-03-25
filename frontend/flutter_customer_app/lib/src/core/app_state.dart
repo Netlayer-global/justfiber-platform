@@ -87,6 +87,7 @@ class AppState extends ChangeNotifier {
   List<InstallerVisitItem> installerVisits = const [];
   FeasibilityResult? feasibility;
   BillingPaymentOrder? billingPaymentOrder;
+  BillingPaymentOrder? bookingPaymentOrder;
   SpeedTestData speedTest = const SpeedTestData(
     downloadMbps: 0,
     uploadMbps: 0,
@@ -177,6 +178,7 @@ class AppState extends ChangeNotifier {
     installerVisits = const [];
     feasibility = null;
     billingPaymentOrder = null;
+    bookingPaymentOrder = null;
     speedTest = const SpeedTestData(
       downloadMbps: 0,
       uploadMbps: 0,
@@ -369,6 +371,7 @@ class AppState extends ChangeNotifier {
     required String pinCode,
     required double lat,
     required double lng,
+    String paymentMode = 'cash',
     int? durationMonths,
     String? durationLabel,
     String? preferredDate,
@@ -389,6 +392,7 @@ class AppState extends ChangeNotifier {
         pinCode: pinCode,
         lat: lat,
         lng: lng,
+        paymentMode: paymentMode,
         durationMonths: durationMonths,
         durationLabel: durationLabel,
         preferredDate: preferredDate,
@@ -556,6 +560,64 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       error = e.toString();
       return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<BillingPaymentOrder?> loadBookingPaymentOrder({
+    required String bookingNumber,
+    double? amount,
+  }) async {
+    final current = session;
+    if (current == null) return null;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      bookingPaymentOrder = await api.createBookingPaymentOrder(
+        current,
+        bookingNumber: bookingNumber,
+        amount: amount,
+      );
+      return bookingPaymentOrder;
+    } catch (e) {
+      error = e.toString();
+      return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> verifyBookingPayment({
+    required String bookingNumber,
+    required String orderId,
+    required String paymentId,
+    required String signature,
+    required double amount,
+  }) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.verifyBookingPayment(
+        current,
+        bookingNumber: bookingNumber,
+        orderId: orderId,
+        paymentId: paymentId,
+        signature: signature,
+        amount: amount,
+      );
+      await refresh();
+      await refreshBookingTracking();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
     } finally {
       busy = false;
       notifyListeners();

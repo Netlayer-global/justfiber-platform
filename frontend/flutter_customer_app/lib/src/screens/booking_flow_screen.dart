@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../core/app_state.dart';
 import '../widgets/app_card.dart';
+import 'booking_payment_screen.dart';
 import 'service_tracking_screen.dart';
 
 class BookingFlowScreen extends StatefulWidget {
@@ -27,6 +28,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   String? selectedPlanCode;
   int _selectedDurationMonths = 1;
   String _selectedDurationLabel = '1 month';
+  String _selectedPaymentMode = 'cash';
   String? _selectedSlotCode = 'morning';
   String? _selectedSlotLabel = '10 AM - 1 PM';
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
@@ -450,6 +452,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Pinned coordinates', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
           _summaryRow('Plan', selected?.name ?? '-'),
           _summaryRow('Duration', _selectedDurationLabel),
+          _summaryRow('Payment mode', _selectedPaymentMode == 'razorpay' ? 'Online payment' : 'Cash / offline'),
           _summaryRow('Payable now', 'Rs ${_bookingAmountFor(selected).toStringAsFixed(0)}'),
           _summaryRow('Preferred date', _formatDate(_preferredDate)),
           _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
@@ -508,6 +511,48 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             }).toList(),
           ),
           const SizedBox(height: 16),
+          const Text('Payment mode', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              ChoiceChip(
+                label: const Text('Cash / offline'),
+                selected: _selectedPaymentMode == 'cash',
+                backgroundColor: const Color(0xFFF8F4FF),
+                selectedColor: const Color(0xFF8224E3),
+                side: BorderSide(color: _selectedPaymentMode == 'cash' ? const Color(0xFF8224E3) : const Color(0x228224E3)),
+                labelStyle: TextStyle(
+                  color: _selectedPaymentMode == 'cash' ? const Color(0xFF111111) : const Color(0xFF131313),
+                  fontWeight: FontWeight.w700,
+                ),
+                onSelected: (_) => setState(() => _selectedPaymentMode = 'cash'),
+              ),
+              ChoiceChip(
+                label: const Text('Online payment'),
+                selected: _selectedPaymentMode == 'razorpay',
+                backgroundColor: const Color(0xFFF8F4FF),
+                selectedColor: const Color(0xFF8224E3),
+                side: BorderSide(color: _selectedPaymentMode == 'razorpay' ? const Color(0xFF8224E3) : const Color(0x228224E3)),
+                labelStyle: TextStyle(
+                  color: _selectedPaymentMode == 'razorpay' ? const Color(0xFF111111) : const Color(0xFF131313),
+                  fontWeight: FontWeight.w700,
+                ),
+                onSelected: appState.session == null
+                    ? null
+                    : (_) => setState(() => _selectedPaymentMode = 'razorpay'),
+              ),
+            ],
+          ),
+          if (appState.session == null) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Online payment is available after customer login. Guest bookings continue with cash confirmation.',
+              style: TextStyle(color: Color(0xFF6B7280), height: 1.4),
+            ),
+          ],
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
@@ -527,9 +572,32 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         preferredDate: _preferredDate.toIso8601String(),
                         preferredSlotCode: _selectedSlotCode,
                         preferredSlotLabel: _selectedSlotLabel,
+                        paymentMode: _selectedPaymentMode,
                       );
                       if (!mounted) return;
                       if (ok) {
+                        if (_selectedPaymentMode == 'razorpay' && appState.session != null) {
+                          final order = await appState.loadBookingPaymentOrder(
+                            bookingNumber: appState.latestBooking!.bookingNumber,
+                            amount: appState.latestBooking!.amount,
+                          );
+                          if (!mounted) return;
+                          if (order != null) {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => BookingPaymentScreen(
+                                  bookingNumber: appState.latestBooking!.bookingNumber,
+                                  paymentOrder: order,
+                                ),
+                              ),
+                            );
+                            if (!mounted) return;
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(appState.error ?? 'Unable to start booking payment')),
+                            );
+                          }
+                        }
                         await appState.refresh();
                         if (!mounted) return;
                         setState(() => step = 4);
@@ -660,6 +728,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 selectedPlanCode = null;
                 _selectedDurationMonths = 1;
                 _selectedDurationLabel = '1 month';
+                _selectedPaymentMode = 'cash';
                 _selectedSlotCode = 'morning';
                 _selectedSlotLabel = '10 AM - 1 PM';
                 _preferredDate = DateTime.now().add(const Duration(days: 1));

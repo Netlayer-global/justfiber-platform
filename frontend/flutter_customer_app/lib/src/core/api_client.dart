@@ -389,6 +389,7 @@ class ApiClient {
     required String pinCode,
     required double lat,
     required double lng,
+    String paymentMode = 'cash',
     int? durationMonths,
     String? durationLabel,
     String? preferredDate,
@@ -408,7 +409,7 @@ class ApiClient {
       if (preferredDate != null && preferredDate.isNotEmpty) 'preferredDate': preferredDate,
       if (preferredSlotCode != null && preferredSlotCode.isNotEmpty) 'preferredSlotCode': preferredSlotCode,
       if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty) 'preferredSlotLabel': preferredSlotLabel,
-      'paymentMode': 'cash',
+      'paymentMode': paymentMode,
     };
     final primaryPath = session == null ? '/api/v1/customer/bookings/public' : '/api/v1/customer/bookings';
     final fallbackPath = session == null ? '/api/v1/customer/bookings' : '/api/v1/customer/bookings/public';
@@ -573,6 +574,33 @@ class ApiClient {
     );
   }
 
+  Future<BillingPaymentOrder> createBookingPaymentOrder(
+    CustomerSession session, {
+    required String bookingNumber,
+    double? amount,
+  }) async {
+    final data = _asMap(
+      await _request(
+        '/api/v1/customer/bookings/$bookingNumber/payment/order',
+        method: 'POST',
+        token: session.accessToken,
+        body: amount != null ? {'amount': amount} : const {},
+      ),
+    );
+    return BillingPaymentOrder(
+      provider: (data['provider'] ?? 'razorpay').toString(),
+      customerId: (data['bookingNumber'] ?? bookingNumber).toString(),
+      orderId: (data['orderId'] ?? '').toString(),
+      keyId: (data['keyId'] ?? '').toString(),
+      amount: double.tryParse('${data['amount'] ?? 0}') ?? 0,
+      amountPaise: int.tryParse('${data['amountPaise'] ?? 0}') ?? 0,
+      currency: (data['currency'] ?? 'INR').toString(),
+      customerName: (data['customerName'] ?? '').toString(),
+      customerEmail: (data['customerEmail'] ?? '').toString(),
+      customerPhone: (data['customerPhone'] ?? session.mobile).toString(),
+    );
+  }
+
   Future<void> verifyBillingPayment(
     CustomerSession session, {
     required String orderId,
@@ -590,6 +618,28 @@ class ApiClient {
         'razorpaySignature': signature,
         'amount': amount,
         'notes': 'Customer app Razorpay verification',
+      },
+    );
+  }
+
+  Future<void> verifyBookingPayment(
+    CustomerSession session, {
+    required String bookingNumber,
+    required String orderId,
+    required String paymentId,
+    required String signature,
+    required double amount,
+  }) async {
+    await _request(
+      '/api/v1/customer/bookings/$bookingNumber/payment/verify',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        'razorpayOrderId': orderId,
+        'razorpayPaymentId': paymentId,
+        'razorpaySignature': signature,
+        'amount': amount,
+        'notes': 'Customer app booking Razorpay verification',
       },
     );
   }

@@ -36,6 +36,8 @@ import {
   addonRequestSchema,
   bookingSchema,
   bookingPaymentConfirmSchema,
+  bookingPaymentOrderSchema,
+  bookingPaymentVerifySchema,
   bookingPaymentLinkSchema,
   billingPaymentConfirmSchema,
   billingPaymentOrderSchema,
@@ -1257,6 +1259,73 @@ customerPortalRouter.post(
 );
 
 customerPortalRouter.post(
+  "/bookings/:bookingNumber/payment/order",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = bookingPaymentOrderSchema.parse(req.body || {});
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+    const amount = payload.amount || booking.selectedPlan?.totalAmount || booking.payment?.amount || 0;
+    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+      throw new ApiError(400, "No payable booking amount found");
+    }
+
+    const order = await razorpayClient.createOrder({
+      amount,
+      receipt: `booking_${booking.bookingNumber}_${Date.now()}`,
+      notes: {
+        bookingNumber: booking.bookingNumber,
+        source: "customer_booking"
+      }
+    });
+
+    booking.payment = {
+      ...(booking.payment || {}),
+      provider: "razorpay",
+      status: "pending",
+      amount,
+      reference: order.receipt
+    };
+    await booking.save();
+
+    await PaymentTransaction.findOneAndUpdate(
+      { transactionId: order.id },
+      {
+        $set: {
+          customerId: booking.personalDetails?.mobile || booking.bookingNumber,
+          serviceId: booking.bookingNumber,
+          provider: "razorpay",
+          amount,
+          currency: order.currency || "INR",
+          status: "pending",
+          reference: order.receipt,
+          metadata: {
+            orderId: order.id,
+            source: "customer_booking_order",
+            notes: order.notes
+          }
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return ok(res, {
+      provider: "razorpay",
+      keyId: env.RAZORPAY_KEY_ID,
+      orderId: order.id,
+      amount,
+      amountPaise: order.amount,
+      currency: order.currency || "INR",
+      customerName: booking.personalDetails?.fullName || "",
+      customerEmail: booking.personalDetails?.email || "",
+      customerPhone: booking.personalDetails?.mobile || "",
+      bookingNumber: booking.bookingNumber,
+      receipt: order.receipt,
+      notes: order.notes || {}
+    });
+  })
+);
+
+customerPortalRouter.post(
   "/bookings/:bookingNumber/payment/link-jaze",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
@@ -1386,6 +1455,90 @@ customerPortalRouter.get(
       .limit(20)
       .lean();
     return ok(res, jobs.map(buildInstallerVisitSummary));
+  })
+);
+
+customerPortalRouter.post(
+  "/bookings/:bookingNumber/payment/verify",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const payload = bookingPaymentVerifySchema.parse(req.body || {});
+    const booking = await getOwnedBookingOrThrow(req.params.bookingNumber, req.customerUser._id);
+
+    const valid = razorpayClient.verifyCheckoutSignature({
+      orderId: payload.razorpayOrderId,
+      paymentId: payload.razorpayPaymentId,
+      signature: payload.razorpaySignature
+    });
+    if (!valid) {
+      throw new ApiError(400, "Invalid Razorpay signature");
+    }
+
+    const amount = payload.amount || booking.selectedPlan?.totalAmount || booking.payment?.amount || 0;
+    booking.payment = {
+      ...(booking.payment || {}),
+      provider: "razorpay",
+      status: "paid",
+      paidAt: new Date(),
+      amount,
+      reference: payload.razorpayOrderId,
+      paymentId: payload.razorpayPaymentId,
+      notes: payload.notes
+    };
+
+    await PaymentTransaction.findOneAndUpdate(
+      { transactionId: payload.razorpayOrderId },
+      {
+        $set: {
+          customerId: booking.personalDetails?.mobile || booking.bookingNumber,
+          serviceId: booking.bookingNumber,
+          provider: "razorpay",
+          amount,
+          currency: "INR",
+          status: "captured",
+          paidAt: new Date(),
+          reference: payload.razorpayOrderId,
+          paymentId: payload.razorpayPaymentId,
+          metadata: {
+            source: "customer_booking_verify",
+            orderId: payload.razorpayOrderId,
+            signature: payload.razorpaySignature,
+            notes: payload.notes
+          }
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    const plan = await PlanCatalog.findOne({ planCode: booking.selectedPlan?.planCode });
+    if (!plan) {
+      throw new ApiError(404, "Plan for booking not found");
+    }
+
+    await assignInstallerIfAvailable({
+      booking,
+      payload: {
+        fullName: booking.personalDetails?.fullName,
+        mobile: booking.personalDetails?.mobile,
+        fullAddress: booking.personalDetails?.fullAddress,
+        preferredDate: booking.personalDetails?.preferredSlot?.date,
+        preferredSlotCode: booking.personalDetails?.preferredSlot?.code,
+        preferredSlotLabel: booking.personalDetails?.preferredSlot?.label,
+        durationMonths: booking.selectedPlan?.durationMonths,
+        durationLabel: booking.selectedPlan?.durationLabel,
+        lat: booking.feasibility?.gps?.lat,
+        lng: booking.feasibility?.gps?.lng
+      },
+      plan,
+      feasibility: booking.feasibility
+    });
+
+    return ok(res, {
+      bookingNumber: booking.bookingNumber,
+      status: booking.status,
+      payment: booking.payment,
+      assignment: booking.assignment
+    });
   })
 );
 

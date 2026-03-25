@@ -37,10 +37,22 @@ export const bookingSchema = z.object({
 
 export const bookingPaymentLinkSchema = z.object({});
 
+export const bookingPaymentOrderSchema = z.object({
+  amount: z.number().positive().optional()
+});
+
 export const bookingPaymentConfirmSchema = z.object({
   status: z.enum(["paid", "failed"]),
   paymentId: z.string().optional(),
   reference: z.string().optional(),
+  amount: z.number().positive().optional(),
+  notes: z.string().optional()
+});
+
+export const bookingPaymentVerifySchema = z.object({
+  razorpayOrderId: z.string().min(1),
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
   amount: z.number().positive().optional(),
   notes: z.string().optional()
 });
