@@ -13,7 +13,6 @@ import { LeadKycDocument } from "../../models/LeadKycDocument.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
-import { isPlanProvisioningReady } from "../../common/networkProvisioning.js";
 import { salesBookingPaymentConfirmSchema, salesBookingPaymentLinkSchema, salesKycSchema, salesLeadSchema, salesLoginSchema } from "./schemas.js";
 
 export const salesAppRouter = Router();
@@ -125,7 +124,7 @@ salesAppRouter.get(
   "/plans",
   requireSalesAuth,
   asyncHandler(async (_req, res) => {
-    const plans = (await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean()).filter(isPlanProvisioningReady);
+    const plans = await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean();
     return ok(res, plans);
   })
 );

@@ -29,7 +29,7 @@ import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
-import { detectOntBrand, isPlanProvisioningReady } from "../../common/networkProvisioning.js";
+import { detectOntBrand } from "../../common/networkProvisioning.js";
 import { env } from "../../config/env.js";
 import PDFDocument from "pdfkit";
 import {
@@ -1151,7 +1151,7 @@ customerPortalRouter.get(
 customerPortalRouter.get(
   "/plans",
   asyncHandler(async (_req, res) => {
-    const plans = (await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean()).filter(isPlanProvisioningReady);
+    const plans = await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean();
     return ok(res, plans);
   })
 );
@@ -2282,7 +2282,7 @@ customerPortalRouter.get(
   requireCustomerAuth,
   asyncHandler(async (req, res) => {
     const customer = await Customer.findOne({ customerId: req.customerUser.linkedCustomerIds?.[0] }).lean();
-    const plans = (await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean()).filter(isPlanProvisioningReady);
+    const plans = await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean();
     return ok(res, {
       currentPlanCode: customer?.planCode || null,
       options: plans.filter((plan) => plan.planCode !== customer?.planCode)
