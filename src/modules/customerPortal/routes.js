@@ -465,7 +465,7 @@ async function buildCustomerConnectionSummary(customer) {
     dueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
     paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown",
     billMode: customer.billingSnapshot?.billMode || "",
-    wifiName: device?.wifiInfo?.ssid24 || device?.wifiInfo?.ssid5 || "",
+    wifiName: device?.wifiInfo?.ssid24Masked || device?.wifiInfo?.ssid24 || device?.wifiInfo?.ssid5Masked || device?.wifiInfo?.ssid5 || "",
     onlineStatus: device?.onlineStatus || "unknown",
     address:
       customer.address?.fullAddress
@@ -2317,8 +2317,12 @@ customerPortalRouter.post(
     }
     device.wifiInfo = {
       ...(device.wifiInfo || {}),
+      ssid24,
       ssid24Masked: ssid24,
+      ssid5,
       ssid5Masked: ssid5,
+      password24Masked: password24 ? "********" : device.wifiInfo?.password24Masked || null,
+      password5Masked: password5 ? "********" : device.wifiInfo?.password5Masked || null,
       natEnabled: true
     };
     await device.save();
