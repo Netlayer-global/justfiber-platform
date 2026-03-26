@@ -371,6 +371,7 @@ function mapCustomerServiceRequest(request: any): CustomerServiceRequest {
 function mapDevice(device: any): Device {
   return {
     id: device.deviceId || device._id || '',
+    deviceId: device.deviceId || device._id || '',
     name: device.deviceId || device.serialNumber || device.productClass || 'Unknown device',
     type: device.productClass || device.ontBrand || 'ONT',
     ip: device.ipAddress || device.wanInfo?.ipAddress || device.lastKnownIp,
@@ -381,7 +382,17 @@ function mapDevice(device: any): Device {
           ? 'offline'
           : 'error',
     customerId: device.customerId,
+    serviceId: device.serviceId,
+    serialNumber: device.serialNumber,
+    productClass: device.productClass,
+    onlineStatus: device.onlineStatus,
+    provisioningState: device.provisioningState,
+    updatedAt: device.updatedAt || device.lastInformAt,
     location: device.locationName || device.address,
+    wanInfo: device.wanInfo || {},
+    wifiInfo: device.wifiInfo || {},
+    lanInfo: device.lanInfo || {},
+    opticalInfo: device.opticalInfo || {},
   }
 }
 

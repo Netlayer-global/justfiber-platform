@@ -161,12 +161,23 @@ export interface CustomerBooking {
 
 export interface Device {
   id: string
+  deviceId?: string
   name: string
   type: string
   ip?: string
   status: 'online' | 'offline' | 'error'
   customerId?: string
+  serviceId?: string
+  serialNumber?: string
+  productClass?: string
+  onlineStatus?: string
+  provisioningState?: string
+  updatedAt?: string
   location?: string
+  wanInfo?: Record<string, any>
+  wifiInfo?: Record<string, any>
+  lanInfo?: Record<string, any>
+  opticalInfo?: Record<string, any>
 }
 
 export interface CustomerDevice {
