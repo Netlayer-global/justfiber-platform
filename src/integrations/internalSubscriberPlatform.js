@@ -411,6 +411,9 @@ export class InternalSubscriberPlatform {
         subscriberService.toObject ? subscriberService.toObject() : subscriberService,
         {
           billCycle: buildBillCycle(),
+          billCycleLabel: resolveBillingCycleLabel(durationMonths),
+          durationMonths,
+          dueDate: serviceExpiryAt,
           totalAmount: billingAmount,
           paymentStatus: booking?.payment?.status === "paid" ? "paid" : "pending",
           sourceEvent: "activation"

@@ -131,7 +131,20 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
   };
 }
 
-async function syncCustomerBillingSnapshot({ customerId, totalAmount, dueDate, paymentStatus, billCycle, invoiceNumber, billMode, billingStateCode, billingStateName, billingZoneCode, billingZoneName }) {
+async function syncCustomerBillingSnapshot({
+  customerId,
+  totalAmount,
+  dueDate,
+  paymentStatus,
+  billCycle,
+  billCycleLabel,
+  invoiceNumber,
+  billMode,
+  billingStateCode,
+  billingStateName,
+  billingZoneCode,
+  billingZoneName
+}) {
   const customer = await Customer.findOne({ customerId });
   if (!customer) {
     return null;
@@ -150,7 +163,8 @@ async function syncCustomerBillingSnapshot({ customerId, totalAmount, dueDate, p
   };
   customer.invoiceSummary = {
     ...(customer.invoiceSummary || {}),
-    billCycle: billCycle || "Monthly",
+    billCycle: billCycleLabel || billCycle || "Monthly",
+    billCycleCode: billCycle || customer.invoiceSummary?.billCycleCode || "",
     billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid",
     lastInvoiceNumber: invoiceNumber,
     lastInvoiceDate: new Date()
@@ -219,7 +233,7 @@ export class InternalBillingEngine {
       return { skipped: true, reason: "invoice_exists", invoiceId: existing.invoiceId, serviceId: service.serviceId };
     }
 
-    const dueDate = addDays(generatedAt, billingProfile?.dueDays ?? 0);
+    const dueDate = options.dueDate ? new Date(options.dueDate) : addDays(generatedAt, billingProfile?.dueDays ?? 0);
     const customer = await Customer.findOne({ customerId: service.customerId }).lean();
     const zoneMapping = resolveZoneMapping(billingProfile, customer);
     const billMode = resolveBillMode(service, billingProfile, customer, zoneMapping);
@@ -253,6 +267,8 @@ export class InternalBillingEngine {
         accessProfileCode: service.accessProfileCode,
         billingProfileCode: service.billingProfileCode,
         bngNodeCode: service.bngNodeCode,
+        durationMonths: Number(options.durationMonths || 1),
+        billCycleLabel: options.billCycleLabel || billCycle,
         billMode,
         billingZoneCode: customer?.billingZoneCode || zoneMapping?.zoneCode || "",
         billingZoneName: customer?.billingZoneName || zoneMapping?.zoneName || ""
@@ -267,6 +283,7 @@ export class InternalBillingEngine {
       dueDate: invoice.dueDate,
       paymentStatus: invoice.paymentStatus,
       billCycle,
+      billCycleLabel: options.billCycleLabel || billCycle,
       invoiceNumber: invoice.invoiceNumber,
       billMode,
       billingStateCode: amounts.billingStateCode,
