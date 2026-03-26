@@ -297,6 +297,45 @@ export class RadiusServiceManager {
       metadata: service.metadata || {}
     });
   }
+
+  async deleteSubscriberAccess({ serviceId, radiusUsername, purgeAccounting = false } = {}) {
+    const service =
+      (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
+      (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
+    const username = radiusUsername || service?.radiusUsername;
+    if (!username) {
+      throw new Error("Radius username is required for delete");
+    }
+
+    const connection = await getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute("DELETE FROM radcheck WHERE username = ?", [username]);
+      await connection.execute("DELETE FROM radreply WHERE username = ?", [username]);
+      await connection.execute("DELETE FROM radusergroup WHERE username = ?", [username]);
+      if (purgeAccounting) {
+        await connection.execute("DELETE FROM radacct WHERE username = ?", [username]);
+        await connection.execute("DELETE FROM radpostauth WHERE username = ?", [username]);
+      }
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
+    if (service) {
+      await SubscriberService.deleteOne({ _id: service._id });
+    }
+
+    return {
+      deleted: true,
+      serviceId: service?.serviceId || serviceId || null,
+      radiusUsername: username,
+      purgeAccounting
+    };
+  }
 }
 
 export const radiusServiceManager = new RadiusServiceManager();

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import { Installer, Job } from '@/lib/types'
-import { Loader, RefreshCw, ShieldCheck, UserRoundCog, Wrench } from 'lucide-react'
+import { Loader, RefreshCw, ShieldCheck, Trash2, UserRoundCog, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 
 type InstallerFormState = {
@@ -33,6 +33,7 @@ export default function InstallersPage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [deletingInstallerId, setDeletingInstallerId] = useState('')
   const [form, setForm] = useState<InstallerFormState>(initialForm)
   const [passwordInstallerId, setPasswordInstallerId] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -162,6 +163,29 @@ export default function InstallersPage() {
     }
   }
 
+  async function handleDeleteInstaller(installer: Installer) {
+    const confirmed = window.confirm(
+      `Delete ${installer.name}?\n\nInstaller record, old jobs aur notifications delete ho jayenge. Active jobs honge to delete block rahega.`
+    )
+    if (!confirmed) return
+
+    try {
+      setDeletingInstallerId(installer.id)
+      const response = await adminAPI.deleteInstaller(installer.id)
+      if (response.success) {
+        toast.success(`Deleted ${installer.name}`)
+        await loadInstallers()
+      } else {
+        toast.error(response.error || 'Failed to delete installer')
+      }
+    } catch (error) {
+      console.error('[v0] Failed to delete installer:', error)
+      toast.error('Failed to delete installer')
+    } finally {
+      setDeletingInstallerId('')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -285,6 +309,18 @@ export default function InstallersPage() {
                 <button className="btn-secondary" onClick={() => updateAvailability(installer, 'on_leave')}>Mark Leave</button>
                 <button className="btn-secondary" onClick={() => updateOperationalStatus(installer, 'active')}>Activate</button>
                 <button className="btn-secondary" onClick={() => updateOperationalStatus(installer, 'disabled')}>Disable</button>
+                <button
+                  className="btn-secondary inline-flex items-center gap-2 border-red-500/30 text-red-300 hover:bg-red-500/10"
+                  onClick={() => void handleDeleteInstaller(installer)}
+                  disabled={deletingInstallerId === installer.id}
+                >
+                  {deletingInstallerId === installer.id ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  Delete
+                </button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-end">

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, Customer, Plan } from '@/lib/types'
-import { Eye, Loader, Plus, RefreshCw, Search, Users, Wifi, UserX, X } from 'lucide-react'
+import { Eye, Loader, Plus, RefreshCw, Search, Trash2, Users, Wifi, UserX, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function CustomersPage() {
@@ -14,6 +14,8 @@ export default function CustomersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [isCleaningDemo, setIsCleaningDemo] = useState(false)
+  const [deletingCustomerId, setDeletingCustomerId] = useState('')
   const [createdSummary, setCreatedSummary] = useState<{
     name: string
     customerId?: string
@@ -171,6 +173,63 @@ export default function CustomersPage() {
     })
   }
 
+  async function handleDeleteCustomer(customer: Customer) {
+    const customerId = customer.customerId || customer.id
+    if (!customerId) {
+      toast.error('Customer ID missing')
+      return
+    }
+    const confirmed = window.confirm(
+      `Delete ${customer.name}?\n\nCustomer, PPPoE/RADIUS service, tickets, invoices, payments, jobs aur linked test records delete ho jayenge.`
+    )
+    if (!confirmed) return
+
+    try {
+      setDeletingCustomerId(customerId)
+      const res = await adminAPI.deleteCustomer(customerId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete customer')
+        return
+      }
+      toast.success(`Deleted ${customer.name}`)
+      await loadCustomers({
+        search: search.trim() || undefined,
+        status: status || undefined,
+        planCode: planCode.trim() || undefined,
+        city: city.trim() || undefined,
+      })
+    } catch (error) {
+      console.error('[v0] Failed to delete customer:', error)
+      toast.error('Failed to delete customer')
+    } finally {
+      setDeletingCustomerId('')
+    }
+  }
+
+  async function handleCleanupDemoData() {
+    const confirmed = window.confirm(
+      'Seeded dummy customers, installers, jobs, tickets aur sample records remove karne hain? Real data ko intentionally target nahi kiya jayega.'
+    )
+    if (!confirmed) return
+
+    try {
+      setIsCleaningDemo(true)
+      const res = await adminAPI.cleanupDemoData()
+      if (!res.success) {
+        toast.error(res.error || 'Failed to clean demo data')
+        return
+      }
+      const removedCustomers = Array.isArray(res.data?.customers) ? res.data.customers.length : 0
+      toast.success(`Demo cleanup complete${removedCustomers ? ` | ${removedCustomers} seeded customers removed` : ''}`)
+      await loadCustomers()
+    } catch (error) {
+      console.error('[v0] Failed to clean demo data:', error)
+      toast.error('Failed to clean demo data')
+    } finally {
+      setIsCleaningDemo(false)
+    }
+  }
+
   const activeCount = useMemo(
     () => customers.filter((customer) => customer.status === 'active').length,
     [customers]
@@ -259,6 +318,14 @@ export default function CustomersPage() {
       </section>
 
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
+        <button
+          onClick={() => void handleCleanupDemoData()}
+          className="btn-secondary inline-flex items-center gap-2"
+          disabled={isCleaningDemo}
+        >
+          {isCleaningDemo ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+          Clean Demo Data
+        </button>
         <button onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
           <Plus className="w-4 h-4" />
           New Customer
@@ -440,6 +507,18 @@ export default function CustomersPage() {
                           <Eye className="w-4 h-4" />
                         </button>
                       </Link>
+                      <button
+                        className="p-1 hover:bg-[#3a1722] rounded text-red-300"
+                        title="Delete customer"
+                        onClick={() => void handleDeleteCustomer(customer)}
+                        disabled={deletingCustomerId === (customer.customerId || customer.id)}
+                      >
+                        {deletingCustomerId === (customer.customerId || customer.id) ? (
+                          <Loader className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
                   </td>
                 </tr>

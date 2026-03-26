@@ -38,9 +38,158 @@ import { buildPppoeCredentials } from "../../common/networkProvisioning.js";
 import { AccessProfile } from "../../models/AccessProfile.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
 import { BngNode } from "../../models/BngNode.js";
+import { DashboardSnapshot } from "../../models/DashboardSnapshot.js";
+import { AppBanner } from "../../models/AppBanner.js";
+import { AddonCatalog } from "../../models/AddonCatalog.js";
+import { Lead } from "../../models/Lead.js";
+import { LeadKycDocument } from "../../models/LeadKycDocument.js";
+import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
+import { SalesAgent } from "../../models/SalesAgent.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
+
+const SEEDED_CUSTOMER_IDS = ["CUST-1001", "CUST-1002", "CUST-1003"];
+const SEEDED_SERVICE_IDS = ["SVC-1001", "SVC-1002", "SVC-1003"];
+const SEEDED_DEVICE_IDS = ["ONT-1001", "ONT-1002", "ONT-1003"];
+const SEEDED_TICKET_NUMBERS = ["TKT-20260315-1001", "TKT-20260315-1002"];
+const SEEDED_INVOICE_IDS = ["INV-1001", "INV-1002", "INV-1003"];
+const SEEDED_PAYMENT_IDS = ["PAY-1001", "PAY-1003"];
+const SEEDED_INSTALLER_CODES = ["INS-1001", "INS-1002"];
+const SEEDED_JOB_NUMBERS = ["JOB-20260315-1001", "JOB-20260315-1002"];
+const SEEDED_NETWORK_NODE_IDS = ["BNG-LKO-01", "BNG-LKO-02", "OLT-GN-01"];
+const SEEDED_ADDON_CODES = ["ADDON-WIFI-EXT", "ADDON-ROUTER-UP", "ADDON-LAN-PATCH"];
+const SEEDED_BANNER_TITLES = ["Upgrade to 200 Mbps Family"];
+const SEEDED_SALES_AGENT_CODES = ["SAL-1001"];
+const SEEDED_LEAD_NUMBERS = ["LD100101"];
+const SEEDED_CUSTOMER_USER_MOBILES = ["9876543210"];
+
+async function deleteCustomerCascade(customer) {
+  const services = await SubscriberService.find({
+    $or: [
+      { customerId: customer.customerId },
+      ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : [])
+    ]
+  }).lean();
+
+  const linkedUsers = await CustomerUser.find({
+    $or: [
+      { linkedCustomerIds: customer.customerId },
+      ...(customer.phone ? [{ mobile: customer.phone }] : []),
+      ...(customer.email ? [{ email: customer.email }] : [])
+    ]
+  });
+
+  const deletedCustomerUserIds = [];
+  for (const user of linkedUsers) {
+    const nextLinkedIds = Array.isArray(user.linkedCustomerIds)
+      ? user.linkedCustomerIds.filter((linkedCustomerId) => linkedCustomerId !== customer.customerId)
+      : [];
+    const isPrimaryIdentityMatch =
+      (customer.phone && user.mobile === customer.phone) ||
+      (customer.email && user.email === customer.email);
+
+    if (!nextLinkedIds.length && isPrimaryIdentityMatch) {
+      deletedCustomerUserIds.push(user._id);
+      await user.deleteOne();
+      continue;
+    }
+
+    user.linkedCustomerIds = nextLinkedIds;
+    await user.save();
+  }
+
+  for (const service of services) {
+    await radiusServiceManager.deleteSubscriberAccess({
+      serviceId: service.serviceId,
+      radiusUsername: service.radiusUsername,
+      purgeAccounting: true
+    });
+  }
+
+  const bookingDeleteFilter = {
+    $or: [
+      ...(deletedCustomerUserIds.length ? [{ customerUserId: { $in: deletedCustomerUserIds } }] : []),
+      ...(linkedUsers.length ? [{ customerUserId: { $in: linkedUsers.map((user) => user._id) } }] : []),
+      ...(customer.phone ? [{ "personalDetails.mobile": customer.phone }] : [])
+    ]
+  };
+
+  const deleteResults = await Promise.all([
+    DeviceOperationalCache.deleteMany({
+      $or: [
+        { customerId: customer.customerId },
+        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : [])
+      ]
+    }),
+    SupportTicket.deleteMany({
+      $or: [
+        { customerId: customer.customerId },
+        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : [])
+      ]
+    }),
+    AdminActionRequest.deleteMany({ targetType: "customer", targetId: customer.customerId }),
+    BillingInvoice.deleteMany({
+      $or: [
+        { customerId: customer.customerId },
+        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : [])
+      ]
+    }),
+    PaymentTransaction.deleteMany({
+      $or: [
+        { customerId: customer.customerId },
+        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : [])
+      ]
+    }),
+    BillingNote.deleteMany({
+      $or: [
+        { customerId: customer.customerId },
+        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : [])
+      ]
+    }),
+    ServiceRequest.deleteMany({
+      $or: [
+        { customerId: customer.customerId },
+        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : [])
+      ]
+    }),
+    bookingDeleteFilter.$or.length
+      ? ConnectionBooking.deleteMany(bookingDeleteFilter)
+      : Promise.resolve({ deletedCount: 0 }),
+    CustomerNotification.deleteMany({
+      customerUserId: { $in: linkedUsers.map((user) => user._id) }
+    }),
+    InstallerJob.deleteMany({
+      $or: [
+        { customerId: customer.customerId },
+        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : [])
+      ]
+    }),
+    Customer.deleteOne({ _id: customer._id })
+  ]);
+
+  return {
+    deleted: true,
+    customerId: customer.customerId,
+    serviceId: customer.serviceId,
+    radiusUsernames: services.map((service) => service.radiusUsername).filter(Boolean),
+    deletedCounts: {
+      devices: deleteResults[0].deletedCount || 0,
+      tickets: deleteResults[1].deletedCount || 0,
+      actions: deleteResults[2].deletedCount || 0,
+      invoices: deleteResults[3].deletedCount || 0,
+      payments: deleteResults[4].deletedCount || 0,
+      billingNotes: deleteResults[5].deletedCount || 0,
+      serviceRequests: deleteResults[6].deletedCount || 0,
+      bookings: deleteResults[7].deletedCount || 0,
+      customerNotifications: deleteResults[8].deletedCount || 0,
+      installerJobs: deleteResults[9].deletedCount || 0,
+      customers: deleteResults[10].deletedCount || 0,
+      subscriberServices: services.length,
+      deletedCustomerUsers: deletedCustomerUserIds.length
+    }
+  };
+}
 
 function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMode }) {
   const currentPrice = Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0);
@@ -422,6 +571,123 @@ customersRouter.post(
     });
 
     return ok(res, await buildCustomerResponse(customer), { created: true });
+  })
+);
+
+customersRouter.post(
+  "/demo-data/cleanup",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const seededCustomers = await Customer.find({ customerId: { $in: SEEDED_CUSTOMER_IDS } });
+    const seededCustomerUsers = await CustomerUser.find({
+      mobile: { $in: SEEDED_CUSTOMER_USER_MOBILES }
+    }).select({ _id: 1 }).lean();
+    const customerResults = [];
+    for (const customer of seededCustomers) {
+      customerResults.push(await deleteCustomerCascade(customer));
+    }
+
+    const seededInstallers = await Installer.find({ installerCode: { $in: SEEDED_INSTALLER_CODES } }).select({ _id: 1 }).lean();
+    const seededInstallerIds = seededInstallers.map((installer) => installer._id);
+
+    const [installerJobsResult, installerNotificationsResult, installersResult, customerUsersResult, customerNotificationsResult, leads, ticketsResult, devicesResult, invoicesResult, paymentsResult, bannersResult, addonsResult, salesAgentsResult, serviceRequestsResult, networkNodesResult, snapshotsResult] =
+      await Promise.all([
+        InstallerJob.deleteMany({
+          $or: [
+            { jobNumber: { $in: SEEDED_JOB_NUMBERS } },
+            ...(seededInstallerIds.length ? [{ installerId: { $in: seededInstallerIds } }] : [])
+          ]
+        }),
+        seededInstallerIds.length
+          ? InstallerNotification.deleteMany({ installerId: { $in: seededInstallerIds } })
+          : Promise.resolve({ deletedCount: 0 }),
+        Installer.deleteMany({ installerCode: { $in: SEEDED_INSTALLER_CODES } }),
+        CustomerUser.deleteMany({ mobile: { $in: SEEDED_CUSTOMER_USER_MOBILES } }),
+        seededCustomerUsers.length
+          ? CustomerNotification.deleteMany({ customerUserId: { $in: seededCustomerUsers.map((user) => user._id) } })
+          : Promise.resolve({ deletedCount: 0 }),
+        Lead.find({ leadNumber: { $in: SEEDED_LEAD_NUMBERS } }).select({ _id: 1 }).lean(),
+        SupportTicket.deleteMany({ ticketNumber: { $in: SEEDED_TICKET_NUMBERS } }),
+        DeviceOperationalCache.deleteMany({ deviceId: { $in: SEEDED_DEVICE_IDS } }),
+        BillingInvoice.deleteMany({ invoiceId: { $in: SEEDED_INVOICE_IDS } }),
+        PaymentTransaction.deleteMany({ transactionId: { $in: SEEDED_PAYMENT_IDS } }),
+        AppBanner.deleteMany({ title: { $in: SEEDED_BANNER_TITLES } }),
+        AddonCatalog.deleteMany({ addonCode: { $in: SEEDED_ADDON_CODES } }),
+        SalesAgent.deleteMany({ agentCode: { $in: SEEDED_SALES_AGENT_CODES } }),
+        ServiceRequest.deleteMany({
+          $or: [
+            { requestNumber: "SR100001" },
+            { customerId: { $in: SEEDED_CUSTOMER_IDS } },
+            { serviceId: { $in: SEEDED_SERVICE_IDS } }
+          ]
+        }),
+        NetworkNodeStatus.deleteMany({ nodeId: { $in: SEEDED_NETWORK_NODE_IDS } }),
+        DashboardSnapshot.deleteMany({})
+      ]);
+
+    const leadIds = leads.map((lead) => lead._id);
+    const [leadKycResult, leadsResult] = await Promise.all([
+      leadIds.length
+        ? LeadKycDocument.deleteMany({ leadId: { $in: leadIds } })
+        : Promise.resolve({ deletedCount: 0 }),
+      Lead.deleteMany({ leadNumber: { $in: SEEDED_LEAD_NUMBERS } })
+    ]);
+
+    await auditFromRequest(req, {
+      action: "demo_data.cleaned",
+      entityType: "system",
+      entityId: "seeded-demo-data",
+      metadata: {
+        cleanedCustomerIds: customerResults.map((item) => item.customerId),
+        cleanedInstallerCodes: SEEDED_INSTALLER_CODES
+      }
+    });
+
+    return ok(res, {
+      cleaned: true,
+      customers: customerResults,
+      summary: {
+        installers: installersResult.deletedCount || 0,
+        installerJobs: installerJobsResult.deletedCount || 0,
+        installerNotifications: installerNotificationsResult.deletedCount || 0,
+        customerUsers: customerUsersResult.deletedCount || 0,
+        customerNotifications: customerNotificationsResult.deletedCount || 0,
+        leads: leadsResult.deletedCount || 0,
+        leadKycDocuments: leadKycResult.deletedCount || 0,
+        tickets: ticketsResult.deletedCount || 0,
+        devices: devicesResult.deletedCount || 0,
+        invoices: invoicesResult.deletedCount || 0,
+        payments: paymentsResult.deletedCount || 0,
+        serviceRequests: serviceRequestsResult.deletedCount || 0,
+        banners: bannersResult.deletedCount || 0,
+        addons: addonsResult.deletedCount || 0,
+        salesAgents: salesAgentsResult.deletedCount || 0,
+        networkNodes: networkNodesResult.deletedCount || 0,
+        dashboardSnapshots: snapshotsResult.deletedCount || 0
+      }
+    });
+  })
+);
+
+customersRouter.delete(
+  "/:customerId",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+
+    const result = await deleteCustomerCascade(customer);
+
+    await auditFromRequest(req, {
+      action: "customer.deleted",
+      entityType: "customer",
+      entityId: result.customerId,
+      metadata: result.deletedCounts
+    });
+
+    return ok(res, result);
   })
 );
 

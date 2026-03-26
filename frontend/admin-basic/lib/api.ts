@@ -949,6 +949,28 @@ export const adminAPI = {
       data: res.data ? mapCustomer(res.data) : undefined,
     }
   },
+  deleteCustomer: (id: string) =>
+    request<{
+      deleted: boolean
+      customerId: string
+      serviceId?: string
+      radiusUsernames?: string[]
+      deletedCounts?: Record<string, number>
+    }>(`/api/v1/admin/customers/${id}`, {
+      method: 'DELETE',
+    }),
+  cleanupDemoData: () =>
+    request<{
+      cleaned: boolean
+      customers: Array<{
+        customerId: string
+        serviceId?: string
+        deletedCounts?: Record<string, number>
+      }>
+      summary: Record<string, number>
+    }>('/api/v1/admin/customers/demo-data/cleanup', {
+      method: 'POST',
+    }),
   updateCustomer: (id: string, data: Partial<Customer>) =>
     request<Customer>(`/api/v1/admin/customers/${id}`, {
       method: 'PATCH',
@@ -1236,6 +1258,15 @@ export const adminAPI = {
     request<{ updated: boolean; installerId: string }>(`/api/v1/admin/installers/${id}/reset-password`, {
       method: 'POST',
       body: JSON.stringify({ password }),
+    }),
+  deleteInstaller: (id: string) =>
+    request<{
+      deleted: boolean
+      installerId: string
+      installerCode?: string
+      deletedCounts?: Record<string, number>
+    }>(`/api/v1/admin/installers/${id}`, {
+      method: 'DELETE',
     }),
 
   // Jobs

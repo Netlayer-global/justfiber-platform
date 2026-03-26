@@ -64,6 +64,17 @@ const reassignJobSchema = z.object({
   note: z.string().optional()
 });
 
+const activeJobStatuses = [
+  "assigned",
+  "accepted",
+  "enroute",
+  "onsite",
+  "ont_scanned",
+  "activation_in_progress",
+  "active",
+  "complaint_in_progress"
+];
+
 export const adminInstallersRouter = Router();
 
 adminInstallersRouter.use(requireAuth);
@@ -125,6 +136,42 @@ adminInstallersRouter.patch(
       throw new ApiError(404, "Installer not found");
     }
     return ok(res, installer);
+  })
+);
+
+adminInstallersRouter.delete(
+  "/installers/:installerId",
+  requirePermission(permissions.installerManage),
+  asyncHandler(async (req, res) => {
+    const installer = await Installer.findById(req.params.installerId).lean();
+    if (!installer) {
+      throw new ApiError(404, "Installer not found");
+    }
+
+    const activeJobs = await InstallerJob.countDocuments({
+      installerId: req.params.installerId,
+      status: { $in: activeJobStatuses }
+    });
+    if (activeJobs > 0) {
+      throw new ApiError(409, "Reassign or close active jobs before deleting this installer");
+    }
+
+    const [jobsResult, notificationsResult, installerResult] = await Promise.all([
+      InstallerJob.deleteMany({ installerId: req.params.installerId }),
+      InstallerNotification.deleteMany({ installerId: req.params.installerId }),
+      Installer.deleteOne({ _id: req.params.installerId })
+    ]);
+
+    return ok(res, {
+      deleted: true,
+      installerId: req.params.installerId,
+      installerCode: installer.installerCode,
+      deletedCounts: {
+        jobs: jobsResult.deletedCount || 0,
+        notifications: notificationsResult.deletedCount || 0,
+        installers: installerResult.deletedCount || 0
+      }
+    });
   })
 );
 
