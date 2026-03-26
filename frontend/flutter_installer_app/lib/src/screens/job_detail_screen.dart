@@ -164,8 +164,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Future<void> _refreshPreviewAndDiagnostics({String successMessage = 'ONT details refreshed'}) async {
+    final session = _appState.session;
+    if (session == null) return;
     setState(() => _busy = true);
     try {
+      final serial = _serialController.text.trim();
+      final savedSerial =
+          (_detail?['deviceContext']?['finalSerialNumber'] ?? _detail?['deviceContext']?['manualSerialNumber'] ?? '')
+              .toString()
+              .trim();
+      if (serial.isNotEmpty && serial != savedSerial) {
+        await _appState.api.setManualSerial(session, widget.job.id, serial);
+      }
       await _loadAll();
       if (!mounted) return;
       _show(successMessage);
