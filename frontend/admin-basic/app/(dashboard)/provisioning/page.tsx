@@ -106,6 +106,7 @@ export default function ProvisioningPage() {
   const [copySourcePlanId, setCopySourcePlanId] = useState('')
   const [bulkTargetPlanIds, setBulkTargetPlanIds] = useState<string[]>([])
   const [bulkCategoryFilter, setBulkCategoryFilter] = useState<'all' | 'home' | 'business' | 'enterprise'>('all')
+  const [bulkIncompleteOnly, setBulkIncompleteOnly] = useState(false)
 
   useEffect(() => {
     void loadPlans()
@@ -130,6 +131,7 @@ export default function ProvisioningPage() {
   const issues = provisioningIssues(form)
   const bulkCandidatePlans = plans.filter((plan) => {
     if (plan.id === selectedPlan?.id) return false
+    if (bulkIncompleteOnly && plan.provisioningReady !== false) return false
     if (bulkCategoryFilter === 'all') return true
     return (plan.category || 'home') === bulkCategoryFilter
   })
@@ -447,6 +449,14 @@ export default function ProvisioningPage() {
                     <button type="button" onClick={clearBulkTargets} className="btn-secondary">
                       Clear all
                     </button>
+                    <label className="flex items-center gap-2 rounded-[16px] border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/75">
+                      <input
+                        type="checkbox"
+                        checked={bulkIncompleteOnly}
+                        onChange={(e) => setBulkIncompleteOnly(e.target.checked)}
+                      />
+                      Only incomplete plans
+                    </label>
                   </div>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     {bulkCandidatePlans.map((plan) => (
