@@ -1075,7 +1075,7 @@ export const adminAPI = {
     if (options?.sync) params.set('sync', 'true')
     if (options?.live) params.set('live', 'true')
     const suffix = params.toString() ? `?${params.toString()}` : ''
-    const res = await request<any>(`/api/v1/admin/devices/${id}${suffix}`)
+    const res = await request<any>(`/api/v1/admin/devices/${encodeURIComponent(id)}${suffix}`)
     return {
       ...res,
       data: res.data ? mapDevice(res.data) : undefined,
@@ -1106,17 +1106,17 @@ export const adminAPI = {
       radiusSynced?: boolean
       radiusServiceId?: string
       radiusUsername?: string
-    }>(`/api/v1/admin/network/device-management/${deviceId}/wifi`, {
+    }>(`/api/v1/admin/network/device-management/${encodeURIComponent(deviceId)}/wifi`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   rebootDevice: (deviceId: string, reason?: string) =>
-    request(`/api/v1/admin/network/device-management/${deviceId}/reboot`, {
+    request(`/api/v1/admin/network/device-management/${encodeURIComponent(deviceId)}/reboot`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
   applyDevicePreset: (deviceId: string, presetName: 'SERVICE_PREPARE' | 'SERVICE_ACTIVATE' | 'SERVICE_SUSPEND' | 'SERVICE_RESUME') =>
-    request(`/api/v1/admin/devices/${deviceId}/apply-preset`, {
+    request(`/api/v1/admin/devices/${encodeURIComponent(deviceId)}/apply-preset`, {
       method: 'POST',
       body: JSON.stringify({ presetName }),
     }),

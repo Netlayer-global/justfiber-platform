@@ -63,18 +63,45 @@ async function findDeviceByQuery(query) {
   return null;
 }
 
+function deviceIdVariants(deviceId) {
+  const raw = String(deviceId || "").trim();
+  if (!raw) return [];
+  const variants = new Set([raw]);
+
+  try {
+    variants.add(decodeURIComponent(raw));
+  } catch {}
+
+  try {
+    variants.add(encodeURIComponent(raw));
+  } catch {}
+
+  for (const value of [...variants]) {
+    if (value.includes("%2D")) {
+      variants.add(value.replace(/%2D/gi, "-"));
+    }
+    if (value.includes("-")) {
+      variants.add(value.replace(/-/g, "%2D"));
+    }
+  }
+
+  return [...variants].filter(Boolean);
+}
+
 async function resolveDeviceIdForWrite(deviceId) {
-  const direct = await findDeviceByQuery({ _id: deviceId });
-  if (direct?._id) {
-    return direct._id;
-  }
-  const byDeviceId = await findDeviceByQuery({ "DeviceID.ID": deviceId });
-  if (byDeviceId?._id) {
-    return byDeviceId._id;
-  }
-  const bySerial = await findDeviceByQuery({ "DeviceID.SerialNumber": deviceId });
-  if (bySerial?._id) {
-    return bySerial._id;
+  for (const variant of deviceIdVariants(deviceId)) {
+    const direct = await findDeviceByQuery({ _id: variant });
+    if (direct?._id) {
+      return direct._id;
+    }
+    const byDeviceId = await findDeviceByQuery({ "DeviceID.ID": variant });
+    if (byDeviceId?._id) {
+      return byDeviceId._id;
+    }
+    const bySerial = await findDeviceByQuery({ "DeviceID.SerialNumber": variant });
+    if (bySerial?._id) {
+      return bySerial._id;
+    }
   }
   return deviceId;
 }
@@ -92,10 +119,12 @@ export class GenieacsClient {
 
   async findDeviceSummary({ deviceId, serialNumber } = {}) {
     if (deviceId) {
-      const direct = await findDeviceByQuery({ _id: deviceId });
-      if (direct) return direct;
-      const byDeviceId = await findDeviceByQuery({ "DeviceID.ID": deviceId });
-      if (byDeviceId) return byDeviceId;
+      for (const variant of deviceIdVariants(deviceId)) {
+        const direct = await findDeviceByQuery({ _id: variant });
+        if (direct) return direct;
+        const byDeviceId = await findDeviceByQuery({ "DeviceID.ID": variant });
+        if (byDeviceId) return byDeviceId;
+      }
     }
     if (serialNumber) {
       const bySerial = await findDeviceByQuery({ "DeviceID.SerialNumber": serialNumber });
