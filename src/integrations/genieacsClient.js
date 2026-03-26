@@ -90,6 +90,22 @@ export class GenieacsClient {
     return genieacsRequest("GET", `/devices?${query}`);
   }
 
+  async findDeviceSummary({ deviceId, serialNumber } = {}) {
+    if (deviceId) {
+      const direct = await findDeviceByQuery({ _id: deviceId });
+      if (direct) return direct;
+      const byDeviceId = await findDeviceByQuery({ "DeviceID.ID": deviceId });
+      if (byDeviceId) return byDeviceId;
+    }
+    if (serialNumber) {
+      const bySerial = await findDeviceByQuery({ "DeviceID.SerialNumber": serialNumber });
+      if (bySerial) return bySerial;
+      const byLegacySerial = await findDeviceByQuery({ "InternetGatewayDevice.DeviceInfo.SerialNumber": serialNumber });
+      if (byLegacySerial) return byLegacySerial;
+    }
+    return null;
+  }
+
   async applyPreset({ deviceId, presetName, correlationId }) {
     if (!allowedPresets.has(presetName)) {
       throw new Error(`Preset not allowed: ${presetName}`);

@@ -38,6 +38,8 @@ import {
 } from "./schemas.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
+import { genieacsClient } from "../../integrations/genieacsClient.js";
+import { summarizeGenieDevice } from "../../common/deviceOperationalSync.js";
 
 export const installerAppRouter = Router();
 
@@ -130,7 +132,7 @@ async function resolveJobDevice(job) {
     }
   }
 
-  return DeviceOperationalCache.findOne({
+  const fallbackCached = await DeviceOperationalCache.findOne({
     $or: [
       { customerId: job.customerId },
       ...(job.serviceId ? [{ serviceId: job.serviceId }] : [])
@@ -138,6 +140,29 @@ async function resolveJobDevice(job) {
   })
     .sort({ updatedAt: -1, lastInformAt: -1 })
     .lean();
+  if (fallbackCached) {
+    return fallbackCached;
+  }
+
+  try {
+    const liveSummary = await genieacsClient.findDeviceSummary({
+      deviceId: candidateDeviceIds[0],
+      serialNumber: finalSerialNumber
+    });
+    if (liveSummary) {
+      return {
+        ...summarizeGenieDevice(liveSummary, candidateDeviceIds[0]),
+        customerId: job.customerId,
+        serviceId: job.serviceId,
+        provisioningState: "live_only",
+        updatedAt: new Date()
+      };
+    }
+  } catch (error) {
+    console.error("[installer] Live Genie lookup failed:", error);
+  }
+
+  return null;
 }
 
 function buildOpticalSnapshot(job, device) {
