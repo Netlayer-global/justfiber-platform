@@ -545,7 +545,28 @@ platformFoundationRouter.post(
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const payload = bngNodeSchema.parse(req.body);
-    await BngNode.updateOne({ nodeCode: payload.nodeCode }, { $set: payload }, { upsert: true });
+    const existing = await BngNode.findOne({ nodeCode: payload.nodeCode }).lean();
+    const nextPayload = {
+      ...payload,
+      coaSecret:
+        String(payload.coaSecret || "").trim() ||
+        String(existing?.coaSecret || "").trim() ||
+        undefined,
+      routerOsPassword:
+        String(payload.routerOsPassword || "").trim() ||
+        String(existing?.routerOsPassword || "").trim() ||
+        undefined
+    };
+
+    if (
+      nextPayload.useCoa !== false &&
+      String(nextPayload.radiusClientIp || "").trim() &&
+      !String(nextPayload.coaSecret || "").trim()
+    ) {
+      throw new Error("COA secret is required when CoA is enabled for a BNG node");
+    }
+
+    await BngNode.updateOne({ nodeCode: payload.nodeCode }, { $set: nextPayload }, { upsert: true });
     const item = await BngNode.findOne({ nodeCode: payload.nodeCode }).lean();
     const freeradiusClientSync = item ? await syncFreeradiusClientForNode(item) : { synced: false, reason: "node_not_found" };
     return ok(res, { ...item, freeradiusClientSync }, { created: true });
