@@ -74,7 +74,7 @@ function summarizeOptical(opticalInfo?: Record<string, any>) {
   if (health.includes('good') || health.includes('healthy')) return 'Healthy line'
   if (health.includes('warn') || health.includes('weak')) return 'Watch optical'
   if (health.includes('bad') || health.includes('critical')) return 'Optical issue'
-  return 'Awaiting optical sample'
+  return 'No optical sample'
 }
 
 function normalizeLanClients(lanInfo?: Record<string, any>) {
@@ -131,6 +131,11 @@ export default function DevicesPage() {
     void loadDevices()
   }, [])
 
+  useEffect(() => {
+    if (!selectedDeviceId) return
+    void refreshSelectedDevice(false, true)
+  }, [selectedDeviceId])
+
   async function loadDevices(preferredDeviceId?: string) {
     try {
       setIsLoading(true)
@@ -155,7 +160,7 @@ export default function DevicesPage() {
     }
   }
 
-  async function refreshSelectedDevice(syncFromGenie = false) {
+  async function refreshSelectedDevice(syncFromGenie = false, silent = false) {
     if (!selectedDeviceId) return
     try {
       setIsRefreshingDevice(true)
@@ -174,10 +179,14 @@ export default function DevicesPage() {
       setDevices((current) =>
         current.map((device) => (device.id === selectedDeviceId ? { ...device, ...res.data } : device))
       )
-      toast.success(syncFromGenie ? 'Device synced from Genie' : 'Device detail refreshed')
+      if (!silent) {
+        toast.success(syncFromGenie ? 'Device synced from Genie' : 'Device detail refreshed')
+      }
     } catch (error) {
       console.error('[devices] Failed to refresh device detail:', error)
-      toast.error('Failed to refresh device detail')
+      if (!silent) {
+        toast.error('Failed to refresh device detail')
+      }
     } finally {
       setIsRefreshingDevice(false)
     }
@@ -294,6 +303,10 @@ export default function DevicesPage() {
   const actionCount = devices.filter((device) => buildAttentionItems(device).length > 0).length
   const selectedClients = normalizeLanClients(selectedDevice?.lanInfo)
   const selectedAttention = selectedDevice ? buildAttentionItems(selectedDevice) : []
+  const latestFleetSync = devices
+    .map((device) => new Date(device.updatedAt || '').getTime())
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => b - a)[0]
 
   if (isLoading) {
     return (
@@ -307,14 +320,13 @@ export default function DevicesPage() {
     <div className="space-y-6">
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Devices command center</div>
+          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Admin devices</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Admin devices,
-            <span className="text-[#8224E3]"> advanced ops console.</span>
+            Device operations,
+            <span className="text-[#8224E3]"> live admin view.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            Inspect subscriber mapping, WAN access, Wi-Fi radios, optical health, LAN clients, and provisioning state
-            from one operator-first page.
+            {onlineCount} online, {offlineCount} offline, {mappedCount} mapped to subscribers, and {actionCount} currently need attention.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <button
@@ -347,9 +359,11 @@ export default function DevicesPage() {
         </div>
 
         <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Fleet pulse</div>
+          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Live cache snapshot</div>
           <div className="mt-3 text-5xl font-black">{devices.length}</div>
-          <div className="mt-2 text-sm text-black/60">Devices in the latest operational cache snapshot</div>
+          <div className="mt-2 text-sm text-black/60">
+            {latestFleetSync ? `Latest device sync ${new Date(latestFleetSync).toLocaleString()}` : 'No sync timestamp available'}
+          </div>
           <div className="mt-8 grid grid-cols-2 gap-3">
             {[
               { label: 'Online', value: String(onlineCount), Icon: Activity },
@@ -406,7 +420,7 @@ export default function DevicesPage() {
               <p className="text-sm text-slate-500">{filteredDevices.length} matching devices</p>
             </div>
             <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-              Cached ops view
+              {selectedDevice ? formatDateTime(selectedDevice.updatedAt) : 'No device selected'}
             </div>
           </div>
 
@@ -519,8 +533,8 @@ export default function DevicesPage() {
                 <div className="flex items-start gap-3">
                   <Siren className="mt-0.5 h-4 w-4 text-amber-700" />
                   <div className="space-y-2 text-sm text-amber-900">
-                    <div className="font-semibold">Current attention items</div>
-                    {selectedAttention.length ? selectedAttention.map((item) => <div key={item}>{item}</div>) : <div>No active device-side alerts in the current cache snapshot.</div>}
+                    <div className="font-semibold">Live device alerts</div>
+                    {selectedAttention.length ? selectedAttention.map((item) => <div key={item}>{item}</div>) : <div>No current device alerts.</div>}
                   </div>
                 </div>
               </div>
@@ -599,7 +613,7 @@ export default function DevicesPage() {
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold text-slate-900">Top connected clients</h3>
+                  <h3 className="font-semibold text-slate-900">Connected clients</h3>
                   <HardDrive className="h-4 w-4 text-slate-500" />
                 </div>
 
@@ -616,7 +630,7 @@ export default function DevicesPage() {
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
-                    No parsed LAN clients were present in the current device snapshot.
+                    No LAN client records were returned for this device.
                   </div>
                 )}
               </div>
