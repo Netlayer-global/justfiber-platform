@@ -3,6 +3,7 @@ import type {
   LoginResponse,
   Plan,
   Customer,
+  ManualCustomerCreatePayload,
   Device,
   BngNode,
   BngNodeTestResult,
@@ -935,11 +936,16 @@ export const adminAPI = {
       data: res.data ? mapCustomer(res.data) : undefined,
     }
   },
-  createCustomer: (data: Partial<Customer>) =>
-    request<Customer>('/api/v1/admin/customers', {
+  createCustomer: async (data: ManualCustomerCreatePayload) => {
+    const res = await request<any>('/api/v1/admin/customers', {
       method: 'POST',
       body: JSON.stringify(data),
-    }),
+    })
+    return {
+      ...res,
+      data: res.data ? mapCustomer(res.data) : undefined,
+    }
+  },
   updateCustomer: (id: string, data: Partial<Customer>) =>
     request<Customer>(`/api/v1/admin/customers/${id}`, {
       method: 'PATCH',

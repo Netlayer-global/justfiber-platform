@@ -10,6 +10,7 @@ import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
 import {
   assignBookingInstallerSchema,
+  manualCreateCustomerSchema,
   statusActionSchema,
   retryProvisioningSchema,
   updateCustomerSchema,
@@ -33,6 +34,10 @@ import { InstallerJob } from "../../models/InstallerJob.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { buildPppoeCredentials } from "../../common/networkProvisioning.js";
+import { AccessProfile } from "../../models/AccessProfile.js";
+import { BillingProfile } from "../../models/BillingProfile.js";
+import { BngNode } from "../../models/BngNode.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
@@ -146,6 +151,51 @@ function buildBookingTracking(status, existingTracking = {}, note) {
   };
 }
 
+function buildManualIdentifier(prefix) {
+  return `${prefix}-${Date.now().toString().slice(-8)}`;
+}
+
+function toCustomerStatus(operationalStatus) {
+  if (operationalStatus === "suspended") return "suspended";
+  if (operationalStatus === "inactive") return "inactive";
+  return "active";
+}
+
+async function buildCustomerResponse(customer) {
+  const subscriberService = await SubscriberService.findOne({
+    $or: [
+      ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : []),
+      { customerId: customer.customerId }
+    ]
+  }).lean();
+  const radiusSnapshot =
+    subscriberService?.radiusUsername
+      ? await radiusServiceManager.getSubscriberAccessSnapshot({
+          serviceId: subscriberService.serviceId,
+          radiusUsername: subscriberService.radiusUsername
+        }).catch(() => null)
+      : null;
+
+  return {
+    ...customer,
+    radiusService: subscriberService
+      ? {
+          serviceId: subscriberService.serviceId,
+          radiusUsername: subscriberService.radiusUsername,
+          accessProfileCode: subscriberService.accessProfileCode,
+          billingProfileCode: subscriberService.billingProfileCode,
+          bngNodeCode: subscriberService.bngNodeCode,
+          status: subscriberService.status,
+          activatedAt: subscriberService.activatedAt,
+          suspendedAt: subscriberService.suspendedAt,
+          updatedAt: subscriberService.updatedAt,
+          radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
+          radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
+        }
+      : null
+  };
+}
+
 async function createPlanChangeBillingNote({ customer, type, amount, reasonCode, note, metadata, createdByAdminId }) {
   const safeAmount = Number(amount || 0);
   if (!(safeAmount > 0)) return null;
@@ -207,6 +257,170 @@ customersRouter.get(
       Customer.countDocuments(filter)
     ]);
     return ok(res, items, { page, limit, total });
+  })
+);
+
+customersRouter.post(
+  "/",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = manualCreateCustomerSchema.parse(req.body || {});
+    const plan = await PlanCatalog.findOne({ planCode: payload.planCode, archivedAt: { $exists: false } }).lean();
+    if (!plan) {
+      throw new ApiError(404, "Plan not found");
+    }
+
+    const customerId = payload.customerId || buildManualIdentifier("CUS");
+    const accountNumber = payload.accountNumber || buildManualIdentifier("ACC");
+    const serviceId = payload.serviceId || buildManualIdentifier("SRV");
+    const generatedPppoe = buildPppoeCredentials(customerId, plan.provisioning || {});
+    const radiusUsername = String(payload.radiusUsername || generatedPppoe.username).trim();
+    const radiusPassword = String(payload.radiusPassword || generatedPppoe.password).trim();
+
+    const [accessProfile, billingProfile, bngNode] = await Promise.all([
+      payload.accessProfileCode
+        ? AccessProfile.findOne({ code: payload.accessProfileCode, active: true }).lean()
+        : plan?.provisioning?.accessProfileCode
+          ? AccessProfile.findOne({ code: plan.provisioning.accessProfileCode, active: true }).lean()
+          : AccessProfile.findOne({ active: true }).sort({ code: 1 }).lean(),
+      payload.billingProfileCode
+        ? BillingProfile.findOne({ code: payload.billingProfileCode, active: true }).lean()
+        : BillingProfile.findOne({ active: true }).sort({ code: 1 }).lean(),
+      payload.bngNodeCode
+        ? BngNode.findOne({ nodeCode: payload.bngNodeCode, status: "active" }).lean()
+        : BngNode.findOne({ status: "active" }).sort({ nodeCode: 1 }).lean()
+    ]);
+
+    if (payload.accessProfileCode && !accessProfile) {
+      throw new ApiError(404, "Access profile not found");
+    }
+    if (payload.billingProfileCode && !billingProfile) {
+      throw new ApiError(404, "Billing profile not found");
+    }
+    if (payload.bngNodeCode && !bngNode) {
+      throw new ApiError(404, "BNG node not found");
+    }
+
+    const networkProfile = {
+      speedMbps: Number(plan.speedMbps || accessProfile?.downMbps || 0) || 0,
+      uploadSpeedMbps: Number(plan.uploadSpeedMbps || accessProfile?.upMbps || 0) || 0,
+      dataPolicy: plan.dataPolicy || "unlimited",
+      dataLimitGb: Number(plan.dataLimitGb || 0) || 0,
+      fupSpeedMbps: Number(plan.fupSpeedMbps || 0) || 0
+    };
+    const billMode =
+      billingProfile?.billMode ||
+      (payload.customerType === "business"
+        ? billingProfile?.defaultBusinessBillMode
+        : billingProfile?.defaultHomeBillMode) ||
+      (payload.customerType === "business" ? "postpaid" : "prepaid");
+
+    const customer = await Customer.findOneAndUpdate(
+      { customerId },
+      {
+        $set: {
+          customerId,
+          accountNumber,
+          fullName: payload.fullName,
+          phone: payload.phone,
+          email: payload.email || undefined,
+          serviceId,
+          planCode: plan.planCode,
+          planName: plan.name,
+          customerType: payload.customerType,
+          jazeStatus: "manual_admin",
+          operationalStatus: toCustomerStatus(payload.operationalStatus),
+          billingZoneCode: bngNode?.groupName || undefined,
+          billingZoneName: bngNode?.displayName || undefined,
+          billingStateName: payload.address.state || undefined,
+          address: {
+            line1: payload.address.line1,
+            line2: payload.address.line2,
+            area: payload.address.area,
+            city: payload.address.city,
+            state: payload.address.state,
+            pinCode: payload.address.pinCode
+          },
+          billingSnapshot: {
+            lastInvoiceAmount: Number(plan.monthlyPrice || 0),
+            currency: billingProfile?.currency || "INR",
+            dueAmount: 0,
+            remainingDays: 30,
+            speedMbps: networkProfile.speedMbps,
+            uploadSpeedMbps: networkProfile.uploadSpeedMbps,
+            dataPolicy: networkProfile.dataPolicy,
+            dataLimitGb: networkProfile.dataLimitGb || null,
+            fupSpeedMbps: networkProfile.fupSpeedMbps || null,
+            billMode,
+            billingZoneCode: bngNode?.groupName || undefined,
+            billingZoneName: bngNode?.displayName || undefined,
+            billingStateName: payload.address.state || undefined
+          },
+          invoiceSummary: {
+            billCycle: billingProfile?.cycle || "monthly",
+            billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid"
+          },
+          lastSyncedAt: new Date()
+        }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean();
+
+    await SubscriberService.findOneAndUpdate(
+      { serviceId },
+      {
+        $set: {
+          customerId,
+          accountNumber,
+          radiusUsername,
+          radiusPasswordMasked: "********",
+          authType: "pppoe",
+          accessProfileCode: accessProfile?.code || payload.accessProfileCode || "",
+          billingProfileCode: billingProfile?.code || payload.billingProfileCode || "",
+          bngNodeCode: bngNode?.nodeCode || payload.bngNodeCode || "",
+          status: payload.createRadius === false ? "draft" : "active",
+          activatedAt: payload.createRadius === false ? null : new Date(),
+          suspendedAt: null,
+          notes: "Created manually from admin console",
+          metadata: {
+            source: "admin_manual_create",
+            radiusPassword,
+            networkProfile
+          }
+        }
+      },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
+
+    if (payload.createRadius !== false) {
+      await radiusServiceManager.createSubscriberAccess({
+        serviceId,
+        customerId,
+        radiusUsername,
+        radiusPassword,
+        accessProfileCode: accessProfile?.code || payload.accessProfileCode,
+        billingProfileCode: billingProfile?.code || payload.billingProfileCode,
+        bngNodeCode: bngNode?.nodeCode || payload.bngNodeCode,
+        metadata: {
+          source: "admin_manual_create",
+          networkProfile
+        }
+      });
+    }
+
+    await auditFromRequest(req, {
+      action: "customer.created_manual",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: {
+        serviceId,
+        radiusUsername,
+        planCode: plan.planCode,
+        createRadius: payload.createRadius !== false
+      }
+    });
+
+    return ok(res, await buildCustomerResponse(customer), { created: true });
   })
 );
 

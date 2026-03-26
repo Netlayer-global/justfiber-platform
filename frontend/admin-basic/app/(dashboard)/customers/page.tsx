@@ -3,21 +3,45 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { adminAPI } from '@/lib/api'
-import type { Customer } from '@/lib/types'
-import { Eye, Loader, RefreshCw, Search, Users, Wifi, UserX } from 'lucide-react'
+import type { BngNode, Customer, Plan } from '@/lib/types'
+import { Eye, Loader, Plus, RefreshCw, Search, Users, Wifi, UserX, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [bngNodes, setBngNodes] = useState<BngNode[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [planCode, setPlanCode] = useState('')
   const [city, setCity] = useState('')
   const [usageState, setUsageState] = useState('')
+  const [createForm, setCreateForm] = useState({
+    fullName: '',
+    phone: '',
+    email: '',
+    planCode: '',
+    line1: '',
+    line2: '',
+    area: '',
+    city: '',
+    state: '',
+    pinCode: '',
+    customerId: '',
+    accountNumber: '',
+    serviceId: '',
+    radiusUsername: '',
+    radiusPassword: '123456',
+    bngNodeCode: '',
+    operationalStatus: 'active',
+  })
 
   useEffect(() => {
     void loadCustomers()
+    void loadFormOptions()
   }, [])
 
   async function loadCustomers(filters?: { search?: string; status?: string; planCode?: string; city?: string }) {
@@ -34,6 +58,91 @@ export default function CustomersPage() {
       toast.error('Failed to load customers')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function loadFormOptions() {
+    try {
+      const [plansRes, bngRes] = await Promise.all([
+        adminAPI.getPlans(),
+        adminAPI.getBngNodes(),
+      ])
+      if (plansRes.success && Array.isArray(plansRes.data)) {
+        setPlans(plansRes.data.filter((plan) => plan.status === 'active'))
+        setCreateForm((current) => ({
+          ...current,
+          planCode: current.planCode || plansRes.data.find((plan) => plan.status === 'active')?.planCode || '',
+        }))
+      }
+      if (bngRes.success && Array.isArray(bngRes.data)) {
+        setBngNodes(bngRes.data.filter((node) => node.status === 'active'))
+        setCreateForm((current) => ({
+          ...current,
+          bngNodeCode: current.bngNodeCode || bngRes.data.find((node) => node.status === 'active')?.nodeCode || '',
+        }))
+      }
+    } catch (error) {
+      console.error('[v0] Failed to load customer form options:', error)
+    }
+  }
+
+  async function handleCreateCustomer(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      setIsCreating(true)
+      const res = await adminAPI.createCustomer({
+        customerId: createForm.customerId.trim() || undefined,
+        accountNumber: createForm.accountNumber.trim() || undefined,
+        serviceId: createForm.serviceId.trim() || undefined,
+        fullName: createForm.fullName.trim(),
+        phone: createForm.phone.trim(),
+        email: createForm.email.trim() || undefined,
+        planCode: createForm.planCode,
+        operationalStatus: createForm.operationalStatus as 'active' | 'inactive' | 'suspended',
+        customerType: 'home',
+        address: {
+          line1: createForm.line1.trim(),
+          line2: createForm.line2.trim() || undefined,
+          area: createForm.area.trim() || undefined,
+          city: createForm.city.trim() || undefined,
+          state: createForm.state.trim() || undefined,
+          pinCode: createForm.pinCode.trim() || undefined,
+        },
+        radiusUsername: createForm.radiusUsername.trim() || undefined,
+        radiusPassword: createForm.radiusPassword.trim() || undefined,
+        bngNodeCode: createForm.bngNodeCode || undefined,
+        createRadius: true,
+      })
+      if (!res.success || !res.data) {
+        toast.error(res.error || 'Failed to create customer')
+        return
+      }
+      toast.success(`Created ${res.data.name}`)
+      setIsCreateOpen(false)
+      setCreateForm((current) => ({
+        ...current,
+        fullName: '',
+        phone: '',
+        email: '',
+        line1: '',
+        line2: '',
+        area: '',
+        city: '',
+        state: '',
+        pinCode: '',
+        customerId: '',
+        accountNumber: '',
+        serviceId: '',
+        radiusUsername: '',
+        radiusPassword: '123456',
+        operationalStatus: 'active',
+      }))
+      await loadCustomers()
+    } catch (error) {
+      console.error('[v0] Failed to create customer:', error)
+      toast.error('Failed to create customer')
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -135,6 +244,10 @@ export default function CustomersPage() {
       </section>
 
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
+        <button onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          New Customer
+        </button>
         <button onClick={() => void loadCustomers()} className="btn-secondary inline-flex items-center gap-2">
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -296,6 +409,133 @@ export default function CustomersPage() {
           {filteredCustomers.length === 0 ? <div className="p-8 text-center text-[#b4bcc4]">No customers found</div> : null}
         </div>
       )}
+
+      {isCreateOpen ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 px-4 py-10">
+          <div className="card w-full max-w-5xl p-0">
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Manual onboarding</div>
+                <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">Create new PPPoE customer</h2>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+                onClick={() => setIsCreateOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateCustomer} className="space-y-6 px-6 py-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="xl:col-span-2">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Customer name</label>
+                  <input className="input w-full" required value={createForm.fullName} onChange={(e) => setCreateForm((current) => ({ ...current, fullName: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Phone</label>
+                  <input className="input w-full" required value={createForm.phone} onChange={(e) => setCreateForm((current) => ({ ...current, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Email</label>
+                  <input className="input w-full" type="email" value={createForm.email} onChange={(e) => setCreateForm((current) => ({ ...current, email: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Plan</label>
+                  <select className="input w-full" required value={createForm.planCode} onChange={(e) => setCreateForm((current) => ({ ...current, planCode: e.target.value }))}>
+                    <option value="">Select plan</option>
+                    {plans.map((plan) => (
+                      <option key={plan.id} value={plan.planCode || plan.id}>
+                        {plan.name} ({plan.planCode || plan.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">BNG</label>
+                  <select className="input w-full" value={createForm.bngNodeCode} onChange={(e) => setCreateForm((current) => ({ ...current, bngNodeCode: e.target.value }))}>
+                    <option value="">Auto pick</option>
+                    {bngNodes.map((node) => (
+                      <option key={node.nodeCode} value={node.nodeCode}>
+                        {node.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Status</label>
+                  <select className="input w-full" value={createForm.operationalStatus} onChange={(e) => setCreateForm((current) => ({ ...current, operationalStatus: e.target.value }))}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Customer ID</label>
+                  <input className="input w-full" placeholder="Auto if blank" value={createForm.customerId} onChange={(e) => setCreateForm((current) => ({ ...current, customerId: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Account number</label>
+                  <input className="input w-full" placeholder="Auto if blank" value={createForm.accountNumber} onChange={(e) => setCreateForm((current) => ({ ...current, accountNumber: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Service ID</label>
+                  <input className="input w-full" placeholder="Auto if blank" value={createForm.serviceId} onChange={(e) => setCreateForm((current) => ({ ...current, serviceId: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">PPPoE username</label>
+                  <input className="input w-full" placeholder="Auto if blank" value={createForm.radiusUsername} onChange={(e) => setCreateForm((current) => ({ ...current, radiusUsername: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">PPPoE password</label>
+                  <input className="input w-full" required value={createForm.radiusPassword} onChange={(e) => setCreateForm((current) => ({ ...current, radiusPassword: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="xl:col-span-2">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Address line 1</label>
+                  <input className="input w-full" required value={createForm.line1} onChange={(e) => setCreateForm((current) => ({ ...current, line1: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Address line 2</label>
+                  <input className="input w-full" value={createForm.line2} onChange={(e) => setCreateForm((current) => ({ ...current, line2: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Area</label>
+                  <input className="input w-full" value={createForm.area} onChange={(e) => setCreateForm((current) => ({ ...current, area: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">City</label>
+                  <input className="input w-full" value={createForm.city} onChange={(e) => setCreateForm((current) => ({ ...current, city: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">State</label>
+                  <input className="input w-full" value={createForm.state} onChange={(e) => setCreateForm((current) => ({ ...current, state: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Pin code</label>
+                  <input className="input w-full" value={createForm.pinCode} onChange={(e) => setCreateForm((current) => ({ ...current, pinCode: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-[#8224E3]/20 bg-[#0a0e27] px-4 py-4 text-sm text-white/70">
+                Save ke saath customer record, subscriber service aur live PPPoE/RADIUS user create hoga. Blank ID fields auto-generate ho jayenge.
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button type="button" className="btn-secondary" onClick={() => setIsCreateOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary inline-flex items-center gap-2" disabled={isCreating}>
+                  {isCreating ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Create Customer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

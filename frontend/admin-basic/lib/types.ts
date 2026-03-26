@@ -142,6 +142,32 @@ export interface Customer {
   } | null
 }
 
+export interface ManualCustomerCreatePayload {
+  customerId?: string
+  accountNumber?: string
+  serviceId?: string
+  fullName: string
+  phone: string
+  email?: string | null
+  planCode: string
+  operationalStatus?: 'active' | 'inactive' | 'suspended'
+  customerType?: 'home' | 'business'
+  address: {
+    line1: string
+    line2?: string
+    area?: string
+    city?: string
+    state?: string
+    pinCode?: string
+  }
+  radiusUsername?: string
+  radiusPassword?: string
+  accessProfileCode?: string
+  billingProfileCode?: string
+  bngNodeCode?: string
+  createRadius?: boolean
+}
+
 export interface CustomerBooking {
   id: string
   bookingNumber: string

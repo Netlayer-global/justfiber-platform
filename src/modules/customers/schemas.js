@@ -48,3 +48,29 @@ export const updateCustomerSchema = z.object({
   billingSnapshot: z.record(z.any()).optional(),
   invoiceSummary: z.record(z.any()).optional()
 });
+
+export const manualCreateCustomerSchema = z.object({
+  customerId: z.string().min(3).max(40).optional(),
+  accountNumber: z.string().min(3).max(40).optional(),
+  serviceId: z.string().min(3).max(40).optional(),
+  fullName: z.string().min(2).max(200),
+  phone: z.string().min(8).max(20),
+  email: z.string().email().nullable().optional(),
+  planCode: z.string().min(2),
+  operationalStatus: z.enum(["active", "inactive", "suspended"]).default("active"),
+  customerType: z.enum(["home", "business"]).default("home"),
+  address: z.object({
+    line1: z.string().min(2).max(200),
+    line2: z.string().max(200).optional(),
+    area: z.string().max(120).optional(),
+    city: z.string().max(120).optional(),
+    state: z.string().max(120).optional(),
+    pinCode: z.string().max(20).optional()
+  }),
+  radiusUsername: z.string().min(3).max(64).optional(),
+  radiusPassword: z.string().min(1).max(64).optional(),
+  accessProfileCode: z.string().min(2).max(64).optional(),
+  billingProfileCode: z.string().min(2).max(64).optional(),
+  bngNodeCode: z.string().min(2).max(64).optional(),
+  createRadius: z.boolean().default(true)
+});
