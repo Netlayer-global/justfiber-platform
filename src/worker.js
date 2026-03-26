@@ -22,6 +22,7 @@ import { BillingInvoice } from "./models/BillingInvoice.js";
 import { BillingRun } from "./models/BillingRun.js";
 import { PaymentTransaction } from "./models/PaymentTransaction.js";
 import { BillingLedgerEntry } from "./models/BillingLedgerEntry.js";
+import { SubscriberService } from "./models/SubscriberService.js";
 import { radiusServiceManager } from "./integrations/radiusServiceManager.js";
 import { internalSubscriberPlatform } from "./integrations/internalSubscriberPlatform.js";
 import { internalBillingEngine } from "./integrations/internalBillingEngine.js";
