@@ -447,17 +447,12 @@ const worker = new Worker(
           });
           updateActivationStage(jobRecord, "genie_push_done", "Access config pushed to GenieACS");
         } catch (configError) {
-          await genieacsClient.applyPreset({
-            deviceId,
-            presetName: "SERVICE_ACTIVATE",
-            correlationId: jobRecord._id.toString()
-          });
           jobRecord.activation = {
             ...(jobRecord.activation || {}),
-            configFallback: true,
+            configFallback: false,
             configFallbackError: configError.message
           };
-          updateActivationStage(jobRecord, "genie_fallback", "Config push failed, fallback preset applied", {
+          updateActivationStage(jobRecord, "genie_fallback", "Config push failed; legacy Genie preset fallback skipped", {
             lastConfigError: configError.message
           });
         }
