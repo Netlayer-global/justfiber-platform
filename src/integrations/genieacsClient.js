@@ -316,15 +316,18 @@ export class GenieacsClient {
     }
 
     try {
-      await genieacsRequest("POST", buildTaskPath(targetDeviceId), {
-        name: "refreshObject",
-        objectName: "InternetGatewayDevice."
+      await genieacsRequest("POST", `${buildTaskPath(targetDeviceId)}?connection_request`, {
+        name: "getParameterValues",
+        parameterNames: ["DeviceID.ID"]
       });
     } catch (error) {
       if (!String(error.message).includes("405")) {
         throw error;
       }
-      await genieacsRequest("POST", `${buildTaskPath(targetDeviceId)}?connection_request`);
+      await genieacsRequest("POST", buildTaskPath(targetDeviceId), {
+        name: "getParameterValues",
+        parameterNames: ["DeviceID.ID"]
+      });
     }
 
     return { ok: true, deviceId: targetDeviceId, presetName, correlationId };
