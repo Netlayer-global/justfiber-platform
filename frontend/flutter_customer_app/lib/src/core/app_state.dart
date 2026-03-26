@@ -485,6 +485,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: wifi.ssid24, ssid5: wifi.ssid5);
+      wifi = WifiData(
+        ssid24: wifi.ssid24,
+        ssid5: wifi.ssid5,
+        passwordMask: '********',
+        paused: wifi.paused,
+        guestEnabled: wifi.guestEnabled,
+        guestSsid: wifi.guestSsid,
+        connectedDevicesCount: wifi.connectedDevicesCount,
+      );
       await refresh();
     } catch (e) {
       error = e.toString();
@@ -506,6 +515,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: ssid24, ssid5: ssid5);
+      wifi = WifiData(
+        ssid24: ssid24,
+        ssid5: ssid5,
+        passwordMask: '********',
+        paused: wifi.paused,
+        guestEnabled: wifi.guestEnabled,
+        guestSsid: wifi.guestSsid,
+        connectedDevicesCount: wifi.connectedDevicesCount,
+      );
       await refresh();
       return true;
     } catch (e) {

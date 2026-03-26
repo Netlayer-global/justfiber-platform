@@ -15,14 +15,20 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
   final _passwordController = TextEditingController();
   final _guestSsidController = TextEditingController();
   final _guestPasswordController = TextEditingController();
+  String? _lastSyncedSsid;
+  String? _lastSyncedGuestSsid;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final appState = AppStateScope.of(context);
-    if (_nameController.text.isEmpty) {
+    if (_lastSyncedSsid != appState.wifi.ssid24) {
       _nameController.text = appState.wifi.ssid24;
+      _lastSyncedSsid = appState.wifi.ssid24;
+    }
+    if (_lastSyncedGuestSsid != appState.wifi.guestSsid) {
       _guestSsidController.text = appState.wifi.guestSsid;
+      _lastSyncedGuestSsid = appState.wifi.guestSsid;
     }
   }
 
