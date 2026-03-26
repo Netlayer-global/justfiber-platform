@@ -292,11 +292,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final configStatus = (activation['configStatus'] ?? '-').toString();
     final wifi = (preview['wifi'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final pppoe = (preview['pppoe'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final wifiSsid24 = (wifi['ssid24'] ?? activation['credentials']?['wifi']?['ssid24'] ?? '-').toString();
-    final wifiSsid5 = (wifi['ssid5'] ?? activation['credentials']?['wifi']?['ssid5'] ?? '-').toString();
-    final wifiPassword = (wifi['password'] ?? activation['credentials']?['wifi']?['password'] ?? '-').toString();
-    final pppoeUsername = (pppoe['username'] ?? activation['credentials']?['pppoeUsername'] ?? '-').toString();
-    final pppoePassword = (pppoe['password'] ?? activation['credentials']?['pppoePassword'] ?? '-').toString();
+    final prepared = (activation['preparedCredentials'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final preparedWifi = (prepared['wifi'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final preparedPppoe = (prepared['pppoe'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final wifiSsid24 = (wifi['ssid24'] ?? activation['credentials']?['wifi']?['ssid24'] ?? preparedWifi['ssid24'] ?? '-').toString();
+    final wifiSsid5 = (wifi['ssid5'] ?? activation['credentials']?['wifi']?['ssid5'] ?? preparedWifi['ssid5'] ?? '-').toString();
+    final wifiPassword = (wifi['password'] ?? activation['credentials']?['wifi']?['password'] ?? preparedWifi['password'] ?? '-').toString();
+    final pppoeUsername = (pppoe['username'] ?? activation['credentials']?['pppoeUsername'] ?? preparedPppoe['username'] ?? '-').toString();
+    final pppoePassword = (pppoe['password'] ?? activation['credentials']?['pppoePassword'] ?? preparedPppoe['password'] ?? '-').toString();
     final planCode = widget.job.planCode.isEmpty ? (preview['planCode'] ?? '').toString() : widget.job.planCode;
     final planCategory = widget.job.planCategory.isEmpty ? (preview['planCategory'] ?? 'home').toString() : widget.job.planCategory;
     final planPrice = widget.job.monthlyPrice > 0 ? widget.job.monthlyPrice : double.tryParse('${preview['monthlyPrice'] ?? 0}') ?? 0;
@@ -1814,7 +1817,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           _row('Current stage', status.replaceAll('_', ' ')),
                           _row('Config status', configStatus),
                           _row('PPPoE', pppoeUsername),
-                          _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? '-').toString()),
+                          _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? prepared['vlanId'] ?? '-').toString()),
                           _row('Wi-Fi 2.4G', wifiSsid24),
                           _row('Wi-Fi 5G', wifiSsid5),
                           Wrap(
