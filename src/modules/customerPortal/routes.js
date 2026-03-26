@@ -587,6 +587,99 @@ async function findOrCreatePortalUserForBooking({ mobile, email, fullName, exist
   return user;
 }
 
+function buildPlanFeatureList(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
+function buildBookingPlanSnapshot(plan, payload = {}, existingSelectedPlan = {}) {
+  const durationMonths = Number(payload.durationMonths || existingSelectedPlan?.durationMonths || 1);
+  const recurringAmount =
+    durationMonths === 12
+      ? Number(plan.yearlyPrice || existingSelectedPlan?.yearlyPrice || existingSelectedPlan?.recurringAmount || 0)
+      : durationMonths === 6
+        ? Number(plan.halfYearlyPrice || existingSelectedPlan?.halfYearlyPrice || existingSelectedPlan?.recurringAmount || 0)
+        : durationMonths === 3
+          ? Number(plan.quarterlyPrice || existingSelectedPlan?.quarterlyPrice || existingSelectedPlan?.recurringAmount || 0)
+          : Number(plan.monthlyPrice || existingSelectedPlan?.monthlyPrice || existingSelectedPlan?.recurringAmount || 0);
+  const setupAmount = Number(plan.otcCharge || existingSelectedPlan?.otcCharge || 0)
+    + Number(plan.installationCharge || existingSelectedPlan?.installationCharge || 0);
+  return {
+    planCode: plan.planCode,
+    planName: plan.name,
+    planCategory: plan.category || existingSelectedPlan?.planCategory || "home",
+    monthlyPrice: Number(plan.monthlyPrice || existingSelectedPlan?.monthlyPrice || 0),
+    quarterlyPrice: Number(plan.quarterlyPrice || existingSelectedPlan?.quarterlyPrice || 0),
+    halfYearlyPrice: Number(plan.halfYearlyPrice || existingSelectedPlan?.halfYearlyPrice || 0),
+    yearlyPrice: Number(plan.yearlyPrice || existingSelectedPlan?.yearlyPrice || 0),
+    otcCharge: Number(plan.otcCharge || existingSelectedPlan?.otcCharge || 0),
+    installationCharge: Number(plan.installationCharge || existingSelectedPlan?.installationCharge || 0),
+    durationMonths,
+    durationLabel: payload.durationLabel || existingSelectedPlan?.durationLabel || `${durationMonths} month${durationMonths > 1 ? "s" : ""}`,
+    recurringAmount,
+    totalAmount: recurringAmount + setupAmount,
+    speedMbps: Number(plan.speedMbps || existingSelectedPlan?.speedMbps || 0),
+    uploadSpeedMbps: Number(plan.uploadSpeedMbps || existingSelectedPlan?.uploadSpeedMbps || 0),
+    burstDownloadMbps: Number(plan.burstDownloadMbps || existingSelectedPlan?.burstDownloadMbps || 0) || null,
+    burstUploadMbps: Number(plan.burstUploadMbps || existingSelectedPlan?.burstUploadMbps || 0) || null,
+    dataPolicy: plan.dataPolicy || existingSelectedPlan?.dataPolicy || "unlimited",
+    dataLimitGb: Number(plan.dataLimitGb || existingSelectedPlan?.dataLimitGb || 0) || null,
+    fupSpeedMbps: Number(plan.fupSpeedMbps || existingSelectedPlan?.fupSpeedMbps || 0) || null,
+    fairUsageResetPolicy: plan.fairUsageResetPolicy || existingSelectedPlan?.fairUsageResetPolicy || "monthly",
+    latencyClass: plan.latencyClass || existingSelectedPlan?.latencyClass || "standard",
+    contentionRatio: plan.contentionRatio || existingSelectedPlan?.contentionRatio || null,
+    routerIncluded: Boolean(plan.routerIncluded || existingSelectedPlan?.routerIncluded),
+    routerModel: plan.routerModel || existingSelectedPlan?.routerModel || "",
+    routerRental: Number(plan.routerRental || existingSelectedPlan?.routerRental || 0) || null,
+    tags: Array.isArray(plan.tags) ? plan.tags : Array.isArray(existingSelectedPlan?.tags) ? existingSelectedPlan.tags : [],
+    staticBenefits: Array.isArray(plan.staticBenefits)
+      ? plan.staticBenefits
+      : Array.isArray(existingSelectedPlan?.staticBenefits)
+        ? existingSelectedPlan.staticBenefits
+        : [],
+    features: buildPlanFeatureList(plan.features?.length ? plan.features : existingSelectedPlan?.features),
+    ottApps: Array.isArray(plan.ottApps) ? plan.ottApps : Array.isArray(existingSelectedPlan?.ottApps) ? existingSelectedPlan.ottApps : [],
+    planProvisioning: plan.provisioning || existingSelectedPlan?.planProvisioning || null
+  };
+}
+
+function buildPlanRecordFromBookingSnapshot(selectedPlan = {}) {
+  return {
+    planCode: selectedPlan.planCode || "",
+    name: selectedPlan.planName || selectedPlan.planCode || "",
+    category: selectedPlan.planCategory || "home",
+    monthlyPrice: Number(selectedPlan.monthlyPrice || 0),
+    quarterlyPrice: Number(selectedPlan.quarterlyPrice || 0),
+    halfYearlyPrice: Number(selectedPlan.halfYearlyPrice || 0),
+    yearlyPrice: Number(selectedPlan.yearlyPrice || 0),
+    otcCharge: Number(selectedPlan.otcCharge || 0),
+    installationCharge: Number(selectedPlan.installationCharge || 0),
+    speedMbps: Number(selectedPlan.speedMbps || 0),
+    uploadSpeedMbps: Number(selectedPlan.uploadSpeedMbps || 0),
+    burstDownloadMbps: Number(selectedPlan.burstDownloadMbps || 0) || null,
+    burstUploadMbps: Number(selectedPlan.burstUploadMbps || 0) || null,
+    dataPolicy: selectedPlan.dataPolicy || "unlimited",
+    dataLimitGb: Number(selectedPlan.dataLimitGb || 0) || null,
+    fupSpeedMbps: Number(selectedPlan.fupSpeedMbps || 0) || null,
+    fairUsageResetPolicy: selectedPlan.fairUsageResetPolicy || "monthly",
+    latencyClass: selectedPlan.latencyClass || "standard",
+    contentionRatio: selectedPlan.contentionRatio || null,
+    routerIncluded: Boolean(selectedPlan.routerIncluded),
+    routerModel: selectedPlan.routerModel || "",
+    routerRental: Number(selectedPlan.routerRental || 0) || null,
+    tags: Array.isArray(selectedPlan.tags) ? selectedPlan.tags : [],
+    staticBenefits: Array.isArray(selectedPlan.staticBenefits) ? selectedPlan.staticBenefits : [],
+    features: buildPlanFeatureList(selectedPlan.features),
+    ottApps: Array.isArray(selectedPlan.ottApps) ? selectedPlan.ottApps : [],
+    provisioning: selectedPlan.planProvisioning || null
+  };
+}
+
 async function createConnectionBooking({ customerUser, payload }) {
   const plan = await PlanCatalog.findOne({ planCode: payload.planCode });
   if (!plan) {
@@ -601,50 +694,15 @@ async function createConnectionBooking({ customerUser, payload }) {
   if (!feasibility.feasible) {
     throw new ApiError(409, feasibility.message || "Selected address is not serviceable");
   }
-  const durationMonths = Number(payload.durationMonths || 1);
-  const recurringAmount =
-    durationMonths === 12
-      ? Number(plan.yearlyPrice || 0)
-      : durationMonths === 6
-        ? Number(plan.halfYearlyPrice || 0)
-        : durationMonths === 3
-          ? Number(plan.quarterlyPrice || 0)
-          : Number(plan.monthlyPrice || 0);
-  const setupAmount = Number(plan.otcCharge || 0) + Number(plan.installationCharge || 0);
-  const amount = recurringAmount + setupAmount;
+  const selectedPlan = buildBookingPlanSnapshot(plan, payload);
+  const amount = Number(selectedPlan.totalAmount || 0);
   const isOfflinePayment = payload.paymentMode === "cash";
 
   const booking = await ConnectionBooking.create({
     bookingNumber: `JF${Date.now().toString().slice(-6)}`,
     customerUserId: customerUser?._id,
     status: "payment_pending",
-    selectedPlan: {
-      planCode: plan.planCode,
-      planName: plan.name,
-      monthlyPrice: plan.monthlyPrice,
-      quarterlyPrice: plan.quarterlyPrice,
-      halfYearlyPrice: plan.halfYearlyPrice,
-      yearlyPrice: plan.yearlyPrice,
-      otcCharge: plan.otcCharge,
-      installationCharge: plan.installationCharge,
-      durationMonths,
-      durationLabel: payload.durationLabel || `${durationMonths} month`,
-      recurringAmount,
-      totalAmount: amount,
-      speedMbps: Number(plan.speedMbps || 0),
-      uploadSpeedMbps: Number(plan.uploadSpeedMbps || 0),
-      burstDownloadMbps: Number(plan.burstDownloadMbps || 0) || null,
-      burstUploadMbps: Number(plan.burstUploadMbps || 0) || null,
-      dataPolicy: plan.dataPolicy || "unlimited",
-      dataLimitGb: Number(plan.dataLimitGb || 0) || null,
-      fupSpeedMbps: Number(plan.fupSpeedMbps || 0) || null,
-      fairUsageResetPolicy: plan.fairUsageResetPolicy || "monthly",
-      latencyClass: plan.latencyClass || "standard",
-      contentionRatio: plan.contentionRatio || null,
-      routerIncluded: Boolean(plan.routerIncluded),
-      routerModel: plan.routerModel || "",
-      routerRental: Number(plan.routerRental || 0) || null
-    },
+    selectedPlan,
     feasibility: {
       ...feasibility,
       gps: { lat: payload.lat, lng: payload.lng }
@@ -1059,6 +1117,7 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
     return booking;
   }
 
+  const installerPlanSnapshot = buildBookingPlanSnapshot(plan, payload, booking.selectedPlan || {});
   const installerJob = await InstallerJob.create({
     jobNumber: `JOB-${Date.now()}`,
     type: "installation",
@@ -1078,38 +1137,7 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
             date: payload.preferredDate || null
           }
         : null,
-      planName: plan.name,
-      planCode: plan.planCode,
-      durationMonths: Number(booking.selectedPlan?.durationMonths || payload.durationMonths || 1),
-      durationLabel: booking.selectedPlan?.durationLabel || payload.durationLabel || "1 month",
-      recurringAmount: Number(booking.selectedPlan?.recurringAmount || 0),
-      totalAmount: Number(booking.selectedPlan?.totalAmount || booking.payment?.amount || 0),
-      planCategory: plan.category || "home",
-      monthlyPrice: Number(plan.monthlyPrice || 0),
-      otcCharge: Number(plan.otcCharge || 0),
-      installationCharge: Number(plan.installationCharge || 0),
-      speedMbps: Number(plan.speedMbps || 0),
-      uploadSpeedMbps: Number(plan.uploadSpeedMbps || 0),
-      burstDownloadMbps: Number(plan.burstDownloadMbps || 0) || null,
-      burstUploadMbps: Number(plan.burstUploadMbps || 0) || null,
-      dataPolicy: plan.dataPolicy || "unlimited",
-      dataLimitGb: Number(plan.dataLimitGb || 0) || null,
-      fupSpeedMbps: Number(plan.fupSpeedMbps || 0) || null,
-      fairUsageResetPolicy: plan.fairUsageResetPolicy || "monthly",
-      latencyClass: plan.latencyClass || "standard",
-      contentionRatio: plan.contentionRatio || null,
-      routerIncluded: Boolean(plan.routerIncluded),
-      routerModel: plan.routerModel || "",
-      routerRental: Number(plan.routerRental || 0) || null,
-      tags: Array.isArray(plan.tags) ? plan.tags : [],
-      staticBenefits: Array.isArray(plan.staticBenefits) ? plan.staticBenefits : [],
-      features: Array.isArray(plan.features)
-        ? plan.features.filter(Boolean)
-        : typeof plan.features === "string"
-          ? [plan.features]
-          : [],
-      ottApps: Array.isArray(plan.ottApps) ? plan.ottApps : [],
-      planProvisioning: plan.provisioning || null
+      ...installerPlanSnapshot
     },
     timeline: [
       {
@@ -1573,10 +1601,8 @@ customerPortalRouter.post(
       }
     }).catch(() => null);
 
-    const plan = await PlanCatalog.findOne({ planCode: booking.selectedPlan?.planCode });
-    if (!plan) {
-      throw new ApiError(404, "Plan for booking not found");
-    }
+    const plan = await PlanCatalog.findOne({ planCode: booking.selectedPlan?.planCode }).lean()
+      || buildPlanRecordFromBookingSnapshot(booking.selectedPlan || {});
 
     await assignInstallerIfAvailable({
       booking,
@@ -1748,10 +1774,8 @@ customerPortalRouter.post(
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    const plan = await PlanCatalog.findOne({ planCode: booking.selectedPlan?.planCode });
-    if (!plan) {
-      throw new ApiError(404, "Plan for booking not found");
-    }
+    const plan = await PlanCatalog.findOne({ planCode: booking.selectedPlan?.planCode }).lean()
+      || buildPlanRecordFromBookingSnapshot(booking.selectedPlan || {});
 
     await assignInstallerIfAvailable({
       booking,
