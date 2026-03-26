@@ -272,6 +272,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     _show(successMessage);
   }
 
+  String _firstNonBlankText(List<dynamic> values, {String fallback = '-'}) {
+    for (final value in values) {
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return fallback;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -295,11 +304,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final prepared = (activation['preparedCredentials'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final preparedWifi = (prepared['wifi'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final preparedPppoe = (prepared['pppoe'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final wifiSsid24 = (wifi['ssid24'] ?? activation['credentials']?['wifi']?['ssid24'] ?? preparedWifi['ssid24'] ?? '-').toString();
-    final wifiSsid5 = (wifi['ssid5'] ?? activation['credentials']?['wifi']?['ssid5'] ?? preparedWifi['ssid5'] ?? '-').toString();
-    final wifiPassword = (wifi['password'] ?? activation['credentials']?['wifi']?['password'] ?? preparedWifi['password'] ?? '-').toString();
-    final pppoeUsername = (pppoe['username'] ?? activation['credentials']?['pppoeUsername'] ?? preparedPppoe['username'] ?? '-').toString();
-    final pppoePassword = (pppoe['password'] ?? activation['credentials']?['pppoePassword'] ?? preparedPppoe['password'] ?? '-').toString();
+    final wifiSsid24 = _firstNonBlankText([
+      wifi['ssid24'],
+      activation['credentials']?['wifi']?['ssid24'],
+      preparedWifi['ssid24'],
+    ]);
+    final wifiSsid5 = _firstNonBlankText([
+      wifi['ssid5'],
+      activation['credentials']?['wifi']?['ssid5'],
+      preparedWifi['ssid5'],
+    ]);
+    final wifiPassword = _firstNonBlankText([
+      wifi['password'],
+      activation['credentials']?['wifi']?['password'],
+      preparedWifi['password'],
+    ]);
+    final pppoeUsername = _firstNonBlankText([
+      pppoe['username'],
+      activation['credentials']?['pppoeUsername'],
+      preparedPppoe['username'],
+    ]);
+    final pppoePassword = _firstNonBlankText([
+      pppoe['password'],
+      activation['credentials']?['pppoePassword'],
+      preparedPppoe['password'],
+    ]);
     final planCode = widget.job.planCode.isEmpty ? (preview['planCode'] ?? '').toString() : widget.job.planCode;
     final planCategory = widget.job.planCategory.isEmpty ? (preview['planCategory'] ?? 'home').toString() : widget.job.planCategory;
     final planPrice = widget.job.monthlyPrice > 0 ? widget.job.monthlyPrice : double.tryParse('${preview['monthlyPrice'] ?? 0}') ?? 0;
