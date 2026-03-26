@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
-import { Cable, Loader, RefreshCw, Save, ShieldCheck } from 'lucide-react'
+import { Cable, Copy, Loader, RefreshCw, Save, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 
 type ProvisioningFormState = {
@@ -23,6 +23,45 @@ const initialForm: ProvisioningFormState = {
   defaultPppoePassword: '123456',
   wifiNamePrefix: 'JustFiber',
 }
+
+const presetTemplates: Array<{ code: string; label: string; template: ProvisioningFormState }> = [
+  {
+    code: 'home',
+    label: 'Home broadband',
+    template: {
+      accessProfileCode: 'HOME-100M',
+      vlanId: '100',
+      pppoePrefix: 'jf',
+      pppoeRealm: '',
+      defaultPppoePassword: '123456',
+      wifiNamePrefix: 'JustFiber',
+    },
+  },
+  {
+    code: 'business',
+    label: 'Business broadband',
+    template: {
+      accessProfileCode: 'BIZ-200M',
+      vlanId: '200',
+      pppoePrefix: 'jfb',
+      pppoeRealm: 'biz',
+      defaultPppoePassword: 'Netlayer@123',
+      wifiNamePrefix: 'JustFiberBiz',
+    },
+  },
+  {
+    code: 'enterprise',
+    label: 'Enterprise / dedicated',
+    template: {
+      accessProfileCode: 'ENT-500M',
+      vlanId: '300',
+      pppoePrefix: 'jfe',
+      pppoeRealm: 'corp',
+      defaultPppoePassword: 'Enterprise@123',
+      wifiNamePrefix: 'JustFiberCorp',
+    },
+  },
+]
 
 function toForm(plan?: Plan | null): ProvisioningFormState {
   if (!plan) return initialForm
@@ -64,6 +103,7 @@ export default function ProvisioningPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [query, setQuery] = useState('')
+  const [copySourcePlanId, setCopySourcePlanId] = useState('')
 
   useEffect(() => {
     void loadPlans()
@@ -111,6 +151,20 @@ export default function ProvisioningPage() {
   function selectPlan(plan: Plan) {
     setSelectedPlanId(plan.id)
     setForm(toForm(plan))
+  }
+
+  function applyPreset(code: string) {
+    const preset = presetTemplates.find((item) => item.code === code)
+    if (!preset) return
+    setForm({ ...preset.template })
+    toast.success(`${preset.label} preset applied`)
+  }
+
+  function copyTemplateFromPlan(sourcePlanId: string) {
+    const sourcePlan = plans.find((plan) => plan.id === sourcePlanId)
+    if (!sourcePlan) return
+    setForm(toForm(sourcePlan))
+    toast.success(`Copied provisioning template from ${sourcePlan.name}`)
   }
 
   async function handleSave() {
@@ -246,6 +300,54 @@ export default function ProvisioningPage() {
                   <input className="input" placeholder="PPPoE realm" value={form.pppoeRealm} onChange={(e) => setForm({ ...form, pppoeRealm: e.target.value })} />
                   <input className="input" placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
                   <input className="input" placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <div className="rounded-[22px] border border-white/10 bg-white/5 p-5">
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/45">Default presets</div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {presetTemplates.map((preset) => (
+                        <button
+                          key={preset.code}
+                          type="button"
+                          onClick={() => applyPreset(preset.code)}
+                          className="btn-secondary inline-flex items-center gap-2"
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[22px] border border-white/10 bg-white/5 p-5">
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/45">Copy from another plan</div>
+                    <div className="mt-4 flex flex-col gap-3 md:flex-row">
+                      <select
+                        className="input"
+                        value={copySourcePlanId}
+                        onChange={(e) => setCopySourcePlanId(e.target.value)}
+                      >
+                        <option value="">Select source plan</option>
+                        {plans
+                          .filter((plan) => plan.id !== selectedPlan?.id)
+                          .map((plan) => (
+                            <option key={plan.id} value={plan.id}>
+                              {plan.name} ({plan.planCode || plan.id})
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => copyTemplateFromPlan(copySourcePlanId)}
+                        className="btn-secondary inline-flex items-center gap-2"
+                        disabled={!copySourcePlanId}
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy template
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {issues.length ? (
