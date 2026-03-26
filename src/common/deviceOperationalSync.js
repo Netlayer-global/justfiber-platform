@@ -1,6 +1,35 @@
 import { genieacsClient } from "../integrations/genieacsClient.js";
 import { DeviceOperationalCache } from "../models/DeviceOperationalCache.js";
 
+const OPTICAL_REFRESH_OBJECTS = [
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.",
+  "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.",
+  "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig."
+];
+
+const OPTICAL_PARAMETER_NAMES = [
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.RXPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.RxPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalRxPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.RxOpticalPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.TXPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.TxPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalTxPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.TxOpticalPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RXPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TXPower",
+  "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.RXPower",
+  "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.TXPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RXPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TXPower",
+  "VirtualParameters.RXPower",
+  "VirtualParameters.TXPower",
+  "VirtualParameters.OpticalRxPower",
+  "VirtualParameters.OpticalTxPower"
+];
+
 function readValue(node) {
   if (node === undefined || node === null) return undefined;
   if (typeof node === "object" && "_value" in node) return node._value;
@@ -35,6 +64,30 @@ function deriveOnlineStatus(lastInformAt) {
   if (!lastInformAt) return "unknown";
   const ageMs = Date.now() - lastInformAt.getTime();
   return ageMs <= 1000 * 60 * 15 ? "online" : "offline";
+}
+
+async function requestOpticalTelemetryRefresh(deviceId) {
+  if (!deviceId) return;
+
+  for (const objectName of OPTICAL_REFRESH_OBJECTS) {
+    try {
+      await genieacsClient.runTask(deviceId, {
+        name: "refreshObject",
+        objectName
+      });
+    } catch {
+      // Ignore individual task failures; some models reject unsupported objects.
+    }
+  }
+
+  try {
+    await genieacsClient.runTask(deviceId, {
+      name: "getParameterValues",
+      parameterNames: OPTICAL_PARAMETER_NAMES
+    });
+  } catch {
+    // Ignore explicit parameter fetch failures and fall back to whatever the device exposes.
+  }
 }
 
 export function summarizeGenieDevice(summary, fallbackDeviceId) {
@@ -222,7 +275,7 @@ export async function syncDeviceFromGenie(cacheRecord) {
     return { ok: false, reason: "missing_device_id" };
   }
 
-  const summary = await genieacsClient.getRichDeviceSummary({
+  let summary = await genieacsClient.getRichDeviceSummary({
     deviceId: cacheRecord.deviceId,
     serialNumber: cacheRecord.serialNumber
   });
@@ -230,7 +283,17 @@ export async function syncDeviceFromGenie(cacheRecord) {
     return { ok: false, reason: "not_found" };
   }
 
-  const parsed = summarizeGenieDevice(summary, cacheRecord.deviceId);
+  let parsed = summarizeGenieDevice(summary, cacheRecord.deviceId);
+  if (parsed.opticalInfo?.rxPower == null && parsed.opticalInfo?.txPower == null) {
+    await requestOpticalTelemetryRefresh(cacheRecord.deviceId);
+    summary = await genieacsClient.getRichDeviceSummary({
+      deviceId: cacheRecord.deviceId,
+      serialNumber: cacheRecord.serialNumber
+    });
+    if (summary) {
+      parsed = summarizeGenieDevice(summary, cacheRecord.deviceId);
+    }
+  }
   await DeviceOperationalCache.updateOne(
     { _id: cacheRecord._id },
     {
