@@ -168,6 +168,7 @@ export default function CustomerDetailPage() {
       : customer?.plan?.id
   const currentSpeedMbps = Number(billingSummary.speedMbps || 0)
   const radiusService = customer?.radiusService || null
+  const primaryDevice = customer?.devices?.[0]
   const radiusRejectState = radiusService?.radcheck?.some((row) => row.attribute === 'Auth-Type' && row.value === 'Reject') || false
   const radiusPasswordPresent = radiusService?.radcheck?.some((row) => row.attribute === 'Cleartext-Password') || false
   const radiusRateLimit = radiusService?.radreply?.find((row) => row.attribute === 'Mikrotik-Rate-Limit')?.value || ''
@@ -1291,6 +1292,29 @@ export default function CustomerDetailPage() {
                       <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Last sync</p>
                       <p className="mt-2 font-semibold text-slate-900">{radiusService?.updatedAt ? new Date(radiusService.updatedAt).toLocaleString() : '-'}</p>
                     </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="btn-primary"
+                      onClick={() => primaryDevice && void handleProvisionCustomerPppoe(primaryDevice)}
+                      disabled={isSaving || !primaryDevice}
+                    >
+                      Create / Sync PPPoE
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => void handleSuspendCustomerPppoe()}
+                      disabled={isSaving}
+                    >
+                      Suspend PPPoE
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => void handleResumeCustomerPppoe()}
+                      disabled={isSaving}
+                    >
+                      Resume PPPoE
+                    </button>
                   </div>
                 </div>
                 {(customer.devices || []).length ? customer.devices?.map((device) => {
