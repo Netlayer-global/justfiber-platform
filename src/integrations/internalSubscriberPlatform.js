@@ -59,6 +59,23 @@ function addDays(date, days) {
   return next;
 }
 
+function addMonths(date, months) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + Math.max(1, Number(months || 1)));
+  return next;
+}
+
+function resolveDurationMonths(source = {}) {
+  return Math.max(1, Number(source?.durationMonths || 1));
+}
+
+function resolveBillingCycleLabel(durationMonths) {
+  if (durationMonths >= 12) return "Yearly";
+  if (durationMonths >= 6) return "Half-yearly";
+  if (durationMonths >= 3) return "Quarterly";
+  return "Monthly";
+}
+
 async function pickAccessProfile(plan) {
   if (!plan) {
     return AccessProfile.findOne({ active: true }).sort({ downMbps: 1, createdAt: 1 }).lean();
@@ -164,6 +181,9 @@ export class InternalSubscriberPlatform {
     const customerType = resolveCustomerType(plan);
     const billMode = resolveBillModeForPlan({ billingProfile, plan });
     const networkProfile = normalizePlanNetworkProfile(plan, accessProfile);
+    const durationMonths = resolveDurationMonths(booking.selectedPlan);
+    const serviceExpiryAt = addMonths(new Date(), durationMonths);
+    const remainingDays = Math.max(1, Math.ceil((serviceExpiryAt - Date.now()) / (1000 * 60 * 60 * 24)));
     const provisionalPppoe =
       jobRecord.activation?.preparedCredentials?.pppoe ||
       buildPppoeCredentials(identifiers.customerId, plan?.provisioning);
@@ -182,7 +202,7 @@ export class InternalSubscriberPlatform {
           customerType,
           jazeStatus: "internal_platform",
           operationalStatus: "activation_in_progress",
-          expiryAt: addDays(new Date(), 30),
+          expiryAt: serviceExpiryAt,
           address: {
             ...(booking.personalDetails?.fullAddress ? { fullAddress: booking.personalDetails.fullAddress } : {}),
             ...(booking.personalDetails?.pinCode ? { pinCode: booking.personalDetails.pinCode } : {}),
@@ -201,7 +221,7 @@ export class InternalSubscriberPlatform {
             currency: "INR",
             lastPaymentStatus: booking.payment?.status === "paid" ? "paid" : "pending",
             dueAmount: booking.payment?.status === "paid" ? 0 : Number(plan?.monthlyPrice || booking.selectedPlan?.monthlyPrice || 0),
-            remainingDays: 30,
+            remainingDays,
             speedMbps: networkProfile.speedMbps,
             uploadSpeedMbps: networkProfile.uploadSpeedMbps,
             dataPolicy: networkProfile.dataPolicy,
@@ -214,7 +234,7 @@ export class InternalSubscriberPlatform {
             billingStateName: booking.personalDetails?.state
           },
           invoiceSummary: {
-            billCycle: "Monthly",
+            billCycle: resolveBillingCycleLabel(durationMonths),
             billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid"
           }
         }
@@ -242,6 +262,7 @@ export class InternalSubscriberPlatform {
             customerType,
             billMode,
             installerJobId: jobRecord._id.toString(),
+            durationMonths,
             networkProfile
           }
         }
@@ -303,6 +324,9 @@ export class InternalSubscriberPlatform {
     const customerType = resolveCustomerType({ category: snapshotCategory });
     const billMode = resolveBillModeForPlan({ billingProfile, plan: { category: snapshotCategory } });
     const networkProfile = normalizePlanNetworkProfile(installerJob.customerSnapshot);
+    const durationMonths = resolveDurationMonths(installerJob.customerSnapshot);
+    const serviceExpiryAt = addMonths(new Date(), durationMonths);
+    const remainingDays = Math.max(1, Math.ceil((serviceExpiryAt - Date.now()) / (1000 * 60 * 60 * 24)));
     const billingAmount =
       Number(installerJob.customerSnapshot?.recurringAmount || 0) ||
       Number(installerJob.customerSnapshot?.monthlyPrice || 0) ||
@@ -317,14 +341,14 @@ export class InternalSubscriberPlatform {
           accountNumber: identifiers.accountNumber,
           operationalStatus: "active",
           jazeStatus: "internal_platform",
-          expiryAt: addDays(new Date(), 30),
+          expiryAt: serviceExpiryAt,
           customerType,
           billingSnapshot: {
             lastInvoiceAmount: billingAmount,
             currency: "INR",
             lastPaymentStatus: booking?.payment?.status === "paid" ? "paid" : "pending",
             dueAmount: booking?.payment?.status === "paid" ? 0 : billingAmount,
-            remainingDays: 30,
+            remainingDays,
             speedMbps: networkProfile.speedMbps,
             uploadSpeedMbps: networkProfile.uploadSpeedMbps,
             dataPolicy: networkProfile.dataPolicy,
@@ -338,7 +362,7 @@ export class InternalSubscriberPlatform {
             billingStateName: booking?.personalDetails?.state
           },
           invoiceSummary: {
-            billCycle: "Monthly",
+            billCycle: resolveBillingCycleLabel(durationMonths),
             billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid"
           },
           billingZoneCode: booking?.feasibility?.matchedZone?.zoneCode || booking?.feasibility?.matchedZone?.zoneName,
@@ -371,6 +395,7 @@ export class InternalSubscriberPlatform {
             vlanId,
             customerType,
             billMode,
+            durationMonths,
             networkProfile
           }
         }
