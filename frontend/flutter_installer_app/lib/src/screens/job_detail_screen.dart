@@ -42,6 +42,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _cablePhotoReady = false;
   int _activationCountdown = 0;
   Timer? _activationTimer;
+  Timer? _detailRefreshTimer;
   DateTime? _routerPhotoCapturedAt;
   DateTime? _cablePhotoCapturedAt;
   String? _routerPhotoPath;
@@ -61,6 +62,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   @override
   void dispose() {
     _activationTimer?.cancel();
+    _detailRefreshTimer?.cancel();
     _serialController.dispose();
     _otpController.dispose();
     _replaceSerialController.dispose();
@@ -83,6 +85,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return;
       }
       setState(() => _activationCountdown -= 1);
+    });
+  }
+
+  void _scheduleDetailRefreshIfNeeded() {
+    _detailRefreshTimer?.cancel();
+    final status = (_detail?['status'] ?? '').toString();
+    final configStatus = (_detail?['activation']?['configStatus'] ?? '').toString();
+    final shouldPoll =
+        status == 'activation_in_progress' ||
+        configStatus == 'pending' ||
+        configStatus == 'retried';
+    if (!shouldPoll) return;
+    _detailRefreshTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted || _busy) return;
+      _loadAll();
     });
   }
 
@@ -129,6 +146,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           _serialController.text = serial;
         }
       });
+      _scheduleDetailRefreshIfNeeded();
     } catch (e) {
       _show('${e.toString()}');
     } finally {
