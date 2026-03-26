@@ -76,13 +76,29 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
   ]);
   const rxPower = firstValue(summary, [
     "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.RXPower",
+    "InternetGatewayDevice.WANDevice.1.X_ZTE-COM_WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.WANDevice.1.X_HW_WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.X_ZTE-COM_WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.X_HW_WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RXPower",
-    "InternetGatewayDevice.FAP.Tunnel.1.Stats.RXPower"
+    "InternetGatewayDevice.FAP.Tunnel.1.Stats.RXPower",
+    "VirtualParameters.RXPower",
+    "VirtualParameters.OpticalRxPower"
   ]);
   const txPower = firstValue(summary, [
     "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.TXPower",
+    "InternetGatewayDevice.WANDevice.1.X_ZTE-COM_WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.WANDevice.1.X_HW_WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.X_ZTE-COM_WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.X_HW_WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TXPower",
-    "InternetGatewayDevice.FAP.Tunnel.1.Stats.TXPower"
+    "InternetGatewayDevice.FAP.Tunnel.1.Stats.TXPower",
+    "VirtualParameters.TXPower",
+    "VirtualParameters.OpticalTxPower"
   ]);
   const serialNumber = firstValue(summary, [
     "DeviceID.SerialNumber",

@@ -78,6 +78,7 @@ devicesRouter.get(
   requirePermission(permissions.deviceRead),
   asyncHandler(async (req, res) => {
     const deviceRecord = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId });
+    const useLiveView = String(req.query.live || "") === "true";
     if (deviceRecord && String(req.query.sync || "") === "true") {
       try {
         await syncDeviceFromGenie(deviceRecord);
@@ -86,6 +87,32 @@ devicesRouter.get(
       }
     }
     const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId }).lean();
+    if (useLiveView) {
+      const liveSummary = await genieacsClient.findDeviceSummary({ deviceId: req.params.deviceId });
+      if (liveSummary) {
+        const parsed = summarizeGenieDevice(liveSummary, req.params.deviceId);
+        return ok(res, {
+          ...(device || {}),
+          ...parsed,
+          customerId: device?.customerId || null,
+          serviceId: device?.serviceId || null,
+          provisioningState: device?.provisioningState || "live_only",
+          wanInfo: {
+            ...(device?.wanInfo || {}),
+            ...(parsed.wanInfo || {})
+          },
+          wifiInfo: {
+            ...(device?.wifiInfo || {}),
+            ...(parsed.wifiInfo || {})
+          },
+          opticalInfo: {
+            ...(device?.opticalInfo || {}),
+            ...(parsed.opticalInfo || {})
+          },
+          updatedAt: parsed.lastInformAt || device?.updatedAt || new Date()
+        });
+      }
+    }
     if (device) {
       return ok(res, device);
     }

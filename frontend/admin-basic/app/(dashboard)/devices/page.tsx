@@ -41,6 +41,8 @@ function formatDateTime(value?: string) {
 }
 
 function formatPower(value: unknown) {
+  if (value === null || value === undefined) return '-'
+  if (typeof value === 'string' && !value.trim()) return '-'
   const num = Number(value)
   return Number.isFinite(num) ? `${num} dBm` : '-'
 }
