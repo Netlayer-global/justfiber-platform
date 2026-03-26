@@ -221,6 +221,56 @@ export default function ProvisioningPage() {
     }
   }
 
+  async function handleSaveAndBulkApply() {
+    if (!selectedPlan) return
+    if (!bulkTargetPlanIds.length) {
+      toast.error('Select target plans first')
+      return
+    }
+    try {
+      setIsSaving(true)
+      const currentPayload = {
+        accessProfileCode: form.accessProfileCode.trim(),
+        vlanId: Number(form.vlanId || 0),
+        pppoePrefix: form.pppoePrefix.trim(),
+        pppoeRealm: form.pppoeRealm.trim(),
+        defaultPppoePassword: form.defaultPppoePassword.trim(),
+        wifiNamePrefix: form.wifiNamePrefix.trim(),
+      }
+      const selectedRes = await adminAPI.updatePlan(selectedPlan.planCode || selectedPlan.id, {
+        ...selectedPlan,
+        provisioning: currentPayload,
+      })
+      if (!selectedRes.success) {
+        toast.error(selectedRes.error || 'Failed to save selected plan template')
+        return
+      }
+
+      const targets = bulkCandidatePlans.filter((plan) => bulkTargetPlanIds.includes(plan.id))
+      const results = await Promise.all(
+        targets.map((plan) =>
+          adminAPI.updatePlan(plan.planCode || plan.id, {
+            ...plan,
+            provisioning: currentPayload,
+          })
+        )
+      )
+      const failed = results.find((result) => !result.success)
+      if (failed) {
+        toast.error(failed.error || 'Failed to apply template to selected plans')
+        return
+      }
+      toast.success(`Template saved and applied to ${targets.length + 1} plan(s)`)
+      setBulkTargetPlanIds([])
+      await loadPlans()
+    } catch (error) {
+      console.error('[provisioning] Failed to save and bulk apply:', error)
+      toast.error('Failed to save and bulk apply template')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   async function handleBulkApply() {
     if (!bulkTargetPlanIds.length) {
       toast.error('Select target plans first')
@@ -507,6 +557,15 @@ export default function ProvisioningPage() {
                   <button type="button" onClick={() => void handleSave()} className="btn-primary inline-flex items-center gap-2" disabled={isSaving}>
                     <Save className="h-4 w-4" />
                     Save provisioning template
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveAndBulkApply()}
+                    className="btn-secondary inline-flex items-center gap-2"
+                    disabled={isSaving || !bulkTargetPlanIds.length}
+                  >
+                    <Copy className="h-4 w-4" />
+                    Save + apply to selected
                   </button>
                   <button type="button" onClick={() => setForm(toForm(selectedPlan))} className="btn-secondary inline-flex items-center gap-2" disabled={isSaving}>
                     <RefreshCw className="h-4 w-4" />
