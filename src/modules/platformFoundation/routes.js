@@ -103,13 +103,22 @@ const bngNodeSchema = z.object({
   displayName: z.string().min(2),
   vendor: z.enum(["mikrotik", "juniper", "huawei", "other"]).default("mikrotik"),
   status: z.enum(["active", "planned", "disabled"]).default("active"),
+  macAddress: z.string().optional(),
+  groupName: z.string().optional(),
   nasIdentifier: z.string().optional(),
   managementIp: z.string().optional(),
   radiusClientIp: z.string().optional(),
   apiBaseUrl: z.string().optional(),
+  useCoa: z.boolean().optional(),
   coaHost: z.string().optional(),
   coaPort: z.number().int().positive().optional(),
   coaSecret: z.string().optional(),
+  enableIpAuth: z.boolean().optional(),
+  routerOsUsername: z.string().optional(),
+  routerOsPassword: z.string().optional(),
+  snmpCommunity: z.string().optional(),
+  apiPort: z.number().int().positive().optional(),
+  wwwPort: z.number().int().positive().optional(),
   notes: z.string().optional()
 });
 

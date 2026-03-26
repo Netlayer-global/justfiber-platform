@@ -4,6 +4,7 @@ import type {
   Plan,
   Customer,
   Device,
+  BngNode,
   Ticket,
   Installer,
   Job,
@@ -192,6 +193,35 @@ function mapPlan(plan: any): Plan {
     type: plan.serviceType || 'fiber',
     status: plan.active === false ? 'inactive' : 'active',
     createdAt: plan.createdAt || new Date().toISOString(),
+  }
+}
+
+function mapBngNode(node: any): BngNode {
+  return {
+    id: node._id || node.nodeCode || '',
+    nodeCode: node.nodeCode || '',
+    displayName: node.displayName || node.nodeCode || 'Unnamed router',
+    vendor: node.vendor || 'mikrotik',
+    status: node.status || 'planned',
+    macAddress: node.macAddress || '',
+    groupName: node.groupName || '',
+    nasIdentifier: node.nasIdentifier || '',
+    managementIp: node.managementIp || '',
+    radiusClientIp: node.radiusClientIp || '',
+    apiBaseUrl: node.apiBaseUrl || '',
+    useCoa: node.useCoa !== false,
+    coaHost: node.coaHost || '',
+    coaPort: Number(node.coaPort || 3799),
+    coaSecret: node.coaSecret || '',
+    enableIpAuth: Boolean(node.enableIpAuth),
+    routerOsUsername: node.routerOsUsername || '',
+    routerOsPassword: node.routerOsPassword || '',
+    snmpCommunity: node.snmpCommunity || '',
+    apiPort: Number(node.apiPort || 8728),
+    wwwPort: Number(node.wwwPort || 80),
+    notes: node.notes || '',
+    createdAt: node.createdAt || '',
+    updatedAt: node.updatedAt || '',
   }
 }
 
@@ -1058,6 +1088,25 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify({ presetName }),
     }),
+
+  // Routers / BNG
+  getBngNodes: async () => {
+    const res = await request<any[]>('/api/v1/admin/foundation/bng-nodes')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapBngNode) : [],
+    }
+  },
+  saveBngNode: async (data: Partial<BngNode> & { nodeCode: string; displayName: string }) => {
+    const res = await request<any>('/api/v1/admin/foundation/bng-nodes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapBngNode(res.data) : undefined,
+    }
+  },
 
   // Tickets
   getTickets: async (page = 1, limit = 20) => {

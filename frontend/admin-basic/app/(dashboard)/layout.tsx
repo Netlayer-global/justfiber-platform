@@ -11,6 +11,7 @@ import {
   HardDrive,
   LogOut,
   MapPinned,
+  Router,
   Ticket,
   UserRound,
   Wrench,
@@ -20,6 +21,7 @@ import { clearAuthToken, getAuthToken } from '@/lib/api'
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/plans', label: 'Plans', icon: Cable },
+  { href: '/routers', label: 'Routers', icon: Router },
   { href: '/customers', label: 'Customers', icon: UserRound },
   { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/devices', label: 'Devices', icon: HardDrive },

@@ -180,6 +180,33 @@ export interface Device {
   opticalInfo?: Record<string, any>
 }
 
+export interface BngNode {
+  id: string
+  nodeCode: string
+  displayName: string
+  vendor: 'mikrotik' | 'juniper' | 'huawei' | 'other'
+  status: 'active' | 'planned' | 'disabled'
+  macAddress?: string
+  groupName?: string
+  nasIdentifier?: string
+  managementIp?: string
+  radiusClientIp?: string
+  apiBaseUrl?: string
+  useCoa?: boolean
+  coaHost?: string
+  coaPort?: number
+  coaSecret?: string
+  enableIpAuth?: boolean
+  routerOsUsername?: string
+  routerOsPassword?: string
+  snmpCommunity?: string
+  apiPort?: number
+  wwwPort?: number
+  notes?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface CustomerDevice {
   id: string
   deviceId: string
