@@ -1118,7 +1118,7 @@ export const adminAPI = {
     }
   },
   deleteBngNode: (nodeCode: string) =>
-    request<{ deleted: boolean; nodeCode: string }>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}`, {
+    request<{ deleted: boolean; nodeCode: string; freeradiusClientSync?: BngNode['freeradiusClientSync'] }>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}`, {
       method: 'DELETE',
     }),
   testBngNode: (nodeCode: string) =>
