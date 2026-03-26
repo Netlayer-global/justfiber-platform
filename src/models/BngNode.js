@@ -10,6 +10,9 @@ const bngNodeSchema = new mongoose.Schema(
     managementIp: String,
     radiusClientIp: String,
     apiBaseUrl: String,
+    coaHost: String,
+    coaPort: Number,
+    coaSecret: String,
     notes: String
   },
   { timestamps: true }

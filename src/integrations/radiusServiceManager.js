@@ -2,6 +2,7 @@ import mysql from "mysql2/promise";
 import { env } from "../config/env.js";
 import { AccessProfile } from "../models/AccessProfile.js";
 import { SubscriberService } from "../models/SubscriberService.js";
+import { mikrotikBngManager } from "./mikrotikBngManager.js";
 
 let pool;
 
@@ -230,7 +231,16 @@ export class RadiusServiceManager {
     };
     await nextService.save();
 
-    return nextService.toObject();
+    const bngSession = await mikrotikBngManager.disconnectSubscriberSession({
+      serviceId: nextService.serviceId,
+      radiusUsername: username,
+      reason: "provision_refresh"
+    });
+
+    return {
+      ...nextService.toObject(),
+      bngSession
+    };
   }
 
   async suspendSubscriberAccess({ serviceId, reason }) {
@@ -259,7 +269,15 @@ export class RadiusServiceManager {
       suspensionReason: reason || env.RADIUS_REJECT_MESSAGE
     };
     await service.save();
-    return service.toObject();
+    const bngSession = await mikrotikBngManager.disconnectSubscriberSession({
+      serviceId: service.serviceId,
+      radiusUsername: service.radiusUsername,
+      reason: "suspend_disconnect"
+    });
+    return {
+      ...service.toObject(),
+      bngSession
+    };
   }
 
   async resumeSubscriberAccess({ serviceId }) {

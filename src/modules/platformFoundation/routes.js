@@ -107,6 +107,9 @@ const bngNodeSchema = z.object({
   managementIp: z.string().optional(),
   radiusClientIp: z.string().optional(),
   apiBaseUrl: z.string().optional(),
+  coaHost: z.string().optional(),
+  coaPort: z.number().int().positive().optional(),
+  coaSecret: z.string().optional(),
   notes: z.string().optional()
 });
 
