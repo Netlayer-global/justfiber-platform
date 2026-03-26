@@ -484,15 +484,17 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: wifi.ssid24, ssid5: wifi.ssid5);
-      wifi = WifiData(
-        ssid24: wifi.ssid24,
-        ssid5: wifi.ssid5,
-        passwordMask: '********',
-        paused: wifi.paused,
-        guestEnabled: wifi.guestEnabled,
-        guestSsid: wifi.guestSsid,
-        connectedDevicesCount: wifi.connectedDevicesCount,
+      wifi = await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: wifi.ssid24, ssid5: wifi.ssid5);
+      dashboard = DashboardData(
+        customerName: dashboard.customerName,
+        planName: dashboard.planName,
+        walletBalance: dashboard.walletBalance,
+        usedGb: dashboard.usedGb,
+        totalGb: dashboard.totalGb,
+        points: dashboard.points,
+        activeDays: dashboard.activeDays,
+        wifiName: wifi.ssid24.isNotEmpty ? wifi.ssid24 : wifi.ssid5,
+        billingDue: dashboard.billingDue,
       );
       await refresh();
     } catch (e) {
@@ -514,15 +516,17 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: ssid24, ssid5: ssid5);
-      wifi = WifiData(
-        ssid24: ssid24,
-        ssid5: ssid5,
-        passwordMask: '********',
-        paused: wifi.paused,
-        guestEnabled: wifi.guestEnabled,
-        guestSsid: wifi.guestSsid,
-        connectedDevicesCount: wifi.connectedDevicesCount,
+      wifi = await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: ssid24, ssid5: ssid5);
+      dashboard = DashboardData(
+        customerName: dashboard.customerName,
+        planName: dashboard.planName,
+        walletBalance: dashboard.walletBalance,
+        usedGb: dashboard.usedGb,
+        totalGb: dashboard.totalGb,
+        points: dashboard.points,
+        activeDays: dashboard.activeDays,
+        wifiName: wifi.ssid24.isNotEmpty ? wifi.ssid24 : wifi.ssid5,
+        billingDue: dashboard.billingDue,
       );
       await refresh();
       return true;

@@ -169,6 +169,10 @@ class ApiClient {
 
   Future<WifiData> fetchWifi(CustomerSession session, {String? customerId}) async {
     final data = _asMap(await _request(_withCustomerId('/api/v1/customer/wifi', customerId), token: session.accessToken));
+    return _mapWifi(data);
+  }
+
+  WifiData _mapWifi(Map<String, dynamic> data) {
     return WifiData(
       ssid24: (data['ssid24'] ?? '').toString(),
       ssid5: (data['ssid5'] ?? '').toString(),
@@ -259,14 +263,14 @@ class ApiClient {
     );
   }
 
-  Future<void> updateWifi(
+  Future<WifiData> updateWifi(
     CustomerSession session, {
     String? customerId,
     required String password,
     String? ssid24,
     String? ssid5,
   }) async {
-    await _request(
+    final data = _asMap(await _request(
       _withCustomerId('/api/v1/customer/wifi/update', customerId),
       method: 'POST',
       token: session.accessToken,
@@ -277,7 +281,8 @@ class ApiClient {
         'password24': password,
         'password5': password,
       },
-    );
+    ));
+    return _mapWifi(_asMap(data['wifi']));
   }
 
   Future<List<RequestItem>> fetchRequests(CustomerSession session, {String? customerId}) async {

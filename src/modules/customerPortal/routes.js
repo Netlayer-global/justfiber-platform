@@ -2348,6 +2348,19 @@ customerPortalRouter.post(
       updated: true,
       requestedPayload: payload,
       applied: { ssid24, ssid5 },
+      wifi: {
+        sameSsidMode: true,
+        ssid24,
+        ssid5,
+        connectedDevices: Array.isArray(device?.lanInfo?.connectedDevices) ? device.lanInfo.connectedDevices.length : device?.lanInfo?.leasedClients || 0,
+        natEnabled: true,
+        pppoeUsername: device?.wanInfo?.pppoeUsernameMasked || buildFixedPppoeUsername(customer.customerId),
+        paused: Boolean(device?.wifiInfo?.paused),
+        guestWifi: {
+          enabled: Boolean(device?.wifiInfo?.guestWifiEnabled),
+          ssid: device?.wifiInfo?.guestSsid || "JustFiber-Guest"
+        }
+      },
       syncMode,
       syncWarning
     });
