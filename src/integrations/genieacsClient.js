@@ -449,11 +449,6 @@ export class GenieacsClient {
       await this.setParameterValues(deviceId, values, { connectionRequest: true });
     }
 
-    await this.runTask(deviceId, {
-      name: "refreshObject",
-      objectName: "InternetGatewayDevice."
-    }, { connectionRequest: true });
-
     return { ok: true, deviceId, brand, configured: values.length };
   }
 }
