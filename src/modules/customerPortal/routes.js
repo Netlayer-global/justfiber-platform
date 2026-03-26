@@ -32,6 +32,7 @@ import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
 import {
   buildFixedPppoeUsername,
   buildJustFiberWifiName,
@@ -2307,6 +2308,17 @@ customerPortalRouter.post(
       });
       if (brand === "nokia" && (password24 || password5)) {
         await genieacsClient.rebootDevice(device.deviceId);
+      }
+      try {
+        await syncDeviceFromGenie(device);
+        const refreshedDevice = await DeviceOperationalCache.findById(device._id);
+        if (refreshedDevice) {
+          device.wifiInfo = refreshedDevice.wifiInfo || device.wifiInfo;
+          device.wanInfo = refreshedDevice.wanInfo || device.wanInfo;
+          device.onlineStatus = refreshedDevice.onlineStatus || device.onlineStatus;
+        }
+      } catch {
+        // Fall back to local cache update below when live sync isn't available.
       }
     } catch (error) {
       if (!isMissingGenieDeviceError(error)) {
