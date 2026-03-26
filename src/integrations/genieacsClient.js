@@ -140,15 +140,74 @@ function discoverDynamicConfigPaths(summary, kind) {
     if (!("_value" in Object(value || {})) && !("_writable" in Object(value || {}))) {
       return false;
     }
+    const isWifiPath =
+      normalizedPath.includes("wlanconfiguration") ||
+      normalizedPath.includes("device.wifi.ssid") ||
+      normalizedPath.includes("device.wifi.accesspoint");
     const isWanPath =
       normalizedPath.includes("wanconnectiondevice") ||
       normalizedPath.includes("wanpppconnection") ||
       normalizedPath.includes("wanipconnection") ||
       normalizedPath.includes("device.ppp.interface") ||
       normalizedPath.includes("device.wan.pppconnection");
-    if (!isWanPath) return false;
     if (normalizedKind === "pppoeusername") return normalizedPath.endsWith(".username");
     if (normalizedKind === "pppoepassword") return normalizedPath.endsWith(".password");
+    if (!isWifiPath) return false;
+    if (normalizedKind === "ssid24") {
+      return (
+        normalizedPath.endsWith(".ssid") &&
+        (
+          normalizedPath.includes(".wlanconfiguration.1.") ||
+          normalizedPath.includes(".wlanconfiguration.5.") ||
+          normalizedPath.includes(".wifi.ssid.1.") ||
+          normalizedPath.includes(".wifi.ssid.5.")
+        )
+      );
+    }
+    if (normalizedKind === "ssid5") {
+      return (
+        normalizedPath.endsWith(".ssid") &&
+        (
+          normalizedPath.includes(".wlanconfiguration.2.") ||
+          normalizedPath.includes(".wlanconfiguration.6.") ||
+          normalizedPath.includes(".wifi.ssid.2.") ||
+          normalizedPath.includes(".wifi.ssid.5.") ||
+          normalizedPath.includes(".wifi.ssid.6.")
+        )
+      );
+    }
+    if (normalizedKind === "pass24") {
+      return (
+        (
+          normalizedPath.endsWith(".keypassphrase") ||
+          normalizedPath.endsWith(".presharedkey.1.keypassphrase") ||
+          normalizedPath.endsWith(".presharedkey.1.presharedkey")
+        ) &&
+        (
+          normalizedPath.includes(".wlanconfiguration.1.") ||
+          normalizedPath.includes(".wlanconfiguration.5.") ||
+          normalizedPath.includes(".accesspoint.1.") ||
+          normalizedPath.includes(".accesspoint.5.")
+        )
+      );
+    }
+    if (normalizedKind === "pass5") {
+      return (
+        (
+          normalizedPath.endsWith(".keypassphrase") ||
+          normalizedPath.endsWith(".presharedkey.1.keypassphrase") ||
+          normalizedPath.endsWith(".presharedkey.1.presharedkey")
+        ) &&
+        (
+          normalizedPath.includes(".wlanconfiguration.2.") ||
+          normalizedPath.includes(".wlanconfiguration.6.") ||
+          normalizedPath.includes(".accesspoint.2.") ||
+          normalizedPath.includes(".accesspoint.5.") ||
+          normalizedPath.includes(".accesspoint.6.")
+        )
+      );
+    }
+    if (!isWanPath) return false;
     return false;
   };
   return collectMatchingPaths(summary, predicate);
@@ -333,6 +392,10 @@ export class GenieacsClient {
     }
     const dynamicPppoeUsernamePaths = discoverDynamicConfigPaths(liveSummary, "pppoeUsername");
     const dynamicPppoePasswordPaths = discoverDynamicConfigPaths(liveSummary, "pppoePassword");
+    const dynamicSsid24Paths = discoverDynamicConfigPaths(liveSummary, "ssid24");
+    const dynamicPass24Paths = discoverDynamicConfigPaths(liveSummary, "pass24");
+    const dynamicSsid5Paths = discoverDynamicConfigPaths(liveSummary, "ssid5");
+    const dynamicPass5Paths = discoverDynamicConfigPaths(liveSummary, "pass5");
     const values = [];
     const push = (pathOrPaths, value, valueType, transform = (input) => input) => {
       const dynamicPaths =
@@ -340,6 +403,14 @@ export class GenieacsClient {
           ? dynamicPppoeUsernamePaths
           : pathOrPaths === profile.pppoePasswordPath
             ? dynamicPppoePasswordPaths
+            : pathOrPaths === profile.ssid24Path
+              ? dynamicSsid24Paths
+              : pathOrPaths === profile.pass24Path
+                ? dynamicPass24Paths
+                : pathOrPaths === profile.ssid5Path
+                  ? dynamicSsid5Paths
+                  : pathOrPaths === profile.pass5Path
+                    ? dynamicPass5Paths
             : [];
       const preferredPaths = dynamicPaths.length ? [...dynamicPaths, ...(Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths])] : pathOrPaths;
       const paths = selectExistingPaths(liveSummary, preferredPaths);
