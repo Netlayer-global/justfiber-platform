@@ -61,6 +61,18 @@ function buildHealth(rxPower) {
   return "critical";
 }
 
+function normalizeIdentifier(value) {
+  if (value === null || value === undefined) return null;
+  const text =
+    typeof value === "string"
+      ? value
+      : typeof value === "object" && value && "_value" in value
+        ? value._value
+        : String(value);
+  const normalized = String(text || "").trim();
+  return normalized ? normalized.toUpperCase() : null;
+}
+
 function buildInstallerRecommendations({ opticalHealth, checklist, device }) {
   const recommendations = [];
   if (opticalHealth === "critical") {
@@ -100,13 +112,15 @@ function buildProvisioningPreview(job, device) {
 }
 
 async function resolveJobDevice(job) {
-  const finalSerialNumber =
+  const finalSerialNumber = normalizeIdentifier(
     job.deviceContext?.finalSerialNumber ||
-    job.deviceContext?.manualSerialNumber ||
-    job.deviceContext?.scannedSerialNumber ||
-    null;
+      job.deviceContext?.manualSerialNumber ||
+      job.deviceContext?.scannedSerialNumber ||
+      null
+  );
+  const finalDeviceId = normalizeIdentifier(job.deviceContext?.finalDeviceId);
   const candidateDeviceIds = [
-    job.deviceContext?.finalDeviceId,
+    finalDeviceId,
     finalSerialNumber ? `ONT-${finalSerialNumber}` : null
   ].filter(Boolean);
 
@@ -123,7 +137,11 @@ async function resolveJobDevice(job) {
 
   if (finalSerialNumber) {
     const deviceBySerial = await DeviceOperationalCache.findOne({
-      serialNumber: finalSerialNumber
+      $or: [
+        { serialNumber: finalSerialNumber },
+        { serialNumber: finalSerialNumber.toLowerCase() },
+        { serialNumber: finalSerialNumber.toUpperCase() }
+      ]
     })
       .sort({ updatedAt: -1, lastInformAt: -1 })
       .lean();
@@ -145,7 +163,7 @@ async function resolveJobDevice(job) {
   }
 
   try {
-    const liveSummary = await genieacsClient.findDeviceSummary({
+    const liveSummary = await genieacsClient.getRichDeviceSummary({
       deviceId: candidateDeviceIds[0],
       serialNumber: finalSerialNumber
     });
@@ -502,18 +520,19 @@ installerAppRouter.post(
   asyncHandler(async (req, res) => {
     const payload = serialSchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
-    const duplicate = await DeviceOperationalCache.findOne({ serialNumber: payload.serialNumber, customerId: { $ne: job.customerId } });
+    const normalizedSerial = normalizeIdentifier(payload.serialNumber);
+    const duplicate = await DeviceOperationalCache.findOne({ serialNumber: normalizedSerial, customerId: { $ne: job.customerId } });
     if (duplicate) {
       throw new ApiError(409, "Serial number already bound to another customer");
     }
     job.status = "ont_scanned";
     job.deviceContext = {
       ...(job.deviceContext || {}),
-      scannedSerialNumber: payload.serialNumber,
-      finalSerialNumber: payload.serialNumber,
+      scannedSerialNumber: normalizedSerial,
+      finalSerialNumber: normalizedSerial,
       ...(payload.deviceId ? { finalDeviceId: payload.deviceId } : {})
     };
-    pushTimeline(job, "job.device_scanned", req.installer._id, payload.serialNumber);
+    pushTimeline(job, "job.device_scanned", req.installer._id, normalizedSerial);
     await job.save();
     return ok(res, job);
   })
@@ -524,14 +543,15 @@ installerAppRouter.post(
   asyncHandler(async (req, res) => {
     const payload = serialSchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    const normalizedSerial = normalizeIdentifier(payload.serialNumber);
     job.status = "ont_scanned";
     job.deviceContext = {
       ...(job.deviceContext || {}),
-      manualSerialNumber: payload.serialNumber,
-      finalSerialNumber: payload.serialNumber,
+      manualSerialNumber: normalizedSerial,
+      finalSerialNumber: normalizedSerial,
       ...(payload.deviceId ? { finalDeviceId: payload.deviceId } : {})
     };
-    pushTimeline(job, "job.manual_serial", req.installer._id, payload.serialNumber);
+    pushTimeline(job, "job.manual_serial", req.installer._id, normalizedSerial);
     await job.save();
     return ok(res, job);
   })
