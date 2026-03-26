@@ -82,7 +82,7 @@ function buildProvisioningPreview(job, device) {
   const existing = job.activation?.preparedCredentials;
   const provisioning = job.customerSnapshot?.planProvisioning || {};
   const pppoe = existing?.pppoe || buildPppoeCredentials(job.customerId, provisioning);
-  const wifi = existing?.wifi || buildWifiCredentials(provisioning);
+  const wifi = existing?.wifi || buildWifiCredentials(provisioning, job.customerId);
   const brand = detectOntBrand({
     serialNumber: job.deviceContext?.finalSerialNumber || device?.serialNumber,
     productClass: device?.productClass,

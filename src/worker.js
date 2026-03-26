@@ -251,7 +251,7 @@ const worker = new Worker(
         const prepared = jobRecord.activation?.preparedCredentials || {};
         const planProvisioning = bootstrap?.plan?.provisioning || {};
         const pppoe = prepared.pppoe || buildPppoeCredentials(jobRecord.customerId, planProvisioning);
-        const wifi = prepared.wifi || buildWifiCredentials(planProvisioning);
+        const wifi = prepared.wifi || buildWifiCredentials(planProvisioning, jobRecord.customerId);
         const vlanId = prepared.vlanId || planProvisioning.vlanId || existingDevice?.wanInfo?.vlanId || 100;
 
         updateActivationStage(

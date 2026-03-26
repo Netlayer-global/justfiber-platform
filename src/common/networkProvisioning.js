@@ -233,6 +233,45 @@ export function normalizeCustomerId(value) {
   return String(value || "").trim();
 }
 
+function extractDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function hashToFixedDigits(value, length) {
+  const source = String(value || "0");
+  let hash = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash * 31 + source.charCodeAt(index)) % 1000000007;
+  }
+  return String(Math.abs(hash)).slice(-length).padStart(length, "0");
+}
+
+function normalizeWifiSuffix(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^justfiber[_-]?/i, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 24);
+}
+
+export function buildFixedPppoeUsername(customerId) {
+  const normalized = normalizeCustomerId(customerId);
+  const digitsOnly = extractDigits(normalized);
+  const customerSeed = (digitsOnly.slice(0, 4) || hashToFixedDigits(normalized, 4)).padStart(4, "0");
+  const generatedTail = hashToFixedDigits(`${normalized}_wifi`, 5);
+  return `${customerSeed}${generatedTail}_wifi`;
+}
+
+export function buildJustFiberWifiName(customerId, requestedSuffix = "") {
+  const suffix = normalizeWifiSuffix(requestedSuffix) || hashToFixedDigits(`${customerId}_ssid`, 4);
+  return `JustFiber_${suffix}`;
+}
+
+export function buildJustFiberWifiPassword(customerId) {
+  return `just@${hashToFixedDigits(`${customerId}_wifi_pass`, 4)}`;
+}
+
 export function getPlanProvisioningIssues(plan = {}) {
   const provisioning = plan?.provisioning || {};
   const issues = [];
@@ -248,28 +287,18 @@ export function isPlanProvisioningReady(plan = {}) {
 }
 
 export function buildPppoeCredentials(customerId, planProvisioning = {}) {
-  const normalized = normalizeCustomerId(customerId);
-  const digitsOnly = normalized.replace(/\D/g, "");
-  const suffix = (digitsOnly || "00000000").slice(-8).padStart(8, "0");
-  const prefix = String(planProvisioning?.pppoePrefix || "jf").trim() || "jf";
-  const realm = String(planProvisioning?.pppoeRealm || "").trim();
-  const usernameBase = `${prefix}-${suffix}`;
   return {
-    username: realm ? `${usernameBase}@${realm}` : usernameBase,
-    password: String(planProvisioning?.defaultPppoePassword || "123456")
+    username: buildFixedPppoeUsername(customerId),
+    password: "123456"
   };
 }
 
-export function buildWifiCredentials(planProvisioning = {}) {
-  let suffix = "";
-  for (let i = 0; i < 4; i += 1) {
-    suffix += Math.floor(Math.random() * 10);
-  }
-  const prefix = String(planProvisioning?.wifiNamePrefix || "JustFiber").trim() || "JustFiber";
+export function buildWifiCredentials(planProvisioning = {}, customerId = "") {
+  const wifiName = buildJustFiberWifiName(customerId || planProvisioning?.wifiNamePrefix || "JustFiber");
   return {
-    ssid24: `${prefix}-2.4G`,
-    ssid5: `${prefix}-5G`,
-    password: `Just@${suffix}`
+    ssid24: wifiName,
+    ssid5: wifiName,
+    password: buildJustFiberWifiPassword(customerId || planProvisioning?.wifiNamePrefix || "JustFiber")
   };
 }
 

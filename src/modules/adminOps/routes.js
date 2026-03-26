@@ -19,7 +19,10 @@ import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
-import { detectOntBrand } from "../../common/networkProvisioning.js";
+import {
+  buildJustFiberWifiName,
+  detectOntBrand
+} from "../../common/networkProvisioning.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
@@ -1781,8 +1784,11 @@ adminOpsRouter.patch(
   asyncHandler(async (req, res) => {
     const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId });
     const targetDeviceId = device?.deviceId || req.params.deviceId;
-    const ssid24 = req.body?.ssid24 || device?.wifiInfo?.ssid24Masked || "JustFiber";
-    const ssid5 = req.body?.ssid5 || device?.wifiInfo?.ssid5Masked || "JustFiber";
+    const customer = device?.customerId ? await Customer.findOne({ customerId: device.customerId }).lean() : null;
+    const requestedSsid = req.body?.ssid24 || req.body?.ssid5 || device?.wifiInfo?.ssid24Masked || device?.wifiInfo?.ssid5Masked || "";
+    const normalizedSsid = buildJustFiberWifiName(customer?.customerId || targetDeviceId, requestedSsid);
+    const ssid24 = normalizedSsid;
+    const ssid5 = normalizedSsid;
     const wifiPassword24 = req.body?.password24 || req.body?.password;
     const wifiPassword5 = req.body?.password5 || req.body?.password24 || req.body?.password;
     const pppoeUsername = req.body?.pppoeUsername || device?.wanInfo?.pppoeUsernameMasked;
@@ -1800,7 +1806,6 @@ adminOpsRouter.patch(
     let radiusUsername = pppoeUsername || null;
 
     if (syncRadius && device?.customerId && pppoeUsername) {
-      const customer = await Customer.findOne({ customerId: device.customerId }).lean();
       if (!customer?.serviceId) {
         throw new ApiError(400, "Customer serviceId missing for FreeRADIUS sync");
       }

@@ -152,14 +152,12 @@ function toForm(plan?: Plan | null): ProvisioningFormState {
 }
 
 function buildPppoePreview(form: ProvisioningFormState) {
-  const prefix = form.pppoePrefix.trim() || 'jf'
-  const realm = form.pppoeRealm.trim()
-  return `${prefix}.subscriber001${realm ? `@${realm}` : ''}`
+  return '127412345_wifi'
 }
 
 function buildWifiPreview(form: ProvisioningFormState) {
   const prefix = form.wifiNamePrefix.trim() || 'JustFiber'
-  return `${prefix}-Home-2.4G / ${prefix}-Home-5G`
+  return `${prefix}_rewari`
 }
 
 function provisioningIssues(form: ProvisioningFormState) {
@@ -241,11 +239,11 @@ export default function ProvisioningPage() {
   function currentProvisioningPayload() {
     return {
       accessProfileCode: form.accessProfileCode.trim(),
-      vlanId: Number(form.vlanId || 0),
-      pppoePrefix: form.pppoePrefix.trim(),
-      pppoeRealm: form.pppoeRealm.trim(),
-      defaultPppoePassword: form.defaultPppoePassword.trim(),
-      wifiNamePrefix: form.wifiNamePrefix.trim(),
+      vlanId: 100,
+      pppoePrefix: 'customerid_wifi',
+      pppoeRealm: '',
+      defaultPppoePassword: '123456',
+      wifiNamePrefix: 'JustFiber',
     }
   }
 
@@ -483,11 +481,14 @@ export default function ProvisioningPage() {
                     <div className="text-xs uppercase tracking-[0.18em] text-white/45">Core activation fields</div>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                       <input style={styles.input} placeholder="Access profile code" value={form.accessProfileCode} onChange={(e) => setForm({ ...form, accessProfileCode: e.target.value })} />
-                      <input style={styles.input} placeholder="VLAN ID" type="number" value={form.vlanId} onChange={(e) => setForm({ ...form, vlanId: e.target.value })} />
-                      <input style={styles.input} placeholder="PPPoE prefix" value={form.pppoePrefix} onChange={(e) => setForm({ ...form, pppoePrefix: e.target.value })} />
-                      <input style={styles.input} placeholder="PPPoE realm" value={form.pppoeRealm} onChange={(e) => setForm({ ...form, pppoeRealm: e.target.value })} />
-                      <input style={styles.input} placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
-                      <input style={styles.input} placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
+                      <input style={styles.input} placeholder="VLAN ID" type="number" value="100" readOnly />
+                      <input style={styles.input} placeholder="PPPoE username format" value="customer-id + 5 digits + _wifi" readOnly />
+                      <input style={styles.input} placeholder="PPPoE password" value="123456" readOnly />
+                      <input style={styles.input} placeholder="Wi-Fi prefix" value="JustFiber_" readOnly />
+                      <input style={styles.input} placeholder="Wi-Fi password format" value="just@1234" readOnly />
+                    </div>
+                    <div className="mt-4 text-sm leading-6 text-white/55">
+                      NAT always enabled rahega. 2.4G aur 5G dono same SSID use karenge. Customer sirf <span className="text-white">JustFiber_</span> ke baad wala part change kar sakta hai.
                     </div>
                   </div>
 

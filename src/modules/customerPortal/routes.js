@@ -32,7 +32,11 @@ import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
-import { detectOntBrand } from "../../common/networkProvisioning.js";
+import {
+  buildFixedPppoeUsername,
+  buildJustFiberWifiName,
+  detectOntBrand
+} from "../../common/networkProvisioning.js";
 import { env } from "../../config/env.js";
 import PDFDocument from "pdfkit";
 import {
@@ -2248,11 +2252,11 @@ customerPortalRouter.get(
     });
     return ok(res, {
       sameSsidMode: true,
-      ssid24: device?.wifiInfo?.ssid24Masked || "JustFiber",
-      ssid5: device?.wifiInfo?.ssid5Masked || "JustFiber",
+      ssid24: device?.wifiInfo?.ssid24Masked || buildJustFiberWifiName(customer.customerId),
+      ssid5: device?.wifiInfo?.ssid5Masked || buildJustFiberWifiName(customer.customerId),
       connectedDevices: Array.isArray(device?.lanInfo?.connectedDevices) ? device.lanInfo.connectedDevices.length : device?.lanInfo?.leasedClients || 0,
-      natEnabled: device?.wifiInfo?.natEnabled ?? true,
-      pppoeUsername: device?.wanInfo?.pppoeUsernameMasked || `jfr_${String(customer.customerId).toLowerCase()}`,
+      natEnabled: true,
+      pppoeUsername: device?.wanInfo?.pppoeUsernameMasked || buildFixedPppoeUsername(customer.customerId),
       paused: Boolean(device?.wifiInfo?.paused),
       guestWifi: {
         enabled: Boolean(device?.wifiInfo?.guestWifiEnabled),
@@ -2274,9 +2278,11 @@ customerPortalRouter.post(
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
-    const sameSsidMode = payload.sameSsidMode ?? true;
-    const ssid24 = payload.ssid24 || device.wifiInfo?.ssid24Masked || "JustFiber";
-    const ssid5 = sameSsidMode ? payload.ssid24 || ssid24 : payload.ssid5 || device.wifiInfo?.ssid5Masked || "JustFiber";
+    const sameSsidMode = true;
+    const requestedSsid = payload.ssid24 || payload.ssid5 || device.wifiInfo?.ssid24Masked || device.wifiInfo?.ssid5Masked || "";
+    const normalizedSsid = buildJustFiberWifiName(customer.customerId, requestedSsid);
+    const ssid24 = normalizedSsid;
+    const ssid5 = normalizedSsid;
     const password24 = payload.password24 || payload.password5;
     const password5 = sameSsidMode ? payload.password24 || payload.password5 : payload.password5 || payload.password24;
     const brand = detectOntBrand({
