@@ -570,11 +570,35 @@ export default function CustomerDetailPage() {
     }
   }
 
+  async function handleCopyServiceId() {
+    const serviceId = radiusService?.serviceId || customer?.serviceId || ''
+    if (!serviceId) {
+      toast.error('No service ID available')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(serviceId)
+      toast.success('Service ID copied')
+    } catch (error) {
+      console.error('[v0] Failed to copy service ID:', error)
+      toast.error('Failed to copy service ID')
+    }
+  }
+
   function handleOpenRadiusAudit() {
     setActiveTab('overview')
     if (typeof window !== 'undefined') {
       window.setTimeout(() => {
         document.getElementById('radius-audit-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
+    }
+  }
+
+  function handleOpenBillingRecords() {
+    setActiveTab('billing')
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       }, 80)
     }
   }
@@ -1348,9 +1372,22 @@ export default function CustomerDetailPage() {
                     </button>
                     <button
                       className="btn-secondary"
+                      onClick={() => void handleCopyServiceId()}
+                      disabled={!radiusService?.serviceId && !customer?.serviceId}
+                    >
+                      Copy Service ID
+                    </button>
+                    <button
+                      className="btn-secondary"
                       onClick={() => handleOpenRadiusAudit()}
                     >
                       Open RADIUS Audit
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => handleOpenBillingRecords()}
+                    >
+                      Open Billing Records
                     </button>
                   </div>
                 </div>
