@@ -163,6 +163,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return ok;
   }
 
+  Future<void> _refreshPreviewAndDiagnostics({String successMessage = 'ONT details refreshed'}) async {
+    setState(() => _busy = true);
+    try {
+      await _loadAll();
+      if (!mounted) return;
+      _show(successMessage);
+    } catch (e) {
+      _show(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   void _show(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -1749,11 +1764,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             runSpacing: 10,
                             children: [
                               OutlinedButton(
-                                onPressed: _busy ? null : () => _run(() async {}, 'Preview refreshed'),
+                                onPressed: _busy
+                                    ? null
+                                    : () => _refreshPreviewAndDiagnostics(successMessage: 'Preview refreshed'),
                                 child: const Text('Load preview'),
                               ),
                               OutlinedButton(
-                                onPressed: _busy ? null : () => _run(() async {}, 'Diagnostics refreshed'),
+                                onPressed: _busy
+                                    ? null
+                                    : () => _refreshPreviewAndDiagnostics(successMessage: 'Diagnostics refreshed'),
                                 child: const Text('Refresh ONT details'),
                               ),
                             ],
