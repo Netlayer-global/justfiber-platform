@@ -29,6 +29,8 @@ class BillingHistoryScreen extends StatelessWidget {
     final latestPayment = billing.payments.isEmpty ? null : billing.payments.first;
     final usageRatio = billing.usageCapGb > 0 ? (billing.usageGb / billing.usageCapGb).clamp(0, 1) : 0.0;
     final showUpgradePrompt = billing.usageCapReached || (billing.usageCapGb > 0 && usageRatio >= 0.65);
+    final billingCycleLabel = billing.billCycle.isEmpty ? 'Monthly' : billing.billCycle;
+    final nextBillDateLabel = billing.nextBillDate.isEmpty ? 'Will update after activation' : billing.nextBillDate;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Billing')),
@@ -122,6 +124,56 @@ class BillingHistoryScreen extends StatelessWidget {
                       _billBreakupRow('Last payment', billing.lastPaymentAmount <= 0 ? '-' : 'Rs ${billing.lastPaymentAmount.toStringAsFixed(2)}'),
                       _billBreakupRow('Adjustment preview', billing.adjustmentPreview == 0 ? '-' : 'Rs ${billing.adjustmentPreview.toStringAsFixed(2)}'),
                       _billBreakupRow('Payment status', billing.paymentStatus.isEmpty ? '-' : billing.paymentStatus),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0x228224E3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Tenure and cycle',
+                              style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color(0x148224E3),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: const Color(0x448224E3)),
+                            ),
+                            child: Text(
+                              billingCycleLabel,
+                              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'This section reflects your active connection tenure and the recurring commercial cycle for this service.',
+                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: _summaryTile('Recurring amount', 'Rs ${billing.lastPaymentAmount > 0 ? billing.lastPaymentAmount.toStringAsFixed(2) : billing.dueAmount.toStringAsFixed(2)}')),
+                          const SizedBox(width: 10),
+                          Expanded(child: _summaryTile('Next bill / expiry', nextBillDateLabel)),
+                        ],
+                      ),
                     ],
                   ),
                 ),
