@@ -104,6 +104,13 @@ function pathExistsInSummary(summary, path) {
   return readNodeAtPath(summary, path) !== undefined;
 }
 
+function isWritableParameterNode(node) {
+  if (!node || typeof node !== "object") return true;
+  if ("_object" in node && node._object === true && !("_value" in node)) return false;
+  if ("_writable" in node) return node._writable !== false;
+  return true;
+}
+
 function selectExistingPaths(summary, pathOrPaths) {
   const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths];
   if (!summary) return paths.filter(Boolean);
@@ -336,7 +343,11 @@ export class GenieacsClient {
             : [];
       const preferredPaths = dynamicPaths.length ? [...dynamicPaths, ...(Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths])] : pathOrPaths;
       const paths = selectExistingPaths(liveSummary, preferredPaths);
-      for (const path of paths) {
+      const writablePaths = liveSummary
+        ? paths.filter((path) => isWritableParameterNode(readNodeAtPath(liveSummary, path)))
+        : paths;
+      const selectedPaths = (writablePaths.length ? writablePaths : paths).slice(0, 1);
+      for (const path of selectedPaths) {
         if (path && value !== undefined && value !== null && value !== "") {
           const normalizedValue = transform(value);
           values.push(valueType ? [path, normalizedValue, valueType] : [path, normalizedValue]);
