@@ -329,6 +329,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       activation['credentials']?['pppoePassword'],
       preparedPppoe['password'],
     ]);
+    final singleWifiName = wifiSsid24 != '-' && wifiSsid24 == wifiSsid5;
     final planCode = widget.job.planCode.isEmpty ? (preview['planCode'] ?? '').toString() : widget.job.planCode;
     final planCategory = widget.job.planCategory.isEmpty ? (preview['planCategory'] ?? 'home').toString() : widget.job.planCategory;
     final planPrice = widget.job.monthlyPrice > 0 ? widget.job.monthlyPrice : double.tryParse('${preview['monthlyPrice'] ?? 0}') ?? 0;
@@ -832,8 +833,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _row('PPPoE password', pppoePassword),
                       _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? '-').toString()),
                       _row('NAT', ((preview['natEnabled'] ?? activation['credentials']?['natEnabled']) == true) ? 'Enabled' : 'Pending'),
-                      _row('SSID 2.4G', wifiSsid24),
-                      _row('SSID 5G', wifiSsid5),
+                      _row(singleWifiName ? 'Wi-Fi SSID' : 'SSID 2.4G', wifiSsid24),
+                      if (!singleWifiName) _row('SSID 5G', wifiSsid5),
                       _row('Wi-Fi password', wifiPassword),
                       _row('Config status', configStatus),
                       _row('Internet', status == 'active' ? 'Active' : 'Pending'),
@@ -879,13 +880,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           spacing: 10,
                           runSpacing: 10,
                           children: [
-                            OutlinedButton(
-                              onPressed: wifiSsid24 == '-' && wifiSsid5 == '-' ? null : () => _copyText(
-                                'Wi-Fi names copied',
-                                '2.4G: $wifiSsid24\n5G: $wifiSsid5',
+                              OutlinedButton(
+                                onPressed: wifiSsid24 == '-' && wifiSsid5 == '-' ? null : () => _copyText(
+                                  'Wi-Fi details copied',
+                                  singleWifiName
+                                      ? 'SSID: $wifiSsid24\nPassword: $wifiPassword'
+                                      : '2.4G: $wifiSsid24\n5G: $wifiSsid5\nPassword: $wifiPassword',
+                                ),
+                                child: const Text('Copy Wi-Fi'),
                               ),
-                              child: const Text('Copy Wi-Fi names'),
-                            ),
                             OutlinedButton(
                               onPressed: wifiPassword == '-' ? null : () => _copyText(
                                 'Wi-Fi password copied',
@@ -1847,8 +1850,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           _row('Config status', configStatus),
                           _row('PPPoE', pppoeUsername),
                           _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? activation['preparedCredentials']?['vlanId'] ?? '-').toString()),
-                          _row('Wi-Fi 2.4G', wifiSsid24),
-                          _row('Wi-Fi 5G', wifiSsid5),
+                          _row(singleWifiName ? 'Wi-Fi SSID' : 'Wi-Fi 2.4G', wifiSsid24),
+                          if (!singleWifiName) _row('Wi-Fi 5G', wifiSsid5),
+                          _row('Wi-Fi password', wifiPassword),
                           Wrap(
                             spacing: 10,
                             runSpacing: 10,
