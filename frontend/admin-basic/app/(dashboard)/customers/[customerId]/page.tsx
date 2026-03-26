@@ -167,6 +167,10 @@ export default function CustomerDetailPage() {
       ? customer.plan.planCode || customer.plan.id
       : customer?.plan?.id
   const currentSpeedMbps = Number(billingSummary.speedMbps || 0)
+  const billingCycleLabel = String(customer?.invoiceSummary?.billCycle || billingSummary.billCycle || 'Monthly')
+  const billingCycleCode = String(customer?.invoiceSummary?.billCycleCode || '')
+  const remainingDays = Number(billingSummary.remainingDays || 0)
+  const recurringInvoiceAmount = Number(billingSummary.lastInvoiceAmount || billingSummary.dueAmount || 0)
   const radiusService = customer?.radiusService || null
   const primaryDevice = customer?.devices?.[0]
   const radiusRejectState = radiusService?.radcheck?.some((row) => row.attribute === 'Auth-Type' && row.value === 'Reject') || false
@@ -747,6 +751,11 @@ export default function CustomerDetailPage() {
                 {customer.expiryAt ? new Date(customer.expiryAt).toLocaleDateString() : '-'}
               </p>
             </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">Billing cycle</p>
+              <p className="mt-2 text-lg font-semibold">{billingCycleLabel}</p>
+              <p className="mt-1 text-xs text-black/45">{billingCycleCode || 'Live tenure summary'}</p>
+            </div>
             <button onClick={() => void loadCustomer()} className="btn-secondary inline-flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Refresh subscriber
@@ -811,6 +820,36 @@ export default function CustomerDetailPage() {
                     <button className="btn-secondary" onClick={() => void handleResume()} disabled={isSaving}>Resume</button>
                     <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>Retry Provisioning</button>
                     <button className="btn-secondary" onClick={() => void handleCustomerUpdate({ status: 'active' })} disabled={isSaving}>Mark Active</button>
+                  </div>
+                </div>
+                <div className="card p-5 space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold">Tenure & Billing Cycle</h2>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Current commercial tenure, expiry window, and recurring invoice baseline.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
+                      {billingCycleLabel}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Recurring invoice</p>
+                      <p className="mt-2 text-base font-semibold text-slate-900">Rs {recurringInvoiceAmount.toFixed(2)}</p>
+                      <p className="mt-1 text-xs text-slate-500">Current tenure-linked billing amount</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Remaining days</p>
+                      <p className="mt-2 text-base font-semibold text-slate-900">{remainingDays || '-'}</p>
+                      <p className="mt-1 text-xs text-slate-500">Derived from expiry and live billing snapshot</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Cycle code</p>
+                      <p className="mt-2 text-base font-semibold text-slate-900">{billingCycleCode || '-'}</p>
+                      <p className="mt-1 text-xs text-slate-500">Machine cycle reference used in invoice records</p>
+                    </div>
                   </div>
                 </div>
                 <div className="card p-5 space-y-4">
