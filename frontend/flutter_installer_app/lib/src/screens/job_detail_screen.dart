@@ -838,8 +838,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     children: [
                       Text('Optical and device', style: theme.textTheme.titleLarge),
                       const SizedBox(height: 12),
-                      _row('RX power', '${optical['rxPower'] ?? '-'}'),
-                      _row('TX power', '${optical['txPower'] ?? '-'}'),
+                      _row('RX power', '${optical['rxPower'] ?? diagnostics['optical']?['rxPower'] ?? '-'}'),
+                      _row('TX power', '${optical['txPower'] ?? diagnostics['optical']?['txPower'] ?? '-'}'),
                       _row('Health', '${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}'),
                       _row('Router serial', '${device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '-'}'),
                       _row('Router online', '${device['onlineStatus'] ?? 'unknown'}'),
@@ -1738,8 +1738,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         subtitle: 'Verify optical levels, linked router state, and provisioning health before activation.',
                         children: [
                           _row('Scanned serial', _serialController.text.trim().isEmpty ? '-' : _serialController.text.trim()),
-                          _row('RX power', '${optical['rxPower'] ?? '-'}'),
-                          _row('TX power', '${optical['txPower'] ?? '-'}'),
+                          _row('RX power', '${optical['rxPower'] ?? diagnostics['optical']?['rxPower'] ?? '-'}'),
+                          _row('TX power', '${optical['txPower'] ?? diagnostics['optical']?['txPower'] ?? '-'}'),
                           _row('Health', '${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}'),
                           _row('Router online', '${device['onlineStatus'] ?? 'unknown'}'),
                           _row('Provisioning state', '${device['provisioningState'] ?? 'pending'}'),

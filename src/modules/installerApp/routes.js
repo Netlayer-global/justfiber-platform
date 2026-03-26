@@ -97,6 +97,75 @@ function buildProvisioningPreview(job, device) {
   };
 }
 
+async function resolveJobDevice(job) {
+  const finalSerialNumber =
+    job.deviceContext?.finalSerialNumber ||
+    job.deviceContext?.manualSerialNumber ||
+    job.deviceContext?.scannedSerialNumber ||
+    null;
+  const candidateDeviceIds = [
+    job.deviceContext?.finalDeviceId,
+    finalSerialNumber ? `ONT-${finalSerialNumber}` : null
+  ].filter(Boolean);
+
+  if (candidateDeviceIds.length) {
+    const deviceById = await DeviceOperationalCache.findOne({
+      deviceId: { $in: candidateDeviceIds }
+    })
+      .sort({ updatedAt: -1, lastInformAt: -1 })
+      .lean();
+    if (deviceById) {
+      return deviceById;
+    }
+  }
+
+  if (finalSerialNumber) {
+    const deviceBySerial = await DeviceOperationalCache.findOne({
+      serialNumber: finalSerialNumber
+    })
+      .sort({ updatedAt: -1, lastInformAt: -1 })
+      .lean();
+    if (deviceBySerial) {
+      return deviceBySerial;
+    }
+  }
+
+  return DeviceOperationalCache.findOne({
+    $or: [
+      { customerId: job.customerId },
+      ...(job.serviceId ? [{ serviceId: job.serviceId }] : [])
+    ]
+  })
+    .sort({ updatedAt: -1, lastInformAt: -1 })
+    .lean();
+}
+
+function buildOpticalSnapshot(job, device) {
+  const deviceOptical = device?.opticalInfo || {};
+  const rxPower =
+    job.opticalReadings?.rxPower ??
+    deviceOptical.rxPower ??
+    null;
+  const txPower =
+    job.opticalReadings?.txPower ??
+    deviceOptical.txPower ??
+    null;
+
+  return {
+    rxPower,
+    txPower,
+    measuredAt:
+      job.opticalReadings?.measuredAt ||
+      deviceOptical.lastMeasuredAt ||
+      null,
+    healthStatus:
+      job.opticalReadings?.healthStatus ||
+      (rxPower !== null && rxPower !== undefined && rxPower !== ""
+        ? buildHealth(Number(rxPower))
+        : "unknown")
+  };
+}
+
 async function getInstallerJobOrThrow(jobId, installerId) {
   const job = await InstallerJob.findOne({ _id: jobId, installerId });
   if (!job) {
@@ -249,7 +318,18 @@ installerAppRouter.get(
   "/jobs/:jobId",
   asyncHandler(async (req, res) => {
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
-    return ok(res, job.toObject());
+    const device = await resolveJobDevice(job);
+    const detail = job.toObject();
+    if (device?.deviceId && !detail.deviceContext?.finalDeviceId) {
+      detail.deviceContext = {
+        ...(detail.deviceContext || {}),
+        finalDeviceId: device.deviceId
+      };
+    }
+    if (!detail.opticalReadings?.rxPower && !detail.opticalReadings?.txPower) {
+      detail.opticalReadings = buildOpticalSnapshot(job, device);
+    }
+    return ok(res, detail);
   })
 );
 
@@ -266,8 +346,7 @@ installerAppRouter.get(
         };
       }
     }
-    const deviceId = job.deviceContext?.finalDeviceId || `ONT-${job.deviceContext?.finalSerialNumber || ""}`;
-    const device = deviceId ? await DeviceOperationalCache.findOne({ deviceId }).lean() : null;
+    const device = await resolveJobDevice(job);
   const preview = buildProvisioningPreview(job, device);
   const planSummary = {
     planCode: job.customerSnapshot?.planCode || "",
@@ -492,14 +571,14 @@ installerAppRouter.get(
   "/jobs/:jobId/diagnostics",
   asyncHandler(async (req, res) => {
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
-    const finalDeviceId = job.deviceContext?.finalDeviceId || (job.deviceContext?.finalSerialNumber ? `ONT-${job.deviceContext.finalSerialNumber}` : null);
-    const device = finalDeviceId ? await DeviceOperationalCache.findOne({ deviceId: finalDeviceId }).lean() : null;
-    const opticalHealth = job.opticalReadings?.healthStatus || "unknown";
+    const device = await resolveJobDevice(job);
+    const optical = buildOpticalSnapshot(job, device);
+    const opticalHealth = optical.healthStatus || "unknown";
     return ok(res, {
       jobId: job._id,
       customerId: job.customerId,
       status: job.status,
-      optical: job.opticalReadings || null,
+      optical,
       device: device
         ? {
             deviceId: device.deviceId,
@@ -533,8 +612,7 @@ installerAppRouter.post(
     if (job.opticalReadings.healthStatus === "critical") {
       throw new ApiError(409, "Optical readings are critical; activation blocked");
     }
-    const finalDeviceId = job.deviceContext?.finalDeviceId || (job.deviceContext?.finalSerialNumber ? `ONT-${job.deviceContext.finalSerialNumber}` : null);
-    const device = finalDeviceId ? await DeviceOperationalCache.findOne({ deviceId: finalDeviceId }).lean() : null;
+    const device = await resolveJobDevice(job);
     const preview = buildProvisioningPreview(job, device);
     job.status = "activation_in_progress";
     job.activation = {
