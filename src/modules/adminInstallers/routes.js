@@ -219,6 +219,38 @@ adminInstallersRouter.get(
   })
 );
 
+adminInstallersRouter.delete(
+  "/installer-jobs/:jobId",
+  requirePermission(permissions.installerJobManage),
+  asyncHandler(async (req, res) => {
+    const job = await InstallerJob.findById(req.params.jobId).lean();
+    if (!job) {
+      throw new ApiError(404, "Installer job not found");
+    }
+
+    const [jobResult, installerResult] = await Promise.all([
+      InstallerJob.deleteOne({ _id: req.params.jobId }),
+      job.installerId
+        ? Installer.updateOne(
+            { _id: job.installerId, availabilityStatus: "busy" },
+            { $set: { availabilityStatus: "available" } }
+          )
+        : Promise.resolve({ modifiedCount: 0 })
+    ]);
+
+    return ok(res, {
+      deleted: true,
+      jobId: req.params.jobId,
+      jobNumber: job.jobNumber,
+      installerId: job.installerId ? String(job.installerId) : null,
+      deletedCounts: {
+        jobs: jobResult.deletedCount || 0,
+        installersUpdated: installerResult.modifiedCount || 0
+      }
+    });
+  })
+);
+
 adminInstallersRouter.post(
   "/installers/:installerId/jobs",
   requirePermission(permissions.installerJobManage),

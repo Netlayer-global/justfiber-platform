@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import { Customer, Installer, Job } from '@/lib/types'
-import { Calendar, ClipboardList, Loader, RefreshCw, ShieldAlert, Wrench } from 'lucide-react'
+import { Calendar, ClipboardList, Loader, RefreshCw, ShieldAlert, Trash2, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 
 type AssignForm = {
@@ -28,6 +28,7 @@ export default function JobsPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deletingJobId, setDeletingJobId] = useState('')
   const [form, setForm] = useState<AssignForm>(initialAssignForm)
   const [reassignJobId, setReassignJobId] = useState('')
   const [reassignInstallerId, setReassignInstallerId] = useState('')
@@ -149,6 +150,29 @@ export default function JobsPage() {
     } catch (error) {
       console.error('[v0] Failed to reassign job:', error)
       toast.error('Failed to reassign job')
+    }
+  }
+
+  async function handleDeleteJob(job: Job) {
+    const confirmed = window.confirm(
+      `Delete job ${job.jobNumber || job.id}?\n\nYe installer job record permanently remove ho jayega.`
+    )
+    if (!confirmed) return
+
+    try {
+      setDeletingJobId(job.id)
+      const response = await adminAPI.deleteInstallerJob(job.id)
+      if (response.success) {
+        toast.success(`Deleted ${job.jobNumber || 'job'}`)
+        await loadData()
+      } else {
+        toast.error(response.error || 'Failed to delete job')
+      }
+    } catch (error) {
+      console.error('[v0] Failed to delete job:', error)
+      toast.error('Failed to delete job')
+    } finally {
+      setDeletingJobId('')
     }
   }
 
@@ -443,9 +467,23 @@ export default function JobsPage() {
                     ))}
                   </select>
                 </div>
-                <button className="btn-secondary" onClick={() => handleReassign(job.id)}>
-                  Reassign Job
-                </button>
+                <div className="flex gap-2">
+                  <button className="btn-secondary" onClick={() => handleReassign(job.id)}>
+                    Reassign Job
+                  </button>
+                  <button
+                    className="btn-secondary inline-flex items-center gap-2 border-red-500/30 text-red-300 hover:bg-red-500/10"
+                    onClick={() => void handleDeleteJob(job)}
+                    disabled={deletingJobId === job.id}
+                  >
+                    {deletingJobId === job.id ? (
+                      <Loader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}

@@ -1294,6 +1294,16 @@ export const adminAPI = {
       data: res.data ? mapJob(res.data) : undefined,
     }
   },
+  deleteInstallerJob: (id: string) =>
+    request<{
+      deleted: boolean
+      jobId: string
+      jobNumber?: string
+      installerId?: string | null
+      deletedCounts?: Record<string, number>
+    }>(`/api/v1/admin/installer-jobs/${id}`, {
+      method: 'DELETE',
+    }),
   assignInstallerJob: async (
     installerId: string,
     data: {
