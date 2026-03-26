@@ -29,6 +29,7 @@ import { notificationDispatcher } from "./integrations/notificationDispatcher.js
 import { providerAdapters } from "./integrations/providerAdapters.js";
 import { writeAuditLog } from "./common/audit.js";
 import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand, resolveProvisioningProfile } from "./common/networkProvisioning.js";
+import { normalizeInstallerIdentifier } from "./modules/installerApp/routes.js";
 
 await connectMongo();
 await seedSystemData();
@@ -127,6 +128,91 @@ async function applyAutomatedCustomerStatusChange(customer, nextStatus, reason) 
     metadata: { reason }
   });
   return true;
+}
+
+async function resolveActivationTarget(jobRecord, requestedSerial) {
+  const finalSerialNumber = normalizeInstallerIdentifier(
+    jobRecord.deviceContext?.finalSerialNumber ||
+      requestedSerial ||
+      null
+  );
+  const finalDeviceId = normalizeInstallerIdentifier(jobRecord.deviceContext?.finalDeviceId);
+  const candidateDeviceIds = [
+    finalDeviceId,
+    finalSerialNumber ? `ONT-${finalSerialNumber}` : null
+  ].filter(Boolean);
+
+  if (candidateDeviceIds.length) {
+    const existingDevice = await DeviceOperationalCache.findOne({
+      deviceId: { $in: candidateDeviceIds }
+    }).lean();
+    if (existingDevice) {
+      return {
+        deviceId: existingDevice.deviceId,
+        existingDevice,
+        finalSerialNumber: normalizeInstallerIdentifier(existingDevice.serialNumber) || finalSerialNumber
+      };
+    }
+  }
+
+  if (finalSerialNumber) {
+    const existingBySerial = await DeviceOperationalCache.findOne({
+      $or: [
+        { serialNumber: finalSerialNumber },
+        { serialNumber: finalSerialNumber.toLowerCase() },
+        { serialNumber: finalSerialNumber.toUpperCase() }
+      ]
+    }).lean();
+    if (existingBySerial) {
+      return {
+        deviceId: existingBySerial.deviceId,
+        existingDevice: existingBySerial,
+        finalSerialNumber
+      };
+    }
+  }
+
+  const liveSummary = await genieacsClient.getRichDeviceSummary({
+    deviceId: candidateDeviceIds[0],
+    serialNumber: finalSerialNumber
+  });
+  if (liveSummary) {
+    const resolvedDeviceId = normalizeInstallerIdentifier(
+      liveSummary._id || liveSummary?.DeviceID?.ID || candidateDeviceIds[0]
+    );
+    return {
+      deviceId: resolvedDeviceId,
+      existingDevice: null,
+      finalSerialNumber
+    };
+  }
+
+  if (finalSerialNumber) {
+    const liveDevices = await genieacsClient.listDevices(500);
+    const matchedDevice = Array.isArray(liveDevices)
+      ? liveDevices.find((item) => {
+          const itemId = normalizeInstallerIdentifier(item?._id || item?.DeviceID?.ID);
+          const itemSerial = normalizeInstallerIdentifier(
+            item?.DeviceID?.SerialNumber || item?.InternetGatewayDevice?.DeviceInfo?.SerialNumber
+          );
+          return itemSerial === finalSerialNumber || (itemId && itemId.endsWith(finalSerialNumber));
+        })
+      : null;
+
+    if (matchedDevice) {
+      return {
+        deviceId: normalizeInstallerIdentifier(matchedDevice._id || matchedDevice?.DeviceID?.ID),
+        existingDevice: null,
+        finalSerialNumber
+      };
+    }
+  }
+
+  return {
+    deviceId: candidateDeviceIds[0],
+    existingDevice: null,
+    finalSerialNumber
+  };
 }
 
 const worker = new Worker(
@@ -238,13 +324,21 @@ const worker = new Worker(
             contentionRatio: bootstrap.plan?.contentionRatio || jobRecord.customerSnapshot?.contentionRatio || null
           };
         }
+        const activationTarget = await resolveActivationTarget(
+          jobRecord,
+          job.data.finalSerialNumber
+        );
         const deviceId =
+          activationTarget.deviceId ||
           jobRecord.deviceContext?.finalDeviceId ||
           job.data.finalDeviceId ||
           `ONT-${job.data.finalSerialNumber}`;
-        const existingDevice = await DeviceOperationalCache.findOne({ deviceId }).lean();
+        const existingDevice = activationTarget.existingDevice;
         const brand = detectOntBrand({
-          serialNumber: jobRecord.deviceContext?.finalSerialNumber || existingDevice?.serialNumber,
+          serialNumber:
+            activationTarget.finalSerialNumber ||
+            jobRecord.deviceContext?.finalSerialNumber ||
+            existingDevice?.serialNumber,
           productClass: existingDevice?.productClass,
           deviceId
         });
@@ -380,7 +474,10 @@ const worker = new Worker(
               customerId: jobRecord.customerId,
               serviceId: jobRecord.serviceId || jobRecord.customerId,
               deviceId,
-              serialNumber: jobRecord.deviceContext?.finalSerialNumber || existingDevice?.serialNumber,
+              serialNumber:
+                activationTarget.finalSerialNumber ||
+                jobRecord.deviceContext?.finalSerialNumber ||
+                existingDevice?.serialNumber,
               provisioningState: "SERVICE_ACTIVATE",
               wifiInfo: {
                 ...(existingDevice?.wifiInfo || {}),

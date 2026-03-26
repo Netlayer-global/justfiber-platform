@@ -61,7 +61,7 @@ function buildHealth(rxPower) {
   return "critical";
 }
 
-function normalizeIdentifier(value) {
+export function normalizeInstallerIdentifier(value) {
   if (value === null || value === undefined) return null;
   const text =
     typeof value === "string"
@@ -112,13 +112,13 @@ function buildProvisioningPreview(job, device) {
 }
 
 async function resolveJobDevice(job) {
-  const finalSerialNumber = normalizeIdentifier(
+  const finalSerialNumber = normalizeInstallerIdentifier(
     job.deviceContext?.finalSerialNumber ||
       job.deviceContext?.manualSerialNumber ||
       job.deviceContext?.scannedSerialNumber ||
       null
   );
-  const finalDeviceId = normalizeIdentifier(job.deviceContext?.finalDeviceId);
+  const finalDeviceId = normalizeInstallerIdentifier(job.deviceContext?.finalDeviceId);
   const candidateDeviceIds = [
     finalDeviceId,
     finalSerialNumber ? `ONT-${finalSerialNumber}` : null
@@ -181,8 +181,8 @@ async function resolveJobDevice(job) {
       const liveDevices = await genieacsClient.listDevices(500);
       const matchedDevice = Array.isArray(liveDevices)
         ? liveDevices.find((item) => {
-            const itemId = normalizeIdentifier(item?._id || item?.DeviceID?.ID);
-            const itemSerial = normalizeIdentifier(
+            const itemId = normalizeInstallerIdentifier(item?._id || item?.DeviceID?.ID);
+            const itemSerial = normalizeInstallerIdentifier(
               item?.DeviceID?.SerialNumber ||
                 item?.InternetGatewayDevice?.DeviceInfo?.SerialNumber
             );
@@ -194,7 +194,7 @@ async function resolveJobDevice(job) {
         : null;
 
       if (matchedDevice) {
-        const fallbackDeviceId = normalizeIdentifier(matchedDevice._id || matchedDevice?.DeviceID?.ID);
+        const fallbackDeviceId = normalizeInstallerIdentifier(matchedDevice._id || matchedDevice?.DeviceID?.ID);
         const richMatched = await genieacsClient.getRichDeviceSummary({
           deviceId: fallbackDeviceId,
           serialNumber: finalSerialNumber
@@ -553,7 +553,7 @@ installerAppRouter.post(
   asyncHandler(async (req, res) => {
     const payload = serialSchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
-    const normalizedSerial = normalizeIdentifier(payload.serialNumber);
+    const normalizedSerial = normalizeInstallerIdentifier(payload.serialNumber);
     const duplicate = await DeviceOperationalCache.findOne({ serialNumber: normalizedSerial, customerId: { $ne: job.customerId } });
     if (duplicate) {
       throw new ApiError(409, "Serial number already bound to another customer");
@@ -576,7 +576,7 @@ installerAppRouter.post(
   asyncHandler(async (req, res) => {
     const payload = serialSchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
-    const normalizedSerial = normalizeIdentifier(payload.serialNumber);
+    const normalizedSerial = normalizeInstallerIdentifier(payload.serialNumber);
     job.status = "ont_scanned";
     job.deviceContext = {
       ...(job.deviceContext || {}),
