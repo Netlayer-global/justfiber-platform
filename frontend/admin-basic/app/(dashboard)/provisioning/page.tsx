@@ -105,6 +105,7 @@ export default function ProvisioningPage() {
   const [query, setQuery] = useState('')
   const [copySourcePlanId, setCopySourcePlanId] = useState('')
   const [bulkTargetPlanIds, setBulkTargetPlanIds] = useState<string[]>([])
+  const [bulkCategoryFilter, setBulkCategoryFilter] = useState<'all' | 'home' | 'business' | 'enterprise'>('all')
 
   useEffect(() => {
     void loadPlans()
@@ -127,6 +128,11 @@ export default function ProvisioningPage() {
     null
 
   const issues = provisioningIssues(form)
+  const bulkCandidatePlans = plans.filter((plan) => {
+    if (plan.id === selectedPlan?.id) return false
+    if (bulkCategoryFilter === 'all') return true
+    return (plan.category || 'home') === bulkCategoryFilter
+  })
 
   async function loadPlans() {
     try {
@@ -176,6 +182,14 @@ export default function ProvisioningPage() {
     )
   }
 
+  function selectAllBulkTargets() {
+    setBulkTargetPlanIds(bulkCandidatePlans.map((plan) => plan.id))
+  }
+
+  function clearBulkTargets() {
+    setBulkTargetPlanIds([])
+  }
+
   async function handleSave() {
     if (!selectedPlan) return
     try {
@@ -212,7 +226,7 @@ export default function ProvisioningPage() {
     }
     try {
       setIsSaving(true)
-      const targets = plans.filter((plan) => bulkTargetPlanIds.includes(plan.id))
+      const targets = bulkCandidatePlans.filter((plan) => bulkTargetPlanIds.includes(plan.id))
       const results = await Promise.all(
         targets.map((plan) =>
           adminAPI.updatePlan(plan.planCode || plan.id, {
@@ -416,10 +430,26 @@ export default function ProvisioningPage() {
                       Apply to selected plans
                     </button>
                   </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <select
+                      className="input max-w-[220px]"
+                      value={bulkCategoryFilter}
+                      onChange={(e) => setBulkCategoryFilter(e.target.value as 'all' | 'home' | 'business' | 'enterprise')}
+                    >
+                      <option value="all">All categories</option>
+                      <option value="home">Home</option>
+                      <option value="business">Business</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                    <button type="button" onClick={selectAllBulkTargets} className="btn-secondary">
+                      Select all
+                    </button>
+                    <button type="button" onClick={clearBulkTargets} className="btn-secondary">
+                      Clear all
+                    </button>
+                  </div>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {plans
-                      .filter((plan) => plan.id !== selectedPlan?.id)
-                      .map((plan) => (
+                    {bulkCandidatePlans.map((plan) => (
                         <label
                           key={plan.id}
                           className={`flex items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-sm transition ${
