@@ -555,6 +555,30 @@ export default function CustomerDetailPage() {
     }
   }
 
+  async function handleCopyPppoeUsername() {
+    const username = radiusService?.radiusUsername || customer?.pppoeUsername || ''
+    if (!username) {
+      toast.error('No PPPoE username available')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(username)
+      toast.success('PPPoE username copied')
+    } catch (error) {
+      console.error('[v0] Failed to copy PPPoE username:', error)
+      toast.error('Failed to copy PPPoE username')
+    }
+  }
+
+  function handleOpenRadiusAudit() {
+    setActiveTab('overview')
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        document.getElementById('radius-audit-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
+    }
+  }
+
   async function handleDeviceReboot(device: CustomerDevice) {
     try {
       setIsSaving(true)
@@ -740,7 +764,7 @@ export default function CustomerDetailPage() {
           <div className="space-y-4">
             {activeTab === 'overview' ? (
               <>
-                <div className="card p-5 space-y-4">
+                <div id="radius-audit-panel" className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Profile & Service</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input className="input" placeholder="Full name" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
@@ -1314,6 +1338,19 @@ export default function CustomerDetailPage() {
                       disabled={isSaving}
                     >
                       Resume PPPoE
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => void handleCopyPppoeUsername()}
+                      disabled={!radiusService?.radiusUsername && !customer?.pppoeUsername}
+                    >
+                      Copy PPPoE Username
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => handleOpenRadiusAudit()}
+                    >
+                      Open RADIUS Audit
                     </button>
                   </div>
                 </div>
