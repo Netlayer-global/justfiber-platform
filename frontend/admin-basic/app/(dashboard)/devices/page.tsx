@@ -140,7 +140,7 @@ export default function DevicesPage() {
   async function loadDevices(preferredDeviceId?: string) {
     try {
       setIsLoading(true)
-      const res = await adminAPI.getDevices(1, 200, { sync: true, syncLimit: 100 })
+      const res = await adminAPI.getDevices(1, 200, { live: true, liveLimit: 200, sync: true, syncLimit: 100 })
       if (!res.success || !res.data?.items) {
         toast.error(res.error || 'Failed to load device inventory')
         return
@@ -172,7 +172,7 @@ export default function DevicesPage() {
           return
         }
       }
-      const res = await adminAPI.getDevice(selectedDeviceId, { sync: syncFromGenie })
+      const res = await adminAPI.getDevice(selectedDeviceId, { sync: syncFromGenie, live: true })
       if (!res.success || !res.data) {
         toast.error(res.error || 'Failed to load device detail')
         return

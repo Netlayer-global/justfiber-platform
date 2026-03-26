@@ -986,7 +986,7 @@ export const adminAPI = {
   getDevices: async (
     page = 1,
     limit = 20,
-    options?: { sync?: boolean; syncLimit?: number; onlineStatus?: string; provisioningState?: string; search?: string }
+    options?: { sync?: boolean; syncLimit?: number; onlineStatus?: string; provisioningState?: string; search?: string; live?: boolean; liveLimit?: number }
   ) => {
     const params = new URLSearchParams({
       page: String(page),
@@ -994,6 +994,8 @@ export const adminAPI = {
     })
     if (options?.sync) params.set('sync', 'true')
     if (options?.syncLimit) params.set('syncLimit', String(options.syncLimit))
+    if (options?.live) params.set('live', 'true')
+    if (options?.liveLimit) params.set('liveLimit', String(options.liveLimit))
     if (options?.onlineStatus) params.set('onlineStatus', options.onlineStatus)
     if (options?.provisioningState) params.set('provisioningState', options.provisioningState)
     if (options?.search) params.set('search', options.search)
@@ -1006,8 +1008,11 @@ export const adminAPI = {
       },
     }
   },
-  getDevice: async (id: string, options?: { sync?: boolean }) => {
-    const suffix = options?.sync ? '?sync=true' : ''
+  getDevice: async (id: string, options?: { sync?: boolean; live?: boolean }) => {
+    const params = new URLSearchParams()
+    if (options?.sync) params.set('sync', 'true')
+    if (options?.live) params.set('live', 'true')
+    const suffix = params.toString() ? `?${params.toString()}` : ''
     const res = await request<any>(`/api/v1/admin/devices/${id}${suffix}`)
     return {
       ...res,

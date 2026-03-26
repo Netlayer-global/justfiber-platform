@@ -37,7 +37,7 @@ function deriveOnlineStatus(lastInformAt) {
   return ageMs <= 1000 * 60 * 15 ? "online" : "offline";
 }
 
-function summarizeGenieDevice(summary, fallbackDeviceId) {
+export function summarizeGenieDevice(summary, fallbackDeviceId) {
   const lastInformAt =
     parseDate(summary?._lastInform) ||
     parseDate(readPath(summary, "_lastInform._value")) ||
@@ -115,6 +115,45 @@ function summarizeGenieDevice(summary, fallbackDeviceId) {
       txPower: txPower ?? null
     }
   };
+}
+
+export async function getLiveGenieDeviceList(limit = 100) {
+  const liveDevices = await genieacsClient.listDevices(limit);
+  if (!Array.isArray(liveDevices)) return [];
+
+  const cacheRecords = await DeviceOperationalCache.find({
+    deviceId: {
+      $in: liveDevices.map((device) => String(firstValue(device, ["_id", "DeviceID.ID"]) || "")).filter(Boolean)
+    }
+  }).lean();
+  const cacheByDeviceId = new Map(cacheRecords.map((record) => [record.deviceId, record]));
+
+  return liveDevices
+    .map((device) => {
+      const parsed = summarizeGenieDevice(device, undefined);
+      const cached = cacheByDeviceId.get(parsed.deviceId);
+      return {
+        ...(cached || {}),
+        ...parsed,
+        customerId: cached?.customerId || null,
+        serviceId: cached?.serviceId || null,
+        provisioningState: cached?.provisioningState || "live_only",
+        wanInfo: {
+          ...(cached?.wanInfo || {}),
+          ...(parsed.wanInfo || {})
+        },
+        wifiInfo: {
+          ...(cached?.wifiInfo || {}),
+          ...(parsed.wifiInfo || {})
+        },
+        opticalInfo: {
+          ...(cached?.opticalInfo || {}),
+          ...(parsed.opticalInfo || {})
+        },
+        updatedAt: cached?.updatedAt || parsed.lastInformAt || new Date()
+      };
+    })
+    .filter((device) => device.deviceId);
 }
 
 export async function syncDeviceFromGenie(cacheRecord) {

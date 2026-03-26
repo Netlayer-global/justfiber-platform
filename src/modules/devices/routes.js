@@ -11,7 +11,7 @@ import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
-import { syncCachedDevicesFromGenie, syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
+import { getLiveGenieDeviceList, summarizeGenieDevice, syncCachedDevicesFromGenie, syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
 
 export const devicesRouter = Router();
 
@@ -21,10 +21,32 @@ devicesRouter.get(
   "/",
   requirePermission(permissions.deviceRead),
   asyncHandler(async (req, res) => {
+    const useLiveView = String(req.query.live || "") === "true";
     if (String(req.query.sync || "") === "true") {
       await syncCachedDevicesFromGenie({ limit: Number(req.query.syncLimit || 50) });
     }
     const { page, limit, skip } = buildPagination(req.query);
+    if (useLiveView) {
+      let items = await getLiveGenieDeviceList(Number(req.query.liveLimit || limit || 100));
+      if (req.query.search) {
+        const needle = String(req.query.search).toLowerCase();
+        items = items.filter((item) =>
+          [item.deviceId, item.serialNumber, item.customerId, item.serviceId, item.productClass, item.wanInfo?.pppoeUsernameMasked]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(needle)
+        );
+      }
+      if (req.query.onlineStatus) {
+        items = items.filter((item) => item.onlineStatus === req.query.onlineStatus);
+      }
+      if (req.query.provisioningState) {
+        items = items.filter((item) => item.provisioningState === req.query.provisioningState);
+      }
+      const total = items.length;
+      return ok(res, items.slice(skip, skip + limit), { page, limit, total });
+    }
     const filter = {};
     if (req.query.search) {
       filter.$or = [
@@ -56,10 +78,7 @@ devicesRouter.get(
   requirePermission(permissions.deviceRead),
   asyncHandler(async (req, res) => {
     const deviceRecord = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId });
-    if (!deviceRecord) {
-      throw new ApiError(404, "Device not found");
-    }
-    if (String(req.query.sync || "") === "true") {
+    if (deviceRecord && String(req.query.sync || "") === "true") {
       try {
         await syncDeviceFromGenie(deviceRecord);
       } catch (error) {
@@ -67,10 +86,19 @@ devicesRouter.get(
       }
     }
     const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId }).lean();
-    if (!device) {
+    if (device) {
+      return ok(res, device);
+    }
+    const liveSummary = await genieacsClient.getDeviceSummary(req.params.deviceId);
+    if (!liveSummary) {
       throw new ApiError(404, "Device not found");
     }
-    return ok(res, device);
+    const parsed = summarizeGenieDevice(liveSummary, req.params.deviceId);
+    return ok(res, {
+      ...parsed,
+      provisioningState: "live_only",
+      updatedAt: parsed.lastInformAt || new Date()
+    });
   })
 );
 

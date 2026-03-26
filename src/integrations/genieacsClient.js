@@ -85,6 +85,11 @@ async function getWriteTargetDeviceId(deviceId) {
 }
 
 export class GenieacsClient {
+  async listDevices(limit = 100) {
+    const query = `limit=${Math.max(1, Math.min(Number(limit || 100), 500))}`;
+    return genieacsRequest("GET", `/devices?${query}`);
+  }
+
   async applyPreset({ deviceId, presetName, correlationId }) {
     if (!allowedPresets.has(presetName)) {
       throw new Error(`Preset not allowed: ${presetName}`);
