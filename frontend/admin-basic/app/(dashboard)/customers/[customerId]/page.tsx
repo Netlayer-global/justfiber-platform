@@ -25,6 +25,39 @@ const tabIcons: Record<TabKey, any> = {
   actions: Activity,
 }
 
+function formatValue(value: unknown, fallback = '-') {
+  if (value === null || value === undefined) return fallback
+  const text = String(value).trim()
+  return text ? text : fallback
+}
+
+function formatBooleanBadge(value: unknown) {
+  if (value === null || value === undefined) return '-'
+  return value ? 'Enabled' : 'Disabled'
+}
+
+function formatDateTime(value: unknown) {
+  if (!value) return '-'
+  const parsed = new Date(String(value))
+  return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString()
+}
+
+function formatPower(value: unknown) {
+  const num = Number(value)
+  return Number.isFinite(num) ? `${num} dBm` : '-'
+}
+
+function normalizeConnectedClients(device: CustomerDevice) {
+  const lanClients = Array.isArray(device.lanInfo?.connectedDevices) ? device.lanInfo?.connectedDevices : []
+  return lanClients.slice(0, 8).map((item: any, index: number) => ({
+    id: String(item?.id || item?.macAddress || item?.hostName || index),
+    hostName: formatValue(item?.hostName, 'Unknown client'),
+    ipAddress: formatValue(item?.ipAddress || item?.ip, '-'),
+    macAddress: formatValue(item?.macAddress || item?.mac, '-'),
+    status: formatValue(item?.status || item?.active || 'unknown'),
+  }))
+}
+
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>()
   const searchParams = useSearchParams()
@@ -1459,12 +1492,43 @@ export default function CustomerDetailPage() {
                   const connectedClients = Array.isArray(device.lanInfo?.connectedDevices)
                     ? device.lanInfo.connectedDevices.length
                     : Number(device.lanInfo?.leasedClients || 0)
+                  const clientRows = normalizeConnectedClients(device)
+                  const wanIpv4 = formatValue(device.wanInfo?.ipv4Address || device.wanInfo?.currentIpv4 || device.wanInfo?.ipAddress)
+                  const wanGateway = formatValue(device.wanInfo?.gateway || device.wanInfo?.defaultGateway)
+                  const wanMac = formatValue(device.wanInfo?.macAddress || device.wanInfo?.wanMacAddress)
+                  const wanMode = formatValue(device.wanInfo?.wanMode || device.wanInfo?.mode || 'pppoe')
+                  const vlanId = formatValue(device.wanInfo?.vlanId)
+                  const natState = formatBooleanBadge(device.wifiInfo?.natEnabled ?? form?.natEnabled)
+                  const ssid24 = formatValue(device.wifiInfo?.ssid24Masked || form?.ssid24)
+                  const ssid5 = formatValue(device.wifiInfo?.ssid5Masked || form?.ssid5)
+                  const guestSsid = formatValue(device.wifiInfo?.guestSsid)
+                  const opticalLastInform = formatDateTime(device.opticalInfo?.lastInformAt || device.opticalInfo?.measuredAt)
+                  const onlineBadgeClass =
+                    device.onlineStatus === 'online'
+                      ? 'rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700'
+                      : device.onlineStatus === 'offline'
+                        ? 'rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700'
+                        : 'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600'
+                  const provisioningBadgeClass =
+                    device.provisioningState?.includes('ACTIVATE')
+                      ? 'rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700'
+                      : device.provisioningState?.includes('SUSPEND')
+                        ? 'rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700'
+                        : 'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600'
                   return (
                     <div key={device.id} className="card p-5 space-y-4">
-                      <div>
-                        <h2 className="text-lg font-semibold">{device.deviceId}</h2>
-                        <p className="text-sm text-slate-500">{device.productClass || '-'} | {device.serialNumber || '-'}</p>
-                        <p className="text-sm text-slate-500">Online: {device.onlineStatus || '-'} | Provisioning: {device.provisioningState || '-'}</p>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold">{device.deviceId}</h2>
+                          <p className="text-sm text-slate-500">{device.productClass || '-'} | {device.serialNumber || '-'}</p>
+                          <p className="text-sm text-slate-500">
+                            Bound to {customer.customerId || customer.id} / {customer.serviceId || '-'} / {customer.plan.name}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className={onlineBadgeClass}>{formatValue(device.onlineStatus)}</span>
+                          <span className={provisioningBadgeClass}>{formatValue(device.provisioningState)}</span>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1483,6 +1547,135 @@ export default function CustomerDetailPage() {
                         <div className="metric-tile p-3">
                           <p className="text-xs uppercase tracking-[0.22em] text-black/40">Optical health</p>
                           <p className="text-lg font-semibold">{opticalHealth}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-slate-900">Binding & Identity</h3>
+                            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">Mapped to subscriber</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Customer ID</p>
+                              <p className="mt-2 font-semibold text-slate-900">{customer.customerId || customer.id}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Service ID</p>
+                              <p className="mt-2 font-semibold text-slate-900">{customer.serviceId || '-'}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Account</p>
+                              <p className="mt-2 font-semibold text-slate-900">{customer.accountNumber || '-'}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Radius user</p>
+                              <p className="mt-2 font-semibold text-slate-900">{radiusService?.radiusUsername || customer.pppoeUsername || '-'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-slate-900">WAN Provisioning</h3>
+                            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">{wanMode}</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">PPPoE username</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatValue(device.wanInfo?.pppoeUsernameMasked || device.wanInfo?.pppoeUsername || form?.pppoeUsername)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">VLAN ID</p>
+                              <p className="mt-2 font-semibold text-slate-900">{vlanId}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">IPv4</p>
+                              <p className="mt-2 font-semibold text-slate-900">{wanIpv4}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Gateway</p>
+                              <p className="mt-2 font-semibold text-slate-900">{wanGateway}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">WAN MAC</p>
+                              <p className="mt-2 font-semibold text-slate-900">{wanMac}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">NAT</p>
+                              <p className="mt-2 font-semibold text-slate-900">{natState}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 text-sm">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-slate-900">Wi‑Fi Radios</h3>
+                            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">{connectedClients} clients</span>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">SSID 2.4G</p>
+                              <p className="mt-2 font-semibold text-slate-900">{ssid24}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">SSID 5G</p>
+                              <p className="mt-2 font-semibold text-slate-900">{ssid5}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Guest SSID</p>
+                              <p className="mt-2 font-semibold text-slate-900">{guestSsid}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-slate-900">Optical & Health</h3>
+                            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">{opticalHealth}</span>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">RX power</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatPower(device.opticalInfo?.rxPower)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">TX power</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatPower(device.opticalInfo?.txPower)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Last optical update</p>
+                              <p className="mt-2 font-semibold text-slate-900">{opticalLastInform}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-slate-900">LAN Clients</h3>
+                            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">{connectedClients} seen</span>
+                          </div>
+                          {clientRows.length ? (
+                            <div className="space-y-2">
+                              {clientRows.map((client) => (
+                                <div key={client.id} className="rounded-lg bg-white px-3 py-3">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="font-semibold text-slate-900">{client.hostName}</p>
+                                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">{client.status}</span>
+                                  </div>
+                                  <p className="mt-2 text-xs text-slate-500">IP {client.ipAddress}</p>
+                                  <p className="mt-1 text-xs text-slate-500">MAC {client.macAddress}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="rounded-lg bg-white px-3 py-3 text-sm text-slate-500">
+                              No parsed LAN client records yet for this device.
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1545,20 +1738,25 @@ export default function CustomerDetailPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 text-sm">
-                        <div className="rounded border border-[#2a2f4a] p-4">
-                          <h3 className="font-semibold mb-3">Wi-Fi Snapshot</h3>
-                          <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.wifiInfo || {}, null, 2)}</pre>
+                      <details className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <summary className="cursor-pointer list-none font-semibold text-slate-900">
+                          Advanced raw snapshots
+                        </summary>
+                        <div className="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-4 text-sm">
+                          <div className="rounded border border-[#2a2f4a] p-4">
+                            <h3 className="font-semibold mb-3">Wi-Fi Snapshot</h3>
+                            <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.wifiInfo || {}, null, 2)}</pre>
+                          </div>
+                          <div className="rounded border border-[#2a2f4a] p-4">
+                            <h3 className="font-semibold mb-3">WAN / LAN Snapshot</h3>
+                            <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify({ wanInfo: device.wanInfo || {}, lanInfo: device.lanInfo || {} }, null, 2)}</pre>
+                          </div>
+                          <div className="rounded border border-[#2a2f4a] p-4">
+                            <h3 className="font-semibold mb-3">Optical / Diagnostics</h3>
+                            <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.opticalInfo || {}, null, 2)}</pre>
+                          </div>
                         </div>
-                        <div className="rounded border border-[#2a2f4a] p-4">
-                          <h3 className="font-semibold mb-3">WAN / LAN Snapshot</h3>
-                          <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify({ wanInfo: device.wanInfo || {}, lanInfo: device.lanInfo || {} }, null, 2)}</pre>
-                        </div>
-                        <div className="rounded border border-[#2a2f4a] p-4">
-                          <h3 className="font-semibold mb-3">Optical / Diagnostics</h3>
-                          <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.opticalInfo || {}, null, 2)}</pre>
-                        </div>
-                      </div>
+                      </details>
                     </div>
                   )
                 }) : <div className="card p-5 text-slate-500">No devices found</div>}
