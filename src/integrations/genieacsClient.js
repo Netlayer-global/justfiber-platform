@@ -398,6 +398,11 @@ export class GenieacsClient {
     const dynamicPass5Paths = discoverDynamicConfigPaths(liveSummary, "pass5");
     const values = [];
     const push = (pathOrPaths, value, valueType, transform = (input) => input) => {
+      const wifiMultiPath =
+        pathOrPaths === profile.ssid24Path ||
+        pathOrPaths === profile.pass24Path ||
+        pathOrPaths === profile.ssid5Path ||
+        pathOrPaths === profile.pass5Path;
       const dynamicPaths =
         pathOrPaths === profile.pppoeUsernamePath
           ? dynamicPppoeUsernamePaths
@@ -417,7 +422,9 @@ export class GenieacsClient {
       const writablePaths = liveSummary
         ? paths.filter((path) => isWritableParameterNode(readNodeAtPath(liveSummary, path)))
         : paths;
-      const selectedPaths = (writablePaths.length ? writablePaths : paths).slice(0, 1);
+      const selectedPaths = wifiMultiPath
+        ? (writablePaths.length ? writablePaths : paths)
+        : (writablePaths.length ? writablePaths : paths).slice(0, 1);
       for (const path of selectedPaths) {
         if (path && value !== undefined && value !== null && value !== "") {
           const normalizedValue = transform(value);
