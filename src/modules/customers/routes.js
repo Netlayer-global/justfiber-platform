@@ -178,6 +178,7 @@ async function buildCustomerResponse(customer) {
 
   return {
     ...customer,
+    pppoeUsername: subscriberService?.radiusUsername || customer.pppoeUsername || null,
     radiusService: subscriberService
       ? {
           serviceId: subscriberService.serviceId,

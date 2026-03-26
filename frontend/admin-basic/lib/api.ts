@@ -266,6 +266,7 @@ function mapCustomer(customer: any): Customer {
     expiryAt: customer.expiryAt,
     pppoeUsername:
       customer.pppoeUsername ||
+      customer.radiusService?.radiusUsername ||
       customer.devices?.[0]?.wanInfo?.pppoeUsernameMasked ||
       customer.devices?.[0]?.wanInfo?.pppoeUsername,
     billingSnapshot: customer.billingSnapshot || {},
