@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
-import { Copy, Loader, RefreshCw, Save, ShieldCheck } from 'lucide-react'
+import { ChevronDown, ChevronUp, Copy, Loader, RefreshCw, Save, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 
 type ProvisioningFormState = {
@@ -183,6 +183,7 @@ export default function ProvisioningPage() {
   const [bulkTargetPlanIds, setBulkTargetPlanIds] = useState<string[]>([])
   const [bulkCategoryFilter, setBulkCategoryFilter] = useState<'all' | 'home' | 'business' | 'enterprise'>('all')
   const [bulkIncompleteOnly, setBulkIncompleteOnly] = useState(false)
+  const [showAdvancedTools, setShowAdvancedTools] = useState(false)
 
   useEffect(() => {
     void loadPlans()
@@ -237,6 +238,17 @@ export default function ProvisioningPage() {
     }
   }
 
+  function currentProvisioningPayload() {
+    return {
+      accessProfileCode: form.accessProfileCode.trim(),
+      vlanId: Number(form.vlanId || 0),
+      pppoePrefix: form.pppoePrefix.trim(),
+      pppoeRealm: form.pppoeRealm.trim(),
+      defaultPppoePassword: form.defaultPppoePassword.trim(),
+      wifiNamePrefix: form.wifiNamePrefix.trim(),
+    }
+  }
+
   function selectPlan(plan: Plan) {
     setSelectedPlanId(plan.id)
     setForm(toForm(plan))
@@ -260,25 +272,6 @@ export default function ProvisioningPage() {
     setBulkTargetPlanIds((current) =>
       current.includes(planId) ? current.filter((item) => item !== planId) : [...current, planId]
     )
-  }
-
-  function selectAllBulkTargets() {
-    setBulkTargetPlanIds(bulkCandidatePlans.map((plan) => plan.id))
-  }
-
-  function clearBulkTargets() {
-    setBulkTargetPlanIds([])
-  }
-
-  function currentProvisioningPayload() {
-    return {
-      accessProfileCode: form.accessProfileCode.trim(),
-      vlanId: Number(form.vlanId || 0),
-      pppoePrefix: form.pppoePrefix.trim(),
-      pppoeRealm: form.pppoeRealm.trim(),
-      defaultPppoePassword: form.defaultPppoePassword.trim(),
-      wifiNamePrefix: form.wifiNamePrefix.trim(),
-    }
   }
 
   async function handleSave() {
@@ -380,18 +373,25 @@ export default function ProvisioningPage() {
     }
   }
 
+  function selectAllBulkTargets() {
+    setBulkTargetPlanIds(bulkCandidatePlans.map((plan) => plan.id))
+  }
+
+  function clearBulkTargets() {
+    setBulkTargetPlanIds([])
+  }
+
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="card p-8" style={styles.hero}>
           <div className="text-xs uppercase tracking-[0.28em] text-white/45">Technical activation</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Provisioning patterns,
-            <span className="text-[#8224E3]"> outside plan management.</span>
+            Simple provisioning,
+            <span className="text-[#8224E3]"> cleaner rollout.</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            Access profile, VLAN, PPPoE username pattern, and Wi-Fi naming yahan maintain karo. Plans page ab sirf commercial
-            catalog, validity, and pricing ke liye hai.
+            Access profile, VLAN, PPPoE pattern, aur Wi-Fi naming yahan maintain karo. Page ko intentionally simple rakha gaya hai taaki ops team fast kaam kar sake.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <button type="button" onClick={() => void loadPlans()} className="btn-secondary" style={styles.secondaryButton}>
@@ -403,8 +403,10 @@ export default function ProvisioningPage() {
 
         <div className="neon-panel p-8" style={styles.accent}>
           <div className="text-xs uppercase tracking-[0.28em] text-black/60">Provisioning health</div>
-          <div className="mt-3 text-5xl font-black">{readyCount}</div>
-          <div className="mt-2 text-sm text-black/70">Plans with complete activation templates.</div>
+          <div className="mt-3 text-5xl font-black">{selectedPlan ? selectedPlan.name : readyCount}</div>
+          <div className="mt-2 text-sm text-black/70">
+            {selectedPlan ? 'Selected plan for activation mapping.' : 'Plans with complete activation templates.'}
+          </div>
           <div className="mt-8 grid grid-cols-2 gap-3">
             <div className="rounded-[24px] p-4" style={{ border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(0,0,0,0.08)' }}>
               <div className="text-xs uppercase tracking-[0.18em] text-black/60">Ready</div>
@@ -423,21 +425,13 @@ export default function ProvisioningPage() {
           <Loader className="mx-auto h-6 w-6 animate-spin text-[#8224E3]" />
         </div>
       ) : (
-        <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
           <div className="card p-6" style={styles.hero}>
-            <div className="flex flex-col gap-3">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plans</div>
-                <div className="mt-2 text-xl font-black text-white">Select plan</div>
-              </div>
-              <input
-                style={styles.input}
-                placeholder="Search plan"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
+            <div>
+              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plans</div>
+              <div className="mt-2 text-xl font-black text-white">Select plan</div>
             </div>
-
+            <input style={{ ...styles.input, marginTop: 16 }} placeholder="Search plan" value={query} onChange={(e) => setQuery(e.target.value)} />
             <div className="mt-5 space-y-3">
               {filteredPlans.map((plan) => {
                 const selected = selectedPlan?.id === plan.id
@@ -456,9 +450,7 @@ export default function ProvisioningPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-base font-semibold text-white">{plan.name}</div>
-                        <div className="mt-1 text-sm text-white/55">
-                          {plan.planCode || plan.id} - {plan.speed} Mbps
-                        </div>
+                        <div className="mt-1 text-sm text-white/55">{plan.planCode || plan.id}</div>
                       </div>
                       <span style={statusBadge(plan.provisioningReady === false ? 'needs' : 'ready')}>
                         {plan.provisioningReady === false ? 'Needs setup' : 'Ready'}
@@ -478,7 +470,7 @@ export default function ProvisioningPage() {
                     <div className="text-xs uppercase tracking-[0.24em] text-white/45">Provisioning template</div>
                     <h2 className="mt-2 text-3xl font-black text-white">{selectedPlan.name}</h2>
                     <p className="mt-2 text-sm leading-6 text-white/55">
-                      Technical activation pattern for {selectedPlan.planCode || selectedPlan.id}.
+                      Core activation settings for {selectedPlan.planCode || selectedPlan.id}.
                     </p>
                   </div>
                   <span style={statusBadge(selectedPlan.provisioningReady === false ? 'needs' : 'ready')}>
@@ -486,127 +478,44 @@ export default function ProvisioningPage() {
                   </span>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  <input style={styles.input} placeholder="Access profile code" value={form.accessProfileCode} onChange={(e) => setForm({ ...form, accessProfileCode: e.target.value })} />
-                  <input style={styles.input} placeholder="VLAN ID" type="number" value={form.vlanId} onChange={(e) => setForm({ ...form, vlanId: e.target.value })} />
-                  <input style={styles.input} placeholder="PPPoE prefix" value={form.pppoePrefix} onChange={(e) => setForm({ ...form, pppoePrefix: e.target.value })} />
-                  <input style={styles.input} placeholder="PPPoE realm" value={form.pppoeRealm} onChange={(e) => setForm({ ...form, pppoeRealm: e.target.value })} />
-                  <input style={styles.input} placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
-                  <input style={styles.input} placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
-                </div>
-
-                <div className="grid gap-4 xl:grid-cols-2">
+                <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                   <div className="p-5" style={styles.surface}>
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/45">Default presets</div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {presetTemplates.map((preset) => (
-                        <button key={preset.code} type="button" onClick={() => applyPreset(preset.code)} className="btn-secondary" style={styles.secondaryButton}>
-                          <ShieldCheck className="h-4 w-4" />
-                          {preset.label}
-                        </button>
-                      ))}
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/45">Core activation fields</div>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <input style={styles.input} placeholder="Access profile code" value={form.accessProfileCode} onChange={(e) => setForm({ ...form, accessProfileCode: e.target.value })} />
+                      <input style={styles.input} placeholder="VLAN ID" type="number" value={form.vlanId} onChange={(e) => setForm({ ...form, vlanId: e.target.value })} />
+                      <input style={styles.input} placeholder="PPPoE prefix" value={form.pppoePrefix} onChange={(e) => setForm({ ...form, pppoePrefix: e.target.value })} />
+                      <input style={styles.input} placeholder="PPPoE realm" value={form.pppoeRealm} onChange={(e) => setForm({ ...form, pppoeRealm: e.target.value })} />
+                      <input style={styles.input} placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
+                      <input style={styles.input} placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
                     </div>
                   </div>
 
-                  <div className="p-5" style={styles.surface}>
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/45">Copy from another plan</div>
-                    <div className="mt-4 flex flex-col gap-3 md:flex-row">
-                      <select style={styles.input} value={copySourcePlanId} onChange={(e) => setCopySourcePlanId(e.target.value)}>
-                        <option value="">Select source plan</option>
-                        {plans
-                          .filter((plan) => plan.id !== selectedPlan.id)
-                          .map((plan) => (
-                            <option key={plan.id} value={plan.id}>
-                              {plan.name} ({plan.planCode || plan.id})
-                            </option>
-                          ))}
-                      </select>
-                      <button type="button" onClick={() => copyTemplateFromPlan(copySourcePlanId)} className="btn-secondary" style={styles.secondaryButton} disabled={!copySourcePlanId}>
-                        <Copy className="h-4 w-4" />
-                        Copy template
-                      </button>
+                  <div className="space-y-4">
+                    <div className="p-5" style={styles.surface}>
+                      <div className="text-xs uppercase tracking-[0.18em] text-white/45">Live preview</div>
+                      <div className="mt-4 space-y-4">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.16em] text-white/40">PPPoE sample</div>
+                          <div className="mt-2 text-lg font-bold text-white break-all">{buildPppoePreview(form)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.16em] text-white/40">Wi-Fi naming</div>
+                          <div className="mt-2 text-lg font-bold text-white">{buildWifiPreview(form)}</div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="p-5" style={styles.surface}>
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.18em] text-white/45">Bulk apply</div>
-                      <div className="mt-2 text-sm text-white/60">Apply current provisioning template to selected target plans in one go.</div>
-                    </div>
-                    <button type="button" onClick={() => void handleBulkApply()} className="btn-secondary" style={styles.secondaryButton} disabled={isSaving || !bulkTargetPlanIds.length}>
-                      <Copy className="h-4 w-4" />
-                      Apply to selected plans
-                    </button>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <select
-                      style={{ ...styles.input, maxWidth: 220 }}
-                      value={bulkCategoryFilter}
-                      onChange={(e) => setBulkCategoryFilter(e.target.value as 'all' | 'home' | 'business' | 'enterprise')}
+                    <div
+                      className="px-4 py-3 text-sm"
+                      style={
+                        issues.length
+                          ? { borderRadius: 18, border: '1px solid rgba(251,191,36,0.25)', background: 'rgba(251,191,36,0.1)', color: '#fde68a' }
+                          : { borderRadius: 18, border: '1px solid rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.1)', color: '#bbf7d0' }
+                      }
                     >
-                      <option value="all">All categories</option>
-                      <option value="home">Home</option>
-                      <option value="business">Business</option>
-                      <option value="enterprise">Enterprise</option>
-                    </select>
-                    <button type="button" onClick={selectAllBulkTargets} className="btn-secondary" style={styles.secondaryButton}>
-                      Select all
-                    </button>
-                    <button type="button" onClick={clearBulkTargets} className="btn-secondary" style={styles.secondaryButton}>
-                      Clear all
-                    </button>
-                    <label className="flex items-center gap-2 px-4 py-3 text-sm text-white/75" style={styles.surface}>
-                      <input type="checkbox" checked={bulkIncompleteOnly} onChange={(e) => setBulkIncompleteOnly(e.target.checked)} />
-                      Only incomplete plans
-                    </label>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {bulkCandidatePlans.map((plan) => {
-                      const checked = bulkTargetPlanIds.includes(plan.id)
-                      return (
-                        <label
-                          key={plan.id}
-                          className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-                          style={{
-                            ...styles.surface,
-                            borderColor: checked ? '#8224E3' : 'rgba(255,255,255,0.1)',
-                            background: checked ? 'rgba(130,36,227,0.14)' : 'rgba(255,255,255,0.05)',
-                          }}
-                        >
-                          <div>
-                            <div className="font-medium text-white">{plan.name}</div>
-                            <div className="text-xs text-white/50">{plan.planCode || plan.id}</div>
-                          </div>
-                          <input type="checkbox" checked={checked} onChange={() => toggleBulkTarget(plan.id)} />
-                        </label>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div
-                  className="px-4 py-3 text-sm"
-                  style={
-                    issues.length
-                      ? { borderRadius: 18, border: '1px solid rgba(251,191,36,0.25)', background: 'rgba(251,191,36,0.1)', color: '#fde68a' }
-                      : { borderRadius: 18, border: '1px solid rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.1)', color: '#bbf7d0' }
-                  }
-                >
-                  {issues.length ? issues.join(' | ') : 'Provisioning template complete. This plan is ready for activation mapping.'}
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="p-5" style={styles.surface}>
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/45">PPPoE sample</div>
-                    <div className="mt-3 text-lg font-bold text-white break-all">{buildPppoePreview(form)}</div>
-                  </div>
-                  <div className="p-5" style={styles.surface}>
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/45">Wi-Fi naming</div>
-                    <div className="mt-3 text-lg font-bold text-white">{buildWifiPreview(form)}</div>
+                      {issues.length ? issues.join(' | ') : 'Provisioning template complete. This plan is ready for activation mapping.'}
+                    </div>
                   </div>
                 </div>
 
@@ -615,15 +524,119 @@ export default function ProvisioningPage() {
                     <Save className="h-4 w-4" />
                     Save provisioning template
                   </button>
-                  <button type="button" onClick={() => void handleSaveAndBulkApply()} className="btn-secondary" style={styles.secondaryButton} disabled={isSaving || !bulkTargetPlanIds.length}>
-                    <Copy className="h-4 w-4" />
-                    Save + apply to selected
-                  </button>
                   <button type="button" onClick={() => setForm(toForm(selectedPlan))} className="btn-secondary" style={styles.secondaryButton} disabled={isSaving}>
                     <RefreshCw className="h-4 w-4" />
                     Reset
                   </button>
+                  <button type="button" onClick={() => setShowAdvancedTools((current) => !current)} className="btn-secondary" style={styles.secondaryButton}>
+                    {showAdvancedTools ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {showAdvancedTools ? 'Hide advanced tools' : 'Show advanced tools'}
+                  </button>
                 </div>
+
+                {showAdvancedTools ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      <div className="p-5" style={styles.surface}>
+                        <div className="text-xs uppercase tracking-[0.18em] text-white/45">Default presets</div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {presetTemplates.map((preset) => (
+                            <button key={preset.code} type="button" onClick={() => applyPreset(preset.code)} className="btn-secondary" style={styles.secondaryButton}>
+                              <ShieldCheck className="h-4 w-4" />
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-5" style={styles.surface}>
+                        <div className="text-xs uppercase tracking-[0.18em] text-white/45">Copy from another plan</div>
+                        <div className="mt-4 flex flex-col gap-3 md:flex-row">
+                          <select style={styles.input} value={copySourcePlanId} onChange={(e) => setCopySourcePlanId(e.target.value)}>
+                            <option value="">Select source plan</option>
+                            {plans
+                              .filter((plan) => plan.id !== selectedPlan.id)
+                              .map((plan) => (
+                                <option key={plan.id} value={plan.id}>
+                                  {plan.name} ({plan.planCode || plan.id})
+                                </option>
+                              ))}
+                          </select>
+                          <button type="button" onClick={() => copyTemplateFromPlan(copySourcePlanId)} className="btn-secondary" style={styles.secondaryButton} disabled={!copySourcePlanId}>
+                            <Copy className="h-4 w-4" />
+                            Copy template
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-5" style={styles.surface}>
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.18em] text-white/45">Bulk apply</div>
+                          <div className="mt-2 text-sm text-white/60">Apply current template to multiple target plans.</div>
+                        </div>
+                        <button type="button" onClick={() => void handleBulkApply()} className="btn-secondary" style={styles.secondaryButton} disabled={isSaving || !bulkTargetPlanIds.length}>
+                          <Copy className="h-4 w-4" />
+                          Apply to selected plans
+                        </button>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <select
+                          style={{ ...styles.input, maxWidth: 220 }}
+                          value={bulkCategoryFilter}
+                          onChange={(e) => setBulkCategoryFilter(e.target.value as 'all' | 'home' | 'business' | 'enterprise')}
+                        >
+                          <option value="all">All categories</option>
+                          <option value="home">Home</option>
+                          <option value="business">Business</option>
+                          <option value="enterprise">Enterprise</option>
+                        </select>
+                        <button type="button" onClick={selectAllBulkTargets} className="btn-secondary" style={styles.secondaryButton}>
+                          Select all
+                        </button>
+                        <button type="button" onClick={clearBulkTargets} className="btn-secondary" style={styles.secondaryButton}>
+                          Clear all
+                        </button>
+                        <label className="flex items-center gap-2 px-4 py-3 text-sm text-white/75" style={styles.surface}>
+                          <input type="checkbox" checked={bulkIncompleteOnly} onChange={(e) => setBulkIncompleteOnly(e.target.checked)} />
+                          Only incomplete plans
+                        </label>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {bulkCandidatePlans.map((plan) => {
+                          const checked = bulkTargetPlanIds.includes(plan.id)
+                          return (
+                            <label
+                              key={plan.id}
+                              className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                              style={{
+                                ...styles.surface,
+                                borderColor: checked ? '#8224E3' : 'rgba(255,255,255,0.1)',
+                                background: checked ? 'rgba(130,36,227,0.14)' : 'rgba(255,255,255,0.05)',
+                              }}
+                            >
+                              <div>
+                                <div className="font-medium text-white">{plan.name}</div>
+                                <div className="text-xs text-white/50">{plan.planCode || plan.id}</div>
+                              </div>
+                              <input type="checkbox" checked={checked} onChange={() => toggleBulkTarget(plan.id)} />
+                            </label>
+                          )
+                        })}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <button type="button" onClick={() => void handleSaveAndBulkApply()} className="btn-secondary" style={styles.secondaryButton} disabled={isSaving || !bulkTargetPlanIds.length}>
+                          <Copy className="h-4 w-4" />
+                          Save + apply to selected
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="p-8 text-center text-white/55" style={styles.surface}>
