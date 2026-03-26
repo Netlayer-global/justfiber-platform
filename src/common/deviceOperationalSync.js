@@ -138,9 +138,15 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
   ]);
   const pppoeUsername = firstValue(summary, [
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Username",
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.2.Username",
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username",
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.2.Username",
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANPPPConnection.1.Username",
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1.Username",
     "Device.PPP.Interface.1.Username",
-    "Device.WAN.PPPConnection.1.Username"
+    "Device.PPP.Interface.2.Username",
+    "Device.WAN.PPPConnection.1.Username",
+    "Device.WAN.PPPConnection.2.Username"
   ]);
   const vlanId = firstValue(summary, [
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.X_ALU-COM_VLANIDMark",

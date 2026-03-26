@@ -71,15 +71,27 @@ const BRAND_OVERRIDES = {
   nokia: {
     pppoeUsernamePath: [
       `${IGD_PPP}.Username`,
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.2.Username",
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.2.Username",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANPPPConnection.1.Username",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1.Username",
       `${DEVICE_PPP}.Username`,
-      "Device.WAN.PPPConnection.1.Username"
+      "Device.PPP.Interface.2.Username",
+      "Device.WAN.PPPConnection.1.Username",
+      "Device.WAN.PPPConnection.2.Username"
     ],
     pppoePasswordPath: [
       `${IGD_PPP}.Password`,
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.2.Password",
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.2.Password",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANPPPConnection.1.Password",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1.Password",
       `${DEVICE_PPP}.Password`,
-      "Device.WAN.PPPConnection.1.Password"
+      "Device.PPP.Interface.2.Password",
+      "Device.WAN.PPPConnection.1.Password",
+      "Device.WAN.PPPConnection.2.Password"
     ],
     vlanPath: [
       `${IGD_PPP}.X_ALU_OntWAN.VlanId`,

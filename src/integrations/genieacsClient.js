@@ -88,6 +88,29 @@ function deviceIdVariants(deviceId) {
   return [...variants].filter(Boolean);
 }
 
+function readNodeAtPath(root, path) {
+  const parts = String(path || "").split(".");
+  let current = root;
+  for (const part of parts) {
+    if (current === undefined || current === null || typeof current !== "object") {
+      return undefined;
+    }
+    current = current[part];
+  }
+  return current;
+}
+
+function pathExistsInSummary(summary, path) {
+  return readNodeAtPath(summary, path) !== undefined;
+}
+
+function selectExistingPaths(summary, pathOrPaths) {
+  const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths];
+  if (!summary) return paths.filter(Boolean);
+  const matched = paths.filter((path) => path && pathExistsInSummary(summary, path));
+  return matched.length ? matched : paths.filter(Boolean).slice(0, 1);
+}
+
 async function resolveDeviceIdForWrite(deviceId) {
   for (const variant of deviceIdVariants(deviceId)) {
     const direct = await findDeviceByQuery({ _id: variant });
@@ -259,9 +282,15 @@ export class GenieacsClient {
     wifiPassword5
   }) {
     const profile = resolveProvisioningProfile(brand);
+    let liveSummary = null;
+    try {
+      liveSummary = await this.getRichDeviceSummary({ deviceId });
+    } catch {
+      liveSummary = null;
+    }
     const values = [];
     const push = (pathOrPaths, value, valueType, transform = (input) => input) => {
-      const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths];
+      const paths = selectExistingPaths(liveSummary, pathOrPaths);
       for (const path of paths) {
         if (path && value !== undefined && value !== null && value !== "") {
           const normalizedValue = transform(value);
