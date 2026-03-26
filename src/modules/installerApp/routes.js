@@ -38,6 +38,8 @@ import {
 } from "./schemas.js";
 import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
 import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
+import { renderInstallerOtpSms } from "../../common/installerMessaging.js";
+import { setInstallerDemoOtp } from "../../common/installerOtpStore.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { summarizeGenieDevice } from "../../common/deviceOperationalSync.js";
 
@@ -781,6 +783,7 @@ async function sendOtp(job, purpose) {
   };
   pushTimeline(job, "job.otp_sent", "system", `OTP sent for ${purpose}`);
   await job.save();
+  setInstallerDemoOtp(job._id.toString(), code);
   const booking = await getRelatedBooking(job);
   if (booking) {
     await notifyBookingCustomer(
@@ -792,12 +795,12 @@ async function sendOtp(job, purpose) {
     );
   }
   if (job.customerSnapshot?.phone) {
-    const flowLabel = purpose === "complaint_complete" ? "complaint closure" : "installation completion";
+    const body = await renderInstallerOtpSms(job, purpose, code);
     await notificationDispatcher.dispatchEvent({
       eventKey: "verification_code",
       recipients: { sms: job.customerSnapshot.phone },
       subject: "JustFiber verification code",
-      body: `Your JustFiber OTP for ${flowLabel} is ${code}. It is valid for 10 minutes.`,
+      body,
       entityType: "installer_job",
       entityId: job._id.toString(),
       metadata: {

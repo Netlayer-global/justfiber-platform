@@ -14,6 +14,7 @@ import type {
   ServiceZone,
   DashboardStats,
   CustomerOtpLookup,
+  InstallerMessageTemplates,
   BillingData,
   BillingOverview,
   BillingRun,
@@ -521,8 +522,14 @@ function mapJob(job: any): Job {
     routerPhotoUploaded: Boolean(job.proof?.routerPhotoUrl),
     cablePhotoUploaded: Boolean(job.proof?.cablePhotoUrl),
     completionOtpVerifiedAt: job.otp?.verifiedAt || '',
+    completionOtpDemo: job.adminPreview?.completionOtpDemo || '',
+    completionOtpSmsPreview: job.adminPreview?.completionOtpSmsPreview || '',
     wifiSsid24: job.activation?.preparedCredentials?.wifi?.ssid24 || '',
     wifiSsid5: job.activation?.preparedCredentials?.wifi?.ssid5 || '',
+    wifiPassword: job.activation?.credentials?.wifi?.password || job.activation?.preparedCredentials?.wifi?.password || '',
+    pppoeUsername: job.activation?.credentials?.pppoeUsername || job.activation?.preparedCredentials?.pppoe?.username || '',
+    pppoePassword: job.activation?.credentials?.pppoePassword || job.activation?.preparedCredentials?.pppoe?.password || '',
+    activationSmsPreview: job.adminPreview?.activationSmsPreview || '',
     complaintResolutionCode: job.complaint?.resolutionCode || '',
     complaintResolutionNote: job.complaint?.note || '',
     complaintReplacedDevice: Boolean(job.complaint?.replacedDevice),
@@ -1280,6 +1287,13 @@ export const adminAPI = {
       },
     }
   },
+  getInstallerMessageTemplates: () =>
+    request<{ templates: InstallerMessageTemplates; defaults: InstallerMessageTemplates }>('/api/v1/admin/installer-message-templates'),
+  updateInstallerMessageTemplates: (data: Partial<InstallerMessageTemplates>) =>
+    request<{ templates: InstallerMessageTemplates; saved: boolean }>('/api/v1/admin/installer-message-templates', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
   getInstallerJobs: async (installerId: string) => {
     const res = await request<any[]>(`/api/v1/admin/installers/${installerId}/jobs`)
     return {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import { Customer, Installer, Job } from '@/lib/types'
+import { Customer, Installer, InstallerMessageTemplates, Job } from '@/lib/types'
 import { Calendar, ClipboardList, Loader, RefreshCw, ShieldAlert, Trash2, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -34,6 +34,12 @@ export default function JobsPage() {
   const [reassignInstallerId, setReassignInstallerId] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | Job['status']>('all')
   const [typeFilter, setTypeFilter] = useState<'all' | AssignForm['type']>('all')
+  const [templates, setTemplates] = useState<InstallerMessageTemplates>({
+    activationSms: '',
+    installCompletionOtpSms: '',
+    complaintCompletionOtpSms: '',
+  })
+  const [isSavingTemplates, setIsSavingTemplates] = useState(false)
   const dispatchMetrics: Array<{
     label: string
     value: string
@@ -58,10 +64,11 @@ export default function JobsPage() {
   async function loadData() {
     try {
       setIsLoading(true)
-      const [jobsResponse, installersResponse, customersResponse] = await Promise.all([
+      const [jobsResponse, installersResponse, customersResponse, templatesResponse] = await Promise.all([
         adminAPI.getJobs(),
         adminAPI.getInstallers(),
         adminAPI.getCustomers(1, 100),
+        adminAPI.getInstallerMessageTemplates(),
       ])
 
       if (jobsResponse.success && jobsResponse.data) {
@@ -72,6 +79,9 @@ export default function JobsPage() {
       }
       if (customersResponse.success && customersResponse.data) {
         setCustomers(customersResponse.data.items)
+      }
+      if (templatesResponse.success && templatesResponse.data?.templates) {
+        setTemplates(templatesResponse.data.templates)
       }
     } catch (error) {
       console.error('[v0] Failed to load jobs data:', error)
@@ -176,6 +186,26 @@ export default function JobsPage() {
     }
   }
 
+  async function handleSaveTemplates(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      setIsSavingTemplates(true)
+      const response = await adminAPI.updateInstallerMessageTemplates(templates)
+      if (response.success && response.data?.templates) {
+        setTemplates(response.data.templates)
+        toast.success('Installer SMS templates updated')
+        await loadData()
+      } else {
+        toast.error(response.error || 'Failed to update templates')
+      }
+    } catch (error) {
+      console.error('[v0] Failed to update installer templates:', error)
+      toast.error('Failed to update templates')
+    } finally {
+      setIsSavingTemplates(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -260,6 +290,41 @@ export default function JobsPage() {
             onChange={(e) => setForm({ ...form, complaintNote: e.target.value })}
           />
         ) : null}
+      </form>
+
+      <form onSubmit={handleSaveTemplates} className="card p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Installer SMS Templates</h2>
+          <p className="text-sm text-slate-600 mt-1">
+            Activation aur completion OTP SMS yahan customise karo. Variables:
+            {' {{customerName}} {{pppoeUsername}} {{pppoePassword}} {{wifiSsid}} {{wifiPassword}} {{vlanId}} {{otp}} '}
+          </p>
+        </div>
+        <div className="grid gap-4">
+          <textarea
+            className="input min-h-24 w-full"
+            value={templates.activationSms}
+            onChange={(e) => setTemplates((current) => ({ ...current, activationSms: e.target.value }))}
+            placeholder="Activation SMS template"
+          />
+          <textarea
+            className="input min-h-24 w-full"
+            value={templates.installCompletionOtpSms}
+            onChange={(e) => setTemplates((current) => ({ ...current, installCompletionOtpSms: e.target.value }))}
+            placeholder="Installation completion OTP template"
+          />
+          <textarea
+            className="input min-h-24 w-full"
+            value={templates.complaintCompletionOtpSms}
+            onChange={(e) => setTemplates((current) => ({ ...current, complaintCompletionOtpSms: e.target.value }))}
+            placeholder="Complaint completion OTP template"
+          />
+        </div>
+        <div className="flex justify-end">
+          <button type="submit" className="btn-primary" disabled={isSavingTemplates}>
+            {isSavingTemplates ? 'Saving...' : 'Save Templates'}
+          </button>
+        </div>
       </form>
 
       <div className="card p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -422,6 +487,30 @@ export default function JobsPage() {
                       <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
                         Wi-Fi 5G: {job.wifiSsid5 || '-'}
                       </div>
+                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2 md:col-span-2">
+                        Wi-Fi password: {job.wifiPassword || '-'}
+                      </div>
+                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                        PPPoE user: {job.pppoeUsername || '-'}
+                      </div>
+                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                        PPPoE password: {job.pppoePassword || '-'}
+                      </div>
+                    </div>
+                  ) : null}
+                  {job.activationSmsPreview ? (
+                    <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                      <div className="font-semibold text-white">Activation SMS Preview</div>
+                      <div className="mt-1 whitespace-pre-wrap">{job.activationSmsPreview}</div>
+                    </div>
+                  ) : null}
+                  {(job.completionOtpDemo || job.completionOtpSmsPreview) ? (
+                    <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="font-semibold text-white">Installation OTP Demo</div>
+                        <div className="font-mono text-sm text-[#8224E3]">{job.completionOtpDemo || '-'}</div>
+                      </div>
+                      {job.completionOtpSmsPreview ? <div className="mt-2 whitespace-pre-wrap">{job.completionOtpSmsPreview}</div> : null}
                     </div>
                   ) : null}
                   {(job.oldSerialNumber || job.finalSerialNumber) ? (

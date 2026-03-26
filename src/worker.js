@@ -31,6 +31,7 @@ import { providerAdapters } from "./integrations/providerAdapters.js";
 import { writeAuditLog } from "./common/audit.js";
 import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand, resolveProvisioningProfile } from "./common/networkProvisioning.js";
 import { normalizeInstallerIdentifier } from "./modules/installerApp/routes.js";
+import { renderInstallerActivationSms } from "./common/installerMessaging.js";
 
 await connectMongo();
 await seedSystemData();
@@ -592,6 +593,27 @@ const worker = new Worker(
               pppoePassword: pppoe.password,
               wifiSsid: wifi.ssid24,
               wifiPassword: wifi.password
+            }
+          });
+        }
+        if (jobRecord.customerSnapshot?.phone) {
+          const smsBody = await renderInstallerActivationSms(jobRecord, {
+            pppoeUsername: pppoe.username,
+            pppoePassword: pppoe.password,
+            wifiSsid: wifi.ssid24,
+            wifiPassword: wifi.password,
+            vlanId
+          });
+          await notificationDispatcher.dispatchChannel({
+            category: "sms",
+            recipient: jobRecord.customerSnapshot.phone,
+            subject: "JustFiber activation details",
+            body: smsBody,
+            entityType: "installer_job",
+            entityId: jobRecord._id.toString(),
+            metadata: {
+              eventKey: "installer_activation_sms",
+              customerId: jobRecord.customerId
             }
           });
         }

@@ -431,8 +431,14 @@ export interface Job {
   routerPhotoUploaded?: boolean
   cablePhotoUploaded?: boolean
   completionOtpVerifiedAt?: string
+  completionOtpDemo?: string
+  completionOtpSmsPreview?: string
   wifiSsid24?: string
   wifiSsid5?: string
+  wifiPassword?: string
+  pppoeUsername?: string
+  pppoePassword?: string
+  activationSmsPreview?: string
   complaintResolutionCode?: string
   complaintResolutionNote?: string
   complaintReplacedDevice?: boolean
@@ -470,6 +476,12 @@ export interface CustomerOtpLookup {
   lookup: string
   normalizedKey?: string
   otp: string
+}
+
+export interface InstallerMessageTemplates {
+  activationSms: string
+  installCompletionOtpSms: string
+  complaintCompletionOtpSms: string
 }
 
 export interface BillingData {

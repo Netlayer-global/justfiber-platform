@@ -10,6 +10,14 @@ import { InstallerJob } from "../../models/InstallerJob.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
+import { getInstallerDemoOtp } from "../../common/installerOtpStore.js";
+import {
+  defaultInstallerMessageTemplates,
+  getInstallerMessageTemplates,
+  renderInstallerActivationSms,
+  renderInstallerOtpSms,
+  saveInstallerMessageTemplates
+} from "../../common/installerMessaging.js";
 
 const createInstallerSchema = z.object({
   installerCode: z.string().min(3),
@@ -64,6 +72,12 @@ const reassignJobSchema = z.object({
   note: z.string().optional()
 });
 
+const installerMessageTemplateSchema = z.object({
+  activationSms: z.string().min(10).optional(),
+  installCompletionOtpSms: z.string().min(10).optional(),
+  complaintCompletionOtpSms: z.string().min(10).optional()
+});
+
 const activeJobStatuses = [
   "assigned",
   "accepted",
@@ -74,6 +88,21 @@ const activeJobStatuses = [
   "active",
   "complaint_in_progress"
 ];
+
+async function enrichInstallerJob(job) {
+  const activationSmsPreview = await renderInstallerActivationSms(job);
+  const demoOtp = getInstallerDemoOtp(job?._id?.toString?.() || "");
+  const purpose = job?.type === "complaint" ? "complaint_complete" : "install_complete";
+  const otpSmsPreview = await renderInstallerOtpSms(job, purpose, demoOtp || "123456");
+  return {
+    ...job,
+    adminPreview: {
+      activationSmsPreview,
+      completionOtpDemo: demoOtp,
+      completionOtpSmsPreview: otpSmsPreview
+    }
+  };
+}
 
 export const adminInstallersRouter = Router();
 
@@ -206,7 +235,8 @@ adminInstallersRouter.get(
       InstallerJob.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       InstallerJob.countDocuments(filter)
     ]);
-    return ok(res, items, { page, limit, total });
+    const enriched = await Promise.all(items.map(enrichInstallerJob));
+    return ok(res, enriched, { page, limit, total });
   })
 );
 
@@ -215,7 +245,30 @@ adminInstallersRouter.get(
   requirePermission(permissions.installerJobRead),
   asyncHandler(async (req, res) => {
     const jobs = await InstallerJob.find({ installerId: req.params.installerId }).sort({ createdAt: -1 }).limit(100).lean();
-    return ok(res, jobs);
+    const enriched = await Promise.all(jobs.map(enrichInstallerJob));
+    return ok(res, enriched);
+  })
+);
+
+adminInstallersRouter.get(
+  "/installer-message-templates",
+  requirePermission(permissions.installerJobRead),
+  asyncHandler(async (_req, res) => {
+    const templates = await getInstallerMessageTemplates();
+    return ok(res, {
+      templates,
+      defaults: defaultInstallerMessageTemplates
+    });
+  })
+);
+
+adminInstallersRouter.patch(
+  "/installer-message-templates",
+  requirePermission(permissions.installerJobManage),
+  asyncHandler(async (req, res) => {
+    const payload = installerMessageTemplateSchema.parse(req.body || {});
+    const templates = await saveInstallerMessageTemplates(payload, req.admin._id);
+    return ok(res, { templates, saved: true });
   })
 );
 
