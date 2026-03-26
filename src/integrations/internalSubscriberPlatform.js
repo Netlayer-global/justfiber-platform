@@ -89,7 +89,8 @@ async function pickBillingProfile() {
 }
 
 function resolveCustomerType(plan) {
-  return plan?.category === "business" || plan?.category === "enterprise" ? "business" : "home";
+  const category = plan?.category || plan?.planCategory;
+  return category === "business" || category === "enterprise" ? "business" : "home";
 }
 
 function resolveBillModeForPlan({ billingProfile, plan }) {
@@ -294,9 +295,19 @@ export class InternalSubscriberPlatform {
     const billingProfile = subscriberService?.billingProfileCode
       ? await BillingProfile.findOne({ code: subscriberService.billingProfileCode, active: true }).lean()
       : await pickBillingProfile();
-    const customerType = resolveCustomerType({ category: installerJob.customerSnapshot?.category || (booking?.selectedPlan?.category) });
-    const billMode = resolveBillModeForPlan({ billingProfile, plan: { category: customerType } });
+    const snapshotCategory =
+      installerJob.customerSnapshot?.planCategory ||
+      installerJob.customerSnapshot?.category ||
+      booking?.selectedPlan?.planCategory ||
+      booking?.selectedPlan?.category;
+    const customerType = resolveCustomerType({ category: snapshotCategory });
+    const billMode = resolveBillModeForPlan({ billingProfile, plan: { category: snapshotCategory } });
     const networkProfile = normalizePlanNetworkProfile(installerJob.customerSnapshot);
+    const billingAmount =
+      Number(installerJob.customerSnapshot?.recurringAmount || 0) ||
+      Number(installerJob.customerSnapshot?.monthlyPrice || 0) ||
+      Number(installerJob.customerSnapshot?.totalAmount || 0) ||
+      0;
 
     const customer = await Customer.findOneAndUpdate(
       { customerId: identifiers.customerId },
@@ -309,10 +320,10 @@ export class InternalSubscriberPlatform {
           expiryAt: addDays(new Date(), 30),
           customerType,
           billingSnapshot: {
-            lastInvoiceAmount: installerJob.customerSnapshot?.monthlyPrice || installerJob.customerSnapshot?.totalAmount || 0,
+            lastInvoiceAmount: billingAmount,
             currency: "INR",
             lastPaymentStatus: booking?.payment?.status === "paid" ? "paid" : "pending",
-            dueAmount: booking?.payment?.status === "paid" ? 0 : installerJob.customerSnapshot?.monthlyPrice || 0,
+            dueAmount: booking?.payment?.status === "paid" ? 0 : billingAmount,
             remainingDays: 30,
             speedMbps: networkProfile.speedMbps,
             uploadSpeedMbps: networkProfile.uploadSpeedMbps,
@@ -375,7 +386,7 @@ export class InternalSubscriberPlatform {
         subscriberService.toObject ? subscriberService.toObject() : subscriberService,
         {
           billCycle: buildBillCycle(),
-          totalAmount: installerJob.customerSnapshot?.monthlyPrice || installerJob.customerSnapshot?.totalAmount || 0,
+          totalAmount: billingAmount,
           paymentStatus: booking?.payment?.status === "paid" ? "paid" : "pending",
           sourceEvent: "activation"
         }
