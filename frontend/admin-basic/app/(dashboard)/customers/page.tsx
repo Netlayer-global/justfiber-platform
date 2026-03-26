@@ -14,6 +14,13 @@ export default function CustomersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [createdSummary, setCreatedSummary] = useState<{
+    name: string
+    customerId?: string
+    serviceId?: string
+    pppoeUsername?: string
+    pppoePassword?: string
+  } | null>(null)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [planCode, setPlanCode] = useState('')
@@ -118,7 +125,14 @@ export default function CustomersPage() {
         toast.error(res.error || 'Failed to create customer')
         return
       }
-      toast.success(`Created ${res.data.name}`)
+      setCreatedSummary({
+        name: res.data.name,
+        customerId: res.data.customerId || res.data.id,
+        serviceId: res.data.serviceId,
+        pppoeUsername: res.data.pppoeUsername || res.data.radiusService?.radiusUsername || '',
+        pppoePassword: createForm.radiusPassword.trim(),
+      })
+      toast.success(`Created ${res.data.name} | PPPoE ${res.data.pppoeUsername || res.data.radiusService?.radiusUsername || ''}`)
       setIsCreateOpen(false)
       setCreateForm((current) => ({
         ...current,
@@ -254,6 +268,31 @@ export default function CustomersPage() {
           Refresh
         </button>
       </div>
+
+      {createdSummary ? (
+        <div className="rounded-[28px] border border-[#8224E3]/30 bg-[#120d25] px-5 py-5 text-white">
+          <div className="text-xs uppercase tracking-[0.18em] text-white/45">Last created subscriber</div>
+          <div className="mt-3 text-2xl font-black tracking-[-0.03em]">{createdSummary.name}</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <div className="rounded-[20px] bg-white/5 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">Customer ID</div>
+              <div className="mt-2 font-semibold">{createdSummary.customerId || '-'}</div>
+            </div>
+            <div className="rounded-[20px] bg-white/5 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">Service ID</div>
+              <div className="mt-2 font-semibold">{createdSummary.serviceId || '-'}</div>
+            </div>
+            <div className="rounded-[20px] bg-white/5 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">PPPoE Username</div>
+              <div className="mt-2 font-semibold">{createdSummary.pppoeUsername || '-'}</div>
+            </div>
+            <div className="rounded-[20px] bg-white/5 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">PPPoE Password</div>
+              <div className="mt-2 font-semibold">{createdSummary.pppoePassword || '-'}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <form onSubmit={handleSearch} className="card p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
         <div className="xl:col-span-2">
