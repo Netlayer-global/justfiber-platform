@@ -104,6 +104,7 @@ export default function ProvisioningPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [query, setQuery] = useState('')
   const [copySourcePlanId, setCopySourcePlanId] = useState('')
+  const [bulkTargetPlanIds, setBulkTargetPlanIds] = useState<string[]>([])
 
   useEffect(() => {
     void loadPlans()
@@ -167,6 +168,14 @@ export default function ProvisioningPage() {
     toast.success(`Copied provisioning template from ${sourcePlan.name}`)
   }
 
+  function toggleBulkTarget(planId: string) {
+    setBulkTargetPlanIds((current) =>
+      current.includes(planId)
+        ? current.filter((item) => item !== planId)
+        : [...current, planId]
+    )
+  }
+
   async function handleSave() {
     if (!selectedPlan) return
     try {
@@ -191,6 +200,45 @@ export default function ProvisioningPage() {
     } catch (error) {
       console.error('[provisioning] Failed to save template:', error)
       toast.error('Failed to save provisioning template')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleBulkApply() {
+    if (!bulkTargetPlanIds.length) {
+      toast.error('Select target plans first')
+      return
+    }
+    try {
+      setIsSaving(true)
+      const targets = plans.filter((plan) => bulkTargetPlanIds.includes(plan.id))
+      const results = await Promise.all(
+        targets.map((plan) =>
+          adminAPI.updatePlan(plan.planCode || plan.id, {
+            ...plan,
+            provisioning: {
+              accessProfileCode: form.accessProfileCode.trim(),
+              vlanId: Number(form.vlanId || 0),
+              pppoePrefix: form.pppoePrefix.trim(),
+              pppoeRealm: form.pppoeRealm.trim(),
+              defaultPppoePassword: form.defaultPppoePassword.trim(),
+              wifiNamePrefix: form.wifiNamePrefix.trim(),
+            },
+          })
+        )
+      )
+      const failed = results.find((result) => !result.success)
+      if (failed) {
+        toast.error(failed.error || 'Failed to bulk apply template')
+        return
+      }
+      toast.success(`Provisioning template applied to ${targets.length} plan(s)`)
+      setBulkTargetPlanIds([])
+      await loadPlans()
+    } catch (error) {
+      console.error('[provisioning] Failed to bulk apply template:', error)
+      toast.error('Failed to bulk apply template')
     } finally {
       setIsSaving(false)
     }
@@ -347,6 +395,50 @@ export default function ProvisioningPage() {
                         Copy template
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[22px] border border-white/10 bg-white/5 p-5">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-white/45">Bulk apply</div>
+                      <div className="mt-2 text-sm text-white/60">
+                        Apply current provisioning template to multiple target plans in one go.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleBulkApply()}
+                      className="btn-secondary inline-flex items-center gap-2"
+                      disabled={isSaving || !bulkTargetPlanIds.length}
+                    >
+                      <Copy className="h-4 w-4" />
+                      Apply to selected plans
+                    </button>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    {plans
+                      .filter((plan) => plan.id !== selectedPlan?.id)
+                      .map((plan) => (
+                        <label
+                          key={plan.id}
+                          className={`flex items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-sm transition ${
+                            bulkTargetPlanIds.includes(plan.id)
+                              ? 'border-[#8224E3] bg-white/10 text-white'
+                              : 'border-white/10 bg-white/5 text-white/75'
+                          }`}
+                        >
+                          <div>
+                            <div className="font-medium">{plan.name}</div>
+                            <div className="text-xs text-white/50">{plan.planCode || plan.id}</div>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={bulkTargetPlanIds.includes(plan.id)}
+                            onChange={() => toggleBulkTarget(plan.id)}
+                          />
+                        </label>
+                      ))}
                   </div>
                 </div>
 
