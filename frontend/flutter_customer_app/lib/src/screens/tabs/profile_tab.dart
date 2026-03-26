@@ -22,6 +22,11 @@ class ProfileTab extends StatelessWidget {
         break;
       }
     }
+    final billingCycleLabel = billing.billCycle.isEmpty ? '-' : billing.billCycle;
+    final nextBillDateLabel = billing.nextBillDate.isEmpty ? 'Will update after activation' : billing.nextBillDate;
+    final recurringAmountLabel = billing.lastPaymentAmount > 0
+        ? 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'
+        : 'Rs ${billing.dueAmount.toStringAsFixed(0)}';
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -193,6 +198,60 @@ class ProfileTab extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 10),
                   child: Text(appState.error!, style: const TextStyle(color: Color(0xFFD81F26), fontWeight: FontWeight.w700)),
                 ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        _sectionCard(
+          title: 'Tenure and billing cycle',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F4FF),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0x228224E3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Commercial tenure snapshot',
+                            style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFFFF),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: const Color(0x228224E3)),
+                          ),
+                          child: Text(
+                            billingCycleLabel,
+                            style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Your active connection follows this billing tenure and recurring commercial cycle.',
+                      style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                    ),
+                    const SizedBox(height: 14),
+                    _row('Recurring amount', recurringAmountLabel),
+                    _row('Next bill / expiry', nextBillDateLabel),
+                    _row('Cycle label', billingCycleLabel),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
