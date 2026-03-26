@@ -695,7 +695,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                   },
                             child: Text(_busy ? 'Working...' : 'Activate'),
                           ),
-                          if (configStatus == 'failed' || status == 'failed')
+                          if (canRetry)
                             OutlinedButton(
                               onPressed: _busy || !canRetry
                                   ? null
@@ -703,7 +703,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         () => _appState.api.retryActivation(
                                           _appState.session!,
                                           widget.job.id,
-                                          note: 'Retry from installer app after config failure',
+                                          note: 'Retry from installer app after partial or failed activation',
                                         ),
                                         'Retry requested',
                                       ),
@@ -1838,7 +1838,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         },
                                 child: const Text('Activate'),
                               ),
-                              if (configStatus == 'failed' || status == 'failed')
+                              if (canRetry)
                                 OutlinedButton(
                                   onPressed: _busy || !canRetry
                                       ? null
@@ -1846,7 +1846,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                             () => _appState.api.retryActivation(
                                               _appState.session!,
                                               widget.job.id,
-                                              note: 'Retry from installer app after config failure',
+                                              note: 'Retry from installer app after partial or failed activation',
                                             ),
                                             'Retry requested',
                                           ),
@@ -2305,7 +2305,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   bool _canActivate(String status) => ['onsite', 'ont_scanned', 'failed'].contains(status);
 
-  bool _canRetry(String status, String configStatus) => status == 'failed' || configStatus == 'failed';
+  bool _canRetry(String status, String configStatus) {
+    if (status == 'failed') return true;
+    return ['failed', 'pushed', 'retried'].contains(configStatus);
+  }
 
   bool _canStartComplaint(String status) => ['assigned', 'accepted', 'enroute', 'onsite'].contains(status);
 
@@ -2388,7 +2391,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (canAccept) return 'Accept job';
     if (canStartTravel) return 'Start travel';
     if (canStartOnsite) return 'Mark onsite';
-    if (canRetry && status == 'failed') return 'Retry config';
+    if (canRetry) return 'Retry config';
     if (canActivate) return 'Run activation';
     if (canSubmitProof) return 'Submit proof';
     if (canSendInstallOtp) return 'Send OTP';
@@ -2578,12 +2581,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }, 'Onsite started');
       return;
     }
-    if (_canRetry(status, configStatus) && status == 'failed') {
+    if (_canRetry(status, configStatus)) {
       await _run(
         () => _appState.api.retryActivation(
           _appState.session!,
           widget.job.id,
-          note: 'Retry from installer app after config failure',
+          note: 'Retry from installer app after partial or failed activation',
         ),
         'Retry requested',
       );
