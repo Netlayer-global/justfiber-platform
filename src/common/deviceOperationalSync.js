@@ -83,6 +83,10 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.X_ZTE-COM_WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.X_HW_WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RXPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.RXPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.RxPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalRxPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.RxOpticalPower",
     "InternetGatewayDevice.FAP.Tunnel.1.Stats.RXPower",
     "VirtualParameters.RXPower",
     "VirtualParameters.OpticalRxPower"
@@ -96,6 +100,10 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.X_ZTE-COM_WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.X_HW_WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TXPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.TXPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.TxPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalTxPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.TxOpticalPower",
     "InternetGatewayDevice.FAP.Tunnel.1.Stats.TXPower",
     "VirtualParameters.TXPower",
     "VirtualParameters.OpticalTxPower"
