@@ -120,6 +120,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSyncingFleet, setIsSyncingFleet] = useState(false)
   const [isRefreshingDevice, setIsRefreshingDevice] = useState(false)
@@ -248,6 +249,69 @@ export default function DevicesPage() {
     }
   }
 
+  function toggleBulkSelection(deviceId: string) {
+    setSelectedDeviceIds((current) =>
+      current.includes(deviceId) ? current.filter((item) => item !== deviceId) : [...current, deviceId]
+    )
+  }
+
+  function selectFilteredDevices() {
+    setSelectedDeviceIds(filteredDevices.map((device) => device.id))
+  }
+
+  function clearBulkSelection() {
+    setSelectedDeviceIds([])
+  }
+
+  async function runBulkPreset(presetName: PresetName) {
+    if (!selectedDeviceIds.length) {
+      toast.error('Select devices first')
+      return
+    }
+    try {
+      setIsRunningAction(true)
+      const results = await Promise.all(
+        selectedDeviceIds.map((deviceId) => adminAPI.applyDevicePreset(deviceId, presetName))
+      )
+      const failed = results.filter((item) => !item.success).length
+      toast.success(
+        failed
+          ? `${selectedDeviceIds.length - failed}/${selectedDeviceIds.length} preset actions queued`
+          : `${selectedDeviceIds.length} preset actions queued`
+      )
+      await loadDevices(selectedDeviceId)
+    } catch (error) {
+      console.error('[devices] Bulk preset action failed:', error)
+      toast.error('Bulk preset action failed')
+    } finally {
+      setIsRunningAction(false)
+    }
+  }
+
+  async function rebootSelectedDevices() {
+    if (!selectedDeviceIds.length) {
+      toast.error('Select devices first')
+      return
+    }
+    try {
+      setIsRunningAction(true)
+      const results = await Promise.all(
+        selectedDeviceIds.map((deviceId) => adminAPI.rebootDevice(deviceId, 'Bulk reboot from devices console'))
+      )
+      const failed = results.filter((item) => !item.success).length
+      toast.success(
+        failed
+          ? `${selectedDeviceIds.length - failed}/${selectedDeviceIds.length} reboot requests sent`
+          : `${selectedDeviceIds.length} reboot requests sent`
+      )
+    } catch (error) {
+      console.error('[devices] Bulk reboot failed:', error)
+      toast.error('Bulk reboot failed')
+    } finally {
+      setIsRunningAction(false)
+    }
+  }
+
   const filteredDevices = useMemo(() => {
     return devices.filter((device) => {
       const haystack = [
@@ -302,6 +366,8 @@ export default function DevicesPage() {
   const offlineCount = devices.filter((device) => device.status === 'offline').length
   const mappedCount = devices.filter((device) => device.customerId && device.serviceId).length
   const actionCount = devices.filter((device) => buildAttentionItems(device).length > 0).length
+  const suspendCount = devices.filter((device) => String(device.provisioningState || '').toUpperCase().includes('SUSPEND')).length
+  const opticalRiskCount = devices.filter((device) => summarizeOptical(device.opticalInfo) !== 'Healthy line').length
   const selectedClients = normalizeLanClients(selectedDevice?.lanInfo)
   const selectedAttention = selectedDevice ? buildAttentionItems(selectedDevice) : []
   const latestFleetSync = devices
@@ -413,6 +479,63 @@ export default function DevicesPage() {
         </div>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="metric-tile p-5">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-black/40">Selected devices</div>
+          <div className="mt-3 text-3xl font-black">{selectedDeviceIds.length}</div>
+          <div className="mt-2 text-sm text-black/55">Ready for bulk actions</div>
+        </div>
+        <div className="metric-tile p-5">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-black/40">Suspended state</div>
+          <div className="mt-3 text-3xl font-black">{suspendCount}</div>
+          <div className="mt-2 text-sm text-black/55">Devices carrying suspend provisioning</div>
+        </div>
+        <div className="metric-tile p-5">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-black/40">Optical risk</div>
+          <div className="mt-3 text-3xl font-black">{opticalRiskCount}</div>
+          <div className="mt-2 text-sm text-black/55">Weak or missing optical signal samples</div>
+        </div>
+        <div className="metric-tile p-5">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-black/40">Live search scope</div>
+          <div className="mt-3 text-3xl font-black">{filteredDevices.length}</div>
+          <div className="mt-2 text-sm text-black/55">Devices currently visible in this filter</div>
+        </div>
+      </div>
+
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-[0.22em] text-white/45">Bulk device actions</div>
+            <div className="mt-2 text-2xl font-bold text-white">Operate on selected live devices</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-secondary" onClick={selectFilteredDevices}>
+              Select visible
+            </button>
+            <button type="button" className="btn-secondary" onClick={clearBulkSelection}>
+              Clear selection
+            </button>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <button type="button" className="btn-primary" disabled={isRunningAction} onClick={() => void runBulkPreset('SERVICE_PREPARE')}>
+            Bulk prepare
+          </button>
+          <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void runBulkPreset('SERVICE_ACTIVATE')}>
+            Bulk activate
+          </button>
+          <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void runBulkPreset('SERVICE_SUSPEND')}>
+            Bulk suspend
+          </button>
+          <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void runBulkPreset('SERVICE_RESUME')}>
+            Bulk resume
+          </button>
+          <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void rebootSelectedDevices()}>
+            Bulk reboot
+          </button>
+        </div>
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="card p-5 space-y-4">
           <div className="flex items-center justify-between gap-3">
@@ -429,16 +552,31 @@ export default function DevicesPage() {
             {filteredDevices.map((device) => {
               const attentionCount = buildAttentionItems(device).length
               return (
-                <button
+                <div
                   key={device.id}
-                  type="button"
-                  onClick={() => setSelectedDeviceId(device.id)}
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
+                  className={`w-full rounded-2xl border p-4 transition ${
                     selectedDevice?.id === device.id
                       ? 'border-[#8224E3] bg-[#F8F4FF]'
                       : 'border-slate-200 bg-white hover:border-[#8224E3]/40 hover:bg-[#FCFAFF]'
                   }`}
                 >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={selectedDeviceIds.includes(device.id)}
+                        onChange={() => toggleBulkSelection(device.id)}
+                      />
+                      Select
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDeviceId(device.id)}
+                      className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white"
+                    >
+                      Inspect
+                    </button>
+                  </div>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-base font-semibold text-slate-900">{formatValue(device.deviceId || device.name)}</p>
@@ -470,7 +608,7 @@ export default function DevicesPage() {
                     <div>RX {formatPower(device.opticalInfo?.rxPower)}</div>
                     <div>Last sync {formatDateTime(device.updatedAt)}</div>
                   </div>
-                </button>
+                </div>
               )
             })}
 
