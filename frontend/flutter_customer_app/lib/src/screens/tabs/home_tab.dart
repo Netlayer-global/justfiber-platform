@@ -37,6 +37,8 @@ class HomeTab extends StatelessWidget {
     final double usagePercent = usageCapGb > 0 ? (usageGb / usageCapGb).clamp(0.0, 1.0).toDouble() : 0.0;
     final hasUsagePressure = billing.usageCapReached || (usageCapGb > 0 && usagePercent >= 0.65);
     final showUpgradePrompt = hasService && hasUsagePressure;
+    final billingCycleLabel = billing.billCycle.isNotEmpty ? billing.billCycle : 'Monthly';
+    final nextBillDateLabel = billing.nextBillDate.isNotEmpty ? billing.nextBillDate : 'Will update after activation';
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -298,6 +300,61 @@ class HomeTab extends StatelessWidget {
                   Expanded(child: _summaryBox('Wi-Fi name', wifiName)),
                 ],
               ),
+              if (hasService) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0x228224E3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Tenure and billing cycle',
+                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313)),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color(0x148224E3),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: const Color(0x448224E3)),
+                            ),
+                            child: Text(
+                              billingCycleLabel,
+                              style: const TextStyle(
+                                color: Color(0xFF8224E3),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Your connection tenure, recurring cycle, and current payment baseline for this service.',
+                        style: TextStyle(color: Color(0xFF9CA3AF), height: 1.4),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(child: _summaryBox('Recurring due', 'Rs ${billing.lastPaymentAmount > 0 ? billing.lastPaymentAmount.toStringAsFixed(0) : billing.dueAmount.toStringAsFixed(0)}')),
+                          const SizedBox(width: 10),
+                          Expanded(child: _summaryBox('Next bill / expiry', nextBillDateLabel)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (usageCapGb > 0 || billing.dataPolicy != 'unlimited') ...[
                 const SizedBox(height: 16),
                 Container(
