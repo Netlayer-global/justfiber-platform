@@ -1817,7 +1817,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           _row('Current stage', status.replaceAll('_', ' ')),
                           _row('Config status', configStatus),
                           _row('PPPoE', pppoeUsername),
-                          _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? prepared['vlanId'] ?? '-').toString()),
+                          _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? activation['preparedCredentials']?['vlanId'] ?? '-').toString()),
                           _row('Wi-Fi 2.4G', wifiSsid24),
                           _row('Wi-Fi 5G', wifiSsid5),
                           Wrap(
