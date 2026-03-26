@@ -176,6 +176,39 @@ async function resolveJobDevice(job) {
         updatedAt: new Date()
       };
     }
+
+    if (finalSerialNumber) {
+      const liveDevices = await genieacsClient.listDevices(500);
+      const matchedDevice = Array.isArray(liveDevices)
+        ? liveDevices.find((item) => {
+            const itemId = normalizeIdentifier(item?._id || item?.DeviceID?.ID);
+            const itemSerial = normalizeIdentifier(
+              item?.DeviceID?.SerialNumber ||
+                item?.InternetGatewayDevice?.DeviceInfo?.SerialNumber
+            );
+            return (
+              itemSerial === finalSerialNumber ||
+              (itemId && itemId.endsWith(finalSerialNumber))
+            );
+          })
+        : null;
+
+      if (matchedDevice) {
+        const fallbackDeviceId = normalizeIdentifier(matchedDevice._id || matchedDevice?.DeviceID?.ID);
+        const richMatched = await genieacsClient.getRichDeviceSummary({
+          deviceId: fallbackDeviceId,
+          serialNumber: finalSerialNumber
+        });
+        const parsed = summarizeGenieDevice(richMatched || matchedDevice, fallbackDeviceId);
+        return {
+          ...parsed,
+          customerId: job.customerId,
+          serviceId: job.serviceId,
+          provisioningState: "live_only",
+          updatedAt: new Date()
+        };
+      }
+    }
   } catch (error) {
     console.error("[installer] Live Genie lookup failed:", error);
   }
