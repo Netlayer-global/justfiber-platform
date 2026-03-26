@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { BngNode } from '@/lib/types'
+import type { BngNode, BngNodeTestResult } from '@/lib/types'
 import { Loader2, Plus, RefreshCw, Router, Save, ShieldCheck, Trash2, Wifi } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -97,6 +97,8 @@ export default function RoutersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testResult, setTestResult] = useState<BngNodeTestResult | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   useEffect(() => {
@@ -150,12 +152,14 @@ export default function RoutersPage() {
   function handleSelect(router: BngNode) {
     setSelectedId(router.id)
     setForm(toForm(router))
+    setTestResult(null)
     setIsDrawerOpen(false)
   }
 
   function handleNew() {
     setSelectedId(null)
     setForm(initialForm)
+    setTestResult(null)
     setIsDrawerOpen(true)
   }
 
@@ -195,6 +199,7 @@ export default function RoutersPage() {
       }
       toast.success(selectedId ? 'Router updated' : 'Router added')
       await loadRouters(res.data.id)
+      setTestResult(null)
       setIsDrawerOpen(false)
     } catch (error) {
       console.error('[v0] Failed to save router:', error)
@@ -221,12 +226,37 @@ export default function RoutersPage() {
       toast.success('Router deleted')
       setSelectedId(null)
       setForm(initialForm)
+      setTestResult(null)
       await loadRouters()
     } catch (error) {
       console.error('[v0] Failed to delete router:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to delete router')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  async function handleTestSelected() {
+    if (!selectedRouter?.nodeCode) {
+      return
+    }
+    setIsTesting(true)
+    try {
+      const res = await adminAPI.testBngNode(selectedRouter.nodeCode)
+      if (!res.success || !res.data) {
+        throw new Error(res.error || 'Failed to test router')
+      }
+      setTestResult(res.data)
+      if (res.data.checks.coa.ok || res.data.checks.api.ok) {
+        toast.success('Router test completed')
+      } else {
+        toast.error('Router test failed')
+      }
+    } catch (error) {
+      console.error('[v0] Failed to test router:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to test router')
+    } finally {
+      setIsTesting(false)
     }
   }
 
@@ -393,6 +423,12 @@ export default function RoutersPage() {
                 New router
               </button>
               {selectedRouter ? (
+                <button type="button" className="btn-secondary" disabled={isTesting} onClick={() => void handleTestSelected()}>
+                  {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                  Test router
+                </button>
+              ) : null}
+              {selectedRouter ? (
                 <button type="button" className="btn-secondary border-red-500/30 text-red-200 hover:bg-red-500/10" disabled={isDeleting} onClick={() => void handleDeleteSelected()}>
                   {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   Delete router
@@ -411,6 +447,41 @@ export default function RoutersPage() {
               <p>RouterOS username/password aur API port future direct ops ke liye store honge. Abhi session control `radclient` CoA path use karta hai.</p>
             </div>
           </div>
+
+          {testResult ? (
+            <div className="rounded-[30px] border border-white/10 bg-black/35 p-5">
+              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Last test result</div>
+              <div className="mt-2 text-2xl font-black">Connectivity checks</div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-semibold text-white">COA</div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.coa.ok ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-200'}`}>
+                      {testResult.checks.coa.ok ? 'reachable' : 'failed'}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-2 text-sm text-white/70">
+                    <div className="flex items-center justify-between gap-3"><span>Host</span><span>{testResult.checks.coa.host || '-'}</span></div>
+                    <div className="flex items-center justify-between gap-3"><span>Port</span><span>{testResult.checks.coa.port}</span></div>
+                    <div className="flex items-center justify-between gap-3"><span>Reason</span><span>{testResult.checks.coa.reason || 'ok'}</span></div>
+                  </div>
+                </div>
+                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-semibold text-white">Router API</div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.api.ok ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-200'}`}>
+                      {testResult.checks.api.ok ? 'reachable' : 'failed'}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-2 text-sm text-white/70">
+                    <div className="flex items-center justify-between gap-3"><span>Host</span><span>{testResult.checks.api.host || '-'}</span></div>
+                    <div className="flex items-center justify-between gap-3"><span>Port</span><span>{testResult.checks.api.port}</span></div>
+                    <div className="flex items-center justify-between gap-3"><span>Reason</span><span>{testResult.checks.api.reason || 'ok'}</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 

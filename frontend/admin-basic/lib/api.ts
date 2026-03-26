@@ -5,6 +5,7 @@ import type {
   Customer,
   Device,
   BngNode,
+  BngNodeTestResult,
   Ticket,
   Installer,
   Job,
@@ -1110,6 +1111,10 @@ export const adminAPI = {
   deleteBngNode: (nodeCode: string) =>
     request<{ deleted: boolean; nodeCode: string }>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}`, {
       method: 'DELETE',
+    }),
+  testBngNode: (nodeCode: string) =>
+    request<BngNodeTestResult>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/test`, {
+      method: 'POST',
     }),
 
   // Tickets

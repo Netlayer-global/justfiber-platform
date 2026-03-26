@@ -1,4 +1,5 @@
 import { Router } from "express";
+import net from "node:net";
 import { z } from "zod";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
@@ -121,6 +122,28 @@ const bngNodeSchema = z.object({
   wwwPort: z.number().int().positive().optional(),
   notes: z.string().optional()
 });
+
+function testTcpPort(host, port, timeoutMs = 3000) {
+  return new Promise((resolve) => {
+    if (!host || !port) {
+      resolve({ ok: false, reason: "missing_host_or_port" });
+      return;
+    }
+    const socket = new net.Socket();
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(result);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once("connect", () => finish({ ok: true }));
+    socket.once("timeout", () => finish({ ok: false, reason: "timeout" }));
+    socket.once("error", (error) => finish({ ok: false, reason: error?.message || "connect_error" }));
+    socket.connect(port, host);
+  });
+}
 
 const subscriberServiceSchema = z.object({
   serviceId: z.string().min(2),
@@ -450,6 +473,50 @@ platformFoundationRouter.delete(
     }
     await BngNode.deleteOne({ nodeCode });
     return ok(res, { deleted: true, nodeCode });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/bng-nodes/:nodeCode/test",
+  requirePermission(permissions.configRead),
+  asyncHandler(async (req, res) => {
+    const nodeCode = String(req.params.nodeCode || "").trim();
+    const node = await BngNode.findOne({ nodeCode }).lean();
+    if (!node) {
+      throw new Error("BNG node not found");
+    }
+
+    const coaHost = String(node.coaHost || node.managementIp || "").trim();
+    const coaPort = Number(node.coaPort || 3799);
+    const apiHost = String(node.managementIp || "").trim();
+    const apiPort = Number(node.apiPort || 8728);
+
+    const [coa, api] = await Promise.all([
+      node.useCoa === false
+        ? Promise.resolve({ ok: false, reason: "disabled" })
+        : testTcpPort(coaHost, coaPort),
+      testTcpPort(apiHost, apiPort)
+    ]);
+
+    return ok(res, {
+      nodeCode: node.nodeCode,
+      displayName: node.displayName,
+      vendor: node.vendor,
+      status: node.status,
+      checks: {
+        coa: {
+          enabled: node.useCoa !== false,
+          host: coaHost || null,
+          port: coaPort,
+          ...coa
+        },
+        api: {
+          host: apiHost || null,
+          port: apiPort,
+          ...api
+        }
+      }
+    });
   })
 );
 

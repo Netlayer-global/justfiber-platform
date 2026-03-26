@@ -207,6 +207,28 @@ export interface BngNode {
   updatedAt?: string
 }
 
+export interface BngNodeTestResult {
+  nodeCode: string
+  displayName: string
+  vendor: 'mikrotik' | 'juniper' | 'huawei' | 'other'
+  status: 'active' | 'planned' | 'disabled'
+  checks: {
+    coa: {
+      enabled: boolean
+      host?: string | null
+      port: number
+      ok: boolean
+      reason?: string
+    }
+    api: {
+      host?: string | null
+      port: number
+      ok: boolean
+      reason?: string
+    }
+  }
+}
+
 export interface CustomerDevice {
   id: string
   deviceId: string
