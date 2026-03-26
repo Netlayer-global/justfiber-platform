@@ -399,6 +399,20 @@ export class GenieacsClient {
     const dynamicPass24Paths = discoverDynamicConfigPaths(liveSummary, "pass24");
     const dynamicSsid5Paths = discoverDynamicConfigPaths(liveSummary, "ssid5");
     const dynamicPass5Paths = discoverDynamicConfigPaths(liveSummary, "pass5");
+    const normalizedSsid24 = typeof ssid24 === "string" ? ssid24.trim() : ssid24;
+    const normalizedSsid5 = typeof ssid5 === "string" ? ssid5.trim() : ssid5;
+    const normalizedPass24 = typeof (wifiPassword24 ?? wifiPassword) === "string"
+      ? (wifiPassword24 ?? wifiPassword).trim()
+      : (wifiPassword24 ?? wifiPassword);
+    const normalizedPass5 = typeof (wifiPassword5 ?? wifiPassword24 ?? wifiPassword) === "string"
+      ? (wifiPassword5 ?? wifiPassword24 ?? wifiPassword).trim()
+      : (wifiPassword5 ?? wifiPassword24 ?? wifiPassword);
+    const unifyWifiAliases =
+      String(brand || "").toLowerCase() === "nokia" &&
+      normalizedSsid24 &&
+      normalizedSsid24 === normalizedSsid5 &&
+      normalizedPass24 &&
+      normalizedPass24 === normalizedPass5;
     const values = [];
     const push = (pathOrPaths, value, valueType, transform = (input) => input) => {
       const wifiMultiPath =
@@ -443,10 +457,15 @@ export class GenieacsClient {
     if (natEnabled !== undefined && natEnabled !== null) {
       push(profile.natPath, natEnabled, "xsd:boolean", Boolean);
     }
-    push(profile.ssid24Path, ssid24);
-    push(profile.pass24Path, wifiPassword24 ?? wifiPassword);
-    push(profile.ssid5Path, ssid5);
-    push(profile.pass5Path, wifiPassword5 ?? wifiPassword24 ?? wifiPassword);
+    if (unifyWifiAliases) {
+      push([...profile.ssid24Path, ...profile.ssid5Path], normalizedSsid24);
+      push([...profile.pass24Path, ...profile.pass5Path], normalizedPass24);
+    } else {
+      push(profile.ssid24Path, ssid24);
+      push(profile.pass24Path, wifiPassword24 ?? wifiPassword);
+      push(profile.ssid5Path, ssid5);
+      push(profile.pass5Path, wifiPassword5 ?? wifiPassword24 ?? wifiPassword);
+    }
 
     if (values.length > 0) {
       await this.setParameterValues(deviceId, values, { connectionRequest: true });
