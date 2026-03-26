@@ -193,22 +193,25 @@ export class GenieacsClient {
     }
   }
 
-  async runTask(deviceId, task) {
+  async runTask(deviceId, task, options = {}) {
     const targetDeviceId = await getWriteTargetDeviceId(deviceId);
-    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks`, task);
+    const suffix = options.connectionRequest ? "?connection_request" : "";
+    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks${suffix}`, task);
   }
 
-  async setParameterValues(deviceId, parameterValues) {
+  async setParameterValues(deviceId, parameterValues, options = {}) {
     const targetDeviceId = await getWriteTargetDeviceId(deviceId);
-    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks`, {
+    const suffix = options.connectionRequest ? "?connection_request" : "";
+    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks${suffix}`, {
       name: "setParameterValues",
       parameterValues
     });
   }
 
-  async rebootDevice(deviceId) {
+  async rebootDevice(deviceId, options = {}) {
     const targetDeviceId = await getWriteTargetDeviceId(deviceId);
-    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks`, {
+    const suffix = options.connectionRequest ? "?connection_request" : "";
+    return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks${suffix}`, {
       name: "reboot"
     });
   }
@@ -251,13 +254,13 @@ export class GenieacsClient {
     push(profile.pass5Path, wifiPassword5 ?? wifiPassword24 ?? wifiPassword);
 
     if (values.length > 0) {
-      await this.setParameterValues(deviceId, values);
+      await this.setParameterValues(deviceId, values, { connectionRequest: true });
     }
 
     await this.runTask(deviceId, {
       name: "refreshObject",
       objectName: "InternetGatewayDevice."
-    });
+    }, { connectionRequest: true });
 
     return { ok: true, deviceId, brand, configured: values.length };
   }

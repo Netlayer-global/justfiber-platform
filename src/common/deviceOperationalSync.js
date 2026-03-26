@@ -66,6 +66,10 @@ function deriveOnlineStatus(lastInformAt) {
   return ageMs <= 1000 * 60 * 15 ? "online" : "offline";
 }
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function requestOpticalTelemetryRefresh(deviceId) {
   if (!deviceId) return;
 
@@ -74,7 +78,7 @@ async function requestOpticalTelemetryRefresh(deviceId) {
       await genieacsClient.runTask(deviceId, {
         name: "refreshObject",
         objectName
-      });
+      }, { connectionRequest: true });
     } catch {
       // Ignore individual task failures; some models reject unsupported objects.
     }
@@ -84,10 +88,12 @@ async function requestOpticalTelemetryRefresh(deviceId) {
     await genieacsClient.runTask(deviceId, {
       name: "getParameterValues",
       parameterNames: OPTICAL_PARAMETER_NAMES
-    });
+    }, { connectionRequest: true });
   } catch {
     // Ignore explicit parameter fetch failures and fall back to whatever the device exposes.
   }
+
+  await wait(1500);
 }
 
 export function summarizeGenieDevice(summary, fallbackDeviceId) {
