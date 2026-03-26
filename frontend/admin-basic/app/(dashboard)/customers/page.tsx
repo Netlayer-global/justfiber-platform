@@ -67,11 +67,12 @@ export default function CustomersPage() {
         adminAPI.getPlans(),
         adminAPI.getBngNodes(),
       ])
-      if (plansRes.success && Array.isArray(plansRes.data)) {
-        setPlans(plansRes.data.filter((plan) => plan.status === 'active'))
+      if (plansRes.success && Array.isArray(plansRes.data?.items)) {
+        const activePlans = plansRes.data.items.filter((plan) => plan.status === 'active')
+        setPlans(activePlans)
         setCreateForm((current) => ({
           ...current,
-          planCode: current.planCode || plansRes.data.find((plan) => plan.status === 'active')?.planCode || '',
+          planCode: current.planCode || activePlans[0]?.planCode || activePlans[0]?.id || '',
         }))
       }
       if (bngRes.success && Array.isArray(bngRes.data)) {
