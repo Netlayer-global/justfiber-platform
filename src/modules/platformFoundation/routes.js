@@ -1,4 +1,5 @@
 import { Router } from "express";
+import fs from "node:fs/promises";
 import net from "node:net";
 import { z } from "zod";
 import { asyncHandler } from "../../common/asyncHandler.js";
@@ -33,6 +34,8 @@ import { VendorProfile } from "../../models/VendorProfile.js";
 import { AddonCatalog } from "../../models/AddonCatalog.js";
 import { buildPagination } from "../../common/pagination.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
+import { mikrotikBngManager } from "../../integrations/mikrotikBngManager.js";
+import { env } from "../../config/env.js";
 
 const accessProfileSchema = z.object({
   code: z.string().min(2),
@@ -370,9 +373,94 @@ const suspendSchema = z.object({
   reason: z.string().min(2).optional()
 });
 
+const bngCoaDispatchSchema = z.object({
+  radiusUsername: z.string().min(2),
+  reason: z.string().min(2).optional()
+});
+
 export const platformFoundationRouter = Router();
 
 platformFoundationRouter.use(requireAuth);
+
+function buildManagedFreeradiusClientBlock(node) {
+  const clientIp = String(node.radiusClientIp || "").trim();
+  const secret = String(node.coaSecret || env.MIKROTIK_BNG_COA_SECRET || "").trim();
+  if (!clientIp || !secret) return "";
+  const marker = node.nodeCode;
+  return [
+    `# BEGIN JUSTFIBER BNG ${marker}`,
+    `client justfiber-${marker} {`,
+    `  ipaddr = ${clientIp}`,
+    `  secret = ${secret}`,
+    `  shortname = ${marker}`,
+    `  nastype = mikrotik`,
+    `}`,
+    `# END JUSTFIBER BNG ${marker}`
+  ].join("\n");
+}
+
+function stripManagedFreeradiusClientBlock(contents, nodeCode) {
+  const pattern = new RegExp(
+    `\\n?# BEGIN JUSTFIBER BNG ${nodeCode}[\\s\\S]*?# END JUSTFIBER BNG ${nodeCode}\\n?`,
+    "g"
+  );
+  return contents.replace(pattern, "\n").replace(/\n{3,}/g, "\n\n");
+}
+
+async function syncFreeradiusClientForNode(node) {
+  if (!env.FREERADIUS_CLIENTS_AUTOSYNC) {
+    return { synced: false, reason: "disabled" };
+  }
+
+  const filePath = String(env.FREERADIUS_CLIENTS_FILE || "").trim();
+  if (!filePath) {
+    return { synced: false, reason: "missing_clients_file" };
+  }
+
+  try {
+    const current = await fs.readFile(filePath, "utf8");
+    const nextBase = stripManagedFreeradiusClientBlock(current, node.nodeCode).trimEnd();
+    const block = buildManagedFreeradiusClientBlock(node);
+    const next = block ? `${nextBase}\n\n${block}\n` : `${nextBase}\n`;
+    await fs.writeFile(filePath, next, "utf8");
+    return {
+      synced: true,
+      filePath,
+      mode: block ? "upserted" : "removed",
+      radiusClientIp: node.radiusClientIp || null
+    };
+  } catch (error) {
+    return {
+      synced: false,
+      filePath,
+      reason: error instanceof Error ? error.message : "sync_failed"
+    };
+  }
+}
+
+async function removeFreeradiusClientForNode(nodeCode) {
+  if (!env.FREERADIUS_CLIENTS_AUTOSYNC) {
+    return { synced: false, reason: "disabled" };
+  }
+
+  const filePath = String(env.FREERADIUS_CLIENTS_FILE || "").trim();
+  if (!filePath) {
+    return { synced: false, reason: "missing_clients_file" };
+  }
+
+  try {
+    const current = await fs.readFile(filePath, "utf8");
+    const next = `${stripManagedFreeradiusClientBlock(current, nodeCode).trimEnd()}\n`;
+    await fs.writeFile(filePath, next, "utf8");
+    return { synced: true, filePath, mode: "removed" };
+  } catch (error) {
+    return {
+      synced: false,
+      filePath,
+      reason: error instanceof Error ? error.message : "remove_failed"
+    };
+  }
+}
 
 async function buildSubscriberContext(logEntry) {
   const service = await SubscriberService.findOne({
@@ -459,7 +547,8 @@ platformFoundationRouter.post(
     const payload = bngNodeSchema.parse(req.body);
     await BngNode.updateOne({ nodeCode: payload.nodeCode }, { $set: payload }, { upsert: true });
     const item = await BngNode.findOne({ nodeCode: payload.nodeCode }).lean();
-    return ok(res, item, { created: true });
+    const freeradiusClientSync = item ? await syncFreeradiusClientForNode(item) : { synced: false, reason: "node_not_found" };
+    return ok(res, { ...item, freeradiusClientSync }, { created: true });
   })
 );
 
@@ -472,7 +561,8 @@ platformFoundationRouter.delete(
       throw new Error("BNG node code is required");
     }
     await BngNode.deleteOne({ nodeCode });
-    return ok(res, { deleted: true, nodeCode });
+    const freeradiusClientSync = await removeFreeradiusClientForNode(nodeCode);
+    return ok(res, { deleted: true, nodeCode, freeradiusClientSync });
   })
 );
 
@@ -516,6 +606,39 @@ platformFoundationRouter.post(
           ...api
         }
       }
+    });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/bng-nodes/:nodeCode/coa-disconnect",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const nodeCode = String(req.params.nodeCode || "").trim();
+    const payload = bngCoaDispatchSchema.parse(req.body || {});
+    const node = await BngNode.findOne({ nodeCode }).lean();
+    if (!node) {
+      throw new Error("BNG node not found");
+    }
+
+    const service = await SubscriberService.findOne({
+      radiusUsername: payload.radiusUsername,
+      bngNodeCode: nodeCode
+    }).lean();
+    if (!service) {
+      throw new Error("Subscriber not found on selected BNG");
+    }
+
+    const result = await mikrotikBngManager.disconnectSubscriberSession({
+      serviceId: service.serviceId,
+      radiusUsername: payload.radiusUsername,
+      reason: payload.reason || "manual_coa"
+    });
+
+    return ok(res, {
+      nodeCode,
+      radiusUsername: payload.radiusUsername,
+      result
     });
   })
 );

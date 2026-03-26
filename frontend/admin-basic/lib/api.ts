@@ -7,6 +7,7 @@ import type {
   Device,
   BngNode,
   BngNodeTestResult,
+  BngNodeCoaDispatchResult,
   Ticket,
   Installer,
   Job,
@@ -224,6 +225,7 @@ function mapBngNode(node: any): BngNode {
     notes: node.notes || '',
     createdAt: node.createdAt || '',
     updatedAt: node.updatedAt || '',
+    freeradiusClientSync: node.freeradiusClientSync || undefined,
   }
 }
 
@@ -1122,6 +1124,11 @@ export const adminAPI = {
   testBngNode: (nodeCode: string) =>
     request<BngNodeTestResult>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/test`, {
       method: 'POST',
+    }),
+  sendBngNodeCoaDisconnect: (nodeCode: string, data: { radiusUsername: string; reason?: string }) =>
+    request<BngNodeCoaDispatchResult>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/coa-disconnect`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 
   // Tickets

@@ -231,6 +231,13 @@ export interface BngNode {
   notes?: string
   createdAt?: string
   updatedAt?: string
+  freeradiusClientSync?: {
+    synced: boolean
+    filePath?: string
+    mode?: string
+    reason?: string
+    radiusClientIp?: string | null
+  }
 }
 
 export interface BngNodeTestResult {
@@ -252,6 +259,22 @@ export interface BngNodeTestResult {
       ok: boolean
       reason?: string
     }
+  }
+}
+
+export interface BngNodeCoaDispatchResult {
+  nodeCode: string
+  radiusUsername: string
+  result: {
+    attempted?: boolean
+    status?: string
+    action?: string
+    bngNodeCode?: string
+    target?: string
+    stdout?: string
+    stderr?: string
+    error?: string
+    reason?: string
   }
 }
 

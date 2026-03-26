@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, BngNodeTestResult } from '@/lib/types'
-import { Loader2, Plus, RefreshCw, Router, Save, ShieldCheck, Trash2, Wifi } from 'lucide-react'
+import { Loader2, Plus, RefreshCw, Router, Save, ShieldCheck, Trash2, Wifi, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
 type RouterForm = {
@@ -98,6 +98,7 @@ export default function RoutersPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
+  const [isCoaSending, setIsCoaSending] = useState(false)
   const [testResult, setTestResult] = useState<BngNodeTestResult | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
@@ -197,7 +198,13 @@ export default function RoutersPage() {
       if (!res.success || !res.data) {
         throw new Error(res.error || 'Failed to save router')
       }
-      toast.success(selectedId ? 'Router updated' : 'Router added')
+      if (res.data.freeradiusClientSync?.synced) {
+        toast.success(`${selectedId ? 'Router updated' : 'Router added'} | FreeRADIUS client synced`)
+      } else if (res.data.freeradiusClientSync?.reason && res.data.freeradiusClientSync.reason !== 'disabled') {
+        toast.warning(`Router saved, but FreeRADIUS sync skipped: ${res.data.freeradiusClientSync.reason}`)
+      } else {
+        toast.success(selectedId ? 'Router updated' : 'Router added')
+      }
       await loadRouters(res.data.id)
       setTestResult(null)
       setIsDrawerOpen(false)
@@ -210,20 +217,31 @@ export default function RoutersPage() {
   }
 
   async function handleDeleteSelected() {
-    if (!selectedRouter?.nodeCode) {
+    if (!selectedRouter) {
       return
     }
-    const confirmed = window.confirm(`Delete router ${selectedRouter.displayName}?`)
+    await handleDeleteRouter(selectedRouter)
+  }
+
+  async function handleDeleteRouter(router: BngNode) {
+    if (!router?.nodeCode) {
+      return
+    }
+    const confirmed = window.confirm(`Delete router ${router.displayName}?`)
     if (!confirmed) {
       return
     }
     setIsDeleting(true)
     try {
-      const res = await adminAPI.deleteBngNode(selectedRouter.nodeCode)
+      const res = await adminAPI.deleteBngNode(router.nodeCode)
       if (!res.success) {
         throw new Error(res.error || 'Failed to delete router')
       }
-      toast.success('Router deleted')
+      toast.success(
+        res.data?.freeradiusClientSync?.synced
+          ? 'Router deleted and FreeRADIUS client removed'
+          : 'Router deleted'
+      )
       setSelectedId(null)
       setForm(initialForm)
       setTestResult(null)
@@ -257,6 +275,32 @@ export default function RoutersPage() {
       toast.error(error instanceof Error ? error.message : 'Failed to test router')
     } finally {
       setIsTesting(false)
+    }
+  }
+
+  async function handleSendCoa() {
+    if (!selectedRouter?.nodeCode) return
+    const radiusUsername = window.prompt('PPPoE username for CoA disconnect')
+    if (!radiusUsername?.trim()) return
+    setIsCoaSending(true)
+    try {
+      const res = await adminAPI.sendBngNodeCoaDisconnect(selectedRouter.nodeCode, {
+        radiusUsername: radiusUsername.trim(),
+        reason: 'manual_admin_coa',
+      })
+      if (!res.success || !res.data) {
+        throw new Error(res.error || 'Failed to send CoA')
+      }
+      if (res.data.result?.status === 'sent') {
+        toast.success(`CoA sent for ${radiusUsername.trim()}`)
+      } else {
+        toast.error(res.data.result?.error || res.data.result?.reason || 'CoA dispatch failed')
+      }
+    } catch (error) {
+      console.error('[v0] Failed to send CoA:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to send CoA')
+    } finally {
+      setIsCoaSending(false)
     }
   }
 
@@ -342,27 +386,38 @@ export default function RoutersPage() {
                 filteredRouters.map((router) => {
                   const active = selectedRouter?.id === router.id
                   return (
-                    <button
-                      type="button"
+                    <div
                       key={router.id}
-                      onClick={() => handleSelect(router)}
                       className={`grid w-full grid-cols-[1.4fr_1fr_1fr_0.8fr_0.8fr] gap-4 border-b border-white/10 px-4 py-4 text-left transition ${
                         active ? 'bg-[#8224E3]/18' : 'bg-transparent hover:bg-white/5'
                       }`}
                     >
-                      <div>
+                      <button type="button" onClick={() => handleSelect(router)} className="text-left">
                         <div className="font-semibold text-white">{router.displayName}</div>
                         <div className="mt-1 text-xs text-white/45">{router.nodeCode}</div>
-                      </div>
-                      <div className="text-sm text-white/75">{router.managementIp || '-'}</div>
-                      <div className="text-sm text-white/75">{router.groupName || 'Default'}</div>
-                      <div>
+                      </button>
+                      <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-white/75">{router.managementIp || '-'}</button>
+                      <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-white/75">{router.groupName || 'Default'}</button>
+                      <button type="button" onClick={() => handleSelect(router)} className="text-left">
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${router.status === 'active' ? 'bg-emerald-500/15 text-emerald-300' : router.status === 'planned' ? 'bg-amber-500/15 text-amber-200' : 'bg-white/10 text-white/70'}`}>
                           {router.status}
                         </span>
+                      </button>
+                      <div className="flex items-center justify-between gap-2">
+                        <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-white/75">{router.vendor}</button>
+                        <button
+                          type="button"
+                          className="rounded-full border border-red-500/30 p-2 text-red-200 transition hover:bg-red-500/10"
+                          onClick={() => {
+                            handleSelect(router)
+                            void handleDeleteRouter(router)
+                          }}
+                          title="Delete router"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                      <div className="text-sm text-white/75">{router.vendor}</div>
-                    </button>
+                    </div>
                   )
                 })
               )}
@@ -406,6 +461,14 @@ export default function RoutersPage() {
                   <div className="text-xs uppercase tracking-[0.18em] text-white/40">Notes</div>
                   <div className="mt-3 text-sm leading-6 text-white/70">{selectedRouter.notes || 'No extra notes saved for this router.'}</div>
                 </div>
+                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 sm:col-span-2">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">FreeRADIUS sync</div>
+                  <div className="mt-3 text-sm leading-6 text-white/70">
+                    {selectedRouter.freeradiusClientSync?.synced
+                      ? `Managed client synced for ${selectedRouter.freeradiusClientSync.radiusClientIp || selectedRouter.radiusClientIp || '-'}`
+                      : 'Router save/delete will sync a managed client block into FreeRADIUS when clients file access is available.'}
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="mt-6 rounded-[22px] border border-dashed border-white/10 bg-white/5 p-6 text-sm text-white/55">
@@ -426,6 +489,12 @@ export default function RoutersPage() {
                 <button type="button" className="btn-secondary" disabled={isTesting} onClick={() => void handleTestSelected()}>
                   {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
                   Test router
+                </button>
+              ) : null}
+              {selectedRouter ? (
+                <button type="button" className="btn-secondary" disabled={isCoaSending} onClick={() => void handleSendCoa()}>
+                  {isCoaSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                  Send CoA
                 </button>
               ) : null}
               {selectedRouter ? (

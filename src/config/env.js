@@ -42,6 +42,11 @@ const schema = z.object({
   RADIUS_SQL_DATABASE: z.string().default("radius"),
   RADIUS_REJECT_MESSAGE: z.string().default("Service suspended"),
   RADCLIENT_BIN: z.string().default("radclient"),
+  FREERADIUS_CLIENTS_FILE: z.string().default("/etc/freeradius/3.0/clients.conf"),
+  FREERADIUS_CLIENTS_AUTOSYNC: z
+    .string()
+    .transform((value) => value === "true")
+    .default("true"),
   MIKROTIK_BNG_COA_PORT: z.coerce.number().default(3799),
   MIKROTIK_BNG_COA_SECRET: z.string().optional(),
   USAGE_API_URL: z.string().url().optional(),
