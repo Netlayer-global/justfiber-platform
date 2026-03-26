@@ -1389,6 +1389,20 @@ export default function CustomerDetailPage() {
                     >
                       Open Billing Records
                     </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => void loadCustomer()}
+                      disabled={isSaving}
+                    >
+                      Refresh Subscriber
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => void handleRetryProvisioning()}
+                      disabled={isSaving}
+                    >
+                      Retry Provisioning
+                    </button>
                   </div>
                 </div>
                 {(customer.devices || []).length ? customer.devices?.map((device) => {
