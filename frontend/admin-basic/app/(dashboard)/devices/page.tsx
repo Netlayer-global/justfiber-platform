@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Device } from '@/lib/types'
+import Link from 'next/link'
 import {
   Activity,
   ArrowUpRight,
@@ -139,7 +140,7 @@ export default function DevicesPage() {
   async function loadDevices(preferredDeviceId?: string) {
     try {
       setIsLoading(true)
-      const res = await adminAPI.getDevices(1, 200)
+      const res = await adminAPI.getDevices(1, 200, { sync: true, syncLimit: 100 })
       if (!res.success || !res.data?.items) {
         toast.error(res.error || 'Failed to load device inventory')
         return
@@ -171,7 +172,7 @@ export default function DevicesPage() {
           return
         }
       }
-      const res = await adminAPI.getDevice(selectedDeviceId)
+      const res = await adminAPI.getDevice(selectedDeviceId, { sync: syncFromGenie })
       if (!res.success || !res.data) {
         toast.error(res.error || 'Failed to load device detail')
         return
@@ -527,6 +528,21 @@ export default function DevicesPage() {
                 <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void rebootSelectedDevice()}>
                   Reboot
                 </button>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <button type="button" className="btn-secondary" disabled={isRefreshingDevice} onClick={() => void refreshSelectedDevice(true)}>
+                  {isRefreshingDevice ? 'Refreshing live detail...' : 'Refresh live detail'}
+                </button>
+                {selectedDevice.customerId ? (
+                  <Link href={`/customers/${selectedDevice.customerId}`} className="btn-secondary inline-flex items-center justify-center">
+                    Open customer profile
+                  </Link>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-center text-sm text-slate-500">
+                    No linked customer profile
+                  </div>
+                )}
               </div>
 
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">

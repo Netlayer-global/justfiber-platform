@@ -983,8 +983,21 @@ export const adminAPI = {
     }),
 
   // Devices
-  getDevices: async (page = 1, limit = 20) => {
-    const res = await request<any[]>(`/api/v1/admin/devices?page=${page}&limit=${limit}`)
+  getDevices: async (
+    page = 1,
+    limit = 20,
+    options?: { sync?: boolean; syncLimit?: number; onlineStatus?: string; provisioningState?: string; search?: string }
+  ) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    })
+    if (options?.sync) params.set('sync', 'true')
+    if (options?.syncLimit) params.set('syncLimit', String(options.syncLimit))
+    if (options?.onlineStatus) params.set('onlineStatus', options.onlineStatus)
+    if (options?.provisioningState) params.set('provisioningState', options.provisioningState)
+    if (options?.search) params.set('search', options.search)
+    const res = await request<any[]>(`/api/v1/admin/devices?${params.toString()}`)
     return {
       ...res,
       data: {
@@ -993,8 +1006,9 @@ export const adminAPI = {
       },
     }
   },
-  getDevice: async (id: string) => {
-    const res = await request<any>(`/api/v1/admin/devices/${id}`)
+  getDevice: async (id: string, options?: { sync?: boolean }) => {
+    const suffix = options?.sync ? '?sync=true' : ''
+    const res = await request<any>(`/api/v1/admin/devices/${id}${suffix}`)
     return {
       ...res,
       data: res.data ? mapDevice(res.data) : undefined,
