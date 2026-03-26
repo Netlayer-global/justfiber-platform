@@ -845,8 +845,13 @@ async function verifyOtp(job, otp) {
   if (job.otp.expiresAt && new Date(job.otp.expiresAt) < new Date()) {
     throw new ApiError(400, "OTP expired");
   }
-  job.otp.verifiedAt = new Date();
-  await OtpEvent.updateOne({ jobId: job._id, codeHash: hash }, { $set: { verifiedAt: new Date(), status: "verified" } });
+  const verifiedAt = new Date();
+  job.otp = {
+    ...(job.otp || {}),
+    verifiedAt
+  };
+  job.markModified("otp");
+  await OtpEvent.updateOne({ jobId: job._id, codeHash: hash }, { $set: { verifiedAt, status: "verified" } });
 }
 
 installerAppRouter.post(
