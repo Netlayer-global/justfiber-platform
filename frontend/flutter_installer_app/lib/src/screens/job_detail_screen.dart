@@ -525,6 +525,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   pppoeUsername: pppoeUsername,
                   wifiSsid24: wifiSsid24,
                   wifiSsid5: wifiSsid5,
+                  wifiPassword: wifiPassword,
                   canAccept: canAccept,
                   canStartTravel: canStartTravel,
                   canStartOnsite: canStartOnsite,
@@ -1448,6 +1449,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required String pppoeUsername,
     required String wifiSsid24,
     required String wifiSsid5,
+    required String wifiPassword,
     required bool canAccept,
     required bool canStartTravel,
     required bool canStartOnsite,
@@ -1463,6 +1465,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool activationLive,
     required bool proofUploaded,
   }) {
+    final singleWifiName = wifiSsid24 != '-' && wifiSsid24 == wifiSsid5;
     final pages = isComplaint
         ? ['Brief', 'Onsite', 'Resolve', 'Close']
         : ['Details', 'ONT', 'Health', 'Activate', 'Proof', 'Close'];
