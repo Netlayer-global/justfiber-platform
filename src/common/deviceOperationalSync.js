@@ -107,27 +107,46 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
 
   const ssid24 = firstValue(summary, [
     "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID"
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
+    "Device.WiFi.SSID.1.SSID",
+    "Device.WiFi.SSID.5.SSID"
   ]);
   const ssid5 = firstValue(summary, [
     "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID"
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
+    "Device.WiFi.SSID.5.SSID"
   ]);
   const wifiPassword24 = firstValue(summary, [
     "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase"
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.PreSharedKey",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.PreSharedKey",
+    "Device.WiFi.AccessPoint.1.Security.KeyPassphrase",
+    "Device.WiFi.AccessPoint.1.Security.PreSharedKey.1.KeyPassphrase",
+    "Device.WiFi.AccessPoint.5.Security.KeyPassphrase"
   ]);
   const wifiPassword5 = firstValue(summary, [
     "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.KeyPassphrase"
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.PreSharedKey",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.KeyPassphrase",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.PreSharedKey",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase",
+    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.PreSharedKey",
+    "Device.WiFi.AccessPoint.5.Security.KeyPassphrase",
+    "Device.WiFi.AccessPoint.5.Security.PreSharedKey.1.KeyPassphrase"
   ]);
   const pppoeUsername = firstValue(summary, [
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Username",
-    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username"
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username",
+    "Device.PPP.Interface.1.Username",
+    "Device.WAN.PPPConnection.1.Username"
   ]);
   const vlanId = firstValue(summary, [
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.X_ALU-COM_VLANIDMark",
-    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.X_ALU-COM_VLANIDMark"
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.X_ALU-COM_VLANIDMark",
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.X_ALU_OntWAN.VlanId",
+    "Device.WAN.Ethernet.1.VLANID"
   ]);
   const externalIp = firstValue(summary, [
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.ExternalIPAddress",

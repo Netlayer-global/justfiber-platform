@@ -71,22 +71,58 @@ const BRAND_OVERRIDES = {
   nokia: {
     pppoeUsernamePath: [
       `${IGD_PPP}.Username`,
-      `${DEVICE_PPP}.Username`
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username",
+      `${DEVICE_PPP}.Username`,
+      "Device.WAN.PPPConnection.1.Username"
     ],
     pppoePasswordPath: [
       `${IGD_PPP}.Password`,
-      `${DEVICE_PPP}.Password`
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password",
+      `${DEVICE_PPP}.Password`,
+      "Device.WAN.PPPConnection.1.Password"
     ],
     vlanPath: [
       `${IGD_PPP}.X_ALU_OntWAN.VlanId`,
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.X_ALU-COM_VLANIDMark",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.X_ALU-COM_VLANIDMark",
       `${IGD_PPP}.X_CT-COM_VLANID`,
       "Device.WAN.Ethernet.1.VLANID"
     ],
+    ssid24Path: [
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
+      `${DEVICE_WIFI_24}.SSID`
+    ],
     pass24Path: [
-      `${IGD_WIFI_24}.KeyPassphrase`
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.PreSharedKey",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.PreSharedKey",
+      `${DEVICE_AP_24}.KeyPassphrase`,
+      `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`,
+      `${DEVICE_AP_24}.PreSharedKey.1.PreSharedKey`
+    ],
+    ssid5Path: [
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID",
+      `${IGD_WIFI_5}.SSID`,
+      `${DEVICE_WIFI_5}.SSID`
     ],
     pass5Path: [
-      `${IGD_WIFI_5}.KeyPassphrase`
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.PreSharedKey",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.PreSharedKey",
+      `${IGD_WIFI_5}.KeyPassphrase`,
+      `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`,
+      `${IGD_WIFI_5}.PreSharedKey.1.PreSharedKey`,
+      `${DEVICE_AP_5}.KeyPassphrase`,
+      `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`,
+      `${DEVICE_AP_5}.PreSharedKey.1.PreSharedKey`
     ]
   },
   dasan: {
