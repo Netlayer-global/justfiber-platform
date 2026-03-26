@@ -68,10 +68,43 @@ function findFirstMatchingValue(deviceSummary, paths, expectedValue) {
   return null;
 }
 
+function collectProvisioningPaths(root, matcher, basePath = "", acc = []) {
+  if (!root || typeof root !== "object") return acc;
+  for (const [key, value] of Object.entries(root)) {
+    const nextPath = basePath ? `${basePath}.${key}` : key;
+    if (matcher(nextPath, value)) {
+      acc.push(nextPath);
+    }
+    if (value && typeof value === "object") {
+      collectProvisioningPaths(value, matcher, nextPath, acc);
+    }
+  }
+  return acc;
+}
+
+function discoverLivePppoeUsernamePaths(deviceSummary) {
+  return collectProvisioningPaths(deviceSummary, (path, value) => {
+    const normalizedPath = path.toLowerCase();
+    if (!("_value" in Object(value || {}))) return false;
+    const isWanPath =
+      normalizedPath.includes("wanconnectiondevice") ||
+      normalizedPath.includes("wanpppconnection") ||
+      normalizedPath.includes("wanipconnection") ||
+      normalizedPath.includes("device.ppp.interface") ||
+      normalizedPath.includes("device.wan.pppconnection");
+    return isWanPath && normalizedPath.endsWith(".username");
+  });
+}
+
 function verifyProvisionedConfig({ deviceSummary, brand, expected }) {
   const profile = resolveProvisioningProfile(brand);
+  const livePppoeUsernamePaths = discoverLivePppoeUsernamePaths(deviceSummary);
   const checks = {
-    pppoeUsername: findFirstMatchingValue(deviceSummary, profile.pppoeUsernamePath, expected.pppoeUsername),
+    pppoeUsername: findFirstMatchingValue(
+      deviceSummary,
+      livePppoeUsernamePaths.length ? [...livePppoeUsernamePaths, ...profile.pppoeUsernamePath] : profile.pppoeUsernamePath,
+      expected.pppoeUsername
+    ),
     ssid24: findFirstMatchingValue(deviceSummary, profile.ssid24Path, expected.ssid24),
     ssid5: findFirstMatchingValue(deviceSummary, profile.ssid5Path, expected.ssid5)
   };

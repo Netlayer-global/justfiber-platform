@@ -111,6 +111,42 @@ function selectExistingPaths(summary, pathOrPaths) {
   return matched.length ? matched : paths.filter(Boolean).slice(0, 1);
 }
 
+function collectMatchingPaths(root, predicate, basePath = "", acc = []) {
+  if (!root || typeof root !== "object") return acc;
+  for (const [key, value] of Object.entries(root)) {
+    const nextPath = basePath ? `${basePath}.${key}` : key;
+    if (predicate(nextPath, value)) {
+      acc.push(nextPath);
+    }
+    if (value && typeof value === "object") {
+      collectMatchingPaths(value, predicate, nextPath, acc);
+    }
+  }
+  return acc;
+}
+
+function discoverDynamicConfigPaths(summary, kind) {
+  if (!summary) return [];
+  const normalizedKind = String(kind || "").toLowerCase();
+  const predicate = (path, value) => {
+    const normalizedPath = path.toLowerCase();
+    if (!("_value" in Object(value || {})) && !("_writable" in Object(value || {}))) {
+      return false;
+    }
+    const isWanPath =
+      normalizedPath.includes("wanconnectiondevice") ||
+      normalizedPath.includes("wanpppconnection") ||
+      normalizedPath.includes("wanipconnection") ||
+      normalizedPath.includes("device.ppp.interface") ||
+      normalizedPath.includes("device.wan.pppconnection");
+    if (!isWanPath) return false;
+    if (normalizedKind === "pppoeusername") return normalizedPath.endsWith(".username");
+    if (normalizedKind === "pppoepassword") return normalizedPath.endsWith(".password");
+    return false;
+  };
+  return collectMatchingPaths(summary, predicate);
+}
+
 async function resolveDeviceIdForWrite(deviceId) {
   for (const variant of deviceIdVariants(deviceId)) {
     const direct = await findDeviceByQuery({ _id: variant });
@@ -288,9 +324,18 @@ export class GenieacsClient {
     } catch {
       liveSummary = null;
     }
+    const dynamicPppoeUsernamePaths = discoverDynamicConfigPaths(liveSummary, "pppoeUsername");
+    const dynamicPppoePasswordPaths = discoverDynamicConfigPaths(liveSummary, "pppoePassword");
     const values = [];
     const push = (pathOrPaths, value, valueType, transform = (input) => input) => {
-      const paths = selectExistingPaths(liveSummary, pathOrPaths);
+      const dynamicPaths =
+        pathOrPaths === profile.pppoeUsernamePath
+          ? dynamicPppoeUsernamePaths
+          : pathOrPaths === profile.pppoePasswordPath
+            ? dynamicPppoePasswordPaths
+            : [];
+      const preferredPaths = dynamicPaths.length ? [...dynamicPaths, ...(Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths])] : pathOrPaths;
+      const paths = selectExistingPaths(liveSummary, preferredPaths);
       for (const path of paths) {
         if (path && value !== undefined && value !== null && value !== "") {
           const normalizedValue = transform(value);
