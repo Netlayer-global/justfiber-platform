@@ -106,6 +106,22 @@ export class GenieacsClient {
     return null;
   }
 
+  async getRichDeviceSummary({ deviceId, serialNumber } = {}) {
+    const summary = await this.findDeviceSummary({ deviceId, serialNumber });
+    if (!summary) return null;
+
+    const resolvedDeviceId = summary._id || deviceId;
+    if (!resolvedDeviceId) {
+      return summary;
+    }
+
+    try {
+      return await this.getDeviceSummary(resolvedDeviceId);
+    } catch {
+      return summary;
+    }
+  }
+
   async applyPreset({ deviceId, presetName, correlationId }) {
     if (!allowedPresets.has(presetName)) {
       throw new Error(`Preset not allowed: ${presetName}`);

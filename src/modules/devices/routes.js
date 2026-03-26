@@ -88,7 +88,10 @@ devicesRouter.get(
     }
     const device = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId }).lean();
     if (useLiveView) {
-      const liveSummary = await genieacsClient.findDeviceSummary({ deviceId: req.params.deviceId });
+      const liveSummary = await genieacsClient.getRichDeviceSummary({
+        deviceId: req.params.deviceId,
+        serialNumber: device?.serialNumber
+      });
       if (liveSummary) {
         const parsed = summarizeGenieDevice(liveSummary, req.params.deviceId);
         return ok(res, {
@@ -116,7 +119,7 @@ devicesRouter.get(
     if (device) {
       return ok(res, device);
     }
-    const liveSummary = await genieacsClient.getDeviceSummary(req.params.deviceId);
+    const liveSummary = await genieacsClient.getRichDeviceSummary({ deviceId: req.params.deviceId });
     if (!liveSummary) {
       throw new ApiError(404, "Device not found");
     }

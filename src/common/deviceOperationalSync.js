@@ -144,7 +144,7 @@ export async function getLiveGenieDeviceList(limit = 100) {
   }).lean();
   const cacheByDeviceId = new Map(cacheRecords.map((record) => [record.deviceId, record]));
 
-  return liveDevices
+  const baseItems = liveDevices
     .map((device) => {
       const parsed = summarizeGenieDevice(device, undefined);
       const cached = cacheByDeviceId.get(parsed.deviceId);
@@ -170,6 +170,43 @@ export async function getLiveGenieDeviceList(limit = 100) {
       };
     })
     .filter((device) => device.deviceId);
+
+  return Promise.all(
+    baseItems.map(async (device) => {
+      if (device.opticalInfo?.rxPower != null || device.opticalInfo?.txPower != null) {
+        return device;
+      }
+
+      const richSummary = await genieacsClient.getRichDeviceSummary({
+        deviceId: device.deviceId,
+        serialNumber: device.serialNumber
+      });
+      if (!richSummary) {
+        return device;
+      }
+
+      const parsed = summarizeGenieDevice(richSummary, device.deviceId);
+      return {
+        ...device,
+        ...(parsed.serialNumber ? { serialNumber: parsed.serialNumber } : {}),
+        ...(parsed.productClass ? { productClass: parsed.productClass } : {}),
+        onlineStatus: parsed.onlineStatus || device.onlineStatus,
+        wanInfo: {
+          ...(device.wanInfo || {}),
+          ...(parsed.wanInfo || {})
+        },
+        wifiInfo: {
+          ...(device.wifiInfo || {}),
+          ...(parsed.wifiInfo || {})
+        },
+        opticalInfo: {
+          ...(device.opticalInfo || {}),
+          ...(parsed.opticalInfo || {})
+        },
+        updatedAt: parsed.lastInformAt || device.updatedAt
+      };
+    })
+  );
 }
 
 export async function syncDeviceFromGenie(cacheRecord) {
@@ -177,7 +214,10 @@ export async function syncDeviceFromGenie(cacheRecord) {
     return { ok: false, reason: "missing_device_id" };
   }
 
-  const summary = await genieacsClient.getDeviceSummary(cacheRecord.deviceId);
+  const summary = await genieacsClient.getRichDeviceSummary({
+    deviceId: cacheRecord.deviceId,
+    serialNumber: cacheRecord.serialNumber
+  });
   if (!summary) {
     return { ok: false, reason: "not_found" };
   }
