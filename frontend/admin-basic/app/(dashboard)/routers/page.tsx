@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { BngNode } from '@/lib/types'
-import { Loader2, Plus, RefreshCw, Router, Save, ShieldCheck, Wifi } from 'lucide-react'
+import { Loader2, Plus, RefreshCw, Router, Save, ShieldCheck, Trash2, Wifi } from 'lucide-react'
 import { toast } from 'sonner'
 
 type RouterForm = {
@@ -96,6 +96,7 @@ export default function RoutersPage() {
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   useEffect(() => {
@@ -200,6 +201,32 @@ export default function RoutersPage() {
       toast.error(error instanceof Error ? error.message : 'Failed to save router')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (!selectedRouter?.nodeCode) {
+      return
+    }
+    const confirmed = window.confirm(`Delete router ${selectedRouter.displayName}?`)
+    if (!confirmed) {
+      return
+    }
+    setIsDeleting(true)
+    try {
+      const res = await adminAPI.deleteBngNode(selectedRouter.nodeCode)
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to delete router')
+      }
+      toast.success('Router deleted')
+      setSelectedId(null)
+      setForm(initialForm)
+      await loadRouters()
+    } catch (error) {
+      console.error('[v0] Failed to delete router:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to delete router')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -365,6 +392,12 @@ export default function RoutersPage() {
                 <Plus className="mr-2 h-4 w-4" />
                 New router
               </button>
+              {selectedRouter ? (
+                <button type="button" className="btn-secondary border-red-500/30 text-red-200 hover:bg-red-500/10" disabled={isDeleting} onClick={() => void handleDeleteSelected()}>
+                  {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Delete router
+                </button>
+              ) : null}
             </div>
           </div>
 

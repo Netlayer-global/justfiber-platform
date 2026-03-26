@@ -1107,6 +1107,10 @@ export const adminAPI = {
       data: res.data ? mapBngNode(res.data) : undefined,
     }
   },
+  deleteBngNode: (nodeCode: string) =>
+    request<{ deleted: boolean; nodeCode: string }>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}`, {
+      method: 'DELETE',
+    }),
 
   // Tickets
   getTickets: async (page = 1, limit = 20) => {

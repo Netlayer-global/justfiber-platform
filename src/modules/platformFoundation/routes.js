@@ -440,6 +440,19 @@ platformFoundationRouter.post(
   })
 );
 
+platformFoundationRouter.delete(
+  "/foundation/bng-nodes/:nodeCode",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const nodeCode = String(req.params.nodeCode || "").trim();
+    if (!nodeCode) {
+      throw new Error("BNG node code is required");
+    }
+    await BngNode.deleteOne({ nodeCode });
+    return ok(res, { deleted: true, nodeCode });
+  })
+);
+
 platformFoundationRouter.get(
   "/foundation/subscriber-services",
   requirePermission(permissions.customerRead),
