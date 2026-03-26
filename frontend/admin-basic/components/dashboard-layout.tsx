@@ -11,6 +11,7 @@ import {
   LogOut,
   MapPinned,
   Menu,
+  ShieldCheck,
   Ticket,
   UserRound,
   Wrench,
@@ -20,6 +21,7 @@ import { clearAuthToken } from '@/lib/api'
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/plans', label: 'Plans', icon: Cable },
+  { href: '/provisioning', label: 'Provisioning', icon: ShieldCheck },
   { href: '/customers', label: 'Customers', icon: UserRound },
   { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/devices', label: 'Devices', icon: HardDrive },

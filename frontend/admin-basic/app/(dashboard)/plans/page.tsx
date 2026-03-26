@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
@@ -322,8 +323,7 @@ export default function PlansPage() {
 
   const composerOpen = composerMode !== null
   const preview = composerOpen ? form : toForm(selectedPlan)
-  const currentProvisioningIssues = provisioningIssues(preview)
-  const provisioningReady = currentProvisioningIssues.length === 0
+  const provisioningReady = provisioningIssues(preview).length === 0
 
   function beginCreate() {
     setEditingPlanId(null)
@@ -350,10 +350,6 @@ export default function PlansPage() {
       toast.error('Plan code and plan name are required')
       return
     }
-    const currentIssues = provisioningIssues(form)
-    const shouldDowngradeToDraft = form.status === 'active' && currentIssues.length > 0
-    const nextStatus: PlanFormState['status'] = shouldDowngradeToDraft ? 'inactive' : form.status
-
     const payload: Partial<Plan> = {
       id: form.planCode.trim(),
       planCode: form.planCode.trim(),
@@ -378,7 +374,7 @@ export default function PlansPage() {
       taxIncluded: form.taxIncluded,
       gstRate: Number(form.gstRate || 0),
       pricesExcludeGst: form.pricesExcludeGst,
-      status: nextStatus,
+      status: form.status,
       tags: splitCsv(form.tags),
       staticBenefits: splitCsv(form.staticBenefits),
       features: splitLines(form.features),
@@ -415,14 +411,6 @@ export default function PlansPage() {
         recommended: form.recommended,
         spotlightLabel: form.spotlightLabel.trim(),
       },
-      provisioning: {
-        accessProfileCode: form.accessProfileCode.trim(),
-        vlanId: Number(form.vlanId || 0),
-        pppoePrefix: form.pppoePrefix.trim(),
-        pppoeRealm: form.pppoeRealm.trim(),
-        defaultPppoePassword: form.defaultPppoePassword.trim(),
-        wifiNamePrefix: form.wifiNamePrefix.trim(),
-      },
       sortOrder: Number(form.sortOrder || 1),
     }
 
@@ -437,11 +425,7 @@ export default function PlansPage() {
         return
       }
 
-      if (shouldDowngradeToDraft) {
-        toast.success('Plan saved as draft. Complete provisioning template before activation.')
-      } else {
-        toast.success(editingPlanId ? 'Plan updated' : 'Plan created')
-      }
+      toast.success(editingPlanId ? 'Plan updated' : 'Plan created')
       cancelEdit()
       await loadPlans()
     } catch (error) {
@@ -789,8 +773,8 @@ export default function PlansPage() {
                 <div className="text-xs uppercase tracking-[0.18em] text-white/45">App visibility</div>
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between"><span>Badge</span><span>{preview.featured ? 'Featured' : preview.recommended ? 'Recommended' : 'Standard'}</span></div>
-                  <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
-                  <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
+                  <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' ? 'Visible' : 'Hidden'}</span></div>
+                  <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' ? 'Visible' : 'Hidden'}</span></div>
                 </div>
               </div>
               <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
@@ -922,30 +906,30 @@ export default function PlansPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-xs uppercase tracking-[0.24em] text-white/45">Provisioning templates</div>
-                <div className="mt-2 text-2xl font-black text-white">Keep PPPoE and VLAN controls separate</div>
+                <div className="mt-2 text-2xl font-black text-white">Manage technical activation separately</div>
                 <p className="mt-2 text-sm leading-6 text-white/55">
-                Plan create flow simple rakha gaya hai. Yahan selected plan ke liye activation defaults maintain honge.
+                Plan management ko commercial aur catalog-focused rakha gaya hai. PPPoE, VLAN, access profile, aur Wi-Fi naming ab dedicated provisioning section me maintain honge.
                 </p>
               </div>
-            <div className={`rounded-full px-3 py-1 text-xs font-semibold ${provisioningReady ? 'bg-emerald-400/15 text-emerald-200' : 'bg-amber-300/15 text-amber-100'}`}>
-              {provisioningReady ? 'Template ready' : 'Template incomplete'}
+            <div className={`rounded-full px-3 py-1 text-xs font-semibold ${selectedPlan?.provisioningReady === false ? 'bg-amber-300/15 text-amber-100' : 'bg-emerald-400/15 text-emerald-200'}`}>
+              {selectedPlan?.provisioningReady === false ? 'Template incomplete' : 'Template ready'}
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4 xl:grid-cols-3">
-            <input className="input" placeholder="Access profile code" value={form.accessProfileCode} onChange={(e) => setForm({ ...form, accessProfileCode: e.target.value })} />
-            <input className="input" placeholder="VLAN ID" type="number" value={form.vlanId} onChange={(e) => setForm({ ...form, vlanId: e.target.value })} />
-            <input className="input" placeholder="PPPoE prefix" value={form.pppoePrefix} onChange={(e) => setForm({ ...form, pppoePrefix: e.target.value })} />
-            <input className="input" placeholder="PPPoE realm" value={form.pppoeRealm} onChange={(e) => setForm({ ...form, pppoeRealm: e.target.value })} />
-            <input className="input" placeholder="Default PPPoE password" value={form.defaultPppoePassword} onChange={(e) => setForm({ ...form, defaultPppoePassword: e.target.value })} />
-            <input className="input" placeholder="Wi-Fi SSID prefix" value={form.wifiNamePrefix} onChange={(e) => setForm({ ...form, wifiNamePrefix: e.target.value })} />
-          </div>
-
-          {!provisioningReady ? (
-            <div className="mt-4 rounded-[18px] border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-              {currentProvisioningIssues.join(' | ')}
+          <div className="mt-6 rounded-[22px] border border-white/10 bg-white/5 p-5">
+            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <div className="text-sm font-semibold text-white">Open provisioning section</div>
+                <div className="mt-2 text-sm leading-6 text-white/55">
+                  Technical activation pattern selected plan ke liye alag dashboard me maintain karo. Yahan sirf commercial pack, validity, pricing, tags, and merchandising manage hoga.
+                </div>
+              </div>
+              <Link href="/provisioning" className="btn-primary inline-flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" />
+                Open Provisioning
+              </Link>
             </div>
-          ) : null}
+          </div>
         </div>
 
         <div className="card p-6">
@@ -953,18 +937,18 @@ export default function PlansPage() {
           <div className="mt-4 space-y-3 text-sm text-white/70">
             <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
               <div className="text-xs uppercase tracking-[0.18em] text-white/45">PPPoE sample</div>
-              <div className="mt-2 text-lg font-bold text-white break-all">{buildPppoePreview(form)}</div>
+              <div className="mt-2 text-lg font-bold text-white break-all">{buildPppoePreview(preview)}</div>
             </div>
             <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
               <div className="text-xs uppercase tracking-[0.18em] text-white/45">Wi-Fi naming</div>
-              <div className="mt-2 text-lg font-bold text-white">{buildWifiPreview(form)}</div>
+              <div className="mt-2 text-lg font-bold text-white">{buildWifiPreview(preview)}</div>
             </div>
             <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
               <div className="grid gap-2">
                 <div className="flex items-center justify-between"><span>Selected plan</span><span>{preview.name || 'No plan selected'}</span></div>
-                <div className="flex items-center justify-between"><span>Visibility</span><span>{preview.status === 'active' && provisioningReady ? 'Apps ready' : 'Blocked / draft'}</span></div>
-                <div className="flex items-center justify-between"><span>VLAN</span><span>{form.vlanId || '-'}</span></div>
-                <div className="flex items-center justify-between"><span>Access profile</span><span>{form.accessProfileCode || '-'}</span></div>
+                <div className="flex items-center justify-between"><span>Visibility</span><span>{selectedPlan?.provisioningReady === false ? 'Provisioning pending' : 'Apps ready'}</span></div>
+                <div className="flex items-center justify-between"><span>VLAN</span><span>{preview.vlanId || '-'}</span></div>
+                <div className="flex items-center justify-between"><span>Access profile</span><span>{preview.accessProfileCode || '-'}</span></div>
               </div>
             </div>
           </div>
