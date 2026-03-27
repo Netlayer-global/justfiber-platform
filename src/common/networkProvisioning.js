@@ -48,10 +48,8 @@ const GENERIC_PROFILE = {
   pass24Path: [
     `${DEVICE_AP_24}.KeyPassphrase`,
     `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`,
-    `${DEVICE_AP_24}.PreSharedKey.1.PreSharedKey`,
     `${IGD_WIFI_24}.KeyPassphrase`,
-    `${IGD_WIFI_24}.PreSharedKey.1.KeyPassphrase`,
-    `${IGD_WIFI_24}.PreSharedKey.1.PreSharedKey`
+    `${IGD_WIFI_24}.PreSharedKey.1.KeyPassphrase`
   ],
   ssid5Path: [
     `${DEVICE_WIFI_5}.SSID`,
@@ -60,10 +58,8 @@ const GENERIC_PROFILE = {
   pass5Path: [
     `${DEVICE_AP_5}.KeyPassphrase`,
     `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`,
-    `${DEVICE_AP_5}.PreSharedKey.1.PreSharedKey`,
     `${IGD_WIFI_5}.KeyPassphrase`,
-    `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`,
-    `${IGD_WIFI_5}.PreSharedKey.1.PreSharedKey`
+    `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`
   ]
 };
 
@@ -108,13 +104,10 @@ const BRAND_OVERRIDES = {
     pass24Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.PreSharedKey",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.PreSharedKey",
       `${DEVICE_AP_24}.KeyPassphrase`,
-      `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`,
-      `${DEVICE_AP_24}.PreSharedKey.1.PreSharedKey`
+      `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`
     ],
     ssid5Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID",
@@ -125,16 +118,12 @@ const BRAND_OVERRIDES = {
     pass5Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.PreSharedKey",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.PreSharedKey",
       `${IGD_WIFI_5}.KeyPassphrase`,
       `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`,
-      `${IGD_WIFI_5}.PreSharedKey.1.PreSharedKey`,
       `${DEVICE_AP_5}.KeyPassphrase`,
-      `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`,
-      `${DEVICE_AP_5}.PreSharedKey.1.PreSharedKey`
+      `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`
     ]
   },
   dasan: {
