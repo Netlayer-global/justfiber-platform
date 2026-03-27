@@ -103,6 +103,7 @@ export default function BillingPage() {
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
+  const [invoiceQuickView, setInvoiceQuickView] = useState<'all' | 'pending' | 'paid' | 'overdue' | 'activation'>('all')
   const [showInvoiceHtmlPreview, setShowInvoiceHtmlPreview] = useState(false)
   const [collectionBucket, setCollectionBucket] = useState('')
   const [invoiceFilters, setInvoiceFilters] = useState({
@@ -172,6 +173,21 @@ export default function BillingPage() {
     const mappedTemplateKey = mappings.find((item) => String(item.zoneCode || '').trim().toUpperCase() === draftZoneCode)?.templateKey
     return templates.find((item) => item.key === (mappedTemplateKey || invoiceTemplateSettings?.activeTemplate)) || activeInvoiceTemplate
   }, [activeInvoiceTemplate, draftZoneCode, invoiceTemplateSettings])
+  const visibleInvoices = useMemo(() => {
+    if (invoiceQuickView === 'pending') {
+      return billing.filter((item) => (item.paymentStatus || item.status) === 'pending')
+    }
+    if (invoiceQuickView === 'paid') {
+      return billing.filter((item) => (item.paymentStatus || item.status) === 'paid')
+    }
+    if (invoiceQuickView === 'overdue') {
+      return billing.filter((item) => (item.paymentStatus || item.status) === 'overdue')
+    }
+    if (invoiceQuickView === 'activation') {
+      return billing.filter((item) => item.source === 'installer_activation')
+    }
+    return billing
+  }, [billing, invoiceQuickView])
   const activeInvoiceFilterTokens = useMemo(
     () =>
       Object.entries(invoiceFilters)
@@ -194,22 +210,32 @@ export default function BillingPage() {
     [invoiceFilters]
   )
   const invoicePulse = useMemo(() => {
-    const totalAmount = billing.reduce((sum, item) => sum + Number(item.totalAmount || item.amount || 0), 0)
-    const pendingAmount = billing
+    const totalAmount = visibleInvoices.reduce((sum, item) => sum + Number(item.totalAmount || item.amount || 0), 0)
+    const pendingAmount = visibleInvoices
       .filter((item) => (item.paymentStatus || item.status) === 'pending')
       .reduce((sum, item) => sum + Number(item.totalAmount || item.amount || 0), 0)
-    const activationInvoices = billing.filter((item) => item.source === 'installer_activation').length
-    const zoneInvoices = billing.filter((item) => Boolean(item.billingZoneCode)).length
+    const activationInvoices = visibleInvoices.filter((item) => item.source === 'installer_activation').length
+    const zoneInvoices = visibleInvoices.filter((item) => Boolean(item.billingZoneCode)).length
     return {
       totalAmount,
       pendingAmount,
       activationInvoices,
       zoneInvoices,
     }
-  }, [billing])
+  }, [visibleInvoices])
+  const invoiceQuickViewCounts = useMemo(
+    () => ({
+      all: billing.length,
+      pending: billing.filter((item) => (item.paymentStatus || item.status) === 'pending').length,
+      paid: billing.filter((item) => (item.paymentStatus || item.status) === 'paid').length,
+      overdue: billing.filter((item) => (item.paymentStatus || item.status) === 'overdue').length,
+      activation: billing.filter((item) => item.source === 'installer_activation').length,
+    }),
+    [billing]
+  )
   const selectedInvoice = useMemo(
-    () => billing.find((item) => item.invoiceId === selectedInvoiceId) || billing[0] || null,
-    [billing, selectedInvoiceId]
+    () => visibleInvoices.find((item) => item.invoiceId === selectedInvoiceId) || visibleInvoices[0] || null,
+    [visibleInvoices, selectedInvoiceId]
   )
 
   useEffect(() => {
@@ -243,14 +269,14 @@ export default function BillingPage() {
   }, [invoiceDraft.customerId])
 
   useEffect(() => {
-    if (!billing.length) {
+    if (!visibleInvoices.length) {
       setSelectedInvoiceId('')
       return
     }
-    if (!billing.some((item) => item.invoiceId === selectedInvoiceId)) {
-      setSelectedInvoiceId(billing[0].invoiceId)
+    if (!visibleInvoices.some((item) => item.invoiceId === selectedInvoiceId)) {
+      setSelectedInvoiceId(visibleInvoices[0].invoiceId)
     }
-  }, [billing, selectedInvoiceId])
+  }, [visibleInvoices, selectedInvoiceId])
 
   useEffect(() => {
     setShowInvoiceHtmlPreview(false)
@@ -1957,17 +1983,36 @@ export default function BillingPage() {
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice register</div>
                 <div className="mt-1 text-sm text-slate-400">
-                  Searchable invoice ledger with PDF dispatch, live status, source tracking, and service references.
+                  Simpler invoice-first view with quick status tabs, PDF actions, and zone/template context.
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-                  {billing.length} invoice{billing.length === 1 ? '' : 's'}
+                  {visibleInvoices.length} invoice{visibleInvoices.length === 1 ? '' : 's'}
                 </div>
                 <div className="rounded-full bg-[#8224E3]/10 px-3 py-1 text-xs text-[#d9b8ff]">
                   {selectedInvoice ? `Selected ${selectedInvoice.invoiceNumber || selectedInvoice.invoiceId}` : 'No invoice selected'}
                 </div>
               </div>
+            </div>
+            <div className="flex flex-wrap gap-2 border-b border-[#2a2f4a] px-4 py-3">
+              {[
+                ['all', 'All'],
+                ['pending', 'Pending'],
+                ['paid', 'Paid'],
+                ['overdue', 'Overdue'],
+                ['activation', 'Activation'],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    invoiceQuickView === key ? 'bg-[#8224E3] text-white' : 'bg-white/5 text-slate-300'
+                  }`}
+                  onClick={() => setInvoiceQuickView(key as typeof invoiceQuickView)}
+                >
+                  {label} ({invoiceQuickViewCounts[key as keyof typeof invoiceQuickViewCounts]})
+                </button>
+              ))}
             </div>
             <table className="w-full">
               <thead>
@@ -1982,7 +2027,7 @@ export default function BillingPage() {
                 </tr>
               </thead>
               <tbody>
-                {billing.length ? billing.map((item) => (
+                {visibleInvoices.length ? visibleInvoices.map((item) => (
                 <tr
                   key={item.id}
                   className={`border-t border-[#2a2f4a] align-top hover:bg-[#1a1f3a] ${selectedInvoice?.invoiceId === item.invoiceId ? 'bg-[#151a34]' : ''}`}
@@ -2059,7 +2104,7 @@ export default function BillingPage() {
                 )) : (
                   <tr className="border-t border-[#2a2f4a]">
                     <td className="table-cell text-slate-500" colSpan={7}>
-                      No invoices match the active filters. Try clearing search, payment status, or bill cycle.
+                      No invoices match the current quick view and filters. Try switching tabs or clearing filters.
                     </td>
                   </tr>
                 )}
