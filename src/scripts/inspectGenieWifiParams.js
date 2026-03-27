@@ -1,5 +1,5 @@
 import { env } from "../config/env.js";
-import { buildNokiaInspectPaths } from "../common/nokiaWifi.js";
+import { buildNokiaInspectPaths, getNokiaSlotBand, listNokiaWlanSlots } from "../common/nokiaWifi.js";
 
 const DEVICE_ID = process.env.INSPECT_GENIE_DEVICE_ID;
 
@@ -25,6 +25,10 @@ function extractValue(root, path) {
     return node._value;
   }
   return node;
+}
+
+function findRowValue(rows, path) {
+  return rows.find((row) => row.path === path)?.value ?? null;
 }
 
 async function main() {
@@ -70,10 +74,33 @@ async function main() {
     value: extractValue(payload, path)
   }));
 
+  const slotSummary = listNokiaWlanSlots().map((index) => {
+    const base = `InternetGatewayDevice.LANDevice.1.WLANConfiguration.${index}`;
+    return {
+      slot: index,
+      band: getNokiaSlotBand(index),
+      enabled: findRowValue(rows, `${base}.Enable`),
+      ssid: findRowValue(rows, `${base}.SSID`),
+      keyPassphrase: findRowValue(rows, `${base}.KeyPassphrase`),
+      preSharedKeyKeyPassphrase: findRowValue(rows, `${base}.PreSharedKey.1.KeyPassphrase`),
+      preSharedKey: findRowValue(rows, `${base}.PreSharedKey.1.PreSharedKey`)
+    };
+  });
+
+  const enabledSlots = slotSummary.filter((slot) => slot.enabled === true).map((slot) => slot.slot);
+  const disabledSlots = slotSummary.filter((slot) => slot.enabled === false).map((slot) => slot.slot);
+
   console.log(JSON.stringify({
     deviceId: payload._id,
     serialNumber: payload?._deviceId?._SerialNumber,
     productClass: payload?._deviceId?._ProductClass,
+    wifiSummary: {
+      enabledSlots,
+      disabledSlots,
+      allEnabled: slotSummary.every((slot) => slot.enabled === true),
+      allDisabled: slotSummary.every((slot) => slot.enabled === false),
+      slots: slotSummary
+    },
     wifi: rows
   }, null, 2));
 }

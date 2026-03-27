@@ -47,6 +47,14 @@ export function buildNokiaInspectPaths() {
   return [...wlanPaths, ...devicePaths];
 }
 
+export function listNokiaWlanSlots() {
+  return [...NOKIA_WIFI_SLOTS.ssid24, ...NOKIA_WIFI_SLOTS.ssid5];
+}
+
+export function getNokiaSlotBand(index) {
+  return NOKIA_WIFI_SLOTS.ssid24.includes(index) ? "2.4G" : "5G";
+}
+
 export function isUnifiedNokiaWifiRequest({ brand, ssid24, ssid5, password24, password5 }) {
   return String(brand || "").toLowerCase() === "nokia" &&
     typeof ssid24 === "string" &&
