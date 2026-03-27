@@ -453,8 +453,29 @@ export default function SettingsPage() {
             {activeSection === 'invoice_template' ? (
               <div className="grid gap-4 xl:grid-cols-[1fr_0.92fr]">
                 <div className="card p-5 space-y-5">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Templates</div>
+                      <div className="mt-2 text-2xl font-bold text-white">{(invoiceTemplate?.templates || []).length}</div>
+                      <div className="mt-1 text-xs text-slate-400">Saved invoice branding variants</div>
+                    </div>
+                    <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Default</div>
+                      <div className="mt-2 truncate text-lg font-semibold text-white">
+                        {(invoiceTemplate?.templates || []).find((item) => item.key === invoiceTemplate?.activeTemplate)?.templateName || 'Not set'}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-400">Used when no zone override matches</div>
+                    </div>
+                    <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Zone routing</div>
+                      <div className="mt-2 text-2xl font-bold text-white">{(invoiceTemplate?.zoneTemplateMappings || []).length}</div>
+                      <div className="mt-1 text-xs text-slate-400">Zone-specific template assignments</div>
+                    </div>
+                  </div>
+
                   <div className="space-y-3">
                     <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template library</div>
+                    <div className="text-sm text-slate-400">Choose the active template below, then update brand, tax, bank, and asset details for it.</div>
                     <div className="grid gap-3 md:grid-cols-2">
                       {(invoiceTemplate?.templates || []).map((item) => {
                         const isSelected = item.key === selectedTemplateKey
@@ -491,7 +512,7 @@ export default function SettingsPage() {
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Active template</div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Selected template</div>
                       <select className="input" value={selectedTemplateKey} onChange={(e) => setSelectedTemplateKey(e.target.value)}>
                         {(invoiceTemplate?.templates || []).map((item) => (
                           <option key={item.key} value={item.key}>{item.templateName}</option>
@@ -507,9 +528,17 @@ export default function SettingsPage() {
                       <input className="input" value={invoicePreview.key || ''} onChange={(e) => updateSelectedTemplateKey(e.target.value)} />
                     </label>
                     <div className="md:col-span-2 flex flex-wrap gap-3">
-                      <button type="button" className="btn-secondary" onClick={addTemplate}>Add template</button>
-                      <button type="button" className="btn-secondary" onClick={() => duplicateTemplate(selectedTemplateKey)}>Duplicate selected</button>
-                      <button type="button" className="btn-secondary" onClick={() => removeTemplate(selectedTemplateKey)}>Delete selected template</button>
+                      <button type="button" className="btn-secondary" onClick={addTemplate}>Create new template</button>
+                      <button type="button" className="btn-secondary" onClick={() => duplicateTemplate(selectedTemplateKey)}>Duplicate template</button>
+                      <button type="button" className="btn-secondary" onClick={() => removeTemplate(selectedTemplateKey)}>Delete template</button>
+                      <button
+                        type="button"
+                        className={invoiceTemplate?.activeTemplate === selectedTemplateKey ? 'btn-secondary opacity-70' : 'btn-secondary'}
+                        disabled={invoiceTemplate?.activeTemplate === selectedTemplateKey}
+                        onClick={() => setInvoiceTemplate((prev) => prev ? { ...prev, activeTemplate: selectedTemplateKey } : prev)}
+                      >
+                        {invoiceTemplate?.activeTemplate === selectedTemplateKey ? 'Default template' : 'Set as default'}
+                      </button>
                     </div>
                     <label className="space-y-2 md:col-span-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Company name</div>
@@ -569,6 +598,7 @@ export default function SettingsPage() {
                     </label>
                     <label className="space-y-2 md:col-span-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Zone to template mapping</div>
+                      <div className="text-sm text-slate-400">Use this when Haryana, Rajasthan, or other zones need different invoice branding.</div>
                       <div className="space-y-2 rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
                         {(invoiceTemplate?.zoneTemplateMappings || []).map((mapping, index) => (
                           <div key={`${mapping.zoneCode}-${index}`} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
@@ -619,7 +649,12 @@ export default function SettingsPage() {
                     </label>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Brand assets</div>
+                      <div className="text-sm text-slate-400">Upload logo, signature, and stamp for the selected template.</div>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
                     {[
                       ['logoDataUrl', 'Logo'],
                       ['signatureDataUrl', 'Signature'],
@@ -668,6 +703,7 @@ export default function SettingsPage() {
                         </div>
                       )
                     })}
+                    </div>
                   </div>
                 </div>
 
