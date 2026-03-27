@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { SettingsCatalogItem, SettingsSection } from '@/lib/types'
-import { Loader, Save, Upload, FileImage, Settings2 } from 'lucide-react'
+import type { SettingsCatalogItem } from '@/lib/types'
+import { Loader, Save, Upload, FileImage, SlidersHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 
 type InvoiceTemplateSettings = {
@@ -76,7 +76,6 @@ function fileToDataUrl(file: File) {
 export default function SettingsPage() {
   const [catalog, setCatalog] = useState<SettingsCatalogItem[]>([])
   const [activeSection, setActiveSection] = useState('invoice_template')
-  const [sectionCache, setSectionCache] = useState<Record<string, SettingsSection>>({})
   const [invoiceTemplate, setInvoiceTemplate] = useState<InvoiceTemplateSettings | null>(null)
   const [genericJson, setGenericJson] = useState('{}')
   const [isLoading, setIsLoading] = useState(true)
@@ -134,7 +133,6 @@ export default function SettingsPage() {
         toast.error(res.error || `Failed to load ${section}`)
         return
       }
-      setSectionCache((prev) => ({ ...prev, [section]: res.data as SettingsSection }))
       if (section === 'invoice_template') {
         setInvoiceTemplate(res.data.value as InvoiceTemplateSettings)
       } else {
@@ -387,6 +385,7 @@ export default function SettingsPage() {
                           </label>
                           {value ? (
                             <div className="mt-4">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={value} alt={label} className="h-20 w-full rounded-xl object-contain bg-white p-2" />
                               <button
                                 type="button"
@@ -411,6 +410,7 @@ export default function SettingsPage() {
                     <div className="flex items-start justify-between gap-6">
                       <div>
                         {invoicePreview.logoDataUrl ? (
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={invoicePreview.logoDataUrl} alt="Logo" className="h-16 object-contain" />
                         ) : (
                           <div className="text-2xl font-black" style={{ color: invoicePreview.accentColor }}>
@@ -458,13 +458,23 @@ export default function SettingsPage() {
                       <div>
                         <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Signature</div>
                         <div className="mt-3 h-16 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2">
-                          {invoicePreview.signatureDataUrl ? <img src={invoicePreview.signatureDataUrl} alt="Signature" className="h-full object-contain" /> : <div className="pt-4 text-xs text-slate-400">No signature uploaded</div>}
+                          {invoicePreview.signatureDataUrl ? (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={invoicePreview.signatureDataUrl} alt="Signature" className="h-full object-contain" />
+                            </>
+                          ) : <div className="pt-4 text-xs text-slate-400">No signature uploaded</div>}
                         </div>
                       </div>
                       <div>
                         <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Stamp</div>
                         <div className="mt-3 h-16 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2">
-                          {invoicePreview.stampDataUrl ? <img src={invoicePreview.stampDataUrl} alt="Stamp" className="h-full object-contain" /> : <div className="pt-4 text-xs text-slate-400">No stamp uploaded</div>}
+                          {invoicePreview.stampDataUrl ? (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={invoicePreview.stampDataUrl} alt="Stamp" className="h-full object-contain" />
+                            </>
+                          ) : <div className="pt-4 text-xs text-slate-400">No stamp uploaded</div>}
                         </div>
                       </div>
                     </div>
@@ -488,7 +498,7 @@ export default function SettingsPage() {
 
                 <div className="card p-5 space-y-4">
                   <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-white/45">
-                    <Settings2 className="h-4 w-4" />
+                    <SlidersHorizontal className="h-4 w-4" />
                     Future-ready flow
                   </div>
                   <div className="text-sm leading-7 text-slate-300">
