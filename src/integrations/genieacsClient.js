@@ -415,12 +415,13 @@ export class GenieacsClient {
       normalizedPass24 === normalizedPass5;
     const values = [];
     const wifiValues = [];
-    const push = (pathOrPaths, value, valueType, transform = (input) => input) => {
-      const wifiMultiPath =
+    const push = (pathOrPaths, value, valueType, transform = (input) => input, options = {}) => {
+      const wifiMultiPath = Boolean(options.wifiMultiPath) || (
         pathOrPaths === profile.ssid24Path ||
         pathOrPaths === profile.pass24Path ||
         pathOrPaths === profile.ssid5Path ||
-        pathOrPaths === profile.pass5Path;
+        pathOrPaths === profile.pass5Path
+      );
       const dynamicPaths =
         pathOrPaths === profile.pppoeUsernamePath
           ? dynamicPppoeUsernamePaths
@@ -463,8 +464,8 @@ export class GenieacsClient {
       push(profile.natPath, natEnabled, "xsd:boolean", Boolean);
     }
     if (unifyWifiAliases) {
-      push([...profile.ssid24Path, ...profile.ssid5Path], normalizedSsid24);
-      push([...profile.pass24Path, ...profile.pass5Path], normalizedPass24);
+      push([...profile.ssid24Path, ...profile.ssid5Path], normalizedSsid24, undefined, (input) => input, { wifiMultiPath: true });
+      push([...profile.pass24Path, ...profile.pass5Path], normalizedPass24, undefined, (input) => input, { wifiMultiPath: true });
     } else {
       push(profile.ssid24Path, ssid24);
       push(profile.pass24Path, wifiPassword24 ?? wifiPassword);
