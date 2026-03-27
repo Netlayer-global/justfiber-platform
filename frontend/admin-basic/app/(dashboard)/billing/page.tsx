@@ -1597,6 +1597,7 @@ export default function BillingPage() {
           ) : null}
 
           {billingSectionTab === 'settings' ? (
+          <>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="card overflow-hidden">
               <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">State-wise GST Summary</div>
@@ -1912,6 +1913,7 @@ export default function BillingPage() {
               </table>
             </div>
           </div>
+          </>
           ) : null}
 
           {billingSectionTab === 'payments' ? (
