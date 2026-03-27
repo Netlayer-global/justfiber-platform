@@ -23,6 +23,7 @@ type InvoiceTemplateSettings = {
   accentColor: string
   footerNote: string
   paymentInstructions: string
+  zoneOverrides?: Array<Record<string, any>>
   logoDataUrl: string
   signatureDataUrl: string
   stampDataUrl: string
@@ -77,6 +78,7 @@ export default function SettingsPage() {
   const [catalog, setCatalog] = useState<SettingsCatalogItem[]>([])
   const [activeSection, setActiveSection] = useState('invoice_template')
   const [invoiceTemplate, setInvoiceTemplate] = useState<InvoiceTemplateSettings | null>(null)
+  const [zoneOverridesJson, setZoneOverridesJson] = useState('[]')
   const [genericJson, setGenericJson] = useState('{}')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -134,7 +136,9 @@ export default function SettingsPage() {
         return
       }
       if (section === 'invoice_template') {
-        setInvoiceTemplate(res.data.value as InvoiceTemplateSettings)
+        const value = res.data.value as InvoiceTemplateSettings
+        setInvoiceTemplate(value)
+        setZoneOverridesJson(JSON.stringify(value.zoneOverrides || [], null, 2))
       } else {
         setGenericJson(JSON.stringify(res.data.value || {}, null, 2))
       }
@@ -149,7 +153,11 @@ export default function SettingsPage() {
       setIsSaving(true)
       if (activeSection === 'invoice_template') {
         if (!invoiceTemplate) return
-        const res = await adminAPI.updateSettingsSection(activeSection, invoiceTemplate)
+        const parsedOverrides = JSON.parse(zoneOverridesJson || '[]')
+        const res = await adminAPI.updateSettingsSection(activeSection, {
+          ...invoiceTemplate,
+          zoneOverrides: Array.isArray(parsedOverrides) ? parsedOverrides : [],
+        })
         if (!res.success) {
           toast.error(res.error || 'Failed to save invoice template settings')
           return
@@ -204,6 +212,7 @@ export default function SettingsPage() {
     accentColor: '#8224E3',
     footerNote: '',
     paymentInstructions: '',
+    zoneOverrides: [],
     logoDataUrl: '',
     signatureDataUrl: '',
     stampDataUrl: '',
@@ -354,6 +363,15 @@ export default function SettingsPage() {
                     <label className="space-y-2 md:col-span-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Payment instructions</div>
                       <textarea className="input min-h-24" value={invoiceTemplate?.paymentInstructions || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, paymentInstructions: e.target.value }) : prev)} />
+                    </label>
+                    <label className="space-y-2 md:col-span-2">
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Zone template overrides JSON</div>
+                      <textarea
+                        className="input min-h-40 font-mono text-xs"
+                        value={zoneOverridesJson}
+                        onChange={(e) => setZoneOverridesJson(e.target.value)}
+                        placeholder={`[\n  {\n    "zoneCode": "NCR",\n    "companyName": "JustFiber NCR Pvt Ltd",\n    "accentColor": "#1D4ED8"\n  }\n]`}
+                      />
                     </label>
                   </div>
 

@@ -136,6 +136,7 @@ const settingsSectionDefaults = {
     accentColor: "#8224E3",
     footerNote: "Thank you for choosing JustFiber.",
     paymentInstructions: "Please pay before the due date to avoid service interruption.",
+    zoneOverrides: [],
     logoDataUrl: "",
     signatureDataUrl: "",
     stampDataUrl: ""

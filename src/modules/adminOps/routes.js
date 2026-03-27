@@ -138,6 +138,22 @@ async function getInvoiceTemplateSettings() {
   return config?.value || {};
 }
 
+function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer) {
+  const zoneCode = String(
+    customer?.billingZoneCode
+    || invoice?.metadata?.billingZoneCode
+    || invoice?.billingZoneCode
+    || ""
+  ).trim().toUpperCase();
+  const overrides = Array.isArray(baseSettings.zoneOverrides) ? baseSettings.zoneOverrides : [];
+  const matched = overrides.find((item) => String(item?.zoneCode || "").trim().toUpperCase() === zoneCode);
+  if (!matched) return baseSettings;
+  return {
+    ...baseSettings,
+    ...matched,
+  };
+}
+
 function pickBranding(profile, templateSettings = {}) {
   const accent = String(templateSettings.accentColor || "#0f6cbd");
   return {
@@ -1468,14 +1484,15 @@ adminOpsRouter.get(
       Customer.findOne({ customerId: invoice.customerId }).lean(),
       getInvoiceTemplateSettings()
     ]);
-    const branding = pickBranding(profile, templateSettings);
+    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, invoice, customer);
+    const branding = pickBranding(profile, selectedTemplateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.send(buildInvoiceHtml(invoice, customer, branding));
     }
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${invoice.invoiceNumber || invoice.invoiceId}.pdf\"`);
-    return renderInvoicePdf(invoice, profile, customer, templateSettings).pipe(res);
+    return renderInvoicePdf(invoice, profile, customer, selectedTemplateSettings).pipe(res);
   })
 );
 
@@ -1530,14 +1547,15 @@ adminOpsRouter.get(
       Customer.findOne({ customerId: note.customerId }).lean(),
       getInvoiceTemplateSettings()
     ]);
-    const branding = pickBranding(profile, templateSettings);
+    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, note, customer);
+    const branding = pickBranding(profile, selectedTemplateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.send(buildBillingNoteHtml(note, customer, branding));
     }
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${note.noteNumber}.pdf\"`);
-    return renderBillingNotePdf(note, profile, customer, templateSettings).pipe(res);
+    return renderBillingNotePdf(note, profile, customer, selectedTemplateSettings).pipe(res);
   })
 );
 
@@ -1554,14 +1572,15 @@ adminOpsRouter.get(
       Customer.findOne({ customerId: payment.customerId }).lean(),
       getInvoiceTemplateSettings()
     ]);
-    const branding = pickBranding(profile, templateSettings);
+    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, payment, customer);
+    const branding = pickBranding(profile, selectedTemplateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.send(buildPaymentReceiptHtml(payment, customer, branding));
     }
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${payment.transactionId}.pdf\"`);
-    return renderPaymentReceiptPdf(payment, profile, customer, templateSettings).pipe(res);
+    return renderPaymentReceiptPdf(payment, profile, customer, selectedTemplateSettings).pipe(res);
   })
 );
 
