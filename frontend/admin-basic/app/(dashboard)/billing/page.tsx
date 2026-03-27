@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, IntegrationSummary, Customer } from '@/lib/types'
-import { CreditCard, Loader, RefreshCw, ShieldCheck, Wallet } from 'lucide-react'
+import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
 type BillingProfileForm = {
@@ -823,101 +823,87 @@ export default function BillingPage() {
     { key: 'collections', label: 'Collections', hint: 'Overdues, reminders, and recovery' },
     { key: 'settings', label: 'Settings', hint: 'GST, zones, templates, and exports' },
   ]
-  const activeBillingSection = billingSectionTabs.find((tab) => tab.key === billingSectionTab) || billingSectionTabs[0]
   const activeHeroCopy = {
     invoices: {
       eyebrow: 'Invoice workspace',
       title: 'Issue and track invoices',
-      accent: ' without billing clutter.',
       description: 'Generate invoices, review zone/template routing, and dispatch PDFs from one focused invoice desk.',
-      pulseLabel: 'Invoice value',
-      pulseValue: `Rs ${invoicePulse.totalAmount.toFixed(0)}`,
-      pulseHint: `${visibleInvoices.length} visible invoice${visibleInvoices.length === 1 ? '' : 's'} in current view`,
-      metrics: [
-        { label: 'Pending', value: String(invoiceQuickViewCounts.pending), Icon: Wallet },
-        { label: 'Paid', value: String(invoiceQuickViewCounts.paid), Icon: ShieldCheck },
-        { label: 'Activation', value: String(invoiceQuickViewCounts.activation), Icon: CreditCard },
-      ],
     },
     payments: {
       eyebrow: 'Payments workspace',
       title: 'Reconcile and recover payments',
-      accent: ' with less noise.',
       description: 'Watch Razorpay settlement status, review recovery queues, and process refunds without invoice-heavy screens.',
-      pulseLabel: 'Captured payments',
-      pulseValue: String(razorpayOverview?.capturedPayments || payments.length || 0),
-      pulseHint: `${razorpayOverview?.unreconciledPayments || 0} unreconciled payment(s) awaiting action`,
-      metrics: [
-        { label: 'Unreconciled', value: String(razorpayOverview?.unreconciledPayments || 0), Icon: Wallet },
-        { label: 'Refunds', value: String(refundPayments.length), Icon: CreditCard },
-        { label: 'Failures', value: String(recoveryItems.length), Icon: ShieldCheck },
-      ],
     },
     collections: {
       eyebrow: 'Collections workspace',
       title: 'Work overdue and recovery queues',
-      accent: ' zone by zone.',
       description: 'See aging, promise-to-pay, reminders, and suspend-ready accounts in one recovery workflow.',
-      pulseLabel: 'Due amount',
-      pulseValue: `Rs ${Number(overview?.overdueAmount || 0).toFixed(0)}`,
-      pulseHint: `${collections.length} collection item(s) in the current bucket`,
-      metrics: [
-        { label: 'PTP', value: String(overview?.collectionStats?.promiseToPayActive || 0), Icon: CreditCard },
-        { label: 'Suspend', value: String(overview?.collectionStats?.suspendReady || 0), Icon: ShieldCheck },
-        { label: 'Assigned', value: String(overview?.collectionStats?.assignedCollections || 0), Icon: Wallet },
-      ],
     },
     settings: {
       eyebrow: 'Billing settings',
       title: 'Configure tax and billing rules',
-      accent: ' in one admin lane.',
       description: 'Manage GST profiles, zone mappings, export filters, and billing notes without payment and invoice distractions.',
-      pulseLabel: 'Profiles',
-      pulseValue: String(profiles.length || 0),
-      pulseHint: `${invoiceTemplateSettings?.zoneTemplateMappings?.length || 0} zone mapping(s) linked to branding`,
-      metrics: [
-        { label: 'Templates', value: String(invoiceTemplateSettings?.templates?.length || 1), Icon: CreditCard },
-        { label: 'Zones', value: String(profileForm.zoneMappings.length), Icon: ShieldCheck },
-        { label: 'States', value: String(profileForm.stateOverrides.length), Icon: Wallet },
-      ],
     },
+  }[billingSectionTab]
+  const compactSummaryCards = {
+    invoices: [
+      { label: 'Visible invoices', value: String(visibleInvoices.length) },
+      { label: 'Pending amount', value: `Rs ${invoicePulse.pendingAmount.toFixed(0)}` },
+      { label: 'Activation', value: String(invoicePulse.activationInvoices) },
+    ],
+    payments: [
+      { label: 'Captured', value: String(razorpayOverview?.capturedPayments || payments.length || 0) },
+      { label: 'Unreconciled', value: String(razorpayOverview?.unreconciledPayments || 0) },
+      { label: 'Refunds', value: String(refundPayments.length) },
+    ],
+    collections: [
+      { label: 'Queue', value: String(collections.length) },
+      { label: 'Promise to pay', value: String(overview?.collectionStats?.promiseToPayActive || 0) },
+      { label: 'Suspend ready', value: String(overview?.collectionStats?.suspendReady || 0) },
+    ],
+    settings: [
+      { label: 'Profiles', value: String(profiles.length || 0) },
+      { label: 'Templates', value: String(invoiceTemplateSettings?.templates?.length || 1) },
+      { label: 'Zones', value: String(profileForm.zoneMappings.length) },
+    ],
   }[billingSectionTab]
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">{activeHeroCopy.eyebrow}</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            {activeHeroCopy.title}
-            <span className="text-[#8224E3]">{activeHeroCopy.accent}</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            {activeHeroCopy.description}
-          </p>
-          <div className="mt-6 inline-flex rounded-full bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-slate-300">
-            {activeBillingSection.label} active
+      <section className="card p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.2em] text-white/45">{activeHeroCopy.eyebrow}</div>
+            <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-white">{activeHeroCopy.title}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">{activeHeroCopy.description}</p>
           </div>
-        </div>
-
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">{activeHeroCopy.pulseLabel}</div>
-          <div className="mt-3 text-5xl font-black">{activeHeroCopy.pulseValue}</div>
-          <div className="mt-2 text-sm text-black/60">{activeHeroCopy.pulseHint}</div>
-          <div className="mt-8 grid grid-cols-3 gap-3">
-            {activeHeroCopy.metrics.map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[22px] bg-black/10 p-4">
-                <Icon className="h-4 w-4 text-black/75" />
-                <div className="mt-4 text-2xl font-bold">{value}</div>
-                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {compactSummaryCards.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
+                <div className="mt-2 text-xl font-semibold text-white">{item.value}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="flex items-start justify-between gap-4">
-        <div />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap gap-2">
+          {billingSectionTabs.map((tab) => (
+            <button
+              key={tab.key}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                billingSectionTab === tab.key
+                  ? 'bg-white text-black'
+                  : 'bg-white/5 text-slate-300'
+              }`}
+              onClick={() => setBillingSectionTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {billingSectionTab === 'invoices' ? (
             <a
@@ -963,26 +949,6 @@ export default function BillingPage() {
               {isRunningCycle ? 'Running...' : billingSectionTab === 'collections' ? 'Refresh Collection Cycle' : 'Run Billing Cycle'}
             </button>
           ) : null}
-        </div>
-      </div>
-
-      <div className="card p-5">
-        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Billing workspace</div>
-        <div className="flex flex-wrap gap-3">
-          {billingSectionTabs.map((tab) => (
-            <button
-              key={tab.key}
-              className={`rounded-[20px] border px-4 py-3 text-left transition ${
-                billingSectionTab === tab.key
-                  ? 'border-[#8224E3] bg-[#8224E3]/15 text-white'
-                  : 'border-white/10 bg-white/5 text-slate-300'
-              }`}
-              onClick={() => setBillingSectionTab(tab.key)}
-            >
-              <div className="text-sm font-semibold">{tab.label}</div>
-              <div className="mt-1 text-xs text-inherit/70">{tab.hint}</div>
-            </button>
-          ))}
         </div>
       </div>
 
@@ -1225,13 +1191,6 @@ export default function BillingPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="card p-5"><p className="text-sm text-slate-500">Total Invoices</p><p className="text-2xl font-semibold mt-2">{overview?.totalInvoices || 0}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Overdue</p><p className="text-2xl font-semibold mt-2">{overview?.overdueInvoices || 0}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.collectedAmount || 0).toFixed(2)}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">GST Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.taxCollected || 0).toFixed(2)}</p></div>
-          </div>
-
           {billingSectionTab === 'invoices' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="card p-5"><p className="text-sm text-slate-500">Visible Total</p><p className="text-2xl font-semibold mt-2">Rs {invoicePulse.totalAmount.toFixed(2)}</p></div>
