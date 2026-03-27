@@ -311,6 +311,18 @@ function toLower(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function resolveCycleLabelFromMonths(durationMonths) {
+  const months = Math.max(1, Number(durationMonths || 1));
+  if (months >= 12) return "Yearly";
+  if (months >= 6) return "Half-yearly";
+  if (months >= 3) return "Quarterly";
+  return "Monthly";
+}
+
+function formatBillingMode(value) {
+  return String(value || "").toLowerCase() === "postpaid" ? "Postpaid" : "Prepaid";
+}
+
 function pointInRing(point, ring) {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -2212,31 +2224,61 @@ customerPortalRouter.get(
       throw new ApiError(404, "Billing details not available");
     }
 
-    const [invoices, payments, ledger, notes, requests] = await Promise.all([
-      BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1, createdAt: -1 }).limit(6).lean(),
+    const [service, invoiceCount, invoices, payments, ledger, notes, requests] = await Promise.all([
+      SubscriberService.findOne({ customerId: customer.customerId, status: { $in: ["active", "suspended", "expired"] } })
+        .sort({ updatedAt: -1 })
+        .lean(),
+      BillingInvoice.countDocuments({ customerId: customer.customerId }),
+      BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1, createdAt: -1 }).limit(12).lean(),
       PaymentTransaction.find({ customerId: customer.customerId, status: "success" }).sort({ paidAt: -1, createdAt: -1 }).limit(6).lean(),
       BillingLedgerEntry.find({ customerId: customer.customerId }).sort({ postedAt: -1, createdAt: -1 }).limit(10).lean(),
       BillingNote.find({ customerId: customer.customerId }).sort({ issuedAt: -1, createdAt: -1 }).limit(6).lean(),
       ServiceRequest.find({ customerId: customer.customerId, type: "plan_change" }).sort({ createdAt: -1 }).limit(6).lean()
     ]);
 
+    const latestInvoice = invoices[0] || null;
+    const nextBillingDate = service?.nextBillingDate || customer.expiryAt || latestInvoice?.dueDate || null;
+    const resolvedBillCycle =
+      service?.billingPeriodMonths
+        ? resolveCycleLabelFromMonths(service.billingPeriodMonths)
+        : customer.invoiceSummary?.billCycle ||
+          customer.billingSnapshot?.billCycle ||
+          latestInvoice?.metadata?.billCycleLabel ||
+          "Monthly";
+    const recurringAmount = Number(
+      service?.metadata?.recurringAmount ||
+        service?.metadata?.yearlyPrice ||
+        service?.metadata?.halfYearlyPrice ||
+        service?.metadata?.quarterlyPrice ||
+        service?.metadata?.monthlyPrice ||
+        latestInvoice?.totalAmount ||
+        customer.billingSnapshot?.lastInvoiceAmount ||
+        0
+    );
+    const openInvoices = invoices.filter((invoice) => String(invoice.paymentStatus || "").toLowerCase() !== "paid");
+    const dueAmount = openInvoices.length
+      ? openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
+      : Number(customer.billingSnapshot?.dueAmount || 0);
+
     return ok(res, {
       customerId: customer.customerId,
       summary: {
         currentPlan: customer.planName,
-        dueDate: customer.expiryAt,
-        billCycle:
-          customer.invoiceSummary?.billCycle ||
-          customer.billingSnapshot?.billCycle ||
-          invoices[0]?.metadata?.billCycleLabel ||
-          "Monthly",
-        billMode: customer.billingSnapshot?.billMode === "postpaid" ? "Postpaid" : "Prepaid",
-        generatedDate: customer.updatedAt,
-        amount: customer.billingSnapshot?.lastInvoiceAmount || 0,
-        dueAmount: customer.billingSnapshot?.dueAmount || 0,
-        paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown",
+        dueDate: nextBillingDate,
+        nextBillDate: nextBillingDate,
+        billCycle: resolvedBillCycle,
+        billMode: formatBillingMode(service?.metadata?.billMode || customer.billingSnapshot?.billMode),
+        generatedDate: latestInvoice?.generatedAt || customer.updatedAt,
+        amount: latestInvoice?.totalAmount || customer.billingSnapshot?.lastInvoiceAmount || 0,
+        dueAmount,
+        recurringAmount,
+        paymentStatus: latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "unknown",
         lastPaymentAmount: payments[0]?.amount || 0,
         lastPaymentDate: payments[0]?.paidAt || null,
+        invoiceCount,
+        latestInvoiceNumber: latestInvoice?.invoiceNumber || latestInvoice?.invoiceId || "",
+        latestInvoiceStatus: latestInvoice?.paymentStatus || "",
+        serviceStatus: service?.status || customer.operationalStatus || "unknown",
         pendingPlanChange: customer.billingSnapshot?.pendingPlanChange || null,
         adjustmentPreview: customer.billingSnapshot?.adjustmentPreview || 0
       },
@@ -2341,15 +2383,46 @@ customerPortalRouter.get(
     if (!customer) {
       throw new ApiError(404, "Billing summary not available");
     }
+    const [service, invoiceCount, latestInvoice] = await Promise.all([
+      SubscriberService.findOne({ customerId: customer.customerId, status: { $in: ["active", "suspended", "expired"] } })
+        .sort({ updatedAt: -1 })
+        .lean(),
+      BillingInvoice.countDocuments({ customerId: customer.customerId }),
+      BillingInvoice.findOne({ customerId: customer.customerId }).sort({ generatedAt: -1, createdAt: -1 }).lean()
+    ]);
+    const nextBillingDate = service?.nextBillingDate || customer.expiryAt || latestInvoice?.dueDate || null;
+    const billCycle =
+      service?.billingPeriodMonths
+        ? resolveCycleLabelFromMonths(service.billingPeriodMonths)
+        : customer.invoiceSummary?.billCycle ||
+          customer.billingSnapshot?.billCycle ||
+          latestInvoice?.metadata?.billCycleLabel ||
+          "Monthly";
     return ok(res, {
       currentPlan: customer.planName,
-      dueDate: customer.expiryAt,
-      billCycle: "Monthly",
-      billMode: customer.billingSnapshot?.billMode === "postpaid" ? "Postpaid" : "Prepaid",
-      generatedDate: customer.updatedAt,
-      amount: customer.billingSnapshot?.lastInvoiceAmount || 0,
-      paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown",
+      dueDate: nextBillingDate,
+      nextBillDate: nextBillingDate,
+      billCycle,
+      billMode: formatBillingMode(service?.metadata?.billMode || customer.billingSnapshot?.billMode),
+      generatedDate: latestInvoice?.generatedAt || customer.updatedAt,
+      amount: latestInvoice?.totalAmount || customer.billingSnapshot?.lastInvoiceAmount || 0,
+      recurringAmount:
+        Number(
+          service?.metadata?.recurringAmount ||
+            service?.metadata?.yearlyPrice ||
+            service?.metadata?.halfYearlyPrice ||
+            service?.metadata?.quarterlyPrice ||
+            service?.metadata?.monthlyPrice ||
+            latestInvoice?.totalAmount ||
+            customer.billingSnapshot?.lastInvoiceAmount ||
+            0
+        ) || 0,
+      paymentStatus: latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "unknown",
       dueAmount: customer.billingSnapshot?.dueAmount || 0,
+      invoiceCount,
+      latestInvoiceNumber: latestInvoice?.invoiceNumber || latestInvoice?.invoiceId || "",
+      latestInvoiceStatus: latestInvoice?.paymentStatus || "",
+      serviceStatus: service?.status || customer.operationalStatus || "unknown",
       pendingPlanChange: customer.billingSnapshot?.pendingPlanChange || null
     });
   })

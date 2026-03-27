@@ -92,12 +92,17 @@ class BillingData {
   const BillingData({
     required this.currentPlan,
     required this.dueAmount,
+    required this.recurringAmount,
     required this.nextBillDate,
     required this.lastPaymentAmount,
     required this.billCycle,
     required this.billMode,
     required this.generatedDate,
     required this.paymentStatus,
+    required this.latestInvoiceNumber,
+    required this.latestInvoiceStatus,
+    required this.invoiceCount,
+    required this.serviceStatus,
     required this.lastPaymentDate,
     required this.adjustmentPreview,
     required this.speedMbps,
@@ -118,12 +123,17 @@ class BillingData {
 
   final String currentPlan;
   final double dueAmount;
+  final double recurringAmount;
   final String nextBillDate;
   final double lastPaymentAmount;
   final String billCycle;
   final String billMode;
   final String generatedDate;
   final String paymentStatus;
+  final String latestInvoiceNumber;
+  final String latestInvoiceStatus;
+  final int invoiceCount;
+  final String serviceStatus;
   final String lastPaymentDate;
   final double adjustmentPreview;
   final double speedMbps;

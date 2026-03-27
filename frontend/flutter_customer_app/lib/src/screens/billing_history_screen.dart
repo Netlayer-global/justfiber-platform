@@ -31,6 +31,11 @@ class BillingHistoryScreen extends StatelessWidget {
     final showUpgradePrompt = billing.usageCapReached || (billing.usageCapGb > 0 && usageRatio >= 0.65);
     final billingCycleLabel = billing.billCycle.isEmpty ? 'Monthly' : billing.billCycle;
     final nextBillDateLabel = billing.nextBillDate.isEmpty ? 'Will update after activation' : billing.nextBillDate;
+    final recurringAmount = billing.recurringAmount > 0 ? billing.recurringAmount : (billing.dueAmount > 0 ? billing.dueAmount : billing.lastPaymentAmount);
+    final serviceStatusLabel = billing.serviceStatus.isEmpty ? 'Unknown' : billing.serviceStatus;
+    final latestInvoiceLabel = billing.latestInvoiceNumber.isNotEmpty
+        ? billing.latestInvoiceNumber
+        : (latestInvoice?.invoiceNumber.isNotEmpty == true ? latestInvoice!.invoiceNumber : 'Will appear after billing run');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Billing')),
@@ -64,7 +69,7 @@ class BillingHistoryScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Current bill',
+                  billing.dueAmount > 0 ? 'Current due' : 'Billing status',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     color: const Color(0xFFFFFFFF),
                     fontSize: 28,
@@ -72,7 +77,7 @@ class BillingHistoryScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Rs ${billing.dueAmount.toStringAsFixed(2)}',
+                  billing.dueAmount > 0 ? 'Rs ${billing.dueAmount.toStringAsFixed(2)}' : 'No due right now',
                   style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 38, color: Color(0xFF8224E3), letterSpacing: -1),
                 ),
                 const SizedBox(height: 6),
@@ -101,9 +106,9 @@ class BillingHistoryScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Expanded(child: _summaryTile('Download', '${billing.speedMbps.toStringAsFixed(0)} Mbps')),
+                    Expanded(child: _summaryTile('Recurring amount', 'Rs ${recurringAmount.toStringAsFixed(2)}')),
                     const SizedBox(width: 10),
-                    Expanded(child: _summaryTile('Upload', '${billing.uploadSpeedMbps.toStringAsFixed(0)} Mbps')),
+                    Expanded(child: _summaryTile('Invoices', '${billing.invoiceCount}')),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -169,9 +174,17 @@ class BillingHistoryScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: _summaryTile('Recurring amount', 'Rs ${billing.lastPaymentAmount > 0 ? billing.lastPaymentAmount.toStringAsFixed(2) : billing.dueAmount.toStringAsFixed(2)}')),
+                          Expanded(child: _summaryTile('Recurring amount', 'Rs ${recurringAmount.toStringAsFixed(2)}')),
                           const SizedBox(width: 10),
                           Expanded(child: _summaryTile('Next bill / expiry', nextBillDateLabel)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(child: _summaryTile('Latest invoice', latestInvoiceLabel)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _summaryTile('Service status', serviceStatusLabel)),
                         ],
                       ),
                     ],
@@ -416,7 +429,9 @@ class BillingHistoryScreen extends StatelessWidget {
                               context,
                               appState,
                               title: item.invoiceNumber.isEmpty ? 'Invoice' : item.invoiceNumber,
-                              subtitle: 'Generated ${item.generatedAt.isEmpty ? '-' : item.generatedAt}',
+                              subtitle: item.dueDate.isEmpty
+                                  ? 'Generated ${item.generatedAt.isEmpty ? '-' : item.generatedAt}'
+                                  : 'Due ${item.dueDate}',
                               amount: 'Rs ${item.totalAmount.toStringAsFixed(2)}',
                               meta: item.paymentStatus,
                               viewUrl: item.viewUrl,
