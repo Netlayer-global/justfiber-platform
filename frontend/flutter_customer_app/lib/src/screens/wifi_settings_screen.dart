@@ -287,6 +287,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
 
   Future<void> _showPauseSheet(BuildContext context, AppState appState) async {
     final wifi = appState.wifi;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -328,11 +330,27 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     onPressed: appState.busy
                         ? null
                         : () async {
+                            messenger
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    wifi.paused ? 'Resuming Wi-Fi...' : 'Pausing Wi-Fi...',
+                                  ),
+                                  duration: const Duration(seconds: 20),
+                                ),
+                              );
+                            navigator.pop();
                             final ok = await appState.toggleWifiPause(!wifi.paused);
-                            if (!context.mounted) return;
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(ok ? (wifi.paused ? 'Wi-Fi resumed' : 'Wi-Fi paused') : (appState.error ?? 'Unable to update Wi-Fi status'))),
+                            messenger.hideCurrentSnackBar();
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  ok
+                                      ? (wifi.paused ? 'Wi-Fi resumed' : 'Wi-Fi paused')
+                                      : (appState.error ?? 'Unable to update Wi-Fi status'),
+                                ),
+                              ),
                             );
                           },
                     child: Text(wifi.paused ? 'Resume Now' : 'Pause Now'),
