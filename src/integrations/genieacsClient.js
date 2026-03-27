@@ -152,6 +152,9 @@ function discoverDynamicConfigPaths(summary, kind) {
       normalizedPath.includes("device.wan.pppconnection");
     if (normalizedKind === "pppoeusername") return normalizedPath.endsWith(".username");
     if (normalizedKind === "pppoepassword") return normalizedPath.endsWith(".password");
+    if (normalizedKind === "wifienable") {
+      return isWifiPath && normalizedPath.endsWith(".enable");
+    }
     if (!isWifiPath) return false;
     if (normalizedKind === "ssid24") {
       return (
@@ -369,6 +372,36 @@ export class GenieacsClient {
     return genieacsRequest("POST", `/devices/${encodeURIComponent(targetDeviceId)}/tasks${suffix}`, {
       name: "reboot"
     });
+  }
+
+  async setWifiPaused(deviceId, { paused, brand = "generic" } = {}) {
+    const profile = resolveProvisioningProfile(brand);
+    let liveSummary = null;
+    try {
+      liveSummary = await this.getRichDeviceSummary({ deviceId });
+    } catch {
+      liveSummary = null;
+    }
+
+    const enableValue = !paused;
+    const dynamicEnablePaths = discoverDynamicConfigPaths(liveSummary, "wifiEnable");
+    const fallbackEnablePaths = [
+      ...(profile.ssid24Path || []).map((path) => String(path).replace(/\.SSID$/i, ".Enable")),
+      ...(profile.ssid5Path || []).map((path) => String(path).replace(/\.SSID$/i, ".Enable"))
+    ];
+    const candidatePaths = [...new Set([...dynamicEnablePaths, ...fallbackEnablePaths])];
+    const selectedPaths = selectExistingPaths(liveSummary, candidatePaths);
+    const values = selectedPaths
+      .filter(Boolean)
+      .map((path) => [path, enableValue, "xsd:boolean"]);
+
+    if (values.length > 0) {
+      for (const entry of values) {
+        await this.setParameterValues(deviceId, [entry], { connectionRequest: true });
+      }
+    }
+
+    return { ok: true, deviceId, paused: Boolean(paused), configured: values.length };
   }
 
   async pushAccessConfig({
