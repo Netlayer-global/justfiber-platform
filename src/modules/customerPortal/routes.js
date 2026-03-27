@@ -71,6 +71,7 @@ import {
 } from "../../common/customerPortalOtpStore.js";
 
 export const customerPortalRouter = Router();
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function computeBalanceAfter({ currentBalance, direction, amount }) {
   return currentBalance + (direction === "debit" ? amount : -amount);
@@ -2306,9 +2307,6 @@ customerPortalRouter.post(
         wifiPassword24: password24,
         wifiPassword5: password5
       });
-      if (brand === "nokia" && (password24 || password5)) {
-        await genieacsClient.rebootDevice(device.deviceId);
-      }
       try {
         await syncDeviceFromGenie(device);
         const refreshedDevice = await DeviceOperationalCache.findById(device._id);
@@ -2319,6 +2317,10 @@ customerPortalRouter.post(
         }
       } catch {
         // Fall back to local cache update below when live sync isn't available.
+      }
+      if (brand === "nokia" && (password24 || password5)) {
+        await wait(5000);
+        await genieacsClient.rebootDevice(device.deviceId);
       }
     } catch (error) {
       if (!isMissingGenieDeviceError(error)) {

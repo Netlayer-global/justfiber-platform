@@ -36,6 +36,7 @@ import { SubscriberService } from "../../models/SubscriberService.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 
 export const adminOpsRouter = Router();
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 adminOpsRouter.use(requireAuth);
 
@@ -1866,6 +1867,7 @@ adminOpsRouter.patch(
       wifiPassword5
     });
     if (brand === "nokia" && (wifiPassword24 || wifiPassword5)) {
+      await wait(5000);
       await genieacsClient.rebootDevice(targetDeviceId);
     }
     if (device) {
