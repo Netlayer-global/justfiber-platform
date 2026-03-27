@@ -974,7 +974,10 @@ export default function BillingPage() {
             placeholder="Zone code (NCR, LKO)"
             value={exportFilters.zoneCode}
             onChange={(e) => setExportFilters((prev) => ({ ...prev, zoneCode: e.target.value.toUpperCase() }))}
-          />`n          </div>`n          ) : null}
+          />
+        </div>
+      </div>
+      ) : null}
 
       {billingSectionTab === 'invoices' ? (
       <section>
@@ -1118,7 +1121,10 @@ export default function BillingPage() {
             </span>
           )) : (
             <span className="text-xs text-slate-500">No active invoice filters.</span>
-          )}`n          </div>`n          ) : null}
+          )}
+        </div>
+      </div>
+      ) : null}
 
       {isLoading ? (
         <div className="card p-6 text-center">
@@ -1154,7 +1160,10 @@ export default function BillingPage() {
                   <div className="text-xl font-semibold mt-2">Rs {Number(bucket.value?.amount || 0).toFixed(2)}</div>
                   <div className="text-xs text-slate-500 mt-2">{bucket.value?.count || 0} invoice(s)</div>
                 </div>
-              ))}`n          </div>`n          ) : null}
+              ))}
+            </div>
+          </div>
+          ) : null}
 
           {billingSectionTab === 'collections' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -1411,7 +1420,10 @@ export default function BillingPage() {
                     <div key={`${row.transactionId}-${row.status}`}>
                       {row.transactionId} | {row.customerId || '-'} | {row.status} {row.invoiceId ? `| ${row.invoiceId}` : ''} {row.reason ? `| ${row.reason}` : ''}
                     </div>
-                  ))}`n          </div>`n          ) : null}
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </form>
           ) : null}
 
@@ -1995,7 +2007,8 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'invoices' ? (`n          <div className="overflow-x-auto card">
+          {billingSectionTab === 'invoices' ? (
+          <div className="overflow-x-auto card">
             <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice register</div>
@@ -2126,7 +2139,9 @@ export default function BillingPage() {
                   </tr>
                 )}
               </tbody>
-            </table>`n          </div>`n          ) : null}
+            </table>
+          </div>
+          ) : null}
         </>
       )}
     </div>
