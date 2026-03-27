@@ -1,4 +1,6 @@
 import { Router } from "express";
+import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
 import { ApiError } from "../../common/ApiError.js";
@@ -9,6 +11,7 @@ import { ConnectionBooking } from "../../models/ConnectionBooking.js";
 import { Customer } from "../../models/Customer.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
+import { CustomerSession } from "../../models/CustomerSession.js";
 import { InstallerJob } from "../../models/InstallerJob.js";
 import { Installer } from "../../models/Installer.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
@@ -57,6 +60,7 @@ import {
   guestWifiSchema,
   parentalControlSchema,
   planChangeSchema,
+  refreshSessionSchema,
   sendOtpSchema,
   serviceRequestSchema,
   supportTicketSchema,
@@ -481,17 +485,24 @@ function getConnectedDevices(device) {
   if (Array.isArray(device?.lanInfo?.connectedDevices) && device.lanInfo.connectedDevices.length > 0) {
     return device.lanInfo.connectedDevices.map((item, index) => ({
       clientId: item.clientId || item.macAddress || `client-${index + 1}`,
-      name: item.name || `Connected Device ${index + 1}`,
-      connectionType: item.connectionType || "wifi",
-      signal: item.signal || "good",
+      name: item.name || item.hostName || item.hostname || item.macAddress || `Connected Device ${index + 1}`,
+      connectionType: item.connectionType || item.interfaceType || item.medium || "wifi",
+      signal: item.signal || item.linkQuality || item.rssiLabel || "good",
       blocked: Boolean(item.blocked),
       macAddress: item.macAddress
     }));
   }
-  return [
-    { clientId: "tv-living", name: "Living Room TV", connectionType: "wifi-5g", signal: "good", blocked: false },
-    { clientId: "phone-primary", name: "Primary Phone", connectionType: "wifi-5g", signal: "excellent", blocked: false }
-  ];
+  if (Array.isArray(device?.lanInfo?.hosts) && device.lanInfo.hosts.length > 0) {
+    return device.lanInfo.hosts.map((item, index) => ({
+      clientId: item.clientId || item.macAddress || item.hostName || `host-${index + 1}`,
+      name: item.hostName || item.name || item.macAddress || `Connected Device ${index + 1}`,
+      connectionType: item.connectionType || item.interfaceType || item.medium || "wifi",
+      signal: item.signal || item.linkQuality || "good",
+      blocked: Boolean(item.blocked),
+      macAddress: item.macAddress
+    }));
+  }
+  return [];
 }
 
 function isMissingGenieDeviceError(error) {
@@ -1263,6 +1274,40 @@ customerPortalRouter.post(
       { upsert: true }
     );
     return ok(res, { accessToken, refreshToken });
+  })
+);
+
+customerPortalRouter.post(
+  "/auth/refresh",
+  asyncHandler(async (req, res) => {
+    const payload = refreshSessionSchema.parse(req.body);
+    let decoded;
+    try {
+      decoded = jwt.verify(payload.refreshToken, env.JWT_REFRESH_SECRET);
+    } catch {
+      throw new ApiError(401, "Invalid refresh token");
+    }
+
+    if (decoded.scope !== "customer") {
+      throw new ApiError(401, "Invalid customer refresh scope");
+    }
+
+    const refreshTokenHash = crypto.createHash("sha256").update(payload.refreshToken).digest("hex");
+    const session = await CustomerSession.findOne({
+      customerUserId: decoded.sub,
+      refreshTokenHash,
+      expiresAt: { $gt: new Date() }
+    });
+    if (!session) {
+      throw new ApiError(401, "Customer session invalid");
+    }
+
+    const user = await CustomerUser.findById(decoded.sub);
+    if (!user) {
+      throw new ApiError(401, "Customer session invalid");
+    }
+
+    return ok(res, { accessToken: signCustomerAccessToken(user) });
   })
 );
 

@@ -23,6 +23,10 @@ const _latestBookingDurationMonthsKey = 'justfiber.latest_booking_duration_month
 const _latestBookingDurationLabelKey = 'justfiber.latest_booking_duration_label';
 
 class AppState extends ChangeNotifier {
+  AppState() {
+    api.onUnauthorized = _refreshAccessToken;
+  }
+
   final api = ApiClient(baseUrl: defaultApiBase);
 
   CustomerSession? session;
@@ -1007,6 +1011,25 @@ class AppState extends ChangeNotifier {
     } finally {
       restoringSession = false;
       notifyListeners();
+    }
+  }
+
+  Future<String?> _refreshAccessToken() async {
+    final current = session;
+    if (current == null || current.refreshToken.isEmpty) return null;
+    try {
+      final refreshedAccessToken = await api.refreshCustomerSession(current.refreshToken);
+      if (refreshedAccessToken.isEmpty) return null;
+      session = CustomerSession(
+        mobile: current.mobile,
+        accessToken: refreshedAccessToken,
+        refreshToken: current.refreshToken,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_accessTokenKey, refreshedAccessToken);
+      return refreshedAccessToken;
+    } catch (_) {
+      return null;
     }
   }
 

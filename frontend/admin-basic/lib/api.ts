@@ -47,11 +47,21 @@ export function getApiBaseUrl() {
 }
 
 let authToken: string | null = null
+let refreshToken: string | null = null
 
 export function setAuthToken(token: string) {
   authToken = token
   if (typeof window !== 'undefined') {
     localStorage.setItem('admin_token', token)
+  }
+}
+
+export function setAuthSession(accessToken: string, nextRefreshToken?: string) {
+  setAuthToken(accessToken)
+  refreshToken = nextRefreshToken || null
+  if (typeof window !== 'undefined') {
+    if (nextRefreshToken) localStorage.setItem('admin_refresh_token', nextRefreshToken)
+    else localStorage.removeItem('admin_refresh_token')
   }
 }
 
@@ -62,16 +72,48 @@ export function getAuthToken() {
   return authToken
 }
 
+export function getRefreshToken() {
+  if (typeof window !== 'undefined' && !refreshToken) {
+    refreshToken = localStorage.getItem('admin_refresh_token')
+  }
+  return refreshToken
+}
+
 export function clearAuthToken() {
   authToken = null
+  refreshToken = null
   if (typeof window !== 'undefined') {
     localStorage.removeItem('admin_token')
+    localStorage.removeItem('admin_refresh_token')
   }
+}
+
+let refreshInFlight: Promise<string | null> | null = null
+
+async function refreshAdminAccessToken() {
+  const currentRefreshToken = getRefreshToken()
+  if (!currentRefreshToken) return null
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/admin/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: currentRefreshToken }),
+  })
+  let data: any = null
+  try {
+    data = await response.json()
+  } catch {}
+  if (!response.ok || data?.success === false || !data?.data?.accessToken) {
+    clearAuthToken()
+    return null
+  }
+  setAuthSession(data.data.accessToken, currentRefreshToken)
+  return data.data.accessToken as string
 }
 
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  allowRetry = true
 ): Promise<ApiResponse<T>> {
   const token = getAuthToken()
   const headers = new Headers(options.headers)
@@ -86,7 +128,14 @@ async function request<T>(
     headers,
   })
 
-  if (response.status === 401) {
+  if (response.status === 401 && allowRetry && endpoint !== '/api/v1/admin/auth/refresh') {
+    refreshInFlight ??= refreshAdminAccessToken().finally(() => {
+      refreshInFlight = null
+    })
+    const nextToken = await refreshInFlight
+    if (nextToken) {
+      return request<T>(endpoint, options, false)
+    }
     clearAuthToken()
     window?.location.replace('/auth/login')
   }

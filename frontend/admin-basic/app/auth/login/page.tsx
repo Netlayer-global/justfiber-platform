@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, ShieldCheck, Sparkles } from 'lucide-react'
-import { adminAPI, getAuthToken, setAuthToken } from '@/lib/api'
+import { adminAPI, getAuthToken, setAuthSession } from '@/lib/api'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
@@ -30,7 +30,7 @@ export default function LoginPage() {
       setIsLoading(true)
       const res = await adminAPI.login(login, password)
       if (res.success && res.data?.accessToken) {
-        setAuthToken(res.data.accessToken)
+        setAuthSession(res.data.accessToken, res.data.refreshToken)
         toast.success('Logged in')
         router.replace('/dashboard')
       } else {

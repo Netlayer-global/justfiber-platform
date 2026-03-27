@@ -12,6 +12,10 @@ export const verifyOtpSchema = z.object({
   fullName: z.string().optional()
 });
 
+export const refreshSessionSchema = z.object({
+  refreshToken: z.string().min(10)
+});
+
 export const feasibilitySchema = z.object({
   lat: z.number(),
   lng: z.number(),

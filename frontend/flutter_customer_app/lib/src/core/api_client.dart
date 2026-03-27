@@ -9,6 +9,7 @@ class ApiClient {
 
   final String baseUrl;
   static const Duration _requestTimeout = Duration(seconds: 25);
+  Future<String?> Function()? onUnauthorized;
 
   Uri _uri(String path) => Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
 
@@ -24,6 +25,7 @@ class ApiClient {
     String method = 'GET',
     String? token,
     Map<String, dynamic>? body,
+    bool allowRetry = true,
   }) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
@@ -60,6 +62,18 @@ class ApiClient {
             ? 'Server returned an invalid response. Please try again shortly.'
             : 'Unexpected response from server. Please retry.',
       );
+    }
+    if (response.statusCode == 401 && allowRetry && onUnauthorized != null) {
+      final newToken = await onUnauthorized!.call();
+      if (newToken != null && newToken.isNotEmpty && newToken != token) {
+        return _request(
+          path,
+          method: method,
+          token: newToken,
+          body: body,
+          allowRetry: false,
+        );
+      }
     }
     if (response.statusCode >= 400 || payload['success'] == false) {
       throw Exception(payload['error']?['message'] ?? 'Request failed');
@@ -123,6 +137,16 @@ class ApiClient {
       accessToken: (data['accessToken'] ?? '').toString(),
       refreshToken: (data['refreshToken'] ?? '').toString(),
     );
+  }
+
+  Future<String> refreshCustomerSession(String refreshToken) async {
+    final data = _asMap(await _request(
+      '/api/v1/customer/auth/refresh',
+      method: 'POST',
+      body: {'refreshToken': refreshToken},
+      allowRetry: false,
+    ));
+    return (data['accessToken'] ?? '').toString();
   }
 
   Future<(String?, List<CustomerConnection>)> fetchConnections(CustomerSession session, {String? selectedCustomerId}) async {
