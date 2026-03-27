@@ -814,19 +814,29 @@ class AppState extends ChangeNotifier {
   Future<bool> setDeviceBlocked(String clientId, bool blocked) async {
     final current = session;
     if (current == null) return false;
-    busy = true;
     error = null;
+    final existingDevices = connectedDevices;
+    final updatedDevices = existingDevices
+        .map((device) => device.clientId == clientId
+            ? ConnectedDevice(
+                clientId: device.clientId,
+                name: device.name,
+                connectionType: device.connectionType,
+                signal: device.signal,
+                blocked: blocked,
+              )
+            : device)
+        .toList(growable: false);
+    connectedDevices = updatedDevices;
     notifyListeners();
     try {
       await api.setDeviceBlocked(current, customerId: selectedCustomerId, clientId: clientId, blocked: blocked);
-      await refresh();
       return true;
     } catch (e) {
+      connectedDevices = existingDevices;
       error = e.toString();
-      return false;
-    } finally {
-      busy = false;
       notifyListeners();
+      return false;
     }
   }
 
