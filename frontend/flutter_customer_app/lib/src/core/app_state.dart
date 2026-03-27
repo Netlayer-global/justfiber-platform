@@ -827,6 +827,12 @@ class AppState extends ChangeNotifier {
       _refreshWifiStateInBackground();
       return true;
     } catch (e) {
+      if (_isTimeoutLikeError(e)) {
+        error = null;
+        _refreshWifiStateInBackground();
+        notifyListeners();
+        return true;
+      }
       wifi = previousWifi;
       error = e.toString();
       notifyListeners();
