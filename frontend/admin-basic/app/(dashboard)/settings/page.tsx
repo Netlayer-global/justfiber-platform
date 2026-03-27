@@ -410,7 +410,6 @@ export default function SettingsPage() {
                     <div className="flex items-start justify-between gap-6">
                       <div>
                         {invoicePreview.logoDataUrl ? (
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={invoicePreview.logoDataUrl} alt="Logo" className="h-16 object-contain" />
                         ) : (
                           <div className="text-2xl font-black" style={{ color: invoicePreview.accentColor }}>
