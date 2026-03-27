@@ -129,6 +129,11 @@ export default function BillingPage() {
     totalAmount: '',
     paymentStatus: 'pending' as 'pending' | 'paid',
   })
+  const [paymentFilters, setPaymentFilters] = useState({
+    search: '',
+    status: '',
+    provider: '',
+  })
   const refundPayments = payments.filter((payment) => payment.method === 'refund' || (payment.provider || '').includes('refund'))
   const agingCards = [
     { label: 'Current', value: overview?.agingBuckets?.current },
@@ -218,6 +223,26 @@ export default function BillingPage() {
       activation: billing.filter((item) => item.source === 'installer_activation').length,
     }),
     [billing]
+  )
+  const visiblePayments = useMemo(
+    () =>
+      payments.filter((payment) => {
+        const search = paymentFilters.search.trim().toLowerCase()
+        const matchesSearch = !search || [
+          payment.transactionId,
+          payment.customerId,
+          payment.invoiceId,
+          payment.reconciledInvoiceId,
+        ].some((value) => String(value || '').toLowerCase().includes(search))
+        const matchesStatus = !paymentFilters.status || (payment.reconciliationStatus || payment.status || '') === paymentFilters.status
+        const matchesProvider = !paymentFilters.provider || (payment.provider || '') === paymentFilters.provider
+        return matchesSearch && matchesStatus && matchesProvider
+      }),
+    [paymentFilters, payments]
+  )
+  const paymentProviders = useMemo(
+    () => Array.from(new Set(payments.map((payment) => payment.provider).filter((provider): provider is string => Boolean(provider)))).sort(),
+    [payments]
   )
   useEffect(() => {
     void loadBilling()
@@ -496,6 +521,21 @@ export default function BillingPage() {
     } catch (error) {
       console.error('[v0] Failed to dispatch invoice:', error)
       toast.error('Failed to dispatch invoice')
+    }
+  }
+
+  async function markInvoicePaid(invoiceId: string) {
+    try {
+      const res = await adminAPI.markInvoicePaid(invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to mark invoice paid')
+        return
+      }
+      toast.success('Invoice marked paid')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to mark invoice paid:', error)
+      toast.error('Failed to mark invoice paid')
     }
   }
 
@@ -1419,6 +1459,24 @@ export default function BillingPage() {
             </div>
 
             <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                {profileForm.zoneMappings.slice(0, 6).map((item) => (
+                  <div key={item.zoneCode || item.zoneName} className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{item.zoneCode || 'ZONE'}</div>
+                    <div className="mt-2 font-semibold text-white">{item.zoneName || item.companyLegalName || 'Unnamed zone'}</div>
+                    <div className="mt-1 text-xs text-slate-400">{item.stateName || item.stateCode || 'No state'}</div>
+                    <div className="mt-2 text-xs text-slate-500">
+                      {item.invoicePrefix || 'Default prefix'} {item.templateKey ? `| ${item.templateKey}` : ''}
+                    </div>
+                  </div>
+                ))}
+                {!profileForm.zoneMappings.length ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a0e27] p-4 text-sm text-slate-500 md:col-span-3">
+                    No zone mappings configured yet.
+                  </div>
+                ) : null}
+              </div>
+
               <form onSubmit={saveProfile} className="card p-5 space-y-3">
                 <div className="font-semibold">Billing Profile</div>
                 <div className="text-sm text-slate-400">Main billing, GST, and zone routing settings.</div>
@@ -1624,6 +1682,41 @@ export default function BillingPage() {
           ) : null}
 
           {billingSectionTab === 'payments' ? (
+          <div className="space-y-4">
+          <div className="card p-5">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <input
+                className="input"
+                placeholder="Search transaction / customer"
+                value={paymentFilters.search}
+                onChange={(e) => setPaymentFilters((prev) => ({ ...prev, search: e.target.value }))}
+              />
+              <select
+                className="input"
+                value={paymentFilters.status}
+                onChange={(e) => setPaymentFilters((prev) => ({ ...prev, status: e.target.value }))}
+              >
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="reconciled">Reconciled</option>
+                <option value="captured">Captured</option>
+                <option value="success">Success</option>
+                <option value="failed">Failed</option>
+              </select>
+              <select
+                className="input"
+                value={paymentFilters.provider}
+                onChange={(e) => setPaymentFilters((prev) => ({ ...prev, provider: e.target.value }))}
+              >
+                <option value="">All providers</option>
+                {paymentProviders.map((provider) => (
+                  <option key={provider} value={provider || ''}>
+                    {provider}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div className="card overflow-hidden">
             <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
               <div>
@@ -1631,7 +1724,7 @@ export default function BillingPage() {
                 <div className="mt-1 text-sm text-slate-400">Core payment operations only.</div>
               </div>
               <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-                {payments.length} payment{payments.length === 1 ? '' : 's'}
+                {visiblePayments.length} payment{visiblePayments.length === 1 ? '' : 's'}
               </div>
             </div>
             <table className="w-full">
@@ -1645,7 +1738,7 @@ export default function BillingPage() {
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
+                {visiblePayments.map((payment) => (
                   <tr key={payment.id} className="border-t border-[#2a2f4a]">
                     <td className="table-cell">
                       <div className="font-mono text-xs">{payment.transactionId}</div>
@@ -1694,13 +1787,14 @@ export default function BillingPage() {
                     </td>
                   </tr>
                 ))}
-                {!payments.length ? (
+                {!visiblePayments.length ? (
                   <tr className="border-t border-[#2a2f4a]">
                     <td className="table-cell text-slate-500" colSpan={5}>No payments found.</td>
                   </tr>
                 ) : null}
               </tbody>
             </table>
+          </div>
           </div>
           ) : null}
 
@@ -1839,6 +1933,14 @@ export default function BillingPage() {
                       >
                         Dispatch
                       </button>
+                      {(item.paymentStatus || item.status) !== 'paid' ? (
+                        <button
+                          className="text-xs text-emerald-300"
+                          onClick={() => void markInvoicePaid(item.invoiceId)}
+                        >
+                          Mark Paid
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

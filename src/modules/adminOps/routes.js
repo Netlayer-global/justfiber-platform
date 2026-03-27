@@ -2304,6 +2304,49 @@ adminOpsRouter.post(
 );
 
 adminOpsRouter.post(
+  "/billing/invoices/:invoiceId/mark-paid",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const invoice = await BillingInvoice.findOne({
+      $or: [{ invoiceId: req.params.invoiceId }, { invoiceNumber: req.params.invoiceId }]
+    });
+    if (!invoice) {
+      throw new ApiError(404, "Invoice not found");
+    }
+
+    invoice.paymentStatus = "paid";
+    invoice.status = "settled";
+    invoice.metadata = {
+      ...(invoice.metadata || {}),
+      manuallyMarkedPaidAt: new Date(),
+      manuallyMarkedPaidByAdminId: req.admin?._id || null
+    };
+    await invoice.save();
+
+    const customer = await Customer.findOne({ customerId: invoice.customerId });
+    if (customer) {
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        dueAmount: 0,
+        lastPaymentStatus: "paid",
+        lastPaidAt: new Date(),
+        lastSettledInvoiceId: invoice.invoiceId
+      };
+      await customer.save();
+    }
+
+    await auditFromRequest(req, {
+      action: "billing.invoice.mark_paid",
+      entityType: "billing_invoice",
+      entityId: invoice.invoiceId,
+      metadata: { invoiceNumber: invoice.invoiceNumber }
+    });
+
+    return ok(res, { invoiceId: invoice.invoiceId, paymentStatus: invoice.paymentStatus, status: invoice.status });
+  })
+);
+
+adminOpsRouter.post(
   "/billing/notes/:noteNumber/dispatch",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {

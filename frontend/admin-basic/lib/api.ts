@@ -1702,6 +1702,10 @@ export const adminAPI = {
     request(`/api/v1/admin/billing/invoices/${invoiceId}/dispatch`, {
       method: 'POST',
     }),
+  markInvoicePaid: async (invoiceId: string) =>
+    request(`/api/v1/admin/billing/invoices/${invoiceId}/mark-paid`, {
+      method: 'POST',
+    }),
   dispatchBillingNote: async (noteNumber: string) =>
     request(`/api/v1/admin/billing/notes/${noteNumber}/dispatch`, {
       method: 'POST',
