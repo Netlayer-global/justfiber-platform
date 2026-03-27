@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingPayment, RazorpayOverview, RazorpayWebhookLog, Customer } from '@/lib/types'
+import { BillingData, BillingOverview, BillingProfile, BillingPayment, Customer } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -91,17 +91,11 @@ export default function BillingPage() {
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
-  const [collections, setCollections] = useState<BillingCollectionItem[]>([])
-  const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
-  const [razorpayOverview, setRazorpayOverview] = useState<RazorpayOverview | null>(null)
-  const [razorpayWebhookLogs, setRazorpayWebhookLogs] = useState<RazorpayWebhookLog[]>([])
-  const [recoveryItems, setRecoveryItems] = useState<BillingRecoveryItem[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
-  const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections' | 'settings'>('invoices')
+  const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'settings'>('invoices')
   const [invoiceQuickView, setInvoiceQuickView] = useState<'all' | 'pending' | 'paid' | 'overdue' | 'activation'>('all')
-  const [collectionBucket, setCollectionBucket] = useState('')
   const [invoiceFilters, setInvoiceFilters] = useState({
     search: '',
     customerId: '',
@@ -116,8 +110,6 @@ export default function BillingPage() {
     stateCode: '',
     zoneCode: '',
   })
-  const [csvImportText, setCsvImportText] = useState('')
-  const [csvImportResult, setCsvImportResult] = useState<BillingImportResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isRunningCycle, setIsRunningCycle] = useState(false)
@@ -135,13 +127,6 @@ export default function BillingPage() {
     provider: '',
   })
   const refundPayments = payments.filter((payment) => payment.method === 'refund' || (payment.provider || '').includes('refund'))
-  const agingCards = [
-    { label: 'Current', value: overview?.agingBuckets?.current },
-    { label: '1-30 Days', value: overview?.agingBuckets?.days1to30 },
-    { label: '31-60 Days', value: overview?.agingBuckets?.days31to60 },
-    { label: '61-90 Days', value: overview?.agingBuckets?.days61to90 },
-    { label: '90+ Days', value: overview?.agingBuckets?.days90plus },
-  ]
   const exportBaseUrl = getApiBaseUrl()
   const exportQuery = new URLSearchParams(
     Object.entries(exportFilters).filter(([, value]) => value.trim() !== '')
@@ -246,7 +231,7 @@ export default function BillingPage() {
   )
   useEffect(() => {
     void loadBilling()
-  }, [collectionBucket, invoiceFilters])
+  }, [invoiceFilters])
 
   useEffect(() => {
     const customerId = invoiceDraft.customerId.trim()
@@ -277,16 +262,11 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes, invoiceTemplateRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, invoiceTemplateRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
         adminAPI.getBillingPayments(),
-        adminAPI.getBillingCollections(collectionBucket || undefined),
-        adminAPI.getBillingCollectionAgents(),
-        adminAPI.getRazorpayOverview(),
-        adminAPI.getRazorpayWebhookLogs(),
-        adminAPI.getBillingRecovery(),
         adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
       ])
       if (invoiceRes.success && invoiceRes.data) {
@@ -352,21 +332,6 @@ export default function BillingPage() {
       }
       if (paymentRes.success && paymentRes.data) {
         setPayments(paymentRes.data.items)
-      }
-      if (collectionRes.success && collectionRes.data) {
-        setCollections(collectionRes.data)
-      }
-      if (collectionAgentRes.success && collectionAgentRes.data) {
-        setCollectionAgents(collectionAgentRes.data)
-      }
-      if (razorpayOverviewRes.success && razorpayOverviewRes.data) {
-        setRazorpayOverview(razorpayOverviewRes.data)
-      }
-      if (razorpayWebhookRes.success && razorpayWebhookRes.data) {
-        setRazorpayWebhookLogs(razorpayWebhookRes.data)
-      }
-      if (recoveryRes.success && recoveryRes.data) {
-        setRecoveryItems(recoveryRes.data as BillingRecoveryItem[])
       }
       if (invoiceTemplateRes.success && invoiceTemplateRes.data) {
         setInvoiceTemplateSettings(invoiceTemplateRes.data.value || null)
@@ -573,111 +538,6 @@ export default function BillingPage() {
     }
   }
 
-  async function sendRetryReminder(transactionId: string) {
-    try {
-      const res = await adminAPI.sendBillingRetryReminder(transactionId)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to send retry reminder')
-        return
-      }
-      toast.success('Retry reminder sent')
-    } catch (error) {
-      console.error('[v0] Failed to send retry reminder:', error)
-      toast.error('Failed to send retry reminder')
-    }
-  }
-
-  async function suspendFromCollection(customerId: string) {
-    try {
-      const res = await adminAPI.suspendCustomer(customerId, 'Collections due suspension')
-      if (!res.success) {
-        toast.error(res.error || 'Failed to suspend customer')
-        return
-      }
-      toast.success('Customer suspended from collections queue')
-      await loadBilling()
-    } catch (error) {
-      console.error('[v0] Failed to suspend customer from collection:', error)
-      toast.error('Failed to suspend customer')
-    }
-  }
-
-  async function resumeFromCollection(customerId: string) {
-    try {
-      const res = await adminAPI.resumeCustomer(customerId, 'Collections payment/resume')
-      if (!res.success) {
-        toast.error(res.error || 'Failed to resume customer')
-        return
-      }
-      toast.success('Customer resumed')
-      await loadBilling()
-    } catch (error) {
-      console.error('[v0] Failed to resume customer from collection:', error)
-      toast.error('Failed to resume customer')
-    }
-  }
-
-  async function sendReminder(item: BillingCollectionItem) {
-    try {
-      const res = await adminAPI.sendBillingCollectionReminder(item.customerId, item.invoiceId)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to send reminder')
-        return
-      }
-      toast.success('Reminder sent')
-      await loadBilling()
-    } catch (error) {
-      console.error('[v0] Failed to send billing reminder:', error)
-      toast.error('Failed to send reminder')
-    }
-  }
-
-  async function assignCollection(item: BillingCollectionItem) {
-    const defaultAgent = collectionAgents.find((agent) => agent.id === item.assignedAdminId)
-    const selected = window.prompt(
-      `Assign collection owner. Available: ${collectionAgents.map((agent) => `${agent.username} (${agent.fullName})`).join(', ')}`,
-      defaultAgent?.username || ''
-    )
-    if (selected === null) return
-    const agent = collectionAgents.find(
-      (entry) => entry.username.toLowerCase() === selected.trim().toLowerCase() || entry.id === selected.trim()
-    )
-    const res = await adminAPI.assignBillingCollectionOwner(item.customerId, agent?.id)
-    if (!res.success) {
-      toast.error(res.error || 'Failed to assign collection owner')
-      return
-    }
-    toast.success(`Assigned to ${agent?.fullName || 'current admin'}`)
-    await loadBilling()
-  }
-
-  async function addFollowUp(item: BillingCollectionItem) {
-    const note = window.prompt('Follow-up note', item.latestFollowUpNote || '')
-    if (!note) return
-    const res = await adminAPI.addBillingCollectionFollowUp(item.customerId, note)
-    if (!res.success) {
-      toast.error(res.error || 'Failed to save follow-up note')
-      return
-    }
-    toast.success('Follow-up note added')
-    await loadBilling()
-  }
-
-  async function markRazorpayOrderStale(orderId: string) {
-    try {
-      const res = await adminAPI.markRazorpayOrderStale(orderId)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to mark Razorpay order stale')
-        return
-      }
-      toast.success('Razorpay order marked stale')
-      await loadBilling()
-    } catch (error) {
-      console.error('[v0] Failed to mark Razorpay order stale:', error)
-      toast.error('Failed to mark Razorpay order stale')
-    }
-  }
-
   async function createRazorpayRefund(paymentId: string, currentAmount: number) {
     const amountInput = window.prompt('Refund amount', String(currentAmount || 0))
     if (amountInput === null) return
@@ -701,46 +561,6 @@ export default function BillingPage() {
     }
   }
 
-  async function importCsvPayments(e: React.FormEvent) {
-    e.preventDefault()
-    try {
-      const res = await adminAPI.importBillingPaymentsCsv(csvImportText)
-      if (!res.success || !res.data) {
-        toast.error(res.error || 'Failed to import CSV payments')
-        return
-      }
-      setCsvImportResult(res.data)
-      toast.success('CSV payments imported')
-      await loadBilling()
-    } catch (error) {
-      console.error('[v0] Failed to import CSV payments:', error)
-      toast.error('Failed to import CSV payments')
-    }
-  }
-
-  async function setPromiseToPay(item: BillingCollectionItem) {
-    const promisedAt = window.prompt('Promise to pay date (YYYY-MM-DD)', item.promiseToPayAt ? item.promiseToPayAt.slice(0, 10) : '')
-    if (!promisedAt) return
-    const amountInput = window.prompt('Promise amount', item.promiseAmount ? String(item.promiseAmount) : String(item.dueAmount || 0))
-    if (amountInput === null) return
-    const note = window.prompt('Promise note', item.promiseNote || '') || ''
-    try {
-      const res = await adminAPI.setBillingPromiseToPay(item.customerId, {
-        promisedAt,
-        amount: Number(amountInput || 0),
-        note,
-      })
-      if (!res.success) {
-        toast.error(res.error || 'Failed to save promise to pay')
-        return
-      }
-      toast.success('Promise to pay saved')
-      await loadBilling()
-    } catch (error) {
-      console.error('[v0] Failed to save promise to pay:', error)
-      toast.error('Failed to save promise to pay')
-    }
-  }
   const invoiceStatusTone = (status?: string) => {
     if (status === 'paid') return 'bg-emerald-500/15 text-emerald-300'
     if (status === 'pending') return 'bg-amber-500/15 text-amber-300'
@@ -754,7 +574,7 @@ export default function BillingPage() {
     return 'bg-white/5 text-slate-300'
   }
   const billingSectionTabs: Array<{
-    key: 'invoices' | 'payments' | 'collections' | 'settings'
+    key: 'invoices' | 'payments' | 'settings'
     label: string
     hint: string
   }> = [
@@ -784,7 +604,7 @@ export default function BillingPage() {
             {billingSectionTab === 'invoices'
               ? `Pending Rs ${invoicePulse.pendingAmount.toFixed(2)}`
               : billingSectionTab === 'payments'
-                ? `${recoveryItems.length} recovery items`
+                ? `${visiblePayments.length} visible payments`
                 : `${profileForm.zoneMappings.length} zone mappings`}
           </div>
         </div>
@@ -1011,426 +831,6 @@ export default function BillingPage() {
         </div>
       ) : (
         <>
-          {false ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="card p-5"><p className="text-sm text-slate-500">Active Prepaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePrepaidCustomers || 0}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Active Postpaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePostpaidCustomers || 0}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Promise To Pay</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.promiseToPayActive || 0}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Suspend Ready</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.suspendReady || 0}</p></div>
-          </div>
-          ) : null}
-
-          {false ? (
-          <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Aging Summary</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 p-4">
-              {agingCards.map((bucket) => (
-                <div key={bucket.label} className="rounded bg-[#0a0e27] p-4">
-                  <div className="text-xs text-slate-500">{bucket.label}</div>
-                  <div className="text-xl font-semibold mt-2">Rs {Number(bucket.value?.amount || 0).toFixed(2)}</div>
-                  <div className="text-xs text-slate-500 mt-2">{bucket.value?.count || 0} invoice(s)</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          ) : null}
-
-          {false ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="card p-5"><p className="text-sm text-slate-500">Pending Plan Changes</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.pendingPlanChanges || 0}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Assigned Collections</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.assignedCollections || 0}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Follow-ups Logged</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.followUpsLogged || 0}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Suspended Customers</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.suspendedCustomers || 0}</p></div>
-          </div>
-          ) : null}
-
-          {false ? (
-          <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Settlement Overview</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 p-4">
-              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Orders</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.totalOrders || 0}</div></div>
-              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Pending Orders</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.pendingOrders || 0}</div></div>
-              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Captured</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.capturedPayments || 0}</div></div>
-              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Unreconciled</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.unreconciledPayments || 0}</div></div>
-              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Webhook Captured</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.webhookCaptured || 0}</div></div>
-              <div className="rounded bg-[#0a0e27] p-4"><div className="text-xs text-slate-500">Verify Captured</div><div className="text-xl font-semibold mt-2">{razorpayOverview?.verifyCaptured || 0}</div></div>
-            </div>
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#0a0e27]">
-                  <th className="table-header">Payment</th>
-                  <th className="table-header">Customer</th>
-                  <th className="table-header">Order</th>
-                  <th className="table-header">Amount</th>
-                  <th className="table-header">Source</th>
-                  <th className="table-header text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(razorpayOverview?.settlementItems || []).slice(0, 15).map((item) => (
-                  <tr key={item.transactionId} className="border-t border-[#2a2f4a]">
-                    <td className="table-cell">
-                      <div className="font-mono text-xs">{item.transactionId}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.status} | {item.reconciliationStatus || 'pending'}</div>
-                    </td>
-                    <td className="table-cell">{item.customerId}</td>
-                    <td className="table-cell">
-                      <div className="font-mono text-xs">{item.orderId || '-'}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.orderExists ? item.orderStatus || 'order found' : 'order missing'}</div>
-                    </td>
-                    <td className="table-cell">Rs {Number(item.amount || 0).toFixed(2)}</td>
-                    <td className="table-cell">
-                      <div>{item.source || '-'}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.paidAt ? new Date(item.paidAt).toLocaleString() : item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</div>
-                    </td>
-                    <td className="table-cell text-right">
-                      <button
-                        className="btn-secondary"
-                        onClick={() => void reconcilePayment(item.transactionId)}
-                      >
-                        Reconcile
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {!(razorpayOverview?.settlementItems || []).length ? (
-                  <tr className="border-t border-[#2a2f4a]">
-                    <td className="table-cell text-slate-500" colSpan={6}>No unreconciled Razorpay settlements.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-          ) : null}
-
-          {false ? (
-          <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Recovery Queue</div>
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#0a0e27]">
-                  <th className="table-header">Order/Payment</th>
-                  <th className="table-header">Customer</th>
-                  <th className="table-header">State</th>
-                  <th className="table-header">Amount</th>
-                  <th className="table-header">Time</th>
-                  <th className="table-header text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(razorpayOverview?.settlementItems || [])
-                  .filter((item) => item.stale || item.reconciliationStatus === 'manual_review')
-                  .slice(0, 15)
-                  .map((item) => (
-                    <tr key={`recovery-${item.transactionId}`} className="border-t border-[#2a2f4a]">
-                      <td className="table-cell">
-                        <div className="font-mono text-xs">{item.orderId || item.transactionId}</div>
-                        <div className="text-xs text-slate-500 mt-1">{item.source || '-'} </div>
-                      </td>
-                      <td className="table-cell">{item.customerId}</td>
-                      <td className="table-cell">
-                        <div>{item.stale ? 'stale_pending_order' : item.reconciliationStatus || 'pending'}</div>
-                        <div className="text-xs text-slate-500 mt-1">{item.status}</div>
-                      </td>
-                      <td className="table-cell">Rs {Number(item.amount || 0).toFixed(2)}</td>
-                      <td className="table-cell">{item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</td>
-                      <td className="table-cell text-right">
-                        {item.stale && item.orderId ? (
-                          <button
-                            className="btn-secondary"
-                            onClick={() => void markRazorpayOrderStale(item.orderId!)}
-                          >
-                            Mark Stale
-                          </button>
-                        ) : (
-                          <button
-                            className="btn-secondary"
-                            onClick={() => void reconcilePayment(item.transactionId)}
-                          >
-                            Review/Reconcile
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                {!((razorpayOverview?.settlementItems || []).filter((item) => item.stale || item.reconciliationStatus === 'manual_review').length) ? (
-                  <tr className="border-t border-[#2a2f4a]">
-                    <td className="table-cell text-slate-500" colSpan={6}>No stale pending orders or manual-review Razorpay items.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-          ) : null}
-
-          {false ? (
-          <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Failed Payment Recovery</div>
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#0a0e27]">
-                  <th className="table-header">Transaction</th>
-                  <th className="table-header">Customer</th>
-                  <th className="table-header">Status</th>
-                  <th className="table-header">Amount</th>
-                  <th className="table-header">Source</th>
-                  <th className="table-header text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recoveryItems.slice(0, 20).map((item) => (
-                  <tr key={`payment-recovery-${item.transactionId}`} className="border-t border-[#2a2f4a]">
-                    <td className="table-cell">
-                      <div className="font-mono text-xs">{item.transactionId}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.provider || '-'} | {item.method || '-'}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.reference || item.invoiceId || '-'}</div>
-                    </td>
-                    <td className="table-cell">
-                      <div>{item.customerName}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.customerId}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.phone || '-'} | Due Rs {Number(item.dueAmount || 0).toFixed(2)}</div>
-                    </td>
-                    <td className="table-cell">
-                      <div>{item.status}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.customerStatus || '-'}</div>
-                    </td>
-                    <td className="table-cell">
-                      <div>Rs {Number(item.amount || 0).toFixed(2)}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.paymentAgeHours}h old</div>
-                    </td>
-                    <td className="table-cell">
-                      <div>{item.source || '-'}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</div>
-                    </td>
-                    <td className="table-cell text-right">
-                      <button
-                        className="btn-secondary"
-                        onClick={() => void sendRetryReminder(item.transactionId)}
-                      >
-                        Send Retry
-                      </button>
-                      {item.retryUrl ? (
-                        <a
-                          className="text-xs text-[#4da3ff] mt-2 inline-block"
-                          href={item.retryUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Open Retry Link
-                        </a>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-                {!recoveryItems.length ? (
-                  <tr className="border-t border-[#2a2f4a]">
-                    <td className="table-cell text-slate-500" colSpan={6}>No failed or pending payment recovery items.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-          ) : null}
-
-          {false ? (
-          <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Webhook Events</div>
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#0a0e27]">
-                  <th className="table-header">Event</th>
-                  <th className="table-header">Status</th>
-                  <th className="table-header">Payment / Order</th>
-                  <th className="table-header">Customer</th>
-                  <th className="table-header">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {razorpayWebhookLogs.slice(0, 20).map((log) => (
-                  <tr key={log.id} className="border-t border-[#2a2f4a]">
-                    <td className="table-cell">
-                      <div>{log.eventType}</div>
-                      {log.errorMessage ? <div className="text-xs text-red-300 mt-1">{log.errorMessage}</div> : null}
-                    </td>
-                    <td className="table-cell">{log.status}</td>
-                    <td className="table-cell">
-                      <div className="font-mono text-xs">{log.paymentId || '-'}</div>
-                      <div className="text-xs text-slate-500 mt-1">{log.orderId || '-'}</div>
-                    </td>
-                    <td className="table-cell">{log.customerId || '-'}</td>
-                    <td className="table-cell">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}</td>
-                  </tr>
-                ))}
-                {!razorpayWebhookLogs.length ? (
-                  <tr className="border-t border-[#2a2f4a]">
-                    <td className="table-cell text-slate-500" colSpan={5}>No Razorpay webhook logs yet.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-          ) : null}
-
-          {false ? (
-          <form onSubmit={importCsvPayments} className="card p-5 space-y-3">
-            <div className="font-semibold">Bulk Payment CSV Import</div>
-            <p className="text-xs text-slate-500">Headers: transactionId,customerId,amount,reference,invoiceId,provider,status,method,paidAt</p>
-            <textarea
-              className="input min-h-40 font-mono text-xs"
-              value={csvImportText}
-              onChange={(e) => setCsvImportText(e.target.value)}
-              placeholder={'transactionId,customerId,amount,reference,invoiceId\nTXN001,CUST001,999,UTR123,INV001'}
-            />
-            <button type="submit" className="btn-primary">Import CSV</button>
-            {csvImportResult ? (
-              <div className="rounded bg-[#0a0e27] p-4 space-y-2">
-                <div className="text-sm">Imported {csvImportResult?.imported} | Reconciled {csvImportResult?.reconciled} | Manual Review {csvImportResult?.manualReview} | Skipped {csvImportResult?.skipped}</div>
-                <div className="max-h-48 overflow-auto text-xs text-slate-300 space-y-1">
-                  {csvImportResult?.results.slice(0, 20).map((row) => (
-                    <div key={`${row.transactionId}-${row.status}`}>
-                      {row.transactionId} | {row.customerId || '-'} | {row.status} {row.invoiceId ? `| ${row.invoiceId}` : ''} {row.reason ? `| ${row.reason}` : ''}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </form>
-          ) : null}
-
-          {false ? (
-          <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold flex items-center justify-between gap-4">
-              <div>Collections Queue</div>
-              <select
-                className="input max-w-56"
-                value={collectionBucket}
-                onChange={(e) => setCollectionBucket(e.target.value)}
-              >
-                <option value="">All buckets</option>
-                <option value="pending_due">Pending due</option>
-                <option value="overdue">Overdue</option>
-                <option value="pending_plan_change">Pending plan change</option>
-                <option value="suspend_ready">Suspend ready</option>
-              </select>
-            </div>
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#0a0e27]">
-                  <th className="table-header">Customer</th>
-                  <th className="table-header">Bucket</th>
-                  <th className="table-header">Due</th>
-                  <th className="table-header">Overdue</th>
-                  <th className="table-header">Plan Change</th>
-                  <th className="table-header text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {collections.length ? collections.map((item) => (
-                  <tr key={`${item.customerId}-${item.bucket}-${item.invoiceId || 'na'}`} className="border-t border-[#2a2f4a] align-top">
-                    <td className="table-cell">
-                      <div className="font-medium">{item.customerName}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.customerId}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.phone || '-'} | {item.billMode || '-'}</div>
-                    </td>
-                    <td className="table-cell">
-                      <span className="px-2 py-1 rounded text-xs bg-[#0a0e27] text-slate-200">{item.bucket}</span>
-                      <div className="text-xs text-slate-500 mt-1">{item.invoiceStatus || item.status || '-'}</div>
-                    </td>
-                    <td className="table-cell">
-                      <div>Rs {Number(item.dueAmount || 0).toFixed(2)}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.invoiceNumber || '-'}</div>
-                    </td>
-                    <td className="table-cell">
-                      <div>{item.overdueDays} day(s)</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.invoiceDueDate ? new Date(item.invoiceDueDate).toLocaleDateString() : '-'}</div>
-                    </td>
-                    <td className="table-cell">
-                      <div>{item.pendingPlanName || '-'}</div>
-                      <div className="text-xs text-slate-500 mt-1">{item.pendingPlanMode || '-'}</div>
-                      {item.assignedAdminName ? (
-                        <div className="text-xs text-sky-300 mt-1">Owner {item.assignedAdminName}</div>
-                      ) : null}
-                      {item.adjustmentPreview ? (
-                        <div className="text-xs text-slate-500 mt-1">Adj Rs {Number(item.adjustmentPreview).toFixed(2)}</div>
-                      ) : null}
-                      {item.promiseToPayAt ? (
-                        <div className="text-xs text-amber-300 mt-1">
-                          PTP {new Date(item.promiseToPayAt).toLocaleDateString()} {item.promiseAmount ? `| Rs ${Number(item.promiseAmount).toFixed(2)}` : ''}
-                        </div>
-                      ) : null}
-                      {item.lastReminderAt ? (
-                        <div className="text-xs text-slate-500 mt-1">Reminded {new Date(item.lastReminderAt).toLocaleString()}</div>
-                      ) : null}
-                      {item.latestFollowUpNote ? (
-                        <div className="text-xs text-slate-400 mt-1">
-                          Note: {item.latestFollowUpNote} {item.followUpCount ? `(${item.followUpCount})` : ''}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="table-cell text-right">
-                      {item.invoiceId ? (
-                        <button
-                          className="text-xs text-[#4da3ff] inline-block"
-                          onClick={() => {
-                            if (!item.invoiceId) return
-                            void openInvoicePdf(item.invoiceId)
-                          }}
-                        >
-                          Open Invoice
-                        </button>
-                      ) : null}
-                      <button
-                        className="text-xs text-[#4da3ff] mt-2 block ml-auto"
-                        onClick={() => void sendReminder(item)}
-                      >
-                        Send Reminder
-                      </button>
-                      <button
-                        className="text-xs text-[#4da3ff] mt-2 block ml-auto"
-                        onClick={() => void assignCollection(item)}
-                      >
-                        Assign
-                      </button>
-                      <button
-                        className="text-xs text-[#4da3ff] mt-2 block ml-auto"
-                        onClick={() => void addFollowUp(item)}
-                      >
-                        Add Note
-                      </button>
-                      <button
-                        className="text-xs text-[#4da3ff] mt-2 block ml-auto"
-                        onClick={() => void setPromiseToPay(item)}
-                      >
-                        Promise To Pay
-                      </button>
-                      {item.suspendRecommended ? (
-                        <button
-                          className="btn-secondary mt-2"
-                          onClick={() => void suspendFromCollection(item.customerId)}
-                        >
-                          Suspend
-                        </button>
-                      ) : null}
-                      {item.status === 'suspended' ? (
-                        <button
-                          className="btn-secondary mt-2"
-                          onClick={() => void resumeFromCollection(item.customerId)}
-                        >
-                          Resume
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                )) : (
-                  <tr className="border-t border-[#2a2f4a]">
-                    <td className="table-cell text-slate-500" colSpan={6}>No collection items in this bucket.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          ) : null}
-
           {billingSectionTab === 'settings' ? (
           <>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
