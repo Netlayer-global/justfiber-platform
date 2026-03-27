@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -91,11 +91,14 @@ export default function BillingPage() {
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
+  const [collections, setCollections] = useState<BillingCollectionItem[]>([])
+  const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [billingRuns, setBillingRuns] = useState<BillingRun[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
-  const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'settings'>('invoices')
+  const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections' | 'settings'>('invoices')
+  const [collectionBucket, setCollectionBucket] = useState<'' | 'pending_due' | 'overdue' | 'pending_plan_change' | 'suspend_ready'>('')
   const [invoiceQuickView, setInvoiceQuickView] = useState<'all' | 'pending' | 'paid' | 'overdue' | 'activation'>('all')
   const [invoiceFilters, setInvoiceFilters] = useState({
     search: '',
@@ -230,10 +233,14 @@ export default function BillingPage() {
     () => Array.from(new Set(payments.map((payment) => payment.provider).filter((provider): provider is string => Boolean(provider)))).sort(),
     [payments]
   )
+  const visibleCollections = useMemo(
+    () => (collectionBucket ? collections.filter((item) => item.bucket === collectionBucket) : collections),
+    [collectionBucket, collections]
+  )
   const latestRecurringRuns = useMemo(() => billingRuns.slice(0, 6), [billingRuns])
   useEffect(() => {
     void loadBilling()
-  }, [invoiceFilters])
+  }, [invoiceFilters, collectionBucket])
 
   useEffect(() => {
     const customerId = invoiceDraft.customerId.trim()
@@ -264,11 +271,13 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, billingRunRes, invoiceTemplateRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, collectionRes, collectionAgentRes, billingRunRes, invoiceTemplateRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
         adminAPI.getBillingPayments(),
+        adminAPI.getBillingCollections(collectionBucket || undefined),
+        adminAPI.getBillingCollectionAgents(),
         adminAPI.getBillingRuns(),
         adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
       ])
@@ -335,6 +344,12 @@ export default function BillingPage() {
       }
       if (paymentRes.success && paymentRes.data) {
         setPayments(paymentRes.data.items)
+      }
+      if (collectionRes.success && collectionRes.data) {
+        setCollections(collectionRes.data)
+      }
+      if (collectionAgentRes.success && collectionAgentRes.data) {
+        setCollectionAgents(collectionAgentRes.data)
       }
       if (billingRunRes.success && billingRunRes.data) {
         setBillingRuns(billingRunRes.data)
@@ -495,6 +510,79 @@ export default function BillingPage() {
     }
   }
 
+  async function sendCollectionReminder(customerId: string, invoiceId?: string) {
+    try {
+      const res = await adminAPI.sendBillingCollectionReminder(customerId, invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to send reminder')
+        return
+      }
+      toast.success('Reminder sent')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to send collection reminder:', error)
+      toast.error('Failed to send reminder')
+    }
+  }
+
+  async function addCollectionFollowUp(customerId: string) {
+    const note = window.prompt('Follow-up note')
+    if (!note || !note.trim()) return
+    try {
+      const res = await adminAPI.addBillingCollectionFollowUp(customerId, note.trim())
+      if (!res.success) {
+        toast.error(res.error || 'Failed to save follow-up')
+        return
+      }
+      toast.success('Follow-up saved')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to save collection follow-up:', error)
+      toast.error('Failed to save follow-up')
+    }
+  }
+
+  async function setPromiseToPay(customerId: string) {
+    const promisedAt = window.prompt('Promise date (YYYY-MM-DD)', new Date().toISOString().slice(0, 10))
+    if (!promisedAt || !promisedAt.trim()) return
+    const amountInput = window.prompt('Promise amount (optional)', '')
+    const note = window.prompt('Promise note', '') || ''
+    try {
+      const res = await adminAPI.setBillingPromiseToPay(customerId, {
+        promisedAt: promisedAt.trim(),
+        amount: amountInput && amountInput.trim() ? Number(amountInput) : undefined,
+        note,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to save promise to pay')
+        return
+      }
+      toast.success('Promise to pay saved')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to save promise to pay:', error)
+      toast.error('Failed to save promise to pay')
+    }
+  }
+
+  async function assignCollection(customerId: string) {
+    const options = collectionAgents.map((agent) => `${agent.id}:${agent.fullName || agent.username}`).join('\n')
+    const selected = window.prompt(`Assign agent using ID.\n${options}`, collectionAgents[0]?.id || '')
+    if (selected === null) return
+    try {
+      const res = await adminAPI.assignBillingCollectionOwner(customerId, selected.trim() || undefined)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to assign owner')
+        return
+      }
+      toast.success(selected.trim() ? 'Collection assigned' : 'Collection owner cleared')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to assign collection owner:', error)
+      toast.error('Failed to assign owner')
+    }
+  }
+
   async function markInvoicePaid(invoiceId: string) {
     try {
       const res = await adminAPI.markInvoicePaid(invoiceId)
@@ -587,12 +675,13 @@ export default function BillingPage() {
     return 'bg-white/5 text-slate-300'
   }
   const billingSectionTabs: Array<{
-    key: 'invoices' | 'payments' | 'settings'
+    key: 'invoices' | 'payments' | 'collections' | 'settings'
     label: string
     hint: string
   }> = [
     { key: 'invoices', label: 'Invoices', hint: 'Generate and manage invoices' },
     { key: 'payments', label: 'Payments', hint: 'Reconcile and refund payments' },
+    { key: 'collections', label: 'Collections', hint: 'Work pending and overdue accounts' },
     { key: 'settings', label: 'Settings', hint: 'GST, zones, templates, and exports' },
   ]
 
@@ -603,13 +692,15 @@ export default function BillingPage() {
           <div>
             <div className="text-xs uppercase tracking-[0.2em] text-white/45">Billing</div>
             <h1 className="mt-1 text-2xl font-semibold text-white">
-              {billingSectionTab === 'invoices' ? 'Invoices' : billingSectionTab === 'payments' ? 'Payments' : 'Settings'}
+              {billingSectionTab === 'invoices' ? 'Invoices' : billingSectionTab === 'payments' ? 'Payments' : billingSectionTab === 'collections' ? 'Collections' : 'Settings'}
             </h1>
             <p className="mt-1 text-sm text-slate-400">
               {billingSectionTab === 'invoices'
                 ? `${visibleInvoices.length} invoices in current view`
                 : billingSectionTab === 'payments'
                   ? `${payments.length} payments and ${refundPayments.length} refunds`
+                  : billingSectionTab === 'collections'
+                    ? `${visibleCollections.length} accounts in collection queue`
                   : `${profiles.length} billing profiles and ${invoiceTemplateSettings?.templates?.length || 1} templates`}
             </p>
           </div>
@@ -618,6 +709,8 @@ export default function BillingPage() {
               ? `Pending Rs ${invoicePulse.pendingAmount.toFixed(2)}`
               : billingSectionTab === 'payments'
                 ? `${visiblePayments.length} visible payments`
+                : billingSectionTab === 'collections'
+                  ? `${visibleCollections.filter((item) => item.suspendRecommended).length} suspend-ready`
                 : `${profileForm.zoneMappings.length} zone mappings`}
           </div>
         </div>
@@ -932,6 +1025,115 @@ export default function BillingPage() {
             )}
           </tbody>
         </table>
+      </div>
+      ) : null}
+
+      {billingSectionTab === 'collections' ? (
+      <div className="space-y-4">
+        <div className="card p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Collection queue</div>
+              <div className="mt-1 text-sm text-slate-400">Only pending commercial recovery actions.</div>
+            </div>
+            <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+              {visibleCollections.length} account{visibleCollections.length === 1 ? '' : 's'}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              ['', 'All'],
+              ['pending_due', 'Pending due'],
+              ['overdue', 'Overdue'],
+              ['suspend_ready', 'Suspend ready'],
+              ['pending_plan_change', 'Plan change'],
+            ].map(([key, label]) => (
+              <button
+                key={key || 'all'}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  collectionBucket === key ? 'bg-[#8224E3] text-white' : 'bg-white/5 text-slate-300'
+                }`}
+                onClick={() => setCollectionBucket(key as typeof collectionBucket)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="card overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#0a0e27]">
+                <th className="table-header">Customer</th>
+                <th className="table-header">Queue</th>
+                <th className="table-header">Due</th>
+                <th className="table-header">Owner</th>
+                <th className="table-header text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleCollections.map((item) => (
+                <tr key={`${item.customerId}-${item.bucket}-${item.invoiceId || 'none'}`} className="border-t border-[#2a2f4a]">
+                  <td className="table-cell">
+                    <div className="font-medium text-white">{item.customerName}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.customerId} {item.phone ? `| ${item.phone}` : ''}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {item.invoiceNumber || item.pendingPlanName || '-'}
+                    </div>
+                  </td>
+                  <td className="table-cell">
+                    <div className="capitalize">{item.bucket.replaceAll('_', ' ')}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {item.overdueDays > 0 ? `${item.overdueDays} day(s) overdue` : item.billMode || '-'}
+                    </div>
+                    {item.promiseToPayAt ? (
+                      <div className="mt-1 text-xs text-amber-300">
+                        PTP {new Date(item.promiseToPayAt).toLocaleDateString()}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="table-cell">
+                    <div>Rs {Number(item.dueAmount || 0).toFixed(2)}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.invoiceStatus || item.status || '-'}</div>
+                    {item.suspendRecommended ? (
+                      <div className="mt-1 text-xs text-rose-300">Suspend recommended</div>
+                    ) : null}
+                  </td>
+                  <td className="table-cell">
+                    <div>{item.assignedAdminName || 'Unassigned'}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.followUpCount || 0} follow-up(s)</div>
+                    {item.latestFollowUpNote ? (
+                      <div className="mt-1 text-xs text-slate-500">{item.latestFollowUpNote}</div>
+                    ) : null}
+                  </td>
+                  <td className="table-cell text-right">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button className="btn-secondary" onClick={() => void sendCollectionReminder(item.customerId, item.invoiceId)}>
+                        Remind
+                      </button>
+                      <button className="btn-secondary" onClick={() => void addCollectionFollowUp(item.customerId)}>
+                        Follow-up
+                      </button>
+                      <button className="btn-secondary" onClick={() => void setPromiseToPay(item.customerId)}>
+                        Promise
+                      </button>
+                      <button className="btn-secondary" onClick={() => void assignCollection(item.customerId)}>
+                        Assign
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!visibleCollections.length ? (
+                <tr className="border-t border-[#2a2f4a]">
+                  <td className="table-cell text-slate-500" colSpan={5}>
+                    No accounts in the selected collection bucket.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </div>
       ) : null}
 
