@@ -798,15 +798,6 @@ export default function BillingPage() {
     }
   }
 
-  const pulseMetrics: Array<{
-    label: string
-    value: string
-    Icon: typeof CreditCard
-  }> = [
-    { label: 'Invoices', value: String(overview?.totalInvoices || 0), Icon: CreditCard },
-    { label: 'GST', value: `Rs ${Number(overview?.taxCollected || 0).toFixed(0)}`, Icon: ShieldCheck },
-    { label: 'Overdue', value: String(overview?.overdueInvoices || 0), Icon: Wallet },
-  ]
   const zohoIntegration = integrations.find((item) =>
     item.provider.toLowerCase().includes('zoho') || item.displayName.toLowerCase().includes('zoho')
   )
@@ -832,28 +823,89 @@ export default function BillingPage() {
     { key: 'collections', label: 'Collections', hint: 'Overdues, reminders, and recovery' },
     { key: 'settings', label: 'Settings', hint: 'GST, zones, templates, and exports' },
   ]
+  const activeBillingSection = billingSectionTabs.find((tab) => tab.key === billingSectionTab) || billingSectionTabs[0]
+  const activeHeroCopy = {
+    invoices: {
+      eyebrow: 'Invoice workspace',
+      title: 'Issue and track invoices',
+      accent: ' without billing clutter.',
+      description: 'Generate invoices, review zone/template routing, and dispatch PDFs from one focused invoice desk.',
+      pulseLabel: 'Invoice value',
+      pulseValue: `Rs ${invoicePulse.totalAmount.toFixed(0)}`,
+      pulseHint: `${visibleInvoices.length} visible invoice${visibleInvoices.length === 1 ? '' : 's'} in current view`,
+      metrics: [
+        { label: 'Pending', value: String(invoiceQuickViewCounts.pending), Icon: Wallet },
+        { label: 'Paid', value: String(invoiceQuickViewCounts.paid), Icon: ShieldCheck },
+        { label: 'Activation', value: String(invoiceQuickViewCounts.activation), Icon: CreditCard },
+      ],
+    },
+    payments: {
+      eyebrow: 'Payments workspace',
+      title: 'Reconcile and recover payments',
+      accent: ' with less noise.',
+      description: 'Watch Razorpay settlement status, review recovery queues, and process refunds without invoice-heavy screens.',
+      pulseLabel: 'Captured payments',
+      pulseValue: String(razorpayOverview?.capturedPayments || payments.length || 0),
+      pulseHint: `${razorpayOverview?.unreconciledPayments || 0} unreconciled payment(s) awaiting action`,
+      metrics: [
+        { label: 'Unreconciled', value: String(razorpayOverview?.unreconciledPayments || 0), Icon: Wallet },
+        { label: 'Refunds', value: String(refundPayments.length), Icon: CreditCard },
+        { label: 'Failures', value: String(recoveryItems.length), Icon: ShieldCheck },
+      ],
+    },
+    collections: {
+      eyebrow: 'Collections workspace',
+      title: 'Work overdue and recovery queues',
+      accent: ' zone by zone.',
+      description: 'See aging, promise-to-pay, reminders, and suspend-ready accounts in one recovery workflow.',
+      pulseLabel: 'Due amount',
+      pulseValue: `Rs ${Number(overview?.overdueAmount || 0).toFixed(0)}`,
+      pulseHint: `${collections.length} collection item(s) in the current bucket`,
+      metrics: [
+        { label: 'PTP', value: String(overview?.collectionStats?.promiseToPayActive || 0), Icon: CreditCard },
+        { label: 'Suspend', value: String(overview?.collectionStats?.suspendReady || 0), Icon: ShieldCheck },
+        { label: 'Assigned', value: String(overview?.collectionStats?.assignedCollections || 0), Icon: Wallet },
+      ],
+    },
+    settings: {
+      eyebrow: 'Billing settings',
+      title: 'Configure tax and billing rules',
+      accent: ' in one admin lane.',
+      description: 'Manage GST profiles, zone mappings, export filters, and billing notes without payment and invoice distractions.',
+      pulseLabel: 'Profiles',
+      pulseValue: String(profiles.length || 0),
+      pulseHint: `${invoiceTemplateSettings?.zoneTemplateMappings?.length || 0} zone mapping(s) linked to branding`,
+      metrics: [
+        { label: 'Templates', value: String(invoiceTemplateSettings?.templates?.length || 1), Icon: CreditCard },
+        { label: 'Zones', value: String(profileForm.zoneMappings.length), Icon: ShieldCheck },
+        { label: 'States', value: String(profileForm.stateOverrides.length), Icon: Wallet },
+      ],
+    },
+  }[billingSectionTab]
 
   return (
     <div className="space-y-6">
       <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
         <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Finance command</div>
+          <div className="text-xs uppercase tracking-[0.25em] text-white/45">{activeHeroCopy.eyebrow}</div>
           <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Billing,
-            <span className="text-[#8224E3]"> reconciled with confidence.</span>
+            {activeHeroCopy.title}
+            <span className="text-[#8224E3]">{activeHeroCopy.accent}</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            Manage invoices, GST breakdown, state-wise tax, collections, imports, recovery queues, and payment
-            intelligence from one financial control layer.
+            {activeHeroCopy.description}
           </p>
+          <div className="mt-6 inline-flex rounded-full bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.18em] text-slate-300">
+            {activeBillingSection.label} active
+          </div>
         </div>
 
         <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Collection pulse</div>
-          <div className="mt-3 text-5xl font-black">Rs {Number(overview?.collectedAmount || 0).toFixed(0)}</div>
-          <div className="mt-2 text-sm text-black/60">Collected amount tracked against live invoice volume</div>
+          <div className="text-xs uppercase tracking-[0.25em] text-black/55">{activeHeroCopy.pulseLabel}</div>
+          <div className="mt-3 text-5xl font-black">{activeHeroCopy.pulseValue}</div>
+          <div className="mt-2 text-sm text-black/60">{activeHeroCopy.pulseHint}</div>
           <div className="mt-8 grid grid-cols-3 gap-3">
-            {pulseMetrics.map(({ label, value, Icon }) => (
+            {activeHeroCopy.metrics.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-[22px] bg-black/10 p-4">
                 <Icon className="h-4 w-4 text-black/75" />
                 <div className="mt-4 text-2xl font-bold">{value}</div>
@@ -867,37 +919,50 @@ export default function BillingPage() {
       <div className="flex items-start justify-between gap-4">
         <div />
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            className="btn-secondary"
-            href={invoiceExportUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Export Invoices CSV
-          </a>
-          <a
-            className="btn-secondary"
-            href={paymentExportUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Export Payments CSV
-          </a>
-          <a
-            className="btn-secondary"
-            href={gstExportUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Export GST CSV
-          </a>
+          {billingSectionTab === 'invoices' ? (
+            <a
+              className="btn-secondary"
+              href={invoiceExportUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Export Invoices CSV
+            </a>
+          ) : null}
+          {billingSectionTab === 'payments' ? (
+            <a
+              className="btn-secondary"
+              href={paymentExportUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Export Payments CSV
+            </a>
+          ) : null}
+          {billingSectionTab === 'settings' ? (
+            <a
+              className="btn-secondary"
+              href={gstExportUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Export GST CSV
+            </a>
+          ) : null}
+          {billingSectionTab === 'settings' ? (
+            <Link href="/settings" className="btn-secondary">
+              Open Template Settings
+            </Link>
+          ) : null}
           <button onClick={() => void loadBilling()} className="btn-secondary inline-flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
-          <button onClick={() => void runBillingCycle()} disabled={isRunningCycle} className="btn-primary">
-            {isRunningCycle ? 'Running...' : 'Run Billing Cycle'}
-          </button>
+          {billingSectionTab !== 'payments' ? (
+            <button onClick={() => void runBillingCycle()} disabled={isRunningCycle} className="btn-primary">
+              {isRunningCycle ? 'Running...' : billingSectionTab === 'collections' ? 'Refresh Collection Cycle' : 'Run Billing Cycle'}
+            </button>
+          ) : null}
         </div>
       </div>
 
