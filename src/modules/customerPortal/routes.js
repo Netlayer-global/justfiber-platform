@@ -2388,11 +2388,21 @@ customerPortalRouter.post(
     });
     let syncMode = "genieacs";
     let syncWarning = null;
+    let wifiSummary = null;
     try {
       await genieacsClient.setWifiPaused(device.deviceId, { paused: payload.paused, brand });
       if (brand === "nokia") {
         await wait(5000);
         await genieacsClient.rebootDevice(device.deviceId);
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+          await wait(3000);
+          wifiSummary = await genieacsClient.getWifiPauseSummary(device.deviceId, { brand });
+          if (wifiSummary && (payload.paused ? wifiSummary.allDisabled : wifiSummary.allEnabled)) {
+            break;
+          }
+        }
+      } else {
+        wifiSummary = await genieacsClient.getWifiPauseSummary(device.deviceId, { brand });
       }
       try {
         await syncDeviceFromGenie(device);
@@ -2418,7 +2428,7 @@ customerPortalRouter.post(
       `Wi-Fi ${payload.paused ? "paused" : "resumed"} for ${customer.customerId}.`,
       { paused: payload.paused }
     );
-    return ok(res, { updated: true, paused: payload.paused, syncMode, syncWarning });
+    return ok(res, { updated: true, paused: payload.paused, syncMode, syncWarning, wifiSummary });
   })
 );
 

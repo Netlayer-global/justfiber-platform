@@ -55,6 +55,17 @@ export function getNokiaSlotBand(index) {
   return NOKIA_WIFI_SLOTS.ssid24.includes(index) ? "2.4G" : "5G";
 }
 
+export function normalizeWifiEnableValue(value) {
+  if (value === true || value === false) return value;
+  if (value && typeof value === "object") {
+    if ("_value" in value && (value._value === true || value._value === false)) {
+      return value._value;
+    }
+    return null;
+  }
+  return null;
+}
+
 export function isUnifiedNokiaWifiRequest({ brand, ssid24, ssid5, password24, password5 }) {
   return String(brand || "").toLowerCase() === "nokia" &&
     typeof ssid24 === "string" &&

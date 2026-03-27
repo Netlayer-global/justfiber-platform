@@ -1,6 +1,12 @@
 import { env } from "../config/env.js";
 import { resolveProvisioningProfile } from "../common/networkProvisioning.js";
-import { buildNokiaEnablePaths, isUnifiedNokiaWifiRequest } from "../common/nokiaWifi.js";
+import {
+  buildNokiaEnablePaths,
+  getNokiaSlotBand,
+  isUnifiedNokiaWifiRequest,
+  listNokiaWlanSlots,
+  normalizeWifiEnableValue
+} from "../common/nokiaWifi.js";
 
 const allowedPresets = new Set([
   "SERVICE_PREPARE",
@@ -99,6 +105,14 @@ function readNodeAtPath(root, path) {
     current = current[part];
   }
   return current;
+}
+
+function extractNodeValue(node) {
+  if (!node) return null;
+  if (typeof node === "object" && "_value" in node) {
+    return node._value;
+  }
+  return node;
 }
 
 function pathExistsInSummary(summary, path) {
@@ -404,6 +418,32 @@ export class GenieacsClient {
     }
 
     return { ok: true, deviceId, paused: Boolean(paused), configured: values.length };
+  }
+
+  async getWifiPauseSummary(deviceId, { brand = "generic" } = {}) {
+    const summary = await this.getRichDeviceSummary({ deviceId });
+    if (!summary || String(brand || "").toLowerCase() !== "nokia") {
+      return null;
+    }
+
+    const slots = listNokiaWlanSlots().map((slot) => {
+      const base = `InternetGatewayDevice.LANDevice.1.WLANConfiguration.${slot}`;
+      const enabledNode = readNodeAtPath(summary, `${base}.Enable`);
+      return {
+        slot,
+        band: getNokiaSlotBand(slot),
+        enabled: normalizeWifiEnableValue(enabledNode),
+        ssid: extractNodeValue(readNodeAtPath(summary, `${base}.SSID`))
+      };
+    });
+
+    return {
+      enabledSlots: slots.filter((slot) => slot.enabled === true).map((slot) => slot.slot),
+      disabledSlots: slots.filter((slot) => slot.enabled === false).map((slot) => slot.slot),
+      allEnabled: slots.every((slot) => slot.enabled === true),
+      allDisabled: slots.every((slot) => slot.enabled === false),
+      slots
+    };
   }
 
   async pushAccessConfig({
