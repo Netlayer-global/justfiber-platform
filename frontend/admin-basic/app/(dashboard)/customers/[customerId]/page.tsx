@@ -193,8 +193,99 @@ export default function CustomerDetailPage() {
   const usageGb = Number(billingSummary.usageGb || 0)
   const usageCapGb = Number(billingSummary.usageCapGb || billingSummary.dataLimitGb || 0)
   const usagePercent = usageCapGb > 0 ? Math.min(100, Math.round((usageGb / usageCapGb) * 100)) : 0
+  const billingCollections = (billingSummary.collections || {}) as Record<string, any>
   const pendingPlanChange = billingSummary.pendingPlanChange as Record<string, any> | undefined
   const adminApiBase = getApiBaseUrl()
+  const collectionTimeline = useMemo(() => {
+    const entries: Array<{ key: string; label: string; at: string; note?: string; tone: 'slate' | 'amber' | 'rose' | 'violet' }> = []
+    if (billingCollections.lastReminderAt) {
+      entries.push({
+        key: `reminder-${billingCollections.lastReminderAt}`,
+        label: 'Manual reminder sent',
+        at: String(billingCollections.lastReminderAt),
+        note: billingCollections.lastReminderInvoiceId ? `Invoice ${billingCollections.lastReminderInvoiceId}` : undefined,
+        tone: 'slate',
+      })
+    }
+    if (billingCollections.lastDueReminderAt) {
+      entries.push({
+        key: `due-${billingCollections.lastDueReminderAt}`,
+        label: 'Due reminder sent',
+        at: String(billingCollections.lastDueReminderAt),
+        note: billingCollections.lastDueReminderAtInvoiceId ? `Invoice ${billingCollections.lastDueReminderAtInvoiceId}` : undefined,
+        tone: 'slate',
+      })
+    }
+    if (billingCollections.lastOverdueReminderAt) {
+      entries.push({
+        key: `overdue-${billingCollections.lastOverdueReminderAt}`,
+        label: 'Overdue reminder sent',
+        at: String(billingCollections.lastOverdueReminderAt),
+        note: billingCollections.lastOverdueReminderAtInvoiceId ? `Invoice ${billingCollections.lastOverdueReminderAtInvoiceId}` : undefined,
+        tone: 'amber',
+      })
+    }
+    if (billingCollections.lastSuspensionWarningAt) {
+      entries.push({
+        key: `warning-${billingCollections.lastSuspensionWarningAt}`,
+        label: 'Suspension warning issued',
+        at: String(billingCollections.lastSuspensionWarningAt),
+        note: billingCollections.lastSuspensionWarningAtInvoiceId ? `Invoice ${billingCollections.lastSuspensionWarningAtInvoiceId}` : undefined,
+        tone: 'rose',
+      })
+    }
+    if (billingCollections.suspensionRecommendedAt) {
+      entries.push({
+        key: `recommend-${billingCollections.suspensionRecommendedAt}`,
+        label: 'Suspension recommended',
+        at: String(billingCollections.suspensionRecommendedAt),
+        tone: 'rose',
+      })
+    }
+    if (billingCollections.promiseToPayAt) {
+      entries.push({
+        key: `promise-${billingCollections.promiseToPayAt}`,
+        label: 'Promise to pay recorded',
+        at: String(billingCollections.promiseToPayAt),
+        note: billingCollections.promiseAmount
+          ? `Rs ${Number(billingCollections.promiseAmount || 0).toFixed(2)}${billingCollections.promiseNote ? ` | ${billingCollections.promiseNote}` : ''}`
+          : billingCollections.promiseNote || undefined,
+        tone: 'violet',
+      })
+    }
+    if (billingCollections.assignedAt || billingCollections.assignedToName) {
+      entries.push({
+        key: `assign-${billingCollections.assignedAt || billingCollections.assignedToName}`,
+        label: 'Collection owner assigned',
+        at: String(billingCollections.assignedAt || billingCollections.latestFollowUpAt || billingCollections.lastReminderAt || ''),
+        note: billingCollections.assignedToName || billingCollections.assignedToAdminId || undefined,
+        tone: 'slate',
+      })
+    }
+    if (Array.isArray(billingCollections.followUps)) {
+      billingCollections.followUps.forEach((item: any, index: number) => {
+        if (!item?.createdAt) return
+        entries.push({
+          key: `followup-${item.createdAt}-${index}`,
+          label: 'Follow-up logged',
+          at: String(item.createdAt),
+          note: [item.note, item.adminName].filter(Boolean).join(' | ') || undefined,
+          tone: 'slate',
+        })
+      })
+    } else if (billingCollections.latestFollowUpAt || billingCollections.latestFollowUpNote) {
+      entries.push({
+        key: `followup-latest-${billingCollections.latestFollowUpAt || billingCollections.latestFollowUpNote}`,
+        label: 'Latest follow-up',
+        at: String(billingCollections.latestFollowUpAt || ''),
+        note: billingCollections.latestFollowUpNote || undefined,
+        tone: 'slate',
+      })
+    }
+    return entries
+      .filter((item) => item.at || item.note)
+      .sort((left, right) => new Date(right.at || 0).getTime() - new Date(left.at || 0).getTime())
+  }, [billingCollections])
 
   async function openInvoicePdf(invoiceId: string) {
     try {
@@ -1279,6 +1370,47 @@ export default function CustomerDetailPage() {
                 <div className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Billing Summary</h2>
                   <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-xs text-slate-300">{JSON.stringify(billingSummary, null, 2)}</pre>
+                </div>
+                <div className="card p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold">Collections Timeline</h2>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Reminder, promise-to-pay, assignment, and follow-up history for this account.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                      {collectionTimeline.length} event{collectionTimeline.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  {collectionTimeline.length ? (
+                    <div className="space-y-3">
+                      {collectionTimeline.map((entry) => (
+                        <div key={entry.key} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <span
+                                className={`inline-flex h-2.5 w-2.5 rounded-full ${
+                                  entry.tone === 'rose'
+                                    ? 'bg-rose-500'
+                                    : entry.tone === 'amber'
+                                      ? 'bg-amber-500'
+                                      : entry.tone === 'violet'
+                                        ? 'bg-violet-500'
+                                        : 'bg-slate-400'
+                                }`}
+                              />
+                              <p className="font-semibold text-slate-900">{entry.label}</p>
+                            </div>
+                            <span className="text-xs text-slate-500">{entry.at ? formatDateTime(entry.at) : '-'}</span>
+                          </div>
+                          {entry.note ? <p className="mt-2 text-sm text-slate-600">{entry.note}</p> : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">No collections actions recorded yet for this customer.</p>
+                  )}
                 </div>
                 <div className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Confirm Payment / Renewal</h2>
