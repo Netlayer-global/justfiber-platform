@@ -1783,15 +1783,22 @@ export default function BillingPage() {
 
           {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Payment Reconciliation</div>
+            <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
+              <div>
+                <div className="font-semibold">Payments</div>
+                <div className="mt-1 text-sm text-slate-400">Core payment operations only.</div>
+              </div>
+              <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+                {payments.length} payment{payments.length === 1 ? '' : 's'}
+              </div>
+            </div>
             <table className="w-full">
               <thead>
                 <tr className="bg-[#0a0e27]">
                   <th className="table-header">Transaction</th>
                   <th className="table-header">Customer</th>
                   <th className="table-header">Amount</th>
-                  <th className="table-header">Reconciliation</th>
-                  <th className="table-header">Audit</th>
+                  <th className="table-header">Status</th>
                   <th className="table-header text-right">Action</th>
                 </tr>
               </thead>
@@ -1821,11 +1828,9 @@ export default function BillingPage() {
                       <div className="text-xs text-slate-500 mt-1">{payment.invoiceId || payment.reconciledInvoiceId || 'Unlinked'}</div>
                     </td>
                     <td className="table-cell">Rs {payment.amount.toFixed(2)}</td>
-                    <td className="table-cell">{payment.reconciliationStatus || 'pending'}</td>
                     <td className="table-cell">
-                      <div>{Math.round((payment.reconciliationConfidence || 0) * 100)}%</div>
-                      <div className="text-xs text-slate-500 mt-1">{payment.reconciliationMatchedBy || 'pending_review'}</div>
-                      <div className="text-xs text-slate-500 mt-1">{payment.reconciliationMatchReason || 'Not evaluated yet'}</div>
+                      <div>{payment.reconciliationStatus || 'pending'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{payment.status || '-'}</div>
                     </td>
                     <td className="table-cell text-right">
                       {payment.reconciliationStatus !== 'reconciled' ? (
@@ -1847,6 +1852,11 @@ export default function BillingPage() {
                     </td>
                   </tr>
                 ))}
+                {!payments.length ? (
+                  <tr className="border-t border-[#2a2f4a]">
+                    <td className="table-cell text-slate-500" colSpan={5}>No payments found.</td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -1854,14 +1864,13 @@ export default function BillingPage() {
 
           {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Refund History</div>
+            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Refunds</div>
             <table className="w-full">
               <thead>
                 <tr className="bg-[#0a0e27]">
                   <th className="table-header">Refund</th>
                   <th className="table-header">Customer</th>
                   <th className="table-header">Amount</th>
-                  <th className="table-header">Original Payment</th>
                   <th className="table-header">Status</th>
                   <th className="table-header">Time</th>
                 </tr>
@@ -1889,17 +1898,13 @@ export default function BillingPage() {
                     </td>
                     <td className="table-cell">{payment.customerId}</td>
                     <td className="table-cell">Rs {payment.amount.toFixed(2)}</td>
-                    <td className="table-cell">
-                      <div className="font-mono text-xs">{payment.originalPaymentId || payment.reference || '-'}</div>
-                      <div className="text-xs text-slate-500 mt-1">{payment.invoiceId || '-'}</div>
-                    </td>
                     <td className="table-cell">{payment.refundStatus || payment.status || '-'}</td>
                     <td className="table-cell">{payment.paidAt ? new Date(payment.paidAt).toLocaleString() : '-'}</td>
                   </tr>
                 ))}
                 {!refundPayments.length ? (
                   <tr className="border-t border-[#2a2f4a]">
-                    <td className="table-cell text-slate-500" colSpan={6}>No refunds recorded yet.</td>
+                    <td className="table-cell text-slate-500" colSpan={5}>No refunds recorded yet.</td>
                   </tr>
                 ) : null}
               </tbody>
