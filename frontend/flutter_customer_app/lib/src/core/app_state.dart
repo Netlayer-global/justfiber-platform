@@ -383,6 +383,31 @@ class AppState extends ChangeNotifier {
     });
   }
 
+  bool _isTimeoutLikeError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('server took too long') || message.contains('timeout');
+  }
+
+  WifiData _copyWifiWith({
+    String? ssid24,
+    String? ssid5,
+    String? passwordMask,
+    bool? paused,
+    bool? guestEnabled,
+    String? guestSsid,
+    int? connectedDevicesCount,
+  }) {
+    return WifiData(
+      ssid24: ssid24 ?? wifi.ssid24,
+      ssid5: ssid5 ?? wifi.ssid5,
+      passwordMask: passwordMask ?? wifi.passwordMask,
+      paused: paused ?? wifi.paused,
+      guestEnabled: guestEnabled ?? wifi.guestEnabled,
+      guestSsid: guestSsid ?? wifi.guestSsid,
+      connectedDevicesCount: connectedDevicesCount ?? wifi.connectedDevicesCount,
+    );
+  }
+
   Future<void> markNotificationRead(String notificationId) async {
     final current = session;
     if (current == null || notificationId.isEmpty) return;
@@ -536,6 +561,15 @@ class AppState extends ChangeNotifier {
       );
       _refreshWifiStateInBackground();
     } catch (e) {
+      if (_isTimeoutLikeError(e)) {
+        wifi = _copyWifiWith(passwordMask: '********');
+        dashboard = _copyDashboardWithWifiName(
+          wifi.ssid24.isNotEmpty ? wifi.ssid24 : wifi.ssid5,
+        );
+        error = null;
+        _refreshWifiStateInBackground();
+        return;
+      }
       error = e.toString();
       notifyListeners();
     } finally {
@@ -566,6 +600,20 @@ class AppState extends ChangeNotifier {
       _refreshWifiStateInBackground();
       return true;
     } catch (e) {
+      if (_isTimeoutLikeError(e)) {
+        wifi = _copyWifiWith(
+          ssid24: ssid24,
+          ssid5: ssid5,
+          passwordMask: '********',
+        );
+        dashboard = _copyDashboardWithWifiName(
+          wifi.ssid24.isNotEmpty ? wifi.ssid24 : wifi.ssid5,
+        );
+        error = null;
+        _refreshWifiStateInBackground();
+        notifyListeners();
+        return true;
+      }
       error = e.toString();
       notifyListeners();
       return false;
