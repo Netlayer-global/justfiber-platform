@@ -796,7 +796,6 @@ export default function BillingPage() {
       toast.error('Failed to save promise to pay')
     }
   }
-  )
   const invoiceStatusTone = (status?: string) => {
     if (status === 'paid') return 'bg-emerald-500/15 text-emerald-300'
     if (status === 'pending') return 'bg-amber-500/15 text-amber-300'
