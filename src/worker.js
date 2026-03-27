@@ -125,6 +125,41 @@ function computeNextRun(frequency, from = new Date()) {
   return next;
 }
 
+function normalizeDate(value) {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function isSameUtcDay(left, right) {
+  return (
+    left.getUTCFullYear() === right.getUTCFullYear() &&
+    left.getUTCMonth() === right.getUTCMonth() &&
+    left.getUTCDate() === right.getUTCDate()
+  );
+}
+
+function canSendCollectionEvent(customer, key, invoiceId, now) {
+  const collections = customer?.billingSnapshot?.collections || {};
+  const lastSentAt = normalizeDate(collections[key]);
+  const lastInvoiceId = String(collections[`${key}InvoiceId`] || "");
+  if (!lastSentAt) return true;
+  if (lastInvoiceId && invoiceId && lastInvoiceId !== invoiceId) return true;
+  return !isSameUtcDay(lastSentAt, now);
+}
+
+async function persistCollectionEvent(customer, key, invoiceId, now, extra = {}) {
+  customer.billingSnapshot = {
+    ...(customer.billingSnapshot || {}),
+    collections: {
+      ...(customer.billingSnapshot?.collections || {}),
+      [key]: now,
+      [`${key}InvoiceId`]: invoiceId,
+      ...extra
+    }
+  };
+  await customer.save();
+}
+
 async function applyAutomatedCustomerStatusChange(customer, nextStatus, reason) {
   if (!customer?.serviceId || customer.operationalStatus === nextStatus) {
     return false;
@@ -1289,6 +1324,37 @@ async function runRecurringBillingTasks() {
       await run.save();
     }
 
+    const upcomingDueInvoices = await BillingInvoice.find({
+      paymentStatus: "pending",
+      dueDate: {
+        $gte: now,
+        $lte: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
+      }
+    });
+
+    for (const invoice of upcomingDueInvoices) {
+      const customer = await Customer.findOne({ customerId: invoice.customerId });
+      if (!customer) continue;
+      if (!canSendCollectionEvent(customer, "lastDueReminderAt", invoice.invoiceId, now)) {
+        continue;
+      }
+      if (customer.phone || customer.email) {
+        await notificationDispatcher.dispatchEvent({
+          eventKey: "invoice_due_date",
+          recipients: {
+            email: customer.email,
+            sms: customer.phone
+          },
+          subject: `Invoice due soon ${invoice.invoiceNumber}`,
+          body: `Dear ${customer.fullName}, invoice ${invoice.invoiceNumber} of Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is due on ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "the due date"}.`,
+          entityType: "billing_invoice",
+          entityId: invoice.invoiceId,
+          metadata: { invoiceId: invoice.invoiceId, automation: "due_reminder", stage: "upcoming_due" }
+        }).catch(() => null);
+      }
+      await persistCollectionEvent(customer, "lastDueReminderAt", invoice.invoiceId, now);
+    }
+
     const overdueInvoices = await BillingInvoice.find({
       paymentStatus: "pending",
       dueDate: { $lt: now }
@@ -1307,18 +1373,21 @@ async function runRecurringBillingTasks() {
       );
       const customer = await Customer.findOne({ customerId: invoice.customerId });
       if (customer?.phone || customer?.email) {
-        await notificationDispatcher.dispatchEvent({
-          eventKey: "invoice_due_date",
-          recipients: {
-            email: customer.email,
-            sms: customer.phone
-          },
-          subject: `Invoice overdue ${invoice.invoiceNumber}`,
-          body: `Dear ${customer.fullName}, invoice ${invoice.invoiceNumber} of Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is overdue.`,
-          entityType: "billing_invoice",
-          entityId: invoice.invoiceId,
-          metadata: { invoiceId: invoice.invoiceId, stage: "overdue" }
-        }).catch(() => null);
+        if (canSendCollectionEvent(customer, "lastOverdueReminderAt", invoice.invoiceId, now)) {
+          await notificationDispatcher.dispatchEvent({
+            eventKey: "unpaid_invoice",
+            recipients: {
+              email: customer.email,
+              sms: customer.phone
+            },
+            subject: `Invoice overdue ${invoice.invoiceNumber}`,
+            body: `Dear ${customer.fullName}, invoice ${invoice.invoiceNumber} of Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is overdue. Please clear the amount to avoid service interruption.`,
+            entityType: "billing_invoice",
+            entityId: invoice.invoiceId,
+            metadata: { invoiceId: invoice.invoiceId, automation: "overdue_reminder", stage: "overdue" }
+          }).catch(() => null);
+          await persistCollectionEvent(customer, "lastOverdueReminderAt", invoice.invoiceId, now);
+        }
       }
       if (customer) {
         const graceDays = Number(customer.billingSnapshot?.graceDays || 0);
@@ -1332,6 +1401,30 @@ async function runRecurringBillingTasks() {
           promiseToPayAt &&
           !Number.isNaN(promiseToPayAt.getTime()) &&
           promiseToPayAt.getTime() >= now.getTime();
+        if (
+          customer.operationalStatus === "active" &&
+          overdueDays === graceDays &&
+          !hasValidPromise &&
+          canSendCollectionEvent(customer, "lastSuspensionWarningAt", invoice.invoiceId, now)
+        ) {
+          if (customer.phone || customer.email) {
+            await notificationDispatcher.dispatchEvent({
+              eventKey: "suspension_warning",
+              recipients: {
+                email: customer.email,
+                sms: customer.phone
+              },
+              subject: `Suspension warning for ${customer.customerId}`,
+              body: `Dear ${customer.fullName}, your invoice ${invoice.invoiceNumber} for Rs ${Number(invoice.totalAmount || 0).toFixed(2)} remains unpaid. Please pay immediately to avoid service suspension.`,
+              entityType: "billing_invoice",
+              entityId: invoice.invoiceId,
+              metadata: { invoiceId: invoice.invoiceId, automation: "suspension_warning", overdueDays }
+            }).catch(() => null);
+          }
+          await persistCollectionEvent(customer, "lastSuspensionWarningAt", invoice.invoiceId, now, {
+            suspensionRecommendedAt: now
+          });
+        }
         if (
           customer.operationalStatus === "active" &&
           overdueDays > graceDays &&

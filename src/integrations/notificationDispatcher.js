@@ -10,6 +10,8 @@ function getDefaultEventChannels(eventKey) {
     billing_invoice: { email: true, sms: true },
     invoice_due_date: { email: true, sms: true },
     unpaid_invoice: { email: true, sms: true },
+    suspension_warning: { email: true, sms: true },
+    account_suspension: { email: true, sms: true },
     paid_invoice: { email: true, sms: true },
     renewal: { email: true, sms: true },
     raising_ticket_notification: { email: true, sms: true },
