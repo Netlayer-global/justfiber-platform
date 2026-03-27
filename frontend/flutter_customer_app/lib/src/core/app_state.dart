@@ -864,19 +864,28 @@ class AppState extends ChangeNotifier {
   }) async {
     final current = session;
     if (current == null) return false;
-    busy = true;
     error = null;
+    final previousWifi = wifi;
+    wifi = _copyWifiWith(
+      guestEnabled: enabled,
+      guestSsid: enabled ? ssid : previousWifi.guestSsid,
+    );
     notifyListeners();
     try {
       await api.setGuestWifi(current, customerId: selectedCustomerId, enabled: enabled, ssid: ssid, password: password);
-      await refresh();
+      _refreshWifiStateInBackground();
       return true;
     } catch (e) {
+      if (_isTimeoutLikeError(e)) {
+        error = null;
+        _refreshWifiStateInBackground();
+        notifyListeners();
+        return true;
+      }
+      wifi = previousWifi;
       error = e.toString();
-      return false;
-    } finally {
-      busy = false;
       notifyListeners();
+      return false;
     }
   }
 

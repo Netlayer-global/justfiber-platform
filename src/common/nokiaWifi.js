@@ -15,6 +15,11 @@ export const NOKIA_WIFI_SLOTS = {
   ssid5: [2, 4, 6, 8]
 };
 
+export const NOKIA_GUEST_WIFI_SLOTS = {
+  ssid24: [3, 7],
+  ssid5: [4, 8]
+};
+
 export function buildNokiaSsidPaths(kind) {
   return (NOKIA_WIFI_SLOTS[kind] || []).map((index) => `${buildWlanBase(index)}.SSID`);
 }
@@ -28,6 +33,21 @@ export function buildNokiaPasswordPaths(kind) {
 
 export function buildNokiaEnablePaths() {
   return [...NOKIA_WIFI_SLOTS.ssid24, ...NOKIA_WIFI_SLOTS.ssid5].map((index) => `${buildWlanBase(index)}.Enable`);
+}
+
+export function buildNokiaGuestSsidPaths(kind) {
+  return (NOKIA_GUEST_WIFI_SLOTS[kind] || []).map((index) => `${buildWlanBase(index)}.SSID`);
+}
+
+export function buildNokiaGuestPasswordPaths(kind) {
+  return (NOKIA_GUEST_WIFI_SLOTS[kind] || []).flatMap((index) => [
+    `${buildWlanBase(index)}.KeyPassphrase`,
+    `${buildWlanBase(index)}.PreSharedKey.1.KeyPassphrase`
+  ]);
+}
+
+export function buildNokiaGuestEnablePaths() {
+  return [...NOKIA_GUEST_WIFI_SLOTS.ssid24, ...NOKIA_GUEST_WIFI_SLOTS.ssid5].map((index) => `${buildWlanBase(index)}.Enable`);
 }
 
 export function buildNokiaInspectPaths() {

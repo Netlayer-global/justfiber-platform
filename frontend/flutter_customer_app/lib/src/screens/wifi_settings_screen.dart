@@ -162,12 +162,6 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   onTap: () => _showGuestWifiSheet(context, appState),
                 ),
                 _actionTile(
-                  icon: Icons.schedule_rounded,
-                  title: 'Parental controls',
-                  subtitle: 'Create scheduled rules to restrict access during selected hours',
-                  onTap: () => _showParentalControlsSheet(context, appState),
-                ),
-                _actionTile(
                   icon: Icons.restart_alt_rounded,
                   title: 'Restart router',
                   subtitle: 'Tap to remotely restart your router',
@@ -283,6 +277,19 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     final normalized = connectionType.trim();
     if (normalized.isEmpty) return 'Unknown';
     return normalized[0].toUpperCase() + normalized.substring(1);
+  }
+
+  String _internetStatusLabel(AppState appState) {
+    final selectedId = appState.selectedCustomerId;
+    final activeConnection = appState.connections.cast<dynamic?>().firstWhere(
+      (item) => item?.customerId == selectedId,
+      orElse: () => appState.connections.isNotEmpty ? appState.connections.first : null,
+    );
+    final status = (activeConnection?.onlineStatus ?? '').toString().trim().toLowerCase();
+    if (status == 'online') return 'Online';
+    if (status == 'offline') return 'Offline';
+    if (status.isEmpty) return 'Unknown';
+    return status[0].toUpperCase() + status.substring(1);
   }
 
   Future<void> _showPauseSheet(BuildContext context, AppState appState) async {
@@ -478,8 +485,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               children: [
                 const Text('Diagnostics summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFF131313))),
                 const SizedBox(height: 18),
-                _diagnosticRow('Download speed', '${appState.speedTest.downloadMbps.toStringAsFixed(1)} Mbps'),
-                _diagnosticRow('Upload speed', '${appState.speedTest.uploadMbps.toStringAsFixed(1)} Mbps'),
+                _diagnosticRow('Internet status', _internetStatusLabel(appState)),
                 _diagnosticRow('Latency', '${appState.networkQuality.latencyMs.toStringAsFixed(0)} ms'),
                 _diagnosticRow('Packet loss', '${appState.networkQuality.packetLossPercent.toStringAsFixed(1)} %'),
                 _diagnosticRow('Jitter', '${appState.networkQuality.jitterMs.toStringAsFixed(0)} ms'),
@@ -523,8 +529,21 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
             animation: appState,
             builder: (context, _) {
               final devices = appState.connectedDevices;
-              final blockedCount = devices.where((device) => device.blocked).length;
-              final allowedCount = devices.where((device) => !device.blocked).length;
+              final hasLiveDevices = devices.isNotEmpty;
+              final displayDevices = hasLiveDevices
+                  ? devices
+                  : List.generate(
+                      appState.wifi.connectedDevicesCount,
+                      (index) => ConnectedDevice(
+                        clientId: 'anonymous-$index',
+                        name: 'Connected device ${index + 1}',
+                        connectionType: 'wifi',
+                        signal: 'name unavailable',
+                        blocked: false,
+                      ),
+                    );
+              final blockedCount = displayDevices.where((device) => device.blocked).length;
+              final allowedCount = displayDevices.where((device) => !device.blocked).length;
               return AppCard(
                 gradient: const LinearGradient(
                   colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
@@ -541,13 +560,13 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _sheetStatusChip('Connected', '${devices.length}'),
+                        _sheetStatusChip('Connected', '${displayDevices.length}'),
                         _sheetStatusChip('Allowed', '$allowedCount'),
                         _sheetStatusChip('Blocked', '$blockedCount'),
                       ],
                     ),
                     const SizedBox(height: 14),
-                    if (devices.isEmpty)
+                    if (displayDevices.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
                         child: Text(
@@ -556,7 +575,15 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                         ),
                       )
                     else
-                      ...devices.map((device) => Padding(
+                      if (!hasLiveDevices)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            'The router can count connected devices, but it is not exposing their names yet. Refresh later to fetch real identities.',
+                            style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                          ),
+                        ),
+                      ...displayDevices.map((device) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Container(
                           padding: const EdgeInsets.all(14),
@@ -594,7 +621,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                 Switch(
                                   value: !device.blocked,
                                   activeColor: const Color(0xFF8224E3),
-                                  onChanged: appState.busy
+                                  onChanged: appState.busy || !hasLiveDevices
                                       ? null
                                       : (allowed) async {
                                           final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
@@ -647,6 +674,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
 
   Future<void> _showGuestWifiSheet(BuildContext context, AppState appState) async {
     final wifi = appState.wifi;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     _guestSsidController.text = wifi.guestSsid;
     _guestPasswordController.text = '';
     await showModalBottomSheet<void>(
@@ -696,33 +725,40 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                 final guestSsid = _guestSsidController.text.trim();
                                 final guestPassword = _guestPasswordController.text.trim();
                                 if (enabled && guestSsid.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(content: Text('Enter a guest Wi-Fi name before saving.')),
                                   );
                                   return;
                                 }
                                 if (enabled && guestPassword.length < 8) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(content: Text('Guest password must be at least 8 characters long.')),
                                   );
                                   return;
                                 }
                                 setLocalState(() => submitting = true);
+                                messenger
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Saving guest Wi-Fi...'),
+                                      duration: Duration(seconds: 20),
+                                    ),
+                                  );
+                                navigator.pop();
                                 final ok = await appState.updateGuestWifi(
                                   enabled: enabled,
                                   ssid: guestSsid,
                                   password: guestPassword,
                                 );
-                                if (!context.mounted) return;
+                                messenger.hideCurrentSnackBar();
                                 if (ok) {
-                                  Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(content: Text('Guest Wi-Fi updated')),
                                   );
                                   return;
                                 }
-                                setLocalState(() => submitting = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(content: Text(appState.error ?? 'Unable to update guest Wi-Fi')),
                                 );
                               },

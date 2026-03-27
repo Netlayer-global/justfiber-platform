@@ -2575,6 +2575,36 @@ customerPortalRouter.post(
       throw new ApiError(404, "Customer device not found");
     }
     const guestSsid = payload.ssid || device.wifiInfo?.guestSsid || "JustFiber-Guest";
+    const brand = detectOntBrand({
+      serialNumber: device.serialNumber,
+      productClass: device.productClass,
+      deviceId: device.deviceId
+    });
+    let syncMode = "genieacs";
+    let syncWarning = null;
+    try {
+      await genieacsClient.setGuestWifi(device.deviceId, {
+        enabled: payload.enabled,
+        ssid: guestSsid,
+        password: payload.password,
+        brand
+      });
+      if (brand === "nokia") {
+        await wait(5000);
+        await genieacsClient.rebootDevice(device.deviceId);
+      }
+      try {
+        await syncDeviceFromGenie(device);
+      } catch {
+        // Fall back to local cache update below when live sync isn't available.
+      }
+    } catch (error) {
+      if (!isMissingGenieDeviceError(error)) {
+        throw error;
+      }
+      syncMode = "cache_only";
+      syncWarning = "Device not present in GenieACS; updated local cache only.";
+    }
     device.wifiInfo = {
       ...(device.wifiInfo || {}),
       guestWifiEnabled: payload.enabled,
@@ -2589,7 +2619,7 @@ customerPortalRouter.post(
       `Guest Wi-Fi settings updated for ${customer.customerId}.`,
       { enabled: payload.enabled, ssid: guestSsid }
     );
-    return ok(res, { updated: true, enabled: payload.enabled, ssid: guestSsid });
+    return ok(res, { updated: true, enabled: payload.enabled, ssid: guestSsid, syncMode, syncWarning });
   })
 );
 

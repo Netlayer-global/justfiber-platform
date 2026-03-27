@@ -2,6 +2,9 @@ import { env } from "../config/env.js";
 import { resolveProvisioningProfile } from "../common/networkProvisioning.js";
 import {
   buildNokiaEnablePaths,
+  buildNokiaGuestEnablePaths,
+  buildNokiaGuestPasswordPaths,
+  buildNokiaGuestSsidPaths,
   getNokiaSlotBand,
   isUnifiedNokiaWifiRequest,
   listNokiaWlanSlots,
@@ -418,6 +421,50 @@ export class GenieacsClient {
     }
 
     return { ok: true, deviceId, paused: Boolean(paused), configured: values.length };
+  }
+
+  async setGuestWifi(deviceId, {
+    enabled,
+    ssid,
+    password,
+    brand = "generic"
+  } = {}) {
+    const normalizedBrand = String(brand || "").toLowerCase();
+    if (normalizedBrand !== "nokia") {
+      return { ok: true, deviceId, enabled: Boolean(enabled), configured: 0, syncMode: "cache_only" };
+    }
+
+    const parameterValues = [];
+    if (enabled) {
+      const guestSsid = String(ssid || "").trim();
+      const guestPassword = String(password || "").trim();
+      for (const path of [
+        ...buildNokiaGuestSsidPaths("ssid24"),
+        ...buildNokiaGuestSsidPaths("ssid5")
+      ]) {
+        if (guestSsid) {
+          parameterValues.push([path, guestSsid]);
+        }
+      }
+      for (const path of [
+        ...buildNokiaGuestPasswordPaths("ssid24"),
+        ...buildNokiaGuestPasswordPaths("ssid5")
+      ]) {
+        if (guestPassword) {
+          parameterValues.push([path, guestPassword]);
+        }
+      }
+    }
+
+    for (const path of buildNokiaGuestEnablePaths()) {
+      parameterValues.push([path, Boolean(enabled), "xsd:boolean"]);
+    }
+
+    for (const entry of parameterValues) {
+      await this.setParameterValues(deviceId, [entry], { connectionRequest: true });
+    }
+
+    return { ok: true, deviceId, enabled: Boolean(enabled), configured: parameterValues.length };
   }
 
   async getWifiPauseSummary(deviceId, { brand = "generic" } = {}) {
