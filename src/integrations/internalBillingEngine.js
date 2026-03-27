@@ -25,6 +25,12 @@ function addDays(date, days) {
   return next;
 }
 
+function addMonths(date, months) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + Math.max(1, Number(months || 1)));
+  return next;
+}
+
 function deriveAmount(service) {
   const durationMonths = resolveDurationMonths(service?.metadata);
   const recurringAmount = Number(service?.metadata?.recurringAmount || 0);
@@ -240,19 +246,62 @@ async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billC
   return `${prefix}-${seriesCode}-${periodCode}-${sequence}`;
 }
 
+function resolveServiceDurationMonths(service) {
+  return Math.max(1, Number(service?.billingPeriodMonths || service?.metadata?.durationMonths || 1));
+}
+
+function resolveServiceNextBillingDate(service) {
+  const explicit = service?.nextBillingDate ? new Date(service.nextBillingDate) : null;
+  if (explicit && !Number.isNaN(explicit.getTime())) {
+    return explicit;
+  }
+  const metadataValue = service?.metadata?.nextBillingDate ? new Date(service.metadata.nextBillingDate) : null;
+  if (metadataValue && !Number.isNaN(metadataValue.getTime())) {
+    return metadataValue;
+  }
+  const activatedAt = service?.activatedAt ? new Date(service.activatedAt) : null;
+  if (activatedAt && !Number.isNaN(activatedAt.getTime())) {
+    return addMonths(activatedAt, resolveServiceDurationMonths(service));
+  }
+  return null;
+}
+
+async function advanceServiceBillingSchedule(service, { billingAnchorDate, generatedAt, durationMonths, dueDate }) {
+  if (!service?.serviceId) return;
+  const anchor = billingAnchorDate ? new Date(billingAnchorDate) : dueDate ? new Date(dueDate) : null;
+  if (!anchor || Number.isNaN(anchor.getTime())) return;
+  const nextBillingDate = addMonths(anchor, durationMonths);
+  await SubscriberService.updateOne(
+    { serviceId: service.serviceId },
+    {
+      $set: {
+        billingPeriodMonths: durationMonths,
+        nextBillingDate,
+        lastBilledAt: generatedAt,
+        expiresAt: dueDate ? new Date(dueDate) : nextBillingDate,
+        "metadata.durationMonths": durationMonths,
+        "metadata.nextBillingDate": nextBillingDate
+      }
+    }
+  );
+}
+
 export class InternalBillingEngine {
   async generateInvoiceForService(service, options = {}) {
     const generatedAt = options.generatedAt ? new Date(options.generatedAt) : new Date();
     const billingProfile = service.billingProfileCode
       ? await BillingProfile.findOne({ code: service.billingProfileCode, active: true }).lean()
       : await BillingProfile.findOne({ active: true }).sort({ createdAt: 1 }).lean();
-    const durationMonths = resolveDurationMonths(options.durationMonths ? { durationMonths: options.durationMonths } : service?.metadata);
+    const durationMonths = resolveDurationMonths(options.durationMonths ? { durationMonths: options.durationMonths } : {
+      durationMonths: resolveServiceDurationMonths(service)
+    });
     const totalAmount = Number(options.totalAmount ?? deriveAmount(service));
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
       return { skipped: true, reason: "missing_amount", serviceId: service.serviceId };
     }
 
-    const billCycle = options.billCycle || buildBillCycle(generatedAt);
+    const billingAnchorDate = options.billingAnchorDate ? new Date(options.billingAnchorDate) : null;
+    const billCycle = options.billCycle || buildBillCycle(billingAnchorDate || generatedAt);
     const sourceEvent = String(options.sourceEvent || "").trim();
     const activationJobId = String(options.activationJobId || "").trim();
     const existing = await BillingInvoice.findOne({ customerId: service.customerId, billCycle }).lean();
@@ -321,6 +370,15 @@ export class InternalBillingEngine {
       billingZoneName: customer?.billingZoneName || zoneMapping?.zoneName || ""
     });
 
+    if (options.advanceBillingSchedule) {
+      await advanceServiceBillingSchedule(service, {
+        billingAnchorDate: billingAnchorDate || dueDate,
+        generatedAt,
+        durationMonths,
+        dueDate
+      });
+    }
+
     return { skipped: false, invoice };
   }
 
@@ -336,9 +394,28 @@ export class InternalBillingEngine {
     }
 
     const services = await SubscriberService.find(filter).lean();
+    const referenceDate = options.referenceDate ? new Date(options.referenceDate) : new Date();
     const results = [];
     for (const service of services) {
-      results.push(await this.generateInvoiceForService(service, options));
+      const nextBillingDate = resolveServiceNextBillingDate(service);
+      const explicitScope = Boolean(options.customerId || options.serviceId);
+      const shouldProcess = explicitScope || !nextBillingDate || nextBillingDate.getTime() <= referenceDate.getTime();
+      if (!shouldProcess) {
+        results.push({
+          skipped: true,
+          reason: "not_due_yet",
+          serviceId: service.serviceId,
+          nextBillingDate
+        });
+        continue;
+      }
+      results.push(await this.generateInvoiceForService(service, {
+        ...options,
+        durationMonths: resolveServiceDurationMonths(service),
+        billCycle: options.billCycle || buildBillCycle(nextBillingDate || referenceDate),
+        billingAnchorDate: nextBillingDate || referenceDate,
+        advanceBillingSchedule: explicitScope ? false : options.advanceBillingSchedule !== false
+      }));
     }
     return {
       processed: services.length,

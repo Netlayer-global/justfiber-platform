@@ -22,6 +22,9 @@ const subscriberServiceSchema = new mongoose.Schema(
       index: true
     },
     activatedAt: Date,
+    billingPeriodMonths: { type: Number, default: 1 },
+    nextBillingDate: { type: Date, index: true },
+    lastBilledAt: Date,
     suspendedAt: Date,
     expiresAt: Date,
     notes: String,
@@ -32,5 +35,6 @@ const subscriberServiceSchema = new mongoose.Schema(
 
 subscriberServiceSchema.index({ customerId: 1, status: 1 });
 subscriberServiceSchema.index({ bngNodeCode: 1, status: 1 });
+subscriberServiceSchema.index({ status: 1, nextBillingDate: 1 });
 
 export const SubscriberService = mongoose.model("SubscriberService", subscriberServiceSchema);

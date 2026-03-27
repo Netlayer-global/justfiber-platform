@@ -267,6 +267,8 @@ export class InternalSubscriberPlatform {
           accessProfileCode: accessProfile?.code,
           billingProfileCode: billingProfile?.code,
           bngNodeCode: bngNode?.nodeCode,
+          billingPeriodMonths: durationMonths,
+          nextBillingDate: serviceExpiryAt,
           status: "pending_installation",
           notes: "Provisioned by internal platform from booking",
           metadata: {
@@ -276,6 +278,7 @@ export class InternalSubscriberPlatform {
             billMode,
             installerJobId: jobRecord._id.toString(),
             durationMonths,
+            nextBillingDate: serviceExpiryAt,
             networkProfile
           }
         }
@@ -400,6 +403,8 @@ export class InternalSubscriberPlatform {
           ontSerialNumber: serialNumber,
           status: "active",
           activatedAt: new Date(),
+          billingPeriodMonths: durationMonths,
+          nextBillingDate: serviceExpiryAt,
           metadata: {
             bookingNumber: booking?.bookingNumber,
             wifi,
@@ -409,6 +414,7 @@ export class InternalSubscriberPlatform {
             customerType,
             billMode,
             durationMonths,
+            nextBillingDate: serviceExpiryAt,
             networkProfile
           }
         }

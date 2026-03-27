@@ -1252,24 +1252,29 @@ async function runRecurringBillingTasks() {
   billingSchedulerRunning = true;
   try {
     const now = new Date();
-    const today = now.getUTCDate();
+    const billCycle = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     const existingRun = await BillingRun.findOne({
       triggerMode: "scheduled",
-      billCycle: `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`,
-      createdAt: { $gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) }
+      billCycle,
+      createdAt: { $gte: dayStart }
     }).lean();
 
-    if (!existingRun && today === 1) {
+    if (!existingRun) {
       const run = await BillingRun.create({
         runId: `BR-AUTO-${Date.now()}`,
         triggerMode: "scheduled",
-        billCycle: `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`,
+        billCycle,
         status: "running",
         startedAt: now,
-        notes: "Automatic daily scheduler run"
+        notes: "Automatic recurring due-date scheduler run"
       });
-      const result = await internalBillingEngine.runBillingCycle({ billCycle: run.billCycle });
+      const result = await internalBillingEngine.runBillingCycle({
+        billCycle: run.billCycle,
+        referenceDate: now,
+        advanceBillingSchedule: true
+      });
       run.status = "completed";
       run.completedAt = new Date();
       run.totals = {

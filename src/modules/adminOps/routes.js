@@ -2242,7 +2242,9 @@ adminOpsRouter.post(
       customerId: req.body?.customerId,
       serviceId: req.body?.serviceId,
       totalAmount: req.body?.totalAmount,
-      paymentStatus: req.body?.paymentStatus
+      paymentStatus: req.body?.paymentStatus,
+      referenceDate: new Date(),
+      advanceBillingSchedule: false
     });
     run.status = "completed";
     run.completedAt = new Date();
