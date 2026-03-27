@@ -343,6 +343,46 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  DashboardData _copyDashboardWithWifiName(String wifiName) {
+    return DashboardData(
+      customerName: dashboard.customerName,
+      planName: dashboard.planName,
+      walletBalance: dashboard.walletBalance,
+      usedGb: dashboard.usedGb,
+      totalGb: dashboard.totalGb,
+      points: dashboard.points,
+      activeDays: dashboard.activeDays,
+      wifiName: wifiName,
+      billingDue: dashboard.billingDue,
+    );
+  }
+
+  void _refreshWifiStateInBackground() {
+    final current = session;
+    if (current == null) return;
+    final customerId = selectedCustomerId;
+    Future<void>(() async {
+      try {
+        final latestWifi = await api.fetchWifi(current, customerId: customerId);
+        wifi = latestWifi;
+        dashboard = _copyDashboardWithWifiName(
+          latestWifi.ssid24.isNotEmpty ? latestWifi.ssid24 : latestWifi.ssid5,
+        );
+        try {
+          connectedDevices = await api.fetchConnectedDevices(
+            current,
+            customerId: customerId,
+          );
+        } catch (_) {
+          // Keep the last known device list if the lightweight sync fails.
+        }
+        notifyListeners();
+      } catch (_) {
+        // Ignore background sync failures after optimistic local updates.
+      }
+    });
+  }
+
   Future<void> markNotificationRead(String notificationId) async {
     final current = session;
     if (current == null || notificationId.isEmpty) return;
@@ -485,19 +525,18 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      wifi = await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: wifi.ssid24, ssid5: wifi.ssid5);
-      dashboard = DashboardData(
-        customerName: dashboard.customerName,
-        planName: dashboard.planName,
-        walletBalance: dashboard.walletBalance,
-        usedGb: dashboard.usedGb,
-        totalGb: dashboard.totalGb,
-        points: dashboard.points,
-        activeDays: dashboard.activeDays,
-        wifiName: wifi.ssid24.isNotEmpty ? wifi.ssid24 : wifi.ssid5,
-        billingDue: dashboard.billingDue,
+      final nextWifi = await api.updateWifi(
+        current,
+        customerId: selectedCustomerId,
+        password: password,
+        ssid24: wifi.ssid24,
+        ssid5: wifi.ssid5,
       );
-      await refresh();
+      wifi = nextWifi;
+      dashboard = _copyDashboardWithWifiName(
+        nextWifi.ssid24.isNotEmpty ? nextWifi.ssid24 : nextWifi.ssid5,
+      );
+      _refreshWifiStateInBackground();
     } catch (e) {
       error = e.toString();
     } finally {
@@ -517,19 +556,18 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      wifi = await api.updateWifi(current, customerId: selectedCustomerId, password: password, ssid24: ssid24, ssid5: ssid5);
-      dashboard = DashboardData(
-        customerName: dashboard.customerName,
-        planName: dashboard.planName,
-        walletBalance: dashboard.walletBalance,
-        usedGb: dashboard.usedGb,
-        totalGb: dashboard.totalGb,
-        points: dashboard.points,
-        activeDays: dashboard.activeDays,
-        wifiName: wifi.ssid24.isNotEmpty ? wifi.ssid24 : wifi.ssid5,
-        billingDue: dashboard.billingDue,
+      final nextWifi = await api.updateWifi(
+        current,
+        customerId: selectedCustomerId,
+        password: password,
+        ssid24: ssid24,
+        ssid5: ssid5,
       );
-      await refresh();
+      wifi = nextWifi;
+      dashboard = _copyDashboardWithWifiName(
+        nextWifi.ssid24.isNotEmpty ? nextWifi.ssid24 : nextWifi.ssid5,
+      );
+      _refreshWifiStateInBackground();
       return true;
     } catch (e) {
       error = e.toString();
@@ -730,14 +768,25 @@ class AppState extends ChangeNotifier {
   Future<bool> toggleWifiPause(bool paused) async {
     final current = session;
     if (current == null) return false;
+    final previousWifi = wifi;
     busy = true;
     error = null;
+    wifi = WifiData(
+      ssid24: wifi.ssid24,
+      ssid5: wifi.ssid5,
+      passwordMask: wifi.passwordMask,
+      paused: paused,
+      guestEnabled: wifi.guestEnabled,
+      guestSsid: wifi.guestSsid,
+      connectedDevicesCount: wifi.connectedDevicesCount,
+    );
     notifyListeners();
     try {
       await api.pauseWifi(current, paused, customerId: selectedCustomerId);
-      await refresh();
+      _refreshWifiStateInBackground();
       return true;
     } catch (e) {
+      wifi = previousWifi;
       error = e.toString();
       return false;
     } finally {
@@ -754,7 +803,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       await api.rebootDevice(current, customerId: selectedCustomerId);
-      await refresh();
+      _refreshWifiStateInBackground();
       return true;
     } catch (e) {
       error = e.toString();
