@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, IntegrationSummary } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, IntegrationSummary, Customer } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, ShieldCheck, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -81,6 +81,8 @@ export default function BillingPage() {
   const [recoveryItems, setRecoveryItems] = useState<BillingRecoveryItem[]>([])
   const [integrations, setIntegrations] = useState<IntegrationSummary[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
+  const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
+  const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
   const [collectionBucket, setCollectionBucket] = useState('')
   const [invoiceFilters, setInvoiceFilters] = useState({
     search: '',
@@ -138,10 +140,47 @@ export default function BillingPage() {
     const templates = invoiceTemplateSettings?.templates || []
     return templates.find((item) => item.key === invoiceTemplateSettings?.activeTemplate) || templates[0] || null
   }, [invoiceTemplateSettings])
+  const draftZoneCode = String(
+    draftCustomer?.billingSnapshot?.billingZoneCode ||
+    draftCustomer?.billingSnapshot?.zoneCode ||
+    ''
+  ).trim().toUpperCase()
+  const draftTemplatePreview = useMemo(() => {
+    const templates = invoiceTemplateSettings?.templates || []
+    const mappings = invoiceTemplateSettings?.zoneTemplateMappings || []
+    const mappedTemplateKey = mappings.find((item) => String(item.zoneCode || '').trim().toUpperCase() === draftZoneCode)?.templateKey
+    return templates.find((item) => item.key === (mappedTemplateKey || invoiceTemplateSettings?.activeTemplate)) || activeInvoiceTemplate
+  }, [activeInvoiceTemplate, draftZoneCode, invoiceTemplateSettings])
 
   useEffect(() => {
     void loadBilling()
   }, [collectionBucket, invoiceFilters])
+
+  useEffect(() => {
+    const customerId = invoiceDraft.customerId.trim()
+    if (!customerId) {
+      setDraftCustomer(null)
+      setIsResolvingDraftCustomer(false)
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        setIsResolvingDraftCustomer(true)
+        const res = await adminAPI.getCustomer(customerId)
+        if (res.success && res.data) {
+          setDraftCustomer(res.data)
+        } else {
+          setDraftCustomer(null)
+        }
+      } catch (error) {
+        console.error('[v0] Failed to resolve draft customer for billing preview:', error)
+        setDraftCustomer(null)
+      } finally {
+        setIsResolvingDraftCustomer(false)
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [invoiceDraft.customerId])
 
   async function loadBilling() {
     try {
@@ -760,6 +799,30 @@ export default function BillingPage() {
             >
               Reset
             </button>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Expected branding</div>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <div className="rounded-xl bg-black/20 p-3">
+                <div className="text-slate-400">Customer</div>
+                <div className="mt-1 font-semibold text-white">
+                  {isResolvingDraftCustomer ? 'Resolving customer...' : draftCustomer?.name || 'Enter customer ID'}
+                </div>
+                <div className="mt-1 text-xs text-slate-500">{draftCustomer?.customerId || 'No lookup yet'}</div>
+              </div>
+              <div className="rounded-xl bg-black/20 p-3">
+                <div className="text-slate-400">Billing zone</div>
+                <div className="mt-1 font-semibold text-white">{draftZoneCode || 'Default route'}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {draftZoneCode ? 'Zone override will apply if mapped' : 'Will fall back to default template'}
+                </div>
+              </div>
+              <div className="rounded-xl bg-black/20 p-3">
+                <div className="text-slate-400">Invoice template</div>
+                <div className="mt-1 font-semibold text-white">{draftTemplatePreview?.templateName || activeInvoiceTemplate?.templateName || 'JustFiber Standard'}</div>
+                <div className="mt-1 text-xs text-slate-500">{draftTemplatePreview?.key || activeInvoiceTemplate?.key || 'justfiber_standard'}</div>
+              </div>
+            </div>
           </div>
         </form>
 
