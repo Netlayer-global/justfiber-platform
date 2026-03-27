@@ -34,6 +34,7 @@ import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../c
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
+import { SystemConfig } from "../../models/SystemConfig.js";
 
 export const adminOpsRouter = Router();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -121,7 +122,48 @@ async function notifyLinkedCustomerUsers(customerId, { type, title, body, payloa
   );
 }
 
-function buildInvoiceHtml(invoice) {
+function dataUrlToBuffer(dataUrl) {
+  const value = String(dataUrl || "").trim();
+  const match = value.match(/^data:(.+?);base64,(.+)$/);
+  if (!match) return null;
+  try {
+    return Buffer.from(match[2], "base64");
+  } catch {
+    return null;
+  }
+}
+
+async function getInvoiceTemplateSettings() {
+  const config = await SystemConfig.findOne({ key: "settings.invoice_template" }).lean();
+  return config?.value || {};
+}
+
+function pickBranding(profile, templateSettings = {}) {
+  const accent = String(templateSettings.accentColor || "#0f6cbd");
+  return {
+    companyName: templateSettings.companyName || profile?.companyLegalName || "JustFiber",
+    companyAddress: templateSettings.companyAddress || profile?.companyAddress || "",
+    accent,
+    text: "#0f172a",
+    muted: "#64748b",
+    gstNumber: templateSettings.gstNumber || profile?.gstNumber || "",
+    panNumber: templateSettings.panNumber || "",
+    website: templateSettings.website || "",
+    phoneNumber: templateSettings.phoneNumber || profile?.supportPhone || "",
+    supportEmail: templateSettings.supportEmail || profile?.supportEmail || "",
+    bankAccountNumber: templateSettings.bankAccountNumber || "",
+    bankName: templateSettings.bankName || "",
+    bankIfscCode: templateSettings.bankIfscCode || "",
+    footerNote: templateSettings.footerNote || "Thank you for choosing JustFiber.",
+    paymentInstructions: templateSettings.paymentInstructions || "",
+    companyState: profile?.companyStateName || profile?.companyStateCode || "",
+    logoBuffer: dataUrlToBuffer(templateSettings.logoDataUrl),
+    signatureBuffer: dataUrlToBuffer(templateSettings.signatureDataUrl),
+    stampBuffer: dataUrlToBuffer(templateSettings.stampDataUrl)
+  };
+}
+
+function buildInvoiceHtml(invoice, customer, branding) {
   const taxRows = (invoice.taxBreakdown || [])
     .map(
       (item) =>
@@ -131,8 +173,18 @@ function buildInvoiceHtml(invoice) {
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber}</title></head>
   <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
-    <h1>Invoice ${invoice.invoiceNumber}</h1>
-    <p>Customer: ${invoice.customerId}</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:28px;font-weight:700;color:${branding.accent}">${branding.companyName}</div>
+        <div style="margin-top:8px;white-space:pre-line;color:#555">${branding.companyAddress || ""}</div>
+        <div style="margin-top:4px;color:#555">${branding.website || ""} ${branding.phoneNumber ? `| ${branding.phoneNumber}` : ""}</div>
+      </div>
+      <div style="text-align:right">
+        <h1 style="margin:0">Invoice ${invoice.invoiceNumber}</h1>
+        <div style="margin-top:8px;color:#555">Generated ${invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleString("en-IN") : "-"}</div>
+      </div>
+    </div>
+    <p>Customer: ${customer?.fullName || invoice.customerId}</p>
     <p>Bill Cycle: ${invoice.billCycle || "-"}</p>
     <p>Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</p>
     <table style="border-collapse:collapse;width:420px;margin-top:16px">
@@ -140,10 +192,15 @@ function buildInvoiceHtml(invoice) {
       ${taxRows}
       <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
     </table>
+    <div style="margin-top:24px;color:#555">${branding.paymentInstructions || ""}</div>
+    <div style="margin-top:24px;border-top:1px solid #ddd;padding-top:12px;color:#666;font-size:12px">
+      ${branding.gstNumber ? `GSTIN: ${branding.gstNumber}` : ""} ${branding.panNumber ? `| PAN: ${branding.panNumber}` : ""}
+      <br/>${branding.footerNote || ""}
+    </div>
   </body></html>`;
 }
 
-function buildBillingNoteHtml(note) {
+function buildBillingNoteHtml(note, customer, branding) {
   const taxRows = (note.taxBreakdown || [])
     .map(
       (item) =>
@@ -153,21 +210,24 @@ function buildBillingNoteHtml(note) {
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${note.noteNumber}</title></head>
   <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
+    <div style="font-size:24px;font-weight:700;color:${branding.accent}">${branding.companyName}</div>
     <h1>${note.type === "credit" ? "Credit Note" : "Debit Note"} ${note.noteNumber}</h1>
-    <p>Customer: ${note.customerId}</p>
+    <p>Customer: ${customer?.fullName || note.customerId}</p>
     <p>Reason: ${note.reasonCode || "-"}</p>
     <table style="border-collapse:collapse;width:420px;margin-top:16px">
       <tr><td style="padding:8px;border:1px solid #ccc;">Base Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(note.amount || 0).toFixed(2)}</td></tr>
       ${taxRows}
       <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(note.totalAmount || 0).toFixed(2)}</td></tr>
     </table>
+    <div style="margin-top:24px;color:#666;font-size:12px">${branding.footerNote || ""}</div>
   </body></html>`;
 }
 
-function buildPaymentReceiptHtml(payment, customer) {
+function buildPaymentReceiptHtml(payment, customer, branding) {
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${payment.transactionId}</title></head>
   <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
+    <div style="font-size:24px;font-weight:700;color:${branding.accent}">${branding.companyName}</div>
     <h1>Payment Receipt ${payment.transactionId}</h1>
     <p>Customer: ${customer?.fullName || payment.customerId}</p>
     <p>Customer ID: ${payment.customerId}</p>
@@ -179,23 +239,19 @@ function buildPaymentReceiptHtml(payment, customer) {
       <tr><td style="padding:8px;border:1px solid #ccc;">Reference</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">${payment.reference || "-"}</td></tr>
       <tr><td style="padding:8px;border:1px solid #ccc;">Paid At</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">${payment.paidAt ? new Date(payment.paidAt).toLocaleString("en-IN") : "-"}</td></tr>
     </table>
+    <div style="margin-top:24px;color:#666;font-size:12px">${branding.footerNote || ""}</div>
   </body></html>`;
 }
 
-function pickBranding(profile) {
-  return {
-    companyName: "JustFiber",
-    accent: "#0f6cbd",
-    text: "#0f172a",
-    muted: "#64748b",
-    gstNumber: profile?.gstNumber || "",
-    companyState: profile?.companyStateName || profile?.companyStateCode || ""
-  };
-}
-
 function drawPdfHeader(doc, branding, title, identifier) {
-  doc.roundedRect(40, 36, 515, 72, 12).fillAndStroke(branding.accent, branding.accent);
-  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(24).text(branding.companyName, 56, 56);
+  doc.roundedRect(40, 36, 515, 96, 12).fillAndStroke(branding.accent, branding.accent);
+  if (branding.logoBuffer) {
+    try {
+      doc.image(branding.logoBuffer, 54, 52, { fit: [78, 52], align: "left", valign: "center" });
+    } catch {}
+  }
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(24).text(branding.companyName, branding.logoBuffer ? 146 : 56, 56, { width: 220 });
+  doc.font("Helvetica").fontSize(10).text(branding.companyAddress || "", branding.logoBuffer ? 146 : 56, 84, { width: 220 });
   doc.font("Helvetica").fontSize(11).text(title, 390, 55, { width: 145, align: "right" });
   doc.font("Helvetica-Bold").fontSize(16).text(identifier, 360, 74, { width: 175, align: "right" });
   doc.fillColor(branding.text);
@@ -241,21 +297,41 @@ function drawPdfFooter(doc, branding, generatedText) {
   doc.moveTo(40, 760).lineTo(555, 760).stroke("#dbe4ee");
   doc.fillColor(branding.muted).font("Helvetica").fontSize(9);
   doc.text(generatedText, 40, 772);
+  if (branding.paymentInstructions) {
+    doc.text(branding.paymentInstructions, 40, 786, { width: 290 });
+  }
+  if (branding.signatureBuffer) {
+    try {
+      doc.image(branding.signatureBuffer, 390, 718, { fit: [70, 36] });
+    } catch {}
+  }
+  if (branding.stampBuffer) {
+    try {
+      doc.image(branding.stampBuffer, 468, 710, { fit: [70, 56] });
+    } catch {}
+  }
   doc.text(
-    [branding.gstNumber ? `GSTIN: ${branding.gstNumber}` : "", branding.companyState ? `State: ${branding.companyState}` : ""]
+    [
+      branding.gstNumber ? `GSTIN: ${branding.gstNumber}` : "",
+      branding.panNumber ? `PAN: ${branding.panNumber}` : "",
+      branding.companyState ? `State: ${branding.companyState}` : ""
+    ]
       .filter(Boolean)
       .join(" | "),
     40,
-    786,
+    806,
     { width: 515, align: "right" }
   );
+  if (branding.footerNote) {
+    doc.text(branding.footerNote, 40, 818, { width: 515, align: "left" });
+  }
 }
 
-function renderInvoicePdf(invoice, profile, customer) {
-  const branding = pickBranding(profile);
+function renderInvoicePdf(invoice, profile, customer, templateSettings) {
+  const branding = pickBranding(profile, templateSettings);
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
-  let y = drawKeyValueGrid(doc, 130, [
+  let y = drawKeyValueGrid(doc, 152, [
     ["Customer", customer?.fullName || invoice.customerId],
     ["Customer ID", invoice.customerId],
     ["Bill Cycle", invoice.billCycle || "-"],
@@ -284,11 +360,11 @@ function renderInvoicePdf(invoice, profile, customer) {
   return doc;
 }
 
-function renderBillingNotePdf(note, profile, customer) {
-  const branding = pickBranding(profile);
+function renderBillingNotePdf(note, profile, customer, templateSettings) {
+  const branding = pickBranding(profile, templateSettings);
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, note.type === "credit" ? "Credit Note" : "Debit Note", note.noteNumber);
-  let y = drawKeyValueGrid(doc, 130, [
+  let y = drawKeyValueGrid(doc, 152, [
     ["Customer", customer?.fullName || note.customerId],
     ["Customer ID", note.customerId],
     ["Reason Code", note.reasonCode || "-"],
@@ -322,11 +398,11 @@ function renderBillingNotePdf(note, profile, customer) {
   return doc;
 }
 
-function renderPaymentReceiptPdf(payment, profile, customer) {
-  const branding = pickBranding(profile);
+function renderPaymentReceiptPdf(payment, profile, customer, templateSettings) {
+  const branding = pickBranding(profile, templateSettings);
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, "Payment Receipt", payment.transactionId);
-  let y = drawKeyValueGrid(doc, 130, [
+  let y = drawKeyValueGrid(doc, 152, [
     ["Customer", customer?.fullName || payment.customerId],
     ["Customer ID", payment.customerId],
     ["Provider", payment.provider || "-"],
@@ -1387,17 +1463,19 @@ adminOpsRouter.get(
     if (!invoice) {
       throw new ApiError(404, "Invoice not found");
     }
-    const [profile, customer] = await Promise.all([
+    const [profile, customer, templateSettings] = await Promise.all([
       BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean(),
-      Customer.findOne({ customerId: invoice.customerId }).lean()
+      Customer.findOne({ customerId: invoice.customerId }).lean(),
+      getInvoiceTemplateSettings()
     ]);
+    const branding = pickBranding(profile, templateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.send(buildInvoiceHtml(invoice));
+      return res.send(buildInvoiceHtml(invoice, customer, branding));
     }
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${invoice.invoiceNumber || invoice.invoiceId}.pdf\"`);
-    return renderInvoicePdf(invoice, profile, customer).pipe(res);
+    return renderInvoicePdf(invoice, profile, customer, templateSettings).pipe(res);
   })
 );
 
@@ -1447,17 +1525,19 @@ adminOpsRouter.get(
     if (!note) {
       throw new ApiError(404, "Billing note not found");
     }
-    const [profile, customer] = await Promise.all([
+    const [profile, customer, templateSettings] = await Promise.all([
       BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean(),
-      Customer.findOne({ customerId: note.customerId }).lean()
+      Customer.findOne({ customerId: note.customerId }).lean(),
+      getInvoiceTemplateSettings()
     ]);
+    const branding = pickBranding(profile, templateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.send(buildBillingNoteHtml(note));
+      return res.send(buildBillingNoteHtml(note, customer, branding));
     }
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${note.noteNumber}.pdf\"`);
-    return renderBillingNotePdf(note, profile, customer).pipe(res);
+    return renderBillingNotePdf(note, profile, customer, templateSettings).pipe(res);
   })
 );
 
@@ -1469,17 +1549,19 @@ adminOpsRouter.get(
     if (!payment) {
       throw new ApiError(404, "Payment transaction not found");
     }
-    const [profile, customer] = await Promise.all([
+    const [profile, customer, templateSettings] = await Promise.all([
       BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean(),
-      Customer.findOne({ customerId: payment.customerId }).lean()
+      Customer.findOne({ customerId: payment.customerId }).lean(),
+      getInvoiceTemplateSettings()
     ]);
+    const branding = pickBranding(profile, templateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.send(buildPaymentReceiptHtml(payment, customer));
+      return res.send(buildPaymentReceiptHtml(payment, customer, branding));
     }
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${payment.transactionId}.pdf\"`);
-    return renderPaymentReceiptPdf(payment, profile, customer).pipe(res);
+    return renderPaymentReceiptPdf(payment, profile, customer, templateSettings).pipe(res);
   })
 );
 
