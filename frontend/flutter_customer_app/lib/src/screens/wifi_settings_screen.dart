@@ -347,6 +347,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
   }
 
   Future<void> _showRenameSheet(BuildContext context, AppState appState) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -400,27 +402,34 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                   return;
                                 }
                                 if (password.length < 8) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(content: Text('Password must be at least 8 characters long.')),
                                   );
                                   return;
                                 }
                                 setLocalState(() => submitting = true);
+                                messenger
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Saving Wi-Fi details...'),
+                                      duration: Duration(seconds: 20),
+                                    ),
+                                  );
+                                navigator.pop();
                                 final ok = await appState.changeWifiPasswordAndRefresh(
                                   password: password,
                                   ssid24: ssid,
                                   ssid5: ssid,
                                 );
-                                if (!context.mounted) return;
+                                messenger.hideCurrentSnackBar();
                                 if (ok) {
-                                  Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(content: Text('Wi-Fi details updated')),
                                   );
                                   return;
                                 }
-                                setLocalState(() => submitting = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(content: Text(appState.error ?? 'Update failed')),
                                 );
                               },
