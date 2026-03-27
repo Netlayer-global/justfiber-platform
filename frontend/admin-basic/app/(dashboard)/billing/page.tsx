@@ -101,7 +101,6 @@ export default function BillingPage() {
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
   const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections' | 'settings'>('invoices')
   const [invoiceQuickView, setInvoiceQuickView] = useState<'all' | 'pending' | 'paid' | 'overdue' | 'activation'>('all')
   const [collectionBucket, setCollectionBucket] = useState('')
@@ -232,11 +231,6 @@ export default function BillingPage() {
     }),
     [billing]
   )
-  const selectedInvoice = useMemo(
-    () => visibleInvoices.find((item) => item.invoiceId === selectedInvoiceId) || visibleInvoices[0] || null,
-    [visibleInvoices, selectedInvoiceId]
-  )
-
   useEffect(() => {
     void loadBilling()
   }, [collectionBucket, invoiceFilters])
@@ -266,16 +260,6 @@ export default function BillingPage() {
     }, 400)
     return () => clearTimeout(timer)
   }, [invoiceDraft.customerId])
-
-  useEffect(() => {
-    if (!visibleInvoices.length) {
-      setSelectedInvoiceId('')
-      return
-    }
-    if (!visibleInvoices.some((item) => item.invoiceId === selectedInvoiceId)) {
-      setSelectedInvoiceId(visibleInvoices[0].invoiceId)
-    }
-  }, [visibleInvoices, selectedInvoiceId])
 
   async function loadBilling() {
     try {
@@ -934,15 +918,17 @@ export default function BillingPage() {
 
       {billingSectionTab === 'invoices' ? (
       <section>
-        <form onSubmit={generateInvoice} className="card p-5 space-y-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice command</div>
-            <h2 className="mt-2 text-2xl font-bold">Generate live invoice</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Single customer ya service ke liye invoice issue karo, amount override do, aur billing cycle rerun ke bina PDF-ready invoice nikalo.
-            </p>
+        <form onSubmit={generateInvoice} className="card p-5 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">New invoice</div>
+              <div className="mt-1 text-sm text-slate-400">Customer, service, amount override.</div>
+            </div>
+            <div className="text-xs text-slate-500">
+              {isResolvingDraftCustomer ? 'Resolving...' : draftCustomer?.name || 'No customer selected'}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <input
               className="input"
               placeholder="Customer ID"
@@ -985,8 +971,8 @@ export default function BillingPage() {
               Reset
             </button>
           </div>
-          <div className="rounded-xl border border-white/10 bg-[#0a0e27] px-4 py-3 text-sm text-slate-300">
-            {isResolvingDraftCustomer ? 'Resolving customer...' : draftCustomer?.name || 'Enter customer ID'} • Zone {draftZoneCode || 'default'} • Template {draftTemplatePreview?.templateName || activeInvoiceTemplate?.templateName || 'JustFiber Standard'}
+          <div className="rounded-xl border border-white/10 bg-[#0a0e27] px-4 py-3 text-xs text-slate-400">
+            Zone {draftZoneCode || 'default'} | Template {draftTemplatePreview?.templateName || activeInvoiceTemplate?.templateName || 'JustFiber Standard'}
           </div>
         </form>
 
@@ -997,17 +983,17 @@ export default function BillingPage() {
       <div className="card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice filters</div>
-            <div className="mt-1 text-sm text-slate-400">Filter by customer, cycle, payment status, and billing date range.</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Filters</div>
+            <div className="mt-1 text-sm text-slate-400">Search and status filters.</div>
           </div>
           <button className="btn-secondary" onClick={resetInvoiceFilters} disabled={!activeInvoiceFilterTokens.length}>
             Clear filters
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
           <input
             className="input"
-            placeholder="Search invoice / customer / service"
+            placeholder="Search invoice / customer"
             value={invoiceFilters.search}
             onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, search: e.target.value }))}
           />
@@ -1036,14 +1022,14 @@ export default function BillingPage() {
           <input
             className="input"
             type="date"
-            value={invoiceFilters.fromDate}
-            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
+            value={invoiceFilters.toDate}
+            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, toDate: e.target.value }))}
           />
           <input
             className="input"
             type="date"
-            value={invoiceFilters.toDate}
-            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, toDate: e.target.value }))}
+            value={invoiceFilters.fromDate}
+            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
           />
         </div>
       </div>
@@ -1926,17 +1912,10 @@ export default function BillingPage() {
             <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice register</div>
-                <div className="mt-1 text-sm text-slate-400">
-                  Simpler invoice-first view with quick status tabs, PDF actions, and zone/template context.
-                </div>
+                <div className="mt-1 text-sm text-slate-400">Compact daily invoice list.</div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-                  {visibleInvoices.length} invoice{visibleInvoices.length === 1 ? '' : 's'}
-                </div>
-                <div className="rounded-full bg-[#8224E3]/10 px-3 py-1 text-xs text-[#d9b8ff]">
-                  {selectedInvoice ? `Selected ${selectedInvoice.invoiceNumber || selectedInvoice.invoiceId}` : 'No invoice selected'}
-                </div>
+              <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+                {visibleInvoices.length} invoice{visibleInvoices.length === 1 ? '' : 's'}
               </div>
             </div>
             <div className="flex flex-wrap gap-2 border-b border-[#2a2f4a] px-4 py-3">
@@ -1963,24 +1942,44 @@ export default function BillingPage() {
                 <tr className="bg-[#0a0e27]">
                   <th className="table-header">Invoice</th>
                   <th className="table-header">Customer</th>
-                  <th className="table-header">State</th>
-                  <th className="table-header">Amount</th>
-                  <th className="table-header">Tax</th>
-                  <th className="table-header">Timeline</th>
+                  <th className="table-header">Total</th>
+                  <th className="table-header">Due</th>
                   <th className="table-header">Status</th>
+                  <th className="table-header text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleInvoices.length ? visibleInvoices.map((item) => (
                 <tr
                   key={item.id}
-                  className={`border-t border-[#2a2f4a] align-top hover:bg-[#1a1f3a] ${selectedInvoice?.invoiceId === item.invoiceId ? 'bg-[#151a34]' : ''}`}
-                  onClick={() => setSelectedInvoiceId(item.invoiceId)}
+                  className="border-t border-[#2a2f4a] align-top hover:bg-[#1a1f3a]"
                 >
                   <td className="table-cell">
                     <div className="font-mono text-sm">{item.invoiceNumber || item.invoiceId}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.billCycle || '-'}</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                  </td>
+                  <td className="table-cell">
+                    <div className="font-medium text-slate-100">{item.customerId}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.serviceId || 'No service linked'}</div>
+                    <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] uppercase tracking-[0.18em] ${invoiceSourceTone(item.source)}`}>
+                      {item.sourceLabel || item.source || 'Internal'}
+                    </div>
+                  </td>
+                  <td className="table-cell">
+                    <div className="mt-1 font-semibold text-white">Total Rs {Number(item.totalAmount || item.amount || 0).toFixed(2)}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.billingZoneCode ? `Zone ${item.billingZoneCode}` : item.billingStateCode || '-'}</div>
+                  </td>
+                  <td className="table-cell">
+                    <div>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '-'}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.generatedAt ? new Date(item.generatedAt).toLocaleDateString() : '-'}</div>
+                  </td>
+                  <td className="table-cell">
+                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${invoiceStatusTone(item.paymentStatus || item.status)}`}>
+                      {item.paymentStatus || item.status}
+                    </span>
+                  </td>
+                  <td className="table-cell text-right">
+                    <div className="flex flex-wrap justify-end gap-3">
                       <button
                         className="text-xs text-[#4da3ff]"
                         onClick={() => void openInvoicePdf(item.invoiceId)}
@@ -1995,59 +1994,10 @@ export default function BillingPage() {
                       </button>
                     </div>
                   </td>
-                  <td className="table-cell">
-                    <div className="font-medium text-slate-100">{item.customerId}</div>
-                    <div className="mt-1 text-xs text-slate-500">{item.serviceId || 'No service linked'}</div>
-                    <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] uppercase tracking-[0.18em] ${invoiceSourceTone(item.source)}`}>
-                      {item.sourceLabel || item.source || 'Internal'}
-                    </div>
-                  </td>
-                  <td className="table-cell">
-                    <div>{item.billingStateName || item.billingStateCode || '-'}</div>
-                    <div className="mt-1 text-xs text-slate-500">{item.taxMode || 'india_gst'}</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {item.billingZoneCode ? (
-                        <span className="inline-flex rounded-full bg-white/5 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-300">
-                          Zone {item.billingZoneCode}
-                        </span>
-                      ) : null}
-                      {item.appliedTemplateName ? (
-                        <span className="inline-flex rounded-full bg-[#8224E3]/15 px-2 py-1 text-[11px] text-[#d9b8ff]">
-                          {item.appliedTemplateName}
-                        </span>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="table-cell">
-                    <div>Taxable Rs {Number(item.amount || 0).toFixed(2)}</div>
-                    <div className="mt-1 font-semibold text-white">Total Rs {Number(item.totalAmount || item.amount || 0).toFixed(2)}</div>
-                  </td>
-                  <td className="table-cell">
-                    <div>Rs {Number(item.taxAmount || 0).toFixed(2)}</div>
-                    {(item.taxBreakdown || []).length ? (
-                      <div className="mt-1 text-xs text-slate-500">
-                        {item.taxBreakdown?.map((part) => `${part.label} ${part.rate}%`).join(' | ')}
-                      </div>
-                    ) : (
-                      <div className="mt-1 text-xs text-slate-500">No detailed breakdown</div>
-                    )}
-                  </td>
-                  <td className="table-cell">
-                    <div>Generated {item.generatedAt ? new Date(item.generatedAt).toLocaleString() : '-'}</div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      Due {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '-'}
-                    </div>
-                  </td>
-                  <td className="table-cell">
-                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${invoiceStatusTone(item.paymentStatus || item.status)}`}>
-                      {item.paymentStatus || item.status}
-                    </span>
-                    <div className="mt-2 text-xs text-slate-500">Lifecycle {item.status}</div>
-                  </td>
                 </tr>
                 )) : (
                   <tr className="border-t border-[#2a2f4a]">
-                    <td className="table-cell text-slate-500" colSpan={7}>
+                    <td className="table-cell text-slate-500" colSpan={6}>
                       No invoices match the current quick view and filters. Try switching tabs or clearing filters.
                     </td>
                   </tr>
