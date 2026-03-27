@@ -54,6 +54,55 @@ function firstValue(root, paths) {
   return undefined;
 }
 
+function collectHostNodes(node) {
+  if (!node || typeof node !== "object") return [];
+  const hostsRoot =
+    node?.InternetGatewayDevice?.LANDevice?.["1"]?.Hosts?.Host ||
+    node?.InternetGatewayDevice?.LANDevice?.["1"]?.Hosts?.Hosts ||
+    node?.Device?.Hosts?.Host ||
+    null;
+  if (!hostsRoot || typeof hostsRoot !== "object") return [];
+  return Object.entries(hostsRoot)
+    .filter(([key, value]) => key !== "_object" && value && typeof value === "object")
+    .map(([, value]) => value);
+}
+
+function summarizeLanHosts(summary) {
+  const hosts = collectHostNodes(summary)
+    .map((hostNode, index) => {
+      const hostName = extractHostNodeValue(hostNode, ["HostName", "Name", "FriendlyName"]);
+      const macAddress = extractHostNodeValue(hostNode, ["MACAddress", "PhysAddress"]);
+      const ipAddress = extractHostNodeValue(hostNode, ["IPAddress", "IPV4Address.1.IPAddress", "IPV6Address.1.IPAddress"]);
+      const interfaceType = extractHostNodeValue(hostNode, ["InterfaceType", "Layer1Interface"]);
+      const active = extractHostNodeValue(hostNode, ["Active", "PresenceActive"]);
+      const addressSource = extractHostNodeValue(hostNode, ["AddressSource"]);
+      if (!hostName && !macAddress && !ipAddress) {
+        return null;
+      }
+      return {
+        clientId: String(macAddress || hostName || ipAddress || `host-${index + 1}`),
+        hostName: String(hostName || macAddress || ipAddress || `Connected Device ${index + 1}`),
+        macAddress: macAddress ? String(macAddress) : "",
+        ipAddress: ipAddress ? String(ipAddress) : "",
+        interfaceType: interfaceType ? String(interfaceType) : "wifi",
+        active: active === undefined || active === null ? true : Boolean(active),
+        addressSource: addressSource ? String(addressSource) : ""
+      };
+    })
+    .filter(Boolean);
+  return hosts;
+}
+
+function extractHostNodeValue(hostNode, names) {
+  for (const name of names) {
+    const value = extractNodeValue(hostNode?.[name]);
+    if (value !== undefined && value !== null && value !== "") {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 function parseDate(value) {
   if (!value) return null;
   const date = new Date(value);
@@ -200,6 +249,11 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "DeviceID.ProductClass",
     "InternetGatewayDevice.DeviceInfo.ProductClass"
   ]);
+  const lanHosts = summarizeLanHosts(summary);
+  const leasedClients = firstValue(summary, [
+    "InternetGatewayDevice.LANDevice.1.Hosts.HostNumberOfEntries",
+    "Device.Hosts.HostNumberOfEntries"
+  ]);
 
   return {
     deviceId: String(firstValue(summary, ["_id", "DeviceID.ID"]) || fallbackDeviceId || ""),
@@ -217,6 +271,10 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
       ssid5Masked: ssid5 || null,
       password24Masked: wifiPassword24 ? "********" : null,
       password5Masked: wifiPassword5 ? "********" : null
+    },
+    lanInfo: {
+      leasedClients: Number(leasedClients || lanHosts.length || 0),
+      hosts: lanHosts
     },
     opticalInfo: {
       rxPower: rxPower ?? null,
@@ -254,6 +312,10 @@ export async function getLiveGenieDeviceList(limit = 100) {
           ...(cached?.wifiInfo || {}),
           ...(parsed.wifiInfo || {})
         },
+        lanInfo: {
+          ...(cached?.lanInfo || {}),
+          ...(parsed.lanInfo || {})
+        },
         opticalInfo: {
           ...(cached?.opticalInfo || {}),
           ...(parsed.opticalInfo || {})
@@ -290,6 +352,10 @@ export async function getLiveGenieDeviceList(limit = 100) {
         wifiInfo: {
           ...(device.wifiInfo || {}),
           ...(parsed.wifiInfo || {})
+        },
+        lanInfo: {
+          ...(device.lanInfo || {}),
+          ...(parsed.lanInfo || {})
         },
         opticalInfo: {
           ...(device.opticalInfo || {}),
@@ -340,6 +406,10 @@ export async function syncDeviceFromGenie(cacheRecord) {
         wifiInfo: {
           ...(cacheRecord.wifiInfo || {}),
           ...(parsed.wifiInfo || {})
+        },
+        lanInfo: {
+          ...(cacheRecord.lanInfo || {}),
+          ...(parsed.lanInfo || {})
         },
         opticalInfo: {
           ...(cacheRecord.opticalInfo || {}),

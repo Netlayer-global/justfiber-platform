@@ -545,6 +545,14 @@ function getConnectedDevices(device) {
   return [...merged.values()].map(({ source, ...item }) => item);
 }
 
+function isGenericConnectedDeviceList(items) {
+  if (!Array.isArray(items) || items.length === 0) return true;
+  return items.every((item) => {
+    const name = String(item?.name || "").trim().toLowerCase();
+    return !name || name.startsWith("connected device ") || name === "unknown";
+  });
+}
+
 function isMissingGenieDeviceError(error) {
   const message = String(error?.message || "");
   return message.includes("GenieACS request failed") && message.includes("No such device");
@@ -2639,7 +2647,16 @@ customerPortalRouter.get(
     if (!device) {
       throw new ApiError(404, "Customer device not found");
     }
-    const connected = getConnectedDevices(device);
+    let connected = getConnectedDevices(device);
+    if (connected.length === 0 || isGenericConnectedDeviceList(connected)) {
+      try {
+        await syncDeviceFromGenie(device);
+        await device.reload();
+        connected = getConnectedDevices(device);
+      } catch {
+        // Keep the last cached view if live sync is unavailable.
+      }
+    }
     return ok(res, connected);
   })
 );
