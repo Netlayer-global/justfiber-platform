@@ -20,6 +20,7 @@ import type {
   BillingRun,
   BillingNote,
   BillingPayment,
+  IntegrationSummary,
   BillingCollectionItem,
   BillingCollectionAgent,
   RazorpayOverview,
@@ -621,6 +622,7 @@ function mapBillingItem(invoice: any): BillingData {
   return {
     id: invoice._id || invoice.invoiceId || '',
     customerId: invoice.customerId || '',
+    serviceId: invoice.serviceId || '',
     amount: Number(invoice.amount || invoice.totalAmount || 0),
     taxAmount: Number(invoice.taxAmount || 0),
     totalAmount: Number(invoice.totalAmount || invoice.amount || 0),
@@ -634,10 +636,28 @@ function mapBillingItem(invoice: any): BillingData {
     invoiceId: invoice.invoiceId || invoice._id || '',
     invoiceNumber: invoice.invoiceNumber,
     billCycle: invoice.billCycle,
+    generatedAt: invoice.generatedAt,
+    paymentStatus: invoice.paymentStatus,
+    source: invoice.source,
     billingStateCode: invoice.billingStateCode,
     billingStateName: invoice.billingStateName,
     taxMode: invoice.taxMode,
     taxBreakdown: Array.isArray(invoice.taxBreakdown) ? invoice.taxBreakdown : [],
+  }
+}
+
+function mapIntegrationSummary(item: any): IntegrationSummary {
+  return {
+    id: item._id || item.key || '',
+    key: item.key || '',
+    category: item.category || '',
+    provider: item.provider || '',
+    displayName: item.displayName || item.provider || item.key || 'Integration',
+    status: item.status || 'inactive',
+    mode: item.mode || 'sandbox',
+    capabilities: Array.isArray(item.capabilities) ? item.capabilities : [],
+    notes: item.notes,
+    lastCheckedAt: item.lastCheckedAt,
   }
 }
 
@@ -1456,8 +1476,29 @@ export const adminAPI = {
     }),
 
   // Billing
-  getBillingData: async (page = 1, limit = 20) => {
-    const res = await request<any[]>(`/api/v1/admin/billing/invoices?page=${page}&limit=${limit}`)
+  getBillingData: async (
+    page = 1,
+    limit = 20,
+    filters?: {
+      customerId?: string
+      paymentStatus?: string
+      billCycle?: string
+      search?: string
+      fromDate?: string
+      toDate?: string
+    },
+  ) => {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(filters?.customerId ? { customerId: filters.customerId } : {}),
+      ...(filters?.paymentStatus ? { paymentStatus: filters.paymentStatus } : {}),
+      ...(filters?.billCycle ? { billCycle: filters.billCycle } : {}),
+      ...(filters?.search ? { search: filters.search } : {}),
+      ...(filters?.fromDate ? { fromDate: filters.fromDate } : {}),
+      ...(filters?.toDate ? { toDate: filters.toDate } : {}),
+    }).toString()
+    const res = await request<any[]>(`/api/v1/admin/billing/invoices?${query}`)
     return {
       ...res,
       data: {
@@ -1613,6 +1654,13 @@ export const adminAPI = {
     request(`/api/v1/admin/billing/payments/${transactionId}/dispatch-receipt`, {
       method: 'POST',
     }),
+  getIntegrations: async () => {
+    const res = await request<any[]>('/api/v1/admin/integrations')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapIntegrationSummary) : [],
+    }
+  },
   createBillingNote: async (data: {
     customerId: string
     type: 'credit' | 'debit'

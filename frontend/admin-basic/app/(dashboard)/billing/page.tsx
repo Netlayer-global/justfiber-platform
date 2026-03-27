@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, IntegrationSummary } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, ShieldCheck, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -72,7 +72,16 @@ export default function BillingPage() {
   const [razorpayOverview, setRazorpayOverview] = useState<RazorpayOverview | null>(null)
   const [razorpayWebhookLogs, setRazorpayWebhookLogs] = useState<RazorpayWebhookLog[]>([])
   const [recoveryItems, setRecoveryItems] = useState<BillingRecoveryItem[]>([])
+  const [integrations, setIntegrations] = useState<IntegrationSummary[]>([])
   const [collectionBucket, setCollectionBucket] = useState('')
+  const [invoiceFilters, setInvoiceFilters] = useState({
+    search: '',
+    customerId: '',
+    paymentStatus: '',
+    billCycle: '',
+    fromDate: '',
+    toDate: '',
+  })
   const [exportFilters, setExportFilters] = useState({
     fromDate: '',
     toDate: '',
@@ -84,8 +93,15 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isRunningCycle, setIsRunningCycle] = useState(false)
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
   const [isSavingNote, setIsSavingNote] = useState(false)
   const [profileForm, setProfileForm] = useState<BillingProfileForm>(emptyProfileForm)
+  const [invoiceDraft, setInvoiceDraft] = useState({
+    customerId: '',
+    serviceId: '',
+    totalAmount: '',
+    paymentStatus: 'pending' as 'pending' | 'paid',
+  })
   const [noteForm, setNoteForm] = useState({
     customerId: '',
     type: 'credit' as 'credit' | 'debit',
@@ -113,13 +129,13 @@ export default function BillingPage() {
 
   useEffect(() => {
     void loadBilling()
-  }, [collectionBucket])
+  }, [collectionBucket, invoiceFilters])
 
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes] = await Promise.all([
-        adminAPI.getBillingData(),
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes, integrationRes] = await Promise.all([
+        adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
         adminAPI.getBillingRuns(),
@@ -130,6 +146,7 @@ export default function BillingPage() {
         adminAPI.getRazorpayOverview(),
         adminAPI.getRazorpayWebhookLogs(),
         adminAPI.getBillingRecovery(),
+        adminAPI.getIntegrations(),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -192,6 +209,9 @@ export default function BillingPage() {
       }
       if (recoveryRes.success && recoveryRes.data) {
         setRecoveryItems(recoveryRes.data as BillingRecoveryItem[])
+      }
+      if (integrationRes.success && integrationRes.data) {
+        setIntegrations(integrationRes.data)
       }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
@@ -262,6 +282,35 @@ export default function BillingPage() {
       toast.error('Failed to run billing cycle')
     } finally {
       setIsRunningCycle(false)
+    }
+  }
+
+  async function generateInvoice(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      setIsGeneratingInvoice(true)
+      const payload = {
+        customerId: invoiceDraft.customerId.trim() || undefined,
+        serviceId: invoiceDraft.serviceId.trim() || undefined,
+        totalAmount: invoiceDraft.totalAmount.trim() ? Number(invoiceDraft.totalAmount) : undefined,
+        paymentStatus: invoiceDraft.paymentStatus,
+      }
+      if (!payload.customerId && !payload.serviceId) {
+        toast.error('Customer ID ya Service ID required hai')
+        return
+      }
+      const res = await adminAPI.runBillingCycle(payload)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to generate invoice')
+        return
+      }
+      toast.success('Invoice generated')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to generate invoice:', error)
+      toast.error('Failed to generate invoice')
+    } finally {
+      setIsGeneratingInvoice(false)
     }
   }
 
@@ -536,6 +585,15 @@ export default function BillingPage() {
     { label: 'GST', value: `Rs ${Number(overview?.taxCollected || 0).toFixed(0)}`, Icon: ShieldCheck },
     { label: 'Overdue', value: String(overview?.overdueInvoices || 0), Icon: Wallet },
   ]
+  const zohoIntegration = integrations.find((item) =>
+    item.provider.toLowerCase().includes('zoho') || item.displayName.toLowerCase().includes('zoho')
+  )
+  const invoiceStatusTone = (status?: string) => {
+    if (status === 'paid') return 'bg-emerald-500/15 text-emerald-300'
+    if (status === 'pending') return 'bg-amber-500/15 text-amber-300'
+    if (status === 'overdue') return 'bg-rose-500/15 text-rose-300'
+    return 'bg-slate-500/15 text-slate-300'
+  }
 
   return (
     <div className="space-y-6">
@@ -631,6 +689,146 @@ export default function BillingPage() {
             placeholder="Zone code (NCR, LKO)"
             value={exportFilters.zoneCode}
             onChange={(e) => setExportFilters((prev) => ({ ...prev, zoneCode: e.target.value.toUpperCase() }))}
+          />
+        </div>
+      </div>
+
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <form onSubmit={generateInvoice} className="card p-5 space-y-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice command</div>
+            <h2 className="mt-2 text-2xl font-bold">Generate live invoice</h2>
+            <p className="mt-2 text-sm text-slate-400">
+              Single customer ya service ke liye invoice issue karo, amount override do, aur billing cycle rerun ke bina PDF-ready invoice nikalo.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input
+              className="input"
+              placeholder="Customer ID"
+              value={invoiceDraft.customerId}
+              onChange={(e) => setInvoiceDraft((prev) => ({ ...prev, customerId: e.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Service ID (optional)"
+              value={invoiceDraft.serviceId}
+              onChange={(e) => setInvoiceDraft((prev) => ({ ...prev, serviceId: e.target.value }))}
+            />
+            <input
+              className="input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Total amount override (optional)"
+              value={invoiceDraft.totalAmount}
+              onChange={(e) => setInvoiceDraft((prev) => ({ ...prev, totalAmount: e.target.value }))}
+            />
+            <select
+              className="input"
+              value={invoiceDraft.paymentStatus}
+              onChange={(e) => setInvoiceDraft((prev) => ({ ...prev, paymentStatus: e.target.value as 'pending' | 'paid' }))}
+            >
+              <option value="pending">Pending invoice</option>
+              <option value="paid">Already paid</option>
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="submit" disabled={isGeneratingInvoice} className="btn-primary">
+              {isGeneratingInvoice ? 'Generating...' : 'Generate Invoice'}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setInvoiceDraft({ customerId: '', serviceId: '', totalAmount: '', paymentStatus: 'pending' })}
+            >
+              Reset
+            </button>
+          </div>
+        </form>
+
+        <div className="card p-5 space-y-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Billing integration</div>
+            <h2 className="mt-2 text-2xl font-bold">Zoho-style invoice control</h2>
+            <p className="mt-2 text-sm text-slate-400">
+              Internal invoice engine live hai. Agar Zoho integration configured hogi to yahin se uski health aur mode visible hogi.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold text-white">{zohoIntegration?.displayName || 'Zoho integration not configured'}</div>
+                <div className="mt-1 text-xs text-slate-400">
+                  {zohoIntegration ? `${zohoIntegration.provider} • ${zohoIntegration.mode}` : 'Using internal PDF invoice pipeline'}
+                </div>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                zohoIntegration?.status === 'active'
+                  ? 'bg-emerald-500/15 text-emerald-300'
+                  : zohoIntegration?.status === 'testing'
+                    ? 'bg-amber-500/15 text-amber-300'
+                    : 'bg-slate-500/15 text-slate-300'
+              }`}>
+                {zohoIntegration?.status || 'inactive'}
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-xl bg-black/20 p-3">
+                <div className="text-slate-400">Invoice source</div>
+                <div className="mt-1 font-semibold text-white">Live internal billing engine</div>
+              </div>
+              <div className="rounded-xl bg-black/20 p-3">
+                <div className="text-slate-400">PDF status</div>
+                <div className="mt-1 font-semibold text-white">Ready for dispatch</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="card p-5">
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice filters</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+          <input
+            className="input"
+            placeholder="Search invoice / customer / service"
+            value={invoiceFilters.search}
+            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, search: e.target.value }))}
+          />
+          <input
+            className="input"
+            placeholder="Customer ID"
+            value={invoiceFilters.customerId}
+            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, customerId: e.target.value }))}
+          />
+          <input
+            className="input"
+            placeholder="Bill cycle (2026-03)"
+            value={invoiceFilters.billCycle}
+            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, billCycle: e.target.value }))}
+          />
+          <select
+            className="input"
+            value={invoiceFilters.paymentStatus}
+            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, paymentStatus: e.target.value }))}
+          >
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+          </select>
+          <input
+            className="input"
+            type="date"
+            value={invoiceFilters.fromDate}
+            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
+          />
+          <input
+            className="input"
+            type="date"
+            value={invoiceFilters.toDate}
+            onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, toDate: e.target.value }))}
           />
         </div>
       </div>
@@ -1370,68 +1568,97 @@ export default function BillingPage() {
           </div>
 
           <div className="overflow-x-auto card">
+          <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice register</div>
+              <div className="mt-1 text-sm text-slate-400">
+                Searchable invoice ledger with PDF dispatch, live status, source tracking, and service references.
+              </div>
+            </div>
+            <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+              {billing.length} invoice{billing.length === 1 ? '' : 's'}
+            </div>
+          </div>
           <table className="w-full">
             <thead>
               <tr className="bg-[#0a0e27]">
                 <th className="table-header">Invoice</th>
+                <th className="table-header">Customer</th>
                 <th className="table-header">State</th>
-                <th className="table-header">Taxable</th>
-                <th className="table-header">GST</th>
-                <th className="table-header">Total</th>
-                <th className="table-header">Due Date</th>
+                <th className="table-header">Amount</th>
+                <th className="table-header">Tax</th>
+                <th className="table-header">Timeline</th>
                 <th className="table-header">Status</th>
               </tr>
             </thead>
             <tbody>
-              {billing.map((item) => (
+              {billing.length ? billing.map((item) => (
                 <tr key={item.id} className="border-t border-[#2a2f4a] hover:bg-[#1a1f3a] align-top">
                   <td className="table-cell">
                     <div className="font-mono text-sm">{item.invoiceNumber || item.invoiceId}</div>
-                    <div className="text-xs text-slate-500 mt-1">{item.billCycle || '-'}</div>
-                    <a
-                      className="text-xs text-[#4da3ff] mt-1 inline-block"
-                      href={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open PDF
-                    </a>
-                    <button
-                      className="text-xs text-[#4da3ff] mt-1 block"
-                      onClick={() => void dispatchInvoice(item.invoiceId)}
-                    >
-                      Dispatch
-                    </button>
+                    <div className="mt-1 text-xs text-slate-500">{item.billCycle || '-'}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <a
+                        className="text-xs text-[#4da3ff]"
+                        href={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open PDF
+                      </a>
+                      <button
+                        className="text-xs text-[#4da3ff]"
+                        onClick={() => void dispatchInvoice(item.invoiceId)}
+                      >
+                        Dispatch
+                      </button>
+                    </div>
                   </td>
-                  <td className="table-cell">{item.billingStateName || item.billingStateCode || '-'}</td>
-                  <td className="table-cell">Rs {Number(item.amount || 0).toFixed(2)}</td>
+                  <td className="table-cell">
+                    <div className="font-medium text-slate-100">{item.customerId}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.serviceId || 'No service linked'}</div>
+                    <div className="mt-2 inline-flex rounded-full bg-white/5 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-300">
+                      {item.source || 'internal'}
+                    </div>
+                  </td>
+                  <td className="table-cell">
+                    <div>{item.billingStateName || item.billingStateCode || '-'}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.taxMode || 'india_gst'}</div>
+                  </td>
+                  <td className="table-cell">
+                    <div>Taxable Rs {Number(item.amount || 0).toFixed(2)}</div>
+                    <div className="mt-1 font-semibold text-white">Total Rs {Number(item.totalAmount || item.amount || 0).toFixed(2)}</div>
+                  </td>
                   <td className="table-cell">
                     <div>Rs {Number(item.taxAmount || 0).toFixed(2)}</div>
                     {(item.taxBreakdown || []).length ? (
-                      <div className="text-xs text-slate-500 mt-1">
+                      <div className="mt-1 text-xs text-slate-500">
                         {item.taxBreakdown?.map((part) => `${part.label} ${part.rate}%`).join(' | ')}
                       </div>
-                    ) : null}
-                  </td>
-                  <td className="table-cell font-medium">Rs {Number(item.totalAmount || item.amount || 0).toFixed(2)}</td>
-                  <td className="table-cell">
-                    {new Date(item.dueDate).toLocaleDateString()}
+                    ) : (
+                      <div className="mt-1 text-xs text-slate-500">No detailed breakdown</div>
+                    )}
                   </td>
                   <td className="table-cell">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        item.status === 'paid'
-                          ? 'bg-green-100 text-green-700'
-                          : item.status === 'pending'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {item.status}
+                    <div>Generated {item.generatedAt ? new Date(item.generatedAt).toLocaleString() : '-'}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Due {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '-'}
+                    </div>
+                  </td>
+                  <td className="table-cell">
+                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${invoiceStatusTone(item.paymentStatus || item.status)}`}>
+                      {item.paymentStatus || item.status}
                     </span>
+                    <div className="mt-2 text-xs text-slate-500">Lifecycle {item.status}</div>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr className="border-t border-[#2a2f4a]">
+                  <td className="table-cell text-slate-500" colSpan={7}>
+                    No invoices match the active filters. Try clearing search, payment status, or bill cycle.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
           </div>

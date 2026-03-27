@@ -494,7 +494,11 @@ export interface BillingData {
   status: 'pending' | 'paid' | 'overdue'
   invoiceId: string
   invoiceNumber?: string
+  serviceId?: string
   billCycle?: string
+  generatedAt?: string
+  paymentStatus?: string
+  source?: string
   billingStateCode?: string
   billingStateName?: string
   taxMode?: string
@@ -503,6 +507,19 @@ export interface BillingData {
     rate: number
     amount: number
   }>
+}
+
+export interface IntegrationSummary {
+  id: string
+  key: string
+  category: string
+  provider: string
+  displayName: string
+  status: string
+  mode: string
+  capabilities: string[]
+  notes?: string
+  lastCheckedAt?: string
 }
 
 export interface BillingOverview {

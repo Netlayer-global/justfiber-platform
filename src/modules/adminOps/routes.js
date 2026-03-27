@@ -1338,6 +1338,37 @@ adminOpsRouter.get(
     if (req.query.paymentStatus) {
       filter.paymentStatus = req.query.paymentStatus;
     }
+    if (req.query.billCycle) {
+      filter.billCycle = String(req.query.billCycle).trim();
+    }
+    const search = String(req.query.search || "").trim();
+    if (search) {
+      const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      filter.$or = [
+        { invoiceNumber: regex },
+        { invoiceId: regex },
+        { customerId: regex },
+        { serviceId: regex }
+      ];
+    }
+    if (req.query.fromDate || req.query.toDate) {
+      const generatedAt = {};
+      if (req.query.fromDate) {
+        const from = new Date(`${req.query.fromDate}T00:00:00.000Z`);
+        if (!Number.isNaN(from.getTime())) {
+          generatedAt.$gte = from;
+        }
+      }
+      if (req.query.toDate) {
+        const to = new Date(`${req.query.toDate}T23:59:59.999Z`);
+        if (!Number.isNaN(to.getTime())) {
+          generatedAt.$lte = to;
+        }
+      }
+      if (Object.keys(generatedAt).length) {
+        filter.generatedAt = generatedAt;
+      }
+    }
     const [items, total] = await Promise.all([
       BillingInvoice.find(filter).sort({ generatedAt: -1 }).skip(skip).limit(limit).lean(),
       BillingInvoice.countDocuments(filter)
