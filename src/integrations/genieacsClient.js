@@ -440,7 +440,7 @@ export class GenieacsClient {
         ? paths.filter((path) => isWritableParameterNode(readNodeAtPath(liveSummary, path)))
         : paths;
       const selectedPaths = wifiMultiPath
-        ? (writablePaths.length ? writablePaths : paths)
+        ? paths
         : (writablePaths.length ? writablePaths : paths).slice(0, 1);
       for (const path of selectedPaths) {
         if (path && value !== undefined && value !== null && value !== "") {
