@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, Customer } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingPayment, RazorpayOverview, RazorpayWebhookLog, Customer } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -90,8 +90,6 @@ export default function BillingPage() {
   const [billing, setBilling] = useState<BillingData[]>([])
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
-  const [runs, setRuns] = useState<BillingRun[]>([])
-  const [notes, setNotes] = useState<BillingNote[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
@@ -124,22 +122,12 @@ export default function BillingPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isRunningCycle, setIsRunningCycle] = useState(false)
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
-  const [isSavingNote, setIsSavingNote] = useState(false)
   const [profileForm, setProfileForm] = useState<BillingProfileForm>(emptyProfileForm)
   const [invoiceDraft, setInvoiceDraft] = useState({
     customerId: '',
     serviceId: '',
     totalAmount: '',
     paymentStatus: 'pending' as 'pending' | 'paid',
-  })
-  const [noteForm, setNoteForm] = useState({
-    customerId: '',
-    type: 'credit' as 'credit' | 'debit',
-    amount: '',
-    taxAmount: '',
-    invoiceId: '',
-    reasonCode: '',
-    note: '',
   })
   const refundPayments = payments.filter((payment) => payment.method === 'refund' || (payment.provider || '').includes('refund'))
   const agingCards = [
@@ -264,12 +252,10 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes, invoiceTemplateRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes, invoiceTemplateRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
-        adminAPI.getBillingRuns(),
-        adminAPI.getBillingNotes(),
         adminAPI.getBillingPayments(),
         adminAPI.getBillingCollections(collectionBucket || undefined),
         adminAPI.getBillingCollectionAgents(),
@@ -338,12 +324,6 @@ export default function BillingPage() {
               : [],
           })
         }
-      }
-      if (runRes.success && runRes.data) {
-        setRuns(runRes.data)
-      }
-      if (noteRes.success && noteRes.data) {
-        setNotes(noteRes.data)
       }
       if (paymentRes.success && paymentRes.data) {
         setPayments(paymentRes.data.items)
@@ -490,42 +470,6 @@ export default function BillingPage() {
     }
   }
 
-  async function saveBillingNote(e: React.FormEvent) {
-    e.preventDefault()
-    try {
-      setIsSavingNote(true)
-      const res = await adminAPI.createBillingNote({
-        customerId: noteForm.customerId.trim(),
-        type: noteForm.type,
-        amount: Number(noteForm.amount || 0),
-        taxAmount: Number(noteForm.taxAmount || 0),
-        invoiceId: noteForm.invoiceId.trim() || undefined,
-        reasonCode: noteForm.reasonCode.trim() || undefined,
-        note: noteForm.note.trim() || undefined,
-      })
-      if (!res.success) {
-        toast.error(res.error || 'Failed to create billing note')
-        return
-      }
-      toast.success(`${noteForm.type === 'credit' ? 'Credit' : 'Debit'} note created`)
-      setNoteForm({
-        customerId: '',
-        type: 'credit',
-        amount: '',
-        taxAmount: '',
-        invoiceId: '',
-        reasonCode: '',
-        note: '',
-      })
-      await loadBilling()
-    } catch (error) {
-      console.error('[v0] Failed to create billing note:', error)
-      toast.error('Failed to create billing note')
-    } finally {
-      setIsSavingNote(false)
-    }
-  }
-
   async function reconcilePayment(transactionId: string, invoiceId?: string) {
     try {
       const res = await adminAPI.reconcileBillingPayment(transactionId, invoiceId)
@@ -573,20 +517,6 @@ export default function BillingPage() {
       fromDate: '',
       toDate: '',
     })
-  }
-
-  async function dispatchBillingNote(noteNumber: string) {
-    try {
-      const res = await adminAPI.dispatchBillingNote(noteNumber)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to dispatch billing note')
-        return
-      }
-      toast.success('Billing note dispatched')
-    } catch (error) {
-      console.error('[v0] Failed to dispatch billing note:', error)
-      toast.error('Failed to dispatch billing note')
-    }
   }
 
   async function dispatchPaymentReceipt(transactionId: string) {
@@ -1465,7 +1395,7 @@ export default function BillingPage() {
           <>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="card overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">State-wise GST Summary</div>
+              <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">GST Summary</div>
               <table className="w-full">
                 <thead>
                   <tr className="bg-[#0a0e27]">
@@ -1489,27 +1419,9 @@ export default function BillingPage() {
             </div>
 
             <div className="space-y-4">
-              <form onSubmit={saveBillingNote} className="card p-5 space-y-3">
-                <div className="font-semibold">Credit / Debit Note</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input className="input" placeholder="Customer ID" value={noteForm.customerId} onChange={(e) => setNoteForm({ ...noteForm, customerId: e.target.value })} />
-                  <select className="input" value={noteForm.type} onChange={(e) => setNoteForm({ ...noteForm, type: e.target.value as 'credit' | 'debit' })}>
-                    <option value="credit">Credit Note</option>
-                    <option value="debit">Debit Note</option>
-                  </select>
-                  <input className="input" placeholder="Amount" type="number" value={noteForm.amount} onChange={(e) => setNoteForm({ ...noteForm, amount: e.target.value })} />
-                  <input className="input" placeholder="Tax amount" type="number" value={noteForm.taxAmount} onChange={(e) => setNoteForm({ ...noteForm, taxAmount: e.target.value })} />
-                  <input className="input" placeholder="Invoice ID (optional)" value={noteForm.invoiceId} onChange={(e) => setNoteForm({ ...noteForm, invoiceId: e.target.value })} />
-                  <input className="input" placeholder="Reason code" value={noteForm.reasonCode} onChange={(e) => setNoteForm({ ...noteForm, reasonCode: e.target.value })} />
-                </div>
-                <textarea className="input min-h-24" placeholder="Note / reason" value={noteForm.note} onChange={(e) => setNoteForm({ ...noteForm, note: e.target.value })} />
-                <button type="submit" disabled={isSavingNote} className="btn-primary">
-                  {isSavingNote ? 'Saving...' : 'Create Note'}
-                </button>
-              </form>
-
               <form onSubmit={saveProfile} className="card p-5 space-y-3">
-                <div className="font-semibold">Multi-State GST Config</div>
+                <div className="font-semibold">Billing Profile</div>
+                <div className="text-sm text-slate-400">Main billing, GST, and zone routing settings.</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input className="input" placeholder="Profile code" value={profileForm.code} onChange={(e) => setProfileForm({ ...profileForm, code: e.target.value.toUpperCase() })} />
                   <input className="input" placeholder="Profile name" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
@@ -1706,76 +1618,6 @@ export default function BillingPage() {
                   ) : null}
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="card overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Recent Billing Runs</div>
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#0a0e27]">
-                    <th className="table-header">Run</th>
-                    <th className="table-header">Status</th>
-                    <th className="table-header">Created</th>
-                    <th className="table-header">Billed</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((run) => (
-                    <tr key={run.id} className="border-t border-[#2a2f4a]">
-                      <td className="table-cell">
-                        <div className="font-mono text-xs">{run.runId}</div>
-                        <div className="text-xs text-slate-500 mt-1">{run.billCycle || '-'}</div>
-                      </td>
-                      <td className="table-cell">{run.status}</td>
-                      <td className="table-cell">{run.startedAt ? new Date(run.startedAt).toLocaleString() : '-'}</td>
-                      <td className="table-cell">Rs {Number(run.totals?.billedAmount || 0).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="card overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Recent Billing Notes</div>
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#0a0e27]">
-                    <th className="table-header">Note</th>
-                    <th className="table-header">Customer</th>
-                    <th className="table-header">Type</th>
-                    <th className="table-header">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {notes.map((item) => (
-                    <tr key={item.id} className="border-t border-[#2a2f4a]">
-                      <td className="table-cell">
-                        <div className="font-mono text-xs">{item.noteNumber}</div>
-                        <div className="text-xs text-slate-500 mt-1">{item.reasonCode || '-'}</div>
-                        <a
-                          className="text-xs text-[#4da3ff] mt-1 inline-block"
-                          href={`${exportBaseUrl}/api/v1/admin/billing/notes/${encodeURIComponent(item.noteNumber)}/pdf`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Open PDF
-                        </a>
-                        <button
-                          className="text-xs text-[#4da3ff] mt-1 block"
-                          onClick={() => void dispatchBillingNote(item.noteNumber)}
-                        >
-                          Dispatch
-                        </button>
-                      </td>
-                      <td className="table-cell">{item.customerId}</td>
-                      <td className="table-cell">{item.type}</td>
-                      <td className="table-cell">Rs {Number(item.totalAmount || 0).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
           </>
