@@ -1328,9 +1328,9 @@ export default function BillingPage() {
             <button type="submit" className="btn-primary">Import CSV</button>
             {csvImportResult ? (
               <div className="rounded bg-[#0a0e27] p-4 space-y-2">
-                <div className="text-sm">Imported {csvImportResult.imported} | Reconciled {csvImportResult.reconciled} | Manual Review {csvImportResult.manualReview} | Skipped {csvImportResult.skipped}</div>
+                <div className="text-sm">Imported {csvImportResult?.imported} | Reconciled {csvImportResult?.reconciled} | Manual Review {csvImportResult?.manualReview} | Skipped {csvImportResult?.skipped}</div>
                 <div className="max-h-48 overflow-auto text-xs text-slate-300 space-y-1">
-                  {csvImportResult.results.slice(0, 20).map((row) => (
+                  {csvImportResult?.results.slice(0, 20).map((row) => (
                     <div key={`${row.transactionId}-${row.status}`}>
                       {row.transactionId} | {row.customerId || '-'} | {row.status} {row.invoiceId ? `| ${row.invoiceId}` : ''} {row.reason ? `| ${row.reason}` : ''}
                     </div>
