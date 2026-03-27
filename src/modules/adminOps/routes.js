@@ -164,17 +164,21 @@ function normalizeInvoiceTemplates(baseSettings = {}) {
   }];
 }
 
-function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer) {
+function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer, profile = null) {
   const zoneCode = String(
     customer?.billingZoneCode
+    || customer?.billingSnapshot?.billingZoneCode
+    || customer?.billingSnapshot?.zoneCode
     || invoice?.metadata?.billingZoneCode
     || invoice?.billingZoneCode
     || ""
   ).trim().toUpperCase();
   const templates = normalizeInvoiceTemplates(baseSettings);
+  const profileZoneMappings = Array.isArray(profile?.zoneMappings) ? profile.zoneMappings : [];
+  const profileZoneMatch = profileZoneMappings.find((item) => String(item?.zoneCode || "").trim().toUpperCase() === zoneCode);
   const mappings = Array.isArray(baseSettings.zoneTemplateMappings) ? baseSettings.zoneTemplateMappings : [];
   const mappedTemplateKey = mappings.find((item) => String(item?.zoneCode || "").trim().toUpperCase() === zoneCode)?.templateKey;
-  const activeTemplateKey = mappedTemplateKey || baseSettings.activeTemplate || templates[0]?.key;
+  const activeTemplateKey = profileZoneMatch?.templateKey || mappedTemplateKey || baseSettings.activeTemplate || templates[0]?.key;
   const selectedTemplate = templates.find((item) => item.key === activeTemplateKey) || templates[0] || {};
   const legacyOverrides = Array.isArray(baseSettings.zoneOverrides) ? baseSettings.zoneOverrides : [];
   const matchedLegacyOverride = legacyOverrides.find((item) => String(item?.zoneCode || "").trim().toUpperCase() === zoneCode);
@@ -184,6 +188,8 @@ function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer) {
     templateKey: activeTemplateKey || selectedTemplate.key || baseSettings.activeTemplate || "justfiber_standard",
     templateName: selectedTemplate.templateName || baseSettings.templateName || "JustFiber Standard",
     billingZoneCode: zoneCode || undefined,
+    profileZoneTemplateKey: profileZoneMatch?.templateKey || undefined,
+    profileZoneName: profileZoneMatch?.zoneName || undefined,
     ...(matchedLegacyOverride || {}),
   };
 }
@@ -1495,13 +1501,14 @@ adminOpsRouter.get(
         filter.generatedAt = generatedAt;
       }
     }
-    const [items, total, templateSettings] = await Promise.all([
+    const [items, total, templateSettings, profile] = await Promise.all([
       BillingInvoice.find(filter).sort({ generatedAt: -1 }).skip(skip).limit(limit).lean(),
       BillingInvoice.countDocuments(filter),
-      getInvoiceTemplateSettings()
+      getInvoiceTemplateSettings(),
+      BillingProfile.findOne({ active: true }).sort({ updatedAt: -1 }).lean()
     ]);
     const decoratedItems = items.map((item) => {
-      const selection = selectInvoiceTemplateSettings(templateSettings, item, null);
+      const selection = selectInvoiceTemplateSettings(templateSettings, item, null, profile);
       return {
         ...item,
         billingZoneCode: item?.metadata?.billingZoneCode || item?.billingZoneCode || selection.billingZoneCode || "",
@@ -1528,7 +1535,7 @@ adminOpsRouter.get(
       Customer.findOne({ customerId: invoice.customerId }).lean(),
       getInvoiceTemplateSettings()
     ]);
-    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, invoice, customer);
+    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, invoice, customer, profile);
     const branding = pickBranding(profile, selectedTemplateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -1591,7 +1598,7 @@ adminOpsRouter.get(
       Customer.findOne({ customerId: note.customerId }).lean(),
       getInvoiceTemplateSettings()
     ]);
-    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, note, customer);
+    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, note, customer, profile);
     const branding = pickBranding(profile, selectedTemplateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -1616,7 +1623,7 @@ adminOpsRouter.get(
       Customer.findOne({ customerId: payment.customerId }).lean(),
       getInvoiceTemplateSettings()
     ]);
-    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, payment, customer);
+    const selectedTemplateSettings = selectInvoiceTemplateSettings(templateSettings, payment, customer, profile);
     const branding = pickBranding(profile, selectedTemplateSettings);
     if (String(req.query.format || "").toLowerCase() === "html") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
