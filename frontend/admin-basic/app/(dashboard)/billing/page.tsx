@@ -278,10 +278,6 @@ export default function BillingPage() {
     }
   }, [visibleInvoices, selectedInvoiceId])
 
-  useEffect(() => {
-    setShowInvoiceHtmlPreview(false)
-  }, [selectedInvoiceId])
-
   async function loadBilling() {
     try {
       setIsLoading(true)
