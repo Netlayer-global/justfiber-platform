@@ -1384,7 +1384,10 @@ export default function BillingPage() {
                       {item.invoiceId ? (
                         <button
                           className="text-xs text-[#4da3ff] inline-block"
-                          onClick={() => void openInvoicePdf(item.invoiceId)}
+                          onClick={() => {
+                            if (!item.invoiceId) return
+                            void openInvoicePdf(item.invoiceId)
+                          }}
                         >
                           Open Invoice
                         </button>
