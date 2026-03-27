@@ -46,6 +46,9 @@ type BillingProfileForm = {
     invoicePrefix: string
     invoiceSeriesCode: string
     templateKey: string
+    companyLegalName: string
+    companyAddress: string
+    gstNumber: string
     defaultBillMode: 'prepaid' | 'postpaid'
   }>
 }
@@ -288,6 +291,9 @@ export default function BillingPage() {
                   invoicePrefix: item.invoicePrefix || '',
                   invoiceSeriesCode: item.invoiceSeriesCode || '',
                   templateKey: item.templateKey || '',
+                  companyLegalName: item.companyLegalName || '',
+                  companyAddress: item.companyAddress || '',
+                  gstNumber: item.gstNumber || '',
                   defaultBillMode: item.defaultBillMode || 'prepaid',
                 }))
               : [],
@@ -354,6 +360,9 @@ export default function BillingPage() {
           invoicePrefix: item.invoicePrefix.trim().toUpperCase() || undefined,
           invoiceSeriesCode: item.invoiceSeriesCode.trim().toUpperCase() || undefined,
           templateKey: item.templateKey || undefined,
+          companyLegalName: item.companyLegalName.trim() || undefined,
+          companyAddress: item.companyAddress.trim() || undefined,
+          gstNumber: item.gstNumber.trim() || undefined,
           defaultBillMode: item.defaultBillMode,
         }))
         .filter((item) => item.zoneCode)
@@ -1572,6 +1581,9 @@ export default function BillingPage() {
                             invoicePrefix: '',
                             invoiceSeriesCode: '',
                             templateKey: invoiceTemplateSettings?.activeTemplate || '',
+                            companyLegalName: '',
+                            companyAddress: '',
+                            gstNumber: '',
                             defaultBillMode: 'prepaid',
                           },
                         ],
@@ -1610,6 +1622,9 @@ export default function BillingPage() {
                             Remove
                           </button>
                         </div>
+                        <input className="input md:col-span-3" placeholder="Zone company legal name" value={item.companyLegalName} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, companyLegalName: e.target.value } : row) }))} />
+                        <input className="input md:col-span-3" placeholder="Zone GST number" value={item.gstNumber} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, gstNumber: e.target.value.toUpperCase() } : row) }))} />
+                        <input className="input md:col-span-2" placeholder="Zone billing address" value={item.companyAddress} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, companyAddress: e.target.value } : row) }))} />
                       </div>
                     ))}
                     {!profileForm.zoneMappings.length ? (
@@ -1650,7 +1665,7 @@ export default function BillingPage() {
                   ) : null}
                   {(profile.zoneMappings || []).length ? (
                     <div className="text-xs text-slate-400">
-                      Zones: {(profile.zoneMappings || []).map((item) => `${item.zoneCode}->${item.stateCode}${item.defaultBillMode ? ` (${item.defaultBillMode})` : ''}${item.templateKey ? ` [${item.templateKey}]` : ''}`).join(' | ')}
+                      Zones: {(profile.zoneMappings || []).map((item) => `${item.zoneCode}->${item.stateCode}${item.defaultBillMode ? ` (${item.defaultBillMode})` : ''}${item.templateKey ? ` [${item.templateKey}]` : ''}${item.companyLegalName ? ` ${item.companyLegalName}` : ''}`).join(' | ')}
                     </div>
                   ) : null}
                 </div>

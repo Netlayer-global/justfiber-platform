@@ -615,6 +615,9 @@ export interface BillingProfile {
     invoicePrefix?: string
     invoiceSeriesCode?: string
     templateKey?: string
+    companyLegalName?: string
+    companyAddress?: string
+    gstNumber?: string
     defaultBillMode?: 'prepaid' | 'postpaid'
   }>
   active?: boolean

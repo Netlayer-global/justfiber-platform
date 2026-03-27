@@ -185,6 +185,7 @@ function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer, pro
   return {
     ...baseSettings,
     ...selectedTemplate,
+    ...(profileZoneMatch || {}),
     templateKey: activeTemplateKey || selectedTemplate.key || baseSettings.activeTemplate || "justfiber_standard",
     templateName: selectedTemplate.templateName || baseSettings.templateName || "JustFiber Standard",
     billingZoneCode: zoneCode || undefined,
