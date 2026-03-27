@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, IntegrationSummary, Customer } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, Customer } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -98,7 +98,6 @@ export default function BillingPage() {
   const [razorpayOverview, setRazorpayOverview] = useState<RazorpayOverview | null>(null)
   const [razorpayWebhookLogs, setRazorpayWebhookLogs] = useState<RazorpayWebhookLog[]>([])
   const [recoveryItems, setRecoveryItems] = useState<BillingRecoveryItem[]>([])
-  const [integrations, setIntegrations] = useState<IntegrationSummary[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
@@ -281,7 +280,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes, integrationRes, invoiceTemplateRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes, invoiceTemplateRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -293,7 +292,6 @@ export default function BillingPage() {
         adminAPI.getRazorpayOverview(),
         adminAPI.getRazorpayWebhookLogs(),
         adminAPI.getBillingRecovery(),
-        adminAPI.getIntegrations(),
         adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
       ])
       if (invoiceRes.success && invoiceRes.data) {
@@ -380,9 +378,6 @@ export default function BillingPage() {
       }
       if (recoveryRes.success && recoveryRes.data) {
         setRecoveryItems(recoveryRes.data as BillingRecoveryItem[])
-      }
-      if (integrationRes.success && integrationRes.data) {
-        setIntegrations(integrationRes.data)
       }
       if (invoiceTemplateRes.success && invoiceTemplateRes.data) {
         setInvoiceTemplateSettings(invoiceTemplateRes.data.value || null)
@@ -809,72 +804,34 @@ export default function BillingPage() {
     label: string
     hint: string
   }> = [
-    { key: 'invoices', label: 'Invoices', hint: 'Issue, preview, and dispatch invoices' },
-    { key: 'payments', label: 'Payments', hint: 'Razorpay, reconciliation, and refunds' },
-    { key: 'collections', label: 'Collections', hint: 'Overdues, reminders, and recovery' },
+    { key: 'invoices', label: 'Invoices', hint: 'Generate and manage invoices' },
+    { key: 'payments', label: 'Payments', hint: 'Reconcile and refund payments' },
     { key: 'settings', label: 'Settings', hint: 'GST, zones, templates, and exports' },
   ]
-  const activeHeroCopy = {
-    invoices: {
-      eyebrow: 'Invoice workspace',
-      title: 'Issue and track invoices',
-      description: 'Generate invoices, review zone/template routing, and dispatch PDFs from one focused invoice desk.',
-    },
-    payments: {
-      eyebrow: 'Payments workspace',
-      title: 'Reconcile and recover payments',
-      description: 'Watch Razorpay settlement status, review recovery queues, and process refunds without invoice-heavy screens.',
-    },
-    collections: {
-      eyebrow: 'Collections workspace',
-      title: 'Work overdue and recovery queues',
-      description: 'See aging, promise-to-pay, reminders, and suspend-ready accounts in one recovery workflow.',
-    },
-    settings: {
-      eyebrow: 'Billing settings',
-      title: 'Configure tax and billing rules',
-      description: 'Manage GST profiles, zone mappings, export filters, and billing notes without payment and invoice distractions.',
-    },
-  }[billingSectionTab]
-  const compactSummaryCards = {
-    invoices: [
-      { label: 'Visible invoices', value: String(visibleInvoices.length) },
-      { label: 'Pending amount', value: `Rs ${invoicePulse.pendingAmount.toFixed(0)}` },
-      { label: 'Activation', value: String(invoicePulse.activationInvoices) },
-    ],
-    payments: [
-      { label: 'Captured', value: String(razorpayOverview?.capturedPayments || payments.length || 0) },
-      { label: 'Unreconciled', value: String(razorpayOverview?.unreconciledPayments || 0) },
-      { label: 'Refunds', value: String(refundPayments.length) },
-    ],
-    collections: [
-      { label: 'Queue', value: String(collections.length) },
-      { label: 'Promise to pay', value: String(overview?.collectionStats?.promiseToPayActive || 0) },
-      { label: 'Suspend ready', value: String(overview?.collectionStats?.suspendReady || 0) },
-    ],
-    settings: [
-      { label: 'Profiles', value: String(profiles.length || 0) },
-      { label: 'Templates', value: String(invoiceTemplateSettings?.templates?.length || 1) },
-      { label: 'Zones', value: String(profileForm.zoneMappings.length) },
-    ],
-  }[billingSectionTab]
 
   return (
     <div className="space-y-6">
-      <section className="card p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <section className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-white/45">{activeHeroCopy.eyebrow}</div>
-            <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-white">{activeHeroCopy.title}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">{activeHeroCopy.description}</p>
+            <div className="text-xs uppercase tracking-[0.2em] text-white/45">Billing</div>
+            <h1 className="mt-1 text-2xl font-semibold text-white">
+              {billingSectionTab === 'invoices' ? 'Invoices' : billingSectionTab === 'payments' ? 'Payments' : 'Settings'}
+            </h1>
+            <p className="mt-1 text-sm text-slate-400">
+              {billingSectionTab === 'invoices'
+                ? `${visibleInvoices.length} invoices in current view`
+                : billingSectionTab === 'payments'
+                  ? `${payments.length} payments and ${refundPayments.length} refunds`
+                  : `${profiles.length} billing profiles and ${invoiceTemplateSettings?.templates?.length || 1} templates`}
+            </p>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {compactSummaryCards.map((item) => (
-              <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
-                <div className="mt-2 text-xl font-semibold text-white">{item.value}</div>
-              </div>
-            ))}
+          <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+            {billingSectionTab === 'invoices'
+              ? `Pending Rs ${invoicePulse.pendingAmount.toFixed(2)}`
+              : billingSectionTab === 'payments'
+                ? `${recoveryItems.length} recovery items`
+                : `${profileForm.zoneMappings.length} zone mappings`}
           </div>
         </div>
       </section>
@@ -935,9 +892,9 @@ export default function BillingPage() {
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
-          {billingSectionTab !== 'payments' ? (
+          {billingSectionTab === 'invoices' ? (
             <button onClick={() => void runBillingCycle()} disabled={isRunningCycle} className="btn-primary">
-              {isRunningCycle ? 'Running...' : billingSectionTab === 'collections' ? 'Refresh Collection Cycle' : 'Run Billing Cycle'}
+              {isRunningCycle ? 'Running...' : 'Run Billing Cycle'}
             </button>
           ) : null}
         </div>
@@ -1028,29 +985,8 @@ export default function BillingPage() {
               Reset
             </button>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Expected branding</div>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl bg-black/20 p-3">
-                <div className="text-slate-400">Customer</div>
-                <div className="mt-1 font-semibold text-white">
-                  {isResolvingDraftCustomer ? 'Resolving customer...' : draftCustomer?.name || 'Enter customer ID'}
-                </div>
-                <div className="mt-1 text-xs text-slate-500">{draftCustomer?.customerId || 'No lookup yet'}</div>
-              </div>
-              <div className="rounded-xl bg-black/20 p-3">
-                <div className="text-slate-400">Billing zone</div>
-                <div className="mt-1 font-semibold text-white">{draftZoneCode || 'Default route'}</div>
-                <div className="mt-1 text-xs text-slate-500">
-                  {draftZoneCode ? 'Zone override will apply if mapped' : 'Will fall back to default template'}
-                </div>
-              </div>
-              <div className="rounded-xl bg-black/20 p-3">
-                <div className="text-slate-400">Invoice template</div>
-                <div className="mt-1 font-semibold text-white">{draftTemplatePreview?.templateName || activeInvoiceTemplate?.templateName || 'JustFiber Standard'}</div>
-                <div className="mt-1 text-xs text-slate-500">{draftTemplatePreview?.key || activeInvoiceTemplate?.key || 'justfiber_standard'}</div>
-              </div>
-            </div>
+          <div className="rounded-xl border border-white/10 bg-[#0a0e27] px-4 py-3 text-sm text-slate-300">
+            {isResolvingDraftCustomer ? 'Resolving customer...' : draftCustomer?.name || 'Enter customer ID'} • Zone {draftZoneCode || 'default'} • Template {draftTemplatePreview?.templateName || activeInvoiceTemplate?.templateName || 'JustFiber Standard'}
           </div>
         </form>
 
@@ -1110,15 +1046,6 @@ export default function BillingPage() {
             onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, toDate: e.target.value }))}
           />
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {activeInvoiceFilterTokens.length ? activeInvoiceFilterTokens.map((item) => (
-            <span key={item.key} className="inline-flex rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-              {item.label}
-            </span>
-          )) : (
-            <span className="text-xs text-slate-500">No active invoice filters.</span>
-          )}
-        </div>
       </div>
       ) : null}
 
@@ -1128,15 +1055,6 @@ export default function BillingPage() {
         </div>
       ) : (
         <>
-          {billingSectionTab === 'invoices' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="card p-5"><p className="text-sm text-slate-500">Visible Total</p><p className="text-2xl font-semibold mt-2">Rs {invoicePulse.totalAmount.toFixed(2)}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Pending In View</p><p className="text-2xl font-semibold mt-2">Rs {invoicePulse.pendingAmount.toFixed(2)}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Activation Invoices</p><p className="text-2xl font-semibold mt-2">{invoicePulse.activationInvoices}</p></div>
-            <div className="card p-5"><p className="text-sm text-slate-500">Zone-Routed</p><p className="text-2xl font-semibold mt-2">{invoicePulse.zoneInvoices}</p></div>
-          </div>
-          ) : null}
-
           {billingSectionTab === 'collections' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="card p-5"><p className="text-sm text-slate-500">Active Prepaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePrepaidCustomers || 0}</p></div>
@@ -1170,7 +1088,7 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'payments' ? (
+          {false ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Settlement Overview</div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 p-4">
@@ -1229,7 +1147,7 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'payments' ? (
+          {false ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Recovery Queue</div>
             <table className="w-full">
@@ -1289,7 +1207,7 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'payments' ? (
+          {false ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Failed Payment Recovery</div>
             <table className="w-full">
@@ -1358,7 +1276,7 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'payments' ? (
+          {false ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Webhook Events</div>
             <table className="w-full">
@@ -1397,7 +1315,7 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'payments' ? (
+          {false ? (
           <form onSubmit={importCsvPayments} className="card p-5 space-y-3">
             <div className="font-semibold">Bulk Payment CSV Import</div>
             <p className="text-xs text-slate-500">Headers: transactionId,customerId,amount,reference,invoiceId,provider,status,method,paidAt</p>
