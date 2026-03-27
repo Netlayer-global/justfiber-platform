@@ -83,6 +83,7 @@ export default function BillingPage() {
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
   const [collectionBucket, setCollectionBucket] = useState('')
   const [invoiceFilters, setInvoiceFilters] = useState({
     search: '',
@@ -151,6 +152,10 @@ export default function BillingPage() {
     const mappedTemplateKey = mappings.find((item) => String(item.zoneCode || '').trim().toUpperCase() === draftZoneCode)?.templateKey
     return templates.find((item) => item.key === (mappedTemplateKey || invoiceTemplateSettings?.activeTemplate)) || activeInvoiceTemplate
   }, [activeInvoiceTemplate, draftZoneCode, invoiceTemplateSettings])
+  const selectedInvoice = useMemo(
+    () => billing.find((item) => item.invoiceId === selectedInvoiceId) || billing[0] || null,
+    [billing, selectedInvoiceId]
+  )
 
   useEffect(() => {
     void loadBilling()
@@ -181,6 +186,16 @@ export default function BillingPage() {
     }, 400)
     return () => clearTimeout(timer)
   }, [invoiceDraft.customerId])
+
+  useEffect(() => {
+    if (!billing.length) {
+      setSelectedInvoiceId('')
+      return
+    }
+    if (!billing.some((item) => item.invoiceId === selectedInvoiceId)) {
+      setSelectedInvoiceId(billing[0].invoiceId)
+    }
+  }, [billing, selectedInvoiceId])
 
   async function loadBilling() {
     try {
@@ -1662,33 +1677,38 @@ export default function BillingPage() {
             </table>
           </div>
 
+          <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="overflow-x-auto card">
-          <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice register</div>
-              <div className="mt-1 text-sm text-slate-400">
-                Searchable invoice ledger with PDF dispatch, live status, source tracking, and service references.
+            <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice register</div>
+                <div className="mt-1 text-sm text-slate-400">
+                  Searchable invoice ledger with PDF dispatch, live status, source tracking, and service references.
+                </div>
+              </div>
+              <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+                {billing.length} invoice{billing.length === 1 ? '' : 's'}
               </div>
             </div>
-            <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-              {billing.length} invoice{billing.length === 1 ? '' : 's'}
-            </div>
-          </div>
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#0a0e27]">
-                <th className="table-header">Invoice</th>
-                <th className="table-header">Customer</th>
-                <th className="table-header">State</th>
-                <th className="table-header">Amount</th>
-                <th className="table-header">Tax</th>
-                <th className="table-header">Timeline</th>
-                <th className="table-header">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {billing.length ? billing.map((item) => (
-                <tr key={item.id} className="border-t border-[#2a2f4a] hover:bg-[#1a1f3a] align-top">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#0a0e27]">
+                  <th className="table-header">Invoice</th>
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">State</th>
+                  <th className="table-header">Amount</th>
+                  <th className="table-header">Tax</th>
+                  <th className="table-header">Timeline</th>
+                  <th className="table-header">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {billing.length ? billing.map((item) => (
+                <tr
+                  key={item.id}
+                  className={`border-t border-[#2a2f4a] align-top hover:bg-[#1a1f3a] ${selectedInvoice?.invoiceId === item.invoiceId ? 'bg-[#151a34]' : ''}`}
+                  onClick={() => setSelectedInvoiceId(item.invoiceId)}
+                >
                   <td className="table-cell">
                     <div className="font-mono text-sm">{item.invoiceNumber || item.invoiceId}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.billCycle || '-'}</div>
@@ -1759,15 +1779,84 @@ export default function BillingPage() {
                     <div className="mt-2 text-xs text-slate-500">Lifecycle {item.status}</div>
                   </td>
                 </tr>
-              )) : (
-                <tr className="border-t border-[#2a2f4a]">
-                  <td className="table-cell text-slate-500" colSpan={7}>
-                    No invoices match the active filters. Try clearing search, payment status, or bill cycle.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )) : (
+                  <tr className="border-t border-[#2a2f4a]">
+                    <td className="table-cell text-slate-500" colSpan={7}>
+                      No invoices match the active filters. Try clearing search, payment status, or bill cycle.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice preview</div>
+            {selectedInvoice ? (
+              <div className="mt-4 space-y-4">
+                <div className="rounded-[24px] bg-[#0a0e27] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-mono text-sm text-white">{selectedInvoice.invoiceNumber || selectedInvoice.invoiceId}</div>
+                      <div className="mt-1 text-xs text-slate-500">{selectedInvoice.billCycle || 'No bill cycle'}</div>
+                    </div>
+                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${invoiceStatusTone(selectedInvoice.paymentStatus || selectedInvoice.status)}`}>
+                      {selectedInvoice.paymentStatus || selectedInvoice.status}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-black/20 p-3">
+                      <div className="text-slate-400">Customer</div>
+                      <div className="mt-1 font-semibold text-white">{selectedInvoice.customerId}</div>
+                      <div className="mt-1 text-xs text-slate-500">{selectedInvoice.serviceId || 'No service linked'}</div>
+                    </div>
+                    <div className="rounded-xl bg-black/20 p-3">
+                      <div className="text-slate-400">Template</div>
+                      <div className="mt-1 font-semibold text-white">{selectedInvoice.appliedTemplateName || 'Default template'}</div>
+                      <div className="mt-1 text-xs text-slate-500">{selectedInvoice.appliedTemplateKey || activeInvoiceTemplate?.key || 'justfiber_standard'}</div>
+                    </div>
+                    <div className="rounded-xl bg-black/20 p-3">
+                      <div className="text-slate-400">Zone / state</div>
+                      <div className="mt-1 font-semibold text-white">{selectedInvoice.billingZoneCode || 'Default route'}</div>
+                      <div className="mt-1 text-xs text-slate-500">{selectedInvoice.billingStateName || selectedInvoice.billingStateCode || 'No state mapped'}</div>
+                    </div>
+                    <div className="rounded-xl bg-black/20 p-3">
+                      <div className="text-slate-400">Amount</div>
+                      <div className="mt-1 font-semibold text-white">Rs {Number(selectedInvoice.totalAmount || selectedInvoice.amount || 0).toFixed(2)}</div>
+                      <div className="mt-1 text-xs text-slate-500">Tax Rs {Number(selectedInvoice.taxAmount || 0).toFixed(2)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Timeline</div>
+                  <div className="mt-3 space-y-2 text-sm text-slate-300">
+                    <div>Generated: {selectedInvoice.generatedAt ? new Date(selectedInvoice.generatedAt).toLocaleString() : '-'}</div>
+                    <div>Due: {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : '-'}</div>
+                    <div>Source: {selectedInvoice.source || 'internal'}</div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <a
+                    className="btn-primary"
+                    href={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(selectedInvoice.invoiceId)}/pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open PDF
+                  </a>
+                  <button className="btn-secondary" onClick={() => void dispatchInvoice(selectedInvoice.invoiceId)}>
+                    Dispatch invoice
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
+                Select an invoice from the register to preview billing route, branding, and quick actions.
+              </div>
+            )}
+          </div>
           </div>
         </>
       )}
