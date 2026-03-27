@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingData, BillingOverview, BillingProfile, BillingPayment, Customer } from '@/lib/types'
+import { BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
 import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -91,6 +91,7 @@ export default function BillingPage() {
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
+  const [billingRuns, setBillingRuns] = useState<BillingRun[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
@@ -229,6 +230,7 @@ export default function BillingPage() {
     () => Array.from(new Set(payments.map((payment) => payment.provider).filter((provider): provider is string => Boolean(provider)))).sort(),
     [payments]
   )
+  const latestRecurringRuns = useMemo(() => billingRuns.slice(0, 6), [billingRuns])
   useEffect(() => {
     void loadBilling()
   }, [invoiceFilters])
@@ -262,11 +264,12 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, invoiceTemplateRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, billingRunRes, invoiceTemplateRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
         adminAPI.getBillingPayments(),
+        adminAPI.getBillingRuns(),
         adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
       ])
       if (invoiceRes.success && invoiceRes.data) {
@@ -332,6 +335,9 @@ export default function BillingPage() {
       }
       if (paymentRes.success && paymentRes.data) {
         setPayments(paymentRes.data.items)
+      }
+      if (billingRunRes.success && billingRunRes.data) {
+        setBillingRuns(billingRunRes.data)
       }
       if (invoiceTemplateRes.success && invoiceTemplateRes.data) {
         setInvoiceTemplateSettings(invoiceTemplateRes.data.value || null)
@@ -565,6 +571,13 @@ export default function BillingPage() {
     if (status === 'paid') return 'bg-emerald-500/15 text-emerald-300'
     if (status === 'pending') return 'bg-amber-500/15 text-amber-300'
     if (status === 'overdue') return 'bg-rose-500/15 text-rose-300'
+    return 'bg-slate-500/15 text-slate-300'
+  }
+
+  const billingRunStatusTone = (status?: string) => {
+    if (status === 'completed') return 'bg-emerald-500/15 text-emerald-300'
+    if (status === 'running') return 'bg-sky-500/15 text-sky-300'
+    if (status === 'failed') return 'bg-rose-500/15 text-rose-300'
     return 'bg-slate-500/15 text-slate-300'
   }
   const invoiceSourceTone = (source?: string) => {
@@ -822,6 +835,103 @@ export default function BillingPage() {
             onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
           />
         </div>
+      </div>
+      ) : null}
+
+      {billingSectionTab === 'invoices' ? (
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Recurring runs</div>
+            <div className="mt-1 text-sm text-slate-400">Daily scheduler and manual billing cycle history.</div>
+          </div>
+          <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+            {latestRecurringRuns.length} recent run{latestRecurringRuns.length === 1 ? '' : 's'}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 border-b border-[#2a2f4a] p-4 md:grid-cols-3">
+          <div className="rounded-xl border border-[#2a2f4a] bg-[#0a0e27] p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Latest cycle</div>
+            <div className="mt-2 text-lg font-semibold text-white">
+              {latestRecurringRuns[0]?.billCycle || 'No runs yet'}
+            </div>
+            <div className="mt-1 text-sm text-slate-400">
+              {latestRecurringRuns[0]?.completedAt
+                ? new Date(latestRecurringRuns[0].completedAt).toLocaleString()
+                : latestRecurringRuns[0]?.startedAt
+                  ? new Date(latestRecurringRuns[0].startedAt).toLocaleString()
+                  : 'Waiting for first scheduler run'}
+            </div>
+          </div>
+          <div className="rounded-xl border border-[#2a2f4a] bg-[#0a0e27] p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Invoices created</div>
+            <div className="mt-2 text-lg font-semibold text-white">
+              {latestRecurringRuns.reduce((sum, run) => sum + Number(run.totals?.created || 0), 0)}
+            </div>
+            <div className="mt-1 text-sm text-slate-400">Across latest scheduler history</div>
+          </div>
+          <div className="rounded-xl border border-[#2a2f4a] bg-[#0a0e27] p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Failures</div>
+            <div className="mt-2 text-lg font-semibold text-white">
+              {latestRecurringRuns.filter((run) => run.status === 'failed').length}
+            </div>
+            <div className="mt-1 text-sm text-slate-400">Review failed runs before month-end collections</div>
+          </div>
+        </div>
+        <table className="w-full">
+          <thead>
+            <tr className="bg-[#0a0e27]">
+              <th className="table-header">Cycle</th>
+              <th className="table-header">Mode</th>
+              <th className="table-header">Created</th>
+              <th className="table-header">Billed</th>
+              <th className="table-header">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {latestRecurringRuns.length ? latestRecurringRuns.map((run) => (
+              <tr key={run.id} className="border-t border-[#2a2f4a]">
+                <td className="table-cell">
+                  <div className="font-mono text-sm">{run.billCycle || run.runId}</div>
+                  <div className="mt-1 text-xs text-slate-500">{run.runId}</div>
+                </td>
+                <td className="table-cell">
+                  <span className="rounded-full bg-white/5 px-2 py-1 text-xs uppercase tracking-[0.18em] text-slate-300">
+                    {run.triggerMode || 'manual'}
+                  </span>
+                </td>
+                <td className="table-cell">
+                  <div>{run.totals?.created || 0} invoice(s)</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Processed {run.totals?.processed || 0} | Skipped {run.totals?.skipped || 0}
+                  </div>
+                </td>
+                <td className="table-cell">
+                  <div>Rs {Number(run.totals?.billedAmount || 0).toFixed(2)}</div>
+                  <div className="mt-1 text-xs text-slate-500">Tax Rs {Number(run.totals?.taxAmount || 0).toFixed(2)}</div>
+                </td>
+                <td className="table-cell">
+                  <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${billingRunStatusTone(run.status)}`}>
+                    {run.status}
+                  </span>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {run.completedAt
+                      ? new Date(run.completedAt).toLocaleString()
+                      : run.startedAt
+                        ? new Date(run.startedAt).toLocaleString()
+                        : '-'}
+                  </div>
+                </td>
+              </tr>
+            )) : (
+              <tr className="border-t border-[#2a2f4a]">
+                <td className="table-cell text-slate-500" colSpan={5}>
+                  No recurring billing runs recorded yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
       ) : null}
 
