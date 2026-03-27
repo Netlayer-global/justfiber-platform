@@ -39,6 +39,11 @@ class HomeTab extends StatelessWidget {
     final showUpgradePrompt = hasService && hasUsagePressure;
     final billingCycleLabel = billing.billCycle.isNotEmpty ? billing.billCycle : 'Monthly';
     final nextBillDateLabel = billing.nextBillDate.isNotEmpty ? billing.nextBillDate : 'Will update after activation';
+    final serviceStatusLabel = dashboard.serviceStatus.isNotEmpty
+        ? dashboard.serviceStatus
+        : (selectedConnection?.status.isNotEmpty == true ? selectedConnection!.status : (hasService ? 'active' : 'no service'));
+    final dashboardAlert = dashboard.billingAlert;
+    final dashboardAlertTone = dashboard.billingAlertTone;
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -107,10 +112,71 @@ class HomeTab extends StatelessWidget {
                 runSpacing: 10,
                 children: [
                   _metricPill('Due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
-                  _metricPill('Status', hasService ? (wifi.paused ? 'Paused' : 'Active') : 'No service'),
+                  _metricPill('Status', hasService ? (wifi.paused ? 'Paused' : serviceStatusLabel) : 'No service'),
                   _metricPill('Devices', '${wifi.connectedDevicesCount}'),
                 ],
               ),
+              if (dashboardAlert.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: dashboardAlertTone == 'critical'
+                          ? const Color(0x55FF6B6B)
+                          : dashboardAlertTone == 'warning'
+                              ? const Color(0x55F59E0B)
+                              : const Color(0x228224E3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: dashboardAlertTone == 'critical'
+                              ? const Color(0xFFFFF1F1)
+                              : dashboardAlertTone == 'warning'
+                                  ? const Color(0xFFFFF7ED)
+                                  : const Color(0xFFF8F4FF),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          dashboardAlertTone == 'critical' ? Icons.warning_amber_rounded : Icons.notifications_active_outlined,
+                          color: dashboardAlertTone == 'critical'
+                              ? const Color(0xFFC2410C)
+                              : dashboardAlertTone == 'warning'
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFF8224E3),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              dashboardAlert,
+                              style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              billing.dueAmount > 0
+                                  ? 'Pay Rs ${billing.dueAmount.toStringAsFixed(0)} to keep the line in good standing.'
+                                  : 'Your latest billing status has been refreshed.',
+                              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               Row(
                 children: [

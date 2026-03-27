@@ -55,6 +55,10 @@ class DashboardData {
     required this.activeDays,
     required this.wifiName,
     required this.billingDue,
+    required this.billingStatus,
+    required this.serviceStatus,
+    required this.billingAlert,
+    required this.billingAlertTone,
   });
 
   final String customerName;
@@ -66,6 +70,10 @@ class DashboardData {
   final int activeDays;
   final String wifiName;
   final double billingDue;
+  final String billingStatus;
+  final String serviceStatus;
+  final String billingAlert;
+  final String billingAlertTone;
 }
 
 class WifiData {

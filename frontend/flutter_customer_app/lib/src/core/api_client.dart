@@ -178,6 +178,28 @@ class ApiClient {
     final dashboard = _asMap(await _request(_withCustomerId('/api/v1/customer/dashboard', customerId), token: session.accessToken));
     final billing = _asMap(await _request(_withCustomerId('/api/v1/customer/billing/summary', customerId), token: session.accessToken));
     final wifi = _asMap(await _request(_withCustomerId('/api/v1/customer/wifi', customerId), token: session.accessToken));
+    final serviceStatus = (billing['serviceStatus'] ?? dashboard['status'] ?? '').toString();
+    final paymentStatus = (billing['paymentStatus'] ?? '').toString();
+    final hasSuspensionWarning = (billing['lastSuspensionWarningAt'] ?? '').toString().isNotEmpty;
+    final hasOverdueReminder = (billing['lastOverdueReminderAt'] ?? '').toString().isNotEmpty;
+    final hasDueReminder = (billing['lastDueReminderAt'] ?? '').toString().isNotEmpty;
+    final billingDue = double.tryParse('${billing['dueAmount'] ?? 0}') ?? 0;
+    final billingAlert = hasSuspensionWarning
+        ? 'Suspension warning active'
+        : hasOverdueReminder
+            ? 'Invoice overdue'
+            : hasDueReminder
+                ? 'Payment due soon'
+                : serviceStatus.toLowerCase() == 'suspended' && billingDue > 0
+                    ? 'Service suspended for unpaid bill'
+                    : '';
+    final billingAlertTone = hasSuspensionWarning || serviceStatus.toLowerCase() == 'suspended'
+        ? 'critical'
+        : hasOverdueReminder
+            ? 'warning'
+            : hasDueReminder
+                ? 'info'
+                : 'info';
     return DashboardData(
       customerName: (dashboard['fullName'] ?? dashboard['customerName'] ?? '').toString(),
       planName: (dashboard['currentPlanName'] ?? billing['currentPlanName'] ?? '').toString(),
@@ -187,7 +209,11 @@ class ApiClient {
       points: int.tryParse('${dashboard['loyaltyPoints'] ?? 0}') ?? 0,
       activeDays: int.tryParse('${dashboard['activeDays'] ?? 0}') ?? 0,
       wifiName: (wifi['ssid24'] ?? wifi['ssid5'] ?? '').toString(),
-      billingDue: double.tryParse('${billing['dueAmount'] ?? 0}') ?? 0,
+      billingDue: billingDue,
+      billingStatus: paymentStatus,
+      serviceStatus: serviceStatus,
+      billingAlert: billingAlert,
+      billingAlertTone: billingAlertTone,
     );
   }
 

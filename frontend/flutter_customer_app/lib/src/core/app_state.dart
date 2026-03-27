@@ -47,6 +47,10 @@ class AppState extends ChangeNotifier {
     activeDays: 0,
     wifiName: '',
     billingDue: 0,
+    billingStatus: '',
+    serviceStatus: '',
+    billingAlert: '',
+    billingAlertTone: 'info',
   );
   WifiData wifi = const WifiData(
     ssid24: '',
@@ -147,6 +151,10 @@ class AppState extends ChangeNotifier {
       activeDays: 0,
       wifiName: '',
       billingDue: 0,
+      billingStatus: '',
+      serviceStatus: '',
+      billingAlert: '',
+      billingAlertTone: 'info',
     );
     wifi = const WifiData(
       ssid24: '',
@@ -376,6 +384,10 @@ class AppState extends ChangeNotifier {
       activeDays: dashboard.activeDays,
       wifiName: wifiName,
       billingDue: dashboard.billingDue,
+      billingStatus: dashboard.billingStatus,
+      serviceStatus: dashboard.serviceStatus,
+      billingAlert: dashboard.billingAlert,
+      billingAlertTone: dashboard.billingAlertTone,
     );
   }
 

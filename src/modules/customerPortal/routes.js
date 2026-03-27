@@ -1110,7 +1110,17 @@ async function finalizeSuccessfulBillingPayment({
     dueAmount: 0,
     lastPaymentStatus: "paid",
     lastPaidAt: new Date(),
-    lastPaymentProvider: provider
+    lastPaymentProvider: provider,
+    collections: {
+      ...(customer.billingSnapshot?.collections || {}),
+      lastDueReminderAt: null,
+      lastDueReminderAtInvoiceId: null,
+      lastOverdueReminderAt: null,
+      lastOverdueReminderAtInvoiceId: null,
+      lastSuspensionWarningAt: null,
+      lastSuspensionWarningAtInvoiceId: null,
+      suspensionRecommendedAt: null
+    }
   };
   if (customer.operationalStatus === "suspended" && customer.serviceId) {
     await radiusServiceManager.resumeSubscriberAccess({
