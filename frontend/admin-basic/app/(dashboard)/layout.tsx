@@ -25,12 +25,12 @@ const NAV_ITEMS = [
   { href: '/routers', label: 'Routers', icon: Router },
   { href: '/customers', label: 'Customers', icon: UserRound },
   { href: '/billing', label: 'Billing', icon: CreditCard },
+  { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/devices', label: 'Devices', icon: HardDrive },
   { href: '/tickets', label: 'Tickets', icon: Ticket },
   { href: '/installers', label: 'Installers', icon: Wrench },
   { href: '/jobs', label: 'Jobs', icon: Activity },
   { href: '/serviceability', label: 'Serviceability', icon: MapPinned },
-  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
