@@ -48,6 +48,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     final title = wifi.ssid24.isEmpty ? 'Wi-Fi not configured' : wifi.ssid24;
     final blockedCount = appState.connectedDevices.where((device) => device.blocked).length;
     final allowedCount = appState.connectedDevices.where((device) => !device.blocked).length;
+    final connectedCount = appState.connectedDevices.isNotEmpty ? appState.connectedDevices.length : wifi.connectedDevicesCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -96,7 +97,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFFFFFFFF))),
                           const SizedBox(height: 6),
                           Text(
-                            'Quality: ${appState.networkQuality.quality} | Devices: ${wifi.connectedDevicesCount}',
+                            'Quality: ${appState.networkQuality.quality} | Devices: $connectedCount',
                             style: const TextStyle(color: Color(0xFFF3E8FF)),
                           ),
                         ],
@@ -245,6 +246,43 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _sheetStatusChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x338224E3)),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF131313)),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _deviceIcon(String connectionType) {
+    final normalized = connectionType.toLowerCase();
+    if (normalized.contains('tv')) return Icons.tv_rounded;
+    if (normalized.contains('phone') || normalized.contains('mobile')) return Icons.smartphone_rounded;
+    if (normalized.contains('laptop') || normalized.contains('pc')) return Icons.laptop_mac_rounded;
+    if (normalized.contains('ethernet') || normalized.contains('lan') || normalized.contains('wired')) {
+      return Icons.settings_ethernet_rounded;
+    }
+    return Icons.devices_other_rounded;
+  }
+
+  String _connectionTypeLabel(String connectionType) {
+    final normalized = connectionType.trim();
+    if (normalized.isEmpty) return 'Unknown';
+    return normalized[0].toUpperCase() + normalized.substring(1);
   }
 
   Future<void> _showPauseSheet(BuildContext context, AppState appState) async {
@@ -473,9 +511,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _statusChip('Connected', '${devices.length}'),
-                    _statusChip('Allowed', '$allowedCount'),
-                    _statusChip('Blocked', '$blockedCount'),
+                    _sheetStatusChip('Connected', '${devices.length}'),
+                    _sheetStatusChip('Allowed', '$allowedCount'),
+                    _sheetStatusChip('Blocked', '$blockedCount'),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -493,19 +531,32 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF08131B),
+                        color: const Color(0xFF0F172A),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: const Color(0x338224E3)),
                       ),
                       child: Row(
                         children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF2FF),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(_deviceIcon(device.connectionType), color: const Color(0xFF8224E3)),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: const Color(0xFF131313))),
+                                Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFFFFFF))),
                                 const SizedBox(height: 4),
-                                Text('${device.connectionType} | ${device.signal}', style: const TextStyle(color: Color(0xFF6E6A67))),
+                                Text(
+                                  '${_connectionTypeLabel(device.connectionType)} | ${device.signal}',
+                                  style: const TextStyle(color: Color(0xFFCBD5E1)),
+                                ),
                               ],
                             ),
                           ),
