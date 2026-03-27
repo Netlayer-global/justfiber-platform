@@ -138,6 +138,32 @@ async function getInvoiceTemplateSettings() {
   return config?.value || {};
 }
 
+function normalizeInvoiceTemplates(baseSettings = {}) {
+  const templates = Array.isArray(baseSettings.templates) ? baseSettings.templates : [];
+  if (templates.length) return templates;
+  return [{
+    key: baseSettings.activeTemplate || "justfiber_standard",
+    templateName: baseSettings.templateName || "JustFiber Standard",
+    companyName: baseSettings.companyName || "JustFiber",
+    companyAddress: baseSettings.companyAddress || "",
+    gstNumber: baseSettings.gstNumber || "",
+    website: baseSettings.website || "",
+    panNumber: baseSettings.panNumber || "",
+    phoneNumber: baseSettings.phoneNumber || "",
+    supportEmail: baseSettings.supportEmail || "",
+    bankAccountNumber: baseSettings.bankAccountNumber || "",
+    bankName: baseSettings.bankName || "",
+    bankIfscCode: baseSettings.bankIfscCode || "",
+    invoicePrefix: baseSettings.invoicePrefix || "JF",
+    accentColor: baseSettings.accentColor || "#8224E3",
+    footerNote: baseSettings.footerNote || "",
+    paymentInstructions: baseSettings.paymentInstructions || "",
+    logoDataUrl: baseSettings.logoDataUrl || "",
+    signatureDataUrl: baseSettings.signatureDataUrl || "",
+    stampDataUrl: baseSettings.stampDataUrl || ""
+  }];
+}
+
 function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer) {
   const zoneCode = String(
     customer?.billingZoneCode
@@ -145,12 +171,17 @@ function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer) {
     || invoice?.billingZoneCode
     || ""
   ).trim().toUpperCase();
-  const overrides = Array.isArray(baseSettings.zoneOverrides) ? baseSettings.zoneOverrides : [];
-  const matched = overrides.find((item) => String(item?.zoneCode || "").trim().toUpperCase() === zoneCode);
-  if (!matched) return baseSettings;
+  const templates = normalizeInvoiceTemplates(baseSettings);
+  const mappings = Array.isArray(baseSettings.zoneTemplateMappings) ? baseSettings.zoneTemplateMappings : [];
+  const mappedTemplateKey = mappings.find((item) => String(item?.zoneCode || "").trim().toUpperCase() === zoneCode)?.templateKey;
+  const activeTemplateKey = mappedTemplateKey || baseSettings.activeTemplate || templates[0]?.key;
+  const selectedTemplate = templates.find((item) => item.key === activeTemplateKey) || templates[0] || {};
+  const legacyOverrides = Array.isArray(baseSettings.zoneOverrides) ? baseSettings.zoneOverrides : [];
+  const matchedLegacyOverride = legacyOverrides.find((item) => String(item?.zoneCode || "").trim().toUpperCase() === zoneCode);
   return {
     ...baseSettings,
-    ...matched,
+    ...selectedTemplate,
+    ...(matchedLegacyOverride || {}),
   };
 }
 

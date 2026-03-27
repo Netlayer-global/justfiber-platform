@@ -122,6 +122,30 @@ const settingsSectionDefaults = {
   invoice_template: {
     activeTemplate: "justfiber_standard",
     templateName: "JustFiber Standard",
+    templates: [
+      {
+        key: "justfiber_standard",
+        templateName: "JustFiber Standard",
+        companyName: "JustFiber Netlayer India Private Limited",
+        companyAddress: "",
+        gstNumber: "",
+        website: "justfiber.in",
+        panNumber: "",
+        phoneNumber: "",
+        supportEmail: "",
+        bankAccountNumber: "",
+        bankName: "",
+        bankIfscCode: "",
+        invoicePrefix: "JF",
+        accentColor: "#8224E3",
+        footerNote: "Thank you for choosing JustFiber.",
+        paymentInstructions: "Please pay before the due date to avoid service interruption.",
+        logoDataUrl: "",
+        signatureDataUrl: "",
+        stampDataUrl: ""
+      }
+    ],
+    zoneTemplateMappings: [],
     companyName: "JustFiber Netlayer India Private Limited",
     companyAddress: "",
     gstNumber: "",

@@ -9,6 +9,8 @@ import { toast } from 'sonner'
 type InvoiceTemplateSettings = {
   activeTemplate: string
   templateName: string
+  templates?: InvoiceTemplateEntry[]
+  zoneTemplateMappings?: ZoneTemplateMapping[]
   companyName: string
   companyAddress: string
   gstNumber: string
@@ -28,6 +30,55 @@ type InvoiceTemplateSettings = {
   signatureDataUrl: string
   stampDataUrl: string
 }
+
+type InvoiceTemplateEntry = {
+  key: string
+  templateName: string
+  companyName: string
+  companyAddress: string
+  gstNumber: string
+  website: string
+  panNumber: string
+  phoneNumber: string
+  supportEmail: string
+  bankAccountNumber: string
+  bankName: string
+  bankIfscCode: string
+  invoicePrefix: string
+  accentColor: string
+  footerNote: string
+  paymentInstructions: string
+  logoDataUrl: string
+  signatureDataUrl: string
+  stampDataUrl: string
+}
+
+type ZoneTemplateMapping = {
+  zoneCode: string
+  templateKey: string
+}
+
+const emptyTemplate = (): InvoiceTemplateEntry => ({
+  key: `template_${Date.now()}`,
+  templateName: 'New Template',
+  companyName: 'JustFiber',
+  companyAddress: '',
+  gstNumber: '',
+  website: '',
+  panNumber: '',
+  phoneNumber: '',
+  supportEmail: '',
+  bankAccountNumber: '',
+  bankName: '',
+  bankIfscCode: '',
+  invoicePrefix: 'JF',
+  accentColor: '#8224E3',
+  footerNote: '',
+  paymentInstructions: '',
+  logoDataUrl: '',
+  signatureDataUrl: '',
+  stampDataUrl: '',
+})
 
 const SECTION_META: Record<string, { title: string; description: string }> = {
   invoice_template: {
@@ -78,7 +129,7 @@ export default function SettingsPage() {
   const [catalog, setCatalog] = useState<SettingsCatalogItem[]>([])
   const [activeSection, setActiveSection] = useState('invoice_template')
   const [invoiceTemplate, setInvoiceTemplate] = useState<InvoiceTemplateSettings | null>(null)
-  const [zoneOverridesJson, setZoneOverridesJson] = useState('[]')
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState('justfiber_standard')
   const [genericJson, setGenericJson] = useState('{}')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -137,8 +188,35 @@ export default function SettingsPage() {
       }
       if (section === 'invoice_template') {
         const value = res.data.value as InvoiceTemplateSettings
-        setInvoiceTemplate(value)
-        setZoneOverridesJson(JSON.stringify(value.zoneOverrides || [], null, 2))
+        const normalizedTemplates = Array.isArray(value.templates) && value.templates.length
+          ? value.templates
+          : [{
+              key: value.activeTemplate || 'justfiber_standard',
+              templateName: value.templateName || 'JustFiber Standard',
+              companyName: value.companyName || 'JustFiber',
+              companyAddress: value.companyAddress || '',
+              gstNumber: value.gstNumber || '',
+              website: value.website || '',
+              panNumber: value.panNumber || '',
+              phoneNumber: value.phoneNumber || '',
+              supportEmail: value.supportEmail || '',
+              bankAccountNumber: value.bankAccountNumber || '',
+              bankName: value.bankName || '',
+              bankIfscCode: value.bankIfscCode || '',
+              invoicePrefix: value.invoicePrefix || 'JF',
+              accentColor: value.accentColor || '#8224E3',
+              footerNote: value.footerNote || '',
+              paymentInstructions: value.paymentInstructions || '',
+              logoDataUrl: value.logoDataUrl || '',
+              signatureDataUrl: value.signatureDataUrl || '',
+              stampDataUrl: value.stampDataUrl || '',
+            }]
+        setInvoiceTemplate({
+          ...value,
+          templates: normalizedTemplates,
+          zoneTemplateMappings: Array.isArray(value.zoneTemplateMappings) ? value.zoneTemplateMappings : [],
+        })
+        setSelectedTemplateKey(value.activeTemplate || normalizedTemplates[0]?.key || 'justfiber_standard')
       } else {
         setGenericJson(JSON.stringify(res.data.value || {}, null, 2))
       }
@@ -153,10 +231,31 @@ export default function SettingsPage() {
       setIsSaving(true)
       if (activeSection === 'invoice_template') {
         if (!invoiceTemplate) return
-        const parsedOverrides = JSON.parse(zoneOverridesJson || '[]')
+        const templates = invoiceTemplate.templates || []
+        const selectedTemplate = templates.find((item) => item.key === selectedTemplateKey) || templates[0] || emptyTemplate()
         const res = await adminAPI.updateSettingsSection(activeSection, {
           ...invoiceTemplate,
-          zoneOverrides: Array.isArray(parsedOverrides) ? parsedOverrides : [],
+          activeTemplate: selectedTemplateKey,
+          templateName: selectedTemplate.templateName,
+          companyName: selectedTemplate.companyName,
+          companyAddress: selectedTemplate.companyAddress,
+          gstNumber: selectedTemplate.gstNumber,
+          website: selectedTemplate.website,
+          panNumber: selectedTemplate.panNumber,
+          phoneNumber: selectedTemplate.phoneNumber,
+          supportEmail: selectedTemplate.supportEmail,
+          bankAccountNumber: selectedTemplate.bankAccountNumber,
+          bankName: selectedTemplate.bankName,
+          bankIfscCode: selectedTemplate.bankIfscCode,
+          invoicePrefix: selectedTemplate.invoicePrefix,
+          accentColor: selectedTemplate.accentColor,
+          footerNote: selectedTemplate.footerNote,
+          paymentInstructions: selectedTemplate.paymentInstructions,
+          logoDataUrl: selectedTemplate.logoDataUrl,
+          signatureDataUrl: selectedTemplate.signatureDataUrl,
+          stampDataUrl: selectedTemplate.stampDataUrl,
+          templates,
+          zoneTemplateMappings: invoiceTemplate.zoneTemplateMappings || [],
         })
         if (!res.success) {
           toast.error(res.error || 'Failed to save invoice template settings')
@@ -185,7 +284,12 @@ export default function SettingsPage() {
     try {
       setIsUploading(field)
       const dataUrl = await fileToDataUrl(file)
-      setInvoiceTemplate({ ...invoiceTemplate, [field]: dataUrl })
+      setInvoiceTemplate({
+        ...invoiceTemplate,
+        templates: (invoiceTemplate.templates || []).map((item) =>
+          item.key === selectedTemplateKey ? { ...item, [field]: dataUrl } : item
+        ),
+      })
       toast.success('Asset ready to save')
     } catch (error) {
       console.error('[v0] Failed to upload settings asset:', error)
@@ -195,27 +299,60 @@ export default function SettingsPage() {
     }
   }
 
-  const invoicePreview = invoiceTemplate || {
-    activeTemplate: 'justfiber_standard',
-    templateName: 'JustFiber Standard',
-    companyName: 'JustFiber',
-    companyAddress: '',
-    gstNumber: '',
-    website: '',
-    panNumber: '',
-    phoneNumber: '',
-    supportEmail: '',
-    bankAccountNumber: '',
-    bankName: '',
-    bankIfscCode: '',
-    invoicePrefix: 'JF',
-    accentColor: '#8224E3',
-    footerNote: '',
-    paymentInstructions: '',
-    zoneOverrides: [],
-    logoDataUrl: '',
-    signatureDataUrl: '',
-    stampDataUrl: '',
+  const invoicePreview = useMemo(() => {
+    const templates = invoiceTemplate?.templates || []
+    return templates.find((item) => item.key === selectedTemplateKey) || templates[0] || emptyTemplate()
+  }, [invoiceTemplate, selectedTemplateKey])
+
+  function updateSelectedTemplate<K extends keyof InvoiceTemplateEntry>(key: K, value: InvoiceTemplateEntry[K]) {
+    if (!invoiceTemplate) return
+    setInvoiceTemplate({
+      ...invoiceTemplate,
+      templates: (invoiceTemplate.templates || []).map((item) =>
+        item.key === selectedTemplateKey ? { ...item, [key]: value } : item
+      ),
+    })
+  }
+
+  function addTemplate() {
+    if (!invoiceTemplate) return
+    const template = emptyTemplate()
+    setInvoiceTemplate({
+      ...invoiceTemplate,
+      templates: [...(invoiceTemplate.templates || []), template],
+    })
+    setSelectedTemplateKey(template.key)
+  }
+
+  function updateSelectedTemplateKey(nextKey: string) {
+    if (!invoiceTemplate) return
+    const normalizedKey = nextKey.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_')
+    if (!normalizedKey) return
+    setInvoiceTemplate({
+      ...invoiceTemplate,
+      templates: (invoiceTemplate.templates || []).map((item) =>
+        item.key === selectedTemplateKey ? { ...item, key: normalizedKey } : item
+      ),
+      zoneTemplateMappings: (invoiceTemplate.zoneTemplateMappings || []).map((item) =>
+        item.templateKey === selectedTemplateKey ? { ...item, templateKey: normalizedKey } : item
+      ),
+    })
+    setSelectedTemplateKey(normalizedKey)
+  }
+
+  function removeTemplate(templateKey: string) {
+    if (!invoiceTemplate) return
+    const nextTemplates = (invoiceTemplate.templates || []).filter((item) => item.key !== templateKey)
+    if (!nextTemplates.length) {
+      toast.error('At least one template required')
+      return
+    }
+    setInvoiceTemplate({
+      ...invoiceTemplate,
+      templates: nextTemplates,
+      zoneTemplateMappings: (invoiceTemplate.zoneTemplateMappings || []).filter((item) => item.templateKey !== templateKey),
+    })
+    if (selectedTemplateKey === templateKey) setSelectedTemplateKey(nextTemplates[0].key)
   }
 
   return (
@@ -301,77 +438,130 @@ export default function SettingsPage() {
                 <div className="card p-5 space-y-5">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template key</div>
-                      <input className="input" value={invoiceTemplate?.activeTemplate || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, activeTemplate: e.target.value }) : prev)} />
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Active template</div>
+                      <select className="input" value={selectedTemplateKey} onChange={(e) => setSelectedTemplateKey(e.target.value)}>
+                        {(invoiceTemplate?.templates || []).map((item) => (
+                          <option key={item.key} value={item.key}>{item.templateName}</option>
+                        ))}
+                      </select>
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template name</div>
-                      <input className="input" value={invoiceTemplate?.templateName || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, templateName: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.templateName || ''} onChange={(e) => updateSelectedTemplate('templateName', e.target.value)} />
                     </label>
                     <label className="space-y-2 md:col-span-2">
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template key</div>
+                      <input className="input" value={invoicePreview.key || ''} onChange={(e) => updateSelectedTemplateKey(e.target.value)} />
+                    </label>
+                    <div className="md:col-span-2 flex flex-wrap gap-3">
+                      <button type="button" className="btn-secondary" onClick={addTemplate}>Add template</button>
+                      <button type="button" className="btn-secondary" onClick={() => removeTemplate(selectedTemplateKey)}>Delete selected template</button>
+                    </div>
+                    <label className="space-y-2 md:col-span-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Company name</div>
-                      <input className="input" value={invoiceTemplate?.companyName || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, companyName: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.companyName || ''} onChange={(e) => updateSelectedTemplate('companyName', e.target.value)} />
                     </label>
                     <label className="space-y-2 md:col-span-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Company address</div>
-                      <textarea className="input min-h-24" value={invoiceTemplate?.companyAddress || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, companyAddress: e.target.value }) : prev)} />
+                      <textarea className="input min-h-24" value={invoicePreview.companyAddress || ''} onChange={(e) => updateSelectedTemplate('companyAddress', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">GST number</div>
-                      <input className="input" value={invoiceTemplate?.gstNumber || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, gstNumber: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.gstNumber || ''} onChange={(e) => updateSelectedTemplate('gstNumber', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">PAN number</div>
-                      <input className="input" value={invoiceTemplate?.panNumber || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, panNumber: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.panNumber || ''} onChange={(e) => updateSelectedTemplate('panNumber', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Website</div>
-                      <input className="input" value={invoiceTemplate?.website || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, website: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.website || ''} onChange={(e) => updateSelectedTemplate('website', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Support email</div>
-                      <input className="input" value={invoiceTemplate?.supportEmail || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, supportEmail: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.supportEmail || ''} onChange={(e) => updateSelectedTemplate('supportEmail', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Phone number</div>
-                      <input className="input" value={invoiceTemplate?.phoneNumber || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, phoneNumber: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.phoneNumber || ''} onChange={(e) => updateSelectedTemplate('phoneNumber', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice prefix</div>
-                      <input className="input" value={invoiceTemplate?.invoicePrefix || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, invoicePrefix: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.invoicePrefix || ''} onChange={(e) => updateSelectedTemplate('invoicePrefix', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Accent color</div>
-                      <input className="input h-12" type="color" value={invoiceTemplate?.accentColor || '#8224E3'} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, accentColor: e.target.value }) : prev)} />
+                      <input className="input h-12" type="color" value={invoicePreview.accentColor || '#8224E3'} onChange={(e) => updateSelectedTemplate('accentColor', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Bank account</div>
-                      <input className="input" value={invoiceTemplate?.bankAccountNumber || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, bankAccountNumber: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.bankAccountNumber || ''} onChange={(e) => updateSelectedTemplate('bankAccountNumber', e.target.value)} />
                     </label>
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Bank name</div>
-                      <input className="input" value={invoiceTemplate?.bankName || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, bankName: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.bankName || ''} onChange={(e) => updateSelectedTemplate('bankName', e.target.value)} />
                     </label>
                     <label className="space-y-2 md:col-span-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Bank IFSC</div>
-                      <input className="input" value={invoiceTemplate?.bankIfscCode || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, bankIfscCode: e.target.value }) : prev)} />
+                      <input className="input" value={invoicePreview.bankIfscCode || ''} onChange={(e) => updateSelectedTemplate('bankIfscCode', e.target.value)} />
                     </label>
                     <label className="space-y-2 md:col-span-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Footer note</div>
-                      <textarea className="input min-h-24" value={invoiceTemplate?.footerNote || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, footerNote: e.target.value }) : prev)} />
+                      <textarea className="input min-h-24" value={invoicePreview.footerNote || ''} onChange={(e) => updateSelectedTemplate('footerNote', e.target.value)} />
                     </label>
                     <label className="space-y-2 md:col-span-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Payment instructions</div>
-                      <textarea className="input min-h-24" value={invoiceTemplate?.paymentInstructions || ''} onChange={(e) => setInvoiceTemplate((prev) => prev ? ({ ...prev, paymentInstructions: e.target.value }) : prev)} />
+                      <textarea className="input min-h-24" value={invoicePreview.paymentInstructions || ''} onChange={(e) => updateSelectedTemplate('paymentInstructions', e.target.value)} />
                     </label>
                     <label className="space-y-2 md:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Zone template overrides JSON</div>
-                      <textarea
-                        className="input min-h-40 font-mono text-xs"
-                        value={zoneOverridesJson}
-                        onChange={(e) => setZoneOverridesJson(e.target.value)}
-                        placeholder={`[\n  {\n    "zoneCode": "NCR",\n    "companyName": "JustFiber NCR Pvt Ltd",\n    "accentColor": "#1D4ED8"\n  }\n]`}
-                      />
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Zone to template mapping</div>
+                      <div className="space-y-2 rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
+                        {(invoiceTemplate?.zoneTemplateMappings || []).map((mapping, index) => (
+                          <div key={`${mapping.zoneCode}-${index}`} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                            <input
+                              className="input"
+                              placeholder="Zone code"
+                              value={mapping.zoneCode}
+                              onChange={(e) => setInvoiceTemplate((prev) => prev ? ({
+                                ...prev,
+                                zoneTemplateMappings: (prev.zoneTemplateMappings || []).map((item, idx) => idx === index ? { ...item, zoneCode: e.target.value.toUpperCase() } : item),
+                              }) : prev)}
+                            />
+                            <select
+                              className="input"
+                              value={mapping.templateKey}
+                              onChange={(e) => setInvoiceTemplate((prev) => prev ? ({
+                                ...prev,
+                                zoneTemplateMappings: (prev.zoneTemplateMappings || []).map((item, idx) => idx === index ? { ...item, templateKey: e.target.value } : item),
+                              }) : prev)}
+                            >
+                              {(invoiceTemplate?.templates || []).map((item) => (
+                                <option key={item.key} value={item.key}>{item.templateName}</option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() => setInvoiceTemplate((prev) => prev ? ({
+                                ...prev,
+                                zoneTemplateMappings: (prev.zoneTemplateMappings || []).filter((_, idx) => idx !== index),
+                              }) : prev)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => setInvoiceTemplate((prev) => prev ? ({
+                            ...prev,
+                            zoneTemplateMappings: [...(prev.zoneTemplateMappings || []), { zoneCode: '', templateKey: selectedTemplateKey }],
+                          }) : prev)}
+                        >
+                          Add zone mapping
+                        </button>
+                      </div>
                     </label>
                   </div>
 
@@ -382,7 +572,7 @@ export default function SettingsPage() {
                       ['stampDataUrl', 'Stamp'],
                     ].map(([field, label]) => {
                       const key = field as 'logoDataUrl' | 'signatureDataUrl' | 'stampDataUrl'
-                      const value = invoiceTemplate?.[key] || ''
+                      const value = invoicePreview[key] || ''
                       return (
                         <div key={field} className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
                           <div className="flex items-center gap-2 text-sm font-semibold text-white">
@@ -408,7 +598,12 @@ export default function SettingsPage() {
                               <button
                                 type="button"
                                 className="mt-3 text-xs text-rose-300"
-                                onClick={() => setInvoiceTemplate((prev) => prev ? ({ ...prev, [key]: '' }) : prev)}
+                                onClick={() => setInvoiceTemplate((prev) => prev ? ({
+                                  ...prev,
+                                  templates: (prev.templates || []).map((item) =>
+                                    item.key === selectedTemplateKey ? { ...item, [key]: '' } : item
+                                  ),
+                                }) : prev)}
                               >
                                 Remove {label.toLowerCase()}
                               </button>
