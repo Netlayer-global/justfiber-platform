@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { adminAPI, getApiBaseUrl } from '@/lib/api'
+import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import type { AdminPlanChangePreview, Customer, CustomerDevice, Installer, Plan } from '@/lib/types'
 import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
@@ -195,6 +195,24 @@ export default function CustomerDetailPage() {
   const usagePercent = usageCapGb > 0 ? Math.min(100, Math.round((usageGb / usageCapGb) * 100)) : 0
   const pendingPlanChange = billingSummary.pendingPlanChange as Record<string, any> | undefined
   const adminApiBase = getApiBaseUrl()
+
+  async function openInvoicePdf(invoiceId: string) {
+    try {
+      await openProtectedDocument(`/api/v1/admin/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`)
+    } catch (error) {
+      console.error('[v0] Failed to open customer invoice PDF:', error)
+      toast.error('Failed to open invoice PDF')
+    }
+  }
+
+  async function openBillingNotePdf(noteNumber: string) {
+    try {
+      await openProtectedDocument(`/api/v1/admin/billing/notes/${encodeURIComponent(noteNumber)}/pdf`)
+    } catch (error) {
+      console.error('[v0] Failed to open billing note PDF:', error)
+      toast.error('Failed to open billing note PDF')
+    }
+  }
   const currentPlanCode =
     customer?.plan && 'planCode' in customer.plan
       ? customer.plan.planCode || customer.plan.id
@@ -1322,7 +1340,7 @@ export default function CustomerDetailPage() {
                             <span>{invoice.invoiceNumber || invoice.invoiceId} | Rs {invoice.amount} | {invoice.paymentStatus || 'pending'}</span>
                             <button
                               className="btn-secondary"
-                              onClick={() => window.open(`${adminApiBase}/api/v1/admin/billing/invoices/${encodeURIComponent(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}/pdf`, '_blank')}
+                              onClick={() => void openInvoicePdf(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}
                             >
                               Open PDF
                             </button>
@@ -1354,7 +1372,7 @@ export default function CustomerDetailPage() {
                             <span>{note.noteNumber} | {note.type} | Rs {note.totalAmount} | {note.reasonCode || note.note || '-'}</span>
                             <button
                               className="btn-secondary"
-                              onClick={() => window.open(`${adminApiBase}/api/v1/admin/billing/notes/${encodeURIComponent(note.noteNumber)}/pdf`, '_blank')}
+                              onClick={() => void openBillingNotePdf(note.noteNumber)}
                             >
                               Open PDF
                             </button>

@@ -1382,14 +1382,12 @@ export default function BillingPage() {
                     </td>
                     <td className="table-cell text-right">
                       {item.invoiceId ? (
-                        <a
+                        <button
                           className="text-xs text-[#4da3ff] inline-block"
-                          href={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => void openInvoicePdf(item.invoiceId)}
                         >
                           Open Invoice
-                        </a>
+                        </button>
                       ) : null}
                       <button
                         className="text-xs text-[#4da3ff] mt-2 block ml-auto"
