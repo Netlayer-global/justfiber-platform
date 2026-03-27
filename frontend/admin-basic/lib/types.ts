@@ -501,7 +501,10 @@ export interface BillingData {
   source?: string
   billingStateCode?: string
   billingStateName?: string
+  billingZoneCode?: string
   taxMode?: string
+  appliedTemplateKey?: string
+  appliedTemplateName?: string
   taxBreakdown?: Array<{
     label: string
     rate: number

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl } from '@/lib/api'
 import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, IntegrationSummary } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, ShieldCheck, Wallet } from 'lucide-react'
@@ -31,6 +32,12 @@ type BillingProfileForm = {
   intrastateSgstPercent: string
   stateOverridesJson: string
   zoneMappingsJson: string
+}
+
+type InvoiceTemplateSettingsSummary = {
+  activeTemplate?: string
+  templates?: Array<{ key: string; templateName?: string }>
+  zoneTemplateMappings?: Array<{ zoneCode?: string; templateKey?: string }>
 }
 
 const emptyProfileForm: BillingProfileForm = {
@@ -73,6 +80,7 @@ export default function BillingPage() {
   const [razorpayWebhookLogs, setRazorpayWebhookLogs] = useState<RazorpayWebhookLog[]>([])
   const [recoveryItems, setRecoveryItems] = useState<BillingRecoveryItem[]>([])
   const [integrations, setIntegrations] = useState<IntegrationSummary[]>([])
+  const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [collectionBucket, setCollectionBucket] = useState('')
   const [invoiceFilters, setInvoiceFilters] = useState({
     search: '',
@@ -126,6 +134,10 @@ export default function BillingPage() {
   const invoiceExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/invoices.csv${exportQuery ? `?${exportQuery}` : ''}`
   const paymentExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/payments.csv${exportQuery ? `?${exportQuery}` : ''}`
   const gstExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/gst-summary?format=csv${exportQuery ? `&${exportQuery}` : ''}`
+  const activeInvoiceTemplate = useMemo(() => {
+    const templates = invoiceTemplateSettings?.templates || []
+    return templates.find((item) => item.key === invoiceTemplateSettings?.activeTemplate) || templates[0] || null
+  }, [invoiceTemplateSettings])
 
   useEffect(() => {
     void loadBilling()
@@ -134,7 +146,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes, integrationRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, runRes, noteRes, paymentRes, collectionRes, collectionAgentRes, razorpayOverviewRes, razorpayWebhookRes, recoveryRes, integrationRes, invoiceTemplateRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -147,6 +159,7 @@ export default function BillingPage() {
         adminAPI.getRazorpayWebhookLogs(),
         adminAPI.getBillingRecovery(),
         adminAPI.getIntegrations(),
+        adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -212,6 +225,9 @@ export default function BillingPage() {
       }
       if (integrationRes.success && integrationRes.data) {
         setIntegrations(integrationRes.data)
+      }
+      if (invoiceTemplateRes.success && invoiceTemplateRes.data) {
+        setInvoiceTemplateSettings(invoiceTemplateRes.data.value || null)
       }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
@@ -782,6 +798,22 @@ export default function BillingPage() {
                 <div className="text-slate-400">PDF status</div>
                 <div className="mt-1 font-semibold text-white">Ready for dispatch</div>
               </div>
+              <div className="rounded-xl bg-black/20 p-3">
+                <div className="text-slate-400">Default template</div>
+                <div className="mt-1 font-semibold text-white">{activeInvoiceTemplate?.templateName || 'JustFiber Standard'}</div>
+                <div className="mt-1 text-xs text-slate-500">{activeInvoiceTemplate?.key || 'justfiber_standard'}</div>
+              </div>
+              <div className="rounded-xl bg-black/20 p-3">
+                <div className="text-slate-400">Zone mappings</div>
+                <div className="mt-1 font-semibold text-white">{invoiceTemplateSettings?.zoneTemplateMappings?.length || 0} active mapping(s)</div>
+                <div className="mt-1 text-xs text-slate-500">{invoiceTemplateSettings?.templates?.length || 1} template variant(s)</div>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+              <div>Invoice PDF aur dispatch ab same settings-driven branding engine use karte hain.</div>
+              <Link href="/settings" className="btn-secondary">
+                Open template settings
+              </Link>
             </div>
           </div>
         </div>
@@ -1624,6 +1656,18 @@ export default function BillingPage() {
                   <td className="table-cell">
                     <div>{item.billingStateName || item.billingStateCode || '-'}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.taxMode || 'india_gst'}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {item.billingZoneCode ? (
+                        <span className="inline-flex rounded-full bg-white/5 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-300">
+                          Zone {item.billingZoneCode}
+                        </span>
+                      ) : null}
+                      {item.appliedTemplateName ? (
+                        <span className="inline-flex rounded-full bg-[#8224E3]/15 px-2 py-1 text-[11px] text-[#d9b8ff]">
+                          {item.appliedTemplateName}
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="table-cell">
                     <div>Taxable Rs {Number(item.amount || 0).toFixed(2)}</div>

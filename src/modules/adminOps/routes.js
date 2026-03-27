@@ -181,6 +181,9 @@ function selectInvoiceTemplateSettings(baseSettings = {}, invoice, customer) {
   return {
     ...baseSettings,
     ...selectedTemplate,
+    templateKey: activeTemplateKey || selectedTemplate.key || baseSettings.activeTemplate || "justfiber_standard",
+    templateName: selectedTemplate.templateName || baseSettings.templateName || "JustFiber Standard",
+    billingZoneCode: zoneCode || undefined,
     ...(matchedLegacyOverride || {}),
   };
 }
@@ -1492,11 +1495,21 @@ adminOpsRouter.get(
         filter.generatedAt = generatedAt;
       }
     }
-    const [items, total] = await Promise.all([
+    const [items, total, templateSettings] = await Promise.all([
       BillingInvoice.find(filter).sort({ generatedAt: -1 }).skip(skip).limit(limit).lean(),
-      BillingInvoice.countDocuments(filter)
+      BillingInvoice.countDocuments(filter),
+      getInvoiceTemplateSettings()
     ]);
-    return ok(res, items, { page, limit, total });
+    const decoratedItems = items.map((item) => {
+      const selection = selectInvoiceTemplateSettings(templateSettings, item, null);
+      return {
+        ...item,
+        billingZoneCode: item?.metadata?.billingZoneCode || item?.billingZoneCode || selection.billingZoneCode || "",
+        appliedTemplateKey: selection.templateKey || "",
+        appliedTemplateName: selection.templateName || "",
+      };
+    });
+    return ok(res, decoratedItems, { page, limit, total });
   })
 );
 
