@@ -172,6 +172,41 @@ export default function BillingPage() {
     const mappedTemplateKey = mappings.find((item) => String(item.zoneCode || '').trim().toUpperCase() === draftZoneCode)?.templateKey
     return templates.find((item) => item.key === (mappedTemplateKey || invoiceTemplateSettings?.activeTemplate)) || activeInvoiceTemplate
   }, [activeInvoiceTemplate, draftZoneCode, invoiceTemplateSettings])
+  const activeInvoiceFilterTokens = useMemo(
+    () =>
+      Object.entries(invoiceFilters)
+        .filter(([, value]) => value.trim() !== '')
+        .map(([key, value]) => ({
+          key,
+          label:
+            key === 'customerId'
+              ? `Customer ${value}`
+              : key === 'paymentStatus'
+                ? `Status ${value}`
+                : key === 'billCycle'
+                  ? `Cycle ${value}`
+                  : key === 'fromDate'
+                    ? `From ${value}`
+                    : key === 'toDate'
+                      ? `To ${value}`
+                      : value,
+        })),
+    [invoiceFilters]
+  )
+  const invoicePulse = useMemo(() => {
+    const totalAmount = billing.reduce((sum, item) => sum + Number(item.totalAmount || item.amount || 0), 0)
+    const pendingAmount = billing
+      .filter((item) => (item.paymentStatus || item.status) === 'pending')
+      .reduce((sum, item) => sum + Number(item.totalAmount || item.amount || 0), 0)
+    const activationInvoices = billing.filter((item) => item.source === 'installer_activation').length
+    const zoneInvoices = billing.filter((item) => Boolean(item.billingZoneCode)).length
+    return {
+      totalAmount,
+      pendingAmount,
+      activationInvoices,
+      zoneInvoices,
+    }
+  }, [billing])
   const selectedInvoice = useMemo(
     () => billing.find((item) => item.invoiceId === selectedInvoiceId) || billing[0] || null,
     [billing, selectedInvoiceId]
@@ -526,6 +561,17 @@ export default function BillingPage() {
       console.error('[v0] Failed to open invoice PDF:', error)
       toast.error('Failed to open invoice PDF')
     }
+  }
+
+  function resetInvoiceFilters() {
+    setInvoiceFilters({
+      search: '',
+      customerId: '',
+      paymentStatus: '',
+      billCycle: '',
+      fromDate: '',
+      toDate: '',
+    })
   }
 
   async function dispatchBillingNote(noteNumber: string) {
@@ -983,7 +1029,15 @@ export default function BillingPage() {
       </section>
 
       <div className="card p-5">
-        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice filters</div>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice filters</div>
+            <div className="mt-1 text-sm text-slate-400">Filter by customer, cycle, payment status, and billing date range.</div>
+          </div>
+          <button className="btn-secondary" onClick={resetInvoiceFilters} disabled={!activeInvoiceFilterTokens.length}>
+            Clear filters
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
           <input
             className="input"
@@ -1026,6 +1080,15 @@ export default function BillingPage() {
             onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, toDate: e.target.value }))}
           />
         </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {activeInvoiceFilterTokens.length ? activeInvoiceFilterTokens.map((item) => (
+            <span key={item.key} className="inline-flex rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+              {item.label}
+            </span>
+          )) : (
+            <span className="text-xs text-slate-500">No active invoice filters.</span>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -1039,6 +1102,13 @@ export default function BillingPage() {
             <div className="card p-5"><p className="text-sm text-slate-500">Overdue</p><p className="text-2xl font-semibold mt-2">{overview?.overdueInvoices || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.collectedAmount || 0).toFixed(2)}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">GST Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.taxCollected || 0).toFixed(2)}</p></div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="card p-5"><p className="text-sm text-slate-500">Visible Total</p><p className="text-2xl font-semibold mt-2">Rs {invoicePulse.totalAmount.toFixed(2)}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Pending In View</p><p className="text-2xl font-semibold mt-2">Rs {invoicePulse.pendingAmount.toFixed(2)}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Activation Invoices</p><p className="text-2xl font-semibold mt-2">{invoicePulse.activationInvoices}</p></div>
+            <div className="card p-5"><p className="text-sm text-slate-500">Zone-Routed</p><p className="text-2xl font-semibold mt-2">{invoicePulse.zoneInvoices}</p></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -1890,8 +1960,13 @@ export default function BillingPage() {
                   Searchable invoice ledger with PDF dispatch, live status, source tracking, and service references.
                 </div>
               </div>
-              <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-                {billing.length} invoice{billing.length === 1 ? '' : 's'}
+              <div className="flex flex-wrap gap-2">
+                <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+                  {billing.length} invoice{billing.length === 1 ? '' : 's'}
+                </div>
+                <div className="rounded-full bg-[#8224E3]/10 px-3 py-1 text-xs text-[#d9b8ff]">
+                  {selectedInvoice ? `Selected ${selectedInvoice.invoiceNumber || selectedInvoice.invoiceId}` : 'No invoice selected'}
+                </div>
               </div>
             </div>
             <table className="w-full">
@@ -2006,7 +2081,7 @@ export default function BillingPage() {
                       {selectedInvoice.paymentStatus || selectedInvoice.status}
                     </span>
                   </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-xl bg-black/20 p-3">
                       <div className="text-slate-400">Customer</div>
                       <div className="mt-1 font-semibold text-white">{selectedInvoice.customerId}</div>
@@ -2027,6 +2102,24 @@ export default function BillingPage() {
                       <div className="mt-1 font-semibold text-white">Rs {Number(selectedInvoice.totalAmount || selectedInvoice.amount || 0).toFixed(2)}</div>
                       <div className="mt-1 text-xs text-slate-500">Tax Rs {Number(selectedInvoice.taxAmount || 0).toFixed(2)}</div>
                     </div>
+                    <div className="rounded-xl bg-black/20 p-3 sm:col-span-2">
+                      <div className="text-slate-400">Commercial route</div>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <span className={`inline-flex rounded-full px-2 py-1 text-xs ${invoiceSourceTone(selectedInvoice.source)}`}>
+                          {selectedInvoice.sourceLabel || selectedInvoice.source || 'Internal'}
+                        </span>
+                        {selectedInvoice.billCycle ? (
+                          <span className="inline-flex rounded-full bg-white/5 px-2 py-1 text-xs text-slate-300">
+                            {selectedInvoice.billCycle}
+                          </span>
+                        ) : null}
+                        {selectedInvoice.paymentStatus ? (
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs ${invoiceStatusTone(selectedInvoice.paymentStatus)}`}>
+                            {selectedInvoice.paymentStatus}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -2036,6 +2129,9 @@ export default function BillingPage() {
                     <div>Generated: {selectedInvoice.generatedAt ? new Date(selectedInvoice.generatedAt).toLocaleString() : '-'}</div>
                     <div>Due: {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : '-'}</div>
                     <div>Source: {selectedInvoice.sourceLabel || selectedInvoice.source || 'Internal'}</div>
+                    {(selectedInvoice.taxBreakdown || []).length ? (
+                      <div>Tax split: {selectedInvoice.taxBreakdown?.map((part) => `${part.label} ${part.rate}%`).join(' | ')}</div>
+                    ) : null}
                   </div>
                 </div>
 
