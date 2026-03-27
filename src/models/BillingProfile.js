@@ -55,6 +55,7 @@ const billingProfileSchema = new mongoose.Schema(
             stateName: String,
             invoicePrefix: String,
             invoiceSeriesCode: String,
+            templateKey: String,
             defaultBillMode: { type: String, enum: ["prepaid", "postpaid"] }
           },
           { _id: false }

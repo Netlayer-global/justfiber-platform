@@ -45,6 +45,7 @@ type BillingProfileForm = {
     stateName: string
     invoicePrefix: string
     invoiceSeriesCode: string
+    templateKey: string
     defaultBillMode: 'prepaid' | 'postpaid'
   }>
 }
@@ -286,6 +287,7 @@ export default function BillingPage() {
                   stateName: item.stateName || '',
                   invoicePrefix: item.invoicePrefix || '',
                   invoiceSeriesCode: item.invoiceSeriesCode || '',
+                  templateKey: item.templateKey || '',
                   defaultBillMode: item.defaultBillMode || 'prepaid',
                 }))
               : [],
@@ -351,6 +353,7 @@ export default function BillingPage() {
           stateName: item.stateName.trim(),
           invoicePrefix: item.invoicePrefix.trim().toUpperCase() || undefined,
           invoiceSeriesCode: item.invoiceSeriesCode.trim().toUpperCase() || undefined,
+          templateKey: item.templateKey || undefined,
           defaultBillMode: item.defaultBillMode,
         }))
         .filter((item) => item.zoneCode)
@@ -1561,7 +1564,16 @@ export default function BillingPage() {
                         ...prev,
                         zoneMappings: [
                           ...prev.zoneMappings,
-                          { zoneCode: '', zoneName: '', stateCode: '', stateName: '', invoicePrefix: '', invoiceSeriesCode: '', defaultBillMode: 'prepaid' },
+                          {
+                            zoneCode: '',
+                            zoneName: '',
+                            stateCode: '',
+                            stateName: '',
+                            invoicePrefix: '',
+                            invoiceSeriesCode: '',
+                            templateKey: invoiceTemplateSettings?.activeTemplate || '',
+                            defaultBillMode: 'prepaid',
+                          },
                         ],
                       }))}
                     >
@@ -1570,13 +1582,21 @@ export default function BillingPage() {
                   </div>
                   <div className="mt-4 space-y-3">
                     {profileForm.zoneMappings.map((item, index) => (
-                      <div key={`zone-${index}`} className="grid gap-3 md:grid-cols-7">
+                      <div key={`zone-${index}`} className="grid gap-3 md:grid-cols-8">
                         <input className="input" placeholder="Zone code" value={item.zoneCode} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, zoneCode: e.target.value.toUpperCase() } : row) }))} />
                         <input className="input" placeholder="Zone name" value={item.zoneName} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, zoneName: e.target.value } : row) }))} />
                         <input className="input" placeholder="State code" value={item.stateCode} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, stateCode: e.target.value.toUpperCase() } : row) }))} />
                         <input className="input" placeholder="State name" value={item.stateName} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, stateName: e.target.value } : row) }))} />
                         <input className="input" placeholder="Invoice prefix" value={item.invoicePrefix} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, invoicePrefix: e.target.value.toUpperCase() } : row) }))} />
                         <input className="input" placeholder="Series code" value={item.invoiceSeriesCode} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, invoiceSeriesCode: e.target.value.toUpperCase() } : row) }))} />
+                        <select className="input" value={item.templateKey} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, templateKey: e.target.value } : row) }))}>
+                          <option value="">Use default template</option>
+                          {(invoiceTemplateSettings?.templates || []).map((template) => (
+                            <option key={template.key} value={template.key}>
+                              {template.templateName || template.key}
+                            </option>
+                          ))}
+                        </select>
                         <div className="flex items-center gap-3">
                           <select className="input" value={item.defaultBillMode} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, defaultBillMode: e.target.value as 'prepaid' | 'postpaid' } : row) }))}>
                             <option value="prepaid">Prepaid</option>
@@ -1630,7 +1650,7 @@ export default function BillingPage() {
                   ) : null}
                   {(profile.zoneMappings || []).length ? (
                     <div className="text-xs text-slate-400">
-                      Zones: {(profile.zoneMappings || []).map((item) => `${item.zoneCode}->${item.stateCode}${item.defaultBillMode ? ` (${item.defaultBillMode})` : ''}`).join(' | ')}
+                      Zones: {(profile.zoneMappings || []).map((item) => `${item.zoneCode}->${item.stateCode}${item.defaultBillMode ? ` (${item.defaultBillMode})` : ''}${item.templateKey ? ` [${item.templateKey}]` : ''}`).join(' | ')}
                     </div>
                   ) : null}
                 </div>

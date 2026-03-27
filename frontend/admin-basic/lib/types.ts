@@ -614,6 +614,7 @@ export interface BillingProfile {
     stateName?: string
     invoicePrefix?: string
     invoiceSeriesCode?: string
+    templateKey?: string
     defaultBillMode?: 'prepaid' | 'postpaid'
   }>
   active?: boolean
