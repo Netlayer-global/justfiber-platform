@@ -1,6 +1,7 @@
 import { env } from "../config/env.js";
 import { IntegrationConnection } from "../models/IntegrationConnection.js";
 import { IntegrationEventLog } from "../models/IntegrationEventLog.js";
+import { BillingProfile } from "../models/BillingProfile.js";
 import { NotificationEventPreference } from "../models/NotificationEventPreference.js";
 import { providerAdapters } from "./providerAdapters.js";
 
@@ -10,6 +11,7 @@ function getDefaultEventChannels(eventKey) {
     billing_invoice: { email: true, sms: true },
     invoice_due_date: { email: true, sms: true },
     unpaid_invoice: { email: true, sms: true },
+    payment_retry: { email: true, sms: true },
     suspension_warning: { email: true, sms: true },
     account_suspension: { email: true, sms: true },
     paid_invoice: { email: true, sms: true },
@@ -20,6 +22,127 @@ function getDefaultEventChannels(eventKey) {
     user_penalty: { email: true, sms: true }
   };
   return defaults[eventKey] || { push: true };
+}
+
+function normalizeZoneCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function formatAmount(value) {
+  return `Rs ${Number(value || 0).toFixed(2)}`;
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toLocaleDateString("en-IN");
+}
+
+async function resolveBillingBranding({ customer, metadata }) {
+  const billingProfileCode = String(
+    metadata?.billingProfileCode ||
+    customer?.billingProfileCode ||
+    customer?.billingSnapshot?.billingProfileCode ||
+    ""
+  ).trim();
+  const profile = billingProfileCode
+    ? await BillingProfile.findOne({ code: billingProfileCode, active: true }).lean()
+    : await BillingProfile.findOne({ active: true }).sort({ createdAt: 1 }).lean();
+  const zoneCode = normalizeZoneCode(
+    metadata?.billingZoneCode ||
+    customer?.billingZoneCode ||
+    customer?.billingSnapshot?.billingZoneCode
+  );
+  const zoneMapping = (profile?.zoneMappings || []).find((item) => normalizeZoneCode(item?.zoneCode) === zoneCode) || null;
+  return {
+    companyName: zoneMapping?.companyLegalName || profile?.companyLegalName || "JustFiber",
+    zoneCode,
+    zoneName: zoneMapping?.zoneName || customer?.billingSnapshot?.billingZoneName || metadata?.billingZoneName || "",
+    supportPhone: profile?.supportPhone || "",
+    supportEmail: profile?.supportEmail || "",
+  };
+}
+
+function buildSupportLine(branding) {
+  const parts = [branding.supportPhone, branding.supportEmail].filter(Boolean);
+  return parts.length ? ` Support: ${parts.join(" | ")}.` : "";
+}
+
+export async function buildBillingNotificationContent({
+  eventKey,
+  customer,
+  invoice,
+  payment,
+  metadata,
+  actionUrl,
+  amount,
+  dueDate,
+  overdueDays
+}) {
+  const branding = await resolveBillingBranding({ customer, metadata });
+  const companyName = branding.companyName;
+  const customerName = customer?.fullName || customer?.customerId || "Customer";
+  const invoiceNumber = invoice?.invoiceNumber || invoice?.invoiceId || metadata?.invoiceNumber || "";
+  const dueDateLabel = formatDate(dueDate || invoice?.dueDate);
+  const amountLabel = formatAmount(amount ?? invoice?.totalAmount ?? payment?.amount ?? metadata?.amount);
+  const supportLine = buildSupportLine(branding);
+  const actionLine = actionUrl ? ` Open: ${actionUrl}` : "";
+  const zoneLine = branding.zoneName ? ` for ${branding.zoneName}` : "";
+
+  if (eventKey === "invoice_due_date") {
+    return {
+      subject: `${companyName}: Invoice due soon`,
+      body: `Dear ${customerName}, invoice ${invoiceNumber || "for your account"}${zoneLine} of ${amountLabel} is due${dueDateLabel ? ` on ${dueDateLabel}` : " soon"}. Please pay on time to avoid interruption.${actionLine}${supportLine}`,
+      branding,
+    };
+  }
+  if (eventKey === "unpaid_invoice") {
+    return {
+      subject: `${companyName}: Invoice overdue`,
+      body: `Dear ${customerName}, invoice ${invoiceNumber || "for your account"}${zoneLine} of ${amountLabel} is overdue. Please clear the pending amount to avoid service interruption.${actionLine}${supportLine}`,
+      branding,
+    };
+  }
+  if (eventKey === "payment_retry") {
+    return {
+      subject: `${companyName}: Payment retry required`,
+      body: `Dear ${customerName}, your payment attempt${zoneLine} for ${amountLabel} was not completed. Please retry the payment from the customer app or portal.${actionLine}${supportLine}`,
+      branding,
+    };
+  }
+  if (eventKey === "suspension_warning") {
+    return {
+      subject: `${companyName}: Suspension warning`,
+      body: `Dear ${customerName}, invoice ${invoiceNumber || "for your account"}${zoneLine} of ${amountLabel} remains unpaid${typeof overdueDays === "number" ? ` after ${overdueDays} overdue day(s)` : ""}. Pay immediately to avoid service suspension.${actionLine}${supportLine}`,
+      branding,
+    };
+  }
+  if (eventKey === "account_suspension") {
+    return {
+      subject: `${companyName}: Service suspended`,
+      body: `Dear ${customerName}, your service${zoneLine} has been temporarily suspended because ${amountLabel} is still pending. Pay now and the service should resume automatically.${actionLine}${supportLine}`,
+      branding,
+    };
+  }
+  if (eventKey === "paid_invoice") {
+    const resumed = Boolean(metadata?.automation === "collections_resume" || metadata?.serviceStatus === "active_after_resume");
+    return {
+      subject: resumed ? `${companyName}: Service resumed` : `${companyName}: Payment received`,
+      body: resumed
+        ? `Dear ${customerName}, we received ${amountLabel} and your service${zoneLine} has been resumed successfully.${actionLine}${supportLine}`
+        : `Dear ${customerName}, we received ${amountLabel}${invoiceNumber ? ` against invoice ${invoiceNumber}` : ""}.${actionLine}${supportLine}`,
+      branding,
+    };
+  }
+  if (eventKey === "billing_invoice") {
+    return {
+      subject: `${companyName}: Invoice ready`,
+      body: `Dear ${customerName}, invoice ${invoiceNumber || "for your account"}${zoneLine} of ${amountLabel} is ready.${actionLine}${supportLine}`,
+      branding,
+    };
+  }
+  return null;
 }
 
 async function resolveActiveConnection(category) {

@@ -33,7 +33,7 @@ import { buildPagination } from "../../common/pagination.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
-import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
+import { buildBillingNotificationContent, notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
 import {
@@ -1152,14 +1152,26 @@ async function finalizeSuccessfulBillingPayment({
       }
     });
   }
+  const paymentMessage = await buildBillingNotificationContent({
+    eventKey: "paid_invoice",
+    customer,
+    payment: { amount },
+    metadata: {
+      customerId: customer.customerId,
+      amount,
+      provider,
+      paymentStatus: "paid",
+      serviceStatus: customer.operationalStatus
+    }
+  });
   await notificationDispatcher.dispatchEvent({
     eventKey: "paid_invoice",
     recipients: {
       sms: customer.phone,
       email: customer.email
     },
-    subject: "JustFiber payment received",
-    body: `Dear ${customer.fullName}, we received Rs ${Number(amount || 0).toFixed(2)}. Your payment status is now paid.`,
+    subject: paymentMessage?.subject || "JustFiber payment received",
+    body: paymentMessage?.body || `Dear ${customer.fullName}, we received Rs ${Number(amount || 0).toFixed(2)}. Your payment status is now paid.`,
     entityType: "billing_payment",
     entityId: transactionId,
     metadata: {
@@ -1167,7 +1179,8 @@ async function finalizeSuccessfulBillingPayment({
       amount,
       provider,
       paymentStatus: "paid",
-      serviceStatus: customer.operationalStatus
+      serviceStatus: customer.operationalStatus,
+      ...(paymentMessage?.branding || {})
     }
   }).catch(() => null);
 

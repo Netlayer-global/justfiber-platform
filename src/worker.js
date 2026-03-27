@@ -26,7 +26,7 @@ import { SubscriberService } from "./models/SubscriberService.js";
 import { radiusServiceManager } from "./integrations/radiusServiceManager.js";
 import { internalSubscriberPlatform } from "./integrations/internalSubscriberPlatform.js";
 import { internalBillingEngine } from "./integrations/internalBillingEngine.js";
-import { notificationDispatcher } from "./integrations/notificationDispatcher.js";
+import { buildBillingNotificationContent, notificationDispatcher } from "./integrations/notificationDispatcher.js";
 import { providerAdapters } from "./integrations/providerAdapters.js";
 import { writeAuditLog } from "./common/audit.js";
 import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand, resolveProvisioningProfile } from "./common/networkProvisioning.js";
@@ -1339,17 +1339,23 @@ async function runRecurringBillingTasks() {
         continue;
       }
       if (customer.phone || customer.email) {
+        const message = await buildBillingNotificationContent({
+          eventKey: "invoice_due_date",
+          customer,
+          invoice,
+          metadata: { invoiceId: invoice.invoiceId, automation: "due_reminder", stage: "upcoming_due" }
+        });
         await notificationDispatcher.dispatchEvent({
           eventKey: "invoice_due_date",
           recipients: {
             email: customer.email,
             sms: customer.phone
           },
-          subject: `Invoice due soon ${invoice.invoiceNumber}`,
-          body: `Dear ${customer.fullName}, invoice ${invoice.invoiceNumber} of Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is due on ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "the due date"}.`,
+          subject: message?.subject || `Invoice due soon ${invoice.invoiceNumber}`,
+          body: message?.body || `Dear ${customer.fullName}, invoice ${invoice.invoiceNumber} of Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is due on ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "the due date"}.`,
           entityType: "billing_invoice",
           entityId: invoice.invoiceId,
-          metadata: { invoiceId: invoice.invoiceId, automation: "due_reminder", stage: "upcoming_due" }
+          metadata: { invoiceId: invoice.invoiceId, automation: "due_reminder", stage: "upcoming_due", ...(message?.branding || {}) }
         }).catch(() => null);
       }
       await persistCollectionEvent(customer, "lastDueReminderAt", invoice.invoiceId, now);
@@ -1374,17 +1380,23 @@ async function runRecurringBillingTasks() {
       const customer = await Customer.findOne({ customerId: invoice.customerId });
       if (customer?.phone || customer?.email) {
         if (canSendCollectionEvent(customer, "lastOverdueReminderAt", invoice.invoiceId, now)) {
+          const message = await buildBillingNotificationContent({
+            eventKey: "unpaid_invoice",
+            customer,
+            invoice,
+            metadata: { invoiceId: invoice.invoiceId, automation: "overdue_reminder", stage: "overdue" }
+          });
           await notificationDispatcher.dispatchEvent({
             eventKey: "unpaid_invoice",
             recipients: {
               email: customer.email,
               sms: customer.phone
             },
-            subject: `Invoice overdue ${invoice.invoiceNumber}`,
-            body: `Dear ${customer.fullName}, invoice ${invoice.invoiceNumber} of Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is overdue. Please clear the amount to avoid service interruption.`,
+            subject: message?.subject || `Invoice overdue ${invoice.invoiceNumber}`,
+            body: message?.body || `Dear ${customer.fullName}, invoice ${invoice.invoiceNumber} of Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is overdue. Please clear the amount to avoid service interruption.`,
             entityType: "billing_invoice",
             entityId: invoice.invoiceId,
-            metadata: { invoiceId: invoice.invoiceId, automation: "overdue_reminder", stage: "overdue" }
+            metadata: { invoiceId: invoice.invoiceId, automation: "overdue_reminder", stage: "overdue", ...(message?.branding || {}) }
           }).catch(() => null);
           await persistCollectionEvent(customer, "lastOverdueReminderAt", invoice.invoiceId, now);
         }
@@ -1408,17 +1420,24 @@ async function runRecurringBillingTasks() {
           canSendCollectionEvent(customer, "lastSuspensionWarningAt", invoice.invoiceId, now)
         ) {
           if (customer.phone || customer.email) {
+            const message = await buildBillingNotificationContent({
+              eventKey: "suspension_warning",
+              customer,
+              invoice,
+              overdueDays,
+              metadata: { invoiceId: invoice.invoiceId, automation: "suspension_warning", overdueDays }
+            });
             await notificationDispatcher.dispatchEvent({
               eventKey: "suspension_warning",
               recipients: {
                 email: customer.email,
                 sms: customer.phone
               },
-              subject: `Suspension warning for ${customer.customerId}`,
-              body: `Dear ${customer.fullName}, your invoice ${invoice.invoiceNumber} for Rs ${Number(invoice.totalAmount || 0).toFixed(2)} remains unpaid. Please pay immediately to avoid service suspension.`,
+              subject: message?.subject || `Suspension warning for ${customer.customerId}`,
+              body: message?.body || `Dear ${customer.fullName}, your invoice ${invoice.invoiceNumber} for Rs ${Number(invoice.totalAmount || 0).toFixed(2)} remains unpaid. Please pay immediately to avoid service suspension.`,
               entityType: "billing_invoice",
               entityId: invoice.invoiceId,
-              metadata: { invoiceId: invoice.invoiceId, automation: "suspension_warning", overdueDays }
+              metadata: { invoiceId: invoice.invoiceId, automation: "suspension_warning", overdueDays, ...(message?.branding || {}) }
             }).catch(() => null);
           }
           await persistCollectionEvent(customer, "lastSuspensionWarningAt", invoice.invoiceId, now, {
@@ -1436,17 +1455,23 @@ async function runRecurringBillingTasks() {
             `Auto collections suspension for overdue invoice ${invoice.invoiceNumber || invoice.invoiceId}`
           );
           if (suspended && (customer.phone || customer.email)) {
+            const message = await buildBillingNotificationContent({
+              eventKey: "account_suspension",
+              customer,
+              invoice,
+              metadata: { invoiceId: invoice.invoiceId, automation: "collections_suspend" }
+            });
             await notificationDispatcher.dispatchEvent({
               eventKey: "account_suspension",
               recipients: {
                 email: customer.email,
                 sms: customer.phone
               },
-              subject: `Service suspended for ${customer.customerId}`,
-              body: `Dear ${customer.fullName}, your service has been temporarily suspended due to overdue billing amount of Rs ${Number(invoice.totalAmount || 0).toFixed(2)}.`,
+              subject: message?.subject || `Service suspended for ${customer.customerId}`,
+              body: message?.body || `Dear ${customer.fullName}, your service has been temporarily suspended due to overdue billing amount of Rs ${Number(invoice.totalAmount || 0).toFixed(2)}.`,
               entityType: "customer",
               entityId: customer.customerId,
-              metadata: { invoiceId: invoice.invoiceId, automation: "collections_suspend" }
+              metadata: { invoiceId: invoice.invoiceId, automation: "collections_suspend", ...(message?.branding || {}) }
             }).catch(() => null);
           }
         }
@@ -1549,32 +1574,51 @@ async function runRecurringBillingTasks() {
               )
             : (await customer.save(), false);
         if ((customer.phone || customer.email) && resumed) {
+          const message = await buildBillingNotificationContent({
+            eventKey: "paid_invoice",
+            customer,
+            invoice,
+            payment,
+            metadata: {
+              invoiceId: invoice.invoiceId,
+              paymentId: payment.transactionId,
+              automation: "collections_resume",
+              serviceStatus: "active_after_resume"
+            }
+          });
           await notificationDispatcher.dispatchEvent({
             eventKey: "paid_invoice",
             recipients: {
               email: customer.email,
               sms: customer.phone
             },
-            subject: `Service resumed for ${customer.customerId}`,
-            body: `Dear ${customer.fullName}, payment of Rs ${Number(payment.amount || 0).toFixed(2)} was received and your service has been resumed.`,
+            subject: message?.subject || `Service resumed for ${customer.customerId}`,
+            body: message?.body || `Dear ${customer.fullName}, payment of Rs ${Number(payment.amount || 0).toFixed(2)} was received and your service has been resumed.`,
             entityType: "customer",
             entityId: customer.customerId,
-            metadata: { invoiceId: invoice.invoiceId, paymentId: payment.transactionId, automation: "collections_resume" }
+            metadata: { invoiceId: invoice.invoiceId, paymentId: payment.transactionId, automation: "collections_resume", serviceStatus: "active_after_resume", ...(message?.branding || {}) }
           }).catch(() => null);
         }
       }
       if ((customer?.phone || customer?.email) && !resumed) {
+        const message = await buildBillingNotificationContent({
+          eventKey: "paid_invoice",
+          customer,
+          invoice,
+          payment,
+          metadata: { invoiceId: invoice.invoiceId, paymentId: payment.transactionId }
+        });
         await notificationDispatcher.dispatchEvent({
           eventKey: "paid_invoice",
           recipients: {
             email: customer.email,
             sms: customer.phone
           },
-          subject: `Payment received for ${invoice.invoiceNumber}`,
-          body: `Dear ${customer.fullName}, payment of Rs ${Number(payment.amount || 0).toFixed(2)} has been reconciled against invoice ${invoice.invoiceNumber}.`,
+          subject: message?.subject || `Payment received for ${invoice.invoiceNumber}`,
+          body: message?.body || `Dear ${customer.fullName}, payment of Rs ${Number(payment.amount || 0).toFixed(2)} has been reconciled against invoice ${invoice.invoiceNumber}.`,
           entityType: "billing_payment",
           entityId: payment.transactionId,
-          metadata: { invoiceId: invoice.invoiceId, paymentId: payment.transactionId }
+          metadata: { invoiceId: invoice.invoiceId, paymentId: payment.transactionId, ...(message?.branding || {}) }
         }).catch(() => null);
       }
     }

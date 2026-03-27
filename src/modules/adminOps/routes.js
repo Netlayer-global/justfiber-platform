@@ -24,7 +24,7 @@ import {
   detectOntBrand
 } from "../../common/networkProvisioning.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
-import { notificationDispatcher } from "../../integrations/notificationDispatcher.js";
+import { buildBillingNotificationContent, notificationDispatcher } from "../../integrations/notificationDispatcher.js";
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { env } from "../../config/env.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
@@ -1221,14 +1221,28 @@ adminOpsRouter.post(
       throw new ApiError(404, "Customer not found");
     }
     const retryUrl = buildCustomerPortalRetryUrl(customer.customerId);
+    const message = await buildBillingNotificationContent({
+      eventKey: "payment_retry",
+      customer,
+      payment,
+      amount: payment.amount,
+      actionUrl: retryUrl,
+      metadata: {
+        customerId: customer.customerId,
+        transactionId: payment.transactionId,
+        retryUrl,
+        provider: payment.provider || "",
+        status: payment.status || ""
+      }
+    });
     await notificationDispatcher.dispatchEvent({
-      eventKey: "unpaid_invoice",
+      eventKey: "payment_retry",
       recipients: {
         email: customer.email,
         sms: customer.phone
       },
-      subject: `Retry payment for ${customer.customerId}`,
-      body: `Dear ${customer.fullName}, your payment attempt of Rs ${Number(payment.amount || 0).toFixed(2)} was not completed. ${retryUrl ? `Retry here: ${retryUrl}` : "Please open the customer app and retry the payment."}`,
+      subject: message?.subject || `Retry payment for ${customer.customerId}`,
+      body: message?.body || `Dear ${customer.fullName}, your payment attempt of Rs ${Number(payment.amount || 0).toFixed(2)} was not completed. ${retryUrl ? `Retry here: ${retryUrl}` : "Please open the customer app and retry the payment."}`,
       entityType: "payment_retry",
       entityId: payment.transactionId,
       metadata: {
@@ -1236,7 +1250,8 @@ adminOpsRouter.post(
         transactionId: payment.transactionId,
         retryUrl,
         provider: payment.provider || "",
-        status: payment.status || ""
+        status: payment.status || "",
+        ...(message?.branding || {})
       }
     });
     return ok(res, {
@@ -1348,14 +1363,25 @@ adminOpsRouter.post(
       ? `${req.protocol}://${req.get("host")}/api/v1/admin/billing/invoices/${encodeURIComponent(invoice.invoiceId)}/pdf`
       : undefined;
     const amount = Number(customer.billingSnapshot?.dueAmount || invoice?.totalAmount || 0).toFixed(2);
+    const message = await buildBillingNotificationContent({
+      eventKey: invoice?.paymentStatus === "overdue" ? "unpaid_invoice" : "invoice_due_date",
+      customer,
+      invoice,
+      actionUrl: invoiceUrl,
+      metadata: {
+        customerId: customer.customerId,
+        invoiceId: invoice?.invoiceId,
+        reminderSource: "billing_collection"
+      }
+    });
     await notificationDispatcher.dispatchEvent({
       eventKey: invoice?.paymentStatus === "overdue" ? "unpaid_invoice" : "invoice_due_date",
       recipients: {
         email: customer.email,
         sms: customer.phone
       },
-      subject: `Payment reminder for ${customer.customerId}`,
-      body: `Dear ${customer.fullName}, your pending amount is Rs ${amount}.${invoiceUrl ? ` Invoice: ${invoiceUrl}` : ""}`,
+      subject: message?.subject || `Payment reminder for ${customer.customerId}`,
+      body: message?.body || `Dear ${customer.fullName}, your pending amount is Rs ${amount}.${invoiceUrl ? ` Invoice: ${invoiceUrl}` : ""}`,
       attachments: invoice
         ? buildBillingAttachment({
             title: `Invoice ${invoice.invoiceNumber || invoice.invoiceId}`,
@@ -1368,7 +1394,8 @@ adminOpsRouter.post(
       metadata: {
         customerId: customer.customerId,
         invoiceId: invoice?.invoiceId,
-        reminderSource: "billing_collection"
+        reminderSource: "billing_collection",
+        ...(message?.branding || {})
       }
     });
     customer.billingSnapshot = {
@@ -2288,18 +2315,25 @@ adminOpsRouter.post(
       url: invoiceUrl,
       reference: invoice.invoiceNumber || invoice.invoiceId
     });
+    const message = await buildBillingNotificationContent({
+      eventKey: "billing_invoice",
+      customer,
+      invoice,
+      actionUrl: invoiceUrl,
+      metadata: { invoiceId: invoice.invoiceId, invoiceNumber: invoice.invoiceNumber, invoiceUrl, attachments }
+    });
     await notificationDispatcher.dispatchEvent({
       eventKey: "billing_invoice",
       recipients: {
         email: customer.email,
         sms: customer.phone
       },
-      subject: `Invoice ${invoice.invoiceNumber}`,
-      body: `Dear ${customer.fullName}, your invoice ${invoice.invoiceNumber} for Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is ready. View PDF: ${invoiceUrl}`,
+      subject: message?.subject || `Invoice ${invoice.invoiceNumber}`,
+      body: message?.body || `Dear ${customer.fullName}, your invoice ${invoice.invoiceNumber} for Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is ready. View PDF: ${invoiceUrl}`,
       attachments,
       entityType: "billing_invoice",
       entityId: invoice.invoiceId,
-      metadata: { invoiceId: invoice.invoiceId, invoiceNumber: invoice.invoiceNumber, invoiceUrl, attachments }
+      metadata: { invoiceId: invoice.invoiceId, invoiceNumber: invoice.invoiceNumber, invoiceUrl, attachments, ...(message?.branding || {}) }
     });
     return ok(res, { dispatched: true, invoiceId: invoice.invoiceId, invoiceUrl, attachments });
   })
@@ -2401,18 +2435,25 @@ adminOpsRouter.post(
       url: receiptUrl,
       reference: payment.reference || payment.transactionId
     });
+    const message = await buildBillingNotificationContent({
+      eventKey: "paid_invoice",
+      customer,
+      payment,
+      actionUrl: receiptUrl,
+      metadata: { transactionId: payment.transactionId, receiptUrl, attachments }
+    });
     await notificationDispatcher.dispatchEvent({
       eventKey: "paid_invoice",
       recipients: {
         email: customer.email,
         sms: customer.phone
       },
-      subject: `Payment receipt ${payment.transactionId}`,
-      body: `Dear ${customer.fullName}, we received Rs ${Number(payment.amount || 0).toFixed(2)}. Receipt: ${receiptUrl}`,
+      subject: message?.subject || `Payment receipt ${payment.transactionId}`,
+      body: message?.body || `Dear ${customer.fullName}, we received Rs ${Number(payment.amount || 0).toFixed(2)}. Receipt: ${receiptUrl}`,
       attachments,
       entityType: "billing_receipt",
       entityId: payment.transactionId,
-      metadata: { transactionId: payment.transactionId, receiptUrl, attachments }
+      metadata: { transactionId: payment.transactionId, receiptUrl, attachments, ...(message?.branding || {}) }
     });
     return ok(res, { dispatched: true, transactionId: payment.transactionId, receiptUrl, attachments });
   })
