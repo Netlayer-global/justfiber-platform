@@ -25,6 +25,8 @@ const _latestBookingDurationLabelKey = 'justfiber.latest_booking_duration_label'
 class AppState extends ChangeNotifier {
   AppState() {
     api.onUnauthorized = _refreshAccessToken;
+    loadPlans();
+    restoreSession();
   }
 
   final api = ApiClient(baseUrl: defaultApiBase);
@@ -115,11 +117,6 @@ class AppState extends ChangeNotifier {
   PlanChangeApplyResult? lastPlanChangeResult;
   bool bookingBusy = false;
   String? bookingError;
-
-  AppState() {
-    loadPlans();
-    restoreSession();
-  }
 
   void _resetCustomerState({bool preserveGuestBooking = false}) {
     final preservedBooking = preserveGuestBooking ? latestBooking : null;
