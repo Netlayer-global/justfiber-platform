@@ -103,6 +103,7 @@ export default function BillingPage() {
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
+  const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections' | 'settings'>('invoices')
   const [invoiceQuickView, setInvoiceQuickView] = useState<'all' | 'pending' | 'paid' | 'overdue' | 'activation'>('all')
   const [showInvoiceHtmlPreview, setShowInvoiceHtmlPreview] = useState(false)
   const [collectionBucket, setCollectionBucket] = useState('')
@@ -821,6 +822,16 @@ export default function BillingPage() {
     if (source === 'manual_admin') return 'bg-fuchsia-500/15 text-fuchsia-300'
     return 'bg-white/5 text-slate-300'
   }
+  const billingSectionTabs: Array<{
+    key: 'invoices' | 'payments' | 'collections' | 'settings'
+    label: string
+    hint: string
+  }> = [
+    { key: 'invoices', label: 'Invoices', hint: 'Issue, preview, and dispatch invoices' },
+    { key: 'payments', label: 'Payments', hint: 'Razorpay, reconciliation, and refunds' },
+    { key: 'collections', label: 'Collections', hint: 'Overdues, reminders, and recovery' },
+    { key: 'settings', label: 'Settings', hint: 'GST, zones, templates, and exports' },
+  ]
 
   return (
     <div className="space-y-6">
@@ -891,6 +902,27 @@ export default function BillingPage() {
       </div>
 
       <div className="card p-5">
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Billing workspace</div>
+        <div className="flex flex-wrap gap-3">
+          {billingSectionTabs.map((tab) => (
+            <button
+              key={tab.key}
+              className={`rounded-[20px] border px-4 py-3 text-left transition ${
+                billingSectionTab === tab.key
+                  ? 'border-[#8224E3] bg-[#8224E3]/15 text-white'
+                  : 'border-white/10 bg-white/5 text-slate-300'
+              }`}
+              onClick={() => setBillingSectionTab(tab.key)}
+            >
+              <div className="text-sm font-semibold">{tab.label}</div>
+              <div className="mt-1 text-xs text-inherit/70">{tab.hint}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {billingSectionTab === 'settings' ? (
+      <div className="card p-5">
         <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Export filters</div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <input
@@ -919,7 +951,9 @@ export default function BillingPage() {
           />
         </div>
       </div>
+      ) : null}
 
+      {billingSectionTab === 'invoices' ? (
       <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <form onSubmit={generateInvoice} className="card p-5 space-y-4">
           <div>
@@ -1053,7 +1087,9 @@ export default function BillingPage() {
           </div>
         </div>
       </section>
+      ) : null}
 
+      {billingSectionTab === 'invoices' ? (
       <div className="card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -1116,6 +1152,7 @@ export default function BillingPage() {
           )}
         </div>
       </div>
+      ) : null}
 
       {isLoading ? (
         <div className="card p-6 text-center">
@@ -1130,20 +1167,25 @@ export default function BillingPage() {
             <div className="card p-5"><p className="text-sm text-slate-500">GST Collected</p><p className="text-2xl font-semibold mt-2">Rs {Number(overview?.taxCollected || 0).toFixed(2)}</p></div>
           </div>
 
+          {billingSectionTab === 'invoices' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="card p-5"><p className="text-sm text-slate-500">Visible Total</p><p className="text-2xl font-semibold mt-2">Rs {invoicePulse.totalAmount.toFixed(2)}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Pending In View</p><p className="text-2xl font-semibold mt-2">Rs {invoicePulse.pendingAmount.toFixed(2)}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Activation Invoices</p><p className="text-2xl font-semibold mt-2">{invoicePulse.activationInvoices}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Zone-Routed</p><p className="text-2xl font-semibold mt-2">{invoicePulse.zoneInvoices}</p></div>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'collections' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="card p-5"><p className="text-sm text-slate-500">Active Prepaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePrepaidCustomers || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Active Postpaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePostpaidCustomers || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Promise To Pay</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.promiseToPayActive || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Suspend Ready</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.suspendReady || 0}</p></div>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'collections' ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Aging Summary</div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 p-4">
@@ -1156,14 +1198,18 @@ export default function BillingPage() {
               ))}
             </div>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'collections' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="card p-5"><p className="text-sm text-slate-500">Pending Plan Changes</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.pendingPlanChanges || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Assigned Collections</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.assignedCollections || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Follow-ups Logged</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.followUpsLogged || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Suspended Customers</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.suspendedCustomers || 0}</p></div>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Settlement Overview</div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 p-4">
@@ -1220,7 +1266,9 @@ export default function BillingPage() {
               </tbody>
             </table>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Recovery Queue</div>
             <table className="w-full">
@@ -1278,7 +1326,9 @@ export default function BillingPage() {
               </tbody>
             </table>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Failed Payment Recovery</div>
             <table className="w-full">
@@ -1345,7 +1395,9 @@ export default function BillingPage() {
               </tbody>
             </table>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Razorpay Webhook Events</div>
             <table className="w-full">
@@ -1382,7 +1434,9 @@ export default function BillingPage() {
               </tbody>
             </table>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'payments' ? (
           <form onSubmit={importCsvPayments} className="card p-5 space-y-3">
             <div className="font-semibold">Bulk Payment CSV Import</div>
             <p className="text-xs text-slate-500">Headers: transactionId,customerId,amount,reference,invoiceId,provider,status,method,paidAt</p>
@@ -1406,7 +1460,9 @@ export default function BillingPage() {
               </div>
             ) : null}
           </form>
+          ) : null}
 
+          {billingSectionTab === 'collections' ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold flex items-center justify-between gap-4">
               <div>Collections Queue</div>
@@ -1538,7 +1594,9 @@ export default function BillingPage() {
               </tbody>
             </table>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'settings' ? (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="card overflow-hidden">
               <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">State-wise GST Summary</div>
@@ -1854,7 +1912,9 @@ export default function BillingPage() {
               </table>
             </div>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Payment Reconciliation</div>
             <table className="w-full">
@@ -1923,7 +1983,9 @@ export default function BillingPage() {
               </tbody>
             </table>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Refund History</div>
             <table className="w-full">
@@ -1976,7 +2038,9 @@ export default function BillingPage() {
               </tbody>
             </table>
           </div>
+          ) : null}
 
+          {billingSectionTab === 'invoices' ? (
           <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="overflow-x-auto card">
             <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
@@ -2215,6 +2279,7 @@ export default function BillingPage() {
             )}
           </div>
           </div>
+          ) : null}
         </>
       )}
     </div>
