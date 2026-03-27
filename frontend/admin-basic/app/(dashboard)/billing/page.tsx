@@ -84,6 +84,7 @@ export default function BillingPage() {
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
+  const [showInvoiceHtmlPreview, setShowInvoiceHtmlPreview] = useState(false)
   const [collectionBucket, setCollectionBucket] = useState('')
   const [invoiceFilters, setInvoiceFilters] = useState({
     search: '',
@@ -196,6 +197,10 @@ export default function BillingPage() {
       setSelectedInvoiceId(billing[0].invoiceId)
     }
   }, [billing, selectedInvoiceId])
+
+  useEffect(() => {
+    setShowInvoiceHtmlPreview(false)
+  }, [selectedInvoiceId])
 
   async function loadBilling() {
     try {
@@ -1846,10 +1851,26 @@ export default function BillingPage() {
                   >
                     Open PDF
                   </a>
+                  <button className="btn-secondary" onClick={() => setShowInvoiceHtmlPreview((prev) => !prev)}>
+                    {showInvoiceHtmlPreview ? 'Hide live preview' : 'Show live preview'}
+                  </button>
                   <button className="btn-secondary" onClick={() => void dispatchInvoice(selectedInvoice.invoiceId)}>
                     Dispatch invoice
                   </button>
                 </div>
+
+                {showInvoiceHtmlPreview ? (
+                  <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white">
+                    <div className="border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Live invoice HTML preview
+                    </div>
+                    <iframe
+                      title={`Invoice preview ${selectedInvoice.invoiceNumber || selectedInvoice.invoiceId}`}
+                      src={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(selectedInvoice.invoiceId)}/pdf?format=html`}
+                      className="h-[720px] w-full bg-white"
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="mt-4 rounded-[24px] border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
