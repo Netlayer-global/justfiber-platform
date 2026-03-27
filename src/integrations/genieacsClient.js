@@ -414,6 +414,7 @@ export class GenieacsClient {
       normalizedPass24 &&
       normalizedPass24 === normalizedPass5;
     const values = [];
+    const wifiValues = [];
     const push = (pathOrPaths, value, valueType, transform = (input) => input) => {
       const wifiMultiPath =
         pathOrPaths === profile.ssid24Path ||
@@ -445,7 +446,11 @@ export class GenieacsClient {
       for (const path of selectedPaths) {
         if (path && value !== undefined && value !== null && value !== "") {
           const normalizedValue = transform(value);
-          values.push(valueType ? [path, normalizedValue, valueType] : [path, normalizedValue]);
+          const entry = valueType ? [path, normalizedValue, valueType] : [path, normalizedValue];
+          values.push(entry);
+          if (wifiMultiPath) {
+            wifiValues.push(entry);
+          }
         }
       }
     };
@@ -468,7 +473,16 @@ export class GenieacsClient {
     }
 
     if (values.length > 0) {
-      await this.setParameterValues(deviceId, values, { connectionRequest: true });
+      const nonWifiValues = values.filter((entry) => !wifiValues.includes(entry));
+      if (nonWifiValues.length > 0) {
+        await this.setParameterValues(deviceId, nonWifiValues, { connectionRequest: true });
+      }
+
+      if (wifiValues.length > 0) {
+        for (const entry of wifiValues) {
+          await this.setParameterValues(deviceId, [entry], { connectionRequest: true });
+        }
+      }
     }
 
     return { ok: true, deviceId, brand, configured: values.length };
