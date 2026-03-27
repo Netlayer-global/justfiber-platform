@@ -2401,6 +2401,7 @@ customerPortalRouter.post(
     });
     let syncMode = "genieacs";
     let syncWarning = null;
+    const backgroundTasks = [];
     try {
       await genieacsClient.pushAccessConfig({
         deviceId: device.deviceId,
@@ -2414,20 +2415,22 @@ customerPortalRouter.post(
         wifiPassword24: password24,
         wifiPassword5: password5
       });
-      try {
-        await syncDeviceFromGenie(device);
-        const refreshedDevice = await DeviceOperationalCache.findById(device._id);
-        if (refreshedDevice) {
-          device.wifiInfo = refreshedDevice.wifiInfo || device.wifiInfo;
-          device.wanInfo = refreshedDevice.wanInfo || device.wanInfo;
-          device.onlineStatus = refreshedDevice.onlineStatus || device.onlineStatus;
+      backgroundTasks.push((async () => {
+        try {
+          await syncDeviceFromGenie(device);
+        } catch {
+          // Background sync is best-effort.
         }
-      } catch {
-        // Fall back to local cache update below when live sync isn't available.
-      }
+      })());
       if (brand === "nokia" && (password24 || password5)) {
-        await wait(5000);
-        await genieacsClient.rebootDevice(device.deviceId);
+        backgroundTasks.push((async () => {
+          try {
+            await wait(5000);
+            await genieacsClient.rebootDevice(device.deviceId);
+          } catch {
+            // Background reboot is best-effort.
+          }
+        })());
       }
     } catch (error) {
       if (!isMissingGenieDeviceError(error)) {
@@ -2453,7 +2456,7 @@ customerPortalRouter.post(
       title: "Wi-Fi updated",
       body: `Wi-Fi updated for ${customer.customerId}.`
     });
-    return ok(res, {
+    const response = ok(res, {
       updated: true,
       requestedPayload: payload,
       applied: { ssid24, ssid5 },
@@ -2473,6 +2476,10 @@ customerPortalRouter.post(
       syncMode,
       syncWarning
     });
+    if (backgroundTasks.length > 0) {
+      Promise.allSettled(backgroundTasks).catch(() => {});
+    }
+    return response;
   })
 );
 
