@@ -324,6 +324,23 @@ export default function SettingsPage() {
     setSelectedTemplateKey(template.key)
   }
 
+  function duplicateTemplate(templateKey: string) {
+    if (!invoiceTemplate) return
+    const source = (invoiceTemplate.templates || []).find((item) => item.key === templateKey)
+    if (!source) return
+    const duplicateKey = `${source.key}_copy_${Date.now()}`
+    const duplicate = {
+      ...source,
+      key: duplicateKey,
+      templateName: `${source.templateName} Copy`,
+    }
+    setInvoiceTemplate({
+      ...invoiceTemplate,
+      templates: [...(invoiceTemplate.templates || []), duplicate],
+    })
+    setSelectedTemplateKey(duplicateKey)
+  }
+
   function updateSelectedTemplateKey(nextKey: string) {
     if (!invoiceTemplate) return
     const normalizedKey = nextKey.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_')
@@ -436,6 +453,42 @@ export default function SettingsPage() {
             {activeSection === 'invoice_template' ? (
               <div className="grid gap-4 xl:grid-cols-[1fr_0.92fr]">
                 <div className="card p-5 space-y-5">
+                  <div className="space-y-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template library</div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {(invoiceTemplate?.templates || []).map((item) => {
+                        const isSelected = item.key === selectedTemplateKey
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => setSelectedTemplateKey(item.key)}
+                            className={`rounded-[22px] border p-4 text-left transition ${
+                              isSelected
+                                ? 'border-[#8224E3]/50 bg-[#8224E3]/15'
+                                : 'border-white/10 bg-[#0a0e27] hover:border-white/20 hover:bg-white/5'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="font-semibold text-white">{item.templateName}</div>
+                                <div className="mt-1 text-xs text-slate-400">{item.key}</div>
+                              </div>
+                              {invoiceTemplate?.activeTemplate === item.key ? (
+                                <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] text-emerald-300">
+                                  Default
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="mt-3 text-xs text-slate-500">
+                              {item.companyName || 'No company name'} • {item.invoicePrefix || 'JF'}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Active template</div>
@@ -455,6 +508,7 @@ export default function SettingsPage() {
                     </label>
                     <div className="md:col-span-2 flex flex-wrap gap-3">
                       <button type="button" className="btn-secondary" onClick={addTemplate}>Add template</button>
+                      <button type="button" className="btn-secondary" onClick={() => duplicateTemplate(selectedTemplateKey)}>Duplicate selected</button>
                       <button type="button" className="btn-secondary" onClick={() => removeTemplate(selectedTemplateKey)}>Delete selected template</button>
                     </div>
                     <label className="space-y-2 md:col-span-2">
