@@ -167,6 +167,41 @@ async function request<T>(
   }
 }
 
+async function authorizedFetch(endpoint: string, options: RequestInit = {}, allowRetry = true): Promise<Response> {
+  const token = getAuthToken()
+  const headers = new Headers(options.headers)
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
+    ...options,
+    headers,
+  })
+  if (response.status === 401 && allowRetry && endpoint !== '/api/v1/admin/auth/refresh') {
+    refreshInFlight ??= refreshAdminAccessToken().finally(() => {
+      refreshInFlight = null
+    })
+    const nextToken = await refreshInFlight
+    if (nextToken) {
+      return authorizedFetch(endpoint, options, false)
+    }
+    clearAuthToken()
+    window?.location.replace('/auth/login')
+  }
+  return response
+}
+
+export async function openProtectedDocument(endpoint: string) {
+  const response = await authorizedFetch(endpoint, { method: 'GET' })
+  if (!response.ok) {
+    throw new Error(`Document request failed with ${response.status}`)
+  }
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  window.open(objectUrl, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+}
+
 function mapPlan(plan: any): Plan {
   return {
     id: plan.planCode || plan._id || '',

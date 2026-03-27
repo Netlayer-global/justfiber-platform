@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
-import { adminAPI, getApiBaseUrl } from '@/lib/api'
+import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingImportResult, BillingOverview, BillingProfile, BillingRecoveryItem, BillingRun, BillingNote, BillingPayment, RazorpayOverview, RazorpayWebhookLog, IntegrationSummary, Customer } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, ShieldCheck, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
@@ -516,6 +516,15 @@ export default function BillingPage() {
     } catch (error) {
       console.error('[v0] Failed to dispatch invoice:', error)
       toast.error('Failed to dispatch invoice')
+    }
+  }
+
+  async function openInvoicePdf(invoiceId: string) {
+    try {
+      await openProtectedDocument(`/api/v1/admin/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`)
+    } catch (error) {
+      console.error('[v0] Failed to open invoice PDF:', error)
+      toast.error('Failed to open invoice PDF')
     }
   }
 
@@ -1907,14 +1916,12 @@ export default function BillingPage() {
                     <div className="font-mono text-sm">{item.invoiceNumber || item.invoiceId}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.billCycle || '-'}</div>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <a
+                      <button
                         className="text-xs text-[#4da3ff]"
-                        href={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(item.invoiceId)}/pdf`}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => void openInvoicePdf(item.invoiceId)}
                       >
                         Open PDF
-                      </a>
+                      </button>
                       <button
                         className="text-xs text-[#4da3ff]"
                         onClick={() => void dispatchInvoice(item.invoiceId)}
@@ -2032,14 +2039,12 @@ export default function BillingPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <a
+                  <button
                     className="btn-primary"
-                    href={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(selectedInvoice.invoiceId)}/pdf`}
-                    target="_blank"
-                    rel="noreferrer"
+                    onClick={() => void openInvoicePdf(selectedInvoice.invoiceId)}
                   >
                     Open PDF
-                  </a>
+                  </button>
                   <button className="btn-secondary" onClick={() => setShowInvoiceHtmlPreview((prev) => !prev)}>
                     {showInvoiceHtmlPreview ? 'Hide live preview' : 'Show live preview'}
                   </button>
