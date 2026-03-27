@@ -8,6 +8,7 @@ class InstallerApiClient {
   InstallerApiClient({required this.baseUrl});
 
   final String baseUrl;
+  Future<String?> Function()? onUnauthorized;
 
   Uri _uri(String path) => Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
 
@@ -16,6 +17,7 @@ class InstallerApiClient {
     String method = 'GET',
     String? token,
     Map<String, dynamic>? body,
+    bool allowRetry = true,
   }) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
@@ -28,6 +30,12 @@ class InstallerApiClient {
       response = await http.get(_uri(path), headers: headers).timeout(const Duration(seconds: 20));
     }
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 401 && allowRetry && onUnauthorized != null) {
+      final refreshedToken = await onUnauthorized!.call();
+      if (refreshedToken != null && refreshedToken.isNotEmpty) {
+        return _request(path, method: method, token: refreshedToken, body: body, allowRetry: false);
+      }
+    }
     if (response.statusCode >= 400 || payload['success'] == false) {
       throw Exception(payload['error']?['message'] ?? 'Request failed');
     }
@@ -44,6 +52,18 @@ class InstallerApiClient {
       accessToken: (data['accessToken'] ?? '').toString(),
       refreshToken: (data['refreshToken'] ?? '').toString(),
     );
+  }
+
+  Future<String> refreshInstallerSession(String refreshToken) async {
+    final data = _asMap(
+      await _request(
+        '/api/v1/installer/auth/refresh',
+        method: 'POST',
+        body: {'refreshToken': refreshToken},
+        allowRetry: false,
+      ),
+    );
+    return (data['accessToken'] ?? '').toString();
   }
 
   Future<InstallerDashboard> fetchDashboard(InstallerSession session) async {

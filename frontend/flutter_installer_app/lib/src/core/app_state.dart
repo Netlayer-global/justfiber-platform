@@ -38,6 +38,7 @@ class InstallerAppState extends ChangeNotifier {
   String? selectedJobId;
 
   InstallerAppState() {
+    api.onUnauthorized = _refreshAccessToken;
     restoreSession();
   }
 
@@ -369,6 +370,30 @@ class InstallerAppState extends ChangeNotifier {
     await refresh();
     restoringSession = false;
     notifyListeners();
+  }
+
+  Future<String?> _refreshAccessToken() async {
+    final current = session;
+    if (current == null || current.refreshToken.isEmpty) {
+      return null;
+    }
+    try {
+      final nextAccessToken = await api.refreshInstallerSession(current.refreshToken);
+      if (nextAccessToken.isEmpty) {
+        return null;
+      }
+      session = InstallerSession(
+        login: current.login,
+        accessToken: nextAccessToken,
+        refreshToken: current.refreshToken,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_installerAccessTokenKey, nextAccessToken);
+      notifyListeners();
+      return nextAccessToken;
+    } catch (_) {
+      return null;
+    }
   }
 }
 
