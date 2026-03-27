@@ -12,6 +12,7 @@ import {
   LogOut,
   MapPinned,
   Router,
+  Settings,
   Ticket,
   UserRound,
   Wrench,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { href: '/installers', label: 'Installers', icon: Wrench },
   { href: '/jobs', label: 'Jobs', icon: Activity },
   { href: '/serviceability', label: 'Serviceability', icon: MapPinned },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

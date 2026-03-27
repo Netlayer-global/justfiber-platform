@@ -21,6 +21,8 @@ import type {
   BillingNote,
   BillingPayment,
   IntegrationSummary,
+  SettingsCatalogItem,
+  SettingsSection,
   BillingCollectionItem,
   BillingCollectionAgent,
   RazorpayOverview,
@@ -658,6 +660,25 @@ function mapIntegrationSummary(item: any): IntegrationSummary {
     capabilities: Array.isArray(item.capabilities) ? item.capabilities : [],
     notes: item.notes,
     lastCheckedAt: item.lastCheckedAt,
+  }
+}
+
+function mapSettingsCatalogItem(item: any): SettingsCatalogItem {
+  return {
+    section: item.section || '',
+    category: item.category || '',
+    key: item.key || '',
+    fieldsPreview: Array.isArray(item.fieldsPreview) ? item.fieldsPreview : [],
+  }
+}
+
+function mapSettingsSection<T = Record<string, any>>(item: any): SettingsSection<T> {
+  return {
+    section: item.section || '',
+    key: item.key || '',
+    value: (item.value || {}) as T,
+    version: Number(item.version || 1),
+    updatedAt: item.updatedAt || null,
   }
 }
 
@@ -1661,6 +1682,25 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapIntegrationSummary) : [],
     }
   },
+  getSettingsCatalog: async () => {
+    const res = await request<any[]>('/api/v1/admin/configs/settings/catalog')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapSettingsCatalogItem) : [],
+    }
+  },
+  getSettingsSection: async <T = Record<string, any>>(section: string) => {
+    const res = await request<any>(`/api/v1/admin/configs/settings/${section}`)
+    return {
+      ...res,
+      data: res.data ? mapSettingsSection<T>(res.data) : undefined,
+    }
+  },
+  updateSettingsSection: async <T = Record<string, any>>(section: string, value: T) =>
+    request(`/api/v1/admin/configs/settings/${section}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
   createBillingNote: async (data: {
     customerId: string
     type: 'credit' | 'debit'

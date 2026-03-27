@@ -119,6 +119,27 @@ const settingsSectionDefaults = {
       { value: 1, unit: "year" }
     ]
   },
+  invoice_template: {
+    activeTemplate: "justfiber_standard",
+    templateName: "JustFiber Standard",
+    companyName: "JustFiber Netlayer India Private Limited",
+    companyAddress: "",
+    gstNumber: "",
+    website: "justfiber.in",
+    panNumber: "",
+    phoneNumber: "",
+    supportEmail: "",
+    bankAccountNumber: "",
+    bankName: "",
+    bankIfscCode: "",
+    invoicePrefix: "JF",
+    accentColor: "#8224E3",
+    footerNote: "Thank you for choosing JustFiber.",
+    paymentInstructions: "Please pay before the due date to avoid service interruption.",
+    logoDataUrl: "",
+    signatureDataUrl: "",
+    stampDataUrl: ""
+  },
   prefix_settings: {
     invoice: { prefix: "JFB/", startDate: "2025-01-01" },
     proformaInvoice: { prefix: "JFP/", startDate: "2025-01-01" },

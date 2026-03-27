@@ -522,6 +522,21 @@ export interface IntegrationSummary {
   lastCheckedAt?: string
 }
 
+export interface SettingsCatalogItem {
+  section: string
+  category: string
+  key: string
+  fieldsPreview: string[]
+}
+
+export interface SettingsSection<T = Record<string, any>> {
+  section: string
+  key: string
+  value: T
+  version: number
+  updatedAt?: string | null
+}
+
 export interface BillingOverview {
   totalInvoices: number
   overdueInvoices: number
