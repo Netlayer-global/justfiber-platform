@@ -403,7 +403,7 @@ class BillingHistoryScreen extends StatelessWidget {
             child: billing.invoices.isEmpty
                 ? _emptyState(
                     title: 'No invoices available yet.',
-                    subtitle: 'Your generated invoices will appear here once a billing cycle is processed.',
+                    subtitle: 'Invoices appear here as soon as activation billing is generated for your connection.',
                     actionLabel: 'Refresh billing',
                     onTap: appState.refresh,
                   )

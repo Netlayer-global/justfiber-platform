@@ -4,6 +4,17 @@ import { BillingProfile } from "../models/BillingProfile.js";
 import { Customer } from "../models/Customer.js";
 import { SubscriberService } from "../models/SubscriberService.js";
 
+function resolveDurationMonths(source = {}) {
+  return Math.max(1, Number(source?.durationMonths || 1));
+}
+
+function resolveBillCycleLabel(durationMonths) {
+  if (durationMonths >= 12) return "Yearly";
+  if (durationMonths >= 6) return "Half-yearly";
+  if (durationMonths >= 3) return "Quarterly";
+  return "Monthly";
+}
+
 function buildBillCycle(date = new Date()) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
@@ -15,8 +26,21 @@ function addDays(date, days) {
 }
 
 function deriveAmount(service) {
+  const durationMonths = resolveDurationMonths(service?.metadata);
+  const recurringAmount = Number(service?.metadata?.recurringAmount || 0);
+  const yearlyPrice = Number(service?.metadata?.yearlyPrice || 0);
+  const halfYearlyPrice = Number(service?.metadata?.halfYearlyPrice || 0);
+  const quarterlyPrice = Number(service?.metadata?.quarterlyPrice || 0);
   const monthlyPrice = Number(service?.metadata?.monthlyPrice || service?.metadata?.planAmount || 0);
-  return Number.isFinite(monthlyPrice) && monthlyPrice > 0 ? monthlyPrice : 0;
+  const resolved =
+    durationMonths >= 12
+      ? yearlyPrice || recurringAmount || monthlyPrice * 12
+      : durationMonths >= 6
+        ? halfYearlyPrice || recurringAmount || monthlyPrice * 6
+        : durationMonths >= 3
+          ? quarterlyPrice || recurringAmount || monthlyPrice * 3
+          : monthlyPrice || recurringAmount;
+  return Number.isFinite(resolved) && resolved > 0 ? resolved : 0;
 }
 
 function normalizeStateCode(value) {
@@ -222,12 +246,15 @@ export class InternalBillingEngine {
     const billingProfile = service.billingProfileCode
       ? await BillingProfile.findOne({ code: service.billingProfileCode, active: true }).lean()
       : await BillingProfile.findOne({ active: true }).sort({ createdAt: 1 }).lean();
+    const durationMonths = resolveDurationMonths(options.durationMonths ? { durationMonths: options.durationMonths } : service?.metadata);
     const totalAmount = Number(options.totalAmount ?? deriveAmount(service));
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
       return { skipped: true, reason: "missing_amount", serviceId: service.serviceId };
     }
 
     const billCycle = options.billCycle || buildBillCycle(generatedAt);
+    const sourceEvent = String(options.sourceEvent || "").trim();
+    const activationJobId = String(options.activationJobId || "").trim();
     const existing = await BillingInvoice.findOne({ customerId: service.customerId, billCycle }).lean();
     if (existing) {
       return { skipped: true, reason: "invoice_exists", invoiceId: existing.invoiceId, serviceId: service.serviceId };
@@ -262,16 +289,18 @@ export class InternalBillingEngine {
       currency: billingProfile?.currency || "INR",
       status: "generated",
       paymentStatus: options.paymentStatus || "pending",
-      source: "internal_platform",
+      source: options.source || "internal_platform",
       metadata: {
         accessProfileCode: service.accessProfileCode,
         billingProfileCode: service.billingProfileCode,
         bngNodeCode: service.bngNodeCode,
-        durationMonths: Number(options.durationMonths || 1),
-        billCycleLabel: options.billCycleLabel || billCycle,
+        durationMonths,
+        billCycleLabel: options.billCycleLabel || resolveBillCycleLabel(durationMonths),
         billMode,
         billingZoneCode: customer?.billingZoneCode || zoneMapping?.zoneCode || "",
-        billingZoneName: customer?.billingZoneName || zoneMapping?.zoneName || ""
+        billingZoneName: customer?.billingZoneName || zoneMapping?.zoneName || "",
+        sourceEvent,
+        activationJobId
       }
     });
 
@@ -283,7 +312,7 @@ export class InternalBillingEngine {
       dueDate: invoice.dueDate,
       paymentStatus: invoice.paymentStatus,
       billCycle,
-      billCycleLabel: options.billCycleLabel || billCycle,
+      billCycleLabel: options.billCycleLabel || resolveBillCycleLabel(durationMonths),
       invoiceNumber: invoice.invoiceNumber,
       billMode,
       billingStateCode: amounts.billingStateCode,

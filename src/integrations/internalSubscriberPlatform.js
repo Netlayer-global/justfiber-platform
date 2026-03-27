@@ -76,6 +76,19 @@ function resolveBillingCycleLabel(durationMonths) {
   return "Monthly";
 }
 
+function resolveRecurringAmount(source = {}) {
+  const durationMonths = resolveDurationMonths(source);
+  const recurringAmount = Number(source?.recurringAmount || 0);
+  const yearlyPrice = Number(source?.yearlyPrice || 0);
+  const halfYearlyPrice = Number(source?.halfYearlyPrice || 0);
+  const quarterlyPrice = Number(source?.quarterlyPrice || 0);
+  const monthlyPrice = Number(source?.monthlyPrice || 0);
+  if (durationMonths >= 12) return yearlyPrice || recurringAmount || monthlyPrice * 12 || 0;
+  if (durationMonths >= 6) return halfYearlyPrice || recurringAmount || monthlyPrice * 6 || 0;
+  if (durationMonths >= 3) return quarterlyPrice || recurringAmount || monthlyPrice * 3 || 0;
+  return monthlyPrice || recurringAmount || 0;
+}
+
 async function pickAccessProfile(plan) {
   if (!plan) {
     return AccessProfile.findOne({ active: true }).sort({ downMbps: 1, createdAt: 1 }).lean();
@@ -465,6 +478,64 @@ export class InternalSubscriberPlatform {
     };
 
     return { customer, booking, identifiers };
+  }
+
+  async ensureInstallerCompletionInvoice(installerJob, options = {}) {
+    const booking =
+      (await ConnectionBooking.findOne({ bookingNumber: installerJob.customerId }).lean()) ||
+      (await ConnectionBooking.findOne({ bookingNumber: installerJob.activation?.bookingNumber }).lean());
+    const customerId = installerJob.customerId || booking?.assignment?.provisionedIds?.customerId;
+    const serviceId = installerJob.serviceId || booking?.assignment?.provisionedIds?.serviceId;
+    if (!customerId || !serviceId) {
+      return { skipped: true, reason: "missing_identifiers" };
+    }
+
+    const subscriberService = await SubscriberService.findOne({ serviceId }).lean();
+    if (!subscriberService) {
+      return { skipped: true, reason: "missing_service", serviceId };
+    }
+
+    const snapshot = booking?.selectedPlan || installerJob.customerSnapshot || {};
+    const durationMonths = resolveDurationMonths(snapshot);
+    const totalAmount = Number(options.totalAmount ?? resolveRecurringAmount(snapshot));
+    if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+      return { skipped: true, reason: "missing_amount", serviceId };
+    }
+
+    const generatedAt = options.generatedAt ? new Date(options.generatedAt) : installerJob.completedAt || new Date();
+    const dueDate = options.dueDate
+      ? new Date(options.dueDate)
+      : installerJob.completedAt
+        ? addMonths(installerJob.completedAt, durationMonths)
+        : addMonths(new Date(), durationMonths);
+    const paymentStatus = booking?.payment?.status === "paid" ? "paid" : options.paymentStatus || "pending";
+    const invoiceResult = await internalBillingEngine.generateInvoiceForService(subscriberService, {
+      generatedAt,
+      dueDate,
+      totalAmount,
+      durationMonths,
+      billCycle: buildBillCycle(generatedAt),
+      billCycleLabel: resolveBillingCycleLabel(durationMonths),
+      paymentStatus,
+      source: "installer_activation",
+      sourceEvent: "installer_completion",
+      activationJobId: installerJob._id?.toString?.() || String(installerJob._id || "")
+    });
+
+    if (!invoiceResult.skipped && invoiceResult.invoice) {
+      await InstallerJob.updateOne(
+        { _id: installerJob._id },
+        {
+          $set: {
+            "activation.invoiceId": invoiceResult.invoice.invoiceId,
+            "activation.invoiceNumber": invoiceResult.invoice.invoiceNumber,
+            "activation.invoiceGeneratedAt": invoiceResult.invoice.generatedAt || new Date()
+          }
+        }
+      );
+    }
+
+    return invoiceResult;
   }
 }
 

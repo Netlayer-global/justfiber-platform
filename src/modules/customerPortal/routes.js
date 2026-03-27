@@ -2225,7 +2225,11 @@ customerPortalRouter.get(
       summary: {
         currentPlan: customer.planName,
         dueDate: customer.expiryAt,
-        billCycle: "Monthly",
+        billCycle:
+          customer.invoiceSummary?.billCycle ||
+          customer.billingSnapshot?.billCycle ||
+          invoices[0]?.metadata?.billCycleLabel ||
+          "Monthly",
         billMode: customer.billingSnapshot?.billMode === "postpaid" ? "Postpaid" : "Prepaid",
         generatedDate: customer.updatedAt,
         amount: customer.billingSnapshot?.lastInvoiceAmount || 0,

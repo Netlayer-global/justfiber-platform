@@ -41,6 +41,7 @@ import { notificationDispatcher } from "../../integrations/notificationDispatche
 import { renderInstallerOtpSms } from "../../common/installerMessaging.js";
 import { setInstallerDemoOtp } from "../../common/installerOtpStore.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
+import { internalSubscriberPlatform } from "../../integrations/internalSubscriberPlatform.js";
 import { summarizeGenieDevice } from "../../common/deviceOperationalSync.js";
 
 export const installerAppRouter = Router();
@@ -948,9 +949,32 @@ installerAppRouter.post(
       Customer.findOne({ customerId: job.customerId }).lean(),
       SubscriberService.findOne({ serviceId: job.serviceId }).lean()
     ]);
+    const activationInvoice = await internalSubscriberPlatform.ensureInstallerCompletionInvoice(job, {
+      generatedAt: job.completedAt || new Date()
+    });
     return ok(res, {
       status: job.status,
       completedAt: job.completedAt,
+      activationInvoice:
+        activationInvoice?.skipped && activationInvoice?.invoiceId
+          ? {
+              status: "existing",
+              invoiceId: activationInvoice.invoiceId
+            }
+          : activationInvoice?.skipped
+            ? {
+                status: "skipped",
+                reason: activationInvoice.reason || "unknown"
+              }
+            : activationInvoice?.invoice
+              ? {
+                  status: "generated",
+                  invoiceId: activationInvoice.invoice.invoiceId,
+                  invoiceNumber: activationInvoice.invoice.invoiceNumber,
+                  billCycle: activationInvoice.invoice.metadata?.billCycleLabel || activationInvoice.invoice.billCycle || "",
+                  totalAmount: activationInvoice.invoice.totalAmount || 0
+                }
+              : null,
       customer: customer
         ? {
             customerId: customer.customerId,
