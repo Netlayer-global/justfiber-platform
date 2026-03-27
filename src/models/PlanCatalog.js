@@ -24,6 +24,14 @@ const planCatalogSchema = new mongoose.Schema(
     taxIncluded: Boolean,
     gstRate: Number,
     pricesExcludeGst: { type: Boolean, default: false },
+    billingBreakup: {
+      internetLabel: String,
+      platformLabel: String,
+      monthlyPlatformFee: Number,
+      quarterlyPlatformFee: Number,
+      halfYearlyPlatformFee: Number,
+      yearlyPlatformFee: Number
+    },
     features: mongoose.Schema.Types.Mixed,
     tags: { type: [String], default: [] },
     staticBenefits: { type: [String], default: [] },

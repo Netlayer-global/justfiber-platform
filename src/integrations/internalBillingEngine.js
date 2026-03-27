@@ -49,6 +49,64 @@ function deriveAmount(service) {
   return Number.isFinite(resolved) && resolved > 0 ? resolved : 0;
 }
 
+function resolvePlatformFeeForDuration(source = {}, durationMonths = 1) {
+  const breakup = source?.billingBreakup || source?.metadata?.billingBreakup || {};
+  const monthly = Number(breakup?.monthlyPlatformFee || 0);
+  const quarterly = Number(breakup?.quarterlyPlatformFee || 0);
+  const halfYearly = Number(breakup?.halfYearlyPlatformFee || 0);
+  const yearly = Number(breakup?.yearlyPlatformFee || 0);
+  const resolved =
+    durationMonths >= 12
+      ? yearly || monthly * 12
+      : durationMonths >= 6
+        ? halfYearly || monthly * 6
+        : durationMonths >= 3
+          ? quarterly || monthly * 3
+          : monthly;
+  return Number.isFinite(resolved) && resolved > 0 ? resolved : 0;
+}
+
+function buildInvoiceLineItems(service, totalAmount, durationMonths, billCycleLabel = "") {
+  const safeTotal = Number(totalAmount || 0);
+  if (!Number.isFinite(safeTotal) || safeTotal <= 0) {
+    return [];
+  }
+  const breakup = service?.billingBreakup || service?.metadata?.billingBreakup || {};
+  const internetLabel = String(breakup?.internetLabel || "Internet service charge").trim() || "Internet service charge";
+  const platformLabel = String(breakup?.platformLabel || "Platform fee").trim() || "Platform fee";
+  const platformFee = Math.min(safeTotal, resolvePlatformFeeForDuration(service, durationMonths));
+  const internetCharge = Number((safeTotal - platformFee).toFixed(2));
+  const items = [];
+  if (internetCharge > 0) {
+    items.push({
+      code: "internet_service",
+      description: `${internetLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
+      quantity: 1,
+      unitAmount: internetCharge,
+      amount: internetCharge
+    });
+  }
+  if (platformFee > 0) {
+    items.push({
+      code: "platform_fee",
+      description: platformLabel,
+      quantity: 1,
+      unitAmount: Number(platformFee.toFixed(2)),
+      amount: Number(platformFee.toFixed(2))
+    });
+  }
+  if (!items.length) {
+    items.push({
+      code: "service_charge",
+      description: "Broadband service charge",
+      quantity: 1,
+      unitAmount: safeTotal,
+      amount: safeTotal
+    });
+  }
+  return items;
+}
+
 function normalizeStateCode(value) {
   return String(value || "").trim().toUpperCase();
 }
@@ -317,6 +375,7 @@ export class InternalBillingEngine {
       billingProfile?.taxMode === "india_gst"
         ? buildGstAmounts(totalAmount, billingProfile, customer)
         : buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
+    const lineItems = buildInvoiceLineItems(service, totalAmount, durationMonths, options.billCycleLabel || resolveBillCycleLabel(durationMonths));
     const invoiceNumber = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle });
     const invoice = await BillingInvoice.create({
       invoiceId: `INV-${service.customerId}-${billCycle}`,
@@ -335,6 +394,7 @@ export class InternalBillingEngine {
       placeOfSupply: amounts.placeOfSupply,
       gstNumber: amounts.gstNumber,
       taxBreakdown: amounts.taxBreakdown || [],
+      lineItems,
       currency: billingProfile?.currency || "INR",
       status: "generated",
       paymentStatus: options.paymentStatus || "pending",

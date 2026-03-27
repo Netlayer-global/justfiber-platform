@@ -89,6 +89,18 @@ function resolveRecurringAmount(source = {}) {
   return monthlyPrice || recurringAmount || 0;
 }
 
+function normalizeBillingBreakup(plan = {}) {
+  const breakup = plan?.billingBreakup || {};
+  return {
+    internetLabel: breakup.internetLabel || "Internet service charge",
+    platformLabel: breakup.platformLabel || "Platform fee",
+    monthlyPlatformFee: Number(breakup.monthlyPlatformFee || 0),
+    quarterlyPlatformFee: Number(breakup.quarterlyPlatformFee || 0),
+    halfYearlyPlatformFee: Number(breakup.halfYearlyPlatformFee || 0),
+    yearlyPlatformFee: Number(breakup.yearlyPlatformFee || 0)
+  };
+}
+
 async function pickAccessProfile(plan) {
   if (!plan) {
     return AccessProfile.findOne({ active: true }).sort({ downMbps: 1, createdAt: 1 }).lean();
@@ -279,7 +291,13 @@ export class InternalSubscriberPlatform {
             installerJobId: jobRecord._id.toString(),
             durationMonths,
             nextBillingDate: serviceExpiryAt,
-            networkProfile
+            networkProfile,
+            monthlyPrice: Number(plan?.monthlyPrice || booking.selectedPlan?.monthlyPrice || 0),
+            quarterlyPrice: Number(plan?.quarterlyPrice || booking.selectedPlan?.quarterlyPrice || 0),
+            halfYearlyPrice: Number(plan?.halfYearlyPrice || booking.selectedPlan?.halfYearlyPrice || 0),
+            yearlyPrice: Number(plan?.yearlyPrice || booking.selectedPlan?.yearlyPrice || 0),
+            recurringAmount: resolveRecurringAmount(plan || booking.selectedPlan || {}),
+            billingBreakup: normalizeBillingBreakup(plan || booking.selectedPlan || {})
           }
         }
       },
@@ -415,7 +433,13 @@ export class InternalSubscriberPlatform {
             billMode,
             durationMonths,
             nextBillingDate: serviceExpiryAt,
-            networkProfile
+            networkProfile,
+            monthlyPrice: Number(booking?.selectedPlan?.monthlyPrice || installerJob.customerSnapshot?.monthlyPrice || 0),
+            quarterlyPrice: Number(booking?.selectedPlan?.quarterlyPrice || installerJob.customerSnapshot?.quarterlyPrice || 0),
+            halfYearlyPrice: Number(booking?.selectedPlan?.halfYearlyPrice || installerJob.customerSnapshot?.halfYearlyPrice || 0),
+            yearlyPrice: Number(booking?.selectedPlan?.yearlyPrice || installerJob.customerSnapshot?.yearlyPrice || 0),
+            recurringAmount: resolveRecurringAmount(booking?.selectedPlan || installerJob.customerSnapshot || {}),
+            billingBreakup: normalizeBillingBreakup(booking?.selectedPlan || installerJob.customerSnapshot || {})
           }
         }
       }

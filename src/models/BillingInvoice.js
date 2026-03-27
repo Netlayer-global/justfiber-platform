@@ -30,6 +30,21 @@ const billingInvoiceSchema = new mongoose.Schema(
       ],
       default: []
     },
+    lineItems: {
+      type: [
+        new mongoose.Schema(
+          {
+            code: String,
+            description: String,
+            quantity: { type: Number, default: 1 },
+            unitAmount: Number,
+            amount: Number
+          },
+          { _id: false }
+        )
+      ],
+      default: []
+    },
     currency: { type: String, default: "INR" },
     status: { type: String, default: "generated", index: true },
     paymentStatus: { type: String, default: "pending", index: true },

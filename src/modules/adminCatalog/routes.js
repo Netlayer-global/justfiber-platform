@@ -63,6 +63,14 @@ const planSchema = z.object({
   taxIncluded: z.boolean().optional(),
   gstRate: z.number().optional(),
   pricesExcludeGst: z.boolean().optional(),
+  billingBreakup: z.object({
+    internetLabel: z.string().optional(),
+    platformLabel: z.string().optional(),
+    monthlyPlatformFee: z.number().optional(),
+    quarterlyPlatformFee: z.number().optional(),
+    halfYearlyPlatformFee: z.number().optional(),
+    yearlyPlatformFee: z.number().optional()
+  }).optional(),
   features: z.any().optional(),
   tags: z.array(z.string()).optional(),
   staticBenefits: z.array(z.string()).optional(),

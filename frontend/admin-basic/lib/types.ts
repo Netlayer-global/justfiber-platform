@@ -39,6 +39,14 @@ export interface Plan {
   taxIncluded?: boolean
   gstRate?: number
   pricesExcludeGst?: boolean
+  billingBreakup?: {
+    internetLabel?: string
+    platformLabel?: string
+    monthlyPlatformFee?: number
+    quarterlyPlatformFee?: number
+    halfYearlyPlatformFee?: number
+    yearlyPlatformFee?: number
+  }
   tags?: string[]
   staticBenefits?: string[]
   features?: string[]

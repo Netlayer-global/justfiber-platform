@@ -44,6 +44,12 @@ type PlanFormState = {
   taxIncluded: boolean
   gstRate: string
   pricesExcludeGst: boolean
+  internetLabel: string
+  platformLabel: string
+  monthlyPlatformFee: string
+  quarterlyPlatformFee: string
+  halfYearlyPlatformFee: string
+  yearlyPlatformFee: string
   status: 'active' | 'inactive'
   tags: string
   staticBenefits: string
@@ -101,6 +107,12 @@ const initialForm: PlanFormState = {
   taxIncluded: true,
   gstRate: '18',
   pricesExcludeGst: false,
+  internetLabel: 'Internet service charge',
+  platformLabel: 'Platform fee',
+  monthlyPlatformFee: '',
+  quarterlyPlatformFee: '',
+  halfYearlyPlatformFee: '',
+  yearlyPlatformFee: '',
   status: 'inactive',
   tags: '',
   staticBenefits: '',
@@ -221,6 +233,12 @@ function toForm(plan?: Plan | null): PlanFormState {
     taxIncluded: Boolean(plan.taxIncluded),
     gstRate: String(plan.gstRate || 18),
     pricesExcludeGst: Boolean(plan.pricesExcludeGst),
+    internetLabel: plan.billingBreakup?.internetLabel || 'Internet service charge',
+    platformLabel: plan.billingBreakup?.platformLabel || 'Platform fee',
+    monthlyPlatformFee: String(plan.billingBreakup?.monthlyPlatformFee || ''),
+    quarterlyPlatformFee: String(plan.billingBreakup?.quarterlyPlatformFee || ''),
+    halfYearlyPlatformFee: String(plan.billingBreakup?.halfYearlyPlatformFee || ''),
+    yearlyPlatformFee: String(plan.billingBreakup?.yearlyPlatformFee || ''),
     status: plan.status,
     tags: (plan.tags || []).join(', '),
     staticBenefits: (plan.staticBenefits || []).join(', '),
@@ -374,6 +392,14 @@ export default function PlansPage() {
       taxIncluded: form.taxIncluded,
       gstRate: Number(form.gstRate || 0),
       pricesExcludeGst: form.pricesExcludeGst,
+      billingBreakup: {
+        internetLabel: form.internetLabel.trim() || 'Internet service charge',
+        platformLabel: form.platformLabel.trim() || 'Platform fee',
+        monthlyPlatformFee: Number(form.monthlyPlatformFee || 0),
+        quarterlyPlatformFee: Number(form.quarterlyPlatformFee || 0),
+        halfYearlyPlatformFee: Number(form.halfYearlyPlatformFee || 0),
+        yearlyPlatformFee: Number(form.yearlyPlatformFee || 0),
+      },
       status: form.status,
       tags: splitCsv(form.tags),
       staticBenefits: splitCsv(form.staticBenefits),
@@ -675,6 +701,23 @@ export default function PlansPage() {
               <input type="checkbox" checked={form.recommended} onChange={(e) => setForm({ ...form, recommended: e.target.checked })} />
               Mark as recommended lane
             </label>
+          </div>
+
+          <div className="rounded-[24px] border border-white/10 bg-white/5 p-4 space-y-4">
+            <div>
+              <div className="text-sm font-semibold text-white">Invoice breakup</div>
+              <div className="mt-1 text-sm text-white/55">
+                Jio-style split ke liye total plan price me se platform fee alag dikhegi, baaki amount internet service charge me jayega.
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <input className="input" placeholder="Internet line label" value={form.internetLabel} onChange={(e) => setForm({ ...form, internetLabel: e.target.value })} />
+              <input className="input" placeholder="Platform line label" value={form.platformLabel} onChange={(e) => setForm({ ...form, platformLabel: e.target.value })} />
+              <input className="input" placeholder="Monthly platform fee" type="number" value={form.monthlyPlatformFee} onChange={(e) => setForm({ ...form, monthlyPlatformFee: e.target.value })} />
+              <input className="input" placeholder="Quarterly platform fee" type="number" value={form.quarterlyPlatformFee} onChange={(e) => setForm({ ...form, quarterlyPlatformFee: e.target.value })} />
+              <input className="input" placeholder="Half-yearly platform fee" type="number" value={form.halfYearlyPlatformFee} onChange={(e) => setForm({ ...form, halfYearlyPlatformFee: e.target.value })} />
+              <input className="input" placeholder="Yearly platform fee" type="number" value={form.yearlyPlatformFee} onChange={(e) => setForm({ ...form, yearlyPlatformFee: e.target.value })} />
+            </div>
           </div>
 
           <input className="input" placeholder="Spotlight label (Best Seller, Gamer Pick, OTT Plus)" value={form.spotlightLabel} onChange={(e) => setForm({ ...form, spotlightLabel: e.target.value })} />

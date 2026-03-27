@@ -221,6 +221,13 @@ function pickBranding(profile, templateSettings = {}) {
 }
 
 function buildInvoiceHtml(invoice, customer, branding) {
+  const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
+  const lineRows = (invoice.lineItems || [])
+    .map(
+      (item) =>
+        `<tr><td style="padding:8px;border:1px solid #ccc;">${item.description || item.code || "Charge"}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(item.amount || 0).toFixed(2)}</td></tr>`
+    )
+    .join("");
   const taxRows = (invoice.taxBreakdown || [])
     .map(
       (item) =>
@@ -245,7 +252,8 @@ function buildInvoiceHtml(invoice, customer, branding) {
     <p>Bill Cycle: ${invoice.billCycle || "-"}</p>
     <p>Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</p>
     <table style="border-collapse:collapse;width:420px;margin-top:16px">
-      <tr><td style="padding:8px;border:1px solid #ccc;">Taxable Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(invoice.amount || 0).toFixed(2)}</td></tr>
+      ${lineRows}
+      ${hasLineItems ? "" : `<tr><td style="padding:8px;border:1px solid #ccc;">Taxable Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(invoice.amount || 0).toFixed(2)}</td></tr>`}
       ${taxRows}
       <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
     </table>
@@ -386,6 +394,7 @@ function drawPdfFooter(doc, branding, generatedText) {
 
 function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   const branding = pickBranding(profile, templateSettings);
+  const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
   let y = drawKeyValueGrid(doc, 152, [
@@ -403,7 +412,11 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     doc,
     y,
     [
-      { label: "Taxable Amount", amount: Number(invoice.amount || 0) },
+      ...((invoice.lineItems || []).map((item) => ({
+        label: item.description || item.code || "Charge",
+        amount: Number(item.amount || 0)
+      }))),
+      ...(hasLineItems ? [] : [{ label: "Taxable Amount", amount: Number(invoice.amount || 0) }]),
       ...(invoice.taxBreakdown || []).map((part) => ({
         label: `${part.label} (${part.rate || 0}%)`,
         amount: Number(part.amount || 0)
