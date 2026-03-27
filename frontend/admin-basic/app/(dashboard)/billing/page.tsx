@@ -1055,7 +1055,7 @@ export default function BillingPage() {
         </div>
       ) : (
         <>
-          {billingSectionTab === 'collections' ? (
+          {false ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="card p-5"><p className="text-sm text-slate-500">Active Prepaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePrepaidCustomers || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Active Postpaid</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.activePostpaidCustomers || 0}</p></div>
@@ -1064,7 +1064,7 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'collections' ? (
+          {false ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Aging Summary</div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 p-4">
@@ -1079,7 +1079,7 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'collections' ? (
+          {false ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="card p-5"><p className="text-sm text-slate-500">Pending Plan Changes</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.pendingPlanChanges || 0}</p></div>
             <div className="card p-5"><p className="text-sm text-slate-500">Assigned Collections</p><p className="text-2xl font-semibold mt-2">{overview?.collectionStats?.assignedCollections || 0}</p></div>
@@ -1341,7 +1341,7 @@ export default function BillingPage() {
           </form>
           ) : null}
 
-          {billingSectionTab === 'collections' ? (
+          {false ? (
           <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold flex items-center justify-between gap-4">
               <div>Collections Queue</div>
