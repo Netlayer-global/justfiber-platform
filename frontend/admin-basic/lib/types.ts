@@ -499,6 +499,7 @@ export interface BillingData {
   generatedAt?: string
   paymentStatus?: string
   source?: string
+  sourceLabel?: string
   billingStateCode?: string
   billingStateName?: string
   billingZoneCode?: string

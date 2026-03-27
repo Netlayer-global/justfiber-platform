@@ -1510,11 +1510,22 @@ adminOpsRouter.get(
     ]);
     const decoratedItems = items.map((item) => {
       const selection = selectInvoiceTemplateSettings(templateSettings, item, null, profile);
+      const sourceLabel =
+        item.source === "installer_activation"
+          ? "Installer activation"
+          : item.source === "internal_platform"
+            ? "Billing cycle"
+            : item.source === "manual_admin"
+              ? "Manual admin"
+              : item.source === "post_payment_activation"
+                ? "Post-payment activation"
+                : item.source || "Internal";
       return {
         ...item,
         billingZoneCode: item?.metadata?.billingZoneCode || item?.billingZoneCode || selection.billingZoneCode || "",
         appliedTemplateKey: selection.templateKey || "",
         appliedTemplateName: selection.templateName || "",
+        sourceLabel,
       };
     });
     return ok(res, decoratedItems, { page, limit, total });

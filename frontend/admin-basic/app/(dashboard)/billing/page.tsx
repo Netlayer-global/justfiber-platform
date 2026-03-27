@@ -734,6 +734,12 @@ export default function BillingPage() {
     if (status === 'overdue') return 'bg-rose-500/15 text-rose-300'
     return 'bg-slate-500/15 text-slate-300'
   }
+  const invoiceSourceTone = (source?: string) => {
+    if (source === 'installer_activation') return 'bg-cyan-500/15 text-cyan-300'
+    if (source === 'post_payment_activation') return 'bg-sky-500/15 text-sky-300'
+    if (source === 'manual_admin') return 'bg-fuchsia-500/15 text-fuchsia-300'
+    return 'bg-white/5 text-slate-300'
+  }
 
   return (
     <div className="space-y-6">
@@ -1920,8 +1926,8 @@ export default function BillingPage() {
                   <td className="table-cell">
                     <div className="font-medium text-slate-100">{item.customerId}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.serviceId || 'No service linked'}</div>
-                    <div className="mt-2 inline-flex rounded-full bg-white/5 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-300">
-                      {item.source || 'internal'}
+                    <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] uppercase tracking-[0.18em] ${invoiceSourceTone(item.source)}`}>
+                      {item.sourceLabel || item.source || 'Internal'}
                     </div>
                   </td>
                   <td className="table-cell">
@@ -2021,7 +2027,7 @@ export default function BillingPage() {
                   <div className="mt-3 space-y-2 text-sm text-slate-300">
                     <div>Generated: {selectedInvoice.generatedAt ? new Date(selectedInvoice.generatedAt).toLocaleString() : '-'}</div>
                     <div>Due: {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : '-'}</div>
-                    <div>Source: {selectedInvoice.source || 'internal'}</div>
+                    <div>Source: {selectedInvoice.sourceLabel || selectedInvoice.source || 'Internal'}</div>
                   </div>
                 </div>
 

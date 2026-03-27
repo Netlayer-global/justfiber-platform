@@ -952,6 +952,48 @@ installerAppRouter.post(
     const activationInvoice = await internalSubscriberPlatform.ensureInstallerCompletionInvoice(job, {
       generatedAt: job.completedAt || new Date()
     });
+    if (activationInvoice?.invoice) {
+      const invoiceUrl = `${req.protocol}://${req.get("host")}/api/v1/customer/billing/invoices/${encodeURIComponent(activationInvoice.invoice.invoiceId)}/pdf`;
+      const attachments = [
+        {
+          title: `Invoice ${activationInvoice.invoice.invoiceNumber || activationInvoice.invoice.invoiceId}`,
+          url: invoiceUrl,
+          reference: activationInvoice.invoice.invoiceNumber || activationInvoice.invoice.invoiceId
+        }
+      ];
+      if (booking?.customerUserId) {
+        await CustomerNotification.create({
+          customerUserId: booking.customerUserId,
+          type: "billing_invoice",
+          title: "Activation invoice ready",
+          body: `${activationInvoice.invoice.invoiceNumber || "Your invoice"} has been generated for ${job.customerSnapshot?.planName || "your activated connection"}.`,
+          payload: {
+            invoiceId: activationInvoice.invoice.invoiceId,
+            invoiceNumber: activationInvoice.invoice.invoiceNumber,
+            pdfUrl: invoiceUrl,
+            totalAmount: activationInvoice.invoice.totalAmount || 0
+          }
+        });
+      }
+      await notificationDispatcher.dispatchEvent({
+        eventKey: "billing_invoice",
+        recipients: {
+          email: customer?.email,
+          sms: customer?.phone
+        },
+        subject: `Invoice ${activationInvoice.invoice.invoiceNumber || activationInvoice.invoice.invoiceId}`,
+        body: `Dear ${customer?.fullName || "Customer"}, your activation invoice ${activationInvoice.invoice.invoiceNumber || activationInvoice.invoice.invoiceId} for Rs ${Number(activationInvoice.invoice.totalAmount || 0).toFixed(2)} is ready. View PDF: ${invoiceUrl}`,
+        attachments,
+        entityType: "billing_invoice",
+        entityId: activationInvoice.invoice.invoiceId,
+        metadata: {
+          invoiceId: activationInvoice.invoice.invoiceId,
+          invoiceNumber: activationInvoice.invoice.invoiceNumber,
+          invoiceUrl,
+          source: "installer_completion"
+        }
+      });
+    }
     return ok(res, {
       status: job.status,
       completedAt: job.completedAt,
@@ -972,7 +1014,8 @@ installerAppRouter.post(
                   invoiceId: activationInvoice.invoice.invoiceId,
                   invoiceNumber: activationInvoice.invoice.invoiceNumber,
                   billCycle: activationInvoice.invoice.metadata?.billCycleLabel || activationInvoice.invoice.billCycle || "",
-                  totalAmount: activationInvoice.invoice.totalAmount || 0
+                  totalAmount: activationInvoice.invoice.totalAmount || 0,
+                  pdfUrl: `/api/v1/customer/billing/invoices/${encodeURIComponent(activationInvoice.invoice.invoiceId)}/pdf`
                 }
               : null,
       customer: customer
