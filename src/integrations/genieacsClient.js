@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { resolveProvisioningProfile } from "../common/networkProvisioning.js";
+import { buildNokiaEnablePaths, isUnifiedNokiaWifiRequest } from "../common/nokiaWifi.js";
 
 const allowedPresets = new Set([
   "SERVICE_PREPARE",
@@ -386,6 +387,7 @@ export class GenieacsClient {
     const enableValue = !paused;
     const dynamicEnablePaths = discoverDynamicConfigPaths(liveSummary, "wifiEnable");
     const fallbackEnablePaths = [
+      ...(String(brand || "").toLowerCase() === "nokia" ? buildNokiaEnablePaths() : []),
       ...(profile.ssid24Path || []).map((path) => String(path).replace(/\.SSID$/i, ".Enable")),
       ...(profile.ssid5Path || []).map((path) => String(path).replace(/\.SSID$/i, ".Enable"))
     ];
@@ -438,12 +440,13 @@ export class GenieacsClient {
     const normalizedPass5 = typeof (wifiPassword5 ?? wifiPassword24 ?? wifiPassword) === "string"
       ? (wifiPassword5 ?? wifiPassword24 ?? wifiPassword).trim()
       : (wifiPassword5 ?? wifiPassword24 ?? wifiPassword);
-    const unifyWifiAliases =
-      String(brand || "").toLowerCase() === "nokia" &&
-      normalizedSsid24 &&
-      normalizedSsid24 === normalizedSsid5 &&
-      normalizedPass24 &&
-      normalizedPass24 === normalizedPass5;
+    const unifyWifiAliases = isUnifiedNokiaWifiRequest({
+      brand,
+      ssid24: normalizedSsid24,
+      ssid5: normalizedSsid5,
+      password24: normalizedPass24,
+      password5: normalizedPass5
+    });
     const values = [];
     const wifiValues = [];
     const push = (pathOrPaths, value, valueType, transform = (input) => input, options = {}) => {

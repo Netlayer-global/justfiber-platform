@@ -1,3 +1,5 @@
+import { buildNokiaPasswordPaths, buildNokiaSsidPaths } from "./nokiaWifi.js";
+
 const BRAND_PATTERNS = [
   { brand: "nokia", patterns: ["nokia", "g-2425", "g2425", "g-140w", "g140w", "alcl", "alcatel"] },
   { brand: "dasan", patterns: ["dasan", "h660", "h640", "h665"] },
@@ -97,29 +99,21 @@ const BRAND_OVERRIDES = {
       "Device.WAN.Ethernet.1.VLANID"
     ],
     ssid24Path: [
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
+      ...buildNokiaSsidPaths("ssid24"),
       `${DEVICE_WIFI_24}.SSID`
     ],
     pass24Path: [
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase",
+      ...buildNokiaPasswordPaths("ssid24"),
       `${DEVICE_AP_24}.KeyPassphrase`,
       `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`
     ],
     ssid5Path: [
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID",
+      ...buildNokiaSsidPaths("ssid5"),
       `${IGD_WIFI_5}.SSID`,
       `${DEVICE_WIFI_5}.SSID`
     ],
     pass5Path: [
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.KeyPassphrase",
+      ...buildNokiaPasswordPaths("ssid5"),
       `${IGD_WIFI_5}.KeyPassphrase`,
       `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`,
       `${DEVICE_AP_5}.KeyPassphrase`,

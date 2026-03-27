@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { buildNokiaInspectPaths } from "../common/nokiaWifi.js";
 
 const DEVICE_ID = process.env.INSPECT_GENIE_DEVICE_ID;
 
@@ -62,32 +63,7 @@ async function main() {
     throw new Error(`Device ${DEVICE_ID} not found in GenieACS`);
   }
 
-  const candidatePaths = [
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.PreSharedKey",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.PreSharedKey",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.PreSharedKey",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.KeyPassphrase",
-    "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.PreSharedKey",
-    "Device.WiFi.SSID.1.SSID",
-    "Device.WiFi.AccessPoint.1.Security.KeyPassphrase",
-    "Device.WiFi.AccessPoint.1.Security.PreSharedKey.1.KeyPassphrase",
-    "Device.WiFi.AccessPoint.1.Security.PreSharedKey.1.PreSharedKey",
-    "Device.WiFi.SSID.5.SSID",
-    "Device.WiFi.AccessPoint.5.Security.KeyPassphrase",
-    "Device.WiFi.AccessPoint.5.Security.PreSharedKey.1.KeyPassphrase",
-    "Device.WiFi.AccessPoint.5.Security.PreSharedKey.1.PreSharedKey"
-  ];
+  const candidatePaths = buildNokiaInspectPaths();
 
   const rows = candidatePaths.map((path) => ({
     path,
