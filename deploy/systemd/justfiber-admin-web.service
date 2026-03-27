@@ -1,0 +1,18 @@
+[Unit]
+Description=JustFiber Admin Web
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/justfiber-platform/frontend/admin-basic
+Environment=NODE_ENV=production
+Environment=HOSTNAME=0.0.0.0
+Environment=PORT=3002
+EnvironmentFile=-/opt/justfiber-platform/frontend/admin-basic/.env.production
+ExecStart=/usr/bin/npm run start -- --port 3002
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
