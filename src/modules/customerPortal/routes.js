@@ -498,6 +498,15 @@ function normalizeConnectedDeviceEntry(item, index, blockedLookup = new Set()) {
   };
 }
 
+function isRealConnectedDeviceEntry(item) {
+  const macAddress = String(item?.macAddress || item?.mac || "").trim();
+  const ipAddress = String(item?.ipAddress || item?.IPAddress || item?.ip || "").trim();
+  const clientId = String(item?.clientId || "").trim();
+  const looksLikeMac = /^[0-9a-f]{2}([:-][0-9a-f]{2}){5}$/i.test(macAddress || clientId);
+  const looksLikeIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(ipAddress || clientId);
+  return Boolean(macAddress || ipAddress || looksLikeMac || looksLikeIp);
+}
+
 function getConnectedDevices(device) {
   const blockedLookup = new Set(
     [
@@ -539,8 +548,13 @@ function getConnectedDevices(device) {
     });
   };
 
-  ingest(device?.lanInfo?.connectedDevices, "connectedDevices");
-  ingest(device?.lanInfo?.hosts, "hosts");
+  const hostItems = Array.isArray(device?.lanInfo?.hosts) ? device.lanInfo.hosts : [];
+  const connectedItems = Array.isArray(device?.lanInfo?.connectedDevices)
+    ? device.lanInfo.connectedDevices.filter((item) => isRealConnectedDeviceEntry(item))
+    : [];
+
+  ingest(hostItems, "hosts");
+  ingest(connectedItems, "connectedDevices");
 
   return [...merged.values()].map(({ source, ...item }) => item);
 }
@@ -2685,7 +2699,7 @@ customerPortalRouter.post(
       .filter(Boolean);
     device.lanInfo = {
       ...(device.lanInfo || {}),
-      connectedDevices: updated,
+      connectedDevices: updated.filter((item) => isRealConnectedDeviceEntry(item)),
       hosts: Array.isArray(device.lanInfo?.hosts)
         ? device.lanInfo.hosts.map((item, index) => {
             const normalized = normalizeConnectedDeviceEntry(item, index);
