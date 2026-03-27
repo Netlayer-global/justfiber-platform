@@ -490,125 +490,128 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        final devices = appState.connectedDevices;
-        final blockedCount = devices.where((device) => device.blocked).length;
-        final allowedCount = devices.where((device) => !device.blocked).length;
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
-          child: AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(accessMode ? 'Manage Wi-Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFF131313))),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+          child: AnimatedBuilder(
+            animation: appState,
+            builder: (context, _) {
+              final devices = appState.connectedDevices;
+              final blockedCount = devices.where((device) => device.blocked).length;
+              final allowedCount = devices.where((device) => !device.blocked).length;
+              return AppCard(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sheetStatusChip('Connected', '${devices.length}'),
-                    _sheetStatusChip('Allowed', '$allowedCount'),
-                    _sheetStatusChip('Blocked', '$blockedCount'),
+                    Text(accessMode ? 'Manage Wi-Fi access' : 'Connected devices', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Color(0xFF131313))),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _sheetStatusChip('Connected', '${devices.length}'),
+                        _sheetStatusChip('Allowed', '$allowedCount'),
+                        _sheetStatusChip('Blocked', '$blockedCount'),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    if (devices.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Text(
+                          'No connected device at the moment. Try reconnecting to Wi-Fi or refresh later.',
+                          style: TextStyle(color: Color(0xFF6E6A67)),
+                        ),
+                      )
+                    else
+                      ...devices.map((device) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x338224E3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEEF2FF),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(_deviceIcon(device.connectionType), color: const Color(0xFF8224E3)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFFFFFF))),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${_connectionTypeLabel(device.connectionType)} | ${device.signal}',
+                                      style: const TextStyle(color: Color(0xFFCBD5E1)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (accessMode)
+                                Switch(
+                                  value: !device.blocked,
+                                  activeColor: const Color(0xFF8224E3),
+                                  onChanged: appState.busy
+                                      ? null
+                                      : (allowed) async {
+                                          final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
+                                          if (!context.mounted) return;
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                ok
+                                                    ? (allowed ? 'Device access restored' : 'Device blocked')
+                                                    : (appState.error ?? 'Unable to update device access'),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                ),
+                            ],
+                          ),
+                        ),
+                      )),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: appState.busy
+                            ? null
+                            : () async {
+                                await appState.refresh();
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Refresh device list updated')),
+                                );
+                              },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF131313),
+                          backgroundColor: const Color(0xFFFFFFFF),
+                          side: const BorderSide(color: Color(0x668224E3)),
+                        ),
+                        child: const Text('Refresh device list'),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                if (devices.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Text(
-                      'No connected device at the moment. Try reconnecting to Wi-Fi or refresh later.',
-                      style: TextStyle(color: Color(0xFF6E6A67)),
-                    ),
-                  )
-                else
-                  ...devices.map((device) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x338224E3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEEF2FF),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Icon(_deviceIcon(device.connectionType), color: const Color(0xFF8224E3)),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFFFFFF))),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${_connectionTypeLabel(device.connectionType)} | ${device.signal}',
-                                  style: const TextStyle(color: Color(0xFFCBD5E1)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (accessMode)
-                            Switch(
-                              value: !device.blocked,
-                              activeColor: const Color(0xFF8224E3),
-                              onChanged: appState.busy
-                                  ? null
-                                  : (allowed) async {
-                                      final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
-                                      if (!context.mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            ok
-                                                ? (allowed ? 'Device access restored' : 'Device blocked')
-                                                : (appState.error ?? 'Unable to update device access'),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                            ),
-                        ],
-                      ),
-                    ),
-                  )),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: appState.busy
-                        ? null
-                        : () async {
-                            await appState.refresh();
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Refresh device list updated')),
-                            );
-                            Navigator.of(context).pop();
-                            await _showConnectedDevices(context, appState, accessMode: accessMode);
-                          },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF131313),
-                      backgroundColor: const Color(0xFFFFFFFF),
-                      side: const BorderSide(color: Color(0x668224E3)),
-                    ),
-                    child: const Text('Refresh device list'),
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
         );
       },

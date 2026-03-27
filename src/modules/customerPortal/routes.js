@@ -481,28 +481,68 @@ async function buildCustomerConnectionSummary(customer) {
   };
 }
 
+function normalizeConnectedDeviceEntry(item, index, blockedLookup = new Set()) {
+  const macAddress = String(item?.macAddress || item?.mac || "").trim();
+  const hostName = String(item?.hostName || item?.hostname || item?.name || item?.deviceName || "").trim();
+  const ipAddress = String(item?.ipAddress || item?.IPAddress || item?.ip || "").trim();
+  const clientId = String(item?.clientId || macAddress || hostName || ipAddress || `client-${index + 1}`).trim();
+  const blocked = Boolean(item?.blocked) || blockedLookup.has(clientId) || (macAddress && blockedLookup.has(macAddress));
+  return {
+    clientId,
+    name: hostName || macAddress || `Connected Device ${index + 1}`,
+    connectionType: String(item?.connectionType || item?.interfaceType || item?.medium || item?.layer1Interface || "wifi").trim() || "wifi",
+    signal: String(item?.signal || item?.linkQuality || item?.rssiLabel || item?.rssi || item?.radio || "good").trim() || "good",
+    blocked,
+    macAddress,
+    ipAddress
+  };
+}
+
 function getConnectedDevices(device) {
-  if (Array.isArray(device?.lanInfo?.connectedDevices) && device.lanInfo.connectedDevices.length > 0) {
-    return device.lanInfo.connectedDevices.map((item, index) => ({
-      clientId: item.clientId || item.macAddress || `client-${index + 1}`,
-      name: item.name || item.hostName || item.hostname || item.macAddress || `Connected Device ${index + 1}`,
-      connectionType: item.connectionType || item.interfaceType || item.medium || "wifi",
-      signal: item.signal || item.linkQuality || item.rssiLabel || "good",
-      blocked: Boolean(item.blocked),
-      macAddress: item.macAddress
-    }));
-  }
-  if (Array.isArray(device?.lanInfo?.hosts) && device.lanInfo.hosts.length > 0) {
-    return device.lanInfo.hosts.map((item, index) => ({
-      clientId: item.clientId || item.macAddress || item.hostName || `host-${index + 1}`,
-      name: item.hostName || item.name || item.macAddress || `Connected Device ${index + 1}`,
-      connectionType: item.connectionType || item.interfaceType || item.medium || "wifi",
-      signal: item.signal || item.linkQuality || "good",
-      blocked: Boolean(item.blocked),
-      macAddress: item.macAddress
-    }));
-  }
-  return [];
+  const blockedLookup = new Set(
+    [
+      ...(Array.isArray(device?.lanInfo?.blockedClients) ? device.lanInfo.blockedClients : []),
+      ...(Array.isArray(device?.lanInfo?.blockedDevices) ? device.lanInfo.blockedDevices : [])
+    ]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+  );
+
+  const merged = new Map();
+  const ingest = (items, source) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item, index) => {
+      const normalized = normalizeConnectedDeviceEntry(item, index, blockedLookup);
+      const key = normalized.macAddress || normalized.clientId;
+      const previous = merged.get(key);
+      if (!previous) {
+        merged.set(key, { ...normalized, source });
+        return;
+      }
+      merged.set(key, {
+        ...previous,
+        ...normalized,
+        name:
+          source === "hosts"
+            ? normalized.name || previous.name
+            : previous.name || normalized.name,
+        connectionType:
+          source === "hosts"
+            ? normalized.connectionType || previous.connectionType
+            : previous.connectionType || normalized.connectionType,
+        signal:
+          source === "hosts"
+            ? normalized.signal || previous.signal
+            : previous.signal || normalized.signal,
+        blocked: previous.blocked || normalized.blocked
+      });
+    });
+  };
+
+  ingest(device?.lanInfo?.connectedDevices, "connectedDevices");
+  ingest(device?.lanInfo?.hosts, "hosts");
+
+  return [...merged.values()].map(({ source, ...item }) => item);
 }
 
 function isMissingGenieDeviceError(error) {
@@ -2617,11 +2657,29 @@ customerPortalRouter.post(
       throw new ApiError(404, "Customer device not found");
     }
     const updated = getConnectedDevices(device).map((item) =>
-      item.clientId === payload.clientId ? { ...item, blocked: payload.blocked } : item
+      item.clientId === payload.clientId || (item.macAddress && item.macAddress === payload.clientId)
+        ? { ...item, blocked: payload.blocked }
+        : item
     );
+    const blockedClients = updated
+      .filter((item) => item.blocked)
+      .flatMap((item) => [item.clientId, item.macAddress])
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
     device.lanInfo = {
       ...(device.lanInfo || {}),
-      connectedDevices: updated
+      connectedDevices: updated,
+      hosts: Array.isArray(device.lanInfo?.hosts)
+        ? device.lanInfo.hosts.map((item, index) => {
+            const normalized = normalizeConnectedDeviceEntry(item, index);
+            const match = updated.find((entry) =>
+              entry.clientId === normalized.clientId ||
+              (entry.macAddress && entry.macAddress === normalized.macAddress)
+            );
+            return match ? { ...item, blocked: match.blocked } : item;
+          })
+        : device.lanInfo?.hosts,
+      blockedClients: [...new Set(blockedClients)]
     };
     await device.save();
     await notifyCustomerAction(
