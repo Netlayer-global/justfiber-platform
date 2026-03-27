@@ -521,9 +521,7 @@ class AppState extends ChangeNotifier {
   Future<void> changeWifiPassword(String password) async {
     final current = session;
     if (current == null) return;
-    busy = true;
     error = null;
-    notifyListeners();
     try {
       final nextWifi = await api.updateWifi(
         current,
@@ -539,8 +537,8 @@ class AppState extends ChangeNotifier {
       _refreshWifiStateInBackground();
     } catch (e) {
       error = e.toString();
+      notifyListeners();
     } finally {
-      busy = false;
       notifyListeners();
     }
   }
@@ -552,9 +550,7 @@ class AppState extends ChangeNotifier {
   }) async {
     final current = session;
     if (current == null) return false;
-    busy = true;
     error = null;
-    notifyListeners();
     try {
       final nextWifi = await api.updateWifi(
         current,
@@ -571,10 +567,8 @@ class AppState extends ChangeNotifier {
       return true;
     } catch (e) {
       error = e.toString();
-      return false;
-    } finally {
-      busy = false;
       notifyListeners();
+      return false;
     }
   }
 
@@ -769,7 +763,6 @@ class AppState extends ChangeNotifier {
     final current = session;
     if (current == null) return false;
     final previousWifi = wifi;
-    busy = true;
     error = null;
     wifi = WifiData(
       ssid24: wifi.ssid24,
@@ -788,9 +781,9 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       wifi = previousWifi;
       error = e.toString();
+      notifyListeners();
       return false;
     } finally {
-      busy = false;
       notifyListeners();
     }
   }
@@ -798,19 +791,15 @@ class AppState extends ChangeNotifier {
   Future<bool> rebootRouter() async {
     final current = session;
     if (current == null) return false;
-    busy = true;
     error = null;
-    notifyListeners();
     try {
       await api.rebootDevice(current, customerId: selectedCustomerId);
       _refreshWifiStateInBackground();
       return true;
     } catch (e) {
       error = e.toString();
-      return false;
-    } finally {
-      busy = false;
       notifyListeners();
+      return false;
     }
   }
 
