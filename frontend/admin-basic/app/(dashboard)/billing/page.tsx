@@ -105,7 +105,6 @@ export default function BillingPage() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
   const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections' | 'settings'>('invoices')
   const [invoiceQuickView, setInvoiceQuickView] = useState<'all' | 'pending' | 'paid' | 'overdue' | 'activation'>('all')
-  const [showInvoiceHtmlPreview, setShowInvoiceHtmlPreview] = useState(false)
   const [collectionBucket, setCollectionBucket] = useState('')
   const [invoiceFilters, setInvoiceFilters] = useState({
     search: '',
@@ -797,9 +796,6 @@ export default function BillingPage() {
       toast.error('Failed to save promise to pay')
     }
   }
-
-  const zohoIntegration = integrations.find((item) =>
-    item.provider.toLowerCase().includes('zoho') || item.displayName.toLowerCase().includes('zoho')
   )
   const invoiceStatusTone = (status?: string) => {
     if (status === 'paid') return 'bg-emerald-500/15 text-emerald-300'
@@ -979,13 +975,10 @@ export default function BillingPage() {
             placeholder="Zone code (NCR, LKO)"
             value={exportFilters.zoneCode}
             onChange={(e) => setExportFilters((prev) => ({ ...prev, zoneCode: e.target.value.toUpperCase() }))}
-          />
-        </div>
-      </div>
-      ) : null}
+          />`n          </div>`n          ) : null}
 
       {billingSectionTab === 'invoices' ? (
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <section>
         <form onSubmit={generateInvoice} className="card p-5 space-y-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice command</div>
@@ -1063,60 +1056,6 @@ export default function BillingPage() {
           </div>
         </form>
 
-        <div className="card p-5 space-y-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Billing integration</div>
-            <h2 className="mt-2 text-2xl font-bold">Zoho-style invoice control</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Internal invoice engine live hai. Agar Zoho integration configured hogi to yahin se uski health aur mode visible hogi.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold text-white">{zohoIntegration?.displayName || 'Zoho integration not configured'}</div>
-                <div className="mt-1 text-xs text-slate-400">
-                  {zohoIntegration ? `${zohoIntegration.provider} • ${zohoIntegration.mode}` : 'Using internal PDF invoice pipeline'}
-                </div>
-              </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                zohoIntegration?.status === 'active'
-                  ? 'bg-emerald-500/15 text-emerald-300'
-                  : zohoIntegration?.status === 'testing'
-                    ? 'bg-amber-500/15 text-amber-300'
-                    : 'bg-slate-500/15 text-slate-300'
-              }`}>
-                {zohoIntegration?.status || 'inactive'}
-              </span>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-xl bg-black/20 p-3">
-                <div className="text-slate-400">Invoice source</div>
-                <div className="mt-1 font-semibold text-white">Live internal billing engine</div>
-              </div>
-              <div className="rounded-xl bg-black/20 p-3">
-                <div className="text-slate-400">PDF status</div>
-                <div className="mt-1 font-semibold text-white">Ready for dispatch</div>
-              </div>
-              <div className="rounded-xl bg-black/20 p-3">
-                <div className="text-slate-400">Default template</div>
-                <div className="mt-1 font-semibold text-white">{activeInvoiceTemplate?.templateName || 'JustFiber Standard'}</div>
-                <div className="mt-1 text-xs text-slate-500">{activeInvoiceTemplate?.key || 'justfiber_standard'}</div>
-              </div>
-              <div className="rounded-xl bg-black/20 p-3">
-                <div className="text-slate-400">Zone mappings</div>
-                <div className="mt-1 font-semibold text-white">{invoiceTemplateSettings?.zoneTemplateMappings?.length || 0} active mapping(s)</div>
-                <div className="mt-1 text-xs text-slate-500">{invoiceTemplateSettings?.templates?.length || 1} template variant(s)</div>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-              <div>Invoice PDF aur dispatch ab same settings-driven branding engine use karte hain.</div>
-              <Link href="/settings" className="btn-secondary">
-                Open template settings
-              </Link>
-            </div>
-          </div>
-        </div>
       </section>
       ) : null}
 
@@ -1180,10 +1119,7 @@ export default function BillingPage() {
             </span>
           )) : (
             <span className="text-xs text-slate-500">No active invoice filters.</span>
-          )}
-        </div>
-      </div>
-      ) : null}
+          )}`n          </div>`n          ) : null}
 
       {isLoading ? (
         <div className="card p-6 text-center">
@@ -1219,10 +1155,7 @@ export default function BillingPage() {
                   <div className="text-xl font-semibold mt-2">Rs {Number(bucket.value?.amount || 0).toFixed(2)}</div>
                   <div className="text-xs text-slate-500 mt-2">{bucket.value?.count || 0} invoice(s)</div>
                 </div>
-              ))}
-            </div>
-          </div>
-          ) : null}
+              ))}`n          </div>`n          ) : null}
 
           {billingSectionTab === 'collections' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -1479,10 +1412,7 @@ export default function BillingPage() {
                     <div key={`${row.transactionId}-${row.status}`}>
                       {row.transactionId} | {row.customerId || '-'} | {row.status} {row.invoiceId ? `| ${row.invoiceId}` : ''} {row.reason ? `| ${row.reason}` : ''}
                     </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+                  ))}`n          </div>`n          ) : null}
           </form>
           ) : null}
 
@@ -2066,9 +1996,7 @@ export default function BillingPage() {
           </div>
           ) : null}
 
-          {billingSectionTab === 'invoices' ? (
-          <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="overflow-x-auto card">
+          {billingSectionTab === 'invoices' ? (`n          <div className="overflow-x-auto card">
             <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice register</div>
@@ -2199,115 +2127,11 @@ export default function BillingPage() {
                   </tr>
                 )}
               </tbody>
-            </table>
-          </div>
-
-          <div className="card p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice preview</div>
-            {selectedInvoice ? (
-              <div className="mt-4 space-y-4">
-                <div className="rounded-[24px] bg-[#0a0e27] p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-mono text-sm text-white">{selectedInvoice.invoiceNumber || selectedInvoice.invoiceId}</div>
-                      <div className="mt-1 text-xs text-slate-500">{selectedInvoice.billCycle || 'No bill cycle'}</div>
-                    </div>
-                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${invoiceStatusTone(selectedInvoice.paymentStatus || selectedInvoice.status)}`}>
-                      {selectedInvoice.paymentStatus || selectedInvoice.status}
-                    </span>
-                  </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl bg-black/20 p-3">
-                      <div className="text-slate-400">Customer</div>
-                      <div className="mt-1 font-semibold text-white">{selectedInvoice.customerId}</div>
-                      <div className="mt-1 text-xs text-slate-500">{selectedInvoice.serviceId || 'No service linked'}</div>
-                    </div>
-                    <div className="rounded-xl bg-black/20 p-3">
-                      <div className="text-slate-400">Template</div>
-                      <div className="mt-1 font-semibold text-white">{selectedInvoice.appliedTemplateName || 'Default template'}</div>
-                      <div className="mt-1 text-xs text-slate-500">{selectedInvoice.appliedTemplateKey || activeInvoiceTemplate?.key || 'justfiber_standard'}</div>
-                    </div>
-                    <div className="rounded-xl bg-black/20 p-3">
-                      <div className="text-slate-400">Zone / state</div>
-                      <div className="mt-1 font-semibold text-white">{selectedInvoice.billingZoneCode || 'Default route'}</div>
-                      <div className="mt-1 text-xs text-slate-500">{selectedInvoice.billingStateName || selectedInvoice.billingStateCode || 'No state mapped'}</div>
-                    </div>
-                    <div className="rounded-xl bg-black/20 p-3">
-                      <div className="text-slate-400">Amount</div>
-                      <div className="mt-1 font-semibold text-white">Rs {Number(selectedInvoice.totalAmount || selectedInvoice.amount || 0).toFixed(2)}</div>
-                      <div className="mt-1 text-xs text-slate-500">Tax Rs {Number(selectedInvoice.taxAmount || 0).toFixed(2)}</div>
-                    </div>
-                    <div className="rounded-xl bg-black/20 p-3 sm:col-span-2">
-                      <div className="text-slate-400">Commercial route</div>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        <span className={`inline-flex rounded-full px-2 py-1 text-xs ${invoiceSourceTone(selectedInvoice.source)}`}>
-                          {selectedInvoice.sourceLabel || selectedInvoice.source || 'Internal'}
-                        </span>
-                        {selectedInvoice.billCycle ? (
-                          <span className="inline-flex rounded-full bg-white/5 px-2 py-1 text-xs text-slate-300">
-                            {selectedInvoice.billCycle}
-                          </span>
-                        ) : null}
-                        {selectedInvoice.paymentStatus ? (
-                          <span className={`inline-flex rounded-full px-2 py-1 text-xs ${invoiceStatusTone(selectedInvoice.paymentStatus)}`}>
-                            {selectedInvoice.paymentStatus}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Timeline</div>
-                  <div className="mt-3 space-y-2 text-sm text-slate-300">
-                    <div>Generated: {selectedInvoice.generatedAt ? new Date(selectedInvoice.generatedAt).toLocaleString() : '-'}</div>
-                    <div>Due: {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : '-'}</div>
-                    <div>Source: {selectedInvoice.sourceLabel || selectedInvoice.source || 'Internal'}</div>
-                    {(selectedInvoice.taxBreakdown || []).length ? (
-                      <div>Tax split: {selectedInvoice.taxBreakdown?.map((part) => `${part.label} ${part.rate}%`).join(' | ')}</div>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    className="btn-primary"
-                    onClick={() => void openInvoicePdf(selectedInvoice.invoiceId)}
-                  >
-                    Open PDF
-                  </button>
-                  <button className="btn-secondary" onClick={() => setShowInvoiceHtmlPreview((prev) => !prev)}>
-                    {showInvoiceHtmlPreview ? 'Hide live preview' : 'Show live preview'}
-                  </button>
-                  <button className="btn-secondary" onClick={() => void dispatchInvoice(selectedInvoice.invoiceId)}>
-                    Dispatch invoice
-                  </button>
-                </div>
-
-                {showInvoiceHtmlPreview ? (
-                  <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white">
-                    <div className="border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Live invoice HTML preview
-                    </div>
-                    <iframe
-                      title={`Invoice preview ${selectedInvoice.invoiceNumber || selectedInvoice.invoiceId}`}
-                      src={`${exportBaseUrl}/api/v1/admin/billing/invoices/${encodeURIComponent(selectedInvoice.invoiceId)}/pdf?format=html`}
-                      className="h-[720px] w-full bg-white"
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
-                Select an invoice from the register to preview billing route, branding, and quick actions.
-              </div>
-            )}
-          </div>
-          </div>
-          ) : null}
+            </table>`n          </div>`n          ) : null}
         </>
       )}
     </div>
   )
 }
+
+
