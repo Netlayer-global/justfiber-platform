@@ -11,8 +11,8 @@ function buildDeviceAccessPointBase(index) {
 }
 
 export const NOKIA_WIFI_SLOTS = {
-  ssid24: [1, 5],
-  ssid5: [2, 6]
+  ssid24: [1, 3, 5, 7],
+  ssid5: [2, 4, 6, 8]
 };
 
 export function buildNokiaSsidPaths(kind) {
