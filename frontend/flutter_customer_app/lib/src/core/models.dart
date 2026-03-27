@@ -103,6 +103,12 @@ class BillingData {
     required this.latestInvoiceStatus,
     required this.invoiceCount,
     required this.serviceStatus,
+    required this.lastDueReminderAt,
+    required this.lastOverdueReminderAt,
+    required this.lastSuspensionWarningAt,
+    required this.promiseToPayAt,
+    required this.promiseAmount,
+    required this.promiseNote,
     required this.lastPaymentDate,
     required this.adjustmentPreview,
     required this.speedMbps,
@@ -134,6 +140,12 @@ class BillingData {
   final String latestInvoiceStatus;
   final int invoiceCount;
   final String serviceStatus;
+  final String lastDueReminderAt;
+  final String lastOverdueReminderAt;
+  final String lastSuspensionWarningAt;
+  final String promiseToPayAt;
+  final double promiseAmount;
+  final String promiseNote;
   final String lastPaymentDate;
   final double adjustmentPreview;
   final double speedMbps;

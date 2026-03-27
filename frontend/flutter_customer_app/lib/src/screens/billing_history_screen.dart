@@ -36,6 +36,10 @@ class BillingHistoryScreen extends StatelessWidget {
     final latestInvoiceLabel = billing.latestInvoiceNumber.isNotEmpty
         ? billing.latestInvoiceNumber
         : (latestInvoice?.invoiceNumber.isNotEmpty == true ? latestInvoice!.invoiceNumber : 'Will appear after billing run');
+    final hasSuspensionWarning = billing.lastSuspensionWarningAt.isNotEmpty;
+    final hasOverdueReminder = billing.lastOverdueReminderAt.isNotEmpty;
+    final hasDueReminder = billing.lastDueReminderAt.isNotEmpty;
+    final hasPromiseToPay = billing.promiseToPayAt.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Billing')),
@@ -132,6 +136,61 @@ class BillingHistoryScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (hasSuspensionWarning || hasOverdueReminder || hasDueReminder || hasPromiseToPay) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFFFF),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: hasSuspensionWarning ? const Color(0x55FF6B6B) : const Color(0x228224E3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hasSuspensionWarning
+                              ? 'Suspension warning active'
+                              : hasOverdueReminder
+                                  ? 'Overdue reminder active'
+                                  : hasDueReminder
+                                      ? 'Upcoming due reminder sent'
+                                      : 'Promise to pay active',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: hasSuspensionWarning ? const Color(0xFFC2410C) : const Color(0xFF131313),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          hasSuspensionWarning
+                              ? 'Please clear the pending invoice immediately to avoid service suspension.'
+                              : hasOverdueReminder
+                                  ? 'Your current invoice is overdue. Pay now to keep the service active.'
+                                  : hasDueReminder
+                                      ? 'A due reminder has been issued for your current cycle.'
+                                      : 'Your billing team has a promise-to-pay note on this account.',
+                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                        ),
+                        const SizedBox(height: 10),
+                        if (hasPromiseToPay)
+                          _billBreakupRow(
+                            'Promise to pay',
+                            billing.promiseAmount > 0
+                                ? '${billing.promiseToPayAt} | Rs ${billing.promiseAmount.toStringAsFixed(2)}'
+                                : billing.promiseToPayAt,
+                          ),
+                        if (billing.promiseNote.isNotEmpty) _billBreakupRow('Promise note', billing.promiseNote),
+                        if (billing.lastSuspensionWarningAt.isNotEmpty) _billBreakupRow('Warning sent', billing.lastSuspensionWarningAt),
+                        if (!hasSuspensionWarning && billing.lastOverdueReminderAt.isNotEmpty) _billBreakupRow('Reminder sent', billing.lastOverdueReminderAt),
+                        if (!hasSuspensionWarning && !hasOverdueReminder && billing.lastDueReminderAt.isNotEmpty) _billBreakupRow('Reminder sent', billing.lastDueReminderAt),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 Container(
                   width: double.infinity,

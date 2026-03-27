@@ -2259,6 +2259,7 @@ customerPortalRouter.get(
     const dueAmount = openInvoices.length
       ? openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
       : Number(customer.billingSnapshot?.dueAmount || 0);
+    const collections = customer.billingSnapshot?.collections || {};
 
     return ok(res, {
       customerId: customer.customerId,
@@ -2279,6 +2280,12 @@ customerPortalRouter.get(
         latestInvoiceNumber: latestInvoice?.invoiceNumber || latestInvoice?.invoiceId || "",
         latestInvoiceStatus: latestInvoice?.paymentStatus || "",
         serviceStatus: service?.status || customer.operationalStatus || "unknown",
+        lastDueReminderAt: collections.lastDueReminderAt || null,
+        lastOverdueReminderAt: collections.lastOverdueReminderAt || null,
+        lastSuspensionWarningAt: collections.lastSuspensionWarningAt || null,
+        promiseToPayAt: collections.promiseToPayAt || null,
+        promiseAmount: Number(collections.promiseAmount || 0),
+        promiseNote: collections.promiseNote || "",
         pendingPlanChange: customer.billingSnapshot?.pendingPlanChange || null,
         adjustmentPreview: customer.billingSnapshot?.adjustmentPreview || 0
       },
@@ -2398,6 +2405,7 @@ customerPortalRouter.get(
           customer.billingSnapshot?.billCycle ||
           latestInvoice?.metadata?.billCycleLabel ||
           "Monthly";
+    const collections = customer.billingSnapshot?.collections || {};
     return ok(res, {
       currentPlan: customer.planName,
       dueDate: nextBillingDate,
@@ -2423,6 +2431,12 @@ customerPortalRouter.get(
       latestInvoiceNumber: latestInvoice?.invoiceNumber || latestInvoice?.invoiceId || "",
       latestInvoiceStatus: latestInvoice?.paymentStatus || "",
       serviceStatus: service?.status || customer.operationalStatus || "unknown",
+      lastDueReminderAt: collections.lastDueReminderAt || null,
+      lastOverdueReminderAt: collections.lastOverdueReminderAt || null,
+      lastSuspensionWarningAt: collections.lastSuspensionWarningAt || null,
+      promiseToPayAt: collections.promiseToPayAt || null,
+      promiseAmount: Number(collections.promiseAmount || 0),
+      promiseNote: collections.promiseNote || "",
       pendingPlanChange: customer.billingSnapshot?.pendingPlanChange || null
     });
   })
