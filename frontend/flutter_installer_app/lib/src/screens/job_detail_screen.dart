@@ -1342,39 +1342,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _workflowPager(
-                  context,
-                  status: status,
-                  isComplaint: isComplaint,
-                  phone: phone,
-                  planName: planName,
-                  configStatus: configStatus,
-                  optical: optical,
-                  diagnostics: diagnostics,
-                  device: device,
-                  preview: preview,
-                  activation: activation,
-                  pppoeUsername: pppoeUsername,
-                  wifiSsid24: wifiSsid24,
-                  wifiSsid5: wifiSsid5,
-                  wifiPassword: wifiPassword,
-                  canAccept: canAccept,
-                  canStartTravel: canStartTravel,
-                  canStartOnsite: canStartOnsite,
-                  canActivate: canActivate,
-                  canRetry: canRetry,
-                  canStartComplaint: canStartComplaint,
-                  canReplaceOnt: canReplaceOnt,
-                  canRebootComplaint: canRebootComplaint,
-                  canSendComplaintOtp: canSendComplaintOtp,
-                  canResolveComplaint: canResolveComplaint,
-                  canSubmitProof: canSubmitProof,
-                  canSendInstallOtp: canSendInstallOtp,
-                  canCompleteInstall: canCompleteInstall,
-                  activationLive: activationLive,
-                  proofUploaded: proofUploaded,
-                ),
-                const SizedBox(height: 16),
                 AppCard(
                   color: const Color(0xFFFFFFFF),
                   borderColor: const Color(0x228224E3),
@@ -1480,46 +1447,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         proofUploaded: proofUploaded,
                         nextStepNumber: nextStepNumber,
                         totalSteps: totalSteps,
-                      ),
-                      const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          OutlinedButton(
-                            onPressed: _busy || !canAccept
-                                ? null
-                                : () => _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Job accepted'),
-                            child: const Text('Accept'),
-                          ),
-                          OutlinedButton(
-                            onPressed: _busy || !canStartTravel
-                                ? null
-                                : () => _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started'),
-                            child: const Text('Start travel'),
-                          ),
-                          OutlinedButton(
-                            onPressed: _busy || !canStartOnsite
-                                ? null
-                                : () => _run(() async {
-                                      await _appState.api.startOnsite(_appState.session!, widget.job.id);
-                                      if (widget.job.latitude != null && widget.job.longitude != null) {
-                                        await _appState.api.checkinLocation(
-                                          _appState.session!,
-                                          widget.job.id,
-                                          lat: widget.job.latitude!,
-                                          lng: widget.job.longitude!,
-                                          address: widget.job.customerAddress,
-                                        );
-                                      }
-                                    }, 'Onsite started'),
-                            child: const Text('Start onsite'),
-                          ),
-                          OutlinedButton(
-                            onPressed: _busy || !_canDeferJob(status) ? null : _showDeferJobSheet,
-                            child: const Text('Follow-up / revisit'),
-                          ),
-                        ],
                       ),
                       const SizedBox(height: 14),
                       TextField(
