@@ -653,6 +653,10 @@ installerAppRouter.post(
     const payload = serialSchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
     const normalizedSerial = normalizeInstallerIdentifier(payload.serialNumber);
+    const duplicate = await DeviceOperationalCache.findOne({ serialNumber: normalizedSerial, customerId: { $ne: job.customerId } });
+    if (duplicate) {
+      throw new ApiError(409, "Serial number already bound to another customer");
+    }
     job.status = "ont_scanned";
     job.deviceContext = {
       ...(job.deviceContext || {}),
@@ -1150,15 +1154,20 @@ installerAppRouter.post(
   asyncHandler(async (req, res) => {
     const payload = replaceDeviceSchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    const normalizedSerial = normalizeInstallerIdentifier(payload.newSerialNumber);
+    const duplicate = await DeviceOperationalCache.findOne({ serialNumber: normalizedSerial, customerId: { $ne: job.customerId } });
+    if (duplicate) {
+      throw new ApiError(409, "Replacement serial number already bound to another customer");
+    }
     const oldDevice = await DeviceOperationalCache.findOne({ customerId: job.customerId });
-    const newDeviceId = `ONT-${payload.newSerialNumber}`;
+    const newDeviceId = `ONT-${normalizedSerial}`;
     await DeviceReplacementLog.create({
       jobId: job._id,
       customerId: job.customerId,
       oldDeviceId: oldDevice?.deviceId,
       oldSerialNumber: oldDevice?.serialNumber,
       newDeviceId,
-      newSerialNumber: payload.newSerialNumber,
+      newSerialNumber: normalizedSerial,
       replacedByInstallerId: req.installer._id,
       reason: payload.reason
     });
@@ -1173,7 +1182,7 @@ installerAppRouter.post(
           customerId: job.customerId,
           serviceId: job.serviceId,
           deviceId: newDeviceId,
-          serialNumber: payload.newSerialNumber,
+          serialNumber: normalizedSerial,
           provisioningState: "SERVICE_PREPARE",
           onlineStatus: "unknown",
           productClass: "Replacement-ONT"
@@ -1192,7 +1201,7 @@ installerAppRouter.post(
       oldDeviceId: oldDevice?.deviceId,
       oldSerialNumber: oldDevice?.serialNumber,
       finalDeviceId: newDeviceId,
-      finalSerialNumber: payload.newSerialNumber
+      finalSerialNumber: normalizedSerial
     };
     pushTimeline(job, "complaint.device_replaced", req.installer._id, payload.reason);
     await job.save();
