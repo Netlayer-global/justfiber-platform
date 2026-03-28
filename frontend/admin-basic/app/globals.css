@@ -30,40 +30,41 @@
     box-shadow: 0 0 0 1px rgba(0,0,0,0.35), 0 14px 34px rgba(45, 125, 255, 0.22);
   }
   .btn-secondary {
-    @apply btn text-white border;
-    background: rgba(255,255,255,0.035);
-    border-color: var(--line);
+    @apply btn border;
+    background: #ffffff;
+    color: #0f172a;
+    border-color: rgba(148, 163, 184, 0.28);
   }
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
   .card {
     @apply rounded-[28px] border shadow-sm;
-    background: linear-gradient(180deg, rgba(18,18,20,0.98), rgba(9,10,12,0.97));
-    border-color: var(--line);
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    background: #ffffff;
+    border-color: rgba(226, 232, 240, 0.9);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
   }
   .input {
-    @apply px-4 py-3 rounded-2xl border text-white focus:outline-none focus:ring-2 focus:border-transparent;
-    background: rgba(255,255,255,0.045);
-    border-color: var(--line);
+    @apply px-4 py-3 rounded-2xl border focus:outline-none focus:ring-2 focus:border-transparent;
+    background: #ffffff;
+    color: #0f172a;
+    border-color: rgba(203, 213, 225, 0.9);
     --tw-ring-color: rgba(45, 125, 255, 0.35);
   }
   .table-cell {
     @apply px-4 py-3 text-sm;
-    color: var(--muted);
+    color: #475569;
   }
   .table-header {
     @apply px-4 py-3 text-sm font-semibold;
-    color: var(--text);
-    background: rgba(255,255,255,0.04);
+    color: #0f172a;
+    background: #f8fafc;
   }
 
   .dashboard-shell {
     background:
-      radial-gradient(circle at top right, rgba(45, 125, 255, 0.12), transparent 24%),
-      radial-gradient(circle at top left, rgba(255,255,255,0.04), transparent 20%),
-      linear-gradient(180deg, #09090b 0%, #050608 100%);
+      radial-gradient(circle at top right, rgba(45, 125, 255, 0.08), transparent 22%),
+      linear-gradient(180deg, #fbfcfe 0%, #f3f6fb 100%);
   }
 
   .soft-grid {
@@ -75,14 +76,43 @@
 
   .metric-tile {
     @apply rounded-[26px] border p-5;
-    background: var(--card);
-    border-color: rgba(0, 0, 0, 0.08);
-    color: var(--card-text);
+    background: #ffffff;
+    border-color: rgba(226, 232, 240, 0.95);
+    color: #0f172a;
   }
 
   .neon-panel {
     @apply rounded-[30px] text-black;
-    background: linear-gradient(180deg, #8224E3 0%, var(--neon) 100%);
-    box-shadow: 0 30px 80px rgba(130, 36, 227, 0.22);
+    background: linear-gradient(180deg, #eaf3ff 0%, #dcecff 100%);
+    box-shadow: 0 18px 40px rgba(45, 125, 255, 0.12);
+  }
+
+  .admin-light .text-white { color: #0f172a !important; }
+  .admin-light .text-white\/80 { color: rgba(15, 23, 42, 0.82) !important; }
+  .admin-light .text-white\/75 { color: rgba(15, 23, 42, 0.76) !important; }
+  .admin-light .text-white\/70 { color: rgba(15, 23, 42, 0.72) !important; }
+  .admin-light .text-white\/65 { color: rgba(15, 23, 42, 0.66) !important; }
+  .admin-light .text-white\/60 { color: rgba(15, 23, 42, 0.58) !important; }
+  .admin-light .text-white\/55 { color: rgba(15, 23, 42, 0.52) !important; }
+  .admin-light .text-white\/50 { color: rgba(15, 23, 42, 0.46) !important; }
+  .admin-light .text-white\/45 { color: rgba(15, 23, 42, 0.42) !important; }
+  .admin-light .text-white\/40 { color: rgba(15, 23, 42, 0.36) !important; }
+  .admin-light .text-white\/35 { color: rgba(15, 23, 42, 0.32) !important; }
+  .admin-light .bg-white\/5,
+  .admin-light .bg-white\/8,
+  .admin-light .bg-white\/10,
+  .admin-light .bg-white\/15 {
+    background: #f8fafc !important;
+  }
+  .admin-light .bg-black\/35,
+  .admin-light .bg-black\/40,
+  .admin-light .bg-black\/55 {
+    background: #f8fafc !important;
+  }
+  .admin-light .border-white\/10,
+  .admin-light .border-white\/20,
+  .admin-light .border-black\/10,
+  .admin-light .border-black\/15 {
+    border-color: rgba(226, 232, 240, 0.95) !important;
   }
 }
