@@ -20,11 +20,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
-    const pages = [
-      DashboardTab(),
-      JobsTab(),
-      NotificationsTab(),
-      ProfileTab(),
+    final pages = [
+      DashboardTab(
+        onOpenJobs: () => setState(() => index = 1),
+        onOpenAlerts: () => setState(() => index = 2),
+        onOpenProfile: () => setState(() => index = 3),
+      ),
+      const JobsTab(),
+      const NotificationsTab(),
+      const ProfileTab(),
     ];
     final hasError = (appState.error ?? '').trim().isNotEmpty;
     final activeJobsCount = appState.jobs.where((job) => job.status != 'completed').length;

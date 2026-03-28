@@ -5,7 +5,16 @@ import '../../core/models.dart';
 import '../../widgets/app_card.dart';
 
 class DashboardTab extends StatelessWidget {
-  const DashboardTab({super.key});
+  const DashboardTab({
+    super.key,
+    this.onOpenJobs,
+    this.onOpenAlerts,
+    this.onOpenProfile,
+  });
+
+  final VoidCallback? onOpenJobs;
+  final VoidCallback? onOpenAlerts;
+  final VoidCallback? onOpenProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +108,44 @@ class DashboardTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 _miniSummary('Follow-up required', '$deferredJobs'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Quick actions', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFF131313))),
+                const SizedBox(height: 8),
+                const Text(
+                  'Jump straight to the screen that needs attention right now.',
+                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: onOpenJobs,
+                      icon: const Icon(Icons.assignment_rounded),
+                      label: Text(todayJobs > 0 ? 'Open jobs ($todayJobs)' : 'Open jobs'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onOpenAlerts,
+                      icon: const Icon(Icons.notifications_active_outlined),
+                      label: const Text('Review alerts'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onOpenProfile,
+                      icon: const Icon(Icons.person_outline_rounded),
+                      label: const Text('Profile & leave'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
