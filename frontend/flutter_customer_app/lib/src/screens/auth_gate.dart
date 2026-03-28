@@ -34,6 +34,8 @@ class _AuthGateLoading extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: const [
+                Icon(Icons.wifi_rounded, color: Color(0xFF8224E3), size: 34),
+                SizedBox(height: 18),
                 SizedBox(
                   width: 34,
                   height: 34,

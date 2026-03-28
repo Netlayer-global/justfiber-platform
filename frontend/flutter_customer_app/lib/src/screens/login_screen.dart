@@ -182,13 +182,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2A0F13),
+                          color: const Color(0xFFFFF1F2),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0x66EF4444)),
                         ),
                         child: Text(
                           appState.error!,
-                          style: const TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: Color(0xFFBE123C), fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
@@ -207,14 +207,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (otpRequested) ...[
                       const SizedBox(height: 8),
                       Center(
-                        child: TextButton(
-                          onPressed: appState.busy
-                              ? null
-                              : () async {
-                                  otpController.clear();
-                                  await _sendOtp(appState);
-                                },
-                          child: const Text('Resend OTP'),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: appState.busy
+                                  ? null
+                                  : () async {
+                                      otpController.clear();
+                                      await _sendOtp(appState);
+                                    },
+                              child: const Text('Resend OTP'),
+                            ),
+                            TextButton(
+                              onPressed: appState.busy
+                                  ? null
+                                  : () => setState(() {
+                                        otpRequested = false;
+                                        otpController.clear();
+                                      }),
+                              child: const Text('Change number'),
+                            ),
+                          ],
                         ),
                       ),
                     ],
