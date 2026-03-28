@@ -384,95 +384,138 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
               children: [
                 AppCard(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: const Color(0xFFFFFFFF),
+                  borderColor: const Color(0x140F172A),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            width: 54,
-                            height: 54,
+                            width: 52,
+                            height: 52,
                             decoration: BoxDecoration(
-                              color: const Color(0x26FFFFFF),
+                              color: const Color(0xFFF5F7FB),
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0x36FFFFFF)),
+                              border: Border.all(color: const Color(0x140F172A)),
                             ),
                             child: Icon(
                               isComplaint ? Icons.build_circle_outlined : Icons.router_rounded,
-                              color: Colors.white,
+                              color: const Color(0xFF2563EB),
                               size: 28,
                             ),
                           ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0x1FFFFFFF),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: const Color(0x2CFFFFFF)),
-                            ),
-                            child: Text(
-                              status.replaceAll('_', ' '),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        isComplaint ? 'COMPLAINT JOB' : 'INSTALLATION JOB',
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: const Color(0xFF2563EB),
+                                          letterSpacing: 1.8,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(color: const Color(0x1F334155)),
+                                      ),
+                                      child: Text(
+                                        status.replaceAll('_', ' '),
+                                        style: const TextStyle(
+                                          color: Color(0xFF0F172A),
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(color: const Color(0x1F334155)),
+                                      ),
+                                      child: Text(
+                                        'Step $nextStepNumber of $totalSteps',
+                                        style: const TextStyle(
+                                          color: Color(0xFF475569),
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  snapshot['fullName']?.toString() ?? widget.job.customerName,
+                                  style: theme.textTheme.headlineSmall?.copyWith(
+                                    color: const Color(0xFF0F172A),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  snapshot['address']?.toString() ?? widget.job.customerAddress,
+                                  style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
-                      Text(
-                        isComplaint ? 'COMPLAINT JOB' : 'INSTALLATION JOB',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFFE9D5FF),
-                          letterSpacing: 3.2,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(snapshot['fullName']?.toString() ?? widget.job.customerName, style: theme.textTheme.headlineSmall),
-                      const SizedBox(height: 8),
-                      Text(
-                        snapshot['address']?.toString() ?? widget.job.customerAddress,
-                        style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
                         children: [
-                          Expanded(child: _chip('Plan', planName)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _chip('Status', status.replaceAll('_', ' '))),
+                          SizedBox(
+                            width: 160,
+                            child: _chip('Plan', planName),
+                          ),
+                          SizedBox(
+                            width: 160,
+                            child: _chip('Phone', phone.isEmpty ? '-' : phone),
+                          ),
+                          SizedBox(
+                            width: 160,
+                            child: _chip('Priority', (detail?['priority'] ?? 'medium').toString()),
+                          ),
+                          SizedBox(
+                            width: 160,
+                            child: _chip('Plan code', planCode.isEmpty ? '-' : planCode),
+                          ),
+                          SizedBox(
+                            width: 160,
+                            child: _chip('Price', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-'),
+                          ),
+                          SizedBox(
+                            width: 160,
+                            child: _chip('Down / Up', '${planDownload > 0 ? planDownload.toStringAsFixed(0) : '-'} / ${planUpload > 0 ? planUpload.toStringAsFixed(0) : '-'} Mbps'),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: _chip('Phone', phone.isEmpty ? '-' : phone)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _chip('Priority', (detail?['priority'] ?? 'medium').toString())),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: _chip('Plan code', planCode.isEmpty ? '-' : planCode)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _chip('Price', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-')),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: _chip('Down', planDownload > 0 ? '${planDownload.toStringAsFixed(0)} Mbps' : '-')),
-                          const SizedBox(width: 10),
-                          Expanded(child: _chip('Up', planUpload > 0 ? '${planUpload.toStringAsFixed(0)} Mbps' : '-')),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
                       if (planTags.isNotEmpty || planBenefits.isNotEmpty) ...[
+                        const SizedBox(height: 14),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -481,8 +524,43 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ...planBenefits.take(2).map((item) => _miniPill(item)),
                           ],
                         ),
-                        const SizedBox(height: 14),
                       ],
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0x120F172A)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Next field action',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: const Color(0xFF0F172A),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _nextActionText(
+                                status: status,
+                                isComplaint: isComplaint,
+                                linkedSerial: linkedSerial,
+                                activationLive: activationLive,
+                                proofUploaded: proofUploaded,
+                              ),
+                              style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+                            ),
+                            const SizedBox(height: 12),
+                            _stageTimeline(status, isComplaint: isComplaint),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
@@ -548,10 +626,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Advanced panels', style: theme.textTheme.titleLarge),
+                      Text('Technical panels', style: theme.textTheme.titleLarge),
                       const SizedBox(height: 8),
                       const Text(
-                        'Use this only when you need deeper diagnostics, timeline, or full raw workflow panels.',
+                        'Open this only when you need diagnostics, raw timeline, or the full field control set.',
                         style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),
                       const SizedBox(height: 12),
@@ -1342,16 +1420,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x338224E3)),
+        border: Border.all(color: const Color(0x120F172A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700)),
+          Text(value, style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -1361,14 +1439,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x338224E3)),
+        border: Border.all(color: const Color(0x120F172A)),
       ),
       child: Text(
         label,
         style: const TextStyle(
-          color: Color(0xFF131313),
+          color: Color(0xFF0F172A),
           fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
@@ -1476,19 +1554,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'WORKFLOW PAGES',
+            'GUIDED WORKFLOW',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF6E6A67),
-              letterSpacing: 2.8,
+              color: const Color(0xFF64748B),
+              letterSpacing: 2,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 10),
-          Text('Workflow steps', style: Theme.of(context).textTheme.titleLarge),
+          Text('Field steps', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
           const Text(
-            'Move one step at a time through the field install flow.',
-            style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+            'Swipe between the task pages and finish one operational stage at a time.',
+            style: TextStyle(color: Color(0xFF64748B), height: 1.4),
           ),
           const SizedBox(height: 12),
           Row(
@@ -1501,16 +1579,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     height: 72,
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     decoration: BoxDecoration(
-                      color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFFF8F4FF),
+                      color: _workflowPage == index ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0x228224E3)),
+                      border: Border.all(
+                        color: _workflowPage == index ? const Color(0xFF93C5FD) : const Color(0x120F172A),
+                      ),
                     ),
                     child: Column(
                       children: [
                         Text(
                           '${index + 1}',
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFFFFFFFF) : const Color(0xFF8224E3),
+                            color: _workflowPage == index ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -1521,7 +1601,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFFFFFFFF) : const Color(0xFF6E6A67),
+                            color: _workflowPage == index ? const Color(0xFF2563EB) : const Color(0xFF64748B),
                             fontWeight: FontWeight.w700,
                             fontSize: 11,
                           ),
@@ -2223,8 +2303,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ],
                   const SizedBox(height: 8),
                   Text(
-                    '${actor.isEmpty ? 'system' : actor} Ã¢â‚¬Â¢ ${at.isEmpty ? '-' : at}',
-                    style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12, fontWeight: FontWeight.w600),
+                    '${actor.isEmpty ? 'system' : actor} • ${at.isEmpty ? '-' : at}',
+                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
