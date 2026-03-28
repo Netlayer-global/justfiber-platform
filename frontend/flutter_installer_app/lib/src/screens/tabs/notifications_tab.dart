@@ -39,6 +39,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
     final appState = InstallerStateScope.of(context);
     final unreadCount = appState.notifications.where((item) => item.readAt == null).length;
     final jobLinkedCount = appState.notifications.where((item) => (item.payload['installerJobId'] ?? '').toString().isNotEmpty).length;
+    final hasFilters = _filter != 'all';
     final filteredNotifications = appState.notifications.where((item) {
       return switch (_filter) {
         'unread' => item.readAt == null,
@@ -143,6 +144,17 @@ class _NotificationsTabState extends State<NotificationsTab> {
                     _filterChip('Job-linked', 'job', jobLinkedCount),
                   ],
                 ),
+                if (hasFilters) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => setState(() => _filter = 'all'),
+                      icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                      label: const Text('Clear filters'),
+                    ),
+                  ),
+                ],
                 if (unreadCount > 0) ...[
                   const SizedBox(height: 14),
                   Align(
