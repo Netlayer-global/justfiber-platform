@@ -5,7 +5,14 @@ import '../job_detail_screen.dart';
 import '../../widgets/app_card.dart';
 
 class NotificationsTab extends StatelessWidget {
-  const NotificationsTab({super.key});
+  const NotificationsTab({
+    super.key,
+    this.onOpenJobs,
+    this.onOpenDashboard,
+  });
+
+  final VoidCallback? onOpenJobs;
+  final VoidCallback? onOpenDashboard;
 
   Future<void> _markAllRead(BuildContext context, InstallerAppState appState) async {
     final ok = await appState.markAllNotificationsRead();
@@ -91,6 +98,23 @@ class NotificationsTab extends StatelessWidget {
                     Expanded(child: _metricChip(context, label: 'Alerts', value: appState.notifications.length.toString())),
                     const SizedBox(width: 12),
                     Expanded(child: _metricChip(context, label: 'Unread', value: unreadCount.toString())),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: onOpenJobs,
+                      icon: const Icon(Icons.assignment_rounded, size: 18),
+                      label: const Text('Open jobs'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onOpenDashboard,
+                      icon: const Icon(Icons.dashboard_customize_rounded, size: 18),
+                      label: const Text('Back to dashboard'),
+                    ),
                   ],
                 ),
                 if (unreadCount > 0) ...[

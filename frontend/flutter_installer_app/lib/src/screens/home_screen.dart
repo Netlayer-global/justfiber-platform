@@ -27,7 +27,10 @@ class _HomeScreenState extends State<HomeScreen> {
         onOpenProfile: () => setState(() => index = 3),
       ),
       const JobsTab(),
-      const NotificationsTab(),
+      NotificationsTab(
+        onOpenJobs: () => setState(() => index = 1),
+        onOpenDashboard: () => setState(() => index = 0),
+      ),
       const ProfileTab(),
     ];
     final hasError = (appState.error ?? '').trim().isNotEmpty;
