@@ -208,37 +208,26 @@ export default function JobsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Dispatch control</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Jobs,
-            <span className="text-[#8224E3]"> dispatched with live oversight.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">Live installer jobs, complaint assignment, and manual dispatch.</p>
-        </div>
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Dispatch pulse</div>
-          <div className="mt-3 text-5xl font-black">{jobs.length}</div>
-          <div className="mt-2 text-sm text-black/60">Jobs currently tracked across installer and complaint workflows</div>
-          <div className="mt-8 grid grid-cols-3 gap-3">
-            {dispatchMetrics.map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[22px] bg-black/10 p-4">
-                <Icon className="h-4 w-4 text-black/75" />
-                <div className="mt-4 text-2xl font-bold">{value}</div>
-                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Dispatch control</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Jobs</h1>
+            <div className="mt-2 text-sm text-slate-500">Live installer jobs, complaint assignment, and manual dispatch in one console.</div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {dispatchMetrics.map(({ label, value }) => (
+              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                <span className="font-medium text-slate-900">{value}</span> {label}
               </div>
             ))}
+            <button onClick={() => void loadData()} className="btn-secondary inline-flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
           </div>
         </div>
       </section>
-
-      <div className="flex items-center justify-end gap-4">
-        <button onClick={() => void loadData()} className="btn-secondary inline-flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
 
       <form onSubmit={handleAssignJob} className="card p-6 space-y-4">
         <div>
@@ -347,7 +336,7 @@ export default function JobsPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#8224E3]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#2d7dff]" />
         </div>
       ) : (
         <div className="space-y-4">
@@ -368,10 +357,10 @@ export default function JobsPage() {
                     }`}>
                       {job.status}
                     </span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-[#1a1f3a] text-[#f0f4f8]">
+                    <span className="text-xs px-2 py-1 rounded-full bg-[#eff6ff] text-[#2d7dff]">
                       {job.type}
                     </span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-[#2a2f4a] text-[#f0f4f8]">
+                    <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
                       {job.priority || 'medium'}
                     </span>
                   </div>

@@ -96,25 +96,17 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Support command</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Tickets,
-            <span className="text-[#8224E3]"> resolved with clarity.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">Manage customer support requests with priority-first visibility.</p>
-        </div>
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Queue pulse</div>
-          <div className="mt-3 text-5xl font-black">{tickets.length + requests.length}</div>
-          <div className="mt-2 text-sm text-black/60">Customer app tickets and service requests in one queue</div>
-          <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {queueMetrics.map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[22px] bg-black/10 p-4">
-                <Icon className="h-4 w-4 text-black/75" />
-                <div className="mt-4 text-2xl font-bold">{value}</div>
-                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Support queue</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Tickets</h1>
+            <div className="mt-2 text-sm text-slate-500">Customer complaints and service requests in one clean support console.</div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {queueMetrics.map(({ label, value }) => (
+              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                <span className="font-medium text-slate-900">{value}</span> {label}
               </div>
             ))}
           </div>
@@ -122,17 +114,17 @@ export default function TicketsPage() {
       </section>
 
       {isLoading ? (
-        <div className="card p-6 text-center"><Loader className="mx-auto h-6 w-6 animate-spin text-[#8224E3]" /></div>
+        <div className="card p-6 text-center"><Loader className="mx-auto h-6 w-6 animate-spin text-[#2d7dff]" /></div>
       ) : (
         <div className="grid gap-6 xl:grid-cols-2">
           <div className="overflow-x-auto card">
-            <div className="border-b border-white/10 px-5 py-4">
-              <div className="text-sm font-semibold text-white">Support tickets</div>
-              <div className="text-xs uppercase tracking-[0.18em] text-white/40">Customer app complaints and billing tickets</div>
+            <div className="border-b border-slate-200 px-5 py-4">
+              <div className="text-sm font-semibold text-slate-900">Support tickets</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Customer app complaints and billing tickets</div>
             </div>
             <table className="w-full">
               <thead>
-                <tr className="bg-[#0a0a0a]">
+                <tr className="bg-slate-50">
                   <th className="table-header">Subject</th>
                   <th className="table-header">Priority</th>
                   <th className="table-header">Status</th>
@@ -142,21 +134,21 @@ export default function TicketsPage() {
               </thead>
               <tbody>
                 {tickets.map((ticket) => (
-                  <tr key={ticket.id} className="border-t border-white/10 hover:bg-white/5">
+                  <tr key={ticket.id} className="border-t border-slate-200 hover:bg-slate-50">
                     <td className="table-cell">
-                      <div className="font-medium text-white">{ticket.subject}</div>
+                      <div className="font-medium text-slate-900">{ticket.subject}</div>
                       {ticket.customerId ? (
-                        <div className="mt-1 text-xs text-white/45">Customer: {ticket.customerId}</div>
+                        <div className="mt-1 text-xs text-slate-400">Customer: {ticket.customerId}</div>
                       ) : null}
                       {extractRecommendation(ticket.description) ? (
-                        <div className="mt-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs leading-5 text-white/70">
+                        <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
                           {extractRecommendation(ticket.description)}
                         </div>
                       ) : null}
                       {extractSnapshot(ticket.description).length ? (
                         <div className="mt-2 flex flex-wrap gap-2">
                           {extractSnapshot(ticket.description).slice(0, 4).map((item) => (
-                            <span key={item} className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-2 py-1 text-[11px] font-medium text-[#d7b9ff]">
+                            <span key={item} className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-2 py-1 text-[11px] font-medium text-[#2d7dff]">
                               {item}
                             </span>
                           ))}
@@ -194,7 +186,7 @@ export default function TicketsPage() {
                     </td>
                     <td className="table-cell">
                       <select
-                        className="rounded-xl border border-white/10 bg-black px-3 py-2 text-xs text-white outline-none"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
                         defaultValue=""
                         disabled={ticketBusyId === ticket.id}
                         onChange={(event) => {
@@ -223,13 +215,13 @@ export default function TicketsPage() {
           </div>
 
           <div className="overflow-x-auto card">
-            <div className="border-b border-white/10 px-5 py-4">
-              <div className="text-sm font-semibold text-white">Service requests</div>
-              <div className="text-xs uppercase tracking-[0.18em] text-white/40">Shift, disconnect, complaint, addon and plan-change requests</div>
+            <div className="border-b border-slate-200 px-5 py-4">
+              <div className="text-sm font-semibold text-slate-900">Service requests</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Shift, disconnect, complaint, addon and plan-change requests</div>
             </div>
             <table className="w-full">
               <thead>
-                <tr className="bg-[#0a0a0a]">
+                <tr className="bg-slate-50">
                   <th className="table-header">Request</th>
                   <th className="table-header">Type</th>
                   <th className="table-header">Status</th>
@@ -239,14 +231,14 @@ export default function TicketsPage() {
               </thead>
               <tbody>
                 {requests.map((request) => (
-                  <tr key={request.id} className="border-t border-white/10 hover:bg-white/5">
+                  <tr key={request.id} className="border-t border-slate-200 hover:bg-slate-50">
                     <td className="table-cell">
-                      <div className="font-medium text-white">{request.requestNumber}</div>
-                      <div className="text-xs text-white/45">{request.customerId || request.serviceId || 'Customer app request'}</div>
+                      <div className="font-medium text-slate-900">{request.requestNumber}</div>
+                      <div className="text-xs text-slate-400">{request.customerId || request.serviceId || 'Customer app request'}</div>
                     </td>
-                    <td className="table-cell text-white">{request.type}</td>
+                    <td className="table-cell text-slate-900">{request.type}</td>
                     <td className="table-cell">
-                      <span className="rounded-full bg-white/10 px-2 py-1 text-xs font-medium text-white">
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
                         {request.status}
                       </span>
                     </td>
@@ -255,7 +247,7 @@ export default function TicketsPage() {
                     </td>
                     <td className="table-cell">
                       <select
-                        className="rounded-xl border border-white/10 bg-black px-3 py-2 text-xs text-white outline-none"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
                         defaultValue=""
                         disabled={requestBusyId === request.id}
                         onChange={(event) => {
@@ -276,7 +268,7 @@ export default function TicketsPage() {
                 ))}
                 {requests.length === 0 ? (
                   <tr>
-                    <td className="table-cell text-white/55" colSpan={5}>No service requests in the queue.</td>
+                    <td className="table-cell text-slate-500" colSpan={5}>No service requests in the queue.</td>
                   </tr>
                 ) : null}
               </tbody>
