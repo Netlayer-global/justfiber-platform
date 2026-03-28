@@ -920,6 +920,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final otpPurpose = (otpState['purpose'] ?? '').toString();
     final otpExpiresAt = (otpState['expiresAt'] ?? '').toString();
     final otpVerifiedAt = (otpState['verifiedAt'] ?? '').toString();
+    final complaintSummaryPack = <String>[
+      'Resolution code: ${_complaintResolutionLabel(complaintResolution)}',
+      'Complaint note: ${complaint['note'] ?? _complaintNoteController.text.trim()}',
+      'Old serial: ${oldSerial.isEmpty ? '-' : oldSerial}',
+      'New serial: ${newSerial.isEmpty ? '-' : newSerial}',
+      'OTP purpose: ${_otpPurposeLabel(otpPurpose)}',
+      'OTP verified: ${otpVerifiedAt.isEmpty ? '-' : _shortDateTime(otpVerifiedAt)}',
+    ].join('\n');
     final latestTimelineItem = timeline.isEmpty ? null : timeline.last;
     final latestTimelineEvent = latestTimelineItem == null
         ? ''
@@ -2026,6 +2034,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       _resolveComplaintFlow();
                                     },
                               child: const Text('Resolve complaint'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () => _copyText('Complaint summary copied', complaintSummaryPack),
+                              child: const Text('Copy complaint summary'),
                             ),
                           ],
                         ),
