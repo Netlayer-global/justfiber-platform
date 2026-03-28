@@ -528,9 +528,9 @@ export default function PlansPage() {
       <section className="card p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan Management</div>
-            <h1 className="mt-2 text-3xl font-black tracking-[-0.03em] text-white">Manage broadband plans</h1>
-            <p className="mt-2 text-sm text-white/55">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plan management</div>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">Manage broadband plans</h1>
+            <p className="mt-2 text-sm text-slate-500">
               Keep this screen commercial-only: plan name, speed, pricing, validity, invoice breakup, and visibility.
             </p>
           </div>
@@ -546,17 +546,17 @@ export default function PlansPage() {
           </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <div className="rounded-[18px] border border-white/10 bg-[#0a0e27] p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-white/45">Total plans</div>
-            <div className="mt-2 text-2xl font-bold text-white">{plans.length}</div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Total plans</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{plans.length}</div>
           </div>
-          <div className="rounded-[18px] border border-white/10 bg-[#0a0e27] p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-white/45">Active</div>
-            <div className="mt-2 text-2xl font-bold text-white">{plans.filter((plan) => plan.status === 'active').length}</div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{plans.filter((plan) => plan.status === 'active').length}</div>
           </div>
-          <div className="rounded-[18px] border border-white/10 bg-[#0a0e27] p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-white/45">Visible now</div>
-            <div className="mt-2 text-2xl font-bold text-white">{filteredPlans.length}</div>
+          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Visible now</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{filteredPlans.length}</div>
           </div>
         </div>
       </section>
@@ -732,9 +732,9 @@ export default function PlansPage() {
         <div className="card p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan composer</div>
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">Create a new plan only when needed</h2>
-              <p className="mt-2 text-sm leading-6 text-white/55">
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plan composer</div>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">Create a new plan only when needed</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
                 Use this only for new commercial packs. For routine work, pick a plan from the list and edit it.
               </p>
             </div>
@@ -744,19 +744,19 @@ export default function PlansPage() {
             </button>
           </div>
 
-          <div className="mt-6 rounded-[24px] border border-white/10 bg-[#0c0f15] p-5">
+          <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Preview name</div>
-                <div className="mt-2 text-lg font-bold text-white">{preview.name || 'New plan'}</div>
+              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Preview name</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">{preview.name || 'New plan'}</div>
               </div>
-              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Speed</div>
-                <div className="mt-2 text-lg font-bold text-white">{preview.speed || '0'} Mbps</div>
+              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Speed</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">{preview.speed || '0'} Mbps</div>
               </div>
-              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Monthly price</div>
-                <div className="mt-2 text-lg font-bold text-white">{formatCurrency(Number(preview.price || 0))}</div>
+              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Monthly price</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(Number(preview.price || 0))}</div>
               </div>
             </div>
           </div>
@@ -765,7 +765,7 @@ export default function PlansPage() {
 
         <div className="space-y-6">
           <div className="card p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan library</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plan library</div>
             <div className="mt-4 space-y-4">
               <input className="input w-full" placeholder="Search by plan code or name" value={query} onChange={(e) => setQuery(e.target.value)} />
               <div className="flex flex-wrap gap-2">
@@ -793,18 +793,18 @@ export default function PlansPage() {
           </div>
 
           <div className="card p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Current draft</div>
-            <div className="mt-4 rounded-[24px] border border-white/10 bg-[#0c0f15] p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Current draft</div>
+            <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Plan name</div>
-                  <div className="mt-2 text-lg font-bold text-white">{preview.name || 'New plan'}</div>
-                  <div className="mt-1 text-sm text-white/45">{preview.planCode || 'PLAN_CODE'}</div>
+                <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Plan name</div>
+                  <div className="mt-2 text-lg font-semibold text-slate-900">{preview.name || 'New plan'}</div>
+                  <div className="mt-1 text-sm text-slate-400">{preview.planCode || 'PLAN_CODE'}</div>
                 </div>
-                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Monthly price</div>
-                  <div className="mt-2 text-lg font-bold text-white">{formatCurrency(Number(preview.price || 0))}</div>
-                  <div className="mt-1 text-sm text-white/45">{preview.speed || '0'} / {preview.uploadSpeed || '0'} Mbps</div>
+                <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Monthly price</div>
+                  <div className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(Number(preview.price || 0))}</div>
+                  <div className="mt-1 text-sm text-slate-400">{preview.speed || '0'} / {preview.uploadSpeed || '0'} Mbps</div>
                 </div>
               </div>
             </div>
@@ -821,10 +821,10 @@ export default function PlansPage() {
           {selectedPlan ? (
             <div className="card grid gap-5 p-5 xl:grid-cols-[1.2fr_0.8fr]">
               <div>
-                <div className="text-xs uppercase tracking-[0.22em] text-white/45">Selected plan</div>
+                <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Selected plan</div>
                 <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <div className="text-2xl font-black text-white">{selectedPlan.name}</div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                  <div className="text-2xl font-semibold text-slate-900">{selectedPlan.name}</div>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
                     {planLaneLabel(selectedPlan)}
                   </span>
                 </div>
@@ -832,22 +832,22 @@ export default function PlansPage() {
                   {selectedPlan.planCode} • {renderCategoryLabel(selectedPlan.category)} • {selectedPlan.visibleInCustomerApp ? 'Visible in apps' : 'Hidden from apps'}
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/40">Commercial</div>
-                    <div className="mt-2 text-lg font-bold text-white">{formatCurrency(selectedPlan.price)}</div>
-                    <div className="text-sm text-white/55">{selectedPlan.speed} / {selectedPlan.uploadSpeed || 0} Mbps</div>
+                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Commercial</div>
+                    <div className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(selectedPlan.price)}</div>
+                    <div className="text-sm text-slate-500">{selectedPlan.speed} / {selectedPlan.uploadSpeed || 0} Mbps</div>
                   </div>
-                  <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/40">Visibility</div>
-                    <div className="mt-2 text-lg font-bold text-white">{selectedPlan.visibleInCustomerApp ? 'Customer live' : 'Hidden'}</div>
-                    <div className="text-sm text-white/55">{selectedPlan.visibleInSalesApp ? 'Sales visible' : 'Sales hidden'}</div>
+                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Visibility</div>
+                    <div className="mt-2 text-lg font-semibold text-slate-900">{selectedPlan.visibleInCustomerApp ? 'Customer live' : 'Hidden'}</div>
+                    <div className="text-sm text-slate-500">{selectedPlan.visibleInSalesApp ? 'Sales visible' : 'Sales hidden'}</div>
                   </div>
-                  <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/40">Readiness</div>
-                    <div className={`mt-2 text-lg font-bold ${selectedPlan.provisioningReady === false ? 'text-amber-100' : 'text-emerald-200'}`}>
+                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Readiness</div>
+                    <div className={`mt-2 text-lg font-semibold ${selectedPlan.provisioningReady === false ? 'text-amber-600' : 'text-emerald-600'}`}>
                       {selectedPlan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
                     </div>
-                    <div className="text-sm text-white/55">{selectedPlan.latencyClass || 'standard'} latency</div>
+                    <div className="text-sm text-slate-500">{selectedPlan.latencyClass || 'standard'} latency</div>
                   </div>
                 </div>
               </div>
@@ -890,27 +890,27 @@ export default function PlansPage() {
                   <div className="mt-2 truncate text-xl font-bold text-white">{plan.name}</div>
                   <div className="mt-1 text-sm text-white/45">{plan.planCode || plan.id}</div>
                 </div>
-                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.status === 'active' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/65'}`}>
+                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                   {plan.status === 'active' ? 'Active' : 'Inactive'}
                 </div>
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-white/40">Monthly price</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{formatCurrency(plan.price)}</div>
+                <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Monthly price</div>
+                  <div className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(plan.price)}</div>
                 </div>
-                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-white/40">Download speed</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{plan.speed} Mbps</div>
+                <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Download speed</div>
+                  <div className="mt-2 text-lg font-semibold text-slate-900">{plan.speed} Mbps</div>
                 </div>
-                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-white/40">Visibility</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{plan.visibleInCustomerApp ? 'Visible' : 'Hidden'}</div>
+                <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Visibility</div>
+                  <div className="mt-2 text-lg font-semibold text-slate-900">{plan.visibleInCustomerApp ? 'Visible' : 'Hidden'}</div>
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+              <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                 <button type="button" onClick={() => beginEdit(plan)} className="btn-secondary inline-flex items-center gap-2">
                   <Pencil className="h-4 w-4" />
                   Edit
@@ -940,12 +940,12 @@ export default function PlansPage() {
                 <button
                   type="button"
                   onClick={() => void togglePlanStatus(plan)}
-                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-200' : 'border-[#8224E3]/30 text-[#8224E3]'}`}
+                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-600' : 'border-[#2d7dff]/20 text-[#2d7dff]'}`}
                 >
                   <ShieldCheck className="h-4 w-4" />
                   {plan.status === 'active' ? 'Deactivate' : 'Activate'}
                 </button>
-                <button type="button" onClick={() => void removePlan(plan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-200">
+                <button type="button" onClick={() => void removePlan(plan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-600">
                   <Trash2 className="h-4 w-4" />
                   Delete
                 </button>
@@ -954,7 +954,7 @@ export default function PlansPage() {
           ))}
 
           {filteredPlans.length === 0 ? (
-            <div className="card p-8 text-center text-white/50 lg:col-span-2">
+            <div className="card p-8 text-center text-slate-500 lg:col-span-2">
               No plans found for the current search and filter combination.
             </div>
           ) : null}
