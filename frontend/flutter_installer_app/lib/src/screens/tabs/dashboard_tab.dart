@@ -12,9 +12,10 @@ class DashboardTab extends StatelessWidget {
     final appState = InstallerStateScope.of(context);
     final dashboard = appState.dashboard;
     final profile = appState.profile;
-    final todayJobs = appState.jobs.where(_isTodayJob).where((job) => job.status != 'completed').length;
-    final pendingJobs = appState.jobs.where((job) => !_isTodayJob(job) && job.status != 'completed').length;
+    final todayJobs = appState.jobs.where(_isTodayJob).where((job) => job.status != 'completed' && job.status != 'deferred').length;
+    final pendingJobs = appState.jobs.where((job) => !_isTodayJob(job) && job.status != 'completed' && job.status != 'deferred').length;
     final completedJobs = appState.jobs.where((job) => job.status == 'completed').length;
+    final deferredJobs = appState.jobs.where((job) => job.status == 'deferred').length;
 
     return RefreshIndicator(
       color: const Color(0xFF2563EB),
@@ -96,6 +97,8 @@ class DashboardTab extends StatelessWidget {
                     Expanded(child: _miniSummary('Queue total', '${dashboard.pendingJobs}')),
                   ],
                 ),
+                const SizedBox(height: 10),
+                _miniSummary('Follow-up required', '$deferredJobs'),
               ],
             ),
           ),
@@ -107,6 +110,8 @@ class DashboardTab extends StatelessWidget {
               Expanded(child: _metric(context, 'Pending', '$pendingJobs')),
             ],
           ),
+          const SizedBox(height: 12),
+          _metric(context, 'Follow-up', '$deferredJobs'),
           const SizedBox(height: 12),
           _metric(context, 'Completed', '$completedJobs'),
           const SizedBox(height: 18),
