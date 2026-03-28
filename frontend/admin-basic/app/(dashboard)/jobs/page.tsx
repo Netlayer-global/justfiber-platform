@@ -339,9 +339,9 @@ export default function JobsPage() {
           <Loader className="w-6 h-6 animate-spin mx-auto text-[#2d7dff]" />
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredJobs.map((job) => (
-            <div key={job.id} className="card p-5 space-y-4">
+            <div key={job.id} className="card p-4 space-y-4">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -420,105 +420,105 @@ export default function JobsPage() {
               </div>
 
               {(job.mapUrl || job.planName || job.customerPhone || job.finalSerialNumber || job.configStatus) ? (
-                <div className="rounded border border-[#2a2f4a] bg-[#0f172a] p-3 text-sm text-slate-300">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
                   <div className="flex flex-wrap items-center gap-2">
                     {job.mapUrl ? (
                       <a
                         href={job.mapUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-[#8224E3]"
+                        className="rounded bg-white px-3 py-1 text-xs font-medium text-[#2d7dff] border border-slate-200"
                       >
                         Open map
                       </a>
                     ) : null}
                     {job.customerPhone ? (
-                      <a href={`tel:${job.customerPhone}`} className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                      <a href={`tel:${job.customerPhone}`} className="rounded bg-white px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">
                         Call customer
                       </a>
                     ) : null}
                     {job.configStatus ? (
-                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                      <span className="rounded bg-white px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">
                         Config: {job.configStatus}
                       </span>
                     ) : null}
                     {job.proofUploadedAt ? (
-                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                      <span className="rounded bg-white px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">
                         Proof uploaded
                       </span>
                     ) : null}
                     {job.completionOtpVerifiedAt ? (
-                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                      <span className="rounded bg-white px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">
                         OTP verified
                       </span>
                     ) : null}
                     {job.complaintResolutionCode ? (
-                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                      <span className="rounded bg-white px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">
                         Resolution: {job.complaintResolutionCode}
                       </span>
                     ) : null}
                     {job.complaintReplacedDevice ? (
-                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                      <span className="rounded bg-white px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">
                         ONT replaced
                       </span>
                     ) : null}
                     {job.latestEventCode ? (
-                      <span className="rounded bg-[#1e293b] px-3 py-1 text-xs font-medium text-white">
+                      <span className="rounded bg-white px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200">
                         Event: {job.latestEventCode}
                       </span>
                     ) : null}
                   </div>
                   {(job.wifiSsid24 || job.wifiSsid5) ? (
-                    <div className="mt-3 grid gap-2 text-xs text-slate-300 md:grid-cols-2">
-                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-2">
+                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
                         Wi-Fi 2.4G: {job.wifiSsid24 || '-'}
                       </div>
-                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
                         Wi-Fi 5G: {job.wifiSsid5 || '-'}
                       </div>
-                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2 md:col-span-2">
+                      <div className="rounded border border-slate-200 bg-white px-3 py-2 md:col-span-2">
                         Wi-Fi password: {job.wifiPassword || '-'}
                       </div>
-                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
                         PPPoE user: {job.pppoeUsername || '-'}
                       </div>
-                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
                         PPPoE password: {job.pppoePassword || '-'}
                       </div>
                     </div>
                   ) : null}
                   {job.activationSmsPreview ? (
-                    <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
-                      <div className="font-semibold text-white">Activation SMS Preview</div>
+                    <div className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                      <div className="font-semibold text-slate-900">Activation SMS Preview</div>
                       <div className="mt-1 whitespace-pre-wrap">{job.activationSmsPreview}</div>
                     </div>
                   ) : null}
                   {(job.completionOtpDemo || job.completionOtpSmsPreview) ? (
-                    <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                    <div className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                       <div className="flex items-center justify-between gap-3">
-                        <div className="font-semibold text-white">Installation OTP Demo</div>
-                        <div className="font-mono text-sm text-[#8224E3]">{job.completionOtpDemo || '-'}</div>
+                        <div className="font-semibold text-slate-900">Installation OTP Demo</div>
+                        <div className="font-mono text-sm text-[#2d7dff]">{job.completionOtpDemo || '-'}</div>
                       </div>
                       {job.completionOtpSmsPreview ? <div className="mt-2 whitespace-pre-wrap">{job.completionOtpSmsPreview}</div> : null}
                     </div>
                   ) : null}
                   {(job.oldSerialNumber || job.finalSerialNumber) ? (
-                    <div className="mt-3 grid gap-2 text-xs text-slate-300 md:grid-cols-2">
-                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-2">
+                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
                         Old ONT: {job.oldSerialNumber || '-'}
                       </div>
-                      <div className="rounded border border-white/10 bg-black/20 px-3 py-2">
+                      <div className="rounded border border-slate-200 bg-white px-3 py-2">
                         New ONT: {job.finalSerialNumber || '-'}
                       </div>
                     </div>
                   ) : null}
                   {job.complaintResolutionNote ? (
-                    <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                    <div className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                       Complaint note: {job.complaintResolutionNote}
                     </div>
                   ) : null}
                   {job.latestEventNote ? (
-                    <div className="mt-3 rounded border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                    <div className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                       {job.latestEventNote}
                     </div>
                   ) : null}
@@ -550,7 +550,7 @@ export default function JobsPage() {
                     Reassign Job
                   </button>
                   <button
-                    className="btn-secondary inline-flex items-center gap-2 border-red-500/30 text-red-300 hover:bg-red-500/10"
+                    className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-600 hover:bg-red-50"
                     onClick={() => void handleDeleteJob(job)}
                     disabled={deletingJobId === job.id}
                   >

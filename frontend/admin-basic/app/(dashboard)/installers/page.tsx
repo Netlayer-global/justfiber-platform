@@ -238,9 +238,9 @@ export default function InstallersPage() {
           <Loader className="w-6 h-6 animate-spin mx-auto text-[#2d7dff]" />
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {installers.map((installer) => (
-            <div key={installer.id} className="card p-5 space-y-4">
+            <div key={installer.id} className="card p-4 space-y-4">
               {(() => {
                 const installerJobs = jobs.filter((job) => job.installerId === installer.id)
                 const liveJobs = installerJobs.filter((job) => job.status === 'pending' || job.status === 'in_progress')
@@ -268,7 +268,7 @@ export default function InstallersPage() {
                   <p className="text-sm text-slate-400">{installer.phone}</p>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm min-w-[280px]">
+              <div className="grid grid-cols-2 gap-3 text-sm min-w-[280px] xl:grid-cols-5">
                   <div>
                     <p className="text-slate-500 text-xs">Jobs Completed</p>
                     <p className="font-semibold">{installer.jobsCompleted}</p>
@@ -337,7 +337,7 @@ export default function InstallersPage() {
                   Skills: {installer.skills.join(', ')}
                 </div>
               ) : null}
-              <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <p className="text-sm font-medium">Current Jobs</p>
                   <p className="text-xs text-slate-500">Pending + in-progress only</p>

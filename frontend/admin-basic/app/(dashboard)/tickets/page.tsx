@@ -207,7 +207,7 @@ export default function TicketsPage() {
                 ))}
                 {tickets.length === 0 ? (
                   <tr>
-                    <td className="table-cell text-white/55" colSpan={5}>No tickets in the queue.</td>
+                    <td className="table-cell text-slate-500" colSpan={5}>No tickets in the queue.</td>
                   </tr>
                 ) : null}
               </tbody>
