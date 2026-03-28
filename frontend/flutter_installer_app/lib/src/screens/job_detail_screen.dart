@@ -902,6 +902,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       'Router online: ${device['onlineStatus'] ?? 'unknown'}',
       'Provisioning state: ${device['provisioningState'] ?? 'pending'}',
     ].join('\n');
+    final visitUrgency = _visitUrgencyLabel(status, priority, scheduledAt);
+    final visitTimeWindow = _timeWindowLabel(scheduledAt);
+    final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
+    final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
+    final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
+    final proofUploadedAt = (proof['uploadedAt'] ?? '').toString();
     final proofSummaryPack = <String>[
       'Router photo: ${_routerPhotoPath == null ? 'Pending capture' : 'Captured'}',
       'Cable photo: ${_cablePhotoPath == null ? 'Pending capture' : 'Captured'}',
@@ -909,12 +915,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (_routerPhotoCapturedAt != null) 'Router captured: ${_shortDateTime(_routerPhotoCapturedAt!.toIso8601String())}',
       if (_cablePhotoCapturedAt != null) 'Cable captured: ${_shortDateTime(_cablePhotoCapturedAt!.toIso8601String())}',
     ].join('\n');
-    final visitUrgency = _visitUrgencyLabel(status, priority, scheduledAt);
-    final visitTimeWindow = _timeWindowLabel(scheduledAt);
-    final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
-    final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
-    final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
-    final proofUploadedAt = (proof['uploadedAt'] ?? '').toString();
     final checklistSavedAt = (checklist['savedAt'] ?? '').toString();
     final checklistSaved = checklist.isNotEmpty;
     final otpPurpose = (otpState['purpose'] ?? '').toString();
@@ -3464,6 +3464,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool canStartOnsite,
     required bool canStartComplaint,
     required bool canReplaceOnt,
+    required bool canRebootComplaint,
     required bool canSendComplaintOtp,
     required bool canResolveComplaint,
   }) {
@@ -3472,6 +3473,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (canStartOnsite && status == 'enroute') return 'Mark onsite';
     if (canStartComplaint && status == 'onsite') return 'Start complaint';
     if (canReplaceOnt) return 'Replace ONT';
+    if (canRebootComplaint) return 'Reboot ONT';
     if (canSendComplaintOtp) return 'Send OTP';
     if (canResolveComplaint) return 'Resolve complaint';
     if (status == 'completed') return 'Complaint closed';
