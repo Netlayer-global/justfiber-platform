@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/app_state.dart';
 import '../job_detail_screen.dart';
@@ -260,6 +261,24 @@ class _NotificationsTabState extends State<NotificationsTab> {
                           _formatTime(item.createdAt),
                           style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                         ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => _copyAlert(context, item),
+                              icon: const Icon(Icons.copy_all_rounded, size: 18),
+                              label: const Text('Copy alert'),
+                            ),
+                            if ((item.payload['installerJobId'] ?? '').toString().isNotEmpty)
+                              OutlinedButton.icon(
+                                onPressed: widget.onOpenJobs,
+                                icon: const Icon(Icons.assignment_rounded, size: 18),
+                                label: const Text('Open jobs'),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -302,6 +321,20 @@ class _NotificationsTabState extends State<NotificationsTab> {
       selected: _filter == value,
       onSelected: (_) => setState(() => _filter = value),
       avatar: count > 0 ? const Icon(Icons.bolt_rounded, size: 16) : null,
+    );
+  }
+
+  Future<void> _copyAlert(BuildContext context, InstallerNotificationItem item) async {
+    final alertPack = <String>[
+      'Title: ${item.title}',
+      'Body: ${item.body}',
+      'Created: ${_formatTime(item.createdAt)}',
+      'Job ID: ${(item.payload['installerJobId'] ?? '-').toString()}',
+    ].join('\n');
+    await Clipboard.setData(ClipboardData(text: alertPack));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Alert copied')),
     );
   }
 
