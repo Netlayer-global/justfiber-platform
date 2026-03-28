@@ -46,11 +46,8 @@ class _JobsTabState extends State<JobsTab> {
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
         children: [
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -60,23 +57,23 @@ class _JobsTabState extends State<JobsTab> {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
+                        color: const Color(0xFFF8F4FF),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x36FFFFFF)),
+                        border: Border.all(color: const Color(0x228224E3)),
                       ),
-                      child: const Icon(Icons.assignment_rounded, color: Colors.white, size: 28),
+                      child: const Icon(Icons.assignment_rounded, color: Color(0xFF8224E3), size: 28),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0x1FFFFFFF),
+                        color: const Color(0xFFF8F4FF),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x2CFFFFFF)),
+                        border: Border.all(color: const Color(0x228224E3)),
                       ),
                       child: Text(
                         '${activeJobs.length} active',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                        style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
                   ],
@@ -85,18 +82,18 @@ class _JobsTabState extends State<JobsTab> {
                 Text(
                   'FIELD JOBS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFE9D5FF),
-                        letterSpacing: 3.2,
+                        color: const Color(0xFF8224E3),
+                        letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 10),
-                Text('Dispatch queue', style: theme.textTheme.headlineSmall),
+                Text('Dispatch queue', style: theme.textTheme.headlineSmall?.copyWith(color: const Color(0xFF131313))),
                 const SizedBox(height: 8),
                 Text(
                   'Open any job card to continue the full field workflow: accept, travel, onsite, router link, activation, proof, OTP, and completion.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFFF3E8FF),
+                        color: const Color(0xFF6E6A67),
                         height: 1.45,
                       ),
                 ),
@@ -245,9 +242,9 @@ class _JobsTabState extends State<JobsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0x26FFFFFF),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x40FFFFFF)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         children: [
@@ -256,13 +253,13 @@ class _JobsTabState extends State<JobsTab> {
             style: const TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 20,
-              color: Color(0xFFFFFFFF),
+              color: Color(0xFF131313),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(color: Color(0xFFE9D5FF), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
           ),
         ],
       ),

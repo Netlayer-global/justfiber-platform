@@ -15,6 +15,7 @@ class DashboardTab extends StatelessWidget {
     final todayJobs = appState.jobs.where(_isTodayJob).where((job) => job.status != 'completed').length;
     final pendingJobs = appState.jobs.where((job) => !_isTodayJob(job) && job.status != 'completed').length;
     final completedJobs = appState.jobs.where((job) => job.status == 'completed').length;
+
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
       backgroundColor: const Color(0xFFF7F8FC),
@@ -23,11 +24,8 @@ class DashboardTab extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
         children: [
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -37,23 +35,23 @@ class DashboardTab extends StatelessWidget {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
+                        color: const Color(0xFFF8F4FF),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x36FFFFFF)),
+                        border: Border.all(color: const Color(0x228224E3)),
                       ),
-                      child: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 28),
+                      child: const Icon(Icons.dashboard_customize_rounded, color: Color(0xFF8224E3), size: 28),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0x1FFFFFFF),
+                        color: const Color(0xFFF0FDF4),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x2CFFFFFF)),
+                        border: Border.all(color: const Color(0x5534D399)),
                       ),
                       child: Text(
                         dashboard.availabilityStatus,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                        style: const TextStyle(color: Color(0xFF166534), fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
                   ],
@@ -62,33 +60,41 @@ class DashboardTab extends StatelessWidget {
                 Text(
                   'FIELD DASHBOARD',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFE9D5FF),
-                        letterSpacing: 3.2,
+                        color: const Color(0xFF8224E3),
+                        letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   profile.fullName.isEmpty ? 'Installer console' : profile.fullName,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFF131313)),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${profile.installerCode.isEmpty ? '-' : profile.installerCode} Ã¢â‚¬Â¢ ${profile.phone.isEmpty ? '-' : profile.phone}',
-                  style: const TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w600),
+                  '${profile.installerCode.isEmpty ? '-' : profile.installerCode} | ${profile.phone.isEmpty ? '-' : profile.phone}',
+                  style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0x26FFFFFF),
+                    color: const Color(0xFFF8F4FF),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0x40FFFFFF)),
+                    border: Border.all(color: const Color(0x228224E3)),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Availability active',
-                    style: const TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w700),
+                    style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700),
                   ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _miniSummary('New installs', '${dashboard.todayNewInstallationJobs}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _miniSummary('Queue total', '${dashboard.pendingJobs}')),
+                  ],
                 ),
               ],
             ),
@@ -157,6 +163,25 @@ class DashboardTab extends StatelessWidget {
           Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF6E6A67))),
           const SizedBox(height: 8),
           Text(value, style: Theme.of(context).textTheme.headlineSmall),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniSummary(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
         ],
       ),
     );
