@@ -1830,7 +1830,7 @@ export default function CustomerDetailPage() {
                       </div>
 
                       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        <div className="rounded border border-[#2a2f4a] p-4 space-y-4">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
                           <h3 className="font-semibold">Wi-Fi Management</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input className="input" placeholder="SSID 2.4G" value={form?.ssid24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid24: e.target.value })} />
@@ -1841,7 +1841,7 @@ export default function CustomerDetailPage() {
                           <button className="btn-primary" onClick={() => void handleDeviceWifiUpdate(device)} disabled={isSaving}>Apply Wi-Fi Only</button>
                         </div>
 
-                        <div className="rounded border border-[#2a2f4a] p-4 space-y-4">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
                           <h3 className="font-semibold">WAN Management</h3>
                           <p className="text-sm text-slate-500">
                             PPPoE update ke saath FreeRADIUS subscriber access bhi sync hoga.
@@ -1858,8 +1858,8 @@ export default function CustomerDetailPage() {
                         </div>
                       </div>
 
-                      <div className="rounded border border-[#2a2f4a] p-4 space-y-4">
-                        <h3 className="font-semibold">Device Actions</h3>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                          <h3 className="font-semibold">Device Actions</h3>
                         <div className="flex flex-wrap gap-2">
                           <button className="btn-secondary" onClick={() => void handleDeviceReboot(device)} disabled={isSaving}>Reboot</button>
                           <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_PREPARE')} disabled={isSaving}>Prepare</button>
@@ -1867,10 +1867,10 @@ export default function CustomerDetailPage() {
                           <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_SUSPEND')} disabled={isSaving}>Suspend Service</button>
                           <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_RESUME')} disabled={isSaving}>Resume Service</button>
                         </div>
-                        <div className="rounded border border-[#2a2f4a] bg-[#0a0e27] p-4 space-y-3">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
                           <div>
-                            <h4 className="font-semibold text-white">FreeRADIUS PPPoE Control</h4>
-                            <p className="mt-1 text-sm text-slate-400">
+                            <h4 className="font-semibold text-slate-900">FreeRADIUS PPPoE Control</h4>
+                            <p className="mt-1 text-sm text-slate-500">
                               Customer service ke liye direct PPPoE create, suspend, aur resume action.
                             </p>
                           </div>
@@ -1893,17 +1893,17 @@ export default function CustomerDetailPage() {
                           Advanced raw snapshots
                         </summary>
                         <div className="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-4 text-sm">
-                          <div className="rounded border border-[#2a2f4a] p-4">
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
                             <h3 className="font-semibold mb-3">Wi-Fi Snapshot</h3>
-                            <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.wifiInfo || {}, null, 2)}</pre>
+                            <pre className="overflow-auto rounded border border-slate-200 bg-slate-50 p-3 text-slate-700">{JSON.stringify(device.wifiInfo || {}, null, 2)}</pre>
                           </div>
-                          <div className="rounded border border-[#2a2f4a] p-4">
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
                             <h3 className="font-semibold mb-3">WAN / LAN Snapshot</h3>
-                            <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify({ wanInfo: device.wanInfo || {}, lanInfo: device.lanInfo || {} }, null, 2)}</pre>
+                            <pre className="overflow-auto rounded border border-slate-200 bg-slate-50 p-3 text-slate-700">{JSON.stringify({ wanInfo: device.wanInfo || {}, lanInfo: device.lanInfo || {} }, null, 2)}</pre>
                           </div>
-                          <div className="rounded border border-[#2a2f4a] p-4">
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
                             <h3 className="font-semibold mb-3">Optical / Diagnostics</h3>
-                            <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-slate-300">{JSON.stringify(device.opticalInfo || {}, null, 2)}</pre>
+                            <pre className="overflow-auto rounded border border-slate-200 bg-slate-50 p-3 text-slate-700">{JSON.stringify(device.opticalInfo || {}, null, 2)}</pre>
                           </div>
                         </div>
                       </details>
@@ -1917,7 +1917,7 @@ export default function CustomerDetailPage() {
               <div className="card p-5 space-y-3">
                 <h2 className="text-lg font-semibold">Tickets</h2>
                 {(customer.tickets || []).length ? customer.tickets?.map((ticket) => (
-                  <div key={ticket.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
+                  <div key={ticket.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
                     {ticket.ticketNumber || ticket.id} | {ticket.subject} | {ticket.status} | {ticket.priority}
                   </div>
                 )) : <p className="text-slate-500 text-sm">No tickets found</p>}
@@ -1928,7 +1928,7 @@ export default function CustomerDetailPage() {
               <div className="card p-5 space-y-3">
                 <h2 className="text-lg font-semibold">Action History</h2>
                 {(customer.actions || []).length ? customer.actions?.map((action) => (
-                  <div key={action.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
+                  <div key={action.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
                     {action.actionType} | {action.status} | {action.createdAt ? new Date(action.createdAt).toLocaleString() : '-'}
                   </div>
                 )) : <p className="text-slate-500 text-sm">No actions found</p>}
@@ -1969,7 +1969,7 @@ export default function CustomerDetailPage() {
 
             <div className="card p-5 space-y-4">
               <h2 className="text-lg font-semibold">Action rail</h2>
-              <p className="text-sm text-[#b4bcc4]">
+              <p className="text-sm text-slate-500">
                 Fast operator controls for lifecycle flips and manual recovery.
               </p>
               <button className="btn-secondary w-full" onClick={() => void handleCustomerUpdate({ status: customer.status === 'active' ? 'suspended' : 'active' })} disabled={isSaving}>
