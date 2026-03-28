@@ -593,6 +593,36 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  bool _hasCapturedProofPhotos() {
+    final hasRouter = (_routerPhotoPath ?? '').trim().isNotEmpty;
+    final hasCable = (_cablePhotoPath ?? '').trim().isNotEmpty;
+    return hasRouter && hasCable;
+  }
+
+  Future<void> _submitCapturedProof() async {
+    if (!_hasCapturedProofPhotos()) {
+      await _showRequirementsSheet(
+        title: 'Proof capture pending',
+        subtitle: 'Before proof submission, capture both required field photos.',
+        items: const [
+          'Capture the router photo from the customer site.',
+          'Capture the cable/photo link proof from the customer site.',
+        ],
+      );
+      return;
+    }
+
+    await _run(
+      () => _appState.api.uploadProof(
+        _appState.session!,
+        widget.job.id,
+        routerPhotoUrl: Uri.file(_routerPhotoPath!).toString(),
+        cablePhotoUrl: Uri.file(_cablePhotoPath!).toString(),
+      ),
+      'Installation proof submitted',
+    );
+  }
+
   Future<void> _copyText(String successMessage, String value) async {
     await Clipboard.setData(ClipboardData(text: value));
     _show(successMessage);
@@ -686,8 +716,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final canReplaceOnt = _canReplaceOnt(status);
     final canSendComplaintOtp = _canSendComplaintOtp(status);
     final canResolveComplaint = _canResolveComplaint(status, _otpController.text.trim());
-    final canSubmitProof = _canSubmitProof(status, _routerPhotoReady, _cablePhotoReady);
-    final canSendInstallOtp = _canSendInstallOtp(status, proofUploaded, _routerPhotoReady, _cablePhotoReady);
+    final canSubmitProof = _canSubmitProof(status, _hasCapturedProofPhotos());
+    final canSendInstallOtp = _canSendInstallOtp(status, proofUploaded);
     final canCompleteInstall = _canCompleteInstall(
       status,
       _otpController.text.trim(),
@@ -1608,32 +1638,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CheckboxListTile(
-                                contentPadding: EdgeInsets.zero,
-                                value: _routerPhotoReady,
-                                onChanged: _busy ? null : (value) => setState(() => _routerPhotoReady = value ?? false),
-                                title: const Text('Router photo captured'),
-                                controlAffinity: ListTileControlAffinity.leading,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CheckboxListTile(
-                                contentPadding: EdgeInsets.zero,
-                                value: _cablePhotoReady,
-                                onChanged: _busy ? null : (value) => setState(() => _cablePhotoReady = value ?? false),
-                                title: const Text('Cable photo captured'),
-                                controlAffinity: ListTileControlAffinity.leading,
-                              ),
-                            ),
-                          ],
-                        ),
+                        _row('Router photo', _routerPhotoPath == null ? 'Pending capture' : 'Captured'),
+                        _row('Cable photo', _cablePhotoPath == null ? 'Pending capture' : 'Captured'),
                         const SizedBox(height: 8),
                         if (_routerPhotoPath != null || _cablePhotoPath != null) ...[
                           Wrap(
@@ -1654,32 +1660,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               onPressed: _busy
                                   ? null
                                   : () => _captureProofPhoto(routerPhoto: true),
-                              child: Text(_routerPhotoReady ? 'Router photo ready' : 'Capture router photo'),
+                              child: Text(_routerPhotoPath != null ? 'Retake router photo' : 'Capture router photo'),
                             ),
                             OutlinedButton(
                               onPressed: _busy
                                   ? null
                                   : () => _captureProofPhoto(routerPhoto: false),
-                              child: Text(_cablePhotoReady ? 'Cable photo ready' : 'Capture cable photo'),
+                              child: Text(_cablePhotoPath != null ? 'Retake cable photo' : 'Capture cable photo'),
                             ),
                             OutlinedButton(
                               onPressed: _busy || !canSubmitProof
                                   ? null
-                                  : () {
-                                      _run(
-                                        () => _appState.api.uploadProof(
-                                          _appState.session!,
-                                          widget.job.id,
-                                          routerPhotoUrl: _routerPhotoPath != null
-                                              ? Uri.file(_routerPhotoPath!).toString()
-                                              : 'https://justfiber.local/proof/${widget.job.id}/router.jpg',
-                                          cablePhotoUrl: _cablePhotoPath != null
-                                              ? Uri.file(_cablePhotoPath!).toString()
-                                              : 'https://justfiber.local/proof/${widget.job.id}/cable.jpg',
-                                        ),
-                                        'Installation proof submitted',
-                                      );
-                                    },
+                                  : _submitCapturedProof,
                               child: Text(proof.isNotEmpty ? 'Update proof' : 'Submit proof'),
                             ),
                             OutlinedButton(
@@ -2325,28 +2317,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             children: [
                               OutlinedButton(
                                 onPressed: _busy ? null : () => _captureProofPhoto(routerPhoto: true),
-                                child: Text(_routerPhotoReady ? 'Router photo ready' : 'Capture router photo'),
+                                child: Text(_routerPhotoPath != null ? 'Retake router photo' : 'Capture router photo'),
                               ),
                               OutlinedButton(
                                 onPressed: _busy ? null : () => _captureProofPhoto(routerPhoto: false),
-                                child: Text(_cablePhotoReady ? 'Cable photo ready' : 'Capture cable photo'),
+                                child: Text(_cablePhotoPath != null ? 'Retake cable photo' : 'Capture cable photo'),
                               ),
                               OutlinedButton(
                                 onPressed: _busy || !canSubmitProof
                                     ? null
-                                    : () => _run(
-                                          () => _appState.api.uploadProof(
-                                            _appState.session!,
-                                            widget.job.id,
-                                            routerPhotoUrl: _routerPhotoPath != null
-                                                ? Uri.file(_routerPhotoPath!).toString()
-                                                : 'https://justfiber.local/proof/${widget.job.id}/router.jpg',
-                                            cablePhotoUrl: _cablePhotoPath != null
-                                                ? Uri.file(_cablePhotoPath!).toString()
-                                                : 'https://justfiber.local/proof/${widget.job.id}/cable.jpg',
-                                          ),
-                                          'Installation proof submitted',
-                                        ),
+                                    : _submitCapturedProof,
                                 child: Text(proofUploaded ? 'Update proof' : 'Submit proof'),
                               ),
                             ],
@@ -2758,11 +2738,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _canResolveComplaint(String status, String otp) =>
       ['complaint_in_progress', 'active', 'onsite'].contains(status) && otp.length == 6;
 
-  bool _canSubmitProof(String status, bool routerReady, bool cableReady) =>
-      ['active', 'activation_in_progress', 'onsite', 'ont_scanned'].contains(status) && routerReady && cableReady;
+  bool _canSubmitProof(String status, bool proofPhotosReady) =>
+      ['active', 'activation_in_progress', 'onsite', 'ont_scanned'].contains(status) && proofPhotosReady;
 
-  bool _canSendInstallOtp(String status, bool proofUploaded, bool routerReady, bool cableReady) =>
-      ['active', 'activation_in_progress'].contains(status) && (proofUploaded || (routerReady && cableReady));
+  bool _canSendInstallOtp(String status, bool proofUploaded) =>
+      ['active', 'activation_in_progress'].contains(status) && proofUploaded;
 
   bool _canDeferJob(String status) => !['completed', 'cancelled', 'deferred'].contains(status);
 
@@ -3091,23 +3071,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       await _run(() => _appState.runActivationFlow(widget.job.id, serial), 'Activation requested');
       return;
     }
-    if (_canSubmitProof(status, _routerPhotoReady, _cablePhotoReady)) {
-      await _run(
-        () => _appState.api.uploadProof(
-          _appState.session!,
-          widget.job.id,
-          routerPhotoUrl: _routerPhotoPath != null
-              ? Uri.file(_routerPhotoPath!).toString()
-              : 'https://justfiber.local/proof/${widget.job.id}/router.jpg',
-          cablePhotoUrl: _cablePhotoPath != null
-              ? Uri.file(_cablePhotoPath!).toString()
-              : 'https://justfiber.local/proof/${widget.job.id}/cable.jpg',
-        ),
-        'Installation proof submitted',
-      );
+    if (_canSubmitProof(status, _hasCapturedProofPhotos())) {
+      await _submitCapturedProof();
       return;
     }
-    if (_canSendInstallOtp(status, proofUploaded, _routerPhotoReady, _cablePhotoReady)) {
+    if (_canSendInstallOtp(status, proofUploaded)) {
       setState(() => _busy = true);
       try {
         final otp = await _appState.api.sendCompletionOtp(_appState.session!, widget.job.id);
