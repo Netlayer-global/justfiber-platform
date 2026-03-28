@@ -17,9 +17,9 @@ function MiniBarChart() {
           <div className="mt-2 text-3xl font-semibold text-slate-900">$124,426</div>
           <div className="mt-1 text-sm text-slate-500">20 Jan to 26 Jan</div>
         </div>
-        <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-semibold text-[#2d7dff]">
+        <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-semibold text-[#5B6CFF]">
           <div className="grid grid-cols-3 gap-1">
-            <span className="rounded-full bg-[#2d7dff] px-3 py-1 text-white">Week</span>
+            <span className="rounded-full bg-[#5B6CFF] px-3 py-1 text-white">Week</span>
             <span className="px-3 py-1 text-slate-500">Month</span>
             <span className="px-3 py-1 text-slate-500">Year</span>
           </div>
@@ -31,7 +31,7 @@ function MiniBarChart() {
           <div key={days[index]} className="text-center">
             <div
               className={`mx-auto flex w-full max-w-[56px] items-start justify-center rounded-[18px] pt-3 text-xs font-semibold ${
-                index === 2 ? 'bg-[#2d7dff] text-white' : 'bg-slate-100 text-slate-500'
+                index === 2 ? 'bg-[#5B6CFF] text-white' : 'bg-slate-100 text-slate-500'
               }`}
               style={{ height: `${height * 2.2}px` }}
             >
@@ -176,26 +176,31 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
-        <Loader className="h-7 w-7 animate-spin text-[#8224E3]" />
+        <Loader className="h-7 w-7 animate-spin text-[#5B6CFF]" />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <section className="card p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Control tower</div>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Dashboard</h1>
-            <div className="mt-2 text-sm text-slate-500">
-              Billing, activation, installers, tickets, and serviceability in one clean operating console.
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Executive overview</div>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Operations dashboard</h1>
+            <div className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">
+              Billing, activation, installers, tickets, and serviceability in one clean operating surface.
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {summary.map(({ label, value }) => (
-              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <span className="font-medium text-slate-900">{value}</span> {label}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {summary.map(({ label, value, detail, icon: Icon }) => (
+              <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</div>
+                  <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
+                <div className="mt-1 text-xs text-slate-500">{detail}</div>
               </div>
             ))}
           </div>
@@ -232,7 +237,7 @@ export default function DashboardPage() {
           <div key={title} className="card p-6">
             <div className="flex items-center justify-between">
               <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{title}</div>
-              <Icon className="h-5 w-5 text-[#2d7dff]" />
+              <Icon className="h-5 w-5 text-[#5B6CFF]" />
             </div>
             <div className="mt-6 text-4xl font-semibold tracking-[-0.04em] text-slate-900">{value}</div>
             <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
@@ -247,7 +252,7 @@ export default function DashboardPage() {
               <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Focus board</div>
               <div className="mt-2 text-2xl font-semibold text-slate-900">Today's priorities</div>
             </div>
-            <div className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#2d7dff]">
+            <div className="rounded-full border border-[#5B6CFF]/20 bg-[#eef1ff] px-3 py-1 text-xs font-semibold text-[#5B6CFF]">
               Live
             </div>
           </div>
@@ -322,7 +327,7 @@ export default function DashboardPage() {
                   <div className="font-semibold text-slate-900">{title}</div>
                   <div className="mt-1 text-sm text-slate-500">{desc}</div>
                 </div>
-                <div className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#2d7dff]">
+                <div className="rounded-full border border-[#5B6CFF]/20 bg-[#eef1ff] px-3 py-1 text-xs font-semibold text-[#5B6CFF]">
                   {state}
                 </div>
               </div>
@@ -381,7 +386,7 @@ export default function DashboardPage() {
             </button>
           </div>
           {otpValue ? (
-            <div className="mt-4 rounded-[20px] border border-[#2d7dff]/20 bg-[#eff6ff] p-4">
+            <div className="mt-4 rounded-[20px] border border-[#5B6CFF]/20 bg-[#eef1ff] p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Current OTP</div>
               <div className="mt-2 text-3xl font-semibold tracking-[0.2em] text-slate-900">{otpValue}</div>
             </div>

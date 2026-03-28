@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
-import { Loader, RefreshCw } from 'lucide-react'
+import { CreditCard, Loader, RefreshCw, Settings2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 type BillingProfileForm = {
@@ -715,21 +715,35 @@ export default function BillingPage() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            <span className="font-medium text-slate-900">{billing.length}</span> All Invoices
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase tracking-[0.16em] text-slate-400">Invoices</span>
+              <CreditCard className="h-4 w-4 text-[#5B6CFF]" />
+            </div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{billing.length}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            <span className="font-medium text-slate-900">{invoiceQuickViewCounts.pending}</span> Pending
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Pending</div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{invoiceQuickViewCounts.pending}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            <span className="font-medium text-slate-900">{payments.length}</span> Payments
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase tracking-[0.16em] text-slate-400">Payments</span>
+              <Wallet className="h-4 w-4 text-[#5B6CFF]" />
+            </div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{payments.length}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            <span className="font-medium text-slate-900">{visibleCollections.length}</span> Collections
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Collections</div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{visibleCollections.length}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            <span className="font-medium text-slate-900">{profiles.length}</span> Profiles
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase tracking-[0.16em] text-slate-400">Profiles</span>
+              <Settings2 className="h-4 w-4 text-[#5B6CFF]" />
+            </div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{profiles.length}</div>
           </div>
         </div>
       </section>
@@ -741,8 +755,8 @@ export default function BillingPage() {
               key={tab.key}
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                 billingSectionTab === tab.key
-                  ? 'bg-white text-black'
-                  : 'bg-white/5 text-slate-300'
+                  ? 'bg-[#5B6CFF] text-white'
+                  : 'bg-slate-100 text-slate-600'
               }`}
               onClick={() => setBillingSectionTab(tab.key)}
             >
@@ -800,7 +814,7 @@ export default function BillingPage() {
 
       {billingSectionTab === 'settings' ? (
       <div className="card p-5">
-        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Export filters</div>
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Export filters</div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <input
             className="input"
@@ -835,7 +849,7 @@ export default function BillingPage() {
         <form onSubmit={generateInvoice} className="card p-5 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">New invoice</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">New invoice</div>
               <div className="mt-1 text-sm text-slate-400">Customer, service, amount override.</div>
             </div>
             <div className="text-xs text-slate-500">

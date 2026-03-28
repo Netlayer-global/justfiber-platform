@@ -240,12 +240,12 @@ export default function CustomersPage() {
     const policy = String(snapshot.dataPolicy || 'unlimited')
     const used = Number(snapshot.usageGb || 0)
     const cap = Number(snapshot.usageCapGb || snapshot.dataLimitGb || 0)
-    if (snapshot.usageCapReached) return { label: 'Cap reached', tone: 'bg-red-900 text-red-100' }
-    if (policy === 'unlimited' || cap <= 0) return { label: 'Unlimited', tone: 'bg-slate-700 text-slate-100' }
+    if (snapshot.usageCapReached) return { label: 'Cap reached', tone: 'bg-rose-50 text-rose-700 border border-rose-200' }
+    if (policy === 'unlimited' || cap <= 0) return { label: 'Unlimited', tone: 'bg-slate-100 text-slate-700 border border-slate-200' }
     const ratio = used / cap
-    if (ratio >= 0.9) return { label: 'High usage', tone: 'bg-yellow-900 text-yellow-100' }
-    if (ratio >= 0.65) return { label: 'Watch', tone: 'bg-[#324014] text-[#8224E3]' }
-    return { label: 'Normal', tone: 'bg-green-900 text-green-100' }
+    if (ratio >= 0.9) return { label: 'High usage', tone: 'bg-amber-50 text-amber-700 border border-amber-200' }
+    if (ratio >= 0.65) return { label: 'Watch', tone: 'bg-[#eef1ff] text-[#5B6CFF] border border-[#cfd5ff]' }
+    return { label: 'Normal', tone: 'bg-emerald-50 text-emerald-700 border border-emerald-200' }
   }
 
   const filteredCustomers = useMemo(() => {
@@ -330,7 +330,7 @@ export default function CustomersPage() {
       </section>
 
       {createdSummary ? (
-        <div className="rounded-[24px] border border-[#2d7dff]/20 bg-[#eff6ff] px-5 py-5 text-slate-900">
+        <div className="rounded-[24px] border border-[#5B6CFF]/20 bg-[#eef1ff] px-5 py-5 text-slate-900">
           <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Last created subscriber</div>
           <div className="mt-3 text-2xl font-semibold tracking-[-0.03em]">{createdSummary.name}</div>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
@@ -420,13 +420,13 @@ export default function CustomersPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-96">
-          <Loader className="h-6 w-6 animate-spin text-[#8224E3]" />
+          <Loader className="h-6 w-6 animate-spin text-[#5B6CFF]" />
         </div>
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-[#0a0e27]">
+              <tr className="bg-slate-50">
                 <th className="table-header">Customer</th>
                 <th className="table-header">Contact</th>
                 <th className="table-header">Plan / PPPoE</th>
@@ -437,7 +437,7 @@ export default function CustomersPage() {
             </thead>
             <tbody>
               {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="border-t border-[#2a2f4a] hover:bg-[#1a1f3a] align-top">
+                <tr key={customer.id} className="border-t border-slate-200 hover:bg-slate-50 align-top">
                   <td className="table-cell">
                     <div className="font-semibold">{customer.name}</div>
                     <div className="text-xs text-slate-500 mt-1">{customer.customerId || customer.id}</div>
@@ -463,10 +463,10 @@ export default function CustomersPage() {
                         <div className="space-y-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             customer.status === 'active'
-                              ? 'bg-green-900 text-green-200'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : customer.status === 'suspended'
-                                ? 'bg-yellow-900 text-yellow-200'
-                                : 'bg-slate-700 text-slate-100'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-slate-100 text-slate-700 border border-slate-200'
                           }`}>
                             {customer.status}
                           </span>
@@ -489,19 +489,19 @@ export default function CustomersPage() {
                         const shouldRecommendUpgrade = risk.label === 'Watch' || risk.label === 'High usage' || risk.label === 'Cap reached'
                         return shouldRecommendUpgrade ? (
                           <Link href={`/customers/${customer.id}?tab=billing`}>
-                            <button className="rounded border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3] transition hover:bg-[#8224E3]/20">
+                            <button className="rounded border border-[#5B6CFF]/30 bg-[#eef1ff] px-3 py-1 text-xs font-semibold text-[#5B6CFF] transition hover:bg-[#dfe5ff]">
                               Upgrade review
                             </button>
                           </Link>
                         ) : null
                       })()}
                       <Link href={`/customers/${customer.id}`}>
-                        <button className="p-1 hover:bg-[#2a2f4a] rounded" title="View customer">
+                        <button className="rounded p-1 hover:bg-slate-100" title="View customer">
                           <Eye className="w-4 h-4" />
                         </button>
                       </Link>
                       <button
-                        className="p-1 hover:bg-[#3a1722] rounded text-red-300"
+                        className="rounded p-1 text-rose-500 hover:bg-rose-50"
                         title="Delete customer"
                         onClick={() => void handleDeleteCustomer(customer)}
                         disabled={deletingCustomerId === (customer.customerId || customer.id)}
@@ -523,16 +523,16 @@ export default function CustomersPage() {
       )}
 
       {isCreateOpen ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 px-4 py-10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/35 px-4 py-10 backdrop-blur-sm">
           <div className="card w-full max-w-5xl p-0">
-            <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
               <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Manual onboarding</div>
-                <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">Create new PPPoE customer</h2>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Manual onboarding</div>
+                <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-slate-900">Create new PPPoE customer</h2>
               </div>
               <button
                 type="button"
-                className="rounded-full border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                 onClick={() => setIsCreateOpen(false)}
               >
                 <X className="h-4 w-4" />
@@ -631,7 +631,7 @@ export default function CustomersPage() {
                 </div>
               </div>
 
-              <div className="rounded-[24px] border border-[#8224E3]/20 bg-[#0a0e27] px-4 py-4 text-sm text-white/70">
+              <div className="rounded-[24px] border border-[#5B6CFF]/20 bg-[#eef1ff] px-4 py-4 text-sm text-slate-600">
                 Save ke saath customer record, subscriber service aur live PPPoE/RADIUS user create hoga. Blank ID fields auto-generate ho jayenge.
               </div>
 
