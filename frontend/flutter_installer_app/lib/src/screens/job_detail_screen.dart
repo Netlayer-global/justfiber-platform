@@ -798,6 +798,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         : ((preview['staticBenefits'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[]);
     final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final linkedSerial = (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '').toString();
+    final onsiteLocation = (deviceContext['onsiteLocation'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final onsiteAddress = (onsiteLocation['address'] ?? '').toString();
+    final onsiteCheckedInAt = (onsiteLocation['checkedInAt'] ?? '').toString();
     final deferReason = (deviceContext['deferReason'] ?? detail?['subStatus'] ?? '').toString();
     final deferNote = (deviceContext['deferNote'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
@@ -1114,6 +1117,33 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                         ],
                       ),
+                      if (onsiteAddress.isNotEmpty || onsiteCheckedInAt.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Onsite check-in',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: const Color(0xFF166534),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _row('Checked in', onsiteCheckedInAt.isEmpty ? '-' : _shortDateTime(onsiteCheckedInAt)),
+                              _row('Location', onsiteAddress.isEmpty ? '-' : onsiteAddress),
+                            ],
+                          ),
+                        ),
+                      ],
                       if (status == 'deferred' || deferReason.isNotEmpty || deferNote.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Container(
