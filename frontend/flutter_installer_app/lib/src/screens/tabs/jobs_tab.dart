@@ -40,7 +40,7 @@ class _JobsTabState extends State<JobsTab> {
     final exceptionJobs = activeJobs.where((job) => job.configStatus == 'failed').length + deferredJobs.length;
 
     return RefreshIndicator(
-      color: const Color(0xFF2563EB),
+      color: const Color(0xFF8224E3),
       backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
@@ -62,7 +62,7 @@ class _JobsTabState extends State<JobsTab> {
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: const Color(0x140F172A)),
                       ),
-                      child: const Icon(Icons.assignment_rounded, color: Color(0xFF2563EB), size: 28),
+                      child: const Icon(Icons.assignment_rounded, color: Color(0xFF8224E3), size: 28),
                     ),
                     const Spacer(),
                     Container(
@@ -74,7 +74,7 @@ class _JobsTabState extends State<JobsTab> {
                       ),
                       child: Text(
                         '${activeJobs.length} active',
-                        style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 12),
+                        style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
                   ],
@@ -83,7 +83,7 @@ class _JobsTabState extends State<JobsTab> {
                 Text(
                   'FIELD JOBS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF2563EB),
+                        color: const Color(0xFF8224E3),
                         letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
@@ -319,7 +319,7 @@ class _JobsTabState extends State<JobsTab> {
                   ),
                   child: Icon(
                     isComplaint ? Icons.build_circle_outlined : Icons.router_rounded,
-                    color: const Color(0xFF2563EB),
+                    color: const Color(0xFF8224E3),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -355,12 +355,12 @@ class _JobsTabState extends State<JobsTab> {
                   decoration: BoxDecoration(
                     color: isDeferred ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: isDeferred ? const Color(0xFFFCD34D) : const Color(0xFFBFDBFE)),
+                    border: Border.all(color: isDeferred ? const Color(0xFFFCD34D) : const Color(0xFFD8B4FE)),
                   ),
                   child: Text(
                     isDeferred ? 'Follow-up required' : primaryAction,
                     style: TextStyle(
-                      color: isDeferred ? Color(0xFFB45309) : Color(0xFF2563EB),
+                      color: isDeferred ? Color(0xFFB45309) : Color(0xFF8224E3),
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
                     ),
@@ -566,7 +566,7 @@ class _JobsTabState extends State<JobsTab> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: const Color(0xFF2563EB)),
+              Icon(icon, size: 14, color: const Color(0xFF8224E3)),
               const SizedBox(width: 6),
               Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
             ],

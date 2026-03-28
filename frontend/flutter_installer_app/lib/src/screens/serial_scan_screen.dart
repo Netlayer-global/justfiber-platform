@@ -85,7 +85,7 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF2563EB)),
+                          const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF8224E3)),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -126,10 +126,10 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                         height: 180,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(28),
-                          border: Border.all(color: const Color(0xFF2563EB), width: 2),
+                          border: Border.all(color: const Color(0xFF8224E3), width: 2),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x332563EB),
+                              color: Color(0x338224E3),
                               blurRadius: 18,
                               spreadRadius: 1,
                             ),

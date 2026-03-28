@@ -29,13 +29,13 @@ class AuthGate extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: const Color(0xFFEFF6FF),
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                          border: Border.all(color: const Color(0xFFD8B4FE)),
                         ),
                         child: const Padding(
                           padding: EdgeInsets.all(16),
                           child: CircularProgressIndicator(
                             strokeWidth: 2.4,
-                            color: Color(0xFF2563EB),
+                            color: Color(0xFF8224E3),
                           ),
                         ),
                       ),

@@ -417,7 +417,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     children: [
                       const Padding(
                         padding: EdgeInsets.only(top: 2),
-                        child: Icon(Icons.radio_button_checked_rounded, size: 16, color: Color(0xFF2563EB)),
+                        child: Icon(Icons.radio_button_checked_rounded, size: 16, color: Color(0xFF8224E3)),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1000,7 +1000,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                             child: Icon(
                               isComplaint ? Icons.build_circle_outlined : Icons.router_rounded,
-                              color: const Color(0xFF2563EB),
+                              color: const Color(0xFF8224E3),
                               size: 28,
                             ),
                           ),
@@ -1023,7 +1023,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       child: Text(
                                         isComplaint ? 'COMPLAINT JOB' : 'INSTALLATION JOB',
                                         style: theme.textTheme.labelSmall?.copyWith(
-                                          color: const Color(0xFF2563EB),
+                                          color: const Color(0xFF8224E3),
                                           letterSpacing: 1.8,
                                           fontWeight: FontWeight.w800,
                                         ),
@@ -2490,7 +2490,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       color: _workflowPage == index ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: _workflowPage == index ? const Color(0xFF93C5FD) : const Color(0x120F172A),
+                        color: _workflowPage == index ? const Color(0xFFC084FC) : const Color(0x120F172A),
                       ),
                     ),
                     child: Column(
@@ -2498,7 +2498,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         Text(
                           '${index + 1}',
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+                            color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFF94A3B8),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -2509,7 +2509,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                            color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFF64748B),
                             fontWeight: FontWeight.w700,
                             fontSize: 11,
                           ),

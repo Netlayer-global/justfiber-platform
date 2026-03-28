@@ -18,7 +18,7 @@ class DashboardTab extends StatelessWidget {
     final deferredJobs = appState.jobs.where((job) => job.status == 'deferred').length;
 
     return RefreshIndicator(
-      color: const Color(0xFF2563EB),
+      color: const Color(0xFF8224E3),
       backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
@@ -40,7 +40,7 @@ class DashboardTab extends StatelessWidget {
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: const Color(0x140F172A)),
                       ),
-                      child: const Icon(Icons.dashboard_customize_rounded, color: Color(0xFF2563EB), size: 28),
+                      child: const Icon(Icons.dashboard_customize_rounded, color: Color(0xFF8224E3), size: 28),
                     ),
                     const Spacer(),
                     Container(
@@ -61,7 +61,7 @@ class DashboardTab extends StatelessWidget {
                 Text(
                   'FIELD DASHBOARD',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF2563EB),
+                        color: const Color(0xFF8224E3),
                         letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
@@ -86,7 +86,7 @@ class DashboardTab extends StatelessWidget {
                   ),
                   child: const Text(
                     'Availability active',
-                    style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700),
+                    style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -135,11 +135,11 @@ class DashboardTab extends StatelessWidget {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.track_changes_rounded, size: 14, color: Color(0xFF2563EB)),
+                          Icon(Icons.track_changes_rounded, size: 14, color: Color(0xFF8224E3)),
                           SizedBox(width: 6),
                           Text(
                             'Field discipline',
-                            style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 12),
+                            style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
                           ),
                         ],
                       ),
@@ -205,11 +205,11 @@ class DashboardTab extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFBFDBFE)),
+              border: Border.all(color: const Color(0xFFD8B4FE)),
             ),
             child: Text(
               index,
-              style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 12),
