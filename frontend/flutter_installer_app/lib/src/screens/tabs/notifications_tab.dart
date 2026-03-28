@@ -4,7 +4,7 @@ import '../../core/app_state.dart';
 import '../job_detail_screen.dart';
 import '../../widgets/app_card.dart';
 
-class NotificationsTab extends StatelessWidget {
+class NotificationsTab extends StatefulWidget {
   const NotificationsTab({
     super.key,
     this.onOpenJobs,
@@ -13,6 +13,13 @@ class NotificationsTab extends StatelessWidget {
 
   final VoidCallback? onOpenJobs;
   final VoidCallback? onOpenDashboard;
+
+  @override
+  State<NotificationsTab> createState() => _NotificationsTabState();
+}
+
+class _NotificationsTabState extends State<NotificationsTab> {
+  String _filter = 'all';
 
   Future<void> _markAllRead(BuildContext context, InstallerAppState appState) async {
     final ok = await appState.markAllNotificationsRead();
@@ -30,6 +37,14 @@ class NotificationsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
     final unreadCount = appState.notifications.where((item) => item.readAt == null).length;
+    final jobLinkedCount = appState.notifications.where((item) => (item.payload['installerJobId'] ?? '').toString().isNotEmpty).length;
+    final filteredNotifications = appState.notifications.where((item) {
+      return switch (_filter) {
+        'unread' => item.readAt == null,
+        'job' => (item.payload['installerJobId'] ?? '').toString().isNotEmpty,
+        _ => true,
+      };
+    }).toList();
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -106,15 +121,25 @@ class NotificationsTab extends StatelessWidget {
                   runSpacing: 10,
                   children: [
                     OutlinedButton.icon(
-                      onPressed: onOpenJobs,
+                      onPressed: widget.onOpenJobs,
                       icon: const Icon(Icons.assignment_rounded, size: 18),
                       label: const Text('Open jobs'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: onOpenDashboard,
+                      onPressed: widget.onOpenDashboard,
                       icon: const Icon(Icons.dashboard_customize_rounded, size: 18),
                       label: const Text('Back to dashboard'),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _filterChip('All', 'all', appState.notifications.length),
+                    _filterChip('Unread', 'unread', unreadCount),
+                    _filterChip('Job-linked', 'job', jobLinkedCount),
                   ],
                 ),
                 if (unreadCount > 0) ...[
@@ -146,8 +171,22 @@ class NotificationsTab extends StatelessWidget {
                 ],
               ),
             )
+          else if (filteredNotifications.isEmpty)
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('No alerts matched this filter.', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Switch to another alert filter or refresh when new activity comes in.',
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                  ),
+                ],
+              ),
+            )
           else
-            ...appState.notifications.map(
+            ...filteredNotifications.map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InkWell(
@@ -254,6 +293,15 @@ class NotificationsTab extends StatelessWidget {
           Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
         ],
       ),
+    );
+  }
+
+  Widget _filterChip(String label, String value, int count) {
+    return FilterChip(
+      label: Text('$label ($count)'),
+      selected: _filter == value,
+      onSelected: (_) => setState(() => _filter = value),
+      avatar: count > 0 ? const Icon(Icons.bolt_rounded, size: 16) : null,
     );
   }
 
