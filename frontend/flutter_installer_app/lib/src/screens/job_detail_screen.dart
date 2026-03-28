@@ -249,6 +249,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final activationInvoice = (result['activationInvoice'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final customer = (result['customer'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final subscriberService = (result['subscriberService'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final installSummary = <String>[
+      'Customer: ${customer['fullName'] ?? '-'}',
+      'Customer ID: ${customer['customerId'] ?? '-'}',
+      'Service ID: ${subscriberService['serviceId'] ?? customer['serviceId'] ?? '-'}',
+      'Radius username: ${subscriberService['radiusUsername'] ?? '-'}',
+      'ONT serial: ${subscriberService['ontSerialNumber'] ?? '-'}',
+      'Invoice status: ${activationInvoice['status'] ?? '-'}',
+      'Invoice number: ${activationInvoice['invoiceNumber'] ?? activationInvoice['invoiceId'] ?? '-'}',
+      'Invoice total: ${activationInvoice['totalAmount'] == null ? '-' : 'Rs ${activationInvoice['totalAmount']}'}',
+    ].join('\n');
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -279,6 +289,25 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               _row('Invoice number', '${activationInvoice['invoiceNumber'] ?? activationInvoice['invoiceId'] ?? '-'}'),
               _row('Invoice total', activationInvoice['totalAmount'] == null ? '-' : 'Rs ${activationInvoice['totalAmount']}'),
               const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => _copyText('Installation summary copied', installSummary),
+                    child: const Text('Copy summary'),
+                  ),
+                  if ((activationInvoice['pdfUrl'] ?? '').toString().isNotEmpty)
+                    OutlinedButton(
+                      onPressed: () => _copyText(
+                        'Invoice PDF link copied',
+                        (activationInvoice['pdfUrl'] ?? '').toString(),
+                      ),
+                      child: const Text('Copy invoice link'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -298,6 +327,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final complaint = (job['complaint'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final deviceContext = (job['deviceContext'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final subscriberService = (result['subscriberService'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final complaintSummary = <String>[
+      'Resolution code: ${complaint['resolutionCode'] ?? '-'}',
+      'Resolution note: ${complaint['note'] ?? '-'}',
+      'Replaced device: ${complaint['replacedDevice'] == true ? 'Yes' : 'No'}',
+      'Old serial: ${deviceContext['oldSerialNumber'] ?? '-'}',
+      'New serial: ${deviceContext['finalSerialNumber'] ?? '-'}',
+      'Service status: ${subscriberService['status'] ?? '-'}',
+    ].join('\n');
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -325,6 +362,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               _row('Old serial', '${deviceContext['oldSerialNumber'] ?? '-'}'),
               _row('New serial', '${deviceContext['finalSerialNumber'] ?? '-'}'),
               _row('Service status', '${subscriberService['status'] ?? '-'}'),
+              const SizedBox(height: 14),
+              OutlinedButton(
+                onPressed: () => _copyText('Complaint summary copied', complaintSummary),
+                child: const Text('Copy summary'),
+              ),
               const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
