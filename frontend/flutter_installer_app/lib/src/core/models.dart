@@ -43,6 +43,7 @@ class InstallerJob {
     required this.id,
     required this.jobNumber,
     required this.status,
+    required this.subStatus,
     required this.customerName,
     required this.customerPhone,
     required this.customerAddress,
@@ -68,11 +69,13 @@ class InstallerJob {
     required this.latitude,
     required this.longitude,
     required this.mapUrl,
+    required this.deferNote,
   });
 
   final String id;
   final String jobNumber;
   final String status;
+  final String subStatus;
   final String customerName;
   final String customerPhone;
   final String customerAddress;
@@ -98,6 +101,7 @@ class InstallerJob {
   final double? latitude;
   final double? longitude;
   final String mapUrl;
+  final String deferNote;
 }
 
 class ProvisioningPreview {

@@ -118,6 +118,7 @@ class InstallerApiClient {
         id: (map['_id'] ?? map['id'] ?? '').toString(),
         jobNumber: (map['jobNumber'] ?? '-').toString(),
         status: (map['status'] ?? 'assigned').toString(),
+        subStatus: (map['subStatus'] ?? '').toString(),
         customerName: (map['customerName'] ?? map['customer']?['fullName'] ?? '-').toString(),
         customerPhone: (map['customerSnapshot']?['phone'] ?? map['phone'] ?? '').toString(),
         customerAddress: (map['customerAddress'] ?? map['serviceAddress'] ?? '-').toString(),
@@ -146,6 +147,7 @@ class InstallerApiClient {
         latitude: double.tryParse('${map['customerSnapshot']?['location']?['lat'] ?? ''}'),
         longitude: double.tryParse('${map['customerSnapshot']?['location']?['lng'] ?? ''}'),
         mapUrl: (map['customerSnapshot']?['location']?['mapUrl'] ?? '').toString(),
+        deferNote: (map['deviceContext']?['deferNote'] ?? '').toString(),
       );
     }).toList();
   }

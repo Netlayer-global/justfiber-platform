@@ -295,6 +295,7 @@ class _JobsTabState extends State<JobsTab> {
     final hasLinkedRouter = job.finalSerialNumber.isNotEmpty;
     final nextVisitLabel = _nextVisitLabel(job);
     final exceptionTone = hasConfigFailure || isDeferred ? const Color(0xFFB45309) : const Color(0xFF6E6A67);
+    final deferReason = _deferReasonLabel(job.subStatus);
 
     return InkWell(
       borderRadius: BorderRadius.circular(28),
@@ -429,6 +430,43 @@ class _JobsTabState extends State<JobsTab> {
                     fontWeight: FontWeight.w700,
                     height: 1.35,
                   ),
+                ),
+              ),
+            ],
+            if (isDeferred && (deferReason != '-' || job.deferNote.isNotEmpty)) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFFCD34D)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Follow-up summary',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: const Color(0xFF92400E),
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (deferReason != '-')
+                      Text(
+                        'Reason: $deferReason',
+                        style: const TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w700),
+                      ),
+                    if (job.deferNote.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        job.deferNote,
+                        style: const TextStyle(color: Color(0xFF78350F), height: 1.35),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -693,6 +731,23 @@ class _JobsTabState extends State<JobsTab> {
     if (minutes <= 0) return 'Due now';
     if (minutes <= 30) return 'Due soon';
     return 'Planned';
+  }
+
+  String _deferReasonLabel(String value) {
+    switch (value) {
+      case 'customer_unavailable':
+        return 'Customer unavailable';
+      case 'revisit_required':
+        return 'Revisit required';
+      case 'material_pending':
+        return 'Material pending';
+      case 'escalated':
+        return 'Escalated to backend/admin';
+      case 'other':
+        return 'Other follow-up';
+      default:
+        return '-';
+    }
   }
 
   String _nextVisitLabel(InstallerJob job) {
