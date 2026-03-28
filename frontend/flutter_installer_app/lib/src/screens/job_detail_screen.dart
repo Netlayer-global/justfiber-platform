@@ -460,6 +460,54 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return items;
   }
 
+  String _shortDateTime(String value) {
+    if (value.isEmpty) return '-';
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return value;
+    final local = parsed.toLocal();
+    final month = <int, String>{
+      1: 'Jan',
+      2: 'Feb',
+      3: 'Mar',
+      4: 'Apr',
+      5: 'May',
+      6: 'Jun',
+      7: 'Jul',
+      8: 'Aug',
+      9: 'Sep',
+      10: 'Oct',
+      11: 'Nov',
+      12: 'Dec',
+    }[local.month]!;
+    final hour = local.hour == 0 ? 12 : (local.hour > 12 ? local.hour - 12 : local.hour);
+    final minute = local.minute.toString().padLeft(2, '0');
+    final suffix = local.hour >= 12 ? 'PM' : 'AM';
+    return '${local.day} $month, $hour:$minute $suffix';
+  }
+
+  String _visitUrgencyLabel(String status, String priority, String scheduledAt) {
+    if (priority.toLowerCase() == 'critical') return 'Immediate';
+    if (priority.toLowerCase() == 'high') return 'Priority';
+    if (status == 'deferred') return 'Revisit pending';
+    if (scheduledAt.isEmpty) return 'Queue ready';
+    final scheduled = DateTime.tryParse(scheduledAt)?.toLocal();
+    if (scheduled == null) return 'Queue ready';
+    final minutes = scheduled.difference(DateTime.now()).inMinutes;
+    if (minutes <= 0) return 'Due now';
+    if (minutes <= 30) return 'Due soon';
+    return 'Planned';
+  }
+
+  String _timeWindowLabel(String scheduledAt) {
+    if (scheduledAt.isEmpty) return '-';
+    final scheduled = DateTime.tryParse(scheduledAt)?.toLocal();
+    if (scheduled == null) return '-';
+    final minutes = scheduled.difference(DateTime.now()).inMinutes;
+    if (minutes.abs() < 1) return 'Now';
+    if (minutes < 0) return '${minutes.abs()} min late';
+    return 'In $minutes min';
+  }
+
   Future<void> _showDeferJobSheet() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -696,6 +744,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final customerAddress = (snapshot['address'] ?? widget.job.customerAddress).toString();
     final phone = (snapshot['phone'] ?? '').toString();
     final planName = (snapshot['planName'] ?? '-').toString();
+    final scheduledAt = (detail?['scheduledAt'] ?? widget.job.scheduledAt).toString();
+    final priority = (detail?['priority'] ?? widget.job.priority).toString();
     final status = (detail?['status'] ?? widget.job.status).toString();
     final isComplaint = (detail?['type'] ?? widget.job.jobType).toString() == 'complaint';
     final configStatus = (activation['configStatus'] ?? '-').toString();
@@ -769,6 +819,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (phone.isNotEmpty) 'Phone: $phone',
       if (customerAddress.isNotEmpty) 'Address: $customerAddress',
     ].join('\n');
+    final visitUrgency = _visitUrgencyLabel(status, priority, scheduledAt);
+    final visitTimeWindow = _timeWindowLabel(scheduledAt);
     final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
     final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
     final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
@@ -957,6 +1009,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           children: [
                             ...planTags.take(3).map((tag) => _miniPill(tag)),
                             ...planBenefits.take(2).map((item) => _miniPill(item)),
+                          ],
+                        ),
+                      ],
+                      if (scheduledAt.isNotEmpty || visitUrgency != 'Queue ready') ...[
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            SizedBox(
+                              width: 160,
+                              child: _chip('Visit timing', visitUrgency),
+                            ),
+                            if (scheduledAt.isNotEmpty)
+                              SizedBox(
+                                width: 190,
+                                child: _chip('Scheduled', _shortDateTime(scheduledAt)),
+                              ),
+                            if (scheduledAt.isNotEmpty)
+                              SizedBox(
+                                width: 160,
+                                child: _chip('Window', visitTimeWindow),
+                              ),
                           ],
                         ),
                       ],
