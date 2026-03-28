@@ -518,6 +518,11 @@ class _JobsTabState extends State<JobsTab> {
                   icon: const Icon(Icons.copy_rounded, size: 18),
                   label: const Text('Copy refs'),
                 ),
+                OutlinedButton.icon(
+                  onPressed: () => _copyRoutePack(context, job),
+                  icon: const Icon(Icons.route_rounded, size: 18),
+                  label: const Text('Copy route pack'),
+                ),
                 if (isDeferred)
                   OutlinedButton.icon(
                     onPressed: appState.busy
@@ -707,6 +712,21 @@ class _JobsTabState extends State<JobsTab> {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Job references copied')),
+    );
+  }
+
+  Future<void> _copyRoutePack(BuildContext context, InstallerJob job) async {
+    final routePack = <String>[
+      'Customer: ${job.customerName.isEmpty ? '-' : job.customerName}',
+      'Phone: ${job.customerPhone.isEmpty ? '-' : job.customerPhone}',
+      'Address: ${job.customerAddress.isEmpty ? '-' : job.customerAddress}',
+      'Map: ${job.mapUrl.isEmpty ? '-' : job.mapUrl}',
+      'Job number: ${job.jobNumber}',
+    ].join('\n');
+    await Clipboard.setData(ClipboardData(text: routePack));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Route pack copied')),
     );
   }
 
