@@ -27,6 +27,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ProfileTab(),
     ];
     final hasError = (appState.error ?? '').trim().isNotEmpty;
+    final activeJobsCount = appState.jobs.where((job) => job.status != 'completed').length;
+    final unreadAlertsCount = appState.notifications.where((item) => item.readAt == null).length;
     final syncLabel = appState.busy
         ? 'Syncing latest field data...'
         : hasError
@@ -108,17 +110,25 @@ class _HomeScreenState extends State<HomeScreen> {
           child: BottomNavigationBar(
             currentIndex: index,
             onTap: (value) => setState(() => index = value),
-            items: const [
+            items: [
               BottomNavigationBarItem(
                 icon: Icon(Icons.dashboard_customize_rounded),
                 label: 'Dashboard',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.assignment_rounded),
+                icon: _navIcon(
+                  icon: Icons.assignment_rounded,
+                  badgeCount: activeJobsCount,
+                  badgeLabel: activeJobsCount > 99 ? '99+' : '$activeJobsCount',
+                ),
                 label: 'Jobs',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.notifications_active_outlined),
+                icon: _navIcon(
+                  icon: Icons.notifications_active_outlined,
+                  badgeCount: unreadAlertsCount,
+                  badgeLabel: unreadAlertsCount > 99 ? '99+' : '$unreadAlertsCount',
+                ),
                 label: 'Alerts',
               ),
               BottomNavigationBarItem(
@@ -140,5 +150,42 @@ class _HomeScreenState extends State<HomeScreen> {
     if (difference.inHours < 1) return '${difference.inMinutes}m ago';
     if (difference.inDays < 1) return '${difference.inHours}h ago';
     return '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _navIcon({
+    required IconData icon,
+    required int badgeCount,
+    required String badgeLabel,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon),
+        if (badgeCount > 0)
+          Positioned(
+            right: -10,
+            top: -6,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8224E3),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0xFFFFFFFF), width: 1.5),
+              ),
+              child: Text(
+                badgeLabel,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFFFFFFFF),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
