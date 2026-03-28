@@ -687,10 +687,10 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <section className="card p-5">
+      <section className="modernize-page-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Billing</div>
+            <div className="modernize-subtitle">Billing</div>
             <h1 className="mt-1 text-3xl font-semibold text-slate-900">
               {billingSectionTab === 'invoices' ? 'Invoices' : billingSectionTab === 'payments' ? 'Payments' : billingSectionTab === 'collections' ? 'Collections' : 'Settings'}
             </h1>
@@ -716,32 +716,32 @@ export default function BillingPage() {
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+          <div className="modernize-stat-card text-sm text-slate-600">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-[0.16em] text-slate-400">Invoices</span>
-              <CreditCard className="h-4 w-4 text-[#5B6CFF]" />
+              <span className="modernize-subtitle">Invoices</span>
+              <CreditCard className="h-4 w-4 text-[#5d87ff]" />
             </div>
             <div className="mt-3 text-2xl font-semibold text-slate-900">{billing.length}</div>
           </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Pending</div>
+          <div className="modernize-stat-card text-sm text-slate-600">
+            <div className="modernize-subtitle">Pending</div>
             <div className="mt-3 text-2xl font-semibold text-slate-900">{invoiceQuickViewCounts.pending}</div>
           </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+          <div className="modernize-stat-card text-sm text-slate-600">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-[0.16em] text-slate-400">Payments</span>
-              <Wallet className="h-4 w-4 text-[#5B6CFF]" />
+              <span className="modernize-subtitle">Payments</span>
+              <Wallet className="h-4 w-4 text-[#5d87ff]" />
             </div>
             <div className="mt-3 text-2xl font-semibold text-slate-900">{payments.length}</div>
           </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Collections</div>
+          <div className="modernize-stat-card text-sm text-slate-600">
+            <div className="modernize-subtitle">Collections</div>
             <div className="mt-3 text-2xl font-semibold text-slate-900">{visibleCollections.length}</div>
           </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+          <div className="modernize-stat-card text-sm text-slate-600">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-[0.16em] text-slate-400">Profiles</span>
-              <Settings2 className="h-4 w-4 text-[#5B6CFF]" />
+              <span className="modernize-subtitle">Profiles</span>
+              <Settings2 className="h-4 w-4 text-[#5d87ff]" />
             </div>
             <div className="mt-3 text-2xl font-semibold text-slate-900">{profiles.length}</div>
           </div>
@@ -753,10 +753,10 @@ export default function BillingPage() {
           {billingSectionTabs.map((tab) => (
             <button
               key={tab.key}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              className={`modernize-tab ${
                 billingSectionTab === tab.key
-                  ? 'bg-[#5B6CFF] text-white'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'modernize-tab-active'
+                  : 'modernize-tab-idle'
               }`}
               onClick={() => setBillingSectionTab(tab.key)}
             >

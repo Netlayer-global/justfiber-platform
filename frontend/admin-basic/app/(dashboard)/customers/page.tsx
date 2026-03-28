@@ -290,10 +290,10 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="card p-5">
+      <section className="modernize-page-card p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Subscriber control</div>
+            <div className="modernize-subtitle">Subscriber control</div>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900">Customers</h1>
             <div className="mt-2 text-sm text-slate-500">
               Search by name, mobile, email, customer ID, account number, or PPPoE username.
@@ -320,9 +320,9 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           {portfolioMetrics.map(({ label, value }) => (
-            <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <div key={label} className="modernize-stat-card py-3 text-sm text-slate-600">
               <span className="font-medium text-slate-900">{value}</span> {label}
             </div>
           ))}
@@ -354,7 +354,7 @@ export default function CustomersPage() {
         </div>
       ) : null}
 
-      <form onSubmit={handleSearch} className="card grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-6">
+      <form onSubmit={handleSearch} className="modernize-page-card grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-6">
         <div className="xl:col-span-2">
           <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Search</label>
           <div className="relative">
@@ -400,19 +400,19 @@ export default function CustomersPage() {
       </form>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="metric-tile">
+        <div className="modernize-stat-card">
           <p className="text-xs uppercase tracking-[0.18em] text-black/45">Visible customers</p>
           <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{filteredCustomers.length}</p>
         </div>
-        <div className="metric-tile">
+        <div className="modernize-stat-card">
           <p className="text-xs uppercase tracking-[0.18em] text-black/45">Active</p>
           <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{activeCount}</p>
         </div>
-        <div className="metric-tile">
+        <div className="modernize-stat-card">
           <p className="text-xs uppercase tracking-[0.18em] text-black/45">Usage watch</p>
           <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{watchCount}</p>
         </div>
-        <div className="metric-tile">
+        <div className="modernize-stat-card">
           <p className="text-xs uppercase tracking-[0.18em] text-black/45">Cap reached</p>
           <p className="mt-6 text-4xl font-black tracking-[-0.04em]">{capReachedCount}</p>
         </div>

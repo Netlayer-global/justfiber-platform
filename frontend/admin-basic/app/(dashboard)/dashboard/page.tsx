@@ -183,10 +183,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="modernize-page-card p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Executive overview</div>
+            <div className="modernize-subtitle">Executive overview</div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Operations dashboard</h1>
             <div className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">
               Billing, activation, installers, tickets, and serviceability in one clean operating surface.
@@ -194,10 +194,10 @@ export default function DashboardPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {summary.map(({ label, value, detail, icon: Icon }) => (
-              <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
+              <div key={label} className="modernize-stat-card">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</div>
-                  <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                  <div className="modernize-subtitle">{label}</div>
+                  <Icon className="h-4 w-4 text-[#5d87ff]" />
                 </div>
                 <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
                 <div className="mt-1 text-xs text-slate-500">{detail}</div>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
 
         <div className="card flex flex-col justify-between p-6 md:p-8">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Operations</div>
+            <div className="modernize-subtitle">Operations</div>
             <h2 className="mt-3 text-2xl font-semibold text-slate-900">Daily operating summary</h2>
             <p className="mt-3 max-w-lg text-sm leading-7 text-slate-500">
               Watch revenue, active sessions, and provisioning health without the old heavy dashboard hero.
@@ -234,10 +234,10 @@ export default function DashboardPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {usageSummaryTiles.map(({ title, value, desc, Icon }) => (
-          <div key={title} className="card p-6">
+          <div key={title} className="modernize-stat-card min-h-[168px]">
             <div className="flex items-center justify-between">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{title}</div>
-              <Icon className="h-5 w-5 text-[#5B6CFF]" />
+              <div className="modernize-subtitle">{title}</div>
+              <Icon className="h-5 w-5 text-[#5d87ff]" />
             </div>
             <div className="mt-6 text-4xl font-semibold tracking-[-0.04em] text-slate-900">{value}</div>
             <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
