@@ -11,6 +11,54 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
+  Future<void> _confirmLogout(InstallerAppState appState) async {
+    final shouldLogout = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: const Color(0xFFF8FAFC),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Logout installer session',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Use this only after finishing or handing over active jobs. You can sign in again anytime.',
+                style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Logout'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (shouldLogout == true && mounted) {
+      appState.logout();
+    }
+  }
+
   Future<void> _openLeaveSheet(InstallerAppState appState) async {
     final reasonController = TextEditingController(text: 'Installer marked unavailable from field app.');
     bool submitting = false;
@@ -284,6 +332,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 _infoRow(Icons.call_outlined, 'Phone', profile.phone.isEmpty ? '-' : profile.phone),
                 _infoRow(Icons.qr_code_rounded, 'Installer code', profile.installerCode.isEmpty ? '-' : profile.installerCode),
                 _infoRow(Icons.event_available_rounded, 'Availability', profile.availabilityStatus),
+                _infoRow(Icons.refresh_rounded, 'Session state', appState.busy ? 'Syncing' : 'Ready'),
               ],
             ),
           ),
@@ -306,9 +355,23 @@ class _ProfileTabState extends State<ProfileTab> {
           const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: appState.logout,
-              child: const Text('Logout'),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: appState.busy ? null : appState.refresh,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Refresh'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => _confirmLogout(appState),
+                    child: const Text('Logout'),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

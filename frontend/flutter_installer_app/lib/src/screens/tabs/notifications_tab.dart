@@ -7,6 +7,18 @@ import '../../widgets/app_card.dart';
 class NotificationsTab extends StatelessWidget {
   const NotificationsTab({super.key});
 
+  Future<void> _markAllRead(BuildContext context, InstallerAppState appState) async {
+    final ok = await appState.markAllNotificationsRead();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok ? 'All alerts marked as read' : (appState.error ?? 'Unable to mark alerts as read'),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
@@ -81,6 +93,17 @@ class NotificationsTab extends StatelessWidget {
                     Expanded(child: _metricChip(context, label: 'Unread', value: unreadCount.toString())),
                   ],
                 ),
+                if (unreadCount > 0) ...[
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: appState.busy ? null : () => _markAllRead(context, appState),
+                      icon: const Icon(Icons.done_all_rounded, size: 18),
+                      label: Text(appState.busy ? 'Updating...' : 'Mark all read'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

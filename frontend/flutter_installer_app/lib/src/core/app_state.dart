@@ -288,6 +288,44 @@ class InstallerAppState extends ChangeNotifier {
     }
   }
 
+  Future<bool> markAllNotificationsRead() async {
+    final current = session;
+    if (current == null) return false;
+    final unreadItems = notifications.where((item) => item.readAt == null).toList();
+    if (unreadItems.isEmpty) return true;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      for (final item in unreadItems) {
+        await api.markNotificationRead(current, item.id);
+      }
+      final now = DateTime.now();
+      notifications = notifications
+          .map(
+            (item) => item.readAt == null
+                ? InstallerNotificationItem(
+                    id: item.id,
+                    type: item.type,
+                    title: item.title,
+                    body: item.body,
+                    createdAt: item.createdAt,
+                    readAt: now,
+                    payload: item.payload,
+                  )
+                : item,
+          )
+          .toList();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> startLeave({required String reason, DateTime? expectedEndAt}) async {
     final current = session;
     if (current == null) return false;
