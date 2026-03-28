@@ -508,6 +508,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return 'In $minutes min';
   }
 
+  String _otpPurposeLabel(String purpose) {
+    switch (purpose) {
+      case 'complaint_complete':
+        return 'Complaint closure';
+      case 'installation_complete':
+        return 'Installation completion';
+      default:
+        return purpose.isEmpty ? '-' : purpose.replaceAll('_', ' ');
+    }
+  }
+
   Future<void> _showDeferJobSheet() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -736,6 +747,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final complaint = (detail?['complaint'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final deviceContext = (detail?['deviceContext'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final proof = (detail?['proof'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final otpState = (detail?['otp'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final timeline = (detail?['timeline'] as List?)?.whereType<Map>().map((item) => item.cast<String, dynamic>()).toList() ?? const <Map<String, dynamic>>[];
     final optical = (detail?['opticalReadings'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final preview = _preview ?? const <String, dynamic>{};
@@ -828,6 +840,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
     final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
     final proofUploadedAt = (proof['uploadedAt'] ?? '').toString();
+    final otpPurpose = (otpState['purpose'] ?? '').toString();
+    final otpExpiresAt = (otpState['expiresAt'] ?? '').toString();
+    final otpVerifiedAt = (otpState['verifiedAt'] ?? '').toString();
     final complaintWatchouts = isComplaint
         ? _complaintWatchouts(
             resolutionCode: complaintResolution,
@@ -1863,6 +1878,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                           ],
                         ),
+                        if (otpPurpose.isNotEmpty || otpVerifiedAt.isNotEmpty || otpExpiresAt.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0x120F172A)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'OTP state',
+                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 10),
+                                _row('Purpose', _otpPurposeLabel(otpPurpose)),
+                                _row('Expires', otpExpiresAt.isEmpty ? '-' : _shortDateTime(otpExpiresAt)),
+                                _row('Verified', otpVerifiedAt.isEmpty ? '-' : _shortDateTime(otpVerifiedAt)),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         Container(
                           width: double.infinity,
@@ -1995,6 +2035,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                           ],
                         ),
+                        if (otpPurpose.isNotEmpty || otpVerifiedAt.isNotEmpty || otpExpiresAt.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0x120F172A)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'OTP state',
+                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 10),
+                                _row('Purpose', _otpPurposeLabel(otpPurpose)),
+                                _row('Expires', otpExpiresAt.isEmpty ? '-' : _shortDateTime(otpExpiresAt)),
+                                _row('Verified', otpVerifiedAt.isEmpty ? '-' : _shortDateTime(otpVerifiedAt)),
+                              ],
+                            ),
+                          ),
+                        ],
                         if (_routerPhotoCapturedAt != null || _cablePhotoCapturedAt != null) ...[
                           const SizedBox(height: 10),
                           if (_routerPhotoCapturedAt != null)
