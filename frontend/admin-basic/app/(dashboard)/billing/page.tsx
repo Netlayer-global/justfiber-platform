@@ -690,28 +690,46 @@ export default function BillingPage() {
       <section className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-white/45">Billing</div>
-            <h1 className="mt-1 text-2xl font-semibold text-white">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Billing</div>
+            <h1 className="mt-1 text-3xl font-semibold text-slate-900">
               {billingSectionTab === 'invoices' ? 'Invoices' : billingSectionTab === 'payments' ? 'Payments' : billingSectionTab === 'collections' ? 'Collections' : 'Settings'}
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-slate-500">
               {billingSectionTab === 'invoices'
                 ? `${visibleInvoices.length} invoices in current view`
                 : billingSectionTab === 'payments'
                   ? `${payments.length} payments and ${refundPayments.length} refunds`
-                  : billingSectionTab === 'collections'
-                    ? `${visibleCollections.length} accounts in collection queue`
+              : billingSectionTab === 'collections'
+                  ? `${visibleCollections.length} accounts in collection queue`
                   : `${profiles.length} billing profiles and ${invoiceTemplateSettings?.templates?.length || 1} templates`}
             </p>
           </div>
-          <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+          <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
             {billingSectionTab === 'invoices'
               ? `Pending Rs ${invoicePulse.pendingAmount.toFixed(2)}`
               : billingSectionTab === 'payments'
                 ? `${visiblePayments.length} visible payments`
                 : billingSectionTab === 'collections'
                   ? `${visibleCollections.filter((item) => item.suspendRecommended).length} suspend-ready`
-                : `${profileForm.zoneMappings.length} zone mappings`}
+                  : `${profileForm.zoneMappings.length} zone mappings`}
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <span className="font-medium text-slate-900">{billing.length}</span> All Invoices
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <span className="font-medium text-slate-900">{invoiceQuickViewCounts.pending}</span> Pending
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <span className="font-medium text-slate-900">{payments.length}</span> Payments
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <span className="font-medium text-slate-900">{visibleCollections.length}</span> Collections
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <span className="font-medium text-slate-900">{profiles.length}</span> Profiles
           </div>
         </div>
       </section>

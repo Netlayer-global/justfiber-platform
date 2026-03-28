@@ -290,82 +290,75 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Subscriber control</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Customers,
-            <span className="text-[#8224E3]"> organized for action.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            Search by name, mobile, email, customer ID, account number or PPPoE username.
-          </p>
-        </div>
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Portfolio pulse</div>
-          <div className="mt-3 text-5xl font-black">{customers.length}</div>
-          <div className="mt-2 text-sm text-black/60">Customers loaded across active service zones</div>
-          <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {portfolioMetrics.map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[22px] bg-black/10 p-4">
-                <Icon className="h-4 w-4 text-black/75" />
-                <div className="mt-4 text-2xl font-bold">{value}</div>
-                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
-              </div>
-            ))}
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Subscriber control</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Customers</h1>
+            <div className="mt-2 text-sm text-slate-500">
+              Search by name, mobile, email, customer ID, account number, or PPPoE username.
+            </div>
           </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => void handleCleanupDemoData()}
+              className="btn-secondary inline-flex items-center gap-2"
+              disabled={isCleaningDemo}
+            >
+              {isCleaningDemo ? <Loader className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Clean Demo
+            </button>
+            <button onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Customer
+            </button>
+            <button onClick={() => void loadCustomers()} className="btn-secondary inline-flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {portfolioMetrics.map(({ label, value }) => (
+            <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-900">{value}</span> {label}
+            </div>
+          ))}
         </div>
       </section>
 
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
-        <button
-          onClick={() => void handleCleanupDemoData()}
-          className="btn-secondary inline-flex items-center gap-2"
-          disabled={isCleaningDemo}
-        >
-          {isCleaningDemo ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-          Clean Demo Data
-        </button>
-        <button onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Customer
-        </button>
-        <button onClick={() => void loadCustomers()} className="btn-secondary inline-flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
-
       {createdSummary ? (
-        <div className="rounded-[28px] border border-[#8224E3]/30 bg-[#120d25] px-5 py-5 text-white">
-          <div className="text-xs uppercase tracking-[0.18em] text-white/45">Last created subscriber</div>
-          <div className="mt-3 text-2xl font-black tracking-[-0.03em]">{createdSummary.name}</div>
+        <div className="rounded-[24px] border border-[#2d7dff]/20 bg-[#eff6ff] px-5 py-5 text-slate-900">
+          <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Last created subscriber</div>
+          <div className="mt-3 text-2xl font-semibold tracking-[-0.03em]">{createdSummary.name}</div>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <div className="rounded-[20px] bg-white/5 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">Customer ID</div>
+            <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Customer ID</div>
               <div className="mt-2 font-semibold">{createdSummary.customerId || '-'}</div>
             </div>
-            <div className="rounded-[20px] bg-white/5 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">Service ID</div>
+            <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Service ID</div>
               <div className="mt-2 font-semibold">{createdSummary.serviceId || '-'}</div>
             </div>
-            <div className="rounded-[20px] bg-white/5 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">PPPoE Username</div>
+            <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">PPPoE Username</div>
               <div className="mt-2 font-semibold">{createdSummary.pppoeUsername || '-'}</div>
             </div>
-            <div className="rounded-[20px] bg-white/5 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">PPPoE Password</div>
+            <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">PPPoE Password</div>
               <div className="mt-2 font-semibold">{createdSummary.pppoePassword || '-'}</div>
             </div>
           </div>
         </div>
       ) : null}
 
-      <form onSubmit={handleSearch} className="card p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+      <form onSubmit={handleSearch} className="card grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-6">
         <div className="xl:col-span-2">
-          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Search</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Search</label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               className="input w-full pl-10"
               placeholder="Name, mobile, email, PPPoE, customer ID"
@@ -375,7 +368,7 @@ export default function CustomersPage() {
           </div>
         </div>
         <div>
-          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Status</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Status</label>
           <select className="input w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All statuses</option>
             <option value="active">Active</option>
@@ -384,15 +377,15 @@ export default function CustomersPage() {
           </select>
         </div>
         <div>
-          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Plan code</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Plan code</label>
           <input className="input w-full" placeholder="PLAN-100" value={planCode} onChange={(e) => setPlanCode(e.target.value)} />
         </div>
         <div>
-          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">City</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">City</label>
           <input className="input w-full" placeholder="Lucknow" value={city} onChange={(e) => setCity(e.target.value)} />
         </div>
         <div>
-          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/45">Usage risk</label>
+          <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Usage risk</label>
           <select className="input w-full" value={usageState} onChange={(e) => setUsageState(e.target.value)}>
             <option value="">All usage states</option>
             <option value="unlimited">Unlimited</option>
