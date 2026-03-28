@@ -181,6 +181,155 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return ok;
   }
 
+  Future<void> _completeInstallationFlow() async {
+    final otp = _otpController.text.trim();
+    if (otp.length != 6) {
+      _show('Enter 6-digit OTP');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
+      final result = await _appState.api.completeJob(_appState.session!, widget.job.id);
+      await _appState.refresh();
+      await _loadAll();
+      if (!mounted) return;
+      _show('Installation completed');
+      await _showInstallCompletionSheet(result);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      _show(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _resolveComplaintFlow() async {
+    final otp = _otpController.text.trim();
+    if (otp.length != 6) {
+      _show('Enter 6-digit OTP');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
+      final result = await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
+      await _appState.refresh();
+      await _loadAll();
+      if (!mounted) return;
+      _show('Complaint resolved');
+      await _showComplaintResolutionSheet(result);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      _show(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _showInstallCompletionSheet(Map<String, dynamic> result) async {
+    final activationInvoice = (result['activationInvoice'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final customer = (result['customer'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final subscriberService = (result['subscriberService'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF8FAFC),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Installation completed',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Customer handover is complete. Review the service and invoice summary before closing this job.',
+                style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+              ),
+              const SizedBox(height: 16),
+              _row('Customer', '${customer['fullName'] ?? '-'}'),
+              _row('Customer ID', '${customer['customerId'] ?? '-'}'),
+              _row('Service ID', '${subscriberService['serviceId'] ?? customer['serviceId'] ?? '-'}'),
+              _row('Radius username', '${subscriberService['radiusUsername'] ?? '-'}'),
+              _row('ONT serial', '${subscriberService['ontSerialNumber'] ?? '-'}'),
+              _row('Invoice status', '${activationInvoice['status'] ?? '-'}'),
+              _row('Invoice number', '${activationInvoice['invoiceNumber'] ?? activationInvoice['invoiceId'] ?? '-'}'),
+              _row('Invoice total', activationInvoice['totalAmount'] == null ? '-' : 'Rs ${activationInvoice['totalAmount']}'),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close summary'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showComplaintResolutionSheet(Map<String, dynamic> result) async {
+    final job = (result['job'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final complaint = (job['complaint'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final deviceContext = (job['deviceContext'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final subscriberService = (result['subscriberService'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF8FAFC),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Complaint resolved',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Resolution is saved. Confirm the fix summary and replacement audit before leaving the site.',
+                style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+              ),
+              const SizedBox(height: 16),
+              _row('Resolution code', '${complaint['resolutionCode'] ?? '-'}'),
+              _row('Resolution note', '${complaint['note'] ?? '-'}'),
+              _row('Replaced device', complaint['replacedDevice'] == true ? 'Yes' : 'No'),
+              _row('Old serial', '${deviceContext['oldSerialNumber'] ?? '-'}'),
+              _row('New serial', '${deviceContext['finalSerialNumber'] ?? '-'}'),
+              _row('Service status', '${subscriberService['status'] ?? '-'}'),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close summary'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _refreshPreviewAndDiagnostics({String successMessage = 'ONT details refreshed'}) async {
     final session = _appState.session;
     if (session == null) return;
@@ -1201,10 +1350,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      _runAndClose(() async {
-                                        await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
-                                        await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
-                                      }, 'Complaint resolved');
+                                      _resolveComplaintFlow();
                                     },
                               child: const Text('Resolve complaint'),
                             ),
@@ -1395,10 +1541,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       _show('Enter 6-digit OTP');
                                       return;
                                     }
-                                    _runAndClose(() async {
-                                      await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
-                                      await _appState.api.completeJob(_appState.session!, widget.job.id);
-                                    }, 'Installation completed');
+                                    _completeInstallationFlow();
                                   },
                             child: const Text('Complete installation'),
                           ),
@@ -1796,10 +1939,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      await _runAndClose(() async {
-                                        await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
-                                        await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
-                                      }, 'Complaint resolved');
+                                      await _resolveComplaintFlow();
                                     },
                             child: const Text('Resolve complaint'),
                           ),
@@ -2073,10 +2213,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      await _runAndClose(() async {
-                                        await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
-                                        await _appState.api.completeJob(_appState.session!, widget.job.id);
-                                      }, 'Installation completed');
+                                      await _completeInstallationFlow();
                                     },
                             child: const Text('Complete installation'),
                           ),
@@ -2664,10 +2801,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
       if (_canResolveComplaint(status, _otpController.text.trim())) {
         final otp = _otpController.text.trim();
-        await _runAndClose(() async {
-          await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
-          await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
-        }, 'Complaint resolved');
+        await _resolveComplaintFlow();
         return;
       }
       _show('No complaint action available right now');
@@ -2749,10 +2883,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
     if (_canCompleteInstall(status, _otpController.text.trim())) {
       final otp = _otpController.text.trim();
-      await _runAndClose(() async {
-        await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
-        await _appState.api.completeJob(_appState.session!, widget.job.id);
-      }, 'Installation completed');
+      await _completeInstallationFlow();
       return;
     }
     _show('No installer action available right now');

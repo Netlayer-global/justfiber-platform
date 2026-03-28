@@ -252,8 +252,8 @@ class InstallerApiClient {
     );
   }
 
-  Future<void> completeJob(InstallerSession session, String jobId) async {
-    await _request('/api/v1/installer/jobs/$jobId/complete', method: 'POST', token: session.accessToken);
+  Future<Map<String, dynamic>> completeJob(InstallerSession session, String jobId) async {
+    return _asMap(await _request('/api/v1/installer/jobs/$jobId/complete', method: 'POST', token: session.accessToken));
   }
 
   Future<void> markNotificationRead(InstallerSession session, String notificationId) async {
@@ -335,8 +335,8 @@ class InstallerApiClient {
     );
   }
 
-  Future<void> resolveComplaint(InstallerSession session, String jobId) async {
-    await _request('/api/v1/installer/jobs/$jobId/resolve-complaint', method: 'POST', token: session.accessToken);
+  Future<Map<String, dynamic>> resolveComplaint(InstallerSession session, String jobId) async {
+    return _asMap(await _request('/api/v1/installer/jobs/$jobId/resolve-complaint', method: 'POST', token: session.accessToken));
   }
 
   Future<void> startLeave(
