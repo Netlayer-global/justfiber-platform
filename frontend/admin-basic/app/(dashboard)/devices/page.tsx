@@ -586,19 +586,19 @@ export default function DevicesPage() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filteredDevices.map((device) => {
               const attentionCount = buildAttentionItems(device).length
               return (
                 <div
                   key={device.id}
-                  className={`w-full rounded-2xl border p-4 transition ${
+                  className={`w-full rounded-xl border px-4 py-3 transition ${
                     selectedDevice?.id === device.id
-                      ? 'border-[#8224E3] bg-[#F8F4FF]'
-                      : 'border-slate-200 bg-white hover:border-[#8224E3]/40 hover:bg-[#FCFAFF]'
+                      ? 'border-[#2d7dff] bg-[#f4f9ff]'
+                      : 'border-slate-200 bg-white hover:border-[#2d7dff]/35 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="mb-2 flex items-center justify-between gap-3">
                     <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
                       <input
                         type="checkbox"
@@ -615,17 +615,17 @@ export default function DevicesPage() {
                       Inspect
                     </button>
                   </div>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="grid gap-3 xl:grid-cols-[1.4fr_0.9fr] xl:items-start">
                     <div>
-                      <p className="text-base font-semibold text-slate-900">{formatValue(device.deviceId || device.name)}</p>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="text-sm font-semibold text-slate-900">{formatValue(device.deviceId || device.name)}</p>
+                      <p className="mt-1 text-xs text-slate-500">
                         {formatValue(device.productClass || device.type)} | Serial {formatValue(device.serialNumber)}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         Customer {formatValue(device.customerId)} | Service {formatValue(device.serviceId)}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 xl:justify-end">
                       <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusTone(device.status)}`}>
                         {device.status}
                       </span>
@@ -640,7 +640,7 @@ export default function DevicesPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-500">
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-500 xl:grid-cols-4">
                     <div>IP {formatValue(device.ip || device.wanInfo?.ipAddress)}</div>
                     <div>PPPoE {formatValue(device.wanInfo?.pppoeUsernameMasked || device.wanInfo?.pppoeUsername)}</div>
                     <div>RX {formatPower(device.opticalInfo?.rxPower)}</div>

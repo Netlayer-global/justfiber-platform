@@ -340,71 +340,73 @@ export default function ServiceabilityPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#8224E3]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#2d7dff]" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {zones.map((zone) => (
-            <div key={zone.id} className="card p-5 space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold">{zone.name}</h3>
-                    <p className="text-sm text-slate-500">{zone.zoneCode || zone.id}</p>
-                    <p className="text-sm text-slate-500">{[zone.area, zone.city].filter(Boolean).join(', ') || 'Location not set'}</p>
-                  </div>
-                </div>
-                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                  zone.status === 'active'
-                    ? 'bg-green-100 text-green-700'
-                    : zone.status === 'planned'
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-slate-100 text-slate-700'
-                }`}>
-                  {zone.status}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div>
-                  <p className="text-slate-500 text-xs">Pins</p>
-                  <p className="font-semibold">{zone.pinCodes?.length ? zone.pinCodes.join(', ') : '-'}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs">Polygon</p>
-                  <p className="font-semibold">{zone.polygon.length} points</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs">Type</p>
-                  <p className="font-semibold">{zone.serviceType || 'fiber'}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs">Priority</p>
-                  <p className="font-semibold">{zone.priority || 1}</p>
-                </div>
-              </div>
-
-              {zone.notes ? <p className="text-sm text-slate-400">{zone.notes}</p> : null}
-
-              <div className="flex gap-2">
-                <button onClick={() => beginEdit(zone)} className="btn-secondary inline-flex items-center gap-2">
-                  <Pencil className="w-4 h-4" />
-                  Edit
-                </button>
-                <button onClick={() => void handleDelete(zone)} className="btn-danger inline-flex items-center gap-2">
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </button>
-              </div>
+        <div className="card overflow-hidden">
+          {zones.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[920px]">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                    <th className="px-5 py-3 font-medium">Zone</th>
+                    <th className="px-4 py-3 font-medium">Location</th>
+                    <th className="px-4 py-3 font-medium">Pins</th>
+                    <th className="px-4 py-3 font-medium">Coverage</th>
+                    <th className="px-4 py-3 font-medium">Type</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {zones.map((zone) => (
+                    <tr key={zone.id} className="border-b border-slate-100 text-sm text-slate-600 last:border-b-0">
+                      <td className="px-5 py-4">
+                        <div className="flex items-start gap-3">
+                          <MapPin className="mt-0.5 h-4 w-4 text-[#2d7dff]" />
+                          <div>
+                            <div className="font-semibold text-slate-900">{zone.name}</div>
+                            <div className="mt-1 text-xs text-slate-500">{zone.zoneCode || zone.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">{[zone.area, zone.city].filter(Boolean).join(', ') || 'Location not set'}</td>
+                      <td className="px-4 py-4">{zone.pinCodes?.length ? zone.pinCodes.join(', ') : '-'}</td>
+                      <td className="px-4 py-4">{zone.polygon.length} points</td>
+                      <td className="px-4 py-4">{zone.serviceType || 'fiber'}</td>
+                      <td className="px-4 py-4">
+                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          zone.status === 'active'
+                            ? 'bg-green-100 text-green-700'
+                            : zone.status === 'planned'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {zone.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex gap-2">
+                          <button onClick={() => beginEdit(zone)} className="btn-secondary inline-flex items-center gap-2">
+                            <Pencil className="w-4 h-4" />
+                            Edit
+                          </button>
+                          <button onClick={() => void handleDelete(zone)} className="btn-danger inline-flex items-center gap-2">
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-
-          {zones.length === 0 ? (
-            <div className="card p-6 text-center text-slate-500 xl:col-span-2">
+          ) : (
+            <div className="p-6 text-center text-slate-500">
               No zones created yet. Add an active polygon-marked zone to make feasibility checks succeed for that area.
             </div>
-          ) : null}
+          )}
         </div>
       )}
     </div>
