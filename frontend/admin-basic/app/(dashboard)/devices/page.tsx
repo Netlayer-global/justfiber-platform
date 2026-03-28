@@ -426,17 +426,17 @@ export default function DevicesPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Admin devices</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Device operations,
-            <span className="text-[#8224E3]"> live admin view.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            {onlineCount} online, {offlineCount} offline, {mappedCount} mapped to subscribers, and {actionCount} currently need attention.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Network console</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Devices</h1>
+            <div className="mt-2 text-sm text-slate-500">
+              {devices.length} total, {onlineCount} online, {offlineCount} offline, {mappedCount} mapped, {actionCount} need attention.
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void syncFleet()}
@@ -444,7 +444,7 @@ export default function DevicesPage() {
               className="btn-primary inline-flex items-center gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${isSyncingFleet ? 'animate-spin' : ''}`} />
-              {isSyncingFleet ? 'Syncing fleet...' : 'Sync fleet from Genie'}
+              {isSyncingFleet ? 'Syncing...' : 'Sync Fleet'}
             </button>
             <button
               type="button"
@@ -453,7 +453,7 @@ export default function DevicesPage() {
               className="btn-secondary inline-flex items-center gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshingDevice ? 'animate-spin' : ''}`} />
-              Sync selected device
+              Selected Device
             </button>
             <button
               type="button"
@@ -461,43 +461,40 @@ export default function DevicesPage() {
               className="btn-secondary inline-flex items-center gap-2"
             >
               <ArrowUpRight className="h-4 w-4" />
-              Refresh inventory
+              Refresh
             </button>
           </div>
         </div>
 
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Live cache snapshot</div>
-          <div className="mt-3 text-5xl font-black">{devices.length}</div>
-          <div className="mt-2 text-sm text-black/60">
-            {latestFleetSync ? `Latest device sync ${new Date(latestFleetSync).toLocaleString()}` : 'No sync timestamp available'}
-          </div>
-          <div className="mt-8 grid grid-cols-2 gap-3">
-            {[
-              { label: 'Online', value: String(onlineCount), Icon: Activity },
-              { label: 'Offline', value: String(offlineCount), Icon: Router },
-              { label: 'Mapped', value: String(mappedCount), Icon: ShieldCheck },
-              { label: 'Attention', value: String(actionCount), Icon: Siren },
-            ].map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[22px] bg-black/10 p-4">
-                <Icon className="h-4 w-4 text-black/75" />
-                <div className="mt-4 text-2xl font-bold">{value}</div>
-                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
-              </div>
-            ))}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {[
+            { label: 'All', value: devices.length },
+            { label: 'Online', value: onlineCount },
+            { label: 'Offline', value: offlineCount },
+            { label: 'Mapped', value: mappedCount },
+            { label: 'Attention', value: actionCount },
+            { label: 'Suspended', value: suspendCount },
+            { label: 'Optical Risk', value: opticalRiskCount },
+          ].map((item) => (
+            <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-900">{item.value}</span> {item.label}
+            </div>
+          ))}
+          <div className="ml-auto text-xs text-slate-400">
+            {latestFleetSync ? `Last sync ${new Date(latestFleetSync).toLocaleString()}` : 'No sync timestamp'}
           </div>
         </div>
       </section>
 
       <div className="card p-5">
         <div className="grid gap-3 xl:grid-cols-[1.6fr_0.55fr_0.55fr]">
-          <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0a0e27] px-4 py-3">
+          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
             <Search className="h-4 w-4 text-slate-400" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by device ID, customer ID, service ID, serial, IP, PPPoE"
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
             />
           </label>
           <select className="input" value={onlineFilter} onChange={(event) => setOnlineFilter(event.target.value as OnlineFilter)}>
@@ -546,8 +543,8 @@ export default function DevicesPage() {
       <div className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.22em] text-white/45">Bulk device actions</div>
-            <div className="mt-2 text-2xl font-bold text-white">Operate on selected live devices</div>
+            <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Bulk device actions</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">Operate on selected devices</div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-secondary" onClick={selectFilteredDevices}>

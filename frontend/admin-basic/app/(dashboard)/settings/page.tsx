@@ -374,32 +374,17 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Settings command</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Central settings,
-            <span className="text-[#8224E3]"> built for scale.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            Invoice template, branding, billing rules, integration switches, and future admin controls ek alag settings layer me manage karo.
-          </p>
-        </div>
-
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Flow preview</div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {[
-              ['Template assets', 'Logo, signature, stamp, invoice color'],
-              ['Billing identity', 'GST, PAN, bank account, footer note'],
-              ['Future sections', 'Integrations, prefixes, platform rules'],
-            ].map(([title, note]) => (
-              <div key={title} className="rounded-[22px] bg-black/10 p-4">
-                <div className="text-sm font-bold text-black">{title}</div>
-                <div className="mt-2 text-xs leading-5 text-black/60">{note}</div>
-              </div>
-            ))}
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Settings</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">{activeMeta.title}</h1>
+            <div className="mt-2 max-w-3xl text-sm text-slate-500">{activeMeta.description}</div>
           </div>
+          <button onClick={saveActiveSection} disabled={isSaving} className="btn-primary inline-flex items-center gap-2">
+            <Save className="h-4 w-4" />
+            {isSaving ? 'Saving...' : 'Save settings'}
+          </button>
         </div>
       </section>
 
@@ -410,7 +395,7 @@ export default function SettingsPage() {
         </div>
       ) : (
         <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="card p-4">
+          <aside className="rounded-[24px] border border-slate-200 bg-[#232735] p-4">
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Settings sections</div>
             <div className="mt-4 space-y-2">
               {orderedCatalog.map((item) => {
@@ -423,12 +408,12 @@ export default function SettingsPage() {
                     onClick={() => setActiveSection(item.section)}
                     className={`w-full rounded-[20px] border px-4 py-3 text-left transition ${
                       isActive
-                        ? 'border-[#8224E3]/35 bg-[#8224E3]/15 text-white'
-                        : 'border-white/10 bg-white/5 text-white/70 hover:border-white/20 hover:bg-white/10 hover:text-white'
+                        ? 'border-[#2d7dff]/40 bg-[linear-gradient(90deg,#1f6fff,#2d7dff)] text-white'
+                        : 'border-transparent bg-transparent text-white/80 hover:border-white/10 hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     <div className="font-semibold">{meta?.title || item.section}</div>
-                    <div className="mt-1 text-xs text-slate-400">{meta?.description || item.fieldsPreview.join(', ')}</div>
+                    <div className="mt-1 text-xs text-white/45">{meta?.description || item.fieldsPreview.join(', ')}</div>
                   </button>
                 )
               })}
@@ -436,40 +421,26 @@ export default function SettingsPage() {
           </aside>
 
           <div className="space-y-4">
-            <div className="card p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Active section</div>
-                  <h2 className="mt-2 text-3xl font-bold text-white">{activeMeta.title}</h2>
-                  <p className="mt-2 max-w-3xl text-sm text-slate-400">{activeMeta.description}</p>
-                </div>
-                <button onClick={saveActiveSection} disabled={isSaving} className="btn-primary inline-flex items-center gap-2">
-                  <Save className="h-4 w-4" />
-                  {isSaving ? 'Saving...' : 'Save settings'}
-                </button>
-              </div>
-            </div>
-
             {activeSection === 'invoice_template' ? (
               <div className="grid gap-4 xl:grid-cols-[1fr_0.92fr]">
                 <div className="card p-5 space-y-5">
                   <div className="grid gap-3 md:grid-cols-3">
-                    <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Templates</div>
-                      <div className="mt-2 text-2xl font-bold text-white">{(invoiceTemplate?.templates || []).length}</div>
-                      <div className="mt-1 text-xs text-slate-400">Saved invoice branding variants</div>
+                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Templates</div>
+                      <div className="mt-2 text-2xl font-bold text-slate-900">{(invoiceTemplate?.templates || []).length}</div>
+                      <div className="mt-1 text-xs text-slate-500">Saved invoice branding variants</div>
                     </div>
-                    <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Default</div>
-                      <div className="mt-2 truncate text-lg font-semibold text-white">
+                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Default</div>
+                      <div className="mt-2 truncate text-lg font-semibold text-slate-900">
                         {(invoiceTemplate?.templates || []).find((item) => item.key === invoiceTemplate?.activeTemplate)?.templateName || 'Not set'}
                       </div>
-                      <div className="mt-1 text-xs text-slate-400">Used when no zone override matches</div>
+                      <div className="mt-1 text-xs text-slate-500">Used when no zone override matches</div>
                     </div>
-                    <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Zone routing</div>
-                      <div className="mt-2 text-2xl font-bold text-white">{(invoiceTemplate?.zoneTemplateMappings || []).length}</div>
-                      <div className="mt-1 text-xs text-slate-400">Zone-specific template assignments</div>
+                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone routing</div>
+                      <div className="mt-2 text-2xl font-bold text-slate-900">{(invoiceTemplate?.zoneTemplateMappings || []).length}</div>
+                      <div className="mt-1 text-xs text-slate-500">Zone-specific template assignments</div>
                     </div>
                   </div>
 
