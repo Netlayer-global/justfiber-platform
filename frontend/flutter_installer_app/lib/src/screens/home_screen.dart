@@ -16,19 +16,30 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
+  String _jobsFilter = 'all';
 
   @override
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
     final pages = [
       DashboardTab(
-        onOpenJobs: () => setState(() => index = 1),
+        onOpenJobs: () => setState(() {
+          _jobsFilter = 'all';
+          index = 1;
+        }),
+        onOpenFollowUps: () => setState(() {
+          _jobsFilter = 'deferred';
+          index = 1;
+        }),
         onOpenAlerts: () => setState(() => index = 2),
         onOpenProfile: () => setState(() => index = 3),
       ),
-      const JobsTab(),
+      JobsTab(initialQueueFilter: _jobsFilter),
       NotificationsTab(
-        onOpenJobs: () => setState(() => index = 1),
+        onOpenJobs: () => setState(() {
+          _jobsFilter = 'all';
+          index = 1;
+        }),
         onOpenDashboard: () => setState(() => index = 0),
       ),
       const ProfileTab(),

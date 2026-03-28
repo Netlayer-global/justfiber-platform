@@ -8,7 +8,12 @@ import '../../widgets/app_card.dart';
 import '../job_detail_screen.dart';
 
 class JobsTab extends StatefulWidget {
-  const JobsTab({super.key});
+  const JobsTab({
+    super.key,
+    this.initialQueueFilter = 'all',
+  });
+
+  final String initialQueueFilter;
 
   @override
   State<JobsTab> createState() => _JobsTabState();
@@ -16,7 +21,16 @@ class JobsTab extends StatefulWidget {
 
 class _JobsTabState extends State<JobsTab> {
   final _searchController = TextEditingController();
-  String _queueFilter = 'all';
+  late String _queueFilter = widget.initialQueueFilter;
+
+  @override
+  void didUpdateWidget(covariant JobsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialQueueFilter != widget.initialQueueFilter && widget.initialQueueFilter != _queueFilter) {
+      _searchController.clear();
+      _queueFilter = widget.initialQueueFilter;
+    }
+  }
 
   @override
   void dispose() {

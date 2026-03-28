@@ -10,11 +10,13 @@ class DashboardTab extends StatelessWidget {
   const DashboardTab({
     super.key,
     this.onOpenJobs,
+    this.onOpenFollowUps,
     this.onOpenAlerts,
     this.onOpenProfile,
   });
 
   final VoidCallback? onOpenJobs;
+  final VoidCallback? onOpenFollowUps;
   final VoidCallback? onOpenAlerts;
   final VoidCallback? onOpenProfile;
 
@@ -231,6 +233,12 @@ class DashboardTab extends StatelessWidget {
                       icon: const Icon(Icons.assignment_rounded),
                       label: Text(todayJobs > 0 ? 'Open jobs ($todayJobs)' : 'Open jobs'),
                     ),
+                    if (deferredJobs > 0)
+                      OutlinedButton.icon(
+                        onPressed: onOpenFollowUps,
+                        icon: const Icon(Icons.restart_alt_rounded),
+                        label: Text('Open follow-up ($deferredJobs)'),
+                      ),
                     OutlinedButton.icon(
                       onPressed: onOpenAlerts,
                       icon: const Icon(Icons.notifications_active_outlined),
