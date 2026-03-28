@@ -12,6 +12,12 @@ class SupportHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
+    final openTickets = appState.tickets
+        .where((item) => !item.status.toLowerCase().contains('closed') && !item.status.toLowerCase().contains('resolved'))
+        .length;
+    final openRequests = appState.requests
+        .where((item) => !item.status.toLowerCase().contains('closed') && !item.status.toLowerCase().contains('completed'))
+        .length;
     CustomerConnection? selectedConnection;
     for (final item in appState.connections) {
       if (item.customerId == appState.selectedCustomerId) {
@@ -20,7 +26,7 @@ class SupportHistoryScreen extends StatelessWidget {
       }
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Support & requests')),
+      appBar: AppBar(title: const Text('Support Center')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFFF6F1EB),
@@ -39,17 +45,17 @@ class SupportHistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'CHAT SUPPORT',
+                  'SUPPORT DESK',
                   style: TextStyle(
                     color: Color(0xFF8224E3),
-                    letterSpacing: 2.8,
+                    letterSpacing: 2.4,
                     fontWeight: FontWeight.w800,
                     fontSize: 11,
                   ),
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Talk to support',
+                  'Get help fast',
                   style: TextStyle(
                     color: Color(0xFF131313),
                     fontWeight: FontWeight.w800,
@@ -60,6 +66,16 @@ class SupportHistoryScreen extends StatelessWidget {
                 const Text(
                   'Type your problem in chat and get guided steps before raising a complaint.',
                   style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(child: _summaryTile('Open tickets', '$openTickets')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryTile('Requests', '${appState.requests.length}')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryTile('Open requests', '$openRequests')),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Container(
@@ -76,20 +92,44 @@ class SupportHistoryScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                FilledButton(
-                  onPressed: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SupportAssistantScreen()),
-                    );
-                    if (context.mounted) {
-                      await appState.refresh();
-                    }
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF8224E3),
-                    foregroundColor: const Color(0xFFFFFFFF),
-                  ),
-                  child: const Text('Open support chat'),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    FilledButton(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportAssistantScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF8224E3),
+                        foregroundColor: const Color(0xFFFFFFFF),
+                      ),
+                      child: const Text('Open support chat'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => _showCreateTicketSheet(context, appState),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF8224E3),
+                        backgroundColor: const Color(0xFFFFFFFF),
+                        side: const BorderSide(color: Color(0x668224E3)),
+                      ),
+                      child: const Text('Create ticket'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => _showCreateRequestSheet(context, appState),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF8224E3),
+                        backgroundColor: const Color(0xFFFFFFFF),
+                        side: const BorderSide(color: Color(0x668224E3)),
+                      ),
+                      child: const Text('Create request'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -240,6 +280,25 @@ class SupportHistoryScreen extends StatelessWidget {
     );
   }
 
+  Widget _summaryTile(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+
   Widget _emptyState({
     required String title,
     required String subtitle,
@@ -303,9 +362,19 @@ class SupportHistoryScreen extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: color.withValues(alpha: 0.24)),
+              ),
+              child: Icon(
+                status.toLowerCase().contains('closed') || status.toLowerCase().contains('resolved') || status.toLowerCase().contains('completed')
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.support_agent_rounded,
+                color: color,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -321,14 +390,24 @@ class SupportHistoryScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: color.withValues(alpha: 0.28)),
-              ),
-              child: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: color.withValues(alpha: 0.28)),
+                  ),
+                  child: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'View',
+                  style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700),
+                ),
+              ],
             ),
           ],
         ),
@@ -790,11 +869,25 @@ class _DetailSheet extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              for (final line in lines)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(line, style: const TextStyle(height: 1.45, color: Color(0xFF6E6A67))),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F4FF),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0x228224E3)),
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final line in lines)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(line, style: const TextStyle(height: 1.45, color: Color(0xFF6E6A67))),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
