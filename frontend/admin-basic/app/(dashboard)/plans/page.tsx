@@ -1,22 +1,18 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import {
   ArrowDown,
   ArrowUp,
-  Cable,
   Copy,
   Loader,
   Pencil,
   Plus,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   Trash2,
-  WalletCards,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -163,32 +159,6 @@ function splitLines(value: string) {
 
 function formatCurrency(amount?: number) {
   return `Rs ${Number(amount || 0).toFixed(0)}`
-}
-
-function buildPppoePreview(form: PlanFormState) {
-  const prefix = form.pppoePrefix.trim() || 'jf'
-  const realm = form.pppoeRealm.trim()
-  return `${prefix}.subscriber001${realm ? `@${realm}` : ''}`
-}
-
-function buildWifiPreview(form: PlanFormState) {
-  const prefix = form.wifiNamePrefix.trim() || 'JustFiber'
-  return `${prefix}-Home-2.4G / ${prefix}-Home-5G`
-}
-
-function provisioningIssues(form: PlanFormState) {
-  if (form.status === 'inactive') return []
-  const issues: string[] = []
-  if (!form.accessProfileCode.trim()) issues.push('Access profile code missing')
-  if (!(Number(form.vlanId || 0) > 0)) issues.push('VLAN ID missing')
-  if (!form.pppoePrefix.trim()) issues.push('PPPoE prefix missing')
-  if (!form.defaultPppoePassword.trim()) issues.push('Default PPPoE password missing')
-  if (!form.wifiNamePrefix.trim()) issues.push('Wi-Fi SSID prefix missing')
-  return issues
-}
-
-function isLiveReady(plan: Plan) {
-  return plan.status === 'active' && plan.provisioningReady !== false
 }
 
 function renderCategoryLabel(category?: Plan['category']) {
@@ -341,7 +311,6 @@ export default function PlansPage() {
 
   const composerOpen = composerMode !== null
   const preview = composerOpen ? form : toForm(selectedPlan)
-  const provisioningReady = provisioningIssues(preview).length === 0
 
   function beginCreate() {
     setEditingPlanId(null)
@@ -556,56 +525,38 @@ export default function PlansPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.28em] text-white/45">Plan command</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Build real broadband packs,
-            <span className="text-[#8224E3]"> not flat rows.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            This catalog drives customer app plans, sales discovery, plan change, and installer provisioning defaults.
-          </p>
-          <div className="mt-8 grid gap-3 md:grid-cols-3">
-            {[
-              { label: 'Active plans', value: String(plans.filter((plan) => plan.status === 'active').length), Icon: Sparkles },
-              { label: 'Home packs', value: String(plans.filter((plan) => (plan.category || 'home') === 'home').length), Icon: Cable },
-              { label: 'Premium packs', value: String(plans.filter((plan) => plan.price >= 1500).length), Icon: WalletCards },
-            ].map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[24px] border border-white/10 bg-white/5 p-4">
-                <Icon className="h-4 w-4 text-[#8224E3]" />
-                <div className="mt-4 text-3xl font-black text-white">{value}</div>
-                <div className="text-xs uppercase tracking-[0.2em] text-white/45">{label}</div>
-              </div>
-            ))}
+      <section className="card p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan Management</div>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.03em] text-white">Manage broadband plans</h1>
+            <p className="mt-2 text-sm text-white/55">
+              Keep this screen commercial-only: plan name, speed, pricing, validity, invoice breakup, and visibility.
+            </p>
           </div>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3">
             <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New plan
             </button>
             <button type="button" onClick={() => void loadPlans()} className="btn-secondary inline-flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
-              Refresh catalog
+              Refresh
             </button>
           </div>
         </div>
-
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.28em] text-black/55">Live slice</div>
-          <div className="mt-3 text-5xl font-black">{filteredPlans.length}</div>
-          <div className="mt-2 text-sm text-black/60">
-            Visible after current search and filters. Plans here should feel like telco catalog lanes, not internal records.
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="rounded-[18px] border border-white/10 bg-[#0a0e27] p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/45">Total plans</div>
+            <div className="mt-2 text-2xl font-bold text-white">{plans.length}</div>
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-3">
-            <div className="rounded-[24px] bg-black/10 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-black/55">Live in apps</div>
-              <div className="mt-3 text-2xl font-black">{plans.filter(isLiveReady).length}</div>
-            </div>
-            <div className="rounded-[24px] bg-black/10 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-black/55">Provisioning blocked</div>
-              <div className="mt-3 text-2xl font-black">{plans.filter((plan) => plan.status === 'active' && plan.provisioningReady === false).length}</div>
-            </div>
+          <div className="rounded-[18px] border border-white/10 bg-[#0a0e27] p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/45">Active</div>
+            <div className="mt-2 text-2xl font-bold text-white">{plans.filter((plan) => plan.status === 'active').length}</div>
+          </div>
+          <div className="rounded-[18px] border border-white/10 bg-[#0a0e27] p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/45">Visible now</div>
+            <div className="mt-2 text-2xl font-bold text-white">{filteredPlans.length}</div>
           </div>
         </div>
       </section>
@@ -616,13 +567,13 @@ export default function PlansPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <div className="text-xs uppercase tracking-[0.24em] text-white/45">
-                {composerMode === 'edit' ? 'Edit live pack' : composerMode === 'clone' ? 'Clone pack' : 'Create pack'}
+                {composerMode === 'edit' ? 'Edit plan' : composerMode === 'clone' ? 'Clone plan' : 'Create plan'}
               </div>
               <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">
-                {composerMode === 'edit' ? 'Refine a broadband lane' : composerMode === 'clone' ? 'Duplicate and refine a broadband lane' : 'Launch a new plan lane'}
+                {composerMode === 'edit' ? 'Update plan details' : composerMode === 'clone' ? 'Duplicate an existing plan' : 'Create a new plan'}
               </h2>
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Pricing, validity, tags, and add-ons yahan manage karo. Provisioning template dashboard me alag maintain hoga.
+                Keep this screen limited to plan essentials: speed, pricing, validity, invoice breakup, and visibility.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -769,7 +720,7 @@ export default function PlansPage() {
           <div className="flex flex-wrap items-center gap-3">
             {composerMode === 'create' ? (
               <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/65">
-                New plans draft mode me start honge. Save ke baad provisioning template section se PPPoE, VLAN, aur Wi-Fi defaults set karo.
+                New plans start inactive. Activate only after pricing and invoice breakup are reviewed.
               </div>
             ) : null}
             <button type="submit" disabled={isSaving} className="btn-primary">
@@ -782,9 +733,9 @@ export default function PlansPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan composer</div>
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">Create new plans only when needed</h2>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">Create a new plan only when needed</h2>
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Existing plans neeche dashboard me visible rahenge. Naya plan banane ke liye top-right `New plan` use karo.
+                Use this only for new commercial packs. For routine work, pick a plan from the list and edit it.
               </p>
             </div>
             <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
@@ -793,40 +744,19 @@ export default function PlansPage() {
             </button>
           </div>
 
-          <div className="mt-6 rounded-[28px] border border-white/10 bg-[#0c0f15] p-6">
-            <div className="text-xs uppercase tracking-[0.2em] text-white/45">Quick plan template</div>
-            <div className="mt-3 text-3xl font-black text-white">{preview.name || 'Select a plan'}</div>
-            <div className="mt-2 text-sm text-white/50">{preview.planCode || 'PLAN_CODE'} - {preview.status === 'active' && provisioningReady ? 'Visible in apps' : 'Draft / blocked'}</div>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-[22px] bg-white/5 p-4">
+          <div className="mt-6 rounded-[24px] border border-white/10 bg-[#0c0f15] p-5">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Preview name</div>
+                <div className="mt-2 text-lg font-bold text-white">{preview.name || 'New plan'}</div>
+              </div>
+              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-white/45">Speed</div>
-                <div className="mt-2 text-2xl font-black text-white">{preview.speed || '0'} Mbps</div>
-                <div className="text-sm text-white/55">Upload {preview.uploadSpeed || '0'} Mbps</div>
+                <div className="mt-2 text-lg font-bold text-white">{preview.speed || '0'} Mbps</div>
               </div>
-              <div className="rounded-[22px] bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Price</div>
-                <div className="mt-2 text-2xl font-black text-white">{formatCurrency(Number(preview.price || 0))}</div>
-                <div className="text-sm text-white/55">{preview.dataPolicy === 'unlimited' ? 'Unlimited data' : `${preview.dataLimitGb || '0'} GB cap`}</div>
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-3 md:grid-cols-2 text-sm text-white/70">
-              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">App visibility</div>
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between"><span>Badge</span><span>{preview.featured ? 'Featured' : preview.recommended ? 'Recommended' : 'Standard'}</span></div>
-                  <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' ? 'Visible' : 'Hidden'}</span></div>
-                  <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' ? 'Visible' : 'Hidden'}</span></div>
-                </div>
-              </div>
-              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Plan essentials</div>
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'Optional'}</span></div>
-                  <div className="flex items-center justify-between"><span>Latency</span><span>{preview.latencyClass || '-'}</span></div>
-                  <div className="flex items-center justify-between"><span>Template</span><span>{provisioningReady ? 'Ready' : 'Pending'}</span></div>
-                </div>
+              <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Monthly price</div>
+                <div className="mt-2 text-lg font-bold text-white">{formatCurrency(Number(preview.price || 0))}</div>
               </div>
             </div>
           </div>
@@ -835,9 +765,9 @@ export default function PlansPage() {
 
         <div className="space-y-6">
           <div className="card p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Catalog explorer</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan library</div>
             <div className="mt-4 space-y-4">
-              <input className="input w-full" placeholder="Search by plan code, name or tags" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <input className="input w-full" placeholder="Search by plan code or name" value={query} onChange={(e) => setQuery(e.target.value)} />
               <div className="flex flex-wrap gap-2">
                 {(['all', 'home', 'business', 'enterprise'] as const).map((value) => (
                   <button key={value} type="button" onClick={() => setCategoryFilter(value)} className={value === categoryFilter ? 'btn-primary' : 'btn-secondary'}>
@@ -863,141 +793,24 @@ export default function PlansPage() {
           </div>
 
           <div className="card p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plan summary</div>
-            <div className="mt-4 rounded-[28px] border border-white/10 bg-[#0c0f15] p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#8224E3]/20 bg-[#8224E3]/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[#8224E3]">
-                    {renderCategoryLabel(preview.category)}
-                  </div>
-                  <div className="mt-4 text-3xl font-black tracking-[-0.04em] text-white">{preview.name || 'Plan preview'}</div>
-                  <div className="mt-2 text-sm uppercase tracking-[0.22em] text-white/40">{preview.planCode || 'PLAN_CODE'}</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Current draft</div>
+            <div className="mt-4 rounded-[24px] border border-white/10 bg-[#0c0f15] p-5">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Plan name</div>
+                  <div className="mt-2 text-lg font-bold text-white">{preview.name || 'New plan'}</div>
+                  <div className="mt-1 text-sm text-white/45">{preview.planCode || 'PLAN_CODE'}</div>
                 </div>
-                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${preview.status === 'inactive' ? 'bg-red-500/15 text-red-200' : 'bg-[#8224E3]/15 text-[#8224E3]'}`}>
-                  {preview.status === 'inactive' ? 'Hidden' : 'Live'}
+                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Monthly price</div>
+                  <div className="mt-2 text-lg font-bold text-white">{formatCurrency(Number(preview.price || 0))}</div>
+                  <div className="mt-1 text-sm text-white/45">{preview.speed || '0'} / {preview.uploadSpeed || '0'} Mbps</div>
                 </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em] ${provisioningReady ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-amber-300/30 bg-amber-300/10 text-amber-100'}`}>
-                  {provisioningReady ? 'Provisioning ready' : 'Provisioning incomplete'}
-                </span>
-                {preview.featured ? <span className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#8224E3]">Featured</span> : null}
-                {preview.recommended ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Recommended</span> : null}
-                {preview.spotlightLabel.trim().length > 0 ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.spotlightLabel}</span> : null}
-                {preview.routerIncluded ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">Router bundled</span> : null}
-                {preview.latencyClass ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/80">{preview.latencyClass}</span> : null}
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Download</div>
-                  <div className="mt-3 text-3xl font-black text-white">{preview.speed || '0'} Mbps</div>
-                </div>
-                <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Upload</div>
-                  <div className="mt-3 text-3xl font-black text-white">{preview.uploadSpeed || '0'} Mbps</div>
-                </div>
-                <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Monthly</div>
-                  <div className="mt-3 text-3xl font-black text-white">{formatCurrency(Number(preview.price || 0))}</div>
-                </div>
-                <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Data</div>
-                  <div className="mt-3 text-3xl font-black text-white">
-                    {preview.dataPolicy === 'unlimited'
-                      ? 'Unlimited'
-                      : `${preview.dataLimitGb || '0'} GB`}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Commercial highlights</div>
-                <div className="mt-4 grid gap-3 md:grid-cols-2 text-sm text-white/70">
-                  <div className="flex items-center justify-between"><span>Quarterly</span><span>{formatCurrency(Number(preview.quarterlyPrice || 0))}</span></div>
-                  <div className="flex items-center justify-between"><span>Yearly</span><span>{formatCurrency(Number(preview.yearlyPrice || 0))}</span></div>
-                  <div className="flex items-center justify-between"><span>Installation</span><span>{formatCurrency(Number(preview.installationCharge || 0))}</span></div>
-                  <div className="flex items-center justify-between"><span>OTC</span><span>{formatCurrency(Number(preview.otcCharge || 0))}</span></div>
-                  <div className="flex items-center justify-between"><span>Data policy</span><span>{preview.dataPolicy}</span></div>
-                  <div className="flex items-center justify-between"><span>FUP speed</span><span>{preview.fupSpeedMbps ? `${preview.fupSpeedMbps} Mbps` : '-'}</span></div>
-                  <div className="flex items-center justify-between"><span>Router</span><span>{preview.routerIncluded ? (preview.routerModel || 'Included') : 'Optional'}</span></div>
-                  <div className="flex items-center justify-between"><span>OTT apps</span><span>{splitCsv(preview.ottApps).slice(0, 3).join(', ') || '-'}</span></div>
-                  <div className="flex items-center justify-between"><span>Customer app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
-                  <div className="flex items-center justify-between"><span>Sales app</span><span>{preview.status === 'active' && provisioningReady ? 'Visible' : 'Hidden'}</span></div>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {splitCsv(preview.tags).slice(0, 6).map((tag) => (
-                  <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75">
-                    {tag}
-                  </span>
-                ))}
-                {splitCsv(preview.tags).length === 0 ? (
-                  <span className="rounded-full border border-dashed border-white/10 px-3 py-1 text-xs text-white/35">No catalog tags yet</span>
-                ) : null}
               </div>
             </div>
           </div>
         </div>
       </section>
-
-      {!composerOpen ? (
-      <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-          <div className="card p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-white/45">Provisioning templates</div>
-                <div className="mt-2 text-2xl font-black text-white">Manage technical activation separately</div>
-                <p className="mt-2 text-sm leading-6 text-white/55">
-                Plan management ko commercial aur catalog-focused rakha gaya hai. PPPoE, VLAN, access profile, aur Wi-Fi naming ab dedicated provisioning section me maintain honge.
-                </p>
-              </div>
-            <div className={`rounded-full px-3 py-1 text-xs font-semibold ${selectedPlan?.provisioningReady === false ? 'bg-amber-300/15 text-amber-100' : 'bg-emerald-400/15 text-emerald-200'}`}>
-              {selectedPlan?.provisioningReady === false ? 'Template incomplete' : 'Template ready'}
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-[22px] border border-white/10 bg-white/5 p-5">
-            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
-              <div>
-                <div className="text-sm font-semibold text-white">Open provisioning section</div>
-                <div className="mt-2 text-sm leading-6 text-white/55">
-                  Technical activation pattern selected plan ke liye alag dashboard me maintain karo. Yahan sirf commercial pack, validity, pricing, tags, and merchandising manage hoga.
-                </div>
-              </div>
-              <Link href="/provisioning" className="btn-primary inline-flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
-                Open Provisioning
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.24em] text-white/45">Template summary</div>
-          <div className="mt-4 space-y-3 text-sm text-white/70">
-            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-white/45">PPPoE sample</div>
-              <div className="mt-2 text-lg font-bold text-white break-all">{buildPppoePreview(preview)}</div>
-            </div>
-            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-white/45">Wi-Fi naming</div>
-              <div className="mt-2 text-lg font-bold text-white">{buildWifiPreview(preview)}</div>
-            </div>
-            <div className="rounded-[20px] border border-white/10 bg-white/5 p-4">
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between"><span>Selected plan</span><span>{preview.name || 'No plan selected'}</span></div>
-                <div className="flex items-center justify-between"><span>Visibility</span><span>{selectedPlan?.provisioningReady === false ? 'Provisioning pending' : 'Apps ready'}</span></div>
-                <div className="flex items-center justify-between"><span>VLAN</span><span>{preview.vlanId || '-'}</span></div>
-                <div className="flex items-center justify-between"><span>Access profile</span><span>{preview.accessProfileCode || '-'}</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      ) : null}
 
       {isLoading ? (
         <div className="card p-8 text-center">
@@ -1063,107 +876,41 @@ export default function PlansPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-2">
           {filteredPlans.map((plan) => (
             <article
               key={plan.id}
-              className={`card p-6 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-[#8224E3]/40' : ''}`}
+              className={`card p-5 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-[#8224E3]/40' : ''}`}
               onMouseEnter={() => setSelectedPlanId(plan.id)}
               onClick={() => setSelectedPlanId(plan.id)}
             >
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.2em] text-white/40">{renderCategoryLabel(plan.category)} catalog</div>
-                  <div className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">{plan.name}</div>
-                  <div className="mt-2 text-sm text-white/45">{plan.planCode || plan.id}</div>
+                <div className="min-w-0">
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">{renderCategoryLabel(plan.category)}</div>
+                  <div className="mt-2 truncate text-xl font-bold text-white">{plan.name}</div>
+                  <div className="mt-1 text-sm text-white/45">{plan.planCode || plan.id}</div>
                 </div>
-                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.status === 'active' ? 'bg-[#8224E3]/15 text-[#8224E3]' : 'bg-red-500/15 text-red-200'}`}>
-                  {plan.status}
-                </div>
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Download</div>
-                  <div className="mt-3 text-2xl font-black text-white">{plan.speed} Mbps</div>
-                </div>
-                <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Upload</div>
-                  <div className="mt-3 text-2xl font-black text-white">{plan.uploadSpeed || 0} Mbps</div>
-                </div>
-                <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Monthly</div>
-                  <div className="mt-3 text-2xl font-black text-white">{formatCurrency(plan.price)}</div>
-                </div>
-                <div className="rounded-[22px] bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">Data</div>
-                  <div className="mt-3 text-2xl font-black text-white">
-                    {plan.dataPolicy === 'unlimited' ? 'Unlimited' : `${plan.dataLimitGb || 0} GB`}
-                  </div>
+                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.status === 'active' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/65'}`}>
+                  {plan.status === 'active' ? 'Active' : 'Inactive'}
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className={`rounded-full border px-3 py-1 text-xs ${plan.provisioningReady === false ? 'border-amber-300/30 bg-amber-300/10 text-amber-100' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'}`}>
-                  {plan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                  {planLaneLabel(plan)}
-                </span>
-                {plan.merchandising?.spotlightLabel ? (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                    {plan.merchandising.spotlightLabel}
-                  </span>
-                ) : null}
-                {plan.routerIncluded ? (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                    Router
-                  </span>
-                ) : null}
-                {plan.latencyClass ? (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                    {plan.latencyClass}
-                  </span>
-                ) : null}
-                {(plan.tags || []).slice(0, 4).map((tag) => (
-                  <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-4 text-sm text-white/60">
-                {(plan.features || []).slice(0, 3).join(' | ') || 'No marketing copy added yet'}
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
-                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Catalog state</div>
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between"><span>Sort order</span><span>{plan.sortOrder || 1}</span></div>
-                    <div className="flex items-center justify-between"><span>Customer app</span><span>{plan.visibleInCustomerApp ? 'Visible' : 'Hidden'}</span></div>
-                    <div className="flex items-center justify-between"><span>Sales app</span><span>{plan.visibleInSalesApp ? 'Visible' : 'Hidden'}</span></div>
-                    <div className="flex items-center justify-between"><span>Latency</span><span>{plan.latencyClass || 'standard'}</span></div>
-                  </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-white/40">Monthly price</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{formatCurrency(plan.price)}</div>
                 </div>
-                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Commercial summary</div>
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between"><span>Quarterly</span><span>{formatCurrency(plan.quarterlyPrice)}</span></div>
-                    <div className="flex items-center justify-between"><span>Installation</span><span>{formatCurrency(plan.installationCharge)}</span></div>
-                    <div className="flex items-center justify-between"><span>Router</span><span>{plan.routerIncluded ? (plan.routerModel || 'Included') : 'Optional'}</span></div>
-                    <div className="flex items-center justify-between"><span>FUP</span><span>{plan.fupSpeedMbps ? `${plan.fupSpeedMbps} Mbps` : '-'}</span></div>
-                  </div>
+                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-white/40">Download speed</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{plan.speed} Mbps</div>
+                </div>
+                <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-white/40">Visibility</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{plan.visibleInCustomerApp ? 'Visible' : 'Hidden'}</div>
                 </div>
               </div>
 
-              {plan.provisioningIssues && plan.provisioningIssues.length > 0 ? (
-                <div className="mt-4 rounded-[18px] border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-xs text-amber-100">
-                  Missing: {plan.provisioningIssues.join(', ')}
-                </div>
-              ) : null}
-
-              <div className="mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+              <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
                 <button type="button" onClick={() => beginEdit(plan)} className="btn-secondary inline-flex items-center gap-2">
                   <Pencil className="h-4 w-4" />
                   Edit
@@ -1207,7 +954,7 @@ export default function PlansPage() {
           ))}
 
           {filteredPlans.length === 0 ? (
-            <div className="card p-8 text-center text-white/50 lg:col-span-2 2xl:col-span-3">
+            <div className="card p-8 text-center text-white/50 lg:col-span-2">
               No plans found for the current search and filter combination.
             </div>
           ) : null}
