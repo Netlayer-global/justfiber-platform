@@ -692,6 +692,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final optical = (detail?['opticalReadings'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final preview = _preview ?? const <String, dynamic>{};
     final diagnostics = _diagnostics ?? const <String, dynamic>{};
+    final customerName = (snapshot['fullName'] ?? widget.job.customerName).toString();
+    final customerAddress = (snapshot['address'] ?? widget.job.customerAddress).toString();
     final phone = (snapshot['phone'] ?? '').toString();
     final planName = (snapshot['planName'] ?? '-').toString();
     final status = (detail?['status'] ?? widget.job.status).toString();
@@ -750,7 +752,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final deferNote = (deviceContext['deferNote'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
     final handoverPack = <String>[
-      if (name.isNotEmpty) 'Customer: $name',
+      if (customerName.isNotEmpty) 'Customer: $customerName',
       if (singleWifiName)
         'Wi-Fi SSID: $wifiSsid24'
       else ...[
@@ -761,6 +763,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       'PPPoE user: $pppoeUsername',
       'PPPoE password: $pppoePassword',
       'Internet status: ${activationLive ? 'Active' : 'Pending'}',
+    ].join('\n');
+    final customerVisitPack = <String>[
+      if (customerName.isNotEmpty) 'Customer: $customerName',
+      if (phone.isNotEmpty) 'Phone: $phone',
+      if (customerAddress.isNotEmpty) 'Address: $customerAddress',
     ].join('\n');
     final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
     final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
@@ -895,7 +902,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  snapshot['fullName']?.toString() ?? widget.job.customerName,
+                                  customerName,
                                   style: theme.textTheme.headlineSmall?.copyWith(
                                     color: const Color(0xFF0F172A),
                                     fontWeight: FontWeight.w800,
@@ -903,7 +910,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  snapshot['address']?.toString() ?? widget.job.customerAddress,
+                                  customerAddress,
                                   style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
                                 ),
                               ],
@@ -993,6 +1000,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         spacing: 10,
                         runSpacing: 10,
                         children: [
+                          OutlinedButton.icon(
+                            onPressed: customerVisitPack.isEmpty
+                                ? null
+                                : () => _copyText(
+                                      'Customer visit details copied',
+                                      customerVisitPack,
+                                    ),
+                            icon: const Icon(Icons.badge_outlined, size: 18),
+                            label: const Text('Copy customer'),
+                          ),
                           if (widget.job.mapUrl.isNotEmpty || (widget.job.latitude != null && widget.job.longitude != null))
                             OutlinedButton.icon(
                               onPressed: () => _openUri(
@@ -1009,6 +1026,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               onPressed: () => _openUri('tel:$phone', fallback: 'Call action not available'),
                               icon: const Icon(Icons.call_outlined, size: 18),
                               label: const Text('Call customer'),
+                            ),
+                          if (customerAddress.isNotEmpty)
+                            OutlinedButton.icon(
+                              onPressed: () => _copyText(
+                                'Customer address copied',
+                                customerAddress,
+                              ),
+                              icon: const Icon(Icons.content_copy_outlined, size: 18),
+                              label: const Text('Copy address'),
                             ),
                         ],
                       ),
