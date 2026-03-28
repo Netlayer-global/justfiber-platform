@@ -1,8 +1,26 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import 'models.dart';
+
+String installerFriendlyError(Object error) {
+  final text = error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+  if (text.contains('TimeoutException') || text.contains('timed out')) {
+    return 'Server took too long to respond. Please retry.';
+  }
+  if (text.contains('SocketException') ||
+      text.contains('Failed host lookup') ||
+      text.contains('Connection refused') ||
+      text.contains('Connection reset')) {
+    return 'Unable to reach server right now. Check internet and retry.';
+  }
+  if (text.isEmpty) {
+    return 'Something went wrong. Please retry.';
+  }
+  return text;
+}
 
 class InstallerApiClient {
   InstallerApiClient({required this.baseUrl});
@@ -24,10 +42,16 @@ class InstallerApiClient {
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
     late http.Response response;
-    if (method == 'POST') {
-      response = await http.post(_uri(path), headers: headers, body: jsonEncode(body ?? {})).timeout(const Duration(seconds: 20));
-    } else {
-      response = await http.get(_uri(path), headers: headers).timeout(const Duration(seconds: 20));
+    try {
+      if (method == 'POST') {
+        response = await http.post(_uri(path), headers: headers, body: jsonEncode(body ?? {})).timeout(const Duration(seconds: 20));
+      } else {
+        response = await http.get(_uri(path), headers: headers).timeout(const Duration(seconds: 20));
+      }
+    } on TimeoutException {
+      throw 'Server took too long to respond. Please retry.';
+    } catch (_) {
+      throw 'Unable to reach server right now. Check internet and retry.';
     }
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 401 && allowRetry && onUnauthorized != null) {
@@ -37,7 +61,7 @@ class InstallerApiClient {
       }
     }
     if (response.statusCode >= 400 || payload['success'] == false) {
-      throw Exception(payload['error']?['message'] ?? 'Request failed');
+      throw installerFriendlyError(payload['error']?['message'] ?? 'Request failed');
     }
     return payload['data'];
   }
