@@ -106,11 +106,8 @@ class _ProfileTabState extends State<ProfileTab> {
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
         children: [
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x140F172A),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -120,24 +117,24 @@ class _ProfileTabState extends State<ProfileTab> {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
+                        color: const Color(0xFFF5F7FB),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x36FFFFFF)),
+                        border: Border.all(color: const Color(0x140F172A)),
                       ),
-                      child: const Icon(Icons.engineering_rounded, color: Colors.white, size: 28),
+                      child: const Icon(Icons.engineering_rounded, color: Color(0xFF2563EB), size: 28),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0x1FFFFFFF),
+                        color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x2CFFFFFF)),
+                        border: Border.all(color: const Color(0x120F172A)),
                       ),
                       child: Text(
                         isOnLeave ? 'On leave' : 'Ready for dispatch',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF0F172A),
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
@@ -149,20 +146,20 @@ class _ProfileTabState extends State<ProfileTab> {
                 Text(
                   'INSTALLER CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFE9D5FF),
-                        letterSpacing: 3.2,
+                        color: const Color(0xFF64748B),
+                        letterSpacing: 2,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   profile.fullName.isEmpty ? 'Field engineer' : profile.fullName,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFF0F172A)),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Manage job readiness, availability, and provisioning workflow details.',
-                  style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -216,9 +213,9 @@ class _ProfileTabState extends State<ProfileTab> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8F4FF),
+                    color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x228224E3)),
+                    border: Border.all(color: const Color(0x120F172A)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,11 +226,11 @@ class _ProfileTabState extends State<ProfileTab> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFFFFF),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0x228224E3)),
+                          border: Border.all(color: const Color(0x120F172A)),
                         ),
                         child: Icon(
                           isOnLeave ? Icons.event_busy_rounded : Icons.local_shipping_outlined,
-                          color: const Color(0xFF8224E3),
+                          color: const Color(0xFF2563EB),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -242,7 +239,7 @@ class _ProfileTabState extends State<ProfileTab> {
                           isOnLeave
                               ? 'Jobs should not be accepted until leave is ended. Dispatch can restore availability from this tab.'
                               : 'Use leave only when no active field work is in progress. The dispatch queue will reflect your live availability.',
-                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                          style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
                         ),
                       ),
                     ],

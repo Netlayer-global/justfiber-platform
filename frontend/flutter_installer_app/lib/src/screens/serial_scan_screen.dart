@@ -44,101 +44,134 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
       appBar: AppBar(title: Text(widget.title)),
       backgroundColor: const Color(0xFFFCFAF7),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  MobileScanner(
-                    controller: _controller,
-                    onDetect: (capture) {
-                      final value = capture.barcodes
-                          .map((barcode) => barcode.rawValue ?? '')
-                          .firstWhere((item) => item.trim().isNotEmpty, orElse: () => '');
-                      if (value.isEmpty) return;
-                      setState(() => _latestCode = value);
-                      _finish(value);
-                    },
-                  ),
-                  Center(
-                    child: Container(
-                      width: 250,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: const Color(0xFF8224E3), width: 2),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x448224E3),
-                            blurRadius: 24,
-                            spreadRadius: 2,
-                          ),
-                        ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFFFF),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0x140F172A)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'SCAN SERIAL',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: const Color(0xFF64748B),
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ),
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: 24,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xF2FFFFFF),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: const Color(0x228224E3)),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x16000000),
-                            blurRadius: 18,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.subtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF64748B),
+                        height: 1.45,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0x120F172A)),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            widget.subtitle,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF6E6A67),
-                              height: 1.45,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _latestCode.isEmpty ? 'Point camera at barcode or QR code.' : _latestCode,
-                            style: const TextStyle(
-                              color: Color(0xFF131313),
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Cancel'),
-                                ),
+                          const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF2563EB)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _latestCode.isEmpty ? 'Point camera at barcode or QR code.' : _latestCode,
+                              style: const TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontWeight: FontWeight.w700,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: FilledButton(
-                                  onPressed: _latestCode.trim().isEmpty ? null : () => _finish(_latestCode),
-                                  child: const Text('Use code'),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Expanded(
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: MobileScanner(
+                        controller: _controller,
+                        onDetect: (capture) {
+                          final value = capture.barcodes
+                              .map((barcode) => barcode.rawValue ?? '')
+                              .firstWhere((item) => item.trim().isNotEmpty, orElse: () => '');
+                          if (value.isEmpty) return;
+                          setState(() => _latestCode = value);
+                          _finish(value);
+                        },
+                      ),
+                    ),
+                    Center(
+                      child: Container(
+                        width: 250,
+                        height: 180,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(color: const Color(0xFF2563EB), width: 2),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x332563EB),
+                              blurRadius: 18,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xF2FFFFFF),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: const Color(0x140F172A)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Cancel'),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: _latestCode.trim().isEmpty ? null : () => _finish(_latestCode),
+                                child: const Text('Use code'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

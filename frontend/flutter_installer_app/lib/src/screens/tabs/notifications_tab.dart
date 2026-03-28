@@ -20,11 +20,8 @@ class NotificationsTab extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
         children: [
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x140F172A),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -34,23 +31,23 @@ class NotificationsTab extends StatelessWidget {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
+                        color: const Color(0xFFF5F7FB),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x36FFFFFF)),
+                        border: Border.all(color: const Color(0x140F172A)),
                       ),
-                      child: const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 28),
+                      child: const Icon(Icons.notifications_active_rounded, color: Color(0xFF2563EB), size: 28),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0x1FFFFFFF),
+                        color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x2CFFFFFF)),
+                        border: Border.all(color: const Color(0x120F172A)),
                       ),
                       child: Text(
                         unreadCount == 0 ? 'All clear' : '$unreadCount unread',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                        style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
                   ],
@@ -59,19 +56,22 @@ class NotificationsTab extends StatelessWidget {
                 Text(
                   'ALERT CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFE9D5FF),
-                        letterSpacing: 3.2,
+                        color: const Color(0xFF64748B),
+                        letterSpacing: 2,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 10),
-                Text('Installer alerts', style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  'Installer alerts',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFF0F172A)),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   appState.notifications.isEmpty
                       ? 'No active dispatch or provisioning alerts right now.'
                       : 'Track dispatch, activation, and system alerts from one queue.',
-                  style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -125,8 +125,8 @@ class NotificationsTab extends StatelessWidget {
                     }
                   },
                   child: AppCard(
-                    color: item.readAt == null ? const Color(0xFFFFFFFF) : const Color(0xFFF8F4FF),
-                    borderColor: item.readAt == null ? const Color(0x558224E3) : const Color(0x228224E3),
+                    color: item.readAt == null ? const Color(0xFFFFFFFF) : const Color(0xFFF8FAFC),
+                    borderColor: item.readAt == null ? const Color(0xFFBFDBFE) : const Color(0x120F172A),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -138,9 +138,9 @@ class NotificationsTab extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: item.readAt == null ? const Color(0xFFF8F4FF) : const Color(0xFFF2ECE6),
+                                color: item.readAt == null ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                                 borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: item.readAt == null ? const Color(0x558224E3) : const Color(0x221F2937)),
+                                border: Border.all(color: item.readAt == null ? const Color(0xFFBFDBFE) : const Color(0x120F172A)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -148,13 +148,13 @@ class NotificationsTab extends StatelessWidget {
                                   Icon(
                                     item.readAt == null ? Icons.circle_notifications_rounded : Icons.mark_email_read_rounded,
                                     size: 14,
-                                    color: item.readAt == null ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+                                    color: item.readAt == null ? const Color(0xFF2563EB) : const Color(0xFF64748B),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     item.readAt == null ? 'Unread' : 'Read',
                                     style: TextStyle(
-                                      color: item.readAt == null ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+                                      color: item.readAt == null ? const Color(0xFF2563EB) : const Color(0xFF64748B),
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -167,12 +167,12 @@ class NotificationsTab extends StatelessWidget {
                         const SizedBox(height: 10),
                         Text(
                           item.body,
-                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                          style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
                         ),
                         const SizedBox(height: 10),
                         Text(
                           _formatTime(item.createdAt),
-                          style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12),
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                         ),
                       ],
                     ),
@@ -189,9 +189,9 @@ class NotificationsTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0x26FFFFFF),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x40FFFFFF)),
+        border: Border.all(color: const Color(0x120F172A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,12 +199,12 @@ class NotificationsTab extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: const Color(0xFFFFFFFF),
+                  color: const Color(0xFF0F172A),
                   fontWeight: FontWeight.w800,
                 ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 12)),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
         ],
       ),
     );
