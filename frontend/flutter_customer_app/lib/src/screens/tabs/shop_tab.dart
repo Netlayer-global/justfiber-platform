@@ -12,7 +12,30 @@ class ShopTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
       children: [
-        Text('Shop', style: Theme.of(context).textTheme.headlineSmall),
+        AppCard(
+          color: const Color(0xFFFFFFFF),
+          borderColor: const Color(0x228224E3),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'OFFERS & HELP',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: const Color(0xFF8224E3),
+                      letterSpacing: 2.6,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 10),
+              Text('Shop', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text(
+                'Explore upgrades, add-ons, and frequently asked questions from one place.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF6E6A67)),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 18),
         _offer(context, 'Upgrade to JustFiber 200', 'Double speed for streaming and gaming', 'Upgrade'),
         const SizedBox(height: 14),
@@ -23,10 +46,18 @@ class ShopTab extends StatelessWidget {
         Text('Available add-ons', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         ...(appState.addons.isEmpty
-            ? [const AppCard(child: Text('No add-ons returned from backend yet.'))]
+            ? [
+                const AppCard(
+                  color: Color(0xFFFFFFFF),
+                  borderColor: Color(0x228224E3),
+                  child: Text('No add-ons returned from backend yet.', style: TextStyle(color: Color(0xFF6E6A67))),
+                )
+              ]
             : appState.addons.map((addon) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: AppCard(
+                    color: const Color(0xFFFFFFFF),
+                    borderColor: const Color(0x228224E3),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -43,6 +74,8 @@ class ShopTab extends StatelessWidget {
         ...(appState.faqs.take(4).map((faq) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: AppCard(
+                color: const Color(0xFFFFFFFF),
+                borderColor: const Color(0x228224E3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -59,6 +92,8 @@ class ShopTab extends StatelessWidget {
 
   Widget _offer(BuildContext context, String title, String description, String cta) {
     return AppCard(
+      color: const Color(0xFFFFFFFF),
+      borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
