@@ -892,6 +892,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (linkedDeviceId.isNotEmpty) 'Device ID: $linkedDeviceId',
       if (linkedProductClass.isNotEmpty) 'Model: $linkedProductClass',
     ].join('\n');
+    final diagnosticsPack = <String>[
+      'RX power: ${optical['rxPower'] ?? diagnostics['optical']?['rxPower'] ?? '-'}',
+      'TX power: ${optical['txPower'] ?? diagnostics['optical']?['txPower'] ?? '-'}',
+      'Health: ${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}',
+      'Router serial: ${device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '-'}',
+      'Device ID: ${linkedDeviceId.isEmpty ? '-' : linkedDeviceId}',
+      'Model: ${linkedProductClass.isEmpty ? '-' : linkedProductClass}',
+      'Router online: ${device['onlineStatus'] ?? 'unknown'}',
+      'Provisioning state: ${device['provisioningState'] ?? 'pending'}',
+    ].join('\n');
     final visitUrgency = _visitUrgencyLabel(status, priority, scheduledAt);
     final visitTimeWindow = _timeWindowLabel(scheduledAt);
     final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
@@ -1778,9 +1788,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _row('Provisioning state', '${device['provisioningState'] ?? 'pending'}'),
                       if (deviceRefsPack.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        OutlinedButton(
-                          onPressed: () => _copyText('Device references copied', deviceRefsPack),
-                          child: const Text('Copy device refs'),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            OutlinedButton(
+                              onPressed: () => _copyText('Device references copied', deviceRefsPack),
+                              child: const Text('Copy device refs'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () => _copyText('Diagnostics snapshot copied', diagnosticsPack),
+                              child: const Text('Copy diagnostics'),
+                            ),
+                          ],
                         ),
                       ],
                       if (recommendations.isNotEmpty) ...[
