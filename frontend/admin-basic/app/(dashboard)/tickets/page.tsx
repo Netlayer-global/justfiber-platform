@@ -99,14 +99,18 @@ export default function TicketsPage() {
       <section className="card p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Support queue</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Support workspace</div>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900">Tickets</h1>
             <div className="mt-2 text-sm text-slate-500">Customer complaints and service requests in one clean support console.</div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {queueMetrics.map(({ label, value }) => (
-              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <span className="font-medium text-slate-900">{value}</span> {label}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {queueMetrics.map(({ label, value, Icon }) => (
+              <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</div>
+                  <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
               </div>
             ))}
           </div>
@@ -114,7 +118,7 @@ export default function TicketsPage() {
       </section>
 
       {isLoading ? (
-        <div className="card p-6 text-center"><Loader className="mx-auto h-6 w-6 animate-spin text-[#2d7dff]" /></div>
+        <div className="card p-6 text-center"><Loader className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" /></div>
       ) : (
         <div className="grid gap-6 xl:grid-cols-2">
           <div className="overflow-x-auto card">
@@ -148,7 +152,7 @@ export default function TicketsPage() {
                       {extractSnapshot(ticket.description).length ? (
                         <div className="mt-2 flex flex-wrap gap-2">
                           {extractSnapshot(ticket.description).slice(0, 4).map((item) => (
-                            <span key={item} className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-2 py-1 text-[11px] font-medium text-[#2d7dff]">
+                            <span key={item} className="rounded-full border border-[#5B6CFF]/20 bg-[#eef1ff] px-2 py-1 text-[11px] font-medium text-[#5B6CFF]">
                               {item}
                             </span>
                           ))}

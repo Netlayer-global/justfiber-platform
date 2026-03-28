@@ -528,8 +528,8 @@ export default function PlansPage() {
       <section className="card p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plan management</div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">Manage broadband plans</h1>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Commercial workspace</div>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Manage broadband plans</h1>
             <p className="mt-2 text-sm text-slate-500">
               Keep this screen commercial-only: plan name, speed, pricing, validity, invoice breakup, and visibility.
             </p>
@@ -546,15 +546,15 @@ export default function PlansPage() {
           </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Total plans</div>
             <div className="mt-2 text-2xl font-semibold text-slate-900">{plans.length}</div>
           </div>
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active</div>
             <div className="mt-2 text-2xl font-semibold text-slate-900">{plans.filter((plan) => plan.status === 'active').length}</div>
           </div>
-          <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Visible now</div>
             <div className="mt-2 text-2xl font-semibold text-slate-900">{filteredPlans.length}</div>
           </div>
@@ -863,7 +863,7 @@ export default function PlansPage() {
                 <button
                   type="button"
                   onClick={() => void togglePlanStatus(selectedPlan)}
-                  className={`btn-secondary inline-flex items-center gap-2 ${selectedPlan.status === 'active' ? 'border-red-500/20 text-red-600' : 'border-[#2d7dff]/20 text-[#2d7dff]'}`}
+                  className={`btn-secondary inline-flex items-center gap-2 ${selectedPlan.status === 'active' ? 'border-red-500/20 text-red-600' : 'border-[#5B6CFF]/20 text-[#5B6CFF]'}`}
                 >
                   <ShieldCheck className="h-4 w-4" />
                   {selectedPlan.status === 'active' ? 'Deactivate' : 'Activate'}
@@ -880,7 +880,7 @@ export default function PlansPage() {
           {filteredPlans.map((plan) => (
             <article
               key={plan.id}
-              className={`card p-5 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-[#2d7dff]/30' : ''}`}
+              className={`card p-5 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-[#5B6CFF]/30' : ''}`}
               onMouseEnter={() => setSelectedPlanId(plan.id)}
               onClick={() => setSelectedPlanId(plan.id)}
             >
@@ -940,7 +940,7 @@ export default function PlansPage() {
                 <button
                   type="button"
                   onClick={() => void togglePlanStatus(plan)}
-                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-600' : 'border-[#2d7dff]/20 text-[#2d7dff]'}`}
+                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-600' : 'border-[#5B6CFF]/20 text-[#5B6CFF]'}`}
                 >
                   <ShieldCheck className="h-4 w-4" />
                   {plan.status === 'active' ? 'Deactivate' : 'Activate'}

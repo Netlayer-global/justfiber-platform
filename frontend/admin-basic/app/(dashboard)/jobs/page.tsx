@@ -211,14 +211,18 @@ export default function JobsPage() {
       <section className="card p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Dispatch control</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Dispatch workspace</div>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900">Jobs</h1>
             <div className="mt-2 text-sm text-slate-500">Live installer jobs, complaint assignment, and manual dispatch in one console.</div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {dispatchMetrics.map(({ label, value }) => (
-              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <span className="font-medium text-slate-900">{value}</span> {label}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {dispatchMetrics.map(({ label, value, Icon }) => (
+              <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</div>
+                  <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
               </div>
             ))}
             <button onClick={() => void loadData()} className="btn-secondary inline-flex items-center gap-2">
@@ -336,7 +340,7 @@ export default function JobsPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#2d7dff]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#5B6CFF]" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -357,7 +361,7 @@ export default function JobsPage() {
                     }`}>
                       {job.status}
                     </span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-[#eff6ff] text-[#2d7dff]">
+                    <span className="text-xs px-2 py-1 rounded-full bg-[#eef1ff] text-[#5B6CFF]">
                       {job.type}
                     </span>
                     <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
@@ -497,7 +501,7 @@ export default function JobsPage() {
                     <div className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                       <div className="flex items-center justify-between gap-3">
                         <div className="font-semibold text-slate-900">Installation OTP Demo</div>
-                        <div className="font-mono text-sm text-[#2d7dff]">{job.completionOtpDemo || '-'}</div>
+                        <div className="font-mono text-sm text-[#5B6CFF]">{job.completionOtpDemo || '-'}</div>
                       </div>
                       {job.completionOtpSmsPreview ? <div className="mt-2 whitespace-pre-wrap">{job.completionOtpSmsPreview}</div> : null}
                     </div>
