@@ -205,6 +205,16 @@ class InstallerApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> resumeFollowUp(InstallerSession session, String jobId) async {
+    return _asMap(
+      await _request(
+        '/api/v1/installer/jobs/$jobId/resume-follow-up',
+        method: 'POST',
+        token: session.accessToken,
+      ),
+    );
+  }
+
   Future<void> checkinLocation(
     InstallerSession session,
     String jobId, {

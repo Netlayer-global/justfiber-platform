@@ -449,6 +449,23 @@ class _JobsTabState extends State<JobsTab> {
                     icon: const Icon(Icons.call_outlined, size: 18),
                     label: const Text('Call customer'),
                   ),
+                if (isDeferred)
+                  OutlinedButton.icon(
+                    onPressed: appState.busy
+                        ? null
+                        : () => _runAction(
+                              context,
+                              appState,
+                              successMessage: 'Follow-up resumed',
+                              action: () async {
+                                await appState.api.resumeFollowUp(appState.session!, job.id);
+                                await appState.refresh();
+                                return true;
+                              },
+                            ),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: const Text('Resume revisit'),
+                  ),
                 OutlinedButton.icon(
                   onPressed: appState.busy || !_canAccept(job)
                       ? null

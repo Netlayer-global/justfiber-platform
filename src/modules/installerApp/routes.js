@@ -648,6 +648,74 @@ installerAppRouter.post(
 );
 
 installerAppRouter.post(
+  "/jobs/:jobId/resume-follow-up",
+  asyncHandler(async (req, res) => {
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    if (job.status !== "deferred") {
+      throw new ApiError(409, "Only deferred jobs can be resumed");
+    }
+
+    job.status = "accepted";
+    job.subStatus = undefined;
+    job.deviceContext = {
+      ...(job.deviceContext || {}),
+      resumedAt: new Date()
+    };
+    req.installer.availabilityStatus = "busy";
+    pushTimeline(job, "job.follow_up_resumed", req.installer._id, "Installer resumed the deferred field visit");
+    await Promise.all([job.save(), req.installer.save()]);
+
+    if (job.type === "installation") {
+      const booking = await updateBookingProgress(job, {
+        status: "assigned",
+        tracking: {
+          currentStep: "installer_assigned",
+          steps: [
+            { code: "booking_placed", status: "done", at: job.createdAt || new Date() },
+            { code: "payment_confirmed", status: "done", at: job.createdAt || new Date() },
+            { code: "installer_assigned", status: "done", at: new Date() }
+          ]
+        }
+      });
+      if (booking) {
+        await notifyBookingCustomer(
+          booking,
+          "installer_follow_up_resumed",
+          "Installer resumed your follow-up visit",
+          `Installer resumed booking ${booking.bookingNumber} for completion follow-up.`,
+          {
+            bookingNumber: booking.bookingNumber,
+            installerJobId: job._id
+          }
+        );
+      }
+    }
+
+    if (job.ticketId) {
+      await SupportTicket.updateOne(
+        buildTicketLookup(job.ticketId),
+        {
+          $set: { status: "in_progress" },
+          $push: {
+            timeline: {
+              type: "installer_follow_up_resumed",
+              actorType: "installer",
+              actorId: req.installer._id,
+              note: "Installer resumed the deferred complaint visit"
+            }
+          }
+        }
+      );
+    }
+
+    return ok(res, {
+      status: job.status,
+      resumedAt: job.deviceContext?.resumedAt || new Date()
+    });
+  })
+);
+
+installerAppRouter.post(
   "/jobs/:jobId/manual-serial",
   asyncHandler(async (req, res) => {
     const payload = serialSchema.parse(req.body);
