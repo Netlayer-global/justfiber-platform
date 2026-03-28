@@ -69,13 +69,10 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: const Color(0xFFFFFFFF),
               borderRadius: BorderRadius.circular(28),
-              boxShadow: const [BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8))],
+              border: Border.all(color: const Color(0x228224E3)),
+              boxShadow: const [BoxShadow(color: Color(0x10030B14), blurRadius: 18, offset: Offset(0, 8))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,8 +80,8 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                 Text(
                   'NETWORK CONSOLE',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFE9D5FF),
-                        letterSpacing: 3.2,
+                        color: const Color(0xFF8224E3),
+                        letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
@@ -95,11 +92,11 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFFFFFFFF))),
+                          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF131313))),
                           const SizedBox(height: 6),
                           Text(
                             'Quality: ${appState.networkQuality.quality} | Devices: $connectedCount',
-                            style: const TextStyle(color: Color(0xFFF3E8FF)),
+                            style: const TextStyle(color: Color(0xFF6E6A67)),
                           ),
                         ],
                       ),
@@ -107,14 +104,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
+                        color: wifi.paused ? const Color(0xFFFFF1F2) : const Color(0xFFF0FDF4),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: wifi.paused ? const Color(0x55FFCDD2) : const Color(0x40FFFFFF)),
+                        border: Border.all(color: wifi.paused ? const Color(0x55FFCDD2) : const Color(0x5534D399)),
                       ),
                       child: Text(
                         wifi.paused ? 'Paused' : 'Online',
                         style: TextStyle(
-                          color: const Color(0xFFFFFFFF),
+                          color: wifi.paused ? const Color(0xFFBE123C) : const Color(0xFF166534),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -200,7 +197,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F4FF),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0x668224E3)),
+                border: Border.all(color: const Color(0x338224E3)),
               ),
               child: Icon(icon, color: const Color(0xFF8224E3)),
             ),
@@ -209,14 +206,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFFFFFFFF))),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.4)),
+                  Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFFFFFFFF)),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFF8224E3)),
           ],
         ),
       ),
@@ -227,13 +224,13 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0x26FFFFFF),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x668224E3)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFFFFFFFF)),
+          style: const TextStyle(color: Color(0xFF131313)),
           children: [
             TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
             TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -486,6 +483,16 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
               children: [
                 const Text('Diagnostics summary', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: const Color(0xFF131313))),
                 const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(child: _sheetStatusChip('Internet', _internetStatusLabel(appState))),
+                    const SizedBox(width: 8),
+                    Expanded(child: _sheetStatusChip('Quality', appState.networkQuality.quality)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _sheetStatusChip('Devices', '${appState.wifi.connectedDevicesCount}')),
+                  ],
+                ),
+                const SizedBox(height: 18),
                 _diagnosticRow('Internet status', _internetStatusLabel(appState)),
                 _diagnosticRow('Latency', '${appState.networkQuality.latencyMs.toStringAsFixed(0)} ms'),
                 _diagnosticRow('Packet loss', '${appState.networkQuality.packetLossPercent.toStringAsFixed(1)} %'),
@@ -589,9 +596,9 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A),
+                            color: const Color(0xFFFFFFFF),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x338224E3)),
+                            border: Border.all(color: const Color(0x228224E3)),
                           ),
                           child: Row(
                             children: [
@@ -609,34 +616,57 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFFFFFF))),
+                                    Text(device.name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
                                     const SizedBox(height: 4),
                                     Text(
                                       '${_connectionTypeLabel(device.connectionType)} | ${device.signal}',
-                                      style: const TextStyle(color: Color(0xFFCBD5E1)),
+                                      style: const TextStyle(color: Color(0xFF6E6A67)),
                                     ),
                                   ],
                                 ),
                               ),
                               if (accessMode)
-                                Switch(
-                                  value: !device.blocked,
-                                  activeColor: const Color(0xFF8224E3),
-                                  onChanged: appState.busy || !hasLiveDevices
-                                      ? null
-                                      : (allowed) async {
-                                          final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                ok
-                                                    ? (allowed ? 'Device access restored' : 'Device blocked')
-                                                    : (appState.error ?? 'Unable to update device access'),
-                                              ),
-                                            ),
-                                          );
-                                        },
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: device.blocked ? const Color(0xFFFFF1F2) : const Color(0xFFF0FDF4),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: device.blocked ? const Color(0x55FFCDD2) : const Color(0x5534D399),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        device.blocked ? 'Blocked' : 'Allowed',
+                                        style: TextStyle(
+                                          color: device.blocked ? const Color(0xFFBE123C) : const Color(0xFF166534),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Switch(
+                                      value: !device.blocked,
+                                      activeColor: const Color(0xFF8224E3),
+                                      onChanged: appState.busy || !hasLiveDevices
+                                          ? null
+                                          : (allowed) async {
+                                              final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
+                                              if (!context.mounted) return;
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    ok
+                                                        ? (allowed ? 'Device access restored' : 'Device blocked')
+                                                        : (appState.error ?? 'Unable to update device access'),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                    ),
+                                  ],
                                 ),
                             ],
                           ),
