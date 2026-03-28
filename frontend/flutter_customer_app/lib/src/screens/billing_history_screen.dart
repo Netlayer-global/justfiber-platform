@@ -41,8 +41,15 @@ class BillingHistoryScreen extends StatelessWidget {
     final hasDueReminder = billing.lastDueReminderAt.isNotEmpty;
     final hasPromiseToPay = billing.promiseToPayAt.isNotEmpty;
 
+    final latestInvoiceStatus = billing.latestInvoiceStatus.isEmpty
+        ? (latestInvoice?.paymentStatus.isNotEmpty == true ? latestInvoice!.paymentStatus : 'Not generated yet')
+        : billing.latestInvoiceStatus;
+    final lastPaymentLabel = billing.lastPaymentDate.isNotEmpty
+        ? billing.lastPaymentDate
+        : (latestPayment?.paidAt.isNotEmpty == true ? latestPayment!.paidAt : 'No payment recorded');
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Billing')),
+      appBar: AppBar(title: const Text('Billing & Invoices')),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
         backgroundColor: const Color(0xFFF6F1EB),
@@ -55,64 +62,55 @@ class BillingHistoryScreen extends StatelessWidget {
             const SizedBox(height: 18),
           ],
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'BILLING CONSOLE',
+                  'BILLING OVERVIEW',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFFE9D5FF),
-                    letterSpacing: 3.2,
+                    color: const Color(0xFF8224E3),
+                    letterSpacing: 2.6,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  billing.dueAmount > 0 ? 'Current due' : 'Billing status',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFFFFFFFF),
-                    fontSize: 28,
-                  ),
-                ),
+                Text(billing.dueAmount > 0 ? 'Current due' : 'Billing status', style: theme.textTheme.headlineSmall),
                 const SizedBox(height: 10),
                 Text(
                   billing.dueAmount > 0 ? 'Rs ${billing.dueAmount.toStringAsFixed(2)}' : 'No due right now',
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 38, color: Color(0xFF8224E3), letterSpacing: -1),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 34, color: Color(0xFF131313), letterSpacing: -1),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   billing.paymentStatus.isEmpty
                       ? 'Your active billing snapshot for this cycle'
                       : 'Status: ${billing.paymentStatus}',
-                  style: const TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Expanded(child: _summaryTile('Generated', billing.generatedDate.isEmpty ? '-' : billing.generatedDate)),
+                    Expanded(child: _summaryTile('Generated', billing.generatedDate.isEmpty ? '-' : billing.generatedDate, compact: true)),
                     const SizedBox(width: 10),
-                    Expanded(child: _summaryTile('Due date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate)),
+                    Expanded(child: _summaryTile('Due date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate, compact: true)),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Expanded(child: _summaryTile('Cycle', billing.billCycle)),
+                    Expanded(child: _summaryTile('Cycle', billing.billCycle, compact: true)),
                     const SizedBox(width: 10),
-                    Expanded(child: _summaryTile('Mode', billing.billMode)),
+                    Expanded(child: _summaryTile('Mode', billing.billMode, compact: true)),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Expanded(child: _summaryTile('Recurring amount', 'Rs ${recurringAmount.toStringAsFixed(2)}')),
+                    Expanded(child: _summaryTile('Recurring amount', 'Rs ${recurringAmount.toStringAsFixed(2)}', compact: true)),
                     const SizedBox(width: 10),
-                    Expanded(child: _summaryTile('Invoices', '${billing.invoiceCount}')),
+                    Expanded(child: _summaryTile('Invoices', '${billing.invoiceCount}', compact: true)),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -131,8 +129,9 @@ class BillingHistoryScreen extends StatelessWidget {
                       const SizedBox(height: 10),
                       _billBreakupRow('Current due', 'Rs ${billing.dueAmount.toStringAsFixed(2)}'),
                       _billBreakupRow('Last payment', billing.lastPaymentAmount <= 0 ? '-' : 'Rs ${billing.lastPaymentAmount.toStringAsFixed(2)}'),
+                      _billBreakupRow('Last payment date', lastPaymentLabel),
                       _billBreakupRow('Adjustment preview', billing.adjustmentPreview == 0 ? '-' : 'Rs ${billing.adjustmentPreview.toStringAsFixed(2)}'),
-                      _billBreakupRow('Payment status', billing.paymentStatus.isEmpty ? '-' : billing.paymentStatus),
+                      _billBreakupRow('Latest invoice status', latestInvoiceStatus),
                     ],
                   ),
                 ),
@@ -426,11 +425,11 @@ class BillingHistoryScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F4FF),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F4FF),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0x228224E3)),
                   ),
@@ -452,12 +451,12 @@ class BillingHistoryScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Need a full payment record?',
+                              'Billing documents',
                               style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
                             ),
                             SizedBox(height: 4),
                             Text(
-                              'Open receipts, invoices, and payment history from the sections below.',
+                              'Invoices, receipts, and adjustments stay available below for quick access.',
                               style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
                             ),
                           ],
@@ -495,6 +494,7 @@ class BillingHistoryScreen extends StatelessWidget {
                               meta: item.paymentStatus,
                               viewUrl: item.viewUrl,
                               pdfUrl: item.pdfUrl,
+                              primaryActionLabel: 'Open invoice',
                             ),
                           ),
                         )
@@ -520,8 +520,18 @@ class BillingHistoryScreen extends StatelessWidget {
                   Text(
                     billing.payments.isEmpty
                         ? 'No payment history available yet.'
-                        : 'Latest payment: ${billing.payments.first.amount.toStringAsFixed(2)} | ${billing.payments.first.paidAt.isEmpty ? billing.payments.first.provider.toUpperCase() : billing.payments.first.paidAt}',
+                        : 'Latest payment: Rs ${billing.payments.first.amount.toStringAsFixed(2)} | ${billing.payments.first.paidAt.isEmpty ? billing.payments.first.provider.toUpperCase() : billing.payments.first.paidAt}',
                     style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _summaryTile('Payments', '${billing.payments.length}', compact: true)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _summaryTile('Last amount', latestPayment == null ? '-' : 'Rs ${latestPayment.amount.toStringAsFixed(2)}', compact: true)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _summaryTile('Last status', latestPayment == null ? '-' : (latestPayment.paidAt.isEmpty ? 'Pending' : 'Success'), compact: true)),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -557,7 +567,7 @@ class BillingHistoryScreen extends StatelessWidget {
                             backgroundColor: const Color(0xFFFFFFFF),
                             side: const BorderSide(color: Color(0x668224E3)),
                           ),
-                          child: const Text('Latest invoice'),
+                          child: const Text('Latest invoice PDF'),
                         ),
                       if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
                         FilledButton.tonal(
@@ -568,7 +578,7 @@ class BillingHistoryScreen extends StatelessWidget {
                             }
                           },
                           style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-                          child: const Text('Latest receipt'),
+                          child: const Text('Latest receipt PDF'),
                         ),
                     ],
                   ),
@@ -589,7 +599,7 @@ class BillingHistoryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           _sectionCard(
-            title: 'Billing notes',
+            title: 'Adjustments & notes',
             child: billing.notes.isEmpty
                 ? _emptyState(
                     title: 'No billing notes right now.',
@@ -611,6 +621,7 @@ class BillingHistoryScreen extends StatelessWidget {
                               meta: item.issuedAt.isEmpty ? item.type : item.issuedAt,
                               viewUrl: item.viewUrl,
                               pdfUrl: item.pdfUrl,
+                              primaryActionLabel: 'Open note',
                             ),
                           ),
                         )
@@ -623,9 +634,9 @@ class BillingHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _summaryTile(String label, String value) {
+  Widget _summaryTile(String label, String value, {bool compact = false}) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(compact ? 12 : 14),
       decoration: BoxDecoration(
         color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(20),
@@ -636,7 +647,12 @@ class BillingHistoryScreen extends StatelessWidget {
         children: [
           Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
+          Text(
+            value,
+            maxLines: compact ? 2 : null,
+            overflow: compact ? TextOverflow.ellipsis : null,
+            style: TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFF131313), fontSize: compact ? 13 : 14),
+          ),
         ],
       ),
     );
@@ -775,6 +791,7 @@ class BillingHistoryScreen extends StatelessWidget {
     required String meta,
     required String viewUrl,
     required String pdfUrl,
+    String primaryActionLabel = 'Open PDF',
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -796,7 +813,7 @@ class BillingHistoryScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: Color(0xFF131313))),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF131313))),
                     const SizedBox(height: 4),
                     Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67))),
                   ],
@@ -807,7 +824,15 @@ class BillingHistoryScreen extends StatelessWidget {
                 children: [
                   Text(amount, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF8224E3))),
                   const SizedBox(height: 4),
-                  Text(meta, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F4FF),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: const Color(0x228224E3)),
+                    ),
+                    child: Text(meta, style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700)),
+                  ),
                 ],
               ),
             ],
@@ -845,7 +870,7 @@ class BillingHistoryScreen extends StatelessWidget {
                       backgroundColor: const Color(0xFF8224E3),
                         foregroundColor: const Color(0xFFFFFFFF),
                     ),
-                    child: Text(viewUrl.isNotEmpty ? 'Open invoice' : 'Open PDF'),
+                    child: Text(primaryActionLabel),
                   ),
                 if (pdfUrl.isNotEmpty || viewUrl.isNotEmpty)
                   TextButton(

@@ -24,6 +24,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
       if (statusFilter == 'all') return true;
       final haystack = '${payment.reference} ${payment.provider} ${payment.transactionId}'.toLowerCase();
       if (statusFilter == 'success') return haystack.contains('success') || payment.paidAt.isNotEmpty;
+      if (statusFilter == 'pending') return payment.paidAt.isEmpty && !haystack.contains('failed');
       if (statusFilter == 'failed') return haystack.contains('failed');
       return true;
     }).toList();
@@ -40,33 +41,30 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
           children: [
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'PAYMENT CONSOLE',
+                  'PAYMENT HISTORY',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFE9D5FF),
-                        letterSpacing: 3.2,
+                        color: const Color(0xFF8224E3),
+                        letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Payment timeline',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFFFFFFF), fontSize: 28),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 28),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   payments.isEmpty
                       ? 'No payment activity found right now.'
                       : 'Track successful, pending, and failed broadband payments from one place.',
-                  style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -75,7 +73,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                     const SizedBox(width: 10),
                     Expanded(child: _heroMetric('Success', '${billing.payments.where((p) => p.paidAt.isNotEmpty).length}')),
                     const SizedBox(width: 10),
-                    Expanded(child: _heroMetric('Issues', '${billing.payments.where((p) => p.paidAt.isEmpty || p.reference.toLowerCase().contains('failed')).length}')),
+                    Expanded(child: _heroMetric('Pending', '${billing.payments.where((p) => p.paidAt.isEmpty && !p.reference.toLowerCase().contains('failed')).length}')),
                   ],
                 ),
               ],
@@ -87,6 +85,8 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
               Expanded(child: _filterChip('all', 'All')),
               const SizedBox(width: 10),
               Expanded(child: _filterChip('success', 'Success')),
+              const SizedBox(width: 10),
+              Expanded(child: _filterChip('pending', 'Pending')),
               const SizedBox(width: 10),
               Expanded(child: _filterChip('failed', 'Failed')),
             ],
@@ -113,10 +113,10 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0x338224E3)),
                     boxShadow: const [
-                      BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 8)),
+                      BoxShadow(color: Color(0x0F030B14), blurRadius: 16, offset: Offset(0, 8)),
                     ],
                   ),
                   child: Column(
@@ -139,7 +139,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Bill Payment - Broadband',
+                                  'Broadband bill payment',
                                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF6E6A67)),
                                 ),
                                 const SizedBox(height: 4),
@@ -153,8 +153,8 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                             ),
                           ),
                           Text(
-                            'Rs ${payment.amount.toStringAsFixed(0)}',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF8224E3)),
+                            'Rs ${payment.amount.toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF8224E3)),
                           ),
                         ],
                       ),
@@ -185,7 +185,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                             style: TextButton.styleFrom(
                               foregroundColor: const Color(0xFF8224E3),
                             ),
-                            child: const Text('View Details'),
+                            child: const Text('Details'),
                           ),
                           OutlinedButton(
                             onPressed: payment.viewUrl.isEmpty
@@ -201,7 +201,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               backgroundColor: const Color(0xFFFFFFFF),
                               side: const BorderSide(color: Color(0x668224E3)),
                             ),
-                            child: const Text('Open Receipt'),
+                            child: const Text('Receipt'),
                           ),
                           FilledButton(
                             onPressed: payment.pdfUrl.isEmpty
@@ -216,7 +216,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                               backgroundColor: const Color(0xFF8224E3),
                         foregroundColor: const Color(0xFFFFFFFF),
                             ),
-                            child: const Text('View PDF'),
+                            child: const Text('PDF'),
                           ),
                           if (payment.paidAt.isEmpty || payment.reference.toLowerCase().contains('failed'))
                             OutlinedButton(
@@ -233,7 +233,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
                                 backgroundColor: const Color(0xFFFFFFFF),
                                 side: const BorderSide(color: Color(0x338224E3)),
                               ),
-                              child: const Text('Need Help'),
+                              child: const Text('Help'),
                             ),
                         ],
                       ),
@@ -275,16 +275,16 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0x26FFFFFF),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x338224E3)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFE9D5FF))),
+          Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
         ],
       ),
     );
@@ -294,8 +294,8 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     final pending = payment.paidAt.isEmpty;
     final failed = payment.reference.toLowerCase().contains('failed');
     final label = failed ? 'Failed' : (pending ? 'Pending' : 'Success');
-    final color = failed ? const Color(0xFF2A1114) : (pending ? const Color(0xFF2A2310) : const Color(0xFF122315));
-    final text = failed ? const Color(0xFFFF8A80) : (pending ? const Color(0xFFFACC15) : const Color(0xFF8224E3));
+    final color = failed ? const Color(0xFFFFF1F2) : (pending ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4));
+    final text = failed ? const Color(0xFFBE123C) : (pending ? const Color(0xFFC2410C) : const Color(0xFF166534));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(

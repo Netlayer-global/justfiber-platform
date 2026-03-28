@@ -44,10 +44,10 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: const Color(0xFF090C1A),
-        foregroundColor: const Color(0xFFEFEEE8),
+        backgroundColor: const Color(0xFFFFFFFF),
+        foregroundColor: const Color(0xFF131313),
       ),
-      backgroundColor: const Color(0xFF060816),
+      backgroundColor: const Color(0xFFF6F1EB),
       body: Stack(
         children: [
           WebViewWidget(controller: _controller),
@@ -57,9 +57,9 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: const Color(0xCC0B0F19),
+                  color: const Color(0xF2FFFFFF),
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: const Color(0x668224E3)),
+                  border: Border.all(color: const Color(0x228224E3)),
                 ),
                 child: const Center(
                   child: CircularProgressIndicator(color: Color(0xFF8224E3)),

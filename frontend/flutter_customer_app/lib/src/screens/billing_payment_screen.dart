@@ -20,6 +20,7 @@ class BillingPaymentScreen extends StatefulWidget {
 class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   late final Razorpay _razorpay;
   bool launching = false;
+  bool verifying = false;
   bool helping = false;
   String? paymentError;
   String? walletHint;
@@ -105,6 +106,10 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     final appState = AppStateScope.of(context);
+    setState(() {
+      verifying = true;
+      paymentError = null;
+    });
     final ok = await appState.verifyBillPayment(
       orderId: response.orderId ?? widget.paymentOrder.orderId,
       paymentId: response.paymentId ?? '',
@@ -114,7 +119,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(ok ? 'Payment successful.' : (appState.error ?? 'Payment verification failed')),
+        content: Text(ok ? 'Payment received. Updating your billing records.' : (appState.error ?? 'Payment verification failed')),
       ),
     );
     if (ok) {
@@ -129,7 +134,10 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
         Navigator.of(context).pop(true);
       }
     } else {
-      setState(() => launching = false);
+      setState(() {
+        launching = false;
+        verifying = false;
+      });
     }
   }
 
@@ -137,6 +145,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     if (!mounted) return;
     setState(() {
       launching = false;
+      verifying = false;
       paymentError = response.message ?? 'Payment failed';
       retryCount += 1;
     });
@@ -145,6 +154,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   void _handleExternalWallet(ExternalWalletResponse response) {
     if (!mounted) return;
     setState(() {
+      launching = false;
       walletHint = 'Continue payment in ${response.walletName ?? 'wallet'} and return here after completion.';
     });
   }
@@ -186,7 +196,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bill Payment'),
+        title: const Text('Pay Bill'),
       ),
       body: RefreshIndicator(
         color: const Color(0xFF8224E3),
@@ -196,11 +206,8 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
           children: [
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Row(
               children: [
                 Expanded(
@@ -208,20 +215,22 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Razorpay checkout',
-                        style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800, fontSize: 22),
+                        'PAYMENT SUMMARY',
+                        style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, letterSpacing: 2.0),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Amount: Rs ${widget.paymentOrder.amount.toStringAsFixed(0)}',
-                        style: const TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w600),
+                        'Rs ${widget.paymentOrder.amount.toStringAsFixed(0)}',
+                        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w900, fontSize: 30),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        paymentError == null
-                            ? 'Review the bill details below and continue to secure payment.'
-                            : 'Your payment attempt needs attention before completion.',
-                        style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                        verifying
+                            ? 'We have received the payment callback. Hold on while we confirm it.'
+                            : paymentError == null
+                                ? 'Review the bill details below and continue to secure payment.'
+                                : 'Your payment attempt needs attention before completion.',
+                        style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                       ),
                     ],
                   ),
@@ -231,13 +240,17 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0x26FFFFFF),
+                    color: const Color(0xFFF8F4FF),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x668224E3)),
+                    border: Border.all(color: const Color(0x228224E3)),
                   ),
                   child: Icon(
-                    paymentError == null ? Icons.payments_rounded : Icons.error_outline_rounded,
-                    color: paymentError == null ? const Color(0xFF8224E3) : const Color(0xFFFF8A80),
+                    verifying
+                        ? Icons.verified_rounded
+                        : paymentError == null
+                            ? Icons.payments_rounded
+                            : Icons.error_outline_rounded,
+                    color: paymentError == null ? const Color(0xFF8224E3) : const Color(0xFFC2410C),
                   ),
                 ),
               ],
@@ -260,6 +273,27 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                 _detailRow('Order reference', widget.paymentOrder.orderId),
                 _detailRow('Currency', widget.paymentOrder.currency),
                 _detailRow('Payable now', 'Rs ${widget.paymentOrder.amount.toStringAsFixed(2)}'),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F4FF),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0x228224E3)),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('After payment', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
+                      SizedBox(height: 8),
+                      Text(
+                        'We verify the payment, refresh your billing record, and open the receipt screen automatically.',
+                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -283,7 +317,21 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   ),
                   const SizedBox(height: 14),
                 ],
-                if (launching) ...[
+                if (verifying) ...[
+                  const SizedBox(height: 8),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Confirming your payment...',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Please stay on this screen for a few seconds while we update your invoice and receipt.',
+                    textAlign: TextAlign.center,
+                  ),
+                ] else if (launching) ...[
                   const SizedBox(height: 8),
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
