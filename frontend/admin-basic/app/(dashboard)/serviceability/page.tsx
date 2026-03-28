@@ -327,7 +327,7 @@ export default function ServiceabilityPage() {
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
         />
 
-        <div className="rounded border border-[#2a2f4a] p-3 text-sm text-slate-400">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
           Polygon points: {form.polygon.length} | Center: {form.centerLat && form.centerLng ? `${form.centerLat}, ${form.centerLng}` : 'not set'} | Mode: {mapMode}
         </div>
 

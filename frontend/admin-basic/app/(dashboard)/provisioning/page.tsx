@@ -409,15 +409,15 @@ export default function ProvisioningPage() {
       </section>
 
       {isLoading ? (
-        <div className="card p-8 text-center" style={styles.hero}>
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#8224E3]" />
+        <div className="card p-8 text-center">
+          <Loader className="mx-auto h-6 w-6 animate-spin text-[#2d7dff]" />
         </div>
       ) : (
         <section className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-          <div className="card p-6" style={styles.hero}>
+          <div className="card p-6">
             <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Plans</div>
-              <div className="mt-2 text-xl font-black text-white">Select plan</div>
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plans</div>
+              <div className="mt-2 text-xl font-semibold text-slate-900">Select plan</div>
             </div>
             <input style={{ ...styles.input, marginTop: 16 }} placeholder="Search plan" value={query} onChange={(e) => setQuery(e.target.value)} />
             <div className="mt-5 space-y-3">
@@ -431,14 +431,14 @@ export default function ProvisioningPage() {
                     className="w-full p-4 text-left transition"
                     style={{
                       ...styles.surface,
-                      borderColor: selected ? '#8224E3' : 'rgba(255,255,255,0.1)',
-                      background: selected ? 'rgba(130,36,227,0.14)' : 'rgba(255,255,255,0.05)',
+                      borderColor: selected ? '#2d7dff' : '#e2e8f0',
+                      background: selected ? '#eff6ff' : '#ffffff',
                     }}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="text-base font-semibold text-white">{plan.name}</div>
-                        <div className="mt-1 text-sm text-white/55">{plan.planCode || plan.id}</div>
+                        <div className="text-base font-semibold text-slate-900">{plan.name}</div>
+                        <div className="mt-1 text-sm text-slate-500">{plan.planCode || plan.id}</div>
                       </div>
                       <span style={statusBadge(plan.provisioningReady === false ? 'needs' : 'ready')}>
                         {plan.provisioningReady === false ? 'Needs setup' : 'Ready'}
@@ -450,14 +450,14 @@ export default function ProvisioningPage() {
             </div>
           </div>
 
-          <div className="card p-6" style={styles.hero}>
+          <div className="card p-6">
             {selectedPlan ? (
               <div className="space-y-6">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <div className="text-xs uppercase tracking-[0.24em] text-white/45">Provisioning template</div>
-                    <h2 className="mt-2 text-3xl font-black text-white">{selectedPlan.name}</h2>
-                    <p className="mt-2 text-sm leading-6 text-white/55">
+                    <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Provisioning template</div>
+                    <h2 className="mt-2 text-3xl font-semibold text-slate-900">{selectedPlan.name}</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
                       Core activation settings for {selectedPlan.planCode || selectedPlan.id}.
                     </p>
                   </div>
@@ -467,8 +467,8 @@ export default function ProvisioningPage() {
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-                  <div className="p-5" style={styles.surface}>
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/45">Core activation fields</div>
+                  <div className="p-5 rounded-[24px] border border-slate-200 bg-slate-50">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Core activation fields</div>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                       <input style={styles.input} placeholder="Access profile code" value={form.accessProfileCode} onChange={(e) => setForm({ ...form, accessProfileCode: e.target.value })} />
                       <input style={styles.input} placeholder="VLAN ID" type="number" value="100" readOnly />
@@ -477,22 +477,22 @@ export default function ProvisioningPage() {
                       <input style={styles.input} placeholder="Wi-Fi prefix" value="JustFiber_" readOnly />
                       <input style={styles.input} placeholder="Wi-Fi password format" value="just@1234" readOnly />
                     </div>
-                    <div className="mt-4 text-sm leading-6 text-white/55">
-                      NAT always enabled rahega. 2.4G aur 5G dono same SSID use karenge. Customer sirf <span className="text-white">JustFiber_</span> ke baad wala part change kar sakta hai.
+                    <div className="mt-4 text-sm leading-6 text-slate-500">
+                      NAT always enabled rahega. 2.4G aur 5G dono same SSID use karenge. Customer sirf <span className="text-slate-900">JustFiber_</span> ke baad wala part change kar sakta hai.
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="p-5" style={styles.surface}>
-                      <div className="text-xs uppercase tracking-[0.18em] text-white/45">Live preview</div>
+                    <div className="p-5 rounded-[24px] border border-slate-200 bg-slate-50">
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Live preview</div>
                       <div className="mt-4 space-y-4">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.16em] text-white/40">PPPoE sample</div>
-                          <div className="mt-2 text-lg font-bold text-white break-all">{buildPppoePreview(form)}</div>
+                          <div className="text-xs uppercase tracking-[0.16em] text-slate-400">PPPoE sample</div>
+                          <div className="mt-2 text-lg font-semibold text-slate-900 break-all">{buildPppoePreview(form)}</div>
                         </div>
                         <div>
-                          <div className="text-xs uppercase tracking-[0.16em] text-white/40">Wi-Fi naming</div>
-                          <div className="mt-2 text-lg font-bold text-white">{buildWifiPreview(form)}</div>
+                          <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Wi-Fi naming</div>
+                          <div className="mt-2 text-lg font-semibold text-slate-900">{buildWifiPreview(form)}</div>
                         </div>
                       </div>
                     </div>
@@ -528,8 +528,8 @@ export default function ProvisioningPage() {
                 {showAdvancedTools ? (
                   <div className="space-y-4">
                     <div className="grid gap-4 xl:grid-cols-2">
-                      <div className="p-5" style={styles.surface}>
-                        <div className="text-xs uppercase tracking-[0.18em] text-white/45">Default presets</div>
+                      <div className="p-5 rounded-[24px] border border-slate-200 bg-slate-50">
+                        <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Default presets</div>
                         <div className="mt-4 flex flex-wrap gap-2">
                           {presetTemplates.map((preset) => (
                             <button key={preset.code} type="button" onClick={() => applyPreset(preset.code)} className="btn-secondary" style={styles.secondaryButton}>
@@ -540,8 +540,8 @@ export default function ProvisioningPage() {
                         </div>
                       </div>
 
-                      <div className="p-5" style={styles.surface}>
-                        <div className="text-xs uppercase tracking-[0.18em] text-white/45">Copy from another plan</div>
+                      <div className="p-5 rounded-[24px] border border-slate-200 bg-slate-50">
+                        <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Copy from another plan</div>
                         <div className="mt-4 flex flex-col gap-3 md:flex-row">
                           <select style={styles.input} value={copySourcePlanId} onChange={(e) => setCopySourcePlanId(e.target.value)}>
                             <option value="">Select source plan</option>
@@ -561,11 +561,11 @@ export default function ProvisioningPage() {
                       </div>
                     </div>
 
-                    <div className="p-5" style={styles.surface}>
+                    <div className="p-5 rounded-[24px] border border-slate-200 bg-slate-50">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.18em] text-white/45">Bulk apply</div>
-                          <div className="mt-2 text-sm text-white/60">Apply current template to multiple target plans.</div>
+                          <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Bulk apply</div>
+                          <div className="mt-2 text-sm text-slate-500">Apply current template to multiple target plans.</div>
                         </div>
                         <button type="button" onClick={() => void handleBulkApply()} className="btn-secondary" style={styles.secondaryButton} disabled={isSaving || !bulkTargetPlanIds.length}>
                           <Copy className="h-4 w-4" />
@@ -590,7 +590,7 @@ export default function ProvisioningPage() {
                         <button type="button" onClick={clearBulkTargets} className="btn-secondary" style={styles.secondaryButton}>
                           Clear all
                         </button>
-                        <label className="flex items-center gap-2 px-4 py-3 text-sm text-white/75" style={styles.surface}>
+                        <label className="flex items-center gap-2 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
                           <input type="checkbox" checked={bulkIncompleteOnly} onChange={(e) => setBulkIncompleteOnly(e.target.checked)} />
                           Only incomplete plans
                         </label>
@@ -605,13 +605,13 @@ export default function ProvisioningPage() {
                               className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
                               style={{
                                 ...styles.surface,
-                                borderColor: checked ? '#8224E3' : 'rgba(255,255,255,0.1)',
-                                background: checked ? 'rgba(130,36,227,0.14)' : 'rgba(255,255,255,0.05)',
+                                borderColor: checked ? '#2d7dff' : '#e2e8f0',
+                                background: checked ? '#eff6ff' : '#ffffff',
                               }}
                             >
                               <div>
-                                <div className="font-medium text-white">{plan.name}</div>
-                                <div className="text-xs text-white/50">{plan.planCode || plan.id}</div>
+                                <div className="font-medium text-slate-900">{plan.name}</div>
+                                <div className="text-xs text-slate-500">{plan.planCode || plan.id}</div>
                               </div>
                               <input type="checkbox" checked={checked} onChange={() => toggleBulkTarget(plan.id)} />
                             </label>
@@ -630,9 +630,9 @@ export default function ProvisioningPage() {
                 ) : null}
               </div>
             ) : (
-              <div className="p-8 text-center text-white/55" style={styles.surface}>
-                <ShieldCheck className="mx-auto h-10 w-10 text-[#8224E3]" />
-                <div className="mt-4 text-lg font-semibold text-white">No plan selected</div>
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
+                <ShieldCheck className="mx-auto h-10 w-10 text-[#2d7dff]" />
+                <div className="mt-4 text-lg font-semibold text-slate-900">No plan selected</div>
                 <div className="mt-2 text-sm">Pick a plan from the left to maintain its activation template.</div>
               </div>
             )}

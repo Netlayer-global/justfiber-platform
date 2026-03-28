@@ -426,44 +426,44 @@ export default function RoutersPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-[30px] border border-white/10 bg-black/35 p-5">
+          <div className="rounded-[30px] border border-slate-200 bg-white p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-white/45">Selected router</div>
-                <div className="mt-2 text-2xl font-black">{selectedRouter?.displayName || 'No router selected'}</div>
+                <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Selected router</div>
+                <div className="mt-2 text-2xl font-semibold text-slate-900">{selectedRouter?.displayName || 'No router selected'}</div>
               </div>
-              <div className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/12 px-3 py-2 text-xs font-semibold text-[#d7bbff]">
+              <div className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-3 py-2 text-xs font-semibold text-[#2d7dff]">
                 {selectedRouter?.vendor || 'mikrotik'}
               </div>
             </div>
 
             {selectedRouter ? (
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Connectivity</div>
-                  <div className="mt-3 space-y-2 text-sm text-white/75">
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Connectivity</div>
+                  <div className="mt-3 space-y-2 text-sm text-slate-600">
                     <div className="flex items-center justify-between gap-3"><span>Router IP</span><span>{selectedRouter.managementIp || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>RADIUS client IP</span><span>{selectedRouter.radiusClientIp || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>NAS identifier</span><span>{selectedRouter.nasIdentifier || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>API port</span><span>{selectedRouter.apiPort || 8728}</span></div>
                   </div>
                 </div>
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Control plane</div>
-                  <div className="mt-3 space-y-2 text-sm text-white/75">
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Control plane</div>
+                  <div className="mt-3 space-y-2 text-sm text-slate-600">
                     <div className="flex items-center justify-between gap-3"><span>COA</span><span>{selectedRouter.useCoa !== false ? 'Enabled' : 'Disabled'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>COA host</span><span>{selectedRouter.coaHost || selectedRouter.managementIp || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>COA port</span><span>{selectedRouter.coaPort || 3799}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>IP auth</span><span>{selectedRouter.enableIpAuth ? 'Enabled' : 'Disabled'}</span></div>
                   </div>
                 </div>
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 sm:col-span-2">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Notes</div>
-                  <div className="mt-3 text-sm leading-6 text-white/70">{selectedRouter.notes || 'No extra notes saved for this router.'}</div>
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Notes</div>
+                  <div className="mt-3 text-sm leading-6 text-slate-600">{selectedRouter.notes || 'No extra notes saved for this router.'}</div>
                 </div>
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 sm:col-span-2">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">FreeRADIUS sync</div>
-                  <div className="mt-3 text-sm leading-6 text-white/70">
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">FreeRADIUS sync</div>
+                  <div className="mt-3 text-sm leading-6 text-slate-600">
                     {selectedRouter.freeradiusClientSync?.synced
                       ? `Managed client synced for ${selectedRouter.freeradiusClientSync.radiusClientIp || selectedRouter.radiusClientIp || '-'}`
                       : 'Router save/delete will sync a managed client block into FreeRADIUS when clients file access is available.'}
@@ -471,7 +471,7 @@ export default function RoutersPage() {
                 </div>
               </div>
             ) : (
-              <div className="mt-6 rounded-[22px] border border-dashed border-white/10 bg-white/5 p-6 text-sm text-white/55">
+              <div className="mt-6 rounded-[22px] border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
                 Add a BNG node to start managing MikroTik routers from admin.
               </div>
             )}
@@ -498,7 +498,7 @@ export default function RoutersPage() {
                 </button>
               ) : null}
               {selectedRouter ? (
-                <button type="button" className="btn-secondary border-red-500/30 text-red-200 hover:bg-red-500/10" disabled={isDeleting} onClick={() => void handleDeleteSelected()}>
+                <button type="button" className="btn-secondary border-red-500/20 text-red-600 hover:bg-red-50" disabled={isDeleting} onClick={() => void handleDeleteSelected()}>
                   {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   Delete router
                 </button>
@@ -506,43 +506,43 @@ export default function RoutersPage() {
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-white/10 bg-[#8224E3]/10 p-5">
-            <div className="flex items-center gap-3 text-[#d8c0ff]">
+          <div className="rounded-[30px] border border-[#2d7dff]/20 bg-[#eff6ff] p-5">
+            <div className="flex items-center gap-3 text-[#2d7dff]">
               <ShieldCheck className="h-5 w-5" />
               <div className="text-lg font-bold">MikroTik ready</div>
             </div>
-            <div className="mt-3 space-y-2 text-sm leading-6 text-white/75">
+            <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
               <p>COA host aur secret save karoge to FreeRADIUS suspend/resume ke baad live session disconnect bheja ja sakega.</p>
               <p>RouterOS username/password aur API port future direct ops ke liye store honge. Abhi session control `radclient` CoA path use karta hai.</p>
             </div>
           </div>
 
           {testResult ? (
-            <div className="rounded-[30px] border border-white/10 bg-black/35 p-5">
-              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Last test result</div>
-              <div className="mt-2 text-2xl font-black">Connectivity checks</div>
+            <div className="rounded-[30px] border border-slate-200 bg-white p-5">
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Last test result</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">Connectivity checks</div>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="font-semibold text-white">COA</div>
+                    <div className="font-semibold text-slate-900">COA</div>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.coa.ok ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-200'}`}>
                       {testResult.checks.coa.ok ? 'reachable' : 'failed'}
                     </span>
                   </div>
-                  <div className="mt-3 space-y-2 text-sm text-white/70">
+                  <div className="mt-3 space-y-2 text-sm text-slate-600">
                     <div className="flex items-center justify-between gap-3"><span>Host</span><span>{testResult.checks.coa.host || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>Port</span><span>{testResult.checks.coa.port}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>Reason</span><span>{testResult.checks.coa.reason || 'ok'}</span></div>
                   </div>
                 </div>
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="font-semibold text-white">Router API</div>
+                    <div className="font-semibold text-slate-900">Router API</div>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.api.ok ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-200'}`}>
                       {testResult.checks.api.ok ? 'reachable' : 'failed'}
                     </span>
                   </div>
-                  <div className="mt-3 space-y-2 text-sm text-white/70">
+                  <div className="mt-3 space-y-2 text-sm text-slate-600">
                     <div className="flex items-center justify-between gap-3"><span>Host</span><span>{testResult.checks.api.host || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>Port</span><span>{testResult.checks.api.port}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>Reason</span><span>{testResult.checks.api.reason || 'ok'}</span></div>
@@ -556,27 +556,27 @@ export default function RoutersPage() {
 
       {isDrawerOpen ? (
         <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm">
-          <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#09090b] p-6 shadow-[0_0_80px_rgba(0,0,0,0.55)]">
+          <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-[0_0_80px_rgba(15,23,42,0.14)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-white/40">Router form</div>
-                <div className="mt-2 text-3xl font-black">{selectedId ? 'Edit BNG router' : 'Add BNG router'}</div>
-                <div className="mt-2 text-sm text-white/60">Multi-BNG MikroTik nodes ko admin se directly create and update karo.</div>
+                <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Router form</div>
+                <div className="mt-2 text-3xl font-semibold text-slate-900">{selectedId ? 'Edit BNG router' : 'Add BNG router'}</div>
+                <div className="mt-2 text-sm text-slate-500">Multi-BNG MikroTik nodes ko admin se directly create and update karo.</div>
               </div>
               <button type="button" className="btn-secondary" onClick={() => setIsDrawerOpen(false)}>Close</button>
             </div>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className="space-y-2">
-                <div className="text-sm font-semibold text-white/80">Router code</div>
+                  <div className="text-sm font-semibold text-slate-700">Router code</div>
                 <input className="input" value={form.nodeCode} placeholder="mikrotik-rewari-1" onChange={(event) => setForm({ ...form, nodeCode: event.target.value })} />
               </label>
               <label className="space-y-2">
-                <div className="text-sm font-semibold text-white/80">Name</div>
+                  <div className="text-sm font-semibold text-slate-700">Name</div>
                 <input className="input" value={form.displayName} placeholder="JustFiber Rewari" onChange={(event) => setForm({ ...form, displayName: event.target.value })} />
               </label>
               <label className="space-y-2">
-                <div className="text-sm font-semibold text-white/80">Model</div>
+                  <div className="text-sm font-semibold text-slate-700">Model</div>
                 <select className="input" value={form.vendor} onChange={(event) => setForm({ ...form, vendor: event.target.value as RouterForm['vendor'] })}>
                   <option value="mikrotik">MikroTik (Routers)</option>
                   <option value="juniper">Juniper</option>
@@ -585,7 +585,7 @@ export default function RoutersPage() {
                 </select>
               </label>
               <label className="space-y-2">
-                <div className="text-sm font-semibold text-white/80">Status</div>
+                  <div className="text-sm font-semibold text-slate-700">Status</div>
                 <select className="input" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as RouterForm['status'] })}>
                   <option value="active">Active</option>
                   <option value="planned">Planned</option>
@@ -593,11 +593,11 @@ export default function RoutersPage() {
                 </select>
               </label>
               <label className="space-y-2">
-                <div className="text-sm font-semibold text-white/80">MAC address</div>
+                  <div className="text-sm font-semibold text-slate-700">MAC address</div>
                 <input className="input" value={form.macAddress} onChange={(event) => setForm({ ...form, macAddress: event.target.value })} />
               </label>
               <label className="space-y-2">
-                <div className="text-sm font-semibold text-white/80">Group</div>
+                  <div className="text-sm font-semibold text-slate-700">Group</div>
                 <input className="input" value={form.groupName} onChange={(event) => setForm({ ...form, groupName: event.target.value })} />
               </label>
             </div>
