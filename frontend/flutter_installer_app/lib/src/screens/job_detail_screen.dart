@@ -749,6 +749,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final deferReason = (deviceContext['deferReason'] ?? detail?['subStatus'] ?? '').toString();
     final deferNote = (deviceContext['deferNote'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
+    final handoverPack = <String>[
+      if (name.isNotEmpty) 'Customer: $name',
+      if (singleWifiName)
+        'Wi-Fi SSID: $wifiSsid24'
+      else ...[
+        'Wi-Fi 2.4G: $wifiSsid24',
+        'Wi-Fi 5G: $wifiSsid5',
+      ],
+      'Wi-Fi password: $wifiPassword',
+      'PPPoE user: $pppoeUsername',
+      'PPPoE password: $pppoePassword',
+      'Internet status: ${activationLive ? 'Active' : 'Pending'}',
+    ].join('\n');
     final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
     final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
     final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
@@ -1461,6 +1474,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           spacing: 10,
                           runSpacing: 10,
                           children: [
+                            FilledButton(
+                              onPressed: (wifiSsid24 == '-' && wifiSsid5 == '-') && (pppoeUsername == '-' && pppoePassword == '-')
+                                  ? null
+                                  : () => _copyText(
+                                        'Customer handover copied',
+                                        handoverPack,
+                                      ),
+                              child: const Text('Copy handover pack'),
+                            ),
                               OutlinedButton(
                                 onPressed: wifiSsid24 == '-' && wifiSsid5 == '-' ? null : () => _copyText(
                                   'Wi-Fi details copied',
