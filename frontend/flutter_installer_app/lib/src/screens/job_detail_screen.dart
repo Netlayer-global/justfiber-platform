@@ -856,6 +856,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         : ((preview['staticBenefits'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[]);
     final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final linkedSerial = (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '').toString();
+    final linkedDeviceId = (device['deviceId'] ?? deviceContext['finalDeviceId'] ?? '').toString();
+    final linkedProductClass = (device['productClass'] ?? '').toString();
     final onsiteLocation = (deviceContext['onsiteLocation'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final onsiteAddress = (onsiteLocation['address'] ?? '').toString();
     final onsiteCheckedInAt = (onsiteLocation['checkedInAt'] ?? '').toString();
@@ -884,6 +886,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       'Job number: ${widget.job.jobNumber}',
       if (customerId.isNotEmpty) 'Customer ID: $customerId',
       if (serviceId.isNotEmpty) 'Service ID: $serviceId',
+    ].join('\n');
+    final deviceRefsPack = <String>[
+      if (linkedSerial.isNotEmpty) 'Serial: $linkedSerial',
+      if (linkedDeviceId.isNotEmpty) 'Device ID: $linkedDeviceId',
+      if (linkedProductClass.isNotEmpty) 'Model: $linkedProductClass',
     ].join('\n');
     final visitUrgency = _visitUrgencyLabel(status, priority, scheduledAt);
     final visitTimeWindow = _timeWindowLabel(scheduledAt);
@@ -1765,8 +1772,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _row('TX power', '${optical['txPower'] ?? diagnostics['optical']?['txPower'] ?? '-'}'),
                       _row('Health', '${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}'),
                       _row('Router serial', '${device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '-'}'),
+                      _row('Device ID', linkedDeviceId.isEmpty ? '-' : linkedDeviceId),
+                      _row('Model', linkedProductClass.isEmpty ? '-' : linkedProductClass),
                       _row('Router online', '${device['onlineStatus'] ?? 'unknown'}'),
                       _row('Provisioning state', '${device['provisioningState'] ?? 'pending'}'),
+                      if (deviceRefsPack.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () => _copyText('Device references copied', deviceRefsPack),
+                          child: const Text('Copy device refs'),
+                        ),
+                      ],
                       if (recommendations.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Text(
