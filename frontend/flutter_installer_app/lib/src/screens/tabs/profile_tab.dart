@@ -145,6 +145,9 @@ class _ProfileTabState extends State<ProfileTab> {
     final appState = InstallerStateScope.of(context);
     final profile = appState.profile;
     final isOnLeave = profile.availabilityStatus == 'on_leave';
+    final activeJobs = appState.jobs.where((job) => job.status != 'completed' && job.status != 'deferred').length;
+    final complaintJobs = appState.jobs.where((job) => job.status != 'completed' && job.status != 'deferred' && job.jobType == 'complaint').length;
+    final deferredJobs = appState.jobs.where((job) => job.status == 'deferred').length;
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -229,6 +232,32 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Current workload', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 10),
+                const Text(
+                  'Use this before changing availability so active work is not left hanging in the field.',
+                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(child: _metricTile(context, label: 'Active jobs', value: '$activeJobs')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _metricTile(context, label: 'Complaints', value: '$complaintJobs')),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _metricTile(context, label: 'Follow-up required', value: '$deferredJobs'),
               ],
             ),
           ),
