@@ -15,15 +15,15 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  colorScheme: 'dark',
+  colorScheme: 'light',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geist.variable} font-sans bg-[#0a0e27] text-[#f0f4f8]`}>
+      <body className={`${geist.variable} font-sans bg-[#f6f8fc] text-slate-900`}>
         {children}
-        <Toaster theme="dark" />
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )

@@ -112,6 +112,19 @@
   .admin-light .bg-white\/15 {
     background: #f8fafc !important;
   }
+  .admin-light .bg-\[\#0a0e27\] {
+    background: #f8fafc !important;
+  }
+  .admin-light .bg-\[\#eff6ff\] {
+    background: #eef1ff !important;
+  }
+  .admin-light .text-\[\#2d7dff\],
+  .admin-light .text-\[\#8224E3\] {
+    color: #5b6cff !important;
+  }
+  .admin-light .text-\[\#b4bcc4\] {
+    color: #64748b !important;
+  }
   .admin-light .bg-black\/35,
   .admin-light .bg-black\/40,
   .admin-light .bg-black\/55 {
@@ -121,6 +134,11 @@
   .admin-light .border-white\/20,
   .admin-light .border-black\/10,
   .admin-light .border-black\/15 {
+    border-color: rgba(226, 232, 240, 0.95) !important;
+  }
+  .admin-light .border-\[\#2a2f4a\],
+  .admin-light .border-\[\#8224E3\]\/40,
+  .admin-light .border-\[\#8224E3\]\/30 {
     border-color: rgba(226, 232, 240, 0.95) !important;
   }
 }
