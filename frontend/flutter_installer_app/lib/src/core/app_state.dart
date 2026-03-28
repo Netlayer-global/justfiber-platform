@@ -19,6 +19,7 @@ class InstallerAppState extends ChangeNotifier {
   bool busy = false;
   bool restoringSession = true;
   String? error;
+  DateTime? lastSyncedAt;
   InstallerDashboard dashboard = const InstallerDashboard(
     todayNewInstallationJobs: 0,
     pendingJobs: 0,
@@ -78,6 +79,7 @@ class InstallerAppState extends ChangeNotifier {
         preview = await api.fetchProvisioningPreview(current, selectedJobId!);
         diagnostics = await api.fetchDiagnostics(current, selectedJobId!);
       }
+      lastSyncedAt = DateTime.now();
     } catch (e) {
       error = e.toString();
     } finally {
@@ -375,6 +377,7 @@ class InstallerAppState extends ChangeNotifier {
     diagnostics = null;
     selectedJobId = null;
     error = null;
+    lastSyncedAt = null;
     jobs = const [];
     notifications = const [];
     dashboard = const InstallerDashboard(
