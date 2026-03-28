@@ -65,30 +65,18 @@ const presetTemplates: Array<{ code: string; label: string; template: Provisioni
 ]
 
 const styles = {
-  hero: {
-    borderRadius: 28,
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'linear-gradient(180deg, rgba(18,18,18,0.98), rgba(10,10,10,0.96))',
-    boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
-  } satisfies CSSProperties,
-  accent: {
-    borderRadius: 30,
-    background: 'linear-gradient(180deg, #8f41ec 0%, #8224E3 100%)',
-    color: '#111111',
-    boxShadow: '0 30px 80px rgba(130,36,227,0.22)',
-  } satisfies CSSProperties,
   surface: {
     borderRadius: 22,
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid #e2e8f0',
+    background: '#ffffff',
   } satisfies CSSProperties,
   input: {
     width: '100%',
     padding: '14px 16px',
     borderRadius: 18,
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'rgba(255,255,255,0.04)',
-    color: '#ffffff',
+    border: '1px solid #e2e8f0',
+    background: '#ffffff',
+    color: '#0f172a',
     outline: 'none',
   } satisfies CSSProperties,
   primaryButton: {
@@ -98,8 +86,8 @@ const styles = {
     gap: 8,
     padding: '12px 18px',
     borderRadius: 18,
-    border: '1px solid rgba(130,36,227,0.45)',
-    background: '#8224E3',
+    border: '1px solid rgba(91,108,255,0.45)',
+    background: '#5B6CFF',
     color: '#ffffff',
     fontWeight: 700,
   } satisfies CSSProperties,
@@ -110,9 +98,9 @@ const styles = {
     gap: 8,
     padding: '12px 18px',
     borderRadius: 18,
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'rgba(255,255,255,0.04)',
-    color: '#ffffff',
+    border: '1px solid #e2e8f0',
+    background: '#ffffff',
+    color: '#0f172a',
     fontWeight: 600,
   } satisfies CSSProperties,
 } as const
@@ -384,7 +372,7 @@ export default function ProvisioningPage() {
       <section className="card p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.28em] text-slate-400">Technical activation</div>
+            <div className="text-xs uppercase tracking-[0.28em] text-slate-400">Provisioning workspace</div>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900">Provisioning</h1>
             <div className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">
               Access profile, VLAN, PPPoE pattern, aur Wi-Fi naming yahan maintain karo. Page intentionally simple rakhi gayi hai.
@@ -410,7 +398,7 @@ export default function ProvisioningPage() {
 
       {isLoading ? (
         <div className="card p-8 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#2d7dff]" />
+          <Loader className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
         </div>
       ) : (
         <section className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
@@ -431,9 +419,9 @@ export default function ProvisioningPage() {
                     className="w-full p-4 text-left transition"
                     style={{
                       ...styles.surface,
-                      borderColor: selected ? '#2d7dff' : '#e2e8f0',
-                      background: selected ? '#eff6ff' : '#ffffff',
-                    }}
+                                borderColor: selected ? '#5B6CFF' : '#e2e8f0',
+                                background: selected ? '#eef1ff' : '#ffffff',
+                              }}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -631,7 +619,7 @@ export default function ProvisioningPage() {
               </div>
             ) : (
               <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
-                <ShieldCheck className="mx-auto h-10 w-10 text-[#2d7dff]" />
+                <ShieldCheck className="mx-auto h-10 w-10 text-[#5B6CFF]" />
                 <div className="mt-4 text-lg font-semibold text-slate-900">No plan selected</div>
                 <div className="mt-2 text-sm">Pick a plan from the left to maintain its activation template.</div>
               </div>

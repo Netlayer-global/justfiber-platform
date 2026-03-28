@@ -191,14 +191,18 @@ export default function InstallersPage() {
       <section className="card p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Field workforce</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Field workspace</div>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900">Installers</h1>
             <div className="mt-2 text-sm text-slate-500">Create installers, manage credentials, and track live availability.</div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {installerMetrics.map(({ label, value }) => (
-              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <span className="font-medium text-slate-900">{value}</span> {label}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {installerMetrics.map(({ label, value, Icon }) => (
+              <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</div>
+                  <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
               </div>
             ))}
             <button onClick={loadInstallers} className="btn-secondary inline-flex items-center gap-2">
@@ -235,7 +239,7 @@ export default function InstallersPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#2d7dff]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#5B6CFF]" />
         </div>
       ) : (
         <div className="space-y-3">
