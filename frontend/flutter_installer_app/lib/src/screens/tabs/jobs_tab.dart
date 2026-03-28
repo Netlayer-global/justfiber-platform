@@ -143,28 +143,16 @@ class _JobsTabState extends State<JobsTab> {
                     prefixIcon: Icon(Icons.search_rounded),
                   ),
                 ),
-                const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _quickFilterChip('Due today', 'today', todayJobs.length),
-                    _quickFilterChip('Pending', 'pending', pendingJobs.length),
-                    _quickFilterChip('Complaints', 'complaint', liveComplaints),
-                    _quickFilterChip('Deferred', 'deferred', deferredJobs.length),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _filterChip('All', 'all'),
-                    _filterChip('Install', 'install'),
-                    _filterChip('Complaint', 'complaint'),
-                    _filterChip('Deferred', 'deferred'),
-                    _filterChip('Exceptions', 'exceptions'),
-                    _filterChip('Closed', 'closed'),
+                    _filterChip('All', 'all', filteredJobs.length),
+                    _filterChip('Today', 'today', todayJobs.length),
+                    _filterChip('Pending', 'pending', pendingJobs.length),
+                    _filterChip('Complaint', 'complaint', liveComplaints),
+                    _filterChip('Deferred', 'deferred', deferredJobs.length),
+                    _filterChip('Closed', 'closed', completedJobs.length),
                   ],
                 ),
                 if (hasFilters) ...[
@@ -318,20 +306,11 @@ class _JobsTabState extends State<JobsTab> {
     );
   }
 
-  Widget _filterChip(String label, String value) {
+  Widget _filterChip(String label, String value, int count) {
     return ChoiceChip(
-      label: Text(label),
-      selected: _queueFilter == value,
-      onSelected: (_) => setState(() => _queueFilter = value),
-    );
-  }
-
-  Widget _quickFilterChip(String label, String value, int count) {
-    return FilterChip(
       label: Text('$label ($count)'),
       selected: _queueFilter == value,
       onSelected: (_) => setState(() => _queueFilter = value),
-      avatar: count > 0 ? const Icon(Icons.bolt_rounded, size: 16) : null,
     );
   }
 
@@ -450,11 +429,8 @@ class _JobsTabState extends State<JobsTab> {
               children: [
                 _pill(isComplaint ? 'complaint' : 'installation'),
                 _pill(stageLabel),
-                if (isDeferred) _pill('Deferred'),
-                _pill(job.priority),
+                if (isDeferred) _pill('follow-up'),
                 _pill(_urgencyLabel(job)),
-                if (hasPinnedLocation) _pill('Pinned location'),
-                if (hasLinkedRouter) _pill('Router linked'),
               ],
             ),
             if (hasConfigFailure || isDeferred || job.latestEventCode.isNotEmpty) ...[

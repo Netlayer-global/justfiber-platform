@@ -1088,42 +1088,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         children: [
                           SizedBox(
                             width: 160,
-                            child: _chip('Plan', planName),
-                          ),
-                          SizedBox(
-                            width: 160,
                             child: _chip('Phone', phone.isEmpty ? '-' : phone),
                           ),
                           SizedBox(
                             width: 160,
-                            child: _chip('Priority', (detail?['priority'] ?? 'medium').toString()),
+                            child: _chip('Visit timing', visitUrgency),
                           ),
-                          SizedBox(
-                            width: 160,
-                            child: _chip('Plan code', planCode.isEmpty ? '-' : planCode),
-                          ),
-                          SizedBox(
-                            width: 160,
-                            child: _chip('Price', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-'),
-                          ),
-                          SizedBox(
-                            width: 160,
-                            child: _chip('Down / Up', '${planDownload > 0 ? planDownload.toStringAsFixed(0) : '-'} / ${planUpload > 0 ? planUpload.toStringAsFixed(0) : '-'} Mbps'),
-                          ),
+                          if (scheduledAt.isNotEmpty)
+                            SizedBox(
+                              width: 190,
+                              child: _chip('Scheduled', _shortDateTime(scheduledAt)),
+                            ),
                         ],
                       ),
-                      if (planTags.isNotEmpty || planBenefits.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ...planTags.take(3).map((tag) => _miniPill(tag)),
-                            ...planBenefits.take(2).map((item) => _miniPill(item)),
-                          ],
-                        ),
-                      ],
-                      if (scheduledAt.isNotEmpty || visitUrgency != 'Queue ready') ...[
+                      if (scheduledAt.isNotEmpty && visitTimeWindow != '-') ...[
                         const SizedBox(height: 16),
                         Wrap(
                           spacing: 10,
@@ -1131,18 +1109,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           children: [
                             SizedBox(
                               width: 160,
-                              child: _chip('Visit timing', visitUrgency),
+                              child: _chip('Window', visitTimeWindow),
                             ),
-                            if (scheduledAt.isNotEmpty)
-                              SizedBox(
-                                width: 190,
-                                child: _chip('Scheduled', _shortDateTime(scheduledAt)),
-                              ),
-                            if (scheduledAt.isNotEmpty)
-                              SizedBox(
-                                width: 160,
-                                child: _chip('Window', visitTimeWindow),
-                              ),
                           ],
                         ),
                       ],
@@ -1759,22 +1727,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         handoverPack,
                                       ),
                               child: const Text('Copy handover pack'),
-                            ),
-                              OutlinedButton(
-                                onPressed: wifiSsid24 == '-' && wifiSsid5 == '-' ? null : () => _copyText(
-                                  'Wi-Fi details copied',
-                                  singleWifiName
-                                      ? 'SSID: $wifiSsid24\nPassword: $wifiPassword'
-                                      : '2.4G: $wifiSsid24\n5G: $wifiSsid5\nPassword: $wifiPassword',
-                                ),
-                                child: const Text('Copy Wi-Fi'),
-                              ),
-                            OutlinedButton(
-                              onPressed: wifiPassword == '-' ? null : () => _copyText(
-                                'Wi-Fi password copied',
-                                wifiPassword,
-                              ),
-                              child: const Text('Copy Wi-Fi password'),
                             ),
                             OutlinedButton(
                               onPressed: pppoeUsername == '-' && pppoePassword == '-' ? null : () => _copyText(
