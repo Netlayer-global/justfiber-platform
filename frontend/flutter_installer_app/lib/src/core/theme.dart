@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildInstallerTheme() {
-  const background = Color(0xFFF6F1EB);
+  const background = Color(0xFFF8FAFC);
   const surface = Color(0xFFFFFFFF);
-  const surfaceAlt = Color(0xFFF2ECE6);
-  const primary = Color(0xFF8224E3);
-  const accent = Color(0xFF8224E3);
-  const text = Color(0xFF131313);
-  const muted = Color(0xFF6E6A67);
+  const surfaceAlt = Color(0xFFF8FAFC);
+  const primary = Color(0xFF2563EB);
+  const accent = Color(0xFF2563EB);
+  const text = Color(0xFF0F172A);
+  const muted = Color(0xFF64748B);
 
   return ThemeData(
     colorScheme: const ColorScheme.light(
@@ -40,11 +40,11 @@ ThemeData buildInstallerTheme() {
       fillColor: surfaceAlt,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: Color(0x338224E3)),
+        borderSide: const BorderSide(color: Color(0x140F172A)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: Color(0x338224E3)),
+        borderSide: const BorderSide(color: Color(0x140F172A)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
@@ -56,17 +56,17 @@ ThemeData buildInstallerTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: primary,
-        foregroundColor: const Color(0xFFEFEEE8),
+        foregroundColor: const Color(0xFFFFFFFF),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         elevation: 0,
-        shadowColor: const Color(0x338224E3),
+        shadowColor: const Color(0x332563EB),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: primary,
         backgroundColor: const Color(0xFFFFFFFF),
-        side: const BorderSide(color: Color(0x668224E3)),
+        side: const BorderSide(color: Color(0xFFBFDBFE)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
     ),
