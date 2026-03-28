@@ -148,6 +148,8 @@ class _ProfileTabState extends State<ProfileTab> {
     final activeJobs = appState.jobs.where((job) => job.status != 'completed' && job.status != 'deferred').length;
     final complaintJobs = appState.jobs.where((job) => job.status != 'completed' && job.status != 'deferred' && job.jobType == 'complaint').length;
     final deferredJobs = appState.jobs.where((job) => job.status == 'deferred').length;
+    final syncState = appState.busy ? 'Syncing' : ((appState.error ?? '').isNotEmpty ? 'Needs attention' : 'Healthy');
+    final lastSynced = appState.lastSyncedAt == null ? 'Not synced yet' : _formatSyncTime(appState.lastSyncedAt!);
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -232,6 +234,45 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Sync health', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _metricTile(context, label: 'Session', value: syncState)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _metricTile(context, label: 'Last sync', value: lastSynced)),
+                  ],
+                ),
+                if ((appState.error ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFCD34D)),
+                    ),
+                    child: Text(
+                      appState.error!,
+                      style: const TextStyle(
+                        color: Color(0xFF9A3412),
+                        fontWeight: FontWeight.w700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -535,5 +576,14 @@ class _ProfileTabState extends State<ProfileTab> {
         ],
       ),
     );
+  }
+
+  String _formatSyncTime(DateTime value) {
+    final difference = DateTime.now().difference(value);
+    if (difference.inSeconds < 30) return 'Just now';
+    if (difference.inMinutes < 1) return '${difference.inSeconds}s ago';
+    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
+    if (difference.inDays < 1) return '${difference.inHours}h ago';
+    return '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
   }
 }
