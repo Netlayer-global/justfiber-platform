@@ -889,6 +889,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final otpPurpose = (otpState['purpose'] ?? '').toString();
     final otpExpiresAt = (otpState['expiresAt'] ?? '').toString();
     final otpVerifiedAt = (otpState['verifiedAt'] ?? '').toString();
+    final latestTimelineItem = timeline.isEmpty ? null : timeline.last;
+    final latestTimelineEvent = latestTimelineItem == null
+        ? ''
+        : (latestTimelineItem['event'] ?? '').toString().replaceAll('.', ' ');
+    final latestTimelineNote = latestTimelineItem == null ? '' : (latestTimelineItem['note'] ?? '').toString();
+    final latestTimelineAt = latestTimelineItem == null ? '' : (latestTimelineItem['at'] ?? '').toString();
     final complaintWatchouts = isComplaint
         ? _complaintWatchouts(
             resolutionCode: complaintResolution,
@@ -1201,6 +1207,34 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               const SizedBox(height: 10),
                               _row('Checked in', onsiteCheckedInAt.isEmpty ? '-' : _shortDateTime(onsiteCheckedInAt)),
                               _row('Location', onsiteAddress.isEmpty ? '-' : onsiteAddress),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (latestTimelineItem != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0x120F172A)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Latest field update',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: const Color(0xFF0F172A),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _row('Event', latestTimelineEvent.isEmpty ? 'timeline update' : latestTimelineEvent),
+                              _row('Note', latestTimelineNote.isEmpty ? '-' : latestTimelineNote),
+                              _row('At', latestTimelineAt.isEmpty ? '-' : _shortDateTime(latestTimelineAt)),
                             ],
                           ),
                         ),
