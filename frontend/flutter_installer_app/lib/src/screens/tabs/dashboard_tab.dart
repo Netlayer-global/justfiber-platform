@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_state.dart';
@@ -178,6 +179,12 @@ class DashboardTab extends StatelessWidget {
                           onPressed: () => _openCall(context, nextVisit.customerPhone),
                           icon: const Icon(Icons.call_outlined),
                           label: const Text('Call customer'),
+                        ),
+                      if (nextVisit.customerAddress.isNotEmpty)
+                        OutlinedButton.icon(
+                          onPressed: () => _copyAddress(context, nextVisit.customerAddress),
+                          icon: const Icon(Icons.content_copy_rounded),
+                          label: const Text('Copy address'),
                         ),
                       if (nextVisit.mapUrl.isNotEmpty || (nextVisit.latitude != null && nextVisit.longitude != null))
                         OutlinedButton.icon(
@@ -424,5 +431,13 @@ class DashboardTab extends StatelessWidget {
         const SnackBar(content: Text('Unable to open dialer right now.')),
       );
     }
+  }
+
+  Future<void> _copyAddress(BuildContext context, String address) async {
+    await Clipboard.setData(ClipboardData(text: address));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Customer address copied')),
+    );
   }
 }
