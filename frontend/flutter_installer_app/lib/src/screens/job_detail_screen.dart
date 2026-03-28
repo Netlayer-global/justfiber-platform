@@ -330,6 +330,69 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
+  Future<void> _showRequirementsSheet({
+    required String title,
+    required String subtitle,
+    required List<String> items,
+  }) async {
+    if (items.isEmpty) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF8FAFC),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+              ),
+              const SizedBox(height: 16),
+              ...items.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.radio_button_checked_rounded, size: 16, color: Color(0xFF2563EB)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          item,
+                          style: const TextStyle(color: Color(0xFF0F172A), height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Got it'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _refreshPreviewAndDiagnostics({String successMessage = 'ONT details refreshed'}) async {
     final session = _appState.session;
     if (session == null) return;
@@ -511,7 +574,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final canResolveComplaint = _canResolveComplaint(status, _otpController.text.trim());
     final canSubmitProof = _canSubmitProof(status, _routerPhotoReady, _cablePhotoReady);
     final canSendInstallOtp = _canSendInstallOtp(status, proofUploaded, _routerPhotoReady, _cablePhotoReady);
-    final canCompleteInstall = _canCompleteInstall(status, _otpController.text.trim());
+    final canCompleteInstall = _canCompleteInstall(
+      status,
+      _otpController.text.trim(),
+      proofUploaded,
+      activationLive,
+    );
     final nextStepNumber = _nextStepNumber(
       status: status,
       isComplaint: isComplaint,
@@ -2578,8 +2646,40 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _canSendInstallOtp(String status, bool proofUploaded, bool routerReady, bool cableReady) =>
       ['active', 'activation_in_progress'].contains(status) && (proofUploaded || (routerReady && cableReady));
 
-  bool _canCompleteInstall(String status, String otp) =>
-      ['active', 'activation_in_progress'].contains(status) && otp.length == 6;
+  bool _canCompleteInstall(String status, String otp, bool proofUploaded, bool activationLive) =>
+      ['active', 'activation_in_progress'].contains(status) && activationLive && proofUploaded && otp.length == 6;
+
+  List<String> _missingInstallRequirements({
+    required bool activationLive,
+    required bool proofUploaded,
+    required String otp,
+  }) {
+    final items = <String>[];
+    if (!activationLive) {
+      items.add('Wait for the router to come online and internet activation to go live.');
+    }
+    if (!proofUploaded) {
+      items.add('Capture router and cable proof, then submit the proof payload.');
+    }
+    if (otp.trim().length != 6) {
+      items.add('Collect and verify the 6-digit customer completion OTP.');
+    }
+    return items;
+  }
+
+  List<String> _missingComplaintRequirements({
+    required String status,
+    required String otp,
+  }) {
+    final items = <String>[];
+    if (!['complaint_in_progress', 'active', 'onsite'].contains(status)) {
+      items.add('Move the visit into an active complaint stage before closing it.');
+    }
+    if (otp.trim().length != 6) {
+      items.add('Collect and verify the 6-digit complaint closure OTP.');
+    }
+    return items;
+  }
 
   int _nextStepNumber({
     required String status,
@@ -2800,8 +2900,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return;
       }
       if (_canResolveComplaint(status, _otpController.text.trim())) {
-        final otp = _otpController.text.trim();
         await _resolveComplaintFlow();
+        return;
+      }
+      final complaintRequirements = _missingComplaintRequirements(
+        status: status,
+        otp: _otpController.text.trim(),
+      );
+      if (complaintRequirements.isNotEmpty) {
+        await _showRequirementsSheet(
+          title: 'Complaint closeout pending',
+          subtitle: 'Before leaving the site, please finish these complaint closure steps.',
+          items: complaintRequirements,
+        );
         return;
       }
       _show('No complaint action available right now');
@@ -2881,9 +2992,27 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       }
       return;
     }
-    if (_canCompleteInstall(status, _otpController.text.trim())) {
-      final otp = _otpController.text.trim();
+    if (_canCompleteInstall(
+      status,
+      _otpController.text.trim(),
+      proofUploaded,
+      status == 'active' || configStatus == 'verified' || configStatus == 'pushed',
+    )) {
       await _completeInstallationFlow();
+      return;
+    }
+    final installRequirements = _missingInstallRequirements(
+      activationLive: status == 'active' || configStatus == 'verified' || configStatus == 'pushed',
+      proofUploaded: proofUploaded,
+      otp: _otpController.text.trim(),
+    );
+    if (installRequirements.isNotEmpty &&
+        ['onsite', 'ont_scanned', 'activation_in_progress', 'active'].contains(status)) {
+      await _showRequirementsSheet(
+        title: 'Installation closeout pending',
+        subtitle: 'Before closing this job, please finish these handover steps.',
+        items: installRequirements,
+      );
       return;
     }
     _show('No installer action available right now');
