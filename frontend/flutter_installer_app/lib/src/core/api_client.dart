@@ -189,6 +189,22 @@ class InstallerApiClient {
     await _request('/api/v1/installer/jobs/$jobId/start-onsite', method: 'POST', token: session.accessToken);
   }
 
+  Future<Map<String, dynamic>> deferJob(
+    InstallerSession session,
+    String jobId, {
+    required String reason,
+    required String note,
+  }) async {
+    return _asMap(
+      await _request(
+        '/api/v1/installer/jobs/$jobId/defer',
+        method: 'POST',
+        token: session.accessToken,
+        body: {'reason': reason, 'note': note},
+      ),
+    );
+  }
+
   Future<void> checkinLocation(
     InstallerSession session,
     String jobId, {

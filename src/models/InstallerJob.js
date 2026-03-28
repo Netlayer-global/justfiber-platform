@@ -26,6 +26,7 @@ const installerJobSchema = new mongoose.Schema(
         "activation_in_progress",
         "active",
         "complaint_in_progress",
+        "deferred",
         "completed",
         "failed",
         "cancelled"

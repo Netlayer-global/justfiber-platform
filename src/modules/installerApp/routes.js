@@ -26,6 +26,7 @@ import {
 } from "../../common/networkProvisioning.js";
 import {
   complaintStartSchema,
+  deferJobSchema,
   installationChecklistSchema,
   leaveStartSchema,
   locationCheckinSchema,
@@ -571,6 +572,78 @@ installerAppRouter.post(
     pushTimeline(job, "job.device_scanned", req.installer._id, normalizedSerial);
     await job.save();
     return ok(res, job);
+  })
+);
+
+installerAppRouter.post(
+  "/jobs/:jobId/defer",
+  asyncHandler(async (req, res) => {
+    const payload = deferJobSchema.parse(req.body);
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    job.status = "deferred";
+    job.subStatus = payload.reason;
+    job.deviceContext = {
+      ...(job.deviceContext || {}),
+      deferReason: payload.reason,
+      deferNote: payload.note,
+      deferredAt: new Date()
+    };
+    req.installer.availabilityStatus = "available";
+    pushTimeline(job, "job.deferred", req.installer._id, `${payload.reason}: ${payload.note}`);
+    await Promise.all([job.save(), req.installer.save()]);
+
+    if (job.type === "installation") {
+      const booking = await updateBookingProgress(job, {
+        status: "in_progress",
+        tracking: {
+          currentStep: "installer_follow_up_required",
+          steps: [
+            { code: "booking_placed", status: "done", at: job.createdAt || new Date() },
+            { code: "payment_confirmed", status: "done", at: job.createdAt || new Date() },
+            { code: "installer_assigned", status: "done", at: job.assignment?.assignedAt || job.createdAt || new Date() },
+            { code: "installer_follow_up_required", status: "pending", at: new Date() }
+          ]
+        }
+      });
+      if (booking) {
+        await notifyBookingCustomer(
+          booking,
+          "installer_follow_up_required",
+          "Installation follow-up required",
+          `Installer marked booking ${booking.bookingNumber} for follow-up.`,
+          {
+            bookingNumber: booking.bookingNumber,
+            installerJobId: job._id,
+            deferReason: payload.reason,
+            deferNote: payload.note
+          }
+        );
+      }
+    }
+
+    if (job.ticketId) {
+      await SupportTicket.updateOne(
+        buildTicketLookup(job.ticketId),
+        {
+          $set: { status: "assigned" },
+          $push: {
+            timeline: {
+              type: "installer_follow_up_required",
+              actorType: "installer",
+              actorId: req.installer._id,
+              note: `${payload.reason}: ${payload.note}`
+            }
+          }
+        }
+      );
+    }
+
+    return ok(res, {
+      status: job.status,
+      subStatus: job.subStatus,
+      deferReason: payload.reason,
+      deferNote: payload.note
+    });
   })
 );
 

@@ -19,6 +19,11 @@ export const retrySchema = z.object({
   note: z.string().min(3).max(300).optional()
 });
 
+export const deferJobSchema = z.object({
+  reason: z.enum(["customer_unavailable", "revisit_required", "material_pending", "escalated", "other"]),
+  note: z.string().min(3).max(500)
+});
+
 export const proofSchema = z.object({
   routerPhotoUrl: z.string().url(),
   cablePhotoUrl: z.string().url(),

@@ -29,14 +29,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     'wifi_reconfig',
     'port_reprovision',
   ];
+  static const List<String> _deferReasons = [
+    'customer_unavailable',
+    'revisit_required',
+    'material_pending',
+    'escalated',
+    'other',
+  ];
 
   final _serialController = TextEditingController();
   final _otpController = TextEditingController();
   final _replaceSerialController = TextEditingController();
   final _complaintNoteController = TextEditingController(text: 'Visited site and started complaint handling.');
+  final _deferNoteController = TextEditingController(text: 'Customer unavailable. Follow-up required from field team.');
   final _imagePicker = ImagePicker();
   final _workflowController = PageController();
   String _complaintResolutionCode = 'ont_replace';
+  String _deferReason = 'customer_unavailable';
   bool _busy = false;
   bool _routerPhotoReady = false;
   bool _cablePhotoReady = false;
@@ -67,6 +76,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     _otpController.dispose();
     _replaceSerialController.dispose();
     _complaintNoteController.dispose();
+    _deferNoteController.dispose();
     _workflowController.dispose();
     super.dispose();
   }
@@ -388,6 +398,110 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  String _deferReasonLabel(String reason) {
+    switch (reason) {
+      case 'customer_unavailable':
+        return 'Customer unavailable';
+      case 'revisit_required':
+        return 'Revisit required';
+      case 'material_pending':
+        return 'Material pending';
+      case 'escalated':
+        return 'Escalated to backend/admin';
+      default:
+        return 'Other follow-up';
+    }
+  }
+
+  Future<void> _showDeferJobSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF8FAFC),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 24 + MediaQuery.of(context).viewInsets.bottom),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Mark follow-up required',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Use this when the visit cannot be completed right now. The job will stay open for follow-up and your availability will be released.',
+                    style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _deferReason,
+                    items: _deferReasons
+                        .map((reason) => DropdownMenuItem<String>(
+                              value: reason,
+                              child: Text(_deferReasonLabel(reason)),
+                            ))
+                        .toList(),
+                    onChanged: _busy
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            setSheetState(() => _deferReason = value);
+                            setState(() => _deferReason = value);
+                          },
+                    decoration: const InputDecoration(labelText: 'Follow-up reason'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _deferNoteController,
+                    minLines: 3,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Field note',
+                      hintText: 'Explain what blocked completion and what should happen next.',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _busy
+                          ? null
+                          : () async {
+                              final note = _deferNoteController.text.trim();
+                              if (note.length < 3) {
+                                _show('Add a short field note');
+                                return;
+                              }
+                              Navigator.of(context).pop();
+                              final ok = await _run(
+                                () => _appState.api.deferJob(
+                                  _appState.session!,
+                                  widget.job.id,
+                                  reason: _deferReason,
+                                  note: note,
+                                ),
+                                '${widget.job.jobType == 'complaint' ? 'Complaint' : 'Installation'} marked for follow-up',
+                              );
+                              if (ok && mounted) {
+                                Navigator.of(this.context).pop(true);
+                              }
+                            },
+                      child: const Text('Save follow-up'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -975,6 +1089,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       }
                                     }, 'Onsite started'),
                             child: const Text('Start onsite'),
+                          ),
+                          OutlinedButton(
+                            onPressed: _busy || !_canDeferJob(status) ? null : _showDeferJobSheet,
+                            child: const Text('Follow-up / revisit'),
                           ),
                         ],
                       ),
@@ -2646,6 +2764,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _canSendInstallOtp(String status, bool proofUploaded, bool routerReady, bool cableReady) =>
       ['active', 'activation_in_progress'].contains(status) && (proofUploaded || (routerReady && cableReady));
 
+  bool _canDeferJob(String status) => !['completed', 'cancelled', 'deferred'].contains(status);
+
   bool _canCompleteInstall(String status, String otp, bool proofUploaded, bool activationLive) =>
       ['active', 'activation_in_progress'].contains(status) && activationLive && proofUploaded && otp.length == 6;
 
@@ -2698,10 +2818,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           return 3;
         case 'onsite':
           return 4;
-        case 'complaint_in_progress':
-          return otpReady ? 7 : 6;
-        case 'completed':
-          return 7;
+      case 'complaint_in_progress':
+        return otpReady ? 7 : 6;
+      case 'deferred':
+        return 4;
+      case 'completed':
+        return 7;
         default:
           return 4;
       }
@@ -2723,6 +2845,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       case 'active':
         if (!proofUploaded) return 6;
         return otpReady ? 8 : 7;
+      case 'deferred':
+        return activationLive ? 6 : 4;
       case 'completed':
         return 8;
       default:
@@ -2792,6 +2916,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return 'Capture proof, submit it, send OTP, and complete customer handover.';
       case 'completed':
         return 'Installation is closed. Review the proof, timeline, and final router details.';
+      case 'deferred':
+        return 'Visit is marked for follow-up. Review the defer reason and return plan.';
       default:
         return 'Continue the installation sequence from the next guided action.';
     }
@@ -2811,6 +2937,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return 'Replace ONT if needed, verify the fix, send customer OTP, and close the complaint.';
       case 'completed':
         return 'Complaint is closed. Review replacement summary and final timeline.';
+      case 'deferred':
+        return 'Complaint visit is marked for follow-up. Review the defer reason and next action.';
       default:
         return 'Continue the complaint workflow from the next guided action.';
     }
@@ -3026,6 +3154,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool proofUploaded,
   }) {
     if (isComplaint) {
+      if (status == 'deferred') return 'Visit marked for follow-up. Check the defer note and wait for reassignment or revisit.';
       if (status == 'assigned') return 'Accept the complaint visit first, then start travel to customer location.';
       if (status == 'accepted') return 'Start travel and head to the customer site.';
       if (status == 'enroute') return 'Mark onsite after you reach customer location and begin complaint work.';
@@ -3035,6 +3164,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       return 'Open the complaint flow and continue the next field action.';
     }
 
+    if (status == 'deferred') return 'Visit marked for follow-up. Check the defer note and return when the blocker is cleared.';
     if (status == 'assigned') return 'Accept the installation job to take ownership from dispatch.';
     if (status == 'accepted') return 'Start travel and proceed to the customer location.';
     if (status == 'enroute') return 'Mark onsite once you reach the site and are ready to start installation.';
