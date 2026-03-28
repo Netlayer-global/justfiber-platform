@@ -223,45 +223,47 @@ export default function ServiceabilityPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Coverage control</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Serviceability,
-            <span className="text-[#8224E3]"> mapped for real bookings.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            Mark feasible service areas on the map. Customer feasibility and booking flow will use these active zones.
-          </p>
-        </div>
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Coverage pulse</div>
-          <div className="mt-3 text-5xl font-black">{zones.length}</div>
-          <div className="mt-2 text-sm text-black/60">Zones currently defined for serviceability and booking eligibility</div>
-          <div className="mt-8 grid grid-cols-3 gap-3">
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Network console</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Serviceability</h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-500">
+              Mark feasible service areas so booking checks and feasibility flows only use mapped active coverage zones.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {coverageMetrics.map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[22px] bg-black/10 p-4">
-                <Icon className="h-4 w-4 text-black/75" />
-                <div className="mt-4 text-2xl font-bold">{value}</div>
-                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
+              <div
+                key={label}
+                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+              >
+                <Icon className="h-4 w-4 text-[#2d7dff]" />
+                <div>
+                  <div className="font-semibold text-slate-900">{value}</div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{label}</div>
+                </div>
               </div>
             ))}
           </div>
         </div>
-      </section>
 
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
-        <div className="flex gap-2">
-          <button onClick={() => void loadZones()} className="btn-secondary inline-flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
-          <button onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            New Zone
-          </button>
+        <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+            {zones.length} zones currently shape booking eligibility and service rollout decisions.
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => void loadZones()} className="btn-secondary inline-flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+            <button onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              New Zone
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
       <form onSubmit={handleSaveZone} className="card p-6 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">

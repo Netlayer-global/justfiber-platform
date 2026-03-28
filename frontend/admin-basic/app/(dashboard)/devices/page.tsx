@@ -419,7 +419,7 @@ export default function DevicesPage() {
   if (isLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
-        <Loader className="h-7 w-7 animate-spin text-[#8224E3]" />
+        <Loader className="h-7 w-7 animate-spin text-[#2d7dff]" />
       </div>
     )
   }
@@ -518,25 +518,25 @@ export default function DevicesPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="metric-tile p-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-black/40">Selected devices</div>
-          <div className="mt-3 text-3xl font-black">{selectedDeviceIds.length}</div>
-          <div className="mt-2 text-sm text-black/55">Ready for bulk actions</div>
+        <div className="card p-5">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Selected devices</div>
+          <div className="mt-3 text-3xl font-semibold text-slate-900">{selectedDeviceIds.length}</div>
+          <div className="mt-2 text-sm text-slate-500">Ready for bulk actions</div>
         </div>
-        <div className="metric-tile p-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-black/40">Suspended state</div>
-          <div className="mt-3 text-3xl font-black">{suspendCount}</div>
-          <div className="mt-2 text-sm text-black/55">Devices carrying suspend provisioning</div>
+        <div className="card p-5">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Suspended state</div>
+          <div className="mt-3 text-3xl font-semibold text-slate-900">{suspendCount}</div>
+          <div className="mt-2 text-sm text-slate-500">Devices carrying suspend provisioning</div>
         </div>
-        <div className="metric-tile p-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-black/40">Optical risk</div>
-          <div className="mt-3 text-3xl font-black">{opticalRiskCount}</div>
-          <div className="mt-2 text-sm text-black/55">Weak or missing optical signal samples</div>
+        <div className="card p-5">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Optical risk</div>
+          <div className="mt-3 text-3xl font-semibold text-slate-900">{opticalRiskCount}</div>
+          <div className="mt-2 text-sm text-slate-500">Weak or missing optical signal samples</div>
         </div>
-        <div className="metric-tile p-5">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-black/40">Live search scope</div>
-          <div className="mt-3 text-3xl font-black">{filteredDevices.length}</div>
-          <div className="mt-2 text-sm text-black/55">Devices currently visible in this filter</div>
+        <div className="card p-5">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Live search scope</div>
+          <div className="mt-3 text-3xl font-semibold text-slate-900">{filteredDevices.length}</div>
+          <div className="mt-2 text-sm text-slate-500">Devices currently visible in this filter</div>
         </div>
       </div>
 
