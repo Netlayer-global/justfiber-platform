@@ -21,6 +21,7 @@ class DashboardTab extends StatelessWidget {
     final appState = InstallerStateScope.of(context);
     final dashboard = appState.dashboard;
     final profile = appState.profile;
+    final nextVisit = _nextVisitJob(appState.jobs);
     final todayJobs = appState.jobs.where(_isTodayJob).where((job) => job.status != 'completed' && job.status != 'deferred').length;
     final pendingJobs = appState.jobs.where((job) => !_isTodayJob(job) && job.status != 'completed' && job.status != 'deferred').length;
     final completedJobs = appState.jobs.where((job) => job.status == 'completed').length;
@@ -108,6 +109,71 @@ class DashboardTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 _miniSummary('Follow-up required', '$deferredJobs'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Next visit', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFF131313))),
+                    const Spacer(),
+                    if (nextVisit != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8F4FF),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: const Color(0x558224E3)),
+                        ),
+                        child: Text(
+                          _visitWindow(nextVisit),
+                          style: const TextStyle(
+                            color: Color(0xFF8224E3),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                if (nextVisit == null)
+                  const Text(
+                    'No upcoming active site visit is scheduled right now.',
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                  )
+                else ...[
+                  Text(
+                    nextVisit.customerName.isEmpty ? 'Customer visit' : nextVisit.customerName,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF131313)),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    nextVisit.customerAddress.isEmpty ? 'Address unavailable' : nextVisit.customerAddress,
+                    style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _miniSummary('Job', nextVisit.jobNumber),
+                      _miniSummary('Priority', nextVisit.priority.isEmpty ? '-' : nextVisit.priority),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: onOpenJobs,
+                    icon: const Icon(Icons.assignment_rounded),
+                    label: const Text('Open jobs queue'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -280,5 +346,29 @@ class DashboardTab extends StatelessWidget {
     if (parsed == null) return false;
     final now = DateTime.now();
     return parsed.year == now.year && parsed.month == now.month && parsed.day == now.day;
+  }
+
+  InstallerJob? _nextVisitJob(List<InstallerJob> jobs) {
+    final candidates = jobs.where((job) => job.status != 'completed' && job.status != 'deferred').toList();
+    candidates.sort((a, b) {
+      final aTime = DateTime.tryParse(a.scheduledAt)?.toLocal();
+      final bTime = DateTime.tryParse(b.scheduledAt)?.toLocal();
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return aTime.compareTo(bTime);
+    });
+    return candidates.isEmpty ? null : candidates.first;
+  }
+
+  String _visitWindow(InstallerJob job) {
+    final parsed = DateTime.tryParse(job.scheduledAt)?.toLocal();
+    if (parsed == null) return 'Schedule pending';
+    final now = DateTime.now();
+    final diff = parsed.difference(now);
+    if (diff.inMinutes.abs() < 1) return 'Due now';
+    if (diff.isNegative) return '${diff.inMinutes.abs()} min late';
+    if (diff.inHours < 1) return 'In ${diff.inMinutes} min';
+    return 'At ${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
   }
 }
