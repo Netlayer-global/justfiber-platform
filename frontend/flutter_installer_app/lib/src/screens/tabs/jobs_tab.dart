@@ -132,6 +132,17 @@ class _JobsTabState extends State<JobsTab> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    _quickFilterChip('Due today', 'today', todayJobs.length),
+                    _quickFilterChip('Pending', 'pending', pendingJobs.length),
+                    _quickFilterChip('Complaints', 'complaint', liveComplaints),
+                    _quickFilterChip('Deferred', 'deferred', deferredJobs.length),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
                     _filterChip('All', 'all'),
                     _filterChip('Install', 'install'),
                     _filterChip('Complaint', 'complaint'),
@@ -282,6 +293,15 @@ class _JobsTabState extends State<JobsTab> {
       label: Text(label),
       selected: _queueFilter == value,
       onSelected: (_) => setState(() => _queueFilter = value),
+    );
+  }
+
+  Widget _quickFilterChip(String label, String value, int count) {
+    return FilterChip(
+      label: Text('$label ($count)'),
+      selected: _queueFilter == value,
+      onSelected: (_) => setState(() => _queueFilter = value),
+      avatar: count > 0 ? const Icon(Icons.bolt_rounded, size: 16) : null,
     );
   }
 
@@ -665,6 +685,8 @@ class _JobsTabState extends State<JobsTab> {
   List<InstallerJob> _filterJobs(List<InstallerJob> jobs, String search) {
     final filtered = jobs.where((job) {
       final matchesFilter = switch (_queueFilter) {
+        'today' => _isTodayJob(job) && job.status != 'completed' && job.status != 'deferred',
+        'pending' => !_isTodayJob(job) && job.status != 'completed' && job.status != 'deferred',
         'install' => job.jobType != 'complaint' && job.status != 'completed',
         'complaint' => job.jobType == 'complaint' && job.status != 'completed',
         'deferred' => job.status == 'deferred',
