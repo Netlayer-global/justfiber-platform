@@ -75,6 +75,10 @@
       linear-gradient(180deg, #fbfcfe 0%, #f4f7fb 100%);
   }
 
+  .modernize-sidebar-item {
+    min-height: 44px;
+  }
+
   .soft-grid {
     background-image:
       linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
