@@ -824,6 +824,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
     final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
     final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
+    final proofUploadedAt = (proof['uploadedAt'] ?? '').toString();
     final complaintWatchouts = isComplaint
         ? _complaintWatchouts(
             resolutionCode: complaintResolution,
@@ -1898,8 +1899,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _miniPill(_routerPhotoPath == null ? 'Router photo pending' : 'Router photo captured'),
+                            _miniPill(_cablePhotoPath == null ? 'Cable photo pending' : 'Cable photo captured'),
+                            _miniPill(proofUploaded ? 'Proof uploaded' : 'Proof not uploaded'),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         _row('Router photo', _routerPhotoPath == null ? 'Pending capture' : 'Captured'),
                         _row('Cable photo', _cablePhotoPath == null ? 'Pending capture' : 'Captured'),
+                        _row('Proof uploaded', proofUploadedAt.isEmpty ? '-' : _shortDateTime(proofUploadedAt)),
                         const SizedBox(height: 8),
                         if (_routerPhotoPath != null || _cablePhotoPath != null) ...[
                           Wrap(
@@ -1956,9 +1968,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         if (_routerPhotoCapturedAt != null || _cablePhotoCapturedAt != null) ...[
                           const SizedBox(height: 10),
                           if (_routerPhotoCapturedAt != null)
-                            _row('Router photo', _routerPhotoCapturedAt.toString()),
+                            _row('Router captured', _shortDateTime(_routerPhotoCapturedAt!.toIso8601String())),
                           if (_cablePhotoCapturedAt != null)
-                            _row('Cable photo', _cablePhotoCapturedAt.toString()),
+                            _row('Cable captured', _shortDateTime(_cablePhotoCapturedAt!.toIso8601String())),
                         ],
                         const SizedBox(height: 12),
                         TextField(
