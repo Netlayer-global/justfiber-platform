@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/app_state.dart';
+import '../../core/models.dart';
 import '../job_detail_screen.dart';
 import '../../widgets/app_card.dart';
 
