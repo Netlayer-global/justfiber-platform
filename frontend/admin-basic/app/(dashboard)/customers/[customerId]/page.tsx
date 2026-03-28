@@ -842,33 +842,33 @@ export default function CustomerDetailPage() {
         <section className="card p-6 md:p-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs uppercase tracking-[0.32em] text-[#8224E3]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs uppercase tracking-[0.32em] text-[#2d7dff]">
                 Subscriber command center
               </div>
               <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">{customer.name}</h1>
-                <p className="mt-2 text-sm text-[#b4bcc4]">
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">{customer.name}</h1>
+                <p className="mt-2 text-sm text-slate-500">
                   {customer.customerId || customer.id} â€¢ {customer.phone} â€¢ {customer.email}
                 </p>
-                <p className="mt-2 text-sm text-[#b4bcc4]">
+                <p className="mt-2 text-sm text-slate-500">
                   Plan {customer.plan.name} â€¢ PPPoE {customer.pppoeUsername || '-'} â€¢ Service {customer.serviceId || '-'}
                 </p>
               </div>
             </div>
 
-            <div className="neon-panel min-w-[260px] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-black/60">Commercial pulse</p>
-              <p className="mt-3 text-4xl font-semibold tracking-tight">Rs {Number(billingSummary.dueAmount || 0).toFixed(2)}</p>
-              <p className="mt-2 text-sm text-black/70">
+            <div className="min-w-[260px] rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Commercial pulse</p>
+              <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Rs {Number(billingSummary.dueAmount || 0).toFixed(2)}</p>
+              <p className="mt-2 text-sm text-slate-500">
                 {pendingPlanChange?.planName
                   ? `Pending switch to ${pendingPlanChange.planName}`
                   : 'No active commercial blocker on this account'}
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-[#8224E3]">
+                <span className="rounded-full bg-[#eff6ff] px-3 py-1 text-xs font-medium text-[#2d7dff]">
                   {billingSummary.billMode || 'prepaid'}
                 </span>
-                <span className="rounded-full border border-black/15 px-3 py-1 text-xs font-medium text-black/80">
+                <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600">
                   {customer.status}
                 </span>
               </div>
@@ -876,27 +876,27 @@ export default function CustomerDetailPage() {
           </div>
         </section>
 
-        <section className="metric-tile p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-black/45">Commercial snapshot</p>
+        <section className="card p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Commercial snapshot</p>
           <div className="mt-5 grid gap-4 text-sm">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">Account</p>
-              <p className="mt-2 text-lg font-semibold">{customer.accountNumber || '-'}</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">Account</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900">{customer.accountNumber || '-'}</p>
             </div>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">Current plan</p>
-              <p className="mt-2 text-lg font-semibold">{customer.plan.name}</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">Current plan</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900">{customer.plan.name}</p>
             </div>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">Expiry</p>
-              <p className="mt-2 text-lg font-semibold">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">Expiry</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900">
                 {customer.expiryAt ? new Date(customer.expiryAt).toLocaleDateString() : '-'}
               </p>
             </div>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-black/40">Billing cycle</p>
-              <p className="mt-2 text-lg font-semibold">{billingCycleLabel}</p>
-              <p className="mt-1 text-xs text-black/45">{billingCycleCode || 'Live tenure summary'}</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">Billing cycle</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900">{billingCycleLabel}</p>
+              <p className="mt-1 text-xs text-slate-400">{billingCycleCode || 'Live tenure summary'}</p>
             </div>
             <button onClick={() => void loadCustomer()} className="btn-secondary inline-flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
@@ -908,10 +908,10 @@ export default function CustomerDetailPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {topStats.map((item) => (
-          <div key={item.label} className="metric-tile p-5">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-black/40">{item.label}</p>
-            <p className="mt-3 text-2xl font-semibold tracking-tight">{item.value}</p>
-            <p className="mt-2 text-sm text-black/55">{item.hint}</p>
+          <div key={item.label} className="card p-5">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{item.label}</p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{item.value}</p>
+            <p className="mt-2 text-sm text-slate-500">{item.hint}</p>
           </div>
         ))}
       </div>

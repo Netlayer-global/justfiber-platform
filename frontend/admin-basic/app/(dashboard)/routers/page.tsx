@@ -308,13 +308,13 @@ export default function RoutersPage() {
   const coaEnabledCount = routers.filter((item) => item.useCoa !== false).length
 
   return (
-    <div className="space-y-6 text-white">
-      <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(135deg,rgba(20,20,20,0.98),rgba(12,12,12,0.94))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
+    <div className="space-y-6">
+      <section className="card p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.28em] text-white/40">BNG and router management</div>
-            <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white">Manage multi-BNG routers from admin</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/65">
+            <div className="text-xs uppercase tracking-[0.28em] text-slate-400">BNG and router management</div>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900">Manage multi-BNG routers from admin</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
               MikroTik BNG nodes, CoA ports, RouterOS auth, NAS identity, and multi-router rollout yahin se manage karo.
             </p>
           </div>
@@ -332,41 +332,41 @@ export default function RoutersPage() {
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Total routers</div>
-            <div className="mt-3 text-3xl font-black">{routers.length}</div>
-            <div className="mt-2 text-sm text-white/55">All BNG nodes configured in admin</div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Total routers</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-900">{routers.length}</div>
+            <div className="mt-2 text-sm text-slate-500">All BNG nodes configured in admin</div>
           </div>
-          <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">Active</div>
-            <div className="mt-3 text-3xl font-black text-emerald-300">{activeCount}</div>
-            <div className="mt-2 text-sm text-white/55">Routers available for service assignment</div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Active</div>
+            <div className="mt-3 text-3xl font-semibold text-emerald-600">{activeCount}</div>
+            <div className="mt-2 text-sm text-slate-500">Routers available for service assignment</div>
           </div>
-          <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-white/45">CoA enabled</div>
-            <div className="mt-3 text-3xl font-black text-[#c79cff]">{coaEnabledCount}</div>
-            <div className="mt-2 text-sm text-white/55">Nodes ready for live session disconnect and refresh</div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">CoA enabled</div>
+            <div className="mt-3 text-3xl font-semibold text-[#2d7dff]">{coaEnabledCount}</div>
+            <div className="mt-2 text-sm text-slate-500">Nodes ready for live session disconnect and refresh</div>
           </div>
         </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-[30px] border border-white/10 bg-black/35 p-5">
+        <div className="card p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-white/45">Router roster</div>
-              <div className="mt-2 text-2xl font-black">Multi-BNG list</div>
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Router roster</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">Multi-BNG list</div>
             </div>
             <input
-              className="w-full rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 md:w-72"
+              className="w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 md:w-72"
               placeholder="Search router, IP, group, MAC"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
 
-          <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10">
-            <div className="grid grid-cols-[1.4fr_1fr_1fr_0.8fr_0.8fr] gap-4 border-b border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+          <div className="mt-5 overflow-hidden rounded-[24px] border border-slate-200">
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_0.8fr_0.8fr] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
               <div>Name</div>
               <div>IP</div>
               <div>Group</div>
@@ -376,38 +376,38 @@ export default function RoutersPage() {
 
             <div className="max-h-[560px] overflow-y-auto">
               {isLoading ? (
-                <div className="flex items-center justify-center gap-3 px-6 py-24 text-white/60">
+                <div className="flex items-center justify-center gap-3 px-6 py-24 text-slate-500">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Loading routers...
                 </div>
               ) : !filteredRouters.length ? (
-                <div className="px-6 py-24 text-center text-white/55">No routers found. Add the first BNG node from admin.</div>
+                <div className="px-6 py-24 text-center text-slate-500">No routers found. Add the first BNG node from admin.</div>
               ) : (
                 filteredRouters.map((router) => {
                   const active = selectedRouter?.id === router.id
                   return (
                     <div
                       key={router.id}
-                      className={`grid w-full grid-cols-[1.4fr_1fr_1fr_0.8fr_0.8fr] gap-4 border-b border-white/10 px-4 py-4 text-left transition ${
-                        active ? 'bg-[#8224E3]/18' : 'bg-transparent hover:bg-white/5'
+                      className={`grid w-full grid-cols-[1.4fr_1fr_1fr_0.8fr_0.8fr] gap-4 border-b border-slate-200 px-4 py-4 text-left transition ${
+                        active ? 'bg-[#eff6ff]' : 'bg-transparent hover:bg-slate-50'
                       }`}
                     >
                       <button type="button" onClick={() => handleSelect(router)} className="text-left">
-                        <div className="font-semibold text-white">{router.displayName}</div>
-                        <div className="mt-1 text-xs text-white/45">{router.nodeCode}</div>
+                        <div className="font-semibold text-slate-900">{router.displayName}</div>
+                        <div className="mt-1 text-xs text-slate-400">{router.nodeCode}</div>
                       </button>
-                      <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-white/75">{router.managementIp || '-'}</button>
-                      <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-white/75">{router.groupName || 'Default'}</button>
+                      <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-slate-600">{router.managementIp || '-'}</button>
+                      <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-slate-600">{router.groupName || 'Default'}</button>
                       <button type="button" onClick={() => handleSelect(router)} className="text-left">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${router.status === 'active' ? 'bg-emerald-500/15 text-emerald-300' : router.status === 'planned' ? 'bg-amber-500/15 text-amber-200' : 'bg-white/10 text-white/70'}`}>
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${router.status === 'active' ? 'bg-emerald-50 text-emerald-600' : router.status === 'planned' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
                           {router.status}
                         </span>
                       </button>
                       <div className="flex items-center justify-between gap-2">
-                        <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-white/75">{router.vendor}</button>
+                        <button type="button" onClick={() => handleSelect(router)} className="text-left text-sm text-slate-600">{router.vendor}</button>
                         <button
                           type="button"
-                          className="rounded-full border border-red-500/30 p-2 text-red-200 transition hover:bg-red-500/10"
+                          className="rounded-full border border-red-500/20 p-2 text-red-600 transition hover:bg-red-50"
                           onClick={() => {
                             handleSelect(router)
                             void handleDeleteRouter(router)
