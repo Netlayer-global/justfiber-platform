@@ -17,7 +17,7 @@ class DashboardTab extends StatelessWidget {
     final completedJobs = appState.jobs.where((job) => job.status == 'completed').length;
 
     return RefreshIndicator(
-      color: const Color(0xFF8224E3),
+      color: const Color(0xFF2563EB),
       backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
@@ -25,7 +25,7 @@ class DashboardTab extends StatelessWidget {
         children: [
           AppCard(
             color: const Color(0xFFFFFFFF),
-            borderColor: const Color(0x228224E3),
+            borderColor: const Color(0x140F172A),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -35,11 +35,11 @@ class DashboardTab extends StatelessWidget {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F4FF),
+                        color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x228224E3)),
+                        border: Border.all(color: const Color(0x140F172A)),
                       ),
-                      child: const Icon(Icons.dashboard_customize_rounded, color: Color(0xFF8224E3), size: 28),
+                      child: const Icon(Icons.dashboard_customize_rounded, color: Color(0xFF2563EB), size: 28),
                     ),
                     const Spacer(),
                     Container(
@@ -60,7 +60,7 @@ class DashboardTab extends StatelessWidget {
                 Text(
                   'FIELD DASHBOARD',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF8224E3),
+                        color: const Color(0xFF2563EB),
                         letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
@@ -79,13 +79,13 @@ class DashboardTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8F4FF),
+                    color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0x228224E3)),
+                    border: Border.all(color: const Color(0x140F172A)),
                   ),
                   child: const Text(
                     'Availability active',
-                    style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700),
+                    style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -112,7 +112,7 @@ class DashboardTab extends StatelessWidget {
           const SizedBox(height: 18),
           AppCard(
             color: const Color(0xFFFFFFFF),
-            borderColor: const Color(0x228224E3),
+            borderColor: const Color(0x140F172A),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -123,18 +123,18 @@ class DashboardTab extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F4FF),
+                        color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x228224E3)),
+                        border: Border.all(color: const Color(0x140F172A)),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.track_changes_rounded, size: 14, color: Color(0xFF8224E3)),
+                          Icon(Icons.track_changes_rounded, size: 14, color: Color(0xFF2563EB)),
                           SizedBox(width: 6),
                           Text(
                             'Field discipline',
-                            style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+                            style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 12),
                           ),
                         ],
                       ),
@@ -156,7 +156,7 @@ class DashboardTab extends StatelessWidget {
   Widget _metric(BuildContext context, String label, String value) {
     return AppCard(
       color: const Color(0xFFFFFFFF),
-      borderColor: const Color(0x228224E3),
+      borderColor: const Color(0x140F172A),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -172,9 +172,9 @@ class DashboardTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
+        border: Border.all(color: const Color(0x140F172A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,13 +198,13 @@ class DashboardTab extends StatelessWidget {
             height: 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
+              color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0x228224E3)),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
             ),
             child: Text(
               index,
-              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 12),

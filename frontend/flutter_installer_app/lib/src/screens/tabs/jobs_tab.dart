@@ -39,7 +39,7 @@ class _JobsTabState extends State<JobsTab> {
     final exceptionJobs = activeJobs.where((job) => job.configStatus == 'failed').length;
 
     return RefreshIndicator(
-      color: const Color(0xFF8224E3),
+      color: const Color(0xFF2563EB),
       backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
@@ -47,7 +47,7 @@ class _JobsTabState extends State<JobsTab> {
         children: [
           AppCard(
             color: const Color(0xFFFFFFFF),
-            borderColor: const Color(0x228224E3),
+            borderColor: const Color(0x140F172A),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -57,23 +57,23 @@ class _JobsTabState extends State<JobsTab> {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F4FF),
+                        color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x228224E3)),
+                        border: Border.all(color: const Color(0x140F172A)),
                       ),
-                      child: const Icon(Icons.assignment_rounded, color: Color(0xFF8224E3), size: 28),
+                      child: const Icon(Icons.assignment_rounded, color: Color(0xFF2563EB), size: 28),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F4FF),
+                        color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x228224E3)),
+                        border: Border.all(color: const Color(0x140F172A)),
                       ),
                       child: Text(
                         '${activeJobs.length} active',
-                        style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+                        style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
                   ],
@@ -82,7 +82,7 @@ class _JobsTabState extends State<JobsTab> {
                 Text(
                   'FIELD JOBS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF8224E3),
+                        color: const Color(0xFF2563EB),
                         letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
@@ -242,9 +242,9 @@ class _JobsTabState extends State<JobsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
+        border: Border.all(color: const Color(0x140F172A)),
       ),
       child: Column(
         children: [
@@ -289,7 +289,7 @@ class _JobsTabState extends State<JobsTab> {
       onTap: () => _openJobWorkflow(context, appState, job),
       child: AppCard(
         color: const Color(0xFFFFFFFF),
-        borderColor: const Color(0x228224E3),
+        borderColor: const Color(0x140F172A),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -300,13 +300,13 @@ class _JobsTabState extends State<JobsTab> {
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8F4FF),
+                    color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x228224E3)),
+                    border: Border.all(color: const Color(0x140F172A)),
                   ),
                   child: Icon(
                     isComplaint ? Icons.build_circle_outlined : Icons.router_rounded,
-                    color: const Color(0xFF8224E3),
+                    color: const Color(0xFF2563EB),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -340,14 +340,14 @@ class _JobsTabState extends State<JobsTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8F4FF),
+                    color: const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0x558224E3)),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
                   ),
                   child: Text(
                     primaryAction,
                     style: const TextStyle(
-                      color: Color(0xFF8224E3),
+                      color: Color(0xFF2563EB),
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
                     ),
@@ -402,7 +402,7 @@ class _JobsTabState extends State<JobsTab> {
                   color: const Color(0xFFFFF8E8),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: hasConfigFailure ? const Color(0x66F59E0B) : const Color(0x228224E3),
+                    color: hasConfigFailure ? const Color(0x66F59E0B) : const Color(0x140F172A),
                   ),
                 ),
                 child: Text(
@@ -487,16 +487,16 @@ class _JobsTabState extends State<JobsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
+        border: Border.all(color: const Color(0x140F172A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: const Color(0xFF8224E3)),
+              Icon(icon, size: 14, color: const Color(0xFF2563EB)),
               const SizedBox(width: 6),
               Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
             ],
@@ -517,9 +517,9 @@ class _JobsTabState extends State<JobsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x558224E3)),
+        border: Border.all(color: const Color(0x140F172A)),
       ),
       child: Text(
         label[0].toUpperCase() + label.substring(1),

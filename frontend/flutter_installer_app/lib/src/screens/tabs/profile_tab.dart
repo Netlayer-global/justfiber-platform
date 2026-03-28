@@ -99,7 +99,7 @@ class _ProfileTabState extends State<ProfileTab> {
     final isOnLeave = profile.availabilityStatus == 'on_leave';
 
     return RefreshIndicator(
-      color: const Color(0xFF8224E3),
+      color: const Color(0xFF2563EB),
       backgroundColor: const Color(0xFFF7F8FC),
       onRefresh: appState.refresh,
       child: ListView(
@@ -320,9 +320,9 @@ class _ProfileTabState extends State<ProfileTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x338224E3)),
+        border: Border.all(color: const Color(0x140F172A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,18 +342,18 @@ class _ProfileTabState extends State<ProfileTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: const Color(0xFFEFF6FF),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x228224E3)),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: const Color(0xFF8224E3)),
+          Icon(icon, size: 15, color: const Color(0xFF2563EB)),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
+            style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 12),
           ),
         ],
       ),
@@ -367,7 +367,7 @@ class _ProfileTabState extends State<ProfileTab> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
+        border: Border.all(color: const Color(0x140F172A)),
       ),
       child: Row(
         children: [
@@ -375,11 +375,11 @@ class _ProfileTabState extends State<ProfileTab> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
+              color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0x228224E3)),
+              border: Border.all(color: const Color(0x140F172A)),
             ),
-            child: Icon(icon, size: 18, color: const Color(0xFF8224E3)),
+            child: Icon(icon, size: 18, color: const Color(0xFF2563EB)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -411,13 +411,13 @@ class _ProfileTabState extends State<ProfileTab> {
             height: 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
+              color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0x558224E3)),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
             ),
             child: Text(
               index,
-              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 12),
