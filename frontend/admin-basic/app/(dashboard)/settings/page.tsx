@@ -390,13 +390,13 @@ export default function SettingsPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#8224E3]" />
+          <Loader className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
           <div className="mt-2 text-slate-400">Loading settings...</div>
         </div>
       ) : (
         <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-[24px] border border-slate-200 bg-[#232735] p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Settings sections</div>
+          <aside className="rounded-[24px] border border-slate-200 bg-white p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Settings sections</div>
             <div className="mt-4 space-y-2">
               {orderedCatalog.map((item) => {
                 const isActive = item.section === activeSection
@@ -408,12 +408,12 @@ export default function SettingsPage() {
                     onClick={() => setActiveSection(item.section)}
                     className={`w-full rounded-[20px] border px-4 py-3 text-left transition ${
                       isActive
-                        ? 'border-[#2d7dff]/40 bg-[linear-gradient(90deg,#1f6fff,#2d7dff)] text-white'
-                        : 'border-transparent bg-transparent text-white/80 hover:border-white/10 hover:bg-white/5 hover:text-white'
+                        ? 'border-[#5B6CFF]/30 bg-[#eef1ff] text-[#5B6CFF]'
+                        : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900'
                     }`}
                   >
                     <div className="font-semibold">{meta?.title || item.section}</div>
-                    <div className="mt-1 text-xs text-white/45">{meta?.description || item.fieldsPreview.join(', ')}</div>
+                    <div className="mt-1 text-xs text-slate-400">{meta?.description || item.fieldsPreview.join(', ')}</div>
                   </button>
                 )
               })}
@@ -445,7 +445,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template library</div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Template library</div>
                     <div className="text-sm text-slate-400">Choose the active template below, then update brand, tax, bank, and asset details for it.</div>
                     <div className="grid gap-3 md:grid-cols-2">
                       {(invoiceTemplate?.templates || []).map((item) => {
@@ -457,17 +457,17 @@ export default function SettingsPage() {
                             onClick={() => setSelectedTemplateKey(item.key)}
                             className={`rounded-[22px] border p-4 text-left transition ${
                               isSelected
-                                ? 'border-[#8224E3]/50 bg-[#8224E3]/15'
-                                : 'border-white/10 bg-[#0a0e27] hover:border-white/20 hover:bg-white/5'
+                                ? 'border-[#5B6CFF]/35 bg-[#eef1ff]'
+                                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <div className="font-semibold text-white">{item.templateName}</div>
+                                <div className="font-semibold text-slate-900">{item.templateName}</div>
                                 <div className="mt-1 text-xs text-slate-400">{item.key}</div>
                               </div>
                               {invoiceTemplate?.activeTemplate === item.key ? (
-                                <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] text-emerald-300">
+                                <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] text-emerald-700">
                                   Default
                                 </span>
                               ) : null}
@@ -622,7 +622,7 @@ export default function SettingsPage() {
 
                   <div className="space-y-3">
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Brand assets</div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Brand assets</div>
                       <div className="text-sm text-slate-400">Upload logo, signature, and stamp for the selected template.</div>
                     </div>
                     <div className="grid gap-3 md:grid-cols-3">
@@ -634,12 +634,12 @@ export default function SettingsPage() {
                       const key = field as 'logoDataUrl' | 'signatureDataUrl' | 'stampDataUrl'
                       const value = invoicePreview[key] || ''
                       return (
-                        <div key={field} className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
-                          <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                            <FileImage className="h-4 w-4 text-[#8224E3]" />
+                        <div key={field} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <FileImage className="h-4 w-4 text-[#5B6CFF]" />
                             {label}
                           </div>
-                          <label className="mt-4 flex cursor-pointer items-center justify-center rounded-[18px] border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-slate-300 hover:border-[#8224E3]/35 hover:bg-white/10">
+                          <label className="mt-4 flex cursor-pointer items-center justify-center rounded-[18px] border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-600 hover:border-[#5B6CFF]/35 hover:bg-[#eef1ff]">
                             <input
                               type="file"
                               accept="image/*"

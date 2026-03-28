@@ -419,7 +419,7 @@ export default function DevicesPage() {
   if (isLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
-        <Loader className="h-7 w-7 animate-spin text-[#2d7dff]" />
+        <Loader className="h-7 w-7 animate-spin text-[#5B6CFF]" />
       </div>
     )
   }
@@ -594,8 +594,8 @@ export default function DevicesPage() {
                   key={device.id}
                   className={`w-full rounded-xl border px-4 py-3 transition ${
                     selectedDevice?.id === device.id
-                      ? 'border-[#2d7dff] bg-[#f4f9ff]'
-                      : 'border-slate-200 bg-white hover:border-[#2d7dff]/35 hover:bg-slate-50'
+                      ? 'border-[#5B6CFF] bg-[#eef1ff]'
+                      : 'border-slate-200 bg-white hover:border-[#5B6CFF]/35 hover:bg-slate-50'
                   }`}
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
@@ -881,17 +881,17 @@ export default function DevicesPage() {
                 <div className="mt-4 grid gap-4 xl:grid-cols-3">
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <h3 className="mb-3 font-semibold text-slate-900">Wi-Fi snapshot</h3>
-                    <pre className="overflow-auto rounded-xl bg-[#0a0e27] p-3 text-xs text-slate-300">{JSON.stringify(selectedDevice.wifiInfo || {}, null, 2)}</pre>
+                    <pre className="overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">{JSON.stringify(selectedDevice.wifiInfo || {}, null, 2)}</pre>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <h3 className="mb-3 font-semibold text-slate-900">WAN and LAN snapshot</h3>
-                    <pre className="overflow-auto rounded-xl bg-[#0a0e27] p-3 text-xs text-slate-300">
+                    <pre className="overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
                       {JSON.stringify({ wanInfo: selectedDevice.wanInfo || {}, lanInfo: selectedDevice.lanInfo || {} }, null, 2)}
                     </pre>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <h3 className="mb-3 font-semibold text-slate-900">Optical snapshot</h3>
-                    <pre className="overflow-auto rounded-xl bg-[#0a0e27] p-3 text-xs text-slate-300">{JSON.stringify(selectedDevice.opticalInfo || {}, null, 2)}</pre>
+                    <pre className="overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">{JSON.stringify(selectedDevice.opticalInfo || {}, null, 2)}</pre>
                   </div>
                 </div>
               </details>

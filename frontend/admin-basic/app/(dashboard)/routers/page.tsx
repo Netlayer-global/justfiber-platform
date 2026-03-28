@@ -312,8 +312,8 @@ export default function RoutersPage() {
       <section className="card p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.28em] text-slate-400">BNG and router management</div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900">Manage multi-BNG routers from admin</h1>
+            <div className="text-xs uppercase tracking-[0.28em] text-slate-400">Network workspace</div>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">Manage multi-BNG routers from admin</h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
               MikroTik BNG nodes, CoA ports, RouterOS auth, NAS identity, and multi-router rollout yahin se manage karo.
             </p>
@@ -344,7 +344,7 @@ export default function RoutersPage() {
           </div>
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">CoA enabled</div>
-            <div className="mt-3 text-3xl font-semibold text-[#2d7dff]">{coaEnabledCount}</div>
+            <div className="mt-3 text-3xl font-semibold text-[#5B6CFF]">{coaEnabledCount}</div>
             <div className="mt-2 text-sm text-slate-500">Nodes ready for live session disconnect and refresh</div>
           </div>
         </div>
@@ -389,7 +389,7 @@ export default function RoutersPage() {
                     <div
                       key={router.id}
                       className={`grid w-full grid-cols-[1.4fr_1fr_1fr_0.8fr_0.8fr] gap-4 border-b border-slate-200 px-4 py-4 text-left transition ${
-                        active ? 'bg-[#eff6ff]' : 'bg-transparent hover:bg-slate-50'
+                        active ? 'bg-[#eef1ff]' : 'bg-transparent hover:bg-slate-50'
                       }`}
                     >
                       <button type="button" onClick={() => handleSelect(router)} className="text-left">
@@ -432,7 +432,7 @@ export default function RoutersPage() {
                 <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Selected router</div>
                 <div className="mt-2 text-2xl font-semibold text-slate-900">{selectedRouter?.displayName || 'No router selected'}</div>
               </div>
-              <div className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-3 py-2 text-xs font-semibold text-[#2d7dff]">
+              <div className="rounded-full border border-[#5B6CFF]/20 bg-[#eef1ff] px-3 py-2 text-xs font-semibold text-[#5B6CFF]">
                 {selectedRouter?.vendor || 'mikrotik'}
               </div>
             </div>
@@ -506,8 +506,8 @@ export default function RoutersPage() {
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-[#2d7dff]/20 bg-[#eff6ff] p-5">
-            <div className="flex items-center gap-3 text-[#2d7dff]">
+          <div className="rounded-[30px] border border-[#5B6CFF]/20 bg-[#eef1ff] p-5">
+            <div className="flex items-center gap-3 text-[#5B6CFF]">
               <ShieldCheck className="h-5 w-5" />
               <div className="text-lg font-bold">MikroTik ready</div>
             </div>
@@ -525,7 +525,7 @@ export default function RoutersPage() {
                 <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-semibold text-slate-900">COA</div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.coa.ok ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-200'}`}>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.coa.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                       {testResult.checks.coa.ok ? 'reachable' : 'failed'}
                     </span>
                   </div>
@@ -538,7 +538,7 @@ export default function RoutersPage() {
                 <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-semibold text-slate-900">Router API</div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.api.ok ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-200'}`}>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.api.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                       {testResult.checks.api.ok ? 'reachable' : 'failed'}
                     </span>
                   </div>
@@ -602,76 +602,76 @@ export default function RoutersPage() {
               </label>
             </div>
 
-            <div className="mt-6 rounded-[26px] border border-white/10 bg-white/5 p-5">
+            <div className="mt-6 rounded-[26px] border border-slate-200 bg-slate-50 p-5">
               <div className="flex items-center gap-3 text-lg font-bold">
-                <Wifi className="h-5 w-5 text-[#c89fff]" />
+                <Wifi className="h-5 w-5 text-[#5B6CFF]" />
                 Access and CoA
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">Router IP</div>
+                  <div className="text-sm font-semibold text-slate-700">Router IP</div>
                   <input className="input" value={form.managementIp} onChange={(event) => setForm({ ...form, managementIp: event.target.value })} />
                 </label>
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">RADIUS client IP</div>
+                  <div className="text-sm font-semibold text-slate-700">RADIUS client IP</div>
                   <input className="input" value={form.radiusClientIp} onChange={(event) => setForm({ ...form, radiusClientIp: event.target.value })} />
                 </label>
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">NAS identifier</div>
+                  <div className="text-sm font-semibold text-slate-700">NAS identifier</div>
                   <input className="input" value={form.nasIdentifier} onChange={(event) => setForm({ ...form, nasIdentifier: event.target.value })} />
                 </label>
-                <label className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-black/25 px-4 py-4 text-sm font-semibold text-white/80">
+                <label className="flex items-center gap-3 rounded-[20px] border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-700">
                   <input type="checkbox" checked={form.useCoa} onChange={(event) => setForm({ ...form, useCoa: event.target.checked })} />
                   Use CoA disconnect
                 </label>
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">COA host</div>
+                  <div className="text-sm font-semibold text-slate-700">COA host</div>
                   <input className="input" value={form.coaHost} onChange={(event) => setForm({ ...form, coaHost: event.target.value })} />
                 </label>
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">COA port</div>
+                  <div className="text-sm font-semibold text-slate-700">COA port</div>
                   <input className="input" type="number" value={form.coaPort} onChange={(event) => setForm({ ...form, coaPort: event.target.value })} />
                 </label>
                 <label className="space-y-2 md:col-span-2">
-                  <div className="text-sm font-semibold text-white/80">COA secret</div>
+                  <div className="text-sm font-semibold text-slate-700">COA secret</div>
                   <input className="input" type="password" value={form.coaSecret} onChange={(event) => setForm({ ...form, coaSecret: event.target.value })} />
                 </label>
               </div>
             </div>
 
-            <div className="mt-6 rounded-[26px] border border-white/10 bg-white/5 p-5">
+            <div className="mt-6 rounded-[26px] border border-slate-200 bg-slate-50 p-5">
               <div className="text-lg font-bold">RouterOS and API</div>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <label className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-black/25 px-4 py-4 text-sm font-semibold text-white/80 md:col-span-2">
+                <label className="flex items-center gap-3 rounded-[20px] border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-700 md:col-span-2">
                   <input type="checkbox" checked={form.enableIpAuth} onChange={(event) => setForm({ ...form, enableIpAuth: event.target.checked })} />
                   Enable IP auth
                 </label>
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">Username</div>
+                  <div className="text-sm font-semibold text-slate-700">Username</div>
                   <input className="input" value={form.routerOsUsername} onChange={(event) => setForm({ ...form, routerOsUsername: event.target.value })} />
                 </label>
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">Password</div>
+                  <div className="text-sm font-semibold text-slate-700">Password</div>
                   <input className="input" type="password" value={form.routerOsPassword} onChange={(event) => setForm({ ...form, routerOsPassword: event.target.value })} />
                 </label>
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">API port</div>
+                  <div className="text-sm font-semibold text-slate-700">API port</div>
                   <input className="input" type="number" value={form.apiPort} onChange={(event) => setForm({ ...form, apiPort: event.target.value })} />
                 </label>
                 <label className="space-y-2">
-                  <div className="text-sm font-semibold text-white/80">WWW port</div>
+                  <div className="text-sm font-semibold text-slate-700">WWW port</div>
                   <input className="input" type="number" value={form.wwwPort} onChange={(event) => setForm({ ...form, wwwPort: event.target.value })} />
                 </label>
                 <label className="space-y-2 md:col-span-2">
-                  <div className="text-sm font-semibold text-white/80">Community string</div>
+                  <div className="text-sm font-semibold text-slate-700">Community string</div>
                   <input className="input" value={form.snmpCommunity} onChange={(event) => setForm({ ...form, snmpCommunity: event.target.value })} />
                 </label>
                 <label className="space-y-2 md:col-span-2">
-                  <div className="text-sm font-semibold text-white/80">API base URL</div>
+                  <div className="text-sm font-semibold text-slate-700">API base URL</div>
                   <input className="input" value={form.apiBaseUrl} onChange={(event) => setForm({ ...form, apiBaseUrl: event.target.value })} />
                 </label>
                 <label className="space-y-2 md:col-span-2">
-                  <div className="text-sm font-semibold text-white/80">Notes</div>
+                  <div className="text-sm font-semibold text-slate-700">Notes</div>
                   <textarea className="input min-h-[100px]" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} />
                 </label>
               </div>
