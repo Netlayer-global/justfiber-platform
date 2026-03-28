@@ -358,7 +358,7 @@ class _JobsTabState extends State<JobsTab> {
                   ),
                   child: Text(
                     isDeferred ? 'Follow-up required' : primaryAction,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: isDeferred ? Color(0xFFB45309) : Color(0xFF2563EB),
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
