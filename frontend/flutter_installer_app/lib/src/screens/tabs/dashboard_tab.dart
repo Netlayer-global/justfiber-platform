@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_state.dart';
 import '../../core/models.dart';
@@ -168,10 +169,28 @@ class DashboardTab extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: onOpenJobs,
-                    icon: const Icon(Icons.assignment_rounded),
-                    label: const Text('Open jobs queue'),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      if (nextVisit.customerPhone.isNotEmpty)
+                        OutlinedButton.icon(
+                          onPressed: () => _openCall(context, nextVisit.customerPhone),
+                          icon: const Icon(Icons.call_outlined),
+                          label: const Text('Call customer'),
+                        ),
+                      if (nextVisit.mapUrl.isNotEmpty || (nextVisit.latitude != null && nextVisit.longitude != null))
+                        OutlinedButton.icon(
+                          onPressed: () => _openMap(context, nextVisit),
+                          icon: const Icon(Icons.map_outlined),
+                          label: const Text('Open map'),
+                        ),
+                      OutlinedButton.icon(
+                        onPressed: onOpenJobs,
+                        icon: const Icon(Icons.assignment_rounded),
+                        label: const Text('Open jobs queue'),
+                      ),
+                    ],
                   ),
                 ],
               ],
@@ -370,5 +389,40 @@ class DashboardTab extends StatelessWidget {
     if (diff.isNegative) return '${diff.inMinutes.abs()} min late';
     if (diff.inHours < 1) return 'In ${diff.inMinutes} min';
     return 'At ${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _openMap(BuildContext context, InstallerJob job) async {
+    final url = job.mapUrl.isNotEmpty
+        ? job.mapUrl
+        : 'https://maps.google.com/?q=${job.latitude},${job.longitude}';
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location link is not available right now.')),
+      );
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open job location right now.')),
+      );
+    }
+  }
+
+  Future<void> _openCall(BuildContext context, String phone) async {
+    final uri = Uri.tryParse('tel:$phone');
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customer phone is not available right now.')),
+      );
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open dialer right now.')),
+      );
+    }
   }
 }
