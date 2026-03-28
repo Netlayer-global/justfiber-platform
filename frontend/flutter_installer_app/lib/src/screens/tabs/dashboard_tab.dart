@@ -180,6 +180,11 @@ class DashboardTab extends StatelessWidget {
                           icon: const Icon(Icons.call_outlined),
                           label: const Text('Call customer'),
                         ),
+                      OutlinedButton.icon(
+                        onPressed: () => _copyVisitPack(context, nextVisit),
+                        icon: const Icon(Icons.copy_all_rounded),
+                        label: const Text('Copy visit pack'),
+                      ),
                       if (nextVisit.customerAddress.isNotEmpty)
                         OutlinedButton.icon(
                           onPressed: () => _copyAddress(context, nextVisit.customerAddress),
@@ -438,6 +443,21 @@ class DashboardTab extends StatelessWidget {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Customer address copied')),
+    );
+  }
+
+  Future<void> _copyVisitPack(BuildContext context, InstallerJob job) async {
+    final visitPack = <String>[
+      'Customer: ${job.customerName.isEmpty ? '-' : job.customerName}',
+      'Phone: ${job.customerPhone.isEmpty ? '-' : job.customerPhone}',
+      'Address: ${job.customerAddress.isEmpty ? '-' : job.customerAddress}',
+      'Job number: ${job.jobNumber}',
+      'Priority: ${job.priority.isEmpty ? '-' : job.priority}',
+    ].join('\n');
+    await Clipboard.setData(ClipboardData(text: visitPack));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Visit pack copied')),
     );
   }
 }
