@@ -55,11 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFFFFF),
                         borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: const Color(0x338224E3)),
+                        border: Border.all(color: const Color(0x140F172A)),
                       ),
                       child: const Icon(
                         Icons.network_check_rounded,
-                        color: Color(0xFF8224E3),
+                        color: Color(0xFF2563EB),
                         size: 34,
                       ),
                     ),
@@ -67,14 +67,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F4FF),
+                        color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x228224E3)),
+                        border: Border.all(color: const Color(0x120F172A)),
                       ),
                       child: const Text(
                         'Field ready',
                         style: TextStyle(
-                          color: Color(0xFF8224E3),
+                          color: Color(0xFF0F172A),
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
@@ -86,13 +86,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: const Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: const Color(0x1F8224E3)),
+                    border: Border.all(color: const Color(0x140F172A)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,18 +96,24 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'INSTALLER CONSOLE',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFFE9D5FF),
-                          letterSpacing: 3.2,
-                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF64748B),
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Text('Sign in to field operations', style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white)),
+                      Text(
+                        'Sign in to field operations',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: const Color(0xFF0F172A),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'Access assigned jobs, provisioning preview, route links, and activation controls from one installer app.',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFFF3E8FF),
+                          color: const Color(0xFF64748B),
                           height: 1.45,
                         ),
                       ),
@@ -121,11 +123,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 22),
                 Container(
                   padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0x338224E3)),
-                  ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFFFF),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0x140F172A)),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -211,11 +213,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 18),
                 Container(
                   padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0x228224E3)),
-                  ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFFFF),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0x140F172A)),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
@@ -249,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x228224E3)),
+        border: Border.all(color: const Color(0x140F172A)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,13 +261,13 @@ class _LoginScreenState extends State<LoginScreen> {
             height: 28,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
+              color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0x228224E3)),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
             ),
             child: Text(
               index,
-              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
+              style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 12),
@@ -274,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 text,
-                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
               ),
             ),
           ),
