@@ -418,6 +418,48 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  String _complaintResolutionLabel(String code) {
+    switch (code) {
+      case 'ont_replace':
+        return 'ONT replacement';
+      case 'fiber_patch':
+        return 'Fiber patch';
+      case 'low_power_fix':
+        return 'Low power fix';
+      case 'wifi_reconfig':
+        return 'Wi-Fi reconfiguration';
+      case 'port_reprovision':
+        return 'Port reprovision';
+      default:
+        return code.isEmpty ? 'Pending selection' : code.replaceAll('_', ' ');
+    }
+  }
+
+  List<String> _complaintWatchouts({
+    required String resolutionCode,
+    required String deferReason,
+    required String oldSerial,
+    required String newSerial,
+  }) {
+    final items = <String>[];
+    if (resolutionCode == 'ont_replace' && (oldSerial.isNotEmpty || newSerial.isNotEmpty)) {
+      items.add('Replacement audit captured');
+    }
+    if (resolutionCode == 'port_reprovision') {
+      items.add('Backend reprovision check required');
+    }
+    if (resolutionCode == 'low_power_fix') {
+      items.add('Verify optical levels before closeout');
+    }
+    if (deferReason == 'material_pending') {
+      items.add('Material pending follow-up');
+    }
+    if (deferReason == 'escalated') {
+      items.add('Escalated to backend/admin');
+    }
+    return items;
+  }
+
   Future<void> _showDeferJobSheet() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -708,6 +750,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final deferNote = (deviceContext['deferNote'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
     final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
+    final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
+    final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
+    final complaintWatchouts = isComplaint
+        ? _complaintWatchouts(
+            resolutionCode: complaintResolution,
+            deferReason: deferReason,
+            oldSerial: oldSerial,
+            newSerial: newSerial,
+          )
+        : const <String>[];
     final proofUploaded = proof.isNotEmpty;
     final canAccept = _canAccept(status);
     final canStartTravel = _canStartTravel(status);
@@ -991,6 +1043,41 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                   ),
                                 ],
                               ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (isComplaint && (complaint.isNotEmpty || complaintWatchouts.isNotEmpty)) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0x120F172A)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Complaint watchouts',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: const Color(0xFF0F172A),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _row('Issue type', _complaintResolutionLabel(complaintResolution)),
+                              _row('Current note', '${complaint['note'] ?? _complaintNoteController.text.trim()}'),
+                              if (complaintWatchouts.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: complaintWatchouts.map(_miniPill).toList(),
+                                ),
+                              ],
                             ],
                           ),
                         ),
