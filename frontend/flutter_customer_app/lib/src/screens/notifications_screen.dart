@@ -233,33 +233,30 @@ class NotificationsScreen extends StatelessWidget {
             const SizedBox(height: 18),
           ],
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'ALERTS CENTER',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFE9D5FF),
-                        letterSpacing: 3.2,
+                        color: const Color(0xFF8224E3),
+                        letterSpacing: 2.6,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   'Stay updated',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFFFFFFF), fontSize: 28),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 28),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   notifications.isEmpty
                       ? 'There are no active alerts right now.'
                       : 'You have ${notifications.length} recent service, billing, or support alerts.',
-                  style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                  style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                 ),
                 const SizedBox(height: 16),
                 Wrap(

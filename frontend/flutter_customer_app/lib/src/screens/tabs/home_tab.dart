@@ -55,15 +55,11 @@ class HomeTab extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: const Color(0x338224E3)),
+            border: Border.all(color: const Color(0x228224E3)),
             boxShadow: const [
-              BoxShadow(color: Color(0x308224E3), blurRadius: 26, offset: Offset(0, 12)),
+              BoxShadow(color: Color(0x10030B14), blurRadius: 26, offset: Offset(0, 12)),
             ],
           ),
           child: Column(
@@ -79,8 +75,8 @@ class HomeTab extends StatelessWidget {
                         Text(
                           'CUSTOMER DASHBOARD',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: const Color(0xFFE9D5FF),
-                                letterSpacing: 3.2,
+                                color: const Color(0xFF8224E3),
+                                letterSpacing: 2.6,
                                 fontWeight: FontWeight.w700,
                               ),
                         ),
@@ -88,7 +84,7 @@ class HomeTab extends StatelessWidget {
                         Text(
                           'Hi, $displayName',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: const Color(0xFFF7F7F8),
+                                color: const Color(0xFF131313),
                                 fontSize: 30,
                               ),
                         ),
@@ -98,7 +94,7 @@ class HomeTab extends StatelessWidget {
                               ? 'Monitor your broadband, due amount, and active requests from one clean control surface.'
                               : 'Check feasibility, pick a plan, and start your broadband booking in a few steps.',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: const Color(0xFFD6D3D1),
+                                color: const Color(0xFF6E6A67),
                               ),
                         ),
                       ],
@@ -137,9 +133,9 @@ class HomeTab extends StatelessWidget {
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: BoxDecoration(
-                          color: dashboardAlertTone == 'critical'
-                              ? const Color(0xFFFFF1F1)
+                    decoration: BoxDecoration(
+                      color: dashboardAlertTone == 'critical'
+                          ? const Color(0xFFFFF1F1)
                               : dashboardAlertTone == 'warning'
                                   ? const Color(0xFFFFF7ED)
                                   : const Color(0xFFF8F4FF),
@@ -215,6 +211,16 @@ class HomeTab extends StatelessWidget {
                   ),
                 ],
               ),
+              if (hasService) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _summaryBox('Next bill', nextBillDateLabel)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _summaryBox('Cycle', billingCycleLabel)),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -750,16 +756,16 @@ class HomeTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0x26FFFFFF),
+        color: const Color(0xFFF8F4FF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x40FFFFFF)),
+        border: Border.all(color: const Color(0x228224E3)),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: Color(0xFFFFFFFF)),
+          style: const TextStyle(color: Color(0xFF131313)),
           children: [
             TextSpan(text: '$value ', style: const TextStyle(fontWeight: FontWeight.w800)),
-            TextSpan(text: label, style: const TextStyle(color: Color(0xFFE9D5FF))),
+            TextSpan(text: label, style: const TextStyle(color: Color(0xFF6E6A67))),
           ],
         ),
       ),
