@@ -188,37 +188,26 @@ export default function InstallersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="card p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-white/45">Field workforce</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Installers,
-            <span className="text-[#8224E3]"> managed with field precision.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">Create installers, manage credentials, and track live availability.</p>
-        </div>
-        <div className="neon-panel p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-black/55">Field pulse</div>
-          <div className="mt-3 text-5xl font-black">{installers.length}</div>
-          <div className="mt-2 text-sm text-black/60">Installers currently tracked in the workforce registry</div>
-          <div className="mt-8 grid grid-cols-3 gap-3">
-            {installerMetrics.map(({ label, value, Icon }) => (
-              <div key={label} className="rounded-[22px] bg-black/10 p-4">
-                <Icon className="h-4 w-4 text-black/75" />
-                <div className="mt-4 text-2xl font-bold">{value}</div>
-                <div className="text-xs uppercase tracking-[0.18em] text-black/55">{label}</div>
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Field workforce</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Installers</h1>
+            <div className="mt-2 text-sm text-slate-500">Create installers, manage credentials, and track live availability.</div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {installerMetrics.map(({ label, value }) => (
+              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                <span className="font-medium text-slate-900">{value}</span> {label}
               </div>
             ))}
+            <button onClick={loadInstallers} className="btn-secondary inline-flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
           </div>
         </div>
       </section>
-
-      <div className="flex items-center justify-end gap-4">
-        <button onClick={loadInstallers} className="btn-secondary inline-flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
 
       <form onSubmit={handleCreateInstaller} className="card p-6 space-y-4">
         <div>
@@ -246,7 +235,7 @@ export default function InstallersPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#8224E3]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-[#2d7dff]" />
         </div>
       ) : (
         <div className="space-y-4">
@@ -261,15 +250,15 @@ export default function InstallersPage() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-lg font-semibold">{installer.name}</h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${installer.status === 'active' ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'}`}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${installer.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {installer.status}
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       installer.availabilityStatus === 'available'
-                        ? 'bg-emerald-900 text-emerald-200'
+                        ? 'bg-emerald-100 text-emerald-700'
                         : installer.availabilityStatus === 'busy'
-                          ? 'bg-amber-900 text-amber-200'
-                          : 'bg-slate-700 text-slate-100'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-slate-100 text-slate-700'
                     }`}>
                       {installer.availabilityStatus || 'available'}
                     </span>
@@ -310,7 +299,7 @@ export default function InstallersPage() {
                 <button className="btn-secondary" onClick={() => updateOperationalStatus(installer, 'active')}>Activate</button>
                 <button className="btn-secondary" onClick={() => updateOperationalStatus(installer, 'disabled')}>Disable</button>
                 <button
-                  className="btn-secondary inline-flex items-center gap-2 border-red-500/30 text-red-300 hover:bg-red-500/10"
+                  className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-600 hover:bg-red-50"
                   onClick={() => void handleDeleteInstaller(installer)}
                   disabled={deletingInstallerId === installer.id}
                 >
@@ -348,7 +337,7 @@ export default function InstallersPage() {
                   Skills: {installer.skills.join(', ')}
                 </div>
               ) : null}
-              <div className="rounded border border-[#2a2f4a] p-3">
+              <div className="rounded border border-slate-200 bg-slate-50 p-3">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <p className="text-sm font-medium">Current Jobs</p>
                   <p className="text-xs text-slate-500">Pending + in-progress only</p>
@@ -356,18 +345,18 @@ export default function InstallersPage() {
                 {liveJobs.length ? (
                   <div className="space-y-2">
                     {liveJobs.slice(0, 4).map((job) => (
-                      <div key={job.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded bg-[#0f172a] px-3 py-2 text-sm">
+                      <div key={job.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded bg-white px-3 py-2 text-sm">
                         <div>
                           <div className="font-medium">{job.jobNumber || job.id}</div>
-                          <div className="text-slate-400">{job.customerName || job.customerId}</div>
-                          {job.address ? <div className="text-slate-500">{job.address}</div> : null}
+                          <div className="text-slate-500">{job.customerName || job.customerId}</div>
+                          {job.address ? <div className="text-slate-400">{job.address}</div> : null}
                         </div>
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="rounded bg-[#1e293b] px-2 py-1">{job.type}</span>
-                          <span className="rounded bg-[#1e293b] px-2 py-1">{job.rawStatus || job.status}</span>
-                          <span className="rounded bg-[#1e293b] px-2 py-1">{job.priority || 'medium'}</span>
-                          {job.planName ? <span className="rounded bg-[#1e293b] px-2 py-1">{job.planName}</span> : null}
-                          {job.finalSerialNumber ? <span className="rounded bg-[#1e293b] px-2 py-1">{job.finalSerialNumber}</span> : null}
+                          <span className="rounded bg-slate-100 px-2 py-1">{job.type}</span>
+                          <span className="rounded bg-slate-100 px-2 py-1">{job.rawStatus || job.status}</span>
+                          <span className="rounded bg-slate-100 px-2 py-1">{job.priority || 'medium'}</span>
+                          {job.planName ? <span className="rounded bg-slate-100 px-2 py-1">{job.planName}</span> : null}
+                          {job.finalSerialNumber ? <span className="rounded bg-slate-100 px-2 py-1">{job.finalSerialNumber}</span> : null}
                         </div>
                       </div>
                     ))}

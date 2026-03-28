@@ -381,39 +381,29 @@ export default function ProvisioningPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="card p-8" style={styles.hero}>
-          <div className="text-xs uppercase tracking-[0.28em] text-white/45">Technical activation</div>
-          <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white md:text-5xl">
-            Simple provisioning,
-            <span className="text-[#8224E3]"> cleaner rollout.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/60">
-            Access profile, VLAN, PPPoE pattern, aur Wi-Fi naming yahan maintain karo. Page ko intentionally simple rakha gaya hai taaki ops team fast kaam kar sake.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <button type="button" onClick={() => void loadPlans()} className="btn-secondary" style={styles.secondaryButton}>
+      <section className="card p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.28em] text-slate-400">Technical activation</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Provisioning</h1>
+            <div className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">
+              Access profile, VLAN, PPPoE pattern, aur Wi-Fi naming yahan maintain karo. Page intentionally simple rakhi gayi hai.
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-900">{readyCount}</span> Ready
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-900">{needsCount}</span> Needs template
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-900">{selectedPlan ? selectedPlan.name : readyCount}</span> Active view
+            </div>
+            <button type="button" onClick={() => void loadPlans()} className="btn-secondary">
               <RefreshCw className="h-4 w-4" />
               Refresh plans
             </button>
-          </div>
-        </div>
-
-        <div className="neon-panel p-8" style={styles.accent}>
-          <div className="text-xs uppercase tracking-[0.28em] text-black/60">Provisioning health</div>
-          <div className="mt-3 text-5xl font-black">{selectedPlan ? selectedPlan.name : readyCount}</div>
-          <div className="mt-2 text-sm text-black/70">
-            {selectedPlan ? 'Selected plan for activation mapping.' : 'Plans with complete activation templates.'}
-          </div>
-          <div className="mt-8 grid grid-cols-2 gap-3">
-            <div className="rounded-[24px] p-4" style={{ border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(0,0,0,0.08)' }}>
-              <div className="text-xs uppercase tracking-[0.18em] text-black/60">Ready</div>
-              <div className="mt-3 text-2xl font-black">{readyCount}</div>
-            </div>
-            <div className="rounded-[24px] p-4" style={{ border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(0,0,0,0.08)' }}>
-              <div className="text-xs uppercase tracking-[0.18em] text-black/60">Needs template</div>
-              <div className="mt-3 text-2xl font-black">{needsCount}</div>
-            </div>
           </div>
         </div>
       </section>
