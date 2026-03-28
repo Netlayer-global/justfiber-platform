@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_state.dart';
@@ -507,6 +508,11 @@ class _JobsTabState extends State<JobsTab> {
                     icon: const Icon(Icons.call_outlined, size: 18),
                     label: const Text('Call customer'),
                   ),
+                OutlinedButton.icon(
+                  onPressed: () => _copyCustomerPack(context, job),
+                  icon: const Icon(Icons.copy_all_rounded, size: 18),
+                  label: const Text('Copy customer'),
+                ),
                 if (isDeferred)
                   OutlinedButton.icon(
                     onPressed: appState.busy
@@ -666,6 +672,21 @@ class _JobsTabState extends State<JobsTab> {
         const SnackBar(content: Text('Unable to open dialer right now.')),
       );
     }
+  }
+
+  Future<void> _copyCustomerPack(BuildContext context, InstallerJob job) async {
+    final customerPack = <String>[
+      'Customer: ${job.customerName.isEmpty ? '-' : job.customerName}',
+      'Phone: ${job.customerPhone.isEmpty ? '-' : job.customerPhone}',
+      'Address: ${job.customerAddress.isEmpty ? '-' : job.customerAddress}',
+      'Job number: ${job.jobNumber}',
+      'Plan: ${job.planName.isEmpty ? '-' : job.planName}',
+    ].join('\n');
+    await Clipboard.setData(ClipboardData(text: customerPack));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Customer pack copied')),
+    );
   }
 
   bool _canAccept(InstallerJob job) => job.status == 'assigned';
