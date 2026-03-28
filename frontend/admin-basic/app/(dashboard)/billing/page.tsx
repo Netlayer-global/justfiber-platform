@@ -1448,18 +1448,18 @@ export default function BillingPage() {
             </div>
           </div>
           <div className="card overflow-hidden">
-            <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
               <div>
-                <div className="font-semibold">Payments</div>
-                <div className="mt-1 text-sm text-slate-400">Core payment operations only.</div>
+                <div className="font-semibold text-slate-900">Payments</div>
+                <div className="mt-1 text-sm text-slate-500">Core payment operations only.</div>
               </div>
-              <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
                 {visiblePayments.length} payment{visiblePayments.length === 1 ? '' : 's'}
               </div>
             </div>
             <table className="w-full">
               <thead>
-                <tr className="bg-[#0a0e27]">
+                <tr className="bg-slate-50">
                   <th className="table-header">Transaction</th>
                   <th className="table-header">Customer</th>
                   <th className="table-header">Amount</th>
@@ -1469,7 +1469,7 @@ export default function BillingPage() {
               </thead>
               <tbody>
                 {visiblePayments.map((payment) => (
-                  <tr key={payment.id} className="border-t border-[#2a2f4a]">
+                  <tr key={payment.id} className="border-t border-slate-200">
                     <td className="table-cell">
                       <div className="font-mono text-xs">{payment.transactionId}</div>
                       <div className="text-xs text-slate-500 mt-1">{payment.provider || '-'} | {payment.method || '-'}</div>
@@ -1512,13 +1512,13 @@ export default function BillingPage() {
                         </button>
                       ) : null}
                       {payment.reconciliationStatus === 'reconciled' ? (
-                        <span className="text-xs text-green-400 block mt-2">Done</span>
+                        <span className="text-xs text-emerald-600 block mt-2">Done</span>
                       ) : null}
                     </td>
                   </tr>
                 ))}
                 {!visiblePayments.length ? (
-                  <tr className="border-t border-[#2a2f4a]">
+                  <tr className="border-t border-slate-200">
                     <td className="table-cell text-slate-500" colSpan={5}>No payments found.</td>
                   </tr>
                 ) : null}
@@ -1530,10 +1530,10 @@ export default function BillingPage() {
 
           {billingSectionTab === 'payments' ? (
           <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">Refunds</div>
+            <div className="px-4 py-3 border-b border-slate-200 font-semibold text-slate-900">Refunds</div>
             <table className="w-full">
               <thead>
-                <tr className="bg-[#0a0e27]">
+                <tr className="bg-slate-50">
                   <th className="table-header">Refund</th>
                   <th className="table-header">Customer</th>
                   <th className="table-header">Amount</th>
@@ -1543,7 +1543,7 @@ export default function BillingPage() {
               </thead>
               <tbody>
                 {refundPayments.map((payment) => (
-                  <tr key={`refund-${payment.id}`} className="border-t border-[#2a2f4a]">
+                  <tr key={`refund-${payment.id}`} className="border-t border-slate-200">
                     <td className="table-cell">
                       <div className="font-mono text-xs">{payment.transactionId}</div>
                       <div className="text-xs text-slate-500 mt-1">{payment.provider || '-'} | {payment.razorpayRefundId || '-'}</div>
@@ -1569,7 +1569,7 @@ export default function BillingPage() {
                   </tr>
                 ))}
                 {!refundPayments.length ? (
-                  <tr className="border-t border-[#2a2f4a]">
+                  <tr className="border-t border-slate-200">
                     <td className="table-cell text-slate-500" colSpan={5}>No refunds recorded yet.</td>
                   </tr>
                 ) : null}
@@ -1580,16 +1580,16 @@ export default function BillingPage() {
 
           {billingSectionTab === 'invoices' ? (
           <div className="overflow-x-auto card">
-            <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice register</div>
-                <div className="mt-1 text-sm text-slate-400">Compact daily invoice list.</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Invoice register</div>
+                <div className="mt-1 text-sm text-slate-500">Compact daily invoice list.</div>
               </div>
-              <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
                 {visibleInvoices.length} invoice{visibleInvoices.length === 1 ? '' : 's'}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 border-b border-[#2a2f4a] px-4 py-3">
+            <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3">
               {[
                 ['all', 'All'],
                 ['pending', 'Pending'],
@@ -1600,7 +1600,7 @@ export default function BillingPage() {
                 <button
                   key={key}
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    invoiceQuickView === key ? 'bg-[#8224E3] text-white' : 'bg-white/5 text-slate-300'
+                    invoiceQuickView === key ? 'bg-[#2d7dff] text-white' : 'bg-slate-100 text-slate-600'
                   }`}
                   onClick={() => setInvoiceQuickView(key as typeof invoiceQuickView)}
                 >
@@ -1610,7 +1610,7 @@ export default function BillingPage() {
             </div>
             <table className="w-full">
               <thead>
-                <tr className="bg-[#0a0e27]">
+                <tr className="bg-slate-50">
                   <th className="table-header">Invoice</th>
                   <th className="table-header">Customer</th>
                   <th className="table-header">Total</th>
@@ -1623,21 +1623,21 @@ export default function BillingPage() {
                 {visibleInvoices.length ? visibleInvoices.map((item) => (
                 <tr
                   key={item.id}
-                  className="border-t border-[#2a2f4a] align-top hover:bg-[#1a1f3a]"
+                  className="border-t border-slate-200 align-top hover:bg-slate-50"
                 >
                   <td className="table-cell">
                     <div className="font-mono text-sm">{item.invoiceNumber || item.invoiceId}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.billCycle || '-'}</div>
                   </td>
                   <td className="table-cell">
-                    <div className="font-medium text-slate-100">{item.customerId}</div>
+                    <div className="font-medium text-slate-900">{item.customerId}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.serviceId || 'No service linked'}</div>
                     <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] uppercase tracking-[0.18em] ${invoiceSourceTone(item.source)}`}>
                       {item.sourceLabel || item.source || 'Internal'}
                     </div>
                   </td>
                   <td className="table-cell">
-                    <div className="mt-1 font-semibold text-white">Total Rs {Number(item.totalAmount || item.amount || 0).toFixed(2)}</div>
+                    <div className="mt-1 font-semibold text-slate-900">Total Rs {Number(item.totalAmount || item.amount || 0).toFixed(2)}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.billingZoneCode ? `Zone ${item.billingZoneCode}` : item.billingStateCode || '-'}</div>
                   </td>
                   <td className="table-cell">
@@ -1665,7 +1665,7 @@ export default function BillingPage() {
                       </button>
                       {(item.paymentStatus || item.status) !== 'paid' ? (
                         <button
-                          className="text-xs text-emerald-300"
+                          className="text-xs text-emerald-600"
                           onClick={() => void markInvoicePaid(item.invoiceId)}
                         >
                           Mark Paid
@@ -1675,7 +1675,7 @@ export default function BillingPage() {
                   </td>
                 </tr>
                 )) : (
-                  <tr className="border-t border-[#2a2f4a]">
+                  <tr className="border-t border-slate-200">
                     <td className="table-cell text-slate-500" colSpan={6}>
                       No invoices match the current quick view and filters. Try switching tabs or clearing filters.
                     </td>

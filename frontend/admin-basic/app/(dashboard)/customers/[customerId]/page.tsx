@@ -1465,18 +1465,18 @@ export default function CustomerDetailPage() {
                 <div className="card p-5 space-y-3">
                   <h2 className="text-lg font-semibold">Invoices</h2>
                   {(customer.invoices || []).length ? (
-                    <div className="space-y-2">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200">
                       {customer.invoices?.map((invoice) => (
-                        <div key={invoice.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
+                        <div key={invoice.id} className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 py-3 text-sm last:border-b-0">
                           <div className="flex items-center justify-between gap-3">
-                            <span>{invoice.invoiceNumber || invoice.invoiceId} | Rs {invoice.amount} | {invoice.paymentStatus || 'pending'}</span>
-                            <button
-                              className="btn-secondary"
-                              onClick={() => void openInvoicePdf(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}
-                            >
-                              Open PDF
-                            </button>
+                            <span className="text-slate-700">{invoice.invoiceNumber || invoice.invoiceId} | Rs {invoice.amount} | {invoice.paymentStatus || 'pending'}</span>
                           </div>
+                          <button
+                            className="btn-secondary"
+                            onClick={() => void openInvoicePdf(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}
+                          >
+                            Open PDF
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1485,9 +1485,9 @@ export default function CustomerDetailPage() {
                 <div className="card p-5 space-y-3">
                   <h2 className="text-lg font-semibold">Transactions</h2>
                   {(customer.payments || []).length ? (
-                    <div className="space-y-2">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200">
                       {customer.payments?.map((payment) => (
-                        <div key={payment.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
+                        <div key={payment.id} className="border-b border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 last:border-b-0">
                           {payment.transactionId} | Rs {payment.amount} | {payment.status || 'success'} | {payment.provider || '-'}
                         </div>
                       ))}
@@ -1497,18 +1497,18 @@ export default function CustomerDetailPage() {
                 <div className="card p-5 space-y-3">
                   <h2 className="text-lg font-semibold">Billing Notes</h2>
                   {(customer.billingNotes || []).length ? (
-                    <div className="space-y-2">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200">
                       {customer.billingNotes?.map((note) => (
-                        <div key={note.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
+                        <div key={note.id} className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 py-3 text-sm last:border-b-0">
                           <div className="flex items-center justify-between gap-3">
-                            <span>{note.noteNumber} | {note.type} | Rs {note.totalAmount} | {note.reasonCode || note.note || '-'}</span>
-                            <button
-                              className="btn-secondary"
-                              onClick={() => void openBillingNotePdf(note.noteNumber)}
-                            >
-                              Open PDF
-                            </button>
+                            <span className="text-slate-700">{note.noteNumber} | {note.type} | Rs {note.totalAmount} | {note.reasonCode || note.note || '-'}</span>
                           </div>
+                          <button
+                            className="btn-secondary"
+                            onClick={() => void openBillingNotePdf(note.noteNumber)}
+                          >
+                            Open PDF
+                          </button>
                         </div>
                       ))}
                     </div>
