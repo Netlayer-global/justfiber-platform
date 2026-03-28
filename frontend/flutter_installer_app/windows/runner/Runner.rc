@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "justfiber_installer_app" "\0"
+            VALUE "FileDescription", "JustFiber Field" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "justfiber_installer_app" "\0"
+            VALUE "InternalName", "justfiber_field" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "justfiber_installer_app.exe" "\0"
-            VALUE "ProductName", "justfiber_installer_app" "\0"
+            VALUE "OriginalFilename", "justfiber_field.exe" "\0"
+            VALUE "ProductName", "JustFiber Field" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -42,7 +42,7 @@ class _JustFiberInstallerAppState extends State<JustFiberInstallerApp> with Widg
           appState: appState,
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
-            title: 'JustFiber Installer',
+            title: 'JustFiber Field',
             theme: buildInstallerTheme(),
             home: const AuthGate(),
           ),

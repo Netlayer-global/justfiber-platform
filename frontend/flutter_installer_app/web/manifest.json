@@ -1,11 +1,11 @@
 {
-    "name": "justfiber_installer_app",
-    "short_name": "justfiber_installer_app",
+    "name": "JustFiber Field",
+    "short_name": "JF Field",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "JustFiber field operations app for installers and complaint engineers.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
