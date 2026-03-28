@@ -39,6 +39,7 @@ class _JobsTabState extends State<JobsTab> {
     final liveInstalls = activeJobs.where((job) => job.jobType != 'complaint').length;
     final liveComplaints = activeJobs.where((job) => job.jobType == 'complaint').length;
     final exceptionJobs = activeJobs.where((job) => job.configStatus == 'failed').length + deferredJobs.length;
+    final hasFilters = search.isNotEmpty || _queueFilter != 'all';
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -152,6 +153,20 @@ class _JobsTabState extends State<JobsTab> {
                     _filterChip('Closed', 'closed'),
                   ],
                 ),
+                if (hasFilters) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _queueFilter = 'all');
+                      },
+                      icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                      label: const Text('Clear filters'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
