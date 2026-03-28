@@ -704,6 +704,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         : ((preview['staticBenefits'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[]);
     final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final linkedSerial = (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '').toString();
+    final deferReason = (deviceContext['deferReason'] ?? detail?['subStatus'] ?? '').toString();
+    final deferNote = (deviceContext['deferNote'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
     final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
     final proofUploaded = proof.isNotEmpty;
@@ -945,6 +947,54 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                         ],
                       ),
+                      if (status == 'deferred' || deferReason.isNotEmpty || deferNote.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFFCD34D)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Follow-up status',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: const Color(0xFF92400E),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _row('Reason', _deferReasonLabel(deferReason)),
+                              _row('Field note', deferNote.isEmpty ? '-' : deferNote),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  if (status == 'deferred')
+                                    FilledButton(
+                                      onPressed: _busy
+                                          ? null
+                                          : () => _run(
+                                                () => _appState.api.resumeFollowUp(_appState.session!, widget.job.id),
+                                                'Follow-up resumed',
+                                              ),
+                                      child: const Text('Resume revisit'),
+                                    ),
+                                  OutlinedButton(
+                                    onPressed: _busy ? null : _showDeferJobSheet,
+                                    child: const Text('Update follow-up note'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
