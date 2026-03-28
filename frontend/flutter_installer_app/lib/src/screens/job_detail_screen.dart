@@ -798,6 +798,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final recommendations = (diagnostics['recommendations'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[];
     final customerName = (snapshot['fullName'] ?? widget.job.customerName).toString();
     final customerAddress = (snapshot['address'] ?? widget.job.customerAddress).toString();
+    final customerId = (detail?['customerId'] ?? '').toString();
+    final serviceId = (detail?['serviceId'] ?? '').toString();
     final phone = (snapshot['phone'] ?? '').toString();
     final planName = (snapshot['planName'] ?? '-').toString();
     final scheduledAt = (detail?['scheduledAt'] ?? widget.job.scheduledAt).toString();
@@ -877,6 +879,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (customerName.isNotEmpty) 'Customer: $customerName',
       if (phone.isNotEmpty) 'Phone: $phone',
       if (customerAddress.isNotEmpty) 'Address: $customerAddress',
+    ].join('\n');
+    final jobRefsPack = <String>[
+      'Job number: ${widget.job.jobNumber}',
+      if (customerId.isNotEmpty) 'Customer ID: $customerId',
+      if (serviceId.isNotEmpty) 'Service ID: $serviceId',
     ].join('\n');
     final visitUrgency = _visitUrgencyLabel(status, priority, scheduledAt);
     final visitTimeWindow = _timeWindowLabel(scheduledAt);
@@ -1146,6 +1153,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         spacing: 10,
                         runSpacing: 10,
                         children: [
+                          OutlinedButton.icon(
+                            onPressed: () => _copyText(
+                              'Job references copied',
+                              jobRefsPack,
+                            ),
+                            icon: const Icon(Icons.tag_outlined, size: 18),
+                            label: const Text('Copy refs'),
+                          ),
                           OutlinedButton.icon(
                             onPressed: customerVisitPack.isEmpty
                                 ? null
