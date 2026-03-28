@@ -902,6 +902,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       'Router online: ${device['onlineStatus'] ?? 'unknown'}',
       'Provisioning state: ${device['provisioningState'] ?? 'pending'}',
     ].join('\n');
+    final proofSummaryPack = <String>[
+      'Router photo: ${_routerPhotoPath == null ? 'Pending capture' : 'Captured'}',
+      'Cable photo: ${_cablePhotoPath == null ? 'Pending capture' : 'Captured'}',
+      'Proof uploaded: ${proofUploadedAt.isEmpty ? '-' : _shortDateTime(proofUploadedAt)}',
+      if (_routerPhotoCapturedAt != null) 'Router captured: ${_shortDateTime(_routerPhotoCapturedAt!.toIso8601String())}',
+      if (_cablePhotoCapturedAt != null) 'Cable captured: ${_shortDateTime(_cablePhotoCapturedAt!.toIso8601String())}',
+    ].join('\n');
     final visitUrgency = _visitUrgencyLabel(status, priority, scheduledAt);
     final visitTimeWindow = _timeWindowLabel(scheduledAt);
     final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
@@ -2216,6 +2223,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       }
                                     },
                               child: const Text('Send OTP'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () => _copyText('Proof summary copied', proofSummaryPack),
+                              child: const Text('Copy proof summary'),
                             ),
                           ],
                         ),
