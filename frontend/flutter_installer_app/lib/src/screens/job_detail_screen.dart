@@ -794,6 +794,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final optical = (detail?['opticalReadings'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
     final preview = _preview ?? const <String, dynamic>{};
     final diagnostics = _diagnostics ?? const <String, dynamic>{};
+    final checklist = (diagnostics['checklist'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final recommendations = (diagnostics['recommendations'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[];
     final customerName = (snapshot['fullName'] ?? widget.job.customerName).toString();
     final customerAddress = (snapshot['address'] ?? widget.job.customerAddress).toString();
     final phone = (snapshot['phone'] ?? '').toString();
@@ -882,6 +884,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
     final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
     final proofUploadedAt = (proof['uploadedAt'] ?? '').toString();
+    final checklistSavedAt = (checklist['savedAt'] ?? '').toString();
+    final checklistSaved = checklist.isNotEmpty;
     final otpPurpose = (otpState['purpose'] ?? '').toString();
     final otpExpiresAt = (otpState['expiresAt'] ?? '').toString();
     final otpVerifiedAt = (otpState['verifiedAt'] ?? '').toString();
@@ -2008,6 +2012,46 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           child: const Text(
                             'Capture router and cable proof, submit the proof payload, then verify customer OTP to complete installation cleanly.',
                             style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x120F172A)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Checklist state',
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 10),
+                              _row('Checklist saved', checklistSaved ? 'Yes' : 'Pending'),
+                              _row('Saved at', checklistSavedAt.isEmpty ? '-' : _shortDateTime(checklistSavedAt)),
+                              if (recommendations.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: recommendations.take(3).map(_miniPill).toList(),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              OutlinedButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () => _run(
+                                          () => _appState.api.saveChecklist(_appState.session!, widget.job.id),
+                                          'Checklist saved',
+                                        ),
+                                child: Text(checklistSaved ? 'Update checklist' : 'Save checklist'),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 12),
