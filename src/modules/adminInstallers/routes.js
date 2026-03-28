@@ -345,8 +345,8 @@ adminInstallersRouter.post(
       installerId: installer._id,
       type: payload.type === "installation" ? "new_job" : "complaint_assigned",
       title: payload.type === "installation" ? "New installation job" : "New complaint job",
-      body: `${payload.customerSnapshot.fullName} has been assigned to you.`,
-      payload: { jobId: job._id, jobNumber: job.jobNumber }
+      body: `${payload.customerSnapshot.fullName} | ${job.jobNumber} has been assigned to you.`,
+      payload: { installerJobId: job._id, jobNumber: job.jobNumber }
     });
     return ok(res, job, { created: true });
   })

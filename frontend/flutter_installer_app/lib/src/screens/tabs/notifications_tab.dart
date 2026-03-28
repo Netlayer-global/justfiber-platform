@@ -206,7 +206,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                   borderRadius: BorderRadius.circular(28),
                   onTap: () async {
                     await appState.markNotificationRead(item.id);
-                    final jobId = item.payload['installerJobId']?.toString();
+                    final jobId = item.payload['installerJobId']?.toString() ?? item.payload['jobId']?.toString();
                     if (!context.mounted) return;
                     if (jobId != null && jobId.isNotEmpty) {
                       final matches = appState.jobs.where((candidate) => candidate.id == jobId).toList();
@@ -283,7 +283,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                               icon: const Icon(Icons.copy_all_rounded, size: 18),
                               label: const Text('Copy alert'),
                             ),
-                            if ((item.payload['installerJobId'] ?? '').toString().isNotEmpty)
+                            if (((item.payload['installerJobId'] ?? item.payload['jobId']) ?? '').toString().isNotEmpty)
                               OutlinedButton.icon(
                                 onPressed: widget.onOpenJobs,
                                 icon: const Icon(Icons.assignment_rounded, size: 18),
@@ -341,7 +341,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
       'Title: ${item.title}',
       'Body: ${item.body}',
       'Created: ${_formatTime(item.createdAt)}',
-      'Job ID: ${(item.payload['installerJobId'] ?? '-').toString()}',
+      'Job ID: ${((item.payload['installerJobId'] ?? item.payload['jobId']) ?? '-').toString()}',
     ].join('\n');
     await Clipboard.setData(ClipboardData(text: alertPack));
     if (!context.mounted) return;
