@@ -25,6 +25,7 @@ import {
   detectOntBrand
 } from "../../common/networkProvisioning.js";
 import {
+  cancelInstallationSchema,
   complaintStartSchema,
   deferJobSchema,
   installationChecklistSchema,
@@ -711,6 +712,87 @@ installerAppRouter.post(
     return ok(res, {
       status: job.status,
       resumedAt: job.deviceContext?.resumedAt || new Date()
+    });
+  })
+);
+
+installerAppRouter.post(
+  "/jobs/:jobId/cancel-installation",
+  asyncHandler(async (req, res) => {
+    const payload = cancelInstallationSchema.parse(req.body);
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    if (job.type !== "installation") {
+      throw new ApiError(409, "Only installation jobs can be cancelled");
+    }
+    if (["completed", "cancelled"].includes(job.status)) {
+      throw new ApiError(409, "This installation job cannot be cancelled anymore");
+    }
+
+    job.status = "cancelled";
+    job.subStatus = payload.reason;
+    job.deviceContext = {
+      ...(job.deviceContext || {}),
+      cancelReason: payload.reason,
+      cancelNote: payload.note,
+      cancelledAt: new Date(),
+      cancelledByInstallerId: req.installer._id
+    };
+    req.installer.availabilityStatus = "available";
+    pushTimeline(job, "job.cancelled", req.installer._id, payload.note);
+    await Promise.all([job.save(), req.installer.save()]);
+
+    const booking = await updateBookingProgress(job, {
+      status: "cancelled",
+      payment: {
+        reviewState: "refund_review_pending",
+        cancellationReason: payload.reason,
+        cancellationNote: payload.note,
+        cancelledAt: new Date()
+      },
+      tracking: {
+        currentStep: "booking_cancelled",
+        steps: [
+          { code: "booking_placed", status: "done", at: job.createdAt || new Date() },
+          { code: "installer_assigned", status: "done", at: job.assignment?.assignedAt || job.createdAt || new Date() },
+          { code: "booking_cancelled", status: "done", at: new Date() }
+        ]
+      }
+    });
+    if (booking) {
+      await notifyBookingCustomer(
+        booking,
+        "installation_cancelled",
+        "Installation visit cancelled",
+        `Booking ${booking.bookingNumber} has been cancelled and refund review will be handled by the admin team.`,
+        {
+          bookingNumber: booking.bookingNumber,
+          installerJobId: job._id,
+          cancellationReason: payload.reason,
+          cancellationNote: payload.note,
+          refundReviewState: "pending"
+        }
+      );
+    }
+
+    await InstallerNotification.create({
+      installerId: req.installer._id,
+      type: "installation_cancelled",
+      title: "Installation cancelled",
+      body: `${job.jobNumber} was cancelled. Admin can now review refund handling.`,
+      payload: {
+        installerJobId: job._id.toString(),
+        jobNumber: job.jobNumber,
+        bookingNumber: booking?.bookingNumber || "",
+        cancellationReason: payload.reason
+      }
+    });
+
+    return ok(res, {
+      status: job.status,
+      subStatus: job.subStatus,
+      cancelNote: job.deviceContext?.cancelNote || "",
+      bookingNumber: booking?.bookingNumber || null,
+      refundReviewState: "pending"
     });
   })
 );

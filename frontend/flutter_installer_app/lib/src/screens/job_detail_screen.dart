@@ -36,16 +36,26 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     'escalated',
     'other',
   ];
+  static const List<String> _cancelReasons = [
+    'customer_cancelled',
+    'technical_feasibility_failed',
+    'payment_issue',
+    'material_unavailable',
+    'duplicate_booking',
+    'other',
+  ];
 
   final _serialController = TextEditingController();
   final _otpController = TextEditingController();
   final _replaceSerialController = TextEditingController();
   final _complaintNoteController = TextEditingController(text: 'Visited site and started complaint handling.');
   final _deferNoteController = TextEditingController(text: 'Customer unavailable. Follow-up required from field team.');
+  final _cancelNoteController = TextEditingController(text: 'Installation could not be completed. Cancelled after field review.');
   final _imagePicker = ImagePicker();
   final _workflowController = PageController();
   String _complaintResolutionCode = 'ont_replace';
   String _deferReason = 'customer_unavailable';
+  String _cancelReason = 'technical_feasibility_failed';
   bool _busy = false;
   bool _routerPhotoReady = false;
   bool _cablePhotoReady = false;
@@ -77,6 +87,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     _replaceSerialController.dispose();
     _complaintNoteController.dispose();
     _deferNoteController.dispose();
+    _cancelNoteController.dispose();
     _workflowController.dispose();
     super.dispose();
   }
@@ -650,6 +661,112 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
+  String _cancelReasonLabel(String reason) {
+    switch (reason) {
+      case 'customer_cancelled':
+        return 'Customer cancelled';
+      case 'technical_feasibility_failed':
+        return 'Technical feasibility failed';
+      case 'payment_issue':
+        return 'Payment issue';
+      case 'material_unavailable':
+        return 'Material unavailable';
+      case 'duplicate_booking':
+        return 'Duplicate booking';
+      default:
+        return 'Other cancellation';
+    }
+  }
+
+  Future<void> _showCancelInstallationSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF8FAFC),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 24 + MediaQuery.of(context).viewInsets.bottom),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cancel installation job',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Use this only when the installation should not continue. Admin can review the cancelled booking and process refund handling separately.',
+                    style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _cancelReason,
+                    items: _cancelReasons
+                        .map((reason) => DropdownMenuItem<String>(
+                              value: reason,
+                              child: Text(_cancelReasonLabel(reason)),
+                            ))
+                        .toList(),
+                    onChanged: _busy
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            setSheetState(() => _cancelReason = value);
+                            setState(() => _cancelReason = value);
+                          },
+                    decoration: const InputDecoration(labelText: 'Cancellation reason'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _cancelNoteController,
+                    minLines: 3,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Cancellation note',
+                      hintText: 'Explain why the installation was cancelled and what admin should review for refund.',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _busy
+                          ? null
+                          : () async {
+                              final note = _cancelNoteController.text.trim();
+                              if (note.length < 3) {
+                                _show('Add a short cancellation note');
+                                return;
+                              }
+                              Navigator.of(context).pop();
+                              final ok = await _run(
+                                () => _appState.api.cancelInstallation(
+                                  _appState.session!,
+                                  widget.job.id,
+                                  reason: _cancelReason,
+                                  note: note,
+                                ),
+                                'Installation cancelled',
+                              );
+                              if (ok && mounted) {
+                                Navigator.of(this.context).pop(true);
+                              }
+                            },
+                      child: const Text('Cancel installation'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _refreshPreviewAndDiagnostics({String successMessage = 'ONT details refreshed'}) async {
     final session = _appState.session;
     if (session == null) return;
@@ -863,6 +980,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final onsiteCheckedInAt = (onsiteLocation['checkedInAt'] ?? '').toString();
     final deferReason = (deviceContext['deferReason'] ?? detail?['subStatus'] ?? '').toString();
     final deferNote = (deviceContext['deferNote'] ?? '').toString();
+    final cancelReason = (deviceContext['cancelReason'] ?? detail?['subStatus'] ?? '').toString();
+    final cancelNote = (deviceContext['cancelNote'] ?? '').toString();
     final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
     final handoverPack = <String>[
       if (customerName.isNotEmpty) 'Customer: $customerName',
@@ -1198,6 +1317,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               icon: const Icon(Icons.content_copy_outlined, size: 18),
                               label: const Text('Copy address'),
                             ),
+                          if (!isComplaint && _canCancelInstall(status))
+                            OutlinedButton.icon(
+                              onPressed: _busy ? null : _showCancelInstallationSheet,
+                              icon: const Icon(Icons.cancel_outlined, size: 18),
+                              label: const Text('Cancel installation'),
+                            ),
                         ],
                       ),
                       if (onsiteAddress.isNotEmpty || onsiteCheckedInAt.isNotEmpty) ...[
@@ -1299,6 +1424,33 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                   ),
                                 ],
                               ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (!isComplaint && (status == 'cancelled' || cancelReason.isNotEmpty || cancelNote.isNotEmpty)) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Cancellation status',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: const Color(0xFFB91C1C),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _row('Reason', cancelReason.isEmpty ? '-' : _cancelReasonLabel(cancelReason)),
+                              _row('Field note', cancelNote.isEmpty ? '-' : cancelNote),
                             ],
                           ),
                         ),
@@ -3224,6 +3376,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       ['active', 'activation_in_progress'].contains(status) && proofUploaded;
 
   bool _canDeferJob(String status) => !['completed', 'cancelled', 'deferred'].contains(status);
+
+  bool _canCancelInstall(String status) => !['completed', 'cancelled'].contains(status);
 
   bool _canCompleteInstall(String status, String otp, bool proofUploaded, bool activationLive) =>
       ['active', 'activation_in_progress'].contains(status) && activationLive && proofUploaded && otp.length == 6;

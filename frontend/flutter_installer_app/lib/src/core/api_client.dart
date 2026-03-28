@@ -148,6 +148,7 @@ class InstallerApiClient {
         longitude: double.tryParse('${map['customerSnapshot']?['location']?['lng'] ?? ''}'),
         mapUrl: (map['customerSnapshot']?['location']?['mapUrl'] ?? '').toString(),
         deferNote: (map['deviceContext']?['deferNote'] ?? '').toString(),
+        cancelNote: (map['deviceContext']?['cancelNote'] ?? '').toString(),
       );
     }).toList();
   }
@@ -237,6 +238,22 @@ class InstallerApiClient {
         '/api/v1/installer/jobs/$jobId/resume-follow-up',
         method: 'POST',
         token: session.accessToken,
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> cancelInstallation(
+    InstallerSession session,
+    String jobId, {
+    required String reason,
+    required String note,
+  }) async {
+    return _asMap(
+      await _request(
+        '/api/v1/installer/jobs/$jobId/cancel-installation',
+        method: 'POST',
+        token: session.accessToken,
+        body: {'reason': reason, 'note': note},
       ),
     );
   }

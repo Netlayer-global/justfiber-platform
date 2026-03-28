@@ -70,6 +70,7 @@ class InstallerJob {
     required this.longitude,
     required this.mapUrl,
     required this.deferNote,
+    required this.cancelNote,
   });
 
   final String id;
@@ -102,6 +103,7 @@ class InstallerJob {
   final double? longitude;
   final String mapUrl;
   final String deferNote;
+  final String cancelNote;
 }
 
 class ProvisioningPreview {

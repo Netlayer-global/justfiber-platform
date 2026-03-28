@@ -44,15 +44,14 @@ class _JobsTabState extends State<JobsTab> {
     final theme = Theme.of(context);
     final search = _searchController.text.trim().toLowerCase();
     final filteredJobs = _filterJobs(appState.jobs, search);
-    final activeJobs = filteredJobs.where((job) => job.status != 'completed' && job.status != 'deferred').toList();
+    final installationJobs = filteredJobs.where((job) => job.jobType != 'complaint' && !['completed', 'deferred', 'cancelled'].contains(job.status)).toList();
+    final complaintJobs = filteredJobs.where((job) => job.jobType == 'complaint' && !['completed', 'deferred', 'cancelled'].contains(job.status)).toList();
     final deferredJobs = filteredJobs.where((job) => job.status == 'deferred').toList();
-    final todayJobs = activeJobs.where(_isTodayJob).toList();
-    final pendingJobs = activeJobs.where((job) => !_isTodayJob(job)).toList();
     final completedJobs = filteredJobs.where((job) => job.status == 'completed').toList();
-    final completedTodayJobs = completedJobs.where(_isTodayJob).toList();
-    final liveInstalls = activeJobs.where((job) => job.jobType != 'complaint').length;
-    final liveComplaints = activeJobs.where((job) => job.jobType == 'complaint').length;
-    final exceptionJobs = activeJobs.where((job) => job.configStatus == 'failed').length + deferredJobs.length;
+    final cancelledJobs = filteredJobs.where((job) => job.status == 'cancelled').toList();
+    final liveInstalls = installationJobs.length;
+    final liveComplaints = complaintJobs.length;
+    final exceptionJobs = [...installationJobs, ...complaintJobs].where((job) => job.configStatus == 'failed').length + deferredJobs.length;
     final hasFilters = search.isNotEmpty || _queueFilter != 'all';
 
     return RefreshIndicator(
@@ -89,7 +88,7 @@ class _JobsTabState extends State<JobsTab> {
                         border: Border.all(color: const Color(0x140F172A)),
                       ),
                       child: Text(
-                        '${activeJobs.length} active',
+                        '${installationJobs.length + complaintJobs.length} active',
                         style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
@@ -117,19 +116,19 @@ class _JobsTabState extends State<JobsTab> {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Expanded(child: _metricChip('Today', '${todayJobs.length}')),
+                    Expanded(child: _metricChip('Install', '$liveInstalls')),
                     const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Pending', '${pendingJobs.length}')),
+                    Expanded(child: _metricChip('Complaint', '$liveComplaints')),
                     const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Deferred', '${deferredJobs.length}')),
+                    Expanded(child: _metricChip('Pending', '${deferredJobs.length}')),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _metricChip('Installs', '$liveInstalls')),
+                    Expanded(child: _metricChip('Completed', '${completedJobs.length}')),
                     const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Complaints', '$liveComplaints')),
+                    Expanded(child: _metricChip('Cancelled', '${cancelledJobs.length}')),
                     const SizedBox(width: 8),
                     Expanded(child: _metricChip('Exceptions', '$exceptionJobs')),
                   ],
@@ -148,11 +147,11 @@ class _JobsTabState extends State<JobsTab> {
                   runSpacing: 8,
                   children: [
                     _filterChip('All', 'all', filteredJobs.length),
-                    _filterChip('Today', 'today', todayJobs.length),
-                    _filterChip('Pending', 'pending', pendingJobs.length),
+                    _filterChip('Install', 'install', installationJobs.length),
                     _filterChip('Complaint', 'complaint', liveComplaints),
                     _filterChip('Deferred', 'deferred', deferredJobs.length),
                     _filterChip('Closed', 'closed', completedJobs.length),
+                    _filterChip('Cancelled', 'cancelled', cancelledJobs.length),
                   ],
                 ),
                 if (hasFilters) ...[
@@ -214,18 +213,18 @@ class _JobsTabState extends State<JobsTab> {
               ),
             )
           else ...[
-            if (todayJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'TODAY FIELD VISITS'),
-              ...todayJobs.map(
+            if (installationJobs.isNotEmpty) ...[
+              _sectionLabel(context, 'INSTALLATION JOBS'),
+              ...installationJobs.map(
                 (job) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: _jobCard(context, appState, job),
                 ),
               ),
             ],
-            if (pendingJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'PENDING FOLLOW-UPS'),
-              ...pendingJobs.map(
+            if (complaintJobs.isNotEmpty) ...[
+              _sectionLabel(context, 'COMPLAINT JOBS'),
+              ...complaintJobs.map(
                 (job) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: _jobCard(context, appState, job),
@@ -233,7 +232,7 @@ class _JobsTabState extends State<JobsTab> {
               ),
             ],
             if (deferredJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'FOLLOW-UP REQUIRED'),
+              _sectionLabel(context, 'PENDING / FOLLOW-UP JOBS'),
               ...deferredJobs.map(
                 (job) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
@@ -242,8 +241,17 @@ class _JobsTabState extends State<JobsTab> {
               ),
             ],
             if (completedJobs.isNotEmpty) ...[
-              _sectionLabel(context, completedTodayJobs.isNotEmpty ? 'COMPLETED TODAY' : 'RECENTLY CLOSED'),
-              ...(completedTodayJobs.isNotEmpty ? completedTodayJobs : completedJobs).map(
+              _sectionLabel(context, 'COMPLETED JOBS'),
+              ...completedJobs.map(
+                (job) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _jobCard(context, appState, job),
+                ),
+              ),
+            ],
+            if (cancelledJobs.isNotEmpty) ...[
+              _sectionLabel(context, 'CANCELLED INSTALLATIONS'),
+              ...cancelledJobs.map(
                 (job) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: _jobCard(context, appState, job),
@@ -320,8 +328,8 @@ class _JobsTabState extends State<JobsTab> {
     final primaryAction = _primaryActionLabel(job);
     final hasConfigFailure = job.configStatus == 'failed';
     final isDeferred = job.status == 'deferred';
+    final isCancelled = job.status == 'cancelled';
     final hasPinnedLocation = job.latitude != null && job.longitude != null;
-    final hasLinkedRouter = job.finalSerialNumber.isNotEmpty;
     final nextVisitLabel = _nextVisitLabel(job);
     final exceptionTone = hasConfigFailure || isDeferred ? const Color(0xFFB45309) : const Color(0xFF6E6A67);
     final deferReason = _deferReasonLabel(job.subStatus);
@@ -382,14 +390,14 @@ class _JobsTabState extends State<JobsTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isDeferred ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF),
+                    color: isCancelled ? const Color(0xFFFEF2F2) : (isDeferred ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF)),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: isDeferred ? const Color(0xFFFCD34D) : const Color(0xFFD8B4FE)),
+                    border: Border.all(color: isCancelled ? const Color(0xFFFCA5A5) : (isDeferred ? const Color(0xFFFCD34D) : const Color(0xFFD8B4FE))),
                   ),
                   child: Text(
-                    isDeferred ? 'Follow-up required' : primaryAction,
+                    isCancelled ? 'Cancelled' : (isDeferred ? 'Follow-up required' : primaryAction),
                     style: TextStyle(
-                      color: isDeferred ? Color(0xFFB45309) : Color(0xFF8224E3),
+                      color: isCancelled ? const Color(0xFFB91C1C) : (isDeferred ? const Color(0xFFB45309) : const Color(0xFF8224E3)),
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
                     ),
@@ -429,11 +437,12 @@ class _JobsTabState extends State<JobsTab> {
               children: [
                 _pill(isComplaint ? 'complaint' : 'installation'),
                 _pill(stageLabel),
+                if (isCancelled) _pill('cancelled'),
                 if (isDeferred) _pill('follow-up'),
                 _pill(_urgencyLabel(job)),
               ],
             ),
-            if (hasConfigFailure || isDeferred || job.latestEventCode.isNotEmpty) ...[
+            if (hasConfigFailure || isDeferred || isCancelled || job.latestEventCode.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -446,7 +455,9 @@ class _JobsTabState extends State<JobsTab> {
                   ),
                 ),
                 child: Text(
-                  isDeferred
+                  isCancelled
+                      ? 'This installation was cancelled. Open the job to review the cancellation note for refund follow-up.'
+                      : isDeferred
                       ? 'This visit is marked for follow-up. Open the job to review the defer note and next steps.'
                       : hasConfigFailure
                       ? 'Router config failed. Open the job and retry activation.'
@@ -456,6 +467,35 @@ class _JobsTabState extends State<JobsTab> {
                     fontWeight: FontWeight.w700,
                     height: 1.35,
                   ),
+                ),
+              ),
+            ],
+            if (isCancelled && job.cancelNote.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cancellation note',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: const Color(0xFFB91C1C),
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      job.cancelNote,
+                      style: const TextStyle(color: Color(0xFF7F1D1D), height: 1.35),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -752,13 +792,11 @@ class _JobsTabState extends State<JobsTab> {
   List<InstallerJob> _filterJobs(List<InstallerJob> jobs, String search) {
     final filtered = jobs.where((job) {
       final matchesFilter = switch (_queueFilter) {
-        'today' => _isTodayJob(job) && job.status != 'completed' && job.status != 'deferred',
-        'pending' => !_isTodayJob(job) && job.status != 'completed' && job.status != 'deferred',
-        'install' => job.jobType != 'complaint' && job.status != 'completed',
-        'complaint' => job.jobType == 'complaint' && job.status != 'completed',
+        'install' => job.jobType != 'complaint' && !['completed', 'deferred', 'cancelled'].contains(job.status),
+        'complaint' => job.jobType == 'complaint' && !['completed', 'deferred', 'cancelled'].contains(job.status),
         'deferred' => job.status == 'deferred',
-        'exceptions' => (job.configStatus == 'failed' || job.status == 'deferred') && job.status != 'completed',
         'closed' => job.status == 'completed',
+        'cancelled' => job.status == 'cancelled',
         _ => true,
       };
       if (!matchesFilter) return false;
@@ -780,8 +818,8 @@ class _JobsTabState extends State<JobsTab> {
   }
 
   int _compareJobs(InstallerJob a, InstallerJob b) {
-    final aClosed = a.status == 'completed';
-    final bClosed = b.status == 'completed';
+    final aClosed = ['completed', 'cancelled'].contains(a.status);
+    final bClosed = ['completed', 'cancelled'].contains(b.status);
     if (aClosed != bClosed) {
       return aClosed ? 1 : -1;
     }
@@ -843,6 +881,8 @@ class _JobsTabState extends State<JobsTab> {
     switch (job.status) {
       case 'deferred':
         return 'Revisit pending';
+      case 'cancelled':
+        return 'Cancelled';
       case 'assigned':
         return 'Accept dispatch';
       case 'accepted':
@@ -868,6 +908,7 @@ class _JobsTabState extends State<JobsTab> {
 
   String _primaryActionLabel(InstallerJob job) {
     if (job.status == 'completed') return 'Review';
+    if (job.status == 'cancelled') return 'Cancelled';
     if (job.status == 'deferred') return 'Revisit';
     if (job.status == 'assigned') return 'Accept';
     if (job.status == 'accepted') return 'Travel';
@@ -897,6 +938,8 @@ class _JobsTabState extends State<JobsTab> {
         return 'internet live';
       case 'deferred':
         return 'follow-up required';
+      case 'cancelled':
+        return 'cancelled';
       case 'completed':
         return 'completed';
       default:

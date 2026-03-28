@@ -24,6 +24,11 @@ export const deferJobSchema = z.object({
   note: z.string().min(3).max(500)
 });
 
+export const cancelInstallationSchema = z.object({
+  reason: z.enum(["customer_cancelled", "technical_feasibility_failed", "payment_issue", "material_unavailable", "duplicate_booking", "other"]),
+  note: z.string().min(3).max(500)
+});
+
 export const proofSchema = z.object({
   routerPhotoUrl: z.string().url(),
   cablePhotoUrl: z.string().url(),
