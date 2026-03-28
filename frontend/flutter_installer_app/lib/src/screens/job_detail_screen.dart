@@ -1718,6 +1718,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _row('Router serial', '${device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '-'}'),
                       _row('Router online', '${device['onlineStatus'] ?? 'unknown'}'),
                       _row('Provisioning state', '${device['provisioningState'] ?? 'pending'}'),
+                      if (recommendations.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'Field recommendations',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: recommendations.take(4).map(_miniPill).toList(),
+                        ),
+                      ],
                     ],
                   ),
                 ),
