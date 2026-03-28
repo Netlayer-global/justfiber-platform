@@ -468,6 +468,14 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> markAllNotificationsRead() async {
+    final unreadIds = notifications.where((item) => item.readAt.isEmpty).map((item) => item.id).where((id) => id.isNotEmpty).toList(growable: false);
+    if (unreadIds.isEmpty) return;
+    for (final notificationId in unreadIds) {
+      await markNotificationRead(notificationId);
+    }
+  }
+
   Future<void> loadPlans() async {
     try {
       plans = await api.fetchPlans();

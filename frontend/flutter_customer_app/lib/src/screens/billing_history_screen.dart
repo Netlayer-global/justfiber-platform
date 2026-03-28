@@ -61,6 +61,21 @@ class BillingHistoryScreen extends StatelessWidget {
             _connectionStrip(selectedConnection),
             const SizedBox(height: 18),
           ],
+          if (appState.error != null && appState.error!.isNotEmpty) ...[
+            AppCard(
+              color: const Color(0xFFFFFFFF),
+              borderColor: const Color(0x33F59E0B),
+              child: Text(
+                appState.error!,
+                style: const TextStyle(
+                  color: Color(0xFFC2410C),
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           AppCard(
             color: const Color(0xFFFFFFFF),
             borderColor: const Color(0x228224E3),
@@ -468,6 +483,65 @@ class BillingHistoryScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (billing.invoices.isEmpty && billing.payments.isEmpty) ...[
+            const SizedBox(height: 18),
+            AppCard(
+              color: const Color(0xFFFFFFFF),
+              borderColor: const Color(0x228224E3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Billing documents are not ready yet',
+                    style: TextStyle(
+                      color: Color(0xFF131313),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Your invoices and receipts will appear here after activation billing or the first billing cycle is generated.',
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: appState.busy ? null : appState.refresh,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF8224E3),
+                            backgroundColor: const Color(0xFFFFFFFF),
+                            side: const BorderSide(color: Color(0x668224E3)),
+                          ),
+                          child: const Text('Refresh billing'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                            );
+                            if (context.mounted) {
+                              await appState.refresh();
+                            }
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF8224E3),
+                            foregroundColor: const Color(0xFFFFFFFF),
+                          ),
+                          child: const Text('Need help'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           _sectionCard(
             title: 'Invoices',

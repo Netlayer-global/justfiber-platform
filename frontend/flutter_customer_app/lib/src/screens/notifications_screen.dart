@@ -211,6 +211,8 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final notifications = appState.notifications;
+    final unreadCount = notifications.where((item) => item.readAt.isEmpty).length;
+    final hasUnread = unreadCount > 0;
     CustomerConnection? selectedConnection;
     for (final item in appState.connections) {
       if (item.customerId == appState.selectedCustomerId) {
@@ -258,6 +260,26 @@ class NotificationsScreen extends StatelessWidget {
                       : 'You have ${notifications.length} recent service, billing, or support alerts.',
                   style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                 ),
+                if (appState.error != null && appState.error!.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0x33F59E0B)),
+                    ),
+                    child: Text(
+                      appState.error!,
+                      style: const TextStyle(
+                        color: Color(0xFFC2410C),
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 8,
@@ -300,6 +322,18 @@ class NotificationsScreen extends StatelessWidget {
                       ),
                       child: const Text('Open Billing'),
                     ),
+                    if (hasUnread)
+                      OutlinedButton(
+                        onPressed: () async {
+                          await appState.markAllNotificationsRead();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF8224E3),
+                          backgroundColor: const Color(0xFFFFFFFF),
+                          side: const BorderSide(color: Color(0x668224E3)),
+                        ),
+                        child: Text('Mark all read ($unreadCount)'),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -308,6 +342,7 @@ class NotificationsScreen extends StatelessWidget {
                   runSpacing: 10,
                   children: [
                     SizedBox(width: 136, child: _heroMetric('Alerts', '${notifications.length}')),
+                    SizedBox(width: 136, child: _heroMetric('Unread', '$unreadCount')),
                     SizedBox(width: 136, child: _heroMetric('Billing', '${notifications.where((n) => _kindFor(n) == _AlertKind.billing).length}')),
                     SizedBox(width: 136, child: _heroMetric('Support', '${notifications.where((n) => _kindFor(n) == _AlertKind.support).length}')),
                     SizedBox(width: 136, child: _heroMetric('Tracking', '${notifications.where((n) => _kindFor(n) == _AlertKind.tracking).length}')),
@@ -321,7 +356,7 @@ class NotificationsScreen extends StatelessWidget {
             color: const Color(0xFFFFFFFF),
             borderColor: const Color(0x228224E3),
             child: notifications.isEmpty
-                ? const Text('No alerts to show right now.', style: TextStyle(color: Color(0xFF6E6A67)))
+                ? const Text('No alerts to show right now. Billing updates, support responses, and installer visit changes will appear here.', style: TextStyle(color: Color(0xFF6E6A67), height: 1.45))
                 : Column(
                     children: notifications.map((item) {
                       final kind = _kindFor(item);
