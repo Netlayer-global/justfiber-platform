@@ -950,6 +950,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final canRetry = _canRetry(status, configStatus);
     final canStartComplaint = _canStartComplaint(status);
     final canReplaceOnt = _canReplaceOnt(status);
+    final canRebootComplaint = _canRebootComplaint(status);
     final canSendComplaintOtp = _canSendComplaintOtp(status);
     final canResolveComplaint = _canResolveComplaint(status, _otpController.text.trim());
     final canSubmitProof = _canSubmitProof(status, _hasCapturedProofPhotos());
@@ -1396,6 +1397,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   canRetry: canRetry,
                   canStartComplaint: canStartComplaint,
                   canReplaceOnt: canReplaceOnt,
+                  canRebootComplaint: canRebootComplaint,
                   canSendComplaintOtp: canSendComplaintOtp,
                   canResolveComplaint: canResolveComplaint,
                   canSubmitProof: canSubmitProof,
@@ -1501,6 +1503,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         canRetry: canRetry,
                         canStartComplaint: canStartComplaint,
                         canReplaceOnt: canReplaceOnt,
+                        canRebootComplaint: canRebootComplaint,
                         canSendComplaintOtp: canSendComplaintOtp,
                         canResolveComplaint: canResolveComplaint,
                         canSubmitProof: canSubmitProof,
@@ -2006,6 +2009,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: const Text('Replace ONT'),
                             ),
                             OutlinedButton(
+                              onPressed: _busy || !canRebootComplaint
+                                  ? null
+                                  : () => _run(
+                                        () => _appState.api.rebootComplaintDevice(_appState.session!, widget.job.id),
+                                        'ONT reboot requested',
+                                      ),
+                              child: const Text('Reboot ONT'),
+                            ),
+                            OutlinedButton(
                               onPressed: _busy || !canSendComplaintOtp
                                   ? null
                                   : () async {
@@ -2430,6 +2442,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool canRetry,
     required bool canStartComplaint,
     required bool canReplaceOnt,
+    required bool canRebootComplaint,
     required bool canSendComplaintOtp,
     required bool canResolveComplaint,
     required bool canSubmitProof,
@@ -2649,6 +2662,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                           );
                                         },
                                 child: const Text('Replace ONT'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canRebootComplaint
+                                    ? null
+                                    : () => _run(
+                                          () => _appState.api.rebootComplaintDevice(_appState.session!, widget.job.id),
+                                          'ONT reboot requested',
+                                        ),
+                                child: const Text('Reboot ONT'),
                               ),
                               FilledButton(
                                 onPressed: _busy || !canSendComplaintOtp
@@ -3037,6 +3059,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool canRetry,
     required bool canStartComplaint,
     required bool canReplaceOnt,
+    required bool canRebootComplaint,
     required bool canSendComplaintOtp,
     required bool canResolveComplaint,
     required bool canSubmitProof,
@@ -3055,6 +3078,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             canStartOnsite: canStartOnsite,
             canStartComplaint: canStartComplaint,
             canReplaceOnt: canReplaceOnt,
+            canRebootComplaint: canRebootComplaint,
             canSendComplaintOtp: canSendComplaintOtp,
             canResolveComplaint: canResolveComplaint,
           )
@@ -3306,6 +3330,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _canStartComplaint(String status) => ['assigned', 'accepted', 'enroute', 'onsite'].contains(status);
 
   bool _canReplaceOnt(String status) => ['onsite', 'complaint_in_progress', 'ont_scanned'].contains(status);
+
+  bool _canRebootComplaint(String status) => ['accepted', 'enroute', 'onsite', 'complaint_in_progress', 'active'].contains(status);
 
   bool _canSendComplaintOtp(String status) => ['complaint_in_progress', 'onsite', 'active'].contains(status);
 

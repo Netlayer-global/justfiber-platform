@@ -372,6 +372,14 @@ class InstallerApiClient {
     );
   }
 
+  Future<void> rebootComplaintDevice(InstallerSession session, String jobId) async {
+    await _request(
+      '/api/v1/installer/jobs/$jobId/reboot-device',
+      method: 'POST',
+      token: session.accessToken,
+    );
+  }
+
   Future<String?> sendComplaintOtp(InstallerSession session, String jobId) async {
     final data = _asMap(await _request('/api/v1/installer/jobs/$jobId/send-complaint-otp', method: 'POST', token: session.accessToken));
     final otp = data['demoOtp']?.toString();

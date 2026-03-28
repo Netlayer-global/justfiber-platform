@@ -1278,6 +1278,38 @@ installerAppRouter.post(
 );
 
 installerAppRouter.post(
+  "/jobs/:jobId/reboot-device",
+  asyncHandler(async (req, res) => {
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    if (job.type !== "complaint") {
+      throw new ApiError(409, "Device reboot is only available for complaint visits");
+    }
+    if (!["accepted", "enroute", "onsite", "complaint_in_progress", "active"].includes(job.status)) {
+      throw new ApiError(409, "Device reboot is only allowed during an active complaint visit");
+    }
+    const device = await resolveJobDevice(job);
+    const targetDeviceId = device?.deviceId || job.deviceContext?.finalDeviceId;
+    if (!targetDeviceId) {
+      throw new ApiError(404, "Linked ONT not found for reboot");
+    }
+
+    await genieacsClient.rebootDevice(targetDeviceId);
+    job.deviceContext = {
+      ...(job.deviceContext || {}),
+      lastComplaintRebootAt: new Date(),
+      lastComplaintRebootBy: req.installer._id
+    };
+    pushTimeline(job, "complaint.device_reboot_requested", req.installer._id, "Installer requested ONT reboot during complaint visit");
+    await job.save();
+    return ok(res, {
+      status: "queued",
+      deviceId: targetDeviceId,
+      rebootQueuedAt: job.deviceContext.lastComplaintRebootAt
+    });
+  })
+);
+
+installerAppRouter.post(
   "/jobs/:jobId/resolve-complaint",
   asyncHandler(async (req, res) => {
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
