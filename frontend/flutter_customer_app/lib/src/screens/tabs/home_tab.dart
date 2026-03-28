@@ -546,7 +546,7 @@ class HomeTab extends StatelessWidget {
                 Row(
                   children: [
                     const Expanded(
-                      child: Text('Payment due', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
+                      child: Text('Billing due', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
                     ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -565,6 +565,24 @@ class HomeTab extends StatelessWidget {
                       ? 'Pay Rs ${billing.dueAmount.toStringAsFixed(0)} to complete your pending plan switch.'
                       : 'Pay Rs ${billing.dueAmount.toStringAsFixed(0)} before ${billing.nextBillDate} to avoid interruption.',
                   style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _summaryBox(
+                        'Latest invoice',
+                        billing.latestInvoiceNumber.isEmpty ? 'Pending generation' : billing.latestInvoiceNumber,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _summaryBox(
+                        'Last payment',
+                        billing.lastPaymentDate.isEmpty ? 'Not recorded' : billing.lastPaymentDate,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -595,6 +613,7 @@ class HomeTab extends StatelessWidget {
               _infoRow('Current plan', planName),
               _infoRow('Wi-Fi name', wifiName),
               _infoRow('Next bill date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),
+              _infoRow('Recurring amount', billing.recurringAmount > 0 ? 'Rs ${billing.recurringAmount.toStringAsFixed(2)}' : '-'),
               _infoRow('Connected devices', '${wifi.connectedDevicesCount}'),
               _infoRow('Service state', hasService ? (wifi.paused ? 'Paused' : 'Active') : 'Not active', highlight: true),
               if (billing.pendingPlanChange != null) _infoRow('Pending plan change', billing.pendingPlanChange!.planName),

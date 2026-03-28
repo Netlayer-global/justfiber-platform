@@ -34,11 +34,8 @@ class PaymentDetailScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
           children: [
           AppCard(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -48,9 +45,9 @@ class PaymentDetailScreen extends StatelessWidget {
                       width: 58,
                       height: 58,
                       decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
+                        color: const Color(0xFFF8F4FF),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x668224E3)),
+                        border: Border.all(color: const Color(0x228224E3)),
                       ),
                       child: const Icon(Icons.check_circle_rounded, color: Color(0xFF8224E3), size: 34),
                     ),
@@ -59,15 +56,15 @@ class PaymentDetailScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Broadband payment', style: TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w700)),
+                          const Text('PAYMENT CONFIRMED', style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, letterSpacing: 1.8)),
                           const SizedBox(height: 4),
-                          Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFFFFFFFF))),
+                          Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313))),
                         ],
                       ),
                     ),
                     Text(
                       'Rs ${payment.amount.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFF8224E3)),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Color(0xFF131313)),
                     ),
                   ],
                 ),
@@ -80,7 +77,7 @@ class PaymentDetailScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 const Text(
                   'Your service and billing records have been updated for this payment.',
-                  style: TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                 ),
               ],
             ),
@@ -117,7 +114,7 @@ class PaymentDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'PAYMENT ACTIONS',
+                  'Receipt actions',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 22,
@@ -133,7 +130,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     textColor: const Color(0xFF131313),
                     subtitleTextStyle: const TextStyle(color: Color(0xFF6E6A67)),
                     leading: const Icon(Icons.receipt_long_rounded),
-                    title: const Text('Open payment receipt'),
+                    title: const Text('Open receipt'),
                     subtitle: const Text('View the receipt inside the app'),
                     trailing: const SizedBox.shrink(),
                     onTap: () => _openDocument(context, appState, 'Receipt', payment.viewUrl),
@@ -145,7 +142,7 @@ class PaymentDetailScreen extends StatelessWidget {
                     textColor: const Color(0xFF131313),
                     subtitleTextStyle: const TextStyle(color: Color(0xFF6E6A67)),
                     leading: const Icon(Icons.picture_as_pdf_rounded),
-                    title: const Text('Open PDF'),
+                    title: const Text('Open receipt PDF'),
                     subtitle: const Text('View the payment receipt PDF'),
                     trailing: const SizedBox.shrink(),
                     onTap: () => _openDocument(context, appState, 'Receipt PDF', payment.pdfUrl),
