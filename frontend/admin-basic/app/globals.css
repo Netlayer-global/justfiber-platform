@@ -23,43 +23,45 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 rounded-2xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
     @apply btn text-white;
-    background: linear-gradient(135deg, #5b6cff 0%, #7c4dff 100%);
-    box-shadow: 0 14px 34px rgba(91, 108, 255, 0.22);
+    background: #5d87ff;
+    box-shadow: none;
   }
   .btn-secondary {
     @apply btn border;
     background: #ffffff;
     color: #0f172a;
-    border-color: rgba(148, 163, 184, 0.28);
+    border-color: #dfe5ef;
   }
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
   .card {
-    @apply rounded-[28px] border shadow-sm;
+    @apply rounded-[18px] border shadow-sm;
     background: #ffffff;
-    border-color: rgba(226, 232, 240, 0.9);
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    border-color: #e5eaf2;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
   .input {
-    @apply px-4 py-3 rounded-2xl border focus:outline-none focus:ring-2 focus:border-transparent;
-    background: #ffffff;
+    @apply rounded-lg border px-4 py-2.5 focus:border-transparent focus:outline-none focus:ring-2;
+    background: #f5f7fb;
     color: #0f172a;
-    border-color: rgba(203, 213, 225, 0.9);
-    --tw-ring-color: rgba(45, 125, 255, 0.35);
+    border-color: #dfe5ef;
+    --tw-ring-color: rgba(93, 135, 255, 0.22);
   }
   .table-cell {
-    @apply px-4 py-3 text-sm;
+    @apply border-b px-4 py-3 text-sm;
     color: #475569;
+    border-color: #eef2f7;
   }
   .table-header {
-    @apply px-4 py-3 text-sm font-semibold;
+    @apply border-b px-4 py-3 text-sm font-semibold;
     color: #0f172a;
-    background: #f8fafc;
+    background: #ffffff;
+    border-color: #eef2f7;
   }
 
   .dashboard-shell {
@@ -69,10 +71,7 @@
   }
 
   .modernize-shell {
-    background:
-      radial-gradient(circle at top right, rgba(91, 108, 255, 0.08), transparent 24%),
-      radial-gradient(circle at bottom left, rgba(124, 77, 255, 0.05), transparent 20%),
-      linear-gradient(180deg, #fbfcfe 0%, #f4f7fb 100%);
+    background: #f6f8fc;
   }
 
   .modernize-sidebar-item {
@@ -107,6 +106,11 @@
   .modernize-tab-idle {
     @apply bg-white text-slate-600 hover:bg-slate-50;
     border: 1px solid #e8edf5;
+  }
+
+  .modernize-search {
+    @apply flex items-center gap-3 rounded-lg border bg-[#f5f7fb] px-4 py-3 text-sm text-slate-500;
+    border-color: #dfe5ef;
   }
 
   .soft-grid {

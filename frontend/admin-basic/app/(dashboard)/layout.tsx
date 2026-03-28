@@ -14,6 +14,7 @@ import {
   MapPinned,
   Menu,
   Router,
+  Search,
   Settings,
   ShieldCheck,
   Ticket,
@@ -93,6 +94,10 @@ function SidebarContent({
             <div className="text-xs font-medium text-slate-500">Admin</div>
           </div>
         </div>
+        <div className="modernize-search mt-5">
+          <Search className="h-4 w-4 text-slate-400" />
+          <span>Search modules</span>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-0 py-4">
@@ -128,9 +133,9 @@ function SidebarContent({
 
       <div className="border-t border-slate-200 p-4">
         <div className="rounded-xl bg-[#ecf2ff] p-4">
-          <div className="text-sm font-semibold text-slate-900">Operations workspace</div>
+          <div className="text-sm font-semibold text-slate-900">Upgrade workspace</div>
           <div className="mt-1 text-xs leading-6 text-slate-500">
-            Customers, billing, network, and field operations managed from one place.
+            Keep finance, network, and field operations in one clean control surface.
           </div>
           <button
             onClick={onLogout}
@@ -202,11 +207,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Menu className="h-5 w-5" />
               </button>
 
-              <button className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
-                <Bell className="h-5 w-5" />
-              </button>
+              <div className="hidden min-w-[320px] max-w-[520px] flex-1 lg:block">
+                <div className="modernize-search">
+                  <Search className="h-4 w-4 text-slate-400" />
+                  <span>Search customers, billing, jobs, devices</span>
+                </div>
+              </div>
 
               <div className="ml-auto flex items-center gap-3">
+                <button className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+                  <Bell className="h-5 w-5" />
+                </button>
                 <div className="hidden rounded-lg border border-slate-200 px-4 py-2 md:block">
                   <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">Workspace</div>
                   <div className="text-sm font-semibold text-slate-900">JustFiber HQ</div>
@@ -220,9 +231,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <main className="flex-1 pb-[60px]">
             <div className="mx-auto w-full max-w-[1200px] px-4 pt-5 md:px-6">
-              <div className="mb-5 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-                <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Admin module</div>
-                <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{currentItem.label}</div>
+              <div className="mb-5 flex items-center justify-between rounded-[18px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                <div>
+                  <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Admin module</div>
+                  <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{currentItem.label}</div>
+                </div>
+                <div className="hidden text-sm text-slate-400 md:block">Modern operations workspace</div>
               </div>
               <div className="min-h-[calc(100vh-170px)]">{children}</div>
             </div>
