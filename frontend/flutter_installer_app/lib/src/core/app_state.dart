@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
 import 'models.dart';
+import 'notification_service.dart';
 
 const installerApiBase = String.fromEnvironment(
   'JUSTFIBER_API_BASE',
@@ -37,6 +40,8 @@ class InstallerAppState extends ChangeNotifier {
   ProvisioningPreview? preview;
   Map<String, dynamic>? diagnostics;
   String? selectedJobId;
+  Timer? _notificationsPoller;
+  Set<String> _knownNotificationIds = <String>{};
 
   InstallerAppState() {
     api.onUnauthorized = _refreshAccessToken;
@@ -54,6 +59,7 @@ class InstallerAppState extends ChangeNotifier {
       await prefs.setString(_installerAccessTokenKey, session!.accessToken);
       await prefs.setString(_installerRefreshTokenKey, session!.refreshToken);
       await refresh();
+      _startNotificationsPolling();
       return true;
     } catch (e) {
       error = e.toString();
@@ -75,6 +81,7 @@ class InstallerAppState extends ChangeNotifier {
       profile = await api.fetchProfile(current);
       jobs = await api.fetchJobs(current);
       notifications = await api.fetchNotifications(current);
+      await _captureNewNotifications(notifications);
       if (selectedJobId != null && selectedJobId!.isNotEmpty) {
         preview = await api.fetchProvisioningPreview(current, selectedJobId!);
         diagnostics = await api.fetchDiagnostics(current, selectedJobId!);
@@ -367,6 +374,8 @@ class InstallerAppState extends ChangeNotifier {
   }
 
   void logout() {
+    _notificationsPoller?.cancel();
+    _notificationsPoller = null;
     SharedPreferences.getInstance().then((prefs) {
       prefs.remove(_installerLoginKey);
       prefs.remove(_installerAccessTokenKey);
@@ -378,6 +387,7 @@ class InstallerAppState extends ChangeNotifier {
     selectedJobId = null;
     error = null;
     lastSyncedAt = null;
+    _knownNotificationIds = <String>{};
     jobs = const [];
     notifications = const [];
     dashboard = const InstallerDashboard(
@@ -409,8 +419,24 @@ class InstallerAppState extends ChangeNotifier {
     session = InstallerSession(login: login, accessToken: accessToken, refreshToken: refreshToken);
     notifyListeners();
     await refresh();
+    _startNotificationsPolling();
     restoringSession = false;
     notifyListeners();
+  }
+
+  Future<void> refreshNotificationsSilently() async {
+    final current = session;
+    if (current == null) return;
+    try {
+      final nextNotifications = await api.fetchNotifications(current);
+      await _captureNewNotifications(nextNotifications);
+      notifications = nextNotifications;
+      lastSyncedAt = DateTime.now();
+      notifyListeners();
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+    }
   }
 
   Future<String?> _refreshAccessToken() async {
@@ -435,6 +461,36 @@ class InstallerAppState extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  void _startNotificationsPolling() {
+    _notificationsPoller?.cancel();
+    _notificationsPoller = Timer.periodic(
+      const Duration(seconds: 45),
+      (_) => refreshNotificationsSilently(),
+    );
+  }
+
+  Future<void> _captureNewNotifications(List<InstallerNotificationItem> nextNotifications) async {
+    if (_knownNotificationIds.isEmpty) {
+      _knownNotificationIds = nextNotifications.map((item) => item.id).toSet();
+      return;
+    }
+
+    final freshItems = nextNotifications
+        .where((item) => !_knownNotificationIds.contains(item.id))
+        .toList()
+      ..sort((a, b) => (a.createdAt ?? DateTime.now()).compareTo(b.createdAt ?? DateTime.now()));
+
+    for (final item in freshItems) {
+      await InstallerNotificationService.instance.showAlert(
+        id: InstallerNotificationService.instance.stableIdFor(item.id),
+        title: item.title,
+        body: item.body,
+      );
+    }
+
+    _knownNotificationIds = nextNotifications.map((item) => item.id).toSet();
   }
 }
 
