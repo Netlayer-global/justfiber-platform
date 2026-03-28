@@ -286,10 +286,10 @@ export default function DashboardPage() {
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs uppercase tracking-[0.2em] text-white/45">Quick actions</div>
-              <div className="mt-2 text-2xl font-bold text-white">Move faster across the console</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Quick actions</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">Move faster across the console</div>
             </div>
-            <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">Pinned</div>
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">Pinned</div>
           </div>
 
           <div className="mt-6 grid gap-3 md:grid-cols-2">
@@ -299,17 +299,17 @@ export default function DashboardPage() {
               ['Inspect tickets', 'Clear pending support activity faster'],
               ['Manage zones', 'Edit serviceability and booking coverage'],
             ].map(([title, desc]) => (
-              <div key={title} className="rounded-[22px] border border-white/10 bg-white/5 p-5">
-                <div className="font-semibold text-white">{title}</div>
-                <div className="mt-2 text-sm leading-6 text-white/55">{desc}</div>
+              <div key={title} className="rounded-[22px] border border-slate-200 bg-slate-50 p-5">
+                <div className="font-semibold text-slate-900">{title}</div>
+                <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
               </div>
             ))}
           </div>
         </div>
 
         <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.2em] text-white/45">Performance ribbon</div>
-          <div className="mt-2 text-2xl font-bold text-white">Signal-rich ops summary</div>
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Performance ribbon</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Signal-rich ops summary</div>
 
           <div className="mt-6 space-y-3">
             {[
@@ -317,12 +317,12 @@ export default function DashboardPage() {
               ['Dispatch pressure', '3 high-priority jobs awaiting acceptance', 'Watch'],
               ['Support throughput', 'Average response under 18 minutes', 'Stable'],
             ].map(([title, desc, state]) => (
-              <div key={title} className="flex items-center justify-between rounded-[22px] border border-white/10 bg-black/35 p-4">
+              <div key={title} className="flex items-center justify-between rounded-[22px] border border-slate-200 bg-slate-50 p-4">
                 <div>
-                  <div className="font-semibold text-white">{title}</div>
-                  <div className="mt-1 text-sm text-white/55">{desc}</div>
+                  <div className="font-semibold text-slate-900">{title}</div>
+                  <div className="mt-1 text-sm text-slate-500">{desc}</div>
                 </div>
-                <div className="rounded-full border border-[#8224E3]/30 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3]">
+                <div className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#2d7dff]">
                   {state}
                 </div>
               </div>
@@ -332,16 +332,16 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="neon-panel p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-black/55">Launch checklist</div>
-          <div className="mt-2 text-3xl font-black tracking-[-0.04em]">Customer app alignment</div>
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Launch checklist</div>
+          <div className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">Customer app alignment</div>
           <div className="mt-4 space-y-3">
             {[
               'Customer app now follows the same live backend flows used by admin and installer operations.',
               'Customer auth now follows normal OTP entry flow without admin-side OTP exposure.',
               'Booking, support, billing, and alerts are wired into the same backend flow.',
             ].map((item) => (
-              <div key={item} className="rounded-[20px] border border-black/10 bg-black/10 p-4 text-sm font-medium text-black/70">
+              <div key={item} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
                 {item}
               </div>
             ))}
@@ -349,15 +349,15 @@ export default function DashboardPage() {
         </div>
 
         <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-white/45">Release hardening</div>
-          <div className="mt-2 text-2xl font-bold text-white">Production cleanup status</div>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Release hardening</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Production cleanup status</div>
           <div className="mt-4 space-y-3">
             {[
               'Installer app no longer ships with prefilled demo credentials.',
               'Customer login screen no longer opens with a seeded mobile number.',
               'Demo OTP responses are hidden by default unless EXPOSE_DEMO_OTP=true is enabled for local testing.',
             ].map((item) => (
-              <div key={item} className="rounded-[20px] border border-white/10 bg-black/35 p-4 text-sm text-white/70">
+              <div key={item} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 {item}
               </div>
             ))}
@@ -367,8 +367,8 @@ export default function DashboardPage() {
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-white/45">Customer OTP</div>
-          <div className="mt-2 text-2xl font-bold text-white">Fetch current OTP</div>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Customer OTP</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Fetch current OTP</div>
           <div className="mt-4 flex flex-col gap-3 md:flex-row">
             <input
               className="input flex-1"
@@ -381,13 +381,13 @@ export default function DashboardPage() {
             </button>
           </div>
           {otpValue ? (
-            <div className="mt-4 rounded-[20px] border border-[#8224E3]/30 bg-[#8224E3]/10 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-white/45">Current OTP</div>
-              <div className="mt-2 text-3xl font-black tracking-[0.2em] text-white">{otpValue}</div>
+            <div className="mt-4 rounded-[20px] border border-[#2d7dff]/20 bg-[#eff6ff] p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Current OTP</div>
+              <div className="mt-2 text-3xl font-semibold tracking-[0.2em] text-slate-900">{otpValue}</div>
             </div>
           ) : null}
           {otpError ? (
-            <div className="mt-4 rounded-[20px] border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+            <div className="mt-4 rounded-[20px] border border-red-200 bg-red-50 p-4 text-sm text-red-600">
               {otpError}
             </div>
           ) : null}
