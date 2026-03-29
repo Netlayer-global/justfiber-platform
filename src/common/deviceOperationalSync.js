@@ -335,38 +335,43 @@ export async function getLiveGenieDeviceList(limit = 100) {
         return device;
       }
 
-      const richSummary = await genieacsClient.getRichDeviceSummary({
-        deviceId: device.deviceId,
-        serialNumber: device.serialNumber
-      });
-      if (!richSummary) {
+      try {
+        const richSummary = await genieacsClient.getRichDeviceSummary({
+          deviceId: device.deviceId,
+          serialNumber: device.serialNumber
+        });
+        if (!richSummary) {
+          return device;
+        }
+
+        const parsed = summarizeGenieDevice(richSummary, device.deviceId);
+        return {
+          ...device,
+          ...(parsed.serialNumber ? { serialNumber: parsed.serialNumber } : {}),
+          ...(parsed.productClass ? { productClass: parsed.productClass } : {}),
+          onlineStatus: parsed.onlineStatus || device.onlineStatus,
+          wanInfo: {
+            ...(device.wanInfo || {}),
+            ...(parsed.wanInfo || {})
+          },
+          wifiInfo: {
+            ...(device.wifiInfo || {}),
+            ...(parsed.wifiInfo || {})
+          },
+          lanInfo: {
+            ...(device.lanInfo || {}),
+            ...(parsed.lanInfo || {})
+          },
+          opticalInfo: {
+            ...(device.opticalInfo || {}),
+            ...(parsed.opticalInfo || {})
+          },
+          updatedAt: parsed.lastInformAt || device.updatedAt
+        };
+      } catch (error) {
+        console.error("[devices] Failed to enrich live device summary:", device.deviceId, error);
         return device;
       }
-
-      const parsed = summarizeGenieDevice(richSummary, device.deviceId);
-      return {
-        ...device,
-        ...(parsed.serialNumber ? { serialNumber: parsed.serialNumber } : {}),
-        ...(parsed.productClass ? { productClass: parsed.productClass } : {}),
-        onlineStatus: parsed.onlineStatus || device.onlineStatus,
-        wanInfo: {
-          ...(device.wanInfo || {}),
-          ...(parsed.wanInfo || {})
-        },
-        wifiInfo: {
-          ...(device.wifiInfo || {}),
-          ...(parsed.wifiInfo || {})
-        },
-        lanInfo: {
-          ...(device.lanInfo || {}),
-          ...(parsed.lanInfo || {})
-        },
-        opticalInfo: {
-          ...(device.opticalInfo || {}),
-          ...(parsed.opticalInfo || {})
-        },
-        updatedAt: parsed.lastInformAt || device.updatedAt
-      };
     })
   );
 }
