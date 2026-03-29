@@ -212,6 +212,11 @@ export class InternalSubscriberPlatform {
     const provisionalPppoe =
       jobRecord.activation?.preparedCredentials?.pppoe ||
       buildPppoeCredentials(identifiers.customerId, plan?.provisioning);
+    const contactMobile =
+      booking.personalDetails?.mobile ||
+      jobRecord.customerSnapshot?.phone ||
+      jobRecord.customerSnapshot?.mobile ||
+      undefined;
 
     const customer = await Customer.findOneAndUpdate(
       { customerId: identifiers.customerId },
@@ -219,7 +224,7 @@ export class InternalSubscriberPlatform {
         $set: {
           accountNumber: identifiers.accountNumber,
           fullName: booking.personalDetails?.fullName || jobRecord.customerSnapshot?.fullName || "JustFiber Customer",
-          phone: booking.personalDetails?.mobile || jobRecord.customerSnapshot?.phone,
+          ...(contactMobile ? { mobile: contactMobile, phone: contactMobile } : {}),
           email: booking.personalDetails?.email,
           serviceId: identifiers.serviceId,
           planCode: plan?.planCode || booking.selectedPlan?.planCode,
@@ -366,11 +371,17 @@ export class InternalSubscriberPlatform {
       Number(installerJob.customerSnapshot?.monthlyPrice || 0) ||
       Number(installerJob.customerSnapshot?.totalAmount || 0) ||
       0;
+    const contactMobile =
+      booking?.personalDetails?.mobile ||
+      installerJob.customerSnapshot?.phone ||
+      installerJob.customerSnapshot?.mobile ||
+      undefined;
 
     const customer = await Customer.findOneAndUpdate(
       { customerId: identifiers.customerId },
       {
         $set: {
+          ...(contactMobile ? { mobile: contactMobile, phone: contactMobile } : {}),
           serviceId: identifiers.serviceId,
           accountNumber: identifiers.accountNumber,
           operationalStatus: "active",

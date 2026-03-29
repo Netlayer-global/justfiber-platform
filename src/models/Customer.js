@@ -5,6 +5,7 @@ const customerSchema = new mongoose.Schema(
     customerId: { type: String, required: true, unique: true, index: true },
     accountNumber: { type: String, index: true },
     fullName: { type: String, required: true, index: true },
+    mobile: { type: String, index: true },
     phone: { type: String, index: true },
     email: String,
     serviceId: { type: String, required: true, index: true },
