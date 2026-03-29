@@ -320,176 +320,127 @@ class _AuthShowcaseCard extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFFFFFF), Color(0xFFF8F4FF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF17141C), Color(0xFF2E2737), Color(0xFF453559)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
                 borderRadius: BorderRadius.circular(34),
-                border: Border.all(color: const Color(0x228224E3)),
+                border: Border.all(color: const Color(0x22FFFFFF)),
                 boxShadow: const [
                   BoxShadow(color: Color(0x22030B14), blurRadius: 24, offset: Offset(0, 10)),
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
                 child: Column(
                   children: [
+                    Row(
+                      children: const [
+                        Text(
+                          '9:41',
+                          style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w700),
+                        ),
+                        Spacer(),
+                        Icon(Icons.signal_cellular_alt_rounded, color: Color(0xFFFFFFFF), size: 18),
+                        SizedBox(width: 6),
+                        Icon(Icons.wifi_rounded, color: Color(0xFFFFFFFF), size: 18),
+                        SizedBox(width: 6),
+                        Icon(Icons.battery_full_rounded, color: Color(0xFFFFFFFF), size: 18),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
                     Expanded(
-                      child: Center(
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 260,
-                              height: 260,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: [Color(0x338224E3), Color(0x00000000)],
-                                ),
-                              ),
-                            ),
-                            Container(
-                              width: 200,
-                              height: 200,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: DecoratedBox(
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: const Color(0x338224E3)),
+                                gradient: const LinearGradient(
+                                  colors: [Color(0x33FFFFFF), Color(0x00000000), Color(0x22000000)],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                                borderRadius: BorderRadius.circular(28),
                               ),
                             ),
-                            Transform.rotate(
-                              angle: -0.18,
-                              child: Container(
-                                width: 150,
-                                height: 230,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFFF8F4FF), Color(0xFFFFFFFF)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(28),
-                                  boxShadow: const [
-                                    BoxShadow(color: Color(0x26030B14), blurRadius: 24, offset: Offset(0, 10)),
-                                  ],
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        children: const [
-                                          Expanded(
-                                            child: Text(
-                                              'Control',
-                                              style: TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
-                                            ),
-                                          ),
-                                          Icon(Icons.more_horiz_rounded, color: const Color(0x886E6A67)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF8F4FF),
-                                          borderRadius: BorderRadius.circular(18),
-                                          border: Border.all(color: const Color(0x338224E3)),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Icon(slide.icon, color: const Color(0xFF8224E3), size: 22),
-                                            const SizedBox(height: 10),
-                                            const Text(
-                                              'Live sync',
-                                              style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Container(
-                                              height: 6,
-                                              decoration: BoxDecoration(
-                                                gradient: const LinearGradient(
-                                                  colors: [Color(0xFF8224E3), Color(0x338224E3)],
-                                                ),
-                                                borderRadius: BorderRadius.circular(999),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            const Text(
-                                              'Billing, plans, support, and bookings in one stream.',
-                                              style: TextStyle(
-                                                color: Color(0xFF6E6A67),
-                                                fontSize: 11,
-                                                height: 1.35,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              right: 18,
-                              top: 40,
-                              child: Container(
-                                width: 160,
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFFFFFFFF), Color(0xFFF8F4FF)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(22),
-                                  border: Border.all(color: const Color(0x338224E3)),
-                                  boxShadow: const [
-                                    BoxShadow(color: Color(0x12030B14), blurRadius: 20, offset: Offset(0, 8)),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      slide.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF131313)),
+                          ),
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 20),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0x1AFFFFFF),
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(color: const Color(0x22FFFFFF)),
                                     ),
-                                    const SizedBox(height: 10),
-                                    Row(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Expanded(child: _MiniStat(value: slide.statLeftValue, label: slide.statLeft)),
+                                        const Icon(Icons.wifi_rounded, color: Color(0xFFFFFFFF), size: 18),
                                         const SizedBox(width: 8),
-                                        Expanded(child: _MiniStat(value: slide.statRightValue, label: slide.statRight)),
+                                        Text(
+                                          'JustFiber',
+                                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                color: const Color(0xFFFFFFFF),
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
                                       ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(height: 26),
+                                  _RouterShowcase(icon: slide.icon),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      slide.title,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontSize: 26,
-                            color: const Color(0xFFEFEEE8),
                           ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      slide.subtitle,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFFD1D5DB), height: 1.45),
+                          Align(
+                            alignment: Alignment.bottomLeft,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.fromLTRB(18, 28, 18, 18),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Color(0x00000000), Color(0xAA111017), Color(0xE6111017)],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    slide.title,
+                                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                          fontSize: 34,
+                                          height: 1.0,
+                                          color: const Color(0xFFFFFFFF),
+                                        ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    slide.subtitle,
+                                    style: const TextStyle(color: Color(0xFFE5E7EB), height: 1.45),
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Row(
+                                    children: [
+                                      Expanded(child: _DarkMiniStat(value: slide.statLeftValue, label: slide.statLeft)),
+                                      const SizedBox(width: 10),
+                                      Expanded(child: _DarkMiniStat(value: slide.statRightValue, label: slide.statRight)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -502,8 +453,8 @@ class _AuthShowcaseCard extends StatelessWidget {
   }
 }
 
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({
+class _DarkMiniStat extends StatelessWidget {
+  const _DarkMiniStat({
     required this.value,
     required this.label,
   });
@@ -513,13 +464,143 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF8224E3))),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 11)),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0x1AFFFFFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x22FFFFFF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFFFFFFF))),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(color: Color(0xFFE5E7EB), fontSize: 11)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouterShowcase extends StatelessWidget {
+  const _RouterShowcase({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 260,
+      height: 300,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 260,
+            height: 260,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [Color(0x448224E3), Color(0x00000000)],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 16,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x55FFFFFF), width: 1.5),
+              ),
+              child: const Icon(Icons.wifi_rounded, color: Color(0xFFFFFFFF), size: 44),
+            ),
+          ),
+          Positioned(
+            top: 76,
+            child: Container(
+              width: 190,
+              height: 2,
+              color: const Color(0x55FFFFFF),
+            ),
+          ),
+          Positioned(
+            left: 52,
+            top: 90,
+            child: Container(
+              width: 12,
+              height: 70,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6F1EB),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 52,
+            top: 90,
+            child: Container(
+              width: 12,
+              height: 70,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6F1EB),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 54,
+            child: Container(
+              width: 188,
+              height: 96,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF7F4FB), Color(0xFFE7DDF7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 12)),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Container(
+                    width: 56,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8224E3),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Icon(icon, color: const Color(0xFF8224E3), size: 28),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      4,
+                      (index) => Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: index == 0 ? const Color(0xFF22C55E) : const Color(0x558224E3),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
