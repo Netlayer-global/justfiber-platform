@@ -71,6 +71,32 @@ function collectHostNodes(node) {
     .map(([, value]) => value);
 }
 
+function discoverOpticalMetric(summary, direction) {
+  const normalizedDirection = String(direction || "").toLowerCase();
+  const directionTokens =
+    normalizedDirection === "tx"
+      ? ["txpower", "txopticalpower", "opticaltxpower"]
+      : ["rxpower", "rxopticalpower", "opticalrxpower"];
+  const transportHints = ["pon", "optical", "gpon", "xgpon", "wanpon", "ont"];
+
+  const matches = collectMatchingPaths(summary, (path, value) => {
+    if (!value || typeof value !== "object" || !("_value" in value)) {
+      return false;
+    }
+    const normalizedPath = String(path || "").toLowerCase();
+    return directionTokens.some((token) => normalizedPath.includes(token)) &&
+      transportHints.some((hint) => normalizedPath.includes(hint));
+  });
+
+  for (const path of matches) {
+    const value = readPath(summary, path);
+    if (value !== undefined && value !== null && value !== "") {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 function summarizeLanHosts(summary) {
   const hosts = collectHostNodes(summary)
     .map((hostNode, index) => {
@@ -216,6 +242,9 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.RXPower",
     "InternetGatewayDevice.WANDevice.1.X_ZTE-COM_WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.WANDevice.1.X_HW_WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.WANDevice.1.X_DASAN_WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.X_DASAN_WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.X_DASAN_OPTICAL.RXPower",
     "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.X_ZTE-COM_WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.X_HW_WANPONInterfaceConfig.RXPower",
@@ -227,12 +256,15 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.FAP.Tunnel.1.Stats.RXPower",
     "VirtualParameters.RXPower",
     "VirtualParameters.OpticalRxPower"
-  ]);
+  ]) ?? discoverOpticalMetric(summary, "rx");
   const txPower = firstValue(summary, [
     "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.TXPower",
     "InternetGatewayDevice.WANDevice.1.X_ZTE-COM_WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.WANDevice.1.X_HW_WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.WANDevice.1.X_DASAN_WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.X_DASAN_WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.X_DASAN_OPTICAL.TXPower",
     "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.X_ZTE-COM_WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.X_HW_WANPONInterfaceConfig.TXPower",
@@ -244,7 +276,7 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.FAP.Tunnel.1.Stats.TXPower",
     "VirtualParameters.TXPower",
     "VirtualParameters.OpticalTxPower"
-  ]);
+  ]) ?? discoverOpticalMetric(summary, "tx");
   const serialNumber = firstValue(summary, [
     "DeviceID.SerialNumber",
     "InternetGatewayDevice.DeviceInfo.SerialNumber"
