@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { SettingsCatalogItem } from '@/lib/types'
+import type { AppBanner, SettingsCatalogItem } from '@/lib/types'
 import { Loader, Save, Upload, FileImage, SlidersHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -56,6 +56,18 @@ type InvoiceTemplateEntry = {
 type ZoneTemplateMapping = {
   zoneCode: string
   templateKey: string
+}
+
+type BannerFormState = {
+  title: string
+  imageUrl: string
+  targetType: string
+  targetValue: string
+  audience: string
+  active: boolean
+  startAt: string
+  endAt: string
+  sortOrder: string
 }
 
 const emptyTemplate = (): InvoiceTemplateEntry => ({
@@ -125,14 +137,31 @@ function fileToDataUrl(file: File) {
   })
 }
 
+function emptyBannerForm(): BannerFormState {
+  return {
+    title: '',
+    imageUrl: '',
+    targetType: 'plans',
+    targetValue: '',
+    audience: 'all',
+    active: true,
+    startAt: '',
+    endAt: '',
+    sortOrder: '1',
+  }
+}
+
 export default function SettingsPage() {
   const [catalog, setCatalog] = useState<SettingsCatalogItem[]>([])
   const [activeSection, setActiveSection] = useState('invoice_template')
   const [invoiceTemplate, setInvoiceTemplate] = useState<InvoiceTemplateSettings | null>(null)
   const [selectedTemplateKey, setSelectedTemplateKey] = useState('justfiber_standard')
   const [genericJson, setGenericJson] = useState('{}')
+  const [banners, setBanners] = useState<AppBanner[]>([])
+  const [bannerForm, setBannerForm] = useState<BannerFormState>(emptyBannerForm())
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSavingBanner, setIsSavingBanner] = useState(false)
   const [isUploading, setIsUploading] = useState<'logoDataUrl' | 'signatureDataUrl' | 'stampDataUrl' | ''>('')
 
   const orderedCatalog = useMemo(() => {
@@ -153,6 +182,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     void loadCatalog()
+    void loadBanners()
   }, [])
 
   useEffect(() => {
@@ -223,6 +253,53 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('[v0] Failed to load settings section:', error)
       toast.error('Failed to load settings section')
+    }
+  }
+
+  async function loadBanners() {
+    try {
+      const res = await adminAPI.getCatalogBanners()
+      if (!res.success) {
+        toast.error(res.error || 'Failed to load customer promotions')
+        return
+      }
+      setBanners(res.data || [])
+    } catch (error) {
+      console.error('[v0] Failed to load customer promotions:', error)
+      toast.error('Failed to load customer promotions')
+    }
+  }
+
+  async function createBanner() {
+    try {
+      if (!bannerForm.title.trim()) {
+        toast.error('Banner title is required')
+        return
+      }
+      setIsSavingBanner(true)
+      const res = await adminAPI.createCatalogBanner({
+        title: bannerForm.title.trim(),
+        imageUrl: bannerForm.imageUrl.trim() || undefined,
+        targetType: bannerForm.targetType || undefined,
+        targetValue: bannerForm.targetValue.trim() || undefined,
+        audience: bannerForm.audience || 'all',
+        active: bannerForm.active,
+        startAt: bannerForm.startAt ? new Date(bannerForm.startAt).toISOString() : undefined,
+        endAt: bannerForm.endAt ? new Date(bannerForm.endAt).toISOString() : undefined,
+        sortOrder: Number(bannerForm.sortOrder || 1),
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to create customer promotion')
+        return
+      }
+      toast.success('Customer promotion created')
+      setBannerForm(emptyBannerForm())
+      await loadBanners()
+    } catch (error) {
+      console.error('[v0] Failed to create customer promotion:', error)
+      toast.error('Failed to create customer promotion')
+    } finally {
+      setIsSavingBanner(false)
     }
   }
 
@@ -754,6 +831,126 @@ export default function SettingsPage() {
 
                     <div className="mt-8 border-t border-slate-200 pt-4 text-xs text-slate-500">
                       {invoicePreview.footerNote || 'Footer note will appear here.'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card p-5 space-y-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Customer promotions</div>
+                      <div className="mt-1 text-sm text-slate-400">Manage in-app banners shown on customer home and offers screens.</div>
+                    </div>
+                    <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                      {banners.length} live entries
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 space-y-3">
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Existing promotions</div>
+                      <div className="space-y-3">
+                        {banners.length ? banners.map((banner) => (
+                          <div key={banner.id} className="rounded-[18px] border border-slate-200 bg-white p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <div className="font-semibold text-slate-900">{banner.title}</div>
+                                <div className="mt-1 text-sm text-slate-500">
+                                  {banner.targetType || 'generic'}{banner.targetValue ? ` • ${banner.targetValue}` : ''} • {banner.audience}
+                                </div>
+                              </div>
+                              <div className={`rounded-full px-3 py-1 text-xs font-semibold ${banner.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {banner.active ? 'Active' : 'Inactive'}
+                              </div>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                              <span className="rounded-full bg-slate-100 px-3 py-1">Sort {banner.sortOrder}</span>
+                              {banner.startAt ? <span className="rounded-full bg-slate-100 px-3 py-1">Starts {new Date(banner.startAt).toLocaleDateString()}</span> : null}
+                              {banner.endAt ? <span className="rounded-full bg-slate-100 px-3 py-1">Ends {new Date(banner.endAt).toLocaleDateString()}</span> : null}
+                            </div>
+                            {banner.imageUrl ? (
+                              <div className="mt-3 text-xs text-[#5B6CFF] break-all">{banner.imageUrl}</div>
+                            ) : (
+                              <div className="mt-3 text-xs text-slate-400">No image URL attached</div>
+                            )}
+                          </div>
+                        )) : (
+                          <div className="rounded-[18px] border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
+                            No promotions yet. Create one on the right and it will start appearing in the customer app.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 space-y-4">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Create promotion</div>
+                        <div className="mt-1 text-sm text-slate-400">Use this for plan upgrades, billing nudges, support shortcuts, or tracking links.</div>
+                      </div>
+                      <div className="grid gap-3">
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Title</div>
+                          <input className="input" value={bannerForm.title} onChange={(e) => setBannerForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Upgrade to yearly and save more" />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Image URL</div>
+                          <input className="input" value={bannerForm.imageUrl} onChange={(e) => setBannerForm((prev) => ({ ...prev, imageUrl: e.target.value }))} placeholder="https://..." />
+                        </label>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Target</div>
+                            <select className="input" value={bannerForm.targetType} onChange={(e) => setBannerForm((prev) => ({ ...prev, targetType: e.target.value }))}>
+                              <option value="plans">Plans</option>
+                              <option value="billing">Billing</option>
+                              <option value="support">Support</option>
+                              <option value="tracking">Tracking</option>
+                              <option value="generic">Generic</option>
+                            </select>
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Audience</div>
+                            <select className="input" value={bannerForm.audience} onChange={(e) => setBannerForm((prev) => ({ ...prev, audience: e.target.value }))}>
+                              <option value="all">All</option>
+                              <option value="active">Active</option>
+                              <option value="prospect">Prospect</option>
+                              <option value="inactive">Inactive</option>
+                            </select>
+                          </label>
+                        </div>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Target value</div>
+                          <input className="input" value={bannerForm.targetValue} onChange={(e) => setBannerForm((prev) => ({ ...prev, targetValue: e.target.value }))} placeholder="Optional route or plan code" />
+                        </label>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Sort order</div>
+                            <input className="input" type="number" value={bannerForm.sortOrder} onChange={(e) => setBannerForm((prev) => ({ ...prev, sortOrder: e.target.value }))} />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Starts</div>
+                            <input className="input" type="datetime-local" value={bannerForm.startAt} onChange={(e) => setBannerForm((prev) => ({ ...prev, startAt: e.target.value }))} />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Ends</div>
+                            <input className="input" type="datetime-local" value={bannerForm.endAt} onChange={(e) => setBannerForm((prev) => ({ ...prev, endAt: e.target.value }))} />
+                          </label>
+                        </div>
+                        <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                          <input type="checkbox" checked={bannerForm.active} onChange={(e) => setBannerForm((prev) => ({ ...prev, active: e.target.checked }))} />
+                          Start this promotion as active
+                        </label>
+                        <div className="rounded-[18px] border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+                          Tip: use `plans` for upgrade nudges, `billing` for payment reminders, `support` for help shortcuts, and `tracking` for service follow-up banners.
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          <button type="button" className="btn-primary" onClick={() => void createBanner()} disabled={isSavingBanner}>
+                            {isSavingBanner ? 'Creating...' : 'Create promotion'}
+                          </button>
+                          <button type="button" className="btn-secondary" onClick={() => setBannerForm(emptyBannerForm())} disabled={isSavingBanner}>
+                            Reset form
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

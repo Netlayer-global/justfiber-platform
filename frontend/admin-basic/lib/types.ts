@@ -549,6 +549,21 @@ export interface SettingsSection<T = Record<string, any>> {
   updatedAt?: string | null
 }
 
+export interface AppBanner {
+  id: string
+  title: string
+  imageUrl?: string
+  targetType?: string
+  targetValue?: string
+  audience: string
+  active: boolean
+  startAt?: string | null
+  endAt?: string | null
+  sortOrder: number
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface BillingOverview {
   totalInvoices: number
   overdueInvoices: number

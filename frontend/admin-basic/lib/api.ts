@@ -40,6 +40,7 @@ import type {
   CustomerPayment,
   CustomerTicket,
   SupportQueueRequest,
+  AppBanner,
 } from './types'
 
 export function getApiBaseUrl() {
@@ -292,6 +293,23 @@ function mapPlan(plan: any): Plan {
     type: plan.serviceType || 'fiber',
     status: plan.active === false ? 'inactive' : 'active',
     createdAt: plan.createdAt || new Date().toISOString(),
+  }
+}
+
+function mapAppBanner(item: any): AppBanner {
+  return {
+    id: item._id || item.id || '',
+    title: item.title || 'Untitled banner',
+    imageUrl: item.imageUrl || '',
+    targetType: item.targetType || '',
+    targetValue: item.targetValue || '',
+    audience: item.audience || 'all',
+    active: Boolean(item.active),
+    startAt: item.startAt || null,
+    endAt: item.endAt || null,
+    sortOrder: Number(item.sortOrder || 1),
+    createdAt: item.createdAt || '',
+    updatedAt: item.updatedAt || '',
   }
 }
 
@@ -1743,6 +1761,33 @@ export const adminAPI = {
     return {
       ...res,
       data: res.data ? mapSettingsSection<T>(res.data) : undefined,
+    }
+  },
+  getCatalogBanners: async () => {
+    const res = await request<any[]>('/api/v1/admin/catalog/banners')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapAppBanner) : [],
+    }
+  },
+  createCatalogBanner: async (payload: {
+    title: string
+    imageUrl?: string
+    targetType?: string
+    targetValue?: string
+    audience?: string
+    active?: boolean
+    startAt?: string
+    endAt?: string
+    sortOrder?: number
+  }) => {
+    const res = await request<any>('/api/v1/admin/catalog/banners', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    return {
+      ...res,
+      data: res.data ? mapAppBanner(res.data) : undefined,
     }
   },
   updateSettingsSection: async <T = Record<string, any>>(section: string, value: T) =>
