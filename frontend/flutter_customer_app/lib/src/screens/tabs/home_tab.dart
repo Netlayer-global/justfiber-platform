@@ -243,10 +243,10 @@ class HomeTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 SizedBox(
-                  height: 174,
+                  height: 196,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: banners.length > 3 ? 3 : banners.length,
+                    itemCount: banners.length > 4 ? 4 : banners.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 12),
                     itemBuilder: (_, index) => _promoCard(context, appState, banners[index]),
                   ),
