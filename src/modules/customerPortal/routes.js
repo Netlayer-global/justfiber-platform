@@ -3632,6 +3632,89 @@ customerPortalRouter.post(
 );
 
 customerPortalRouter.post(
+  "/plan/change/cancel",
+  requireCustomerAuth,
+  asyncHandler(async (req, res) => {
+    const customer = await getOwnedLinkedCustomer({
+      customerUser: req.customerUser,
+      requestedCustomerId: getRequestedCustomerId(req)
+    });
+    const pending = customer.billingSnapshot?.pendingPlanChange;
+    if (!pending?.planCode) {
+      return ok(res, {
+        cancelled: false,
+        customerId: customer.customerId,
+        dueAmount: Number(customer.billingSnapshot?.dueAmount || 0)
+      });
+    }
+
+    let reversedAmount = 0;
+    if (pending.noteNumber) {
+      const note = await BillingNote.findOne({
+        noteNumber: pending.noteNumber,
+        customerId: customer.customerId,
+        status: { $ne: "cancelled" }
+      });
+      if (note) {
+        reversedAmount = Number(note.totalAmount || note.amount || 0);
+        note.status = "cancelled";
+        note.note = note.note ? `${note.note} | Cancelled by customer before payment` : "Cancelled by customer before payment";
+        await note.save();
+      }
+    }
+
+    customer.billingSnapshot = {
+      ...(customer.billingSnapshot || {}),
+      dueAmount: Number(Math.max(0, Number(customer.billingSnapshot?.dueAmount || 0) - reversedAmount).toFixed(2)),
+      adjustmentPreview: 0,
+      pendingPlanChange: null
+    };
+    await customer.save();
+
+    await ServiceRequest.updateMany(
+      {
+        customerId: customer.customerId,
+        type: "plan_change",
+        status: { $in: ["pending_payment", "scheduled"] }
+      },
+      {
+        $set: { status: "cancelled" },
+        $push: {
+          timeline: {
+            event: "request.cancelled",
+            actorType: "customer",
+            actorId: req.customerUser._id.toString(),
+            at: new Date(),
+            note: "Plan change cancelled before completion"
+          }
+        }
+      }
+    );
+
+    await notifyCustomerAction(
+      req.customerUser._id,
+      "plan_change_cancelled",
+      "Plan change cancelled",
+      `Your pending plan change to ${pending.planName || pending.planCode} was cancelled.`,
+      {
+        customerId: customer.customerId,
+        planCode: pending.planCode,
+        reversedAmount,
+        dueAmount: customer.billingSnapshot?.dueAmount || 0
+      }
+    ).catch(() => null);
+
+    return ok(res, {
+      cancelled: true,
+      customerId: customer.customerId,
+      planCode: pending.planCode,
+      reversedAmount,
+      dueAmount: Number(customer.billingSnapshot?.dueAmount || 0)
+    });
+  })
+);
+
+customerPortalRouter.post(
   "/tickets",
   requireCustomerAuth,
   asyncHandler(async (req, res) => {

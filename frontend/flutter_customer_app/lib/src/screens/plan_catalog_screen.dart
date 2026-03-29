@@ -339,11 +339,11 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   }
 
   Future<void> _cancelCheckout(AppState appState) async {
-    await appState.clearPlanChangeDraft();
+    final ok = await appState.cancelPlanChangeCheckout();
     if (!mounted) return;
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Plan change checkout cancelled')),
+      SnackBar(content: Text(ok ? 'Plan change checkout cancelled' : (appState.error ?? 'Unable to cancel plan change'))),
     );
   }
 

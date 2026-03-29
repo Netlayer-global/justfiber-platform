@@ -795,6 +795,26 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<bool> cancelPlanChangeCheckout() async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      final ok = await api.cancelPlanChange(current, customerId: selectedCustomerId);
+      await clearPlanChangeDraft();
+      await refresh();
+      return ok;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> checkFeasibility({
     required String address,
     required String pinCode,
