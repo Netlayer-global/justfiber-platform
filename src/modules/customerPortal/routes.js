@@ -664,12 +664,11 @@ async function findOrCreatePortalUserForBooking({ mobile, email, fullName, exist
   if (existingUser) {
     return existingUser;
   }
-  let user = await CustomerUser.findOne({
-    $or: [
-      ...(mobile ? [{ mobile }] : []),
-      ...(email ? [{ email }] : [])
-    ]
-  });
+  const identityClauses = [
+    ...(mobile ? [{ mobile }] : []),
+    ...(email ? [{ email }] : [])
+  ];
+  let user = identityClauses.length ? await CustomerUser.findOne({ $or: identityClauses }) : null;
   if (!user) {
     user = await CustomerUser.create({
       mobile,
@@ -1371,9 +1370,11 @@ customerPortalRouter.post(
     if (!key || !verifyCustomerPortalDemoOtp(key, payload.otp)) {
       throw new ApiError(400, "Invalid OTP");
     }
-    let user = await CustomerUser.findOne({
-      $or: [{ mobile: payload.mobile }, { email: payload.email }]
-    });
+    const identityClauses = [
+      ...(payload.mobile ? [{ mobile: payload.mobile }] : []),
+      ...(payload.email ? [{ email: payload.email }] : [])
+    ];
+    let user = identityClauses.length ? await CustomerUser.findOne({ $or: identityClauses }) : null;
     if (!user) {
       user = await CustomerUser.create({
         mobile: payload.mobile,
