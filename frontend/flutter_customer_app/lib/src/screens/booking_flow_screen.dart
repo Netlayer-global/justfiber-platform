@@ -297,6 +297,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       );
                       if (!mounted) return;
                       if (ok) {
+                        if (appState.plans.isEmpty) {
+                          await appState.refreshPlans();
+                          if (!mounted) return;
+                        }
                         setState(() => _showUnavailableState = false);
                         setState(() => step = 1);
                       } else {
@@ -395,6 +399,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         );
                         if (!mounted) return;
                         if (ok) {
+                          if (appState.plans.isEmpty) {
+                            await appState.refreshPlans();
+                            if (!mounted) return;
+                          }
                           setState(() {
                             _showUnavailableState = false;
                             step = 1;
@@ -415,6 +423,48 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       title: 'Popular plans',
       child: Column(
         children: [
+          if (plans.isEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F4FF),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0x338224E3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Plans are loading',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    (appState.error ?? '').isNotEmpty
+                        ? 'Plan catalog abhi load nahi hui. ${appState.error}'
+                        : 'Serviceability check complete hai, but plan catalog abhi fetch nahi hui. Retry once.',
+                    style: const TextStyle(color: Color(0xFF6B7280), height: 1.45),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () async {
+                        await appState.refreshPlans();
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF8224E3),
+                        foregroundColor: const Color(0xFFFFFFFF),
+                      ),
+                      child: const Text('Reload plans'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           for (final plan in plans)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),

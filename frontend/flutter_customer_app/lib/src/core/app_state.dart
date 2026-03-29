@@ -883,6 +883,18 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshPlans() async {
+    error = null;
+    notifyListeners();
+    try {
+      plans = await api.fetchPlans();
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      notifyListeners();
+    }
+  }
+
   Future<String?> submitFeasibilityLead({
     required String fullName,
     required String mobile,
