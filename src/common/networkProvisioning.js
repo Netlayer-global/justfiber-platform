@@ -2,7 +2,7 @@ import { buildNokiaPasswordPaths, buildNokiaSsidPaths } from "./nokiaWifi.js";
 
 const BRAND_PATTERNS = [
   { brand: "nokia", patterns: ["nokia", "g-2425", "g2425", "g-140w", "g140w", "alcl", "alcatel"] },
-  { brand: "dasan", patterns: ["dasan", "h660", "h640", "h665"] },
+  { brand: "dasan", patterns: ["dasan", "dzs", "dsnw2a", "h660", "h640", "h665"] },
   { brand: "zte", patterns: ["zte", "f6", "zxhn", "f670", "f660", "f680"] },
   { brand: "syrotech", patterns: ["syrotech", "sy-gpon", "slt", "goxsq"] },
   { brand: "tp-link", patterns: ["tp-link", "tplink", "xc220", "xz000", "archer"] },
@@ -123,30 +123,35 @@ const BRAND_OVERRIDES = {
   dasan: {
     pppoeUsernamePath: [
       `${IGD_PPP}.Username`,
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Username",
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username"
     ],
     pppoePasswordPath: [
       `${IGD_PPP}.Password`,
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Password",
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password"
     ],
     vlanPath: [
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.X_DZS_VlanID",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.X_DZS_VLANID",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_DZS_WANGponLinkConfig.VLANIDMark",
       `${IGD_PPP}.X_DASAN_VLANID`,
       `${IGD_PPP}.X_CT-COM_VLANID`
     ],
     ssid24Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID"
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID"
     ],
     pass24Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase"
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase"
     ],
     ssid5Path: [
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID"
     ],
     pass5Path: [
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase"
     ]
   },
