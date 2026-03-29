@@ -26,6 +26,7 @@ class AppState extends ChangeNotifier {
   String? error;
   String? bookingError;
   String? selectedCustomerId;
+  DateTime? lastSyncedAt;
 
   DashboardData dashboard = const DashboardData(
     customerName: 'JustFiber Customer',
@@ -216,6 +217,7 @@ class AppState extends ChangeNotifier {
       speedTest = await api.fetchSpeedTest(current, customerId: selectedCustomerId);
 
       await refreshBookingTracking(silent: true);
+      lastSyncedAt = DateTime.now();
     } catch (e) {
       error = e.toString();
     } finally {
@@ -921,6 +923,7 @@ class AppState extends ChangeNotifier {
       quality: '',
     );
     bookingError = null;
+    lastSyncedAt = null;
     busy = false;
     bookingBusy = false;
   }
