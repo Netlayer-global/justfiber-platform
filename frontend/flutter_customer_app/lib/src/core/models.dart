@@ -399,6 +399,7 @@ class PendingPlanChange {
     required this.planCode,
     required this.planName,
     required this.effectiveMode,
+    required this.billingTerm,
     required this.billMode,
     required this.currentPrice,
     required this.nextPrice,
@@ -409,6 +410,7 @@ class PendingPlanChange {
   final String planCode;
   final String planName;
   final String effectiveMode;
+  final String billingTerm;
   final String billMode;
   final double currentPrice;
   final double nextPrice;
@@ -423,6 +425,7 @@ class PlanChangePreview {
     required this.nextPlanCode,
     required this.nextPlanName,
     required this.effectiveMode,
+    required this.billingTerm,
     required this.currentPrice,
     required this.nextPrice,
     required this.adjustmentAmount,
@@ -436,6 +439,7 @@ class PlanChangePreview {
   final String nextPlanCode;
   final String nextPlanName;
   final String effectiveMode;
+  final String billingTerm;
   final double currentPrice;
   final double nextPrice;
   final double adjustmentAmount;
@@ -453,6 +457,7 @@ class PlanChangeApplyResult {
     required this.planCode,
     required this.requestNumber,
     required this.payableNow,
+    required this.billingTerm,
   });
 
   final bool updated;
@@ -462,6 +467,25 @@ class PlanChangeApplyResult {
   final String planCode;
   final String requestNumber;
   final double payableNow;
+  final String billingTerm;
+}
+
+class PlanChangeDraft {
+  const PlanChangeDraft({
+    required this.planCode,
+    required this.planName,
+    required this.billingTerm,
+    required this.effectiveMode,
+    required this.step,
+    required this.savedAt,
+  });
+
+  final String planCode;
+  final String planName;
+  final String billingTerm;
+  final String effectiveMode;
+  final int step;
+  final String savedAt;
 }
 
 class BookingQuote {

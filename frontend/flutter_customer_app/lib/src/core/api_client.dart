@@ -312,6 +312,7 @@ class ApiClient {
               planCode: (pendingPlanChangeMap['planCode'] ?? '').toString(),
               planName: (pendingPlanChangeMap['planName'] ?? pendingPlanChangeMap['planCode'] ?? '').toString(),
               effectiveMode: (pendingPlanChangeMap['effectiveMode'] ?? '').toString(),
+              billingTerm: (pendingPlanChangeMap['billingTerm'] ?? 'monthly').toString(),
               billMode: (pendingPlanChangeMap['billMode'] ?? '').toString(),
               currentPrice: double.tryParse('${pendingPlanChangeMap['currentPrice'] ?? 0}') ?? 0,
               nextPrice: double.tryParse('${pendingPlanChangeMap['nextPrice'] ?? 0}') ?? 0,
@@ -1048,13 +1049,14 @@ class ApiClient {
     String? customerId,
     required String planCode,
     required String effectiveMode,
+    required String billingTerm,
   }) async {
     final data = _asMap(
       await _request(
         _withCustomerId('/api/v1/customer/plan/change/preview', customerId),
         method: 'POST',
         token: session.accessToken,
-        body: {'planCode': planCode, 'effectiveMode': effectiveMode},
+        body: {'planCode': planCode, 'effectiveMode': effectiveMode, 'billingTerm': billingTerm},
       ),
     );
     return PlanChangePreview(
@@ -1063,6 +1065,7 @@ class ApiClient {
       nextPlanCode: (data['nextPlanCode'] ?? planCode).toString(),
       nextPlanName: (data['nextPlanName'] ?? planCode).toString(),
       effectiveMode: (data['effectiveMode'] ?? effectiveMode).toString(),
+      billingTerm: (data['billingTerm'] ?? billingTerm).toString(),
       currentPrice: double.tryParse('${data['currentPrice'] ?? 0}') ?? 0,
       nextPrice: double.tryParse('${data['nextPrice'] ?? 0}') ?? 0,
       adjustmentAmount: double.tryParse('${data['adjustmentAmount'] ?? 0}') ?? 0,
@@ -1077,13 +1080,14 @@ class ApiClient {
     String? customerId,
     required String planCode,
     required String effectiveMode,
+    required String billingTerm,
   }) async {
     final data = _asMap(
       await _request(
         _withCustomerId('/api/v1/customer/plan/change/apply', customerId),
         method: 'POST',
         token: session.accessToken,
-        body: {'planCode': planCode, 'effectiveMode': effectiveMode},
+        body: {'planCode': planCode, 'effectiveMode': effectiveMode, 'billingTerm': billingTerm},
       ),
     );
     return PlanChangeApplyResult(
@@ -1094,6 +1098,7 @@ class ApiClient {
       planCode: (data['planCode'] ?? planCode).toString(),
       requestNumber: (data['requestNumber'] ?? '').toString(),
       payableNow: double.tryParse('${data['payableNow'] ?? 0}') ?? 0,
+      billingTerm: (data['billingTerm'] ?? billingTerm).toString(),
     );
   }
 

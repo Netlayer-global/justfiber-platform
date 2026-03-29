@@ -918,9 +918,23 @@ function buildInstallerVisitSummary(job) {
   };
 }
 
-function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMode }) {
+function getPlanTermPrice(plan, billingTerm) {
+  const safePlan = plan || {};
+  switch (billingTerm) {
+    case "quarterly":
+      return Number(safePlan.quarterlyPrice || safePlan.monthlyPrice || 0);
+    case "halfYearly":
+      return Number(safePlan.halfYearlyPrice || safePlan.monthlyPrice || 0);
+    case "yearly":
+      return Number(safePlan.yearlyPrice || safePlan.monthlyPrice || 0);
+    default:
+      return Number(safePlan.monthlyPrice || 0);
+  }
+}
+
+function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMode, billingTerm = "monthly" }) {
   const currentPrice = Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0);
-  const nextPrice = Number(nextPlan?.monthlyPrice || 0);
+  const nextPrice = getPlanTermPrice(nextPlan, billingTerm);
   const remainingDays = Math.max(0, Number(customer.billingSnapshot?.remainingDays || 0));
   const billMode =
     customer.billingSnapshot?.billMode ||
@@ -929,6 +943,7 @@ function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMo
   if (effectiveMode === "next_cycle") {
     return {
       billMode,
+      billingTerm,
       currentPrice,
       nextPrice,
       proratedCurrentCredit: 0,
@@ -947,6 +962,7 @@ function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMo
     const adjustmentAmount = Number((proratedNextCharge - proratedCurrentCredit).toFixed(2));
     return {
       billMode,
+      billingTerm,
       currentPrice,
       nextPrice,
       remainingDays,
@@ -962,6 +978,7 @@ function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMo
   const adjustmentAmount = Number((nextPrice - currentPrice).toFixed(2));
   return {
     billMode,
+    billingTerm,
     currentPrice,
     nextPrice,
     remainingDays,
@@ -3392,7 +3409,13 @@ customerPortalRouter.post(
       throw new ApiError(404, "Plan not found");
     }
     const currentPlan = customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null;
-    const preview = computePlanChangePreview({ customer, currentPlan, nextPlan: plan, effectiveMode: payload.effectiveMode });
+    const preview = computePlanChangePreview({
+      customer,
+      currentPlan,
+      nextPlan: plan,
+      effectiveMode: payload.effectiveMode,
+      billingTerm: payload.billingTerm
+    });
     return ok(res, {
       customerId: customer.customerId,
       currentPlanCode: currentPlan?.planCode || customer.planCode,
@@ -3418,7 +3441,13 @@ customerPortalRouter.post(
     }
     const currentPlan = customer.planCode ? await PlanCatalog.findOne({ planCode: customer.planCode }).lean() : null;
     const nextBillMode = plan.category === "business" || plan.category === "enterprise" ? "postpaid" : "prepaid";
-    const preview = computePlanChangePreview({ customer, currentPlan, nextPlan: plan, effectiveMode: payload.effectiveMode });
+    const preview = computePlanChangePreview({
+      customer,
+      currentPlan,
+      nextPlan: plan,
+      effectiveMode: payload.effectiveMode,
+      billingTerm: payload.billingTerm
+    });
 
     if (payload.effectiveMode === "next_cycle") {
       customer.billingSnapshot = {
@@ -3427,6 +3456,7 @@ customerPortalRouter.post(
           planCode: plan.planCode,
           planName: plan.name,
           effectiveMode: payload.effectiveMode,
+          billingTerm: payload.billingTerm,
           billMode: nextBillMode,
           customerType: nextBillMode === "postpaid" ? "business" : "home",
           currentPrice: preview.currentPrice,
@@ -3448,6 +3478,7 @@ customerPortalRouter.post(
           planCode: plan.planCode,
           planName: plan.name,
           effectiveMode: payload.effectiveMode,
+          billingTerm: payload.billingTerm,
           adjustmentPreview: 0
         },
         timeline: [
@@ -3474,7 +3505,8 @@ customerPortalRouter.post(
         metadata: {
           currentPlanCode: currentPlan?.planCode,
           nextPlanCode: plan.planCode,
-          effectiveMode: payload.effectiveMode
+          effectiveMode: payload.effectiveMode,
+          billingTerm: payload.billingTerm
         }
       });
       customer.billingSnapshot = {
@@ -3485,6 +3517,7 @@ customerPortalRouter.post(
           planCode: plan.planCode,
           planName: plan.name,
           effectiveMode: payload.effectiveMode,
+          billingTerm: payload.billingTerm,
           billMode: nextBillMode,
           customerType: nextBillMode === "postpaid" ? "business" : "home",
           currentPrice: preview.currentPrice,
@@ -3505,6 +3538,7 @@ customerPortalRouter.post(
           planCode: plan.planCode,
           planName: plan.name,
           effectiveMode: payload.effectiveMode,
+          billingTerm: payload.billingTerm,
           payableNow: preview.payableNow,
           noteNumber: note?.noteNumber
         },
@@ -3533,7 +3567,8 @@ customerPortalRouter.post(
         metadata: {
           currentPlanCode: currentPlan?.planCode,
           nextPlanCode: plan.planCode,
-          effectiveMode: payload.effectiveMode
+          effectiveMode: payload.effectiveMode,
+          billingTerm: payload.billingTerm
         }
       });
     }
@@ -3553,7 +3588,8 @@ customerPortalRouter.post(
       fupSpeedMbps: Number(plan.fupSpeedMbps || customer.billingSnapshot?.fupSpeedMbps || 0) || null,
       billMode: nextBillMode,
       lastPlanPrice: Number(currentPlan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0),
-      nextPlanPrice: Number(plan.monthlyPrice || 0),
+      nextPlanPrice: Number(preview.nextPrice || plan.monthlyPrice || 0),
+      nextPlanTerm: payload.billingTerm,
       adjustmentPreview: preview.adjustmentAmount,
       pendingPlanChange: null,
       nextPlanChangeMode: payload.effectiveMode
@@ -3570,6 +3606,7 @@ customerPortalRouter.post(
         planCode: plan.planCode,
         planName: plan.name,
         effectiveMode: payload.effectiveMode,
+        billingTerm: payload.billingTerm,
         appliedDirectly: true,
         creditAmount: preview.creditAmount || 0
       },
@@ -3583,7 +3620,7 @@ customerPortalRouter.post(
       "plan_changed",
       "Plan updated",
       `Plan changed to ${plan.name}.`,
-      { planCode: plan.planCode, effectiveMode: payload.effectiveMode }
+      { planCode: plan.planCode, effectiveMode: payload.effectiveMode, billingTerm: payload.billingTerm }
     );
     return ok(res, {
       updated: true,

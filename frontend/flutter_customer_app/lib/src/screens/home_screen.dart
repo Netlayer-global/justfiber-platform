@@ -161,10 +161,11 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() => index = 4);
             }
             break;
-          case 'plans':
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
-            );
+        case 'plans':
+        case 'plans_resume':
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+          );
             break;
           case 'tracking':
             await Navigator.of(context).push(

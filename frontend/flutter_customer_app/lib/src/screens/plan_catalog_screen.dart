@@ -13,844 +13,351 @@ class PlanCatalogScreen extends StatefulWidget {
 
 class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   String effectiveMode = 'immediate';
+  String billingTerm = 'monthly';
+  int step = 0;
+  bool _hydratedDraft = false;
+  bool _loadingCheckout = false;
+  PlanItem? selectedPlan;
+  PlanChangePreview? preview;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_hydratedDraft) return;
+    _hydratedDraft = true;
+    final appState = AppStateScope.of(context);
+    final draft = appState.planChangeDraft;
+    if (draft == null) return;
+    final plan = appState.planChangeOptions.cast<PlanItem?>().firstWhere(
+          (item) => item?.planCode == draft.planCode,
+          orElse: () => null,
+        );
+    if (plan == null) return;
+    final terms = _terms(plan);
+    selectedPlan = plan;
+    effectiveMode = draft.effectiveMode;
+    billingTerm = terms.contains(draft.billingTerm) ? draft.billingTerm : terms.first;
+    step = draft.step.clamp(1, 2);
+    if (step == 2) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadCheckout(appState, quiet: true));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
-    final plans = appState.planChangeOptions;
     final billing = appState.billing;
-    final currentPlan = appState.billing.currentPlan.toLowerCase();
-    final wifiName = appState.wifi.ssid24.isEmpty ? 'Active connection' : appState.wifi.ssid24;
-    final premiumPlans = plans.where((plan) => _isPremium(plan)).toList();
-    final standardPlans = plans.where((plan) => !_isPremium(plan)).toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Choose your plan'),
-        centerTitle: true,
+    final plans = appState.planChangeOptions;
+    return WillPopScope(
+      onWillPop: () async {
+        if (step == 0 || selectedPlan == null) return true;
+        await _saveDraftAndExit(appState);
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(step == 0 ? 'Choose your plan' : step == 1 ? 'Choose duration' : 'Checkout'),
+          backgroundColor: const Color(0xFFF6F1EB),
+          foregroundColor: const Color(0xFF131313),
+          leading: step == 0 ? null : IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => _saveDraftAndExit(appState)),
+        ),
         backgroundColor: const Color(0xFFF6F1EB),
-        foregroundColor: const Color(0xFF131313),
-      ),
-      backgroundColor: const Color(0xFFF6F1EB),
-      body: RefreshIndicator(
-        color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF6F1EB),
-        onRefresh: appState.refresh,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-          children: [
-          _heroCard(context, wifiName, billing.currentPlan, billing.recurringAmount),
-          const SizedBox(height: 18),
-          _currentPlanStrip(billing),
-          if (billing.pendingPlanChange != null) ...[
-            const SizedBox(height: 18),
-            _pendingPlanStrip(billing.pendingPlanChange!),
-          ],
-          const SizedBox(height: 18),
-          _modeSwitcher(),
-          const SizedBox(height: 20),
-          if (plans.isEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: const Color(0x338224E3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'No alternate plans available right now.',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313)),
-                  ),
+        body: RefreshIndicator(
+          color: const Color(0xFF8224E3),
+          backgroundColor: const Color(0xFFF6F1EB),
+          onRefresh: appState.refresh,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+            children: [
+              _card(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(step == 0 ? 'PLAN STUDIO' : step == 1 ? 'DURATION STEP' : 'CHECKOUT STEP', style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, letterSpacing: 2.1, fontSize: 11)),
+                  const SizedBox(height: 10),
+                  Text(step == 0 ? (billing.currentPlan.isEmpty ? 'Choose your next plan' : 'Current plan: ${billing.currentPlan}') : selectedPlan?.name ?? 'Plan change', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF131313))),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Your current connection may already be on the best available plan for this area. You can refresh later or ask support for upgrade options.',
-                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                  Text(
+                    step == 0
+                        ? 'Recurring: Rs ${billing.recurringAmount.toStringAsFixed(0)} | Due: Rs ${billing.dueAmount.toStringAsFixed(0)}'
+                        : step == 1
+                            ? 'Pick the commercial duration before checkout.'
+                            : 'Review summary, payable amount, and confirm the change.',
+                    style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
                   ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: appState.busy ? null : appState.refresh,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF8224E3),
-                            foregroundColor: const Color(0xFFFFFFFF),
+                ]),
+              ),
+              const SizedBox(height: 16),
+              if (step == 0) ...[
+                _modeSwitcher(),
+                const SizedBox(height: 16),
+                if (appState.planChangeDraft != null)
+                  _card(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('Resume saved change', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
+                      const SizedBox(height: 8),
+                      Text('Saved draft for ${appState.planChangeDraft!.planName}. This draft is hidden everywhere else and resumes only here.', style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Expanded(child: FilledButton(onPressed: () => setState(() {}), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)), child: const Text('Resume'))),
+                        const SizedBox(width: 12),
+                        Expanded(child: OutlinedButton(onPressed: () async => appState.clearPlanChangeDraft(), child: const Text('Discard'))),
+                      ]),
+                    ]),
+                  ),
+                if (appState.planChangeDraft != null) const SizedBox(height: 16),
+                if (plans.isEmpty)
+                  _card(child: const Text('No alternate plans available right now.', style: TextStyle(color: Color(0xFF6E6A67))))
+                else
+                  ...plans.map((plan) => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _planTile(plan, billing.recurringAmount, appState),
+                      )),
+              ] else if (step == 1 && selectedPlan != null) ...[
+                _card(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Available durations', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313))),
+                    const SizedBox(height: 12),
+                    ..._terms(selectedPlan!).map((term) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InkWell(
+                            onTap: () => setState(() => billingTerm = term),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: billingTerm == term ? const Color(0xFFF8F4FF) : const Color(0xFFFFFFFF),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: billingTerm == term ? const Color(0xFF8224E3) : const Color(0x338224E3)),
+                              ),
+                              child: Row(children: [
+                                Expanded(child: Text(_termLabel(term), style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)))),
+                                Text('Rs ${_termPrice(selectedPlan!, term).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF8224E3))),
+                              ]),
+                            ),
                           ),
-                          child: const Text('Refresh plans'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            )
-          else ...[
-            if (premiumPlans.isNotEmpty) ...[
-              _sectionHeader(
-                'Recommended upgrades',
-                'Higher speed and richer entertainment packs for this connection.',
-              ),
-              const SizedBox(height: 12),
-              ...premiumPlans.map((plan) => _planCard(context, appState, plan, currentPlan, featured: true)),
-              const SizedBox(height: 22),
-            ],
-            if (standardPlans.isNotEmpty) ...[
-              _sectionHeader(
-                'All Wi-Fi plans',
-                'Clean broadband plans with fast upgrades and easy billing changes.',
-              ),
-              const SizedBox(height: 12),
-              ...standardPlans.map((plan) => _planCard(context, appState, plan, currentPlan)),
-            ],
-          ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _heroCard(BuildContext context, String wifiName, String currentPlanName, double recurringAmount) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: const [
-          BoxShadow(color: Color(0x220F172A), blurRadius: 28, offset: Offset(0, 14)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0x26FFFFFF),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0x668224E3)),
-            ),
-            child: const Text(
-              'Plan studio',
-              style: TextStyle(color: const Color(0xFFFFFFFF), fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            wifiName,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: const Color(0xFFFFFFFF),
-                  fontWeight: FontWeight.w800,
+                        )),
+                  ]),
                 ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            currentPlanName.isEmpty ? 'Pick a plan for this connection.' : 'Current plan: $currentPlanName',
-            style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
-          ),
-          if (recurringAmount > 0) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Current recurring amount: Rs ${recurringAmount.toStringAsFixed(0)}',
-              style: const TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w700),
-            ),
-          ],
-          const SizedBox(height: 18),
-          Row(
-            children: const [
-              Expanded(child: _HeroMetric(label: 'Flow', value: 'Modern')),
-              SizedBox(width: 10),
-              Expanded(child: _HeroMetric(label: 'Billing', value: 'Instant')),
-              SizedBox(width: 10),
-              Expanded(child: _HeroMetric(label: 'Upgrade', value: 'Live')),
+                const SizedBox(height: 16),
+                Row(children: [
+                  Expanded(child: OutlinedButton(onPressed: () => setState(() => step = 0), child: const Text('Change plan'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: FilledButton(onPressed: _loadingCheckout ? null : () => _loadCheckout(appState), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)), child: Text(_loadingCheckout ? 'Preparing...' : 'Continue'))),
+                ]),
+              ] else if (step == 2 && selectedPlan != null) ...[
+                _card(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    _line('Selected plan', selectedPlan!.name),
+                    _line('Duration', _termLabel(billingTerm)),
+                    _line('Mode', effectiveMode == 'next_cycle' ? 'Apply next cycle' : 'Apply now'),
+                    _line('Commercial price', 'Rs ${_termPrice(selectedPlan!, billingTerm).toStringAsFixed(0)}'),
+                  ]),
+                ),
+                const SizedBox(height: 16),
+                _card(
+                  child: preview == null
+                      ? const Text('Checkout summary is loading.', style: TextStyle(color: Color(0xFF6E6A67)))
+                      : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          _line('Current price', 'Rs ${preview!.currentPrice.toStringAsFixed(0)}'),
+                          _line('Next price', 'Rs ${preview!.nextPrice.toStringAsFixed(0)}'),
+                          _line('Adjustment', 'Rs ${preview!.adjustmentAmount.toStringAsFixed(0)}'),
+                          if (preview!.payableNow > 0) _line('Payable now', 'Rs ${preview!.payableNow.toStringAsFixed(0)}'),
+                          if (preview!.creditAmount > 0) _line('Credit amount', 'Rs ${preview!.creditAmount.toStringAsFixed(0)}'),
+                          const SizedBox(height: 8),
+                          Text(preview!.payableNow > 0 ? 'You will need to pay this amount now to complete the change.' : 'No immediate payment is required for this change.', style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
+                        ]),
+                ),
+                const SizedBox(height: 16),
+                Row(children: [
+                  Expanded(child: OutlinedButton(onPressed: () => setState(() => step = 1), child: const Text('Back'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: FilledButton(onPressed: appState.busy || preview == null ? null : () => _confirmPlanChange(appState), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)), child: const Text('Confirm'))),
+                ]),
+              ],
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _currentPlanStrip(BillingData billing) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0x338224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'CURRENT PLAN',
-            style: TextStyle(
-              color: Color(0xFF8224E3),
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2.2,
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            billing.currentPlan.isEmpty ? 'No active plan' : billing.currentPlan,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313)),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _contextChip('Recurring', billing.recurringAmount > 0 ? 'Rs ${billing.recurringAmount.toStringAsFixed(0)}' : 'Will update'),
-              _contextChip('Bill cycle', billing.billCycle.isEmpty ? 'Monthly' : billing.billCycle),
-              _contextChip('Current due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
-              if (billing.nextBillDate.isNotEmpty) _contextChip('Next bill', billing.nextBillDate),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _pendingPlanStrip(PendingPlanChange pending) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0x668224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'PENDING PLAN CHANGE',
-            style: TextStyle(
-              color: Color(0xFF8224E3),
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2.2,
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            pending.planName,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            pending.noteNumber.isEmpty
-                ? 'This change is waiting in your billing queue.'
-                : 'Reference: ${pending.noteNumber}',
-            style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _contextChip('Mode', pending.effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
-              _contextChip('Current', 'Rs ${pending.currentPrice.toStringAsFixed(0)}'),
-              _contextChip('Next', 'Rs ${pending.nextPrice.toStringAsFixed(0)}'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _modeSwitcher() {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0x338224E3)),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: _modeButton('immediate', 'Switch now', 'Apply with current-cycle adjustment')),
+  Widget _modeSwitcher() => _card(
+        child: Row(children: [
+          Expanded(child: _modeButton('immediate', 'Switch now')),
           const SizedBox(width: 8),
-          Expanded(child: _modeButton('next_cycle', 'Next cycle', 'Queue the change for next billing cycle')),
-        ],
-      ),
-    );
-  }
+          Expanded(child: _modeButton('next_cycle', 'Next cycle')),
+        ]),
+      );
 
-  Widget _modeButton(String value, String title, String subtitle) {
+  Widget _modeButton(String value, String label) {
     final active = effectiveMode == value;
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
       onTap: () => setState(() => effectiveMode = value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+      child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: active ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: active ? const Color(0x998224E3) : const Color(0x338224E3)),
+          border: Border.all(color: active ? const Color(0xFF8224E3) : const Color(0x338224E3)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: active ? const Color(0xFF131313) : const Color(0xFF131313),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: const Color(0xFF6E6A67),
-                fontSize: 12,
-                height: 1.35,
-              ),
-            ),
-          ],
-        ),
+        child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
       ),
     );
   }
 
-  Widget _sectionHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
-        const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
-      ],
-    );
-  }
+  Widget _planTile(PlanItem plan, double currentRecurring, AppState appState) => _card(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313))),
+          const SizedBox(height: 6),
+          Text('${plan.speedMbps.toStringAsFixed(0)} Mbps | Rs ${plan.monthlyPrice.toStringAsFixed(0)} / month', style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          _line('Current recurring', currentRecurring > 0 ? 'Rs ${currentRecurring.toStringAsFixed(0)}' : 'Not available'),
+          _line('Available durations', _terms(plan).map(_termLabel).join(' / ')),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: OutlinedButton(onPressed: () => _previewPlan(plan, appState), child: const Text('View details'))),
+            const SizedBox(width: 12),
+            Expanded(child: FilledButton(onPressed: () => _selectPlan(plan, appState), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)), child: const Text('Select plan'))),
+          ]),
+        ]),
+      );
 
-  Widget _planCard(
-    BuildContext context,
-    AppState appState,
-    PlanItem plan,
-    String currentPlan, {
-    bool featured = false,
-  }) {
-    final billing = appState.billing;
-    final isCurrent = currentPlan.contains(plan.name.toLowerCase()) || currentPlan.contains(plan.planCode.toLowerCase());
-    final priceDelta = plan.monthlyPrice - billing.recurringAmount;
-    final accent = featured ? const Color(0xFF8224E3) : const Color(0xFF8224E3);
-    final background = const Color(0xFFFFFFFF);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Container(
+  Widget _card({required Widget child}) => Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: featured ? const Color(0x668224E3) : const Color(0x338224E3)),
-          boxShadow: const [
-            BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 10)),
-          ],
+          color: const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0x338224E3)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (isCurrent) _badge('Active', const Color(0x141C6B34), const Color(0xFF8224E3), borderColor: const Color(0x668224E3)),
-                          _badge(
-                            featured ? 'Recommended' : (effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
-                            featured ? const Color(0x148224E3) : const Color(0x14111818),
-                            featured ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
-                            borderColor: featured ? const Color(0x668224E3) : const Color(0x338224E3),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF131313))),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${_formatPlanHeadline(plan)} / month',
-                        style: TextStyle(color: accent, fontWeight: FontWeight.w800, fontSize: 18),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: featured
-                          ? const [Color(0xFFF1E8FF), Color(0xFF8224E3)]
-                          : const [Color(0xFFF8F4FF), Color(0xFF8224E3)],
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Icon(
-                    featured ? Icons.rocket_launch_rounded : Icons.wifi_rounded,
-                    color: const Color(0xFFFFFFFF),
-                    size: 30,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F4FF),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0x338224E3)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(child: _planMetric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
-                  Expanded(child: _planMetric('${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps', 'Upload')),
-                  Expanded(child: _planMetric(_validityLabel(plan), 'Durations')),
-                  Expanded(child: _planMetric(_dataLabel(plan), 'Data')),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _benefitChips(plan),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F4FF),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0x338224E3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Plan economics',
-                    style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
-                  ),
-                  const SizedBox(height: 10),
-                  _planPriceRow('Monthly', plan.monthlyPrice),
-                  if (plan.quarterlyPrice > 0) _planPriceRow('Quarterly', plan.quarterlyPrice),
-                  if (plan.halfYearlyPrice > 0) _planPriceRow('Half yearly', plan.halfYearlyPrice),
-                  if (plan.yearlyPrice > 0) _planPriceRow('Yearly', plan.yearlyPrice),
-                  if (plan.installationCharge > 0) _planPriceRow('Installation', plan.installationCharge),
-                  if (plan.otcCharge > 0) _planPriceRow('OTC', plan.otcCharge),
-                  _planTextRow('Data policy', _dataPolicyLabel(plan)),
-                  if (plan.dataPolicy != 'unlimited' && plan.dataLimitGb > 0)
-                    _planTextRow('Data cap', '${plan.dataLimitGb.toStringAsFixed(0)} GB'),
-                  if (plan.fupSpeedMbps > 0) _planTextRow('FUP speed', '${plan.fupSpeedMbps.toStringAsFixed(0)} Mbps'),
-                ],
-              ),
-            ),
-            if (!isCurrent) ...[
-              const SizedBox(height: 14),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFFFF),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0x228224E3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Change summary',
-                      style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
-                    ),
-                    const SizedBox(height: 8),
-                    _planTextRow('Current recurring', billing.recurringAmount > 0 ? 'Rs ${billing.recurringAmount.toStringAsFixed(0)}' : 'Not available'),
-                    _planTextRow(
-                      'Difference',
-                      priceDelta == 0
-                          ? 'Same monthly value'
-                          : priceDelta > 0
-                              ? '+ Rs ${priceDelta.toStringAsFixed(0)}'
-                              : '- Rs ${priceDelta.abs().toStringAsFixed(0)}',
-                    ),
-                    _planTextRow('Mode', effectiveMode == 'next_cycle' ? 'Apply next cycle' : 'Apply now'),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _previewPlan(context, appState, plan),
-                    child: const Text('View details'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: appState.busy ? null : () => _applyPlan(context, appState, plan),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-                    child: Text(isCurrent ? 'Change duration' : 'Select plan'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+        child: child,
+      );
 
-  Widget _badge(String label, Color bg, Color fg, {Color? borderColor}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor ?? bg),
-      ),
-      child: Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w700)),
-    );
-  }
-
-  Widget _planMetric(String value, String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Color(0xFF8A92A3))),
-      ],
-    );
-  }
-
-  List<Widget> _benefitChips(PlanItem plan) {
-    final chips = <String>[
-      ...plan.tags.take(3),
-      ...plan.staticBenefits.take(2),
-    ];
-    if (chips.isEmpty) {
-      chips.addAll(['Unlimited data', '${plan.speedMbps.toStringAsFixed(0)} Mbps class']);
-    }
-    if (plan.otcCharge > 0) {
-      chips.add('OTC Rs ${plan.otcCharge.toStringAsFixed(0)}');
-    }
-    if (plan.uploadSpeedMbps > 0) {
-      chips.add('Up ${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps');
-    }
-    if (plan.dataPolicy != 'unlimited' && plan.dataLimitGb > 0) {
-      chips.add('${plan.dataLimitGb.toStringAsFixed(0)} GB');
-    }
-    return chips
-        .map(
-          (chip) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0x668224E3)),
-            ),
-            child: Text(chip, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF131313))),
-          ),
-        )
-        .toList();
-  }
-
-  bool _isPremium(PlanItem plan) {
-    final lower = plan.name.toLowerCase();
-    return lower.contains('entertainment') ||
-        lower.contains('ott') ||
-        lower.contains('combo') ||
-        plan.monthlyPrice >= 999 ||
-        plan.speedMbps >= 200;
-  }
-
-  String _formatPlanHeadline(PlanItem plan) {
-    final taxSuffix = plan.pricesExcludeGst
-        ? ' + GST'
-        : plan.taxIncluded
-            ? ' GST incl.'
-            : '';
-    return 'Rs ${plan.monthlyPrice.toStringAsFixed(0)}$taxSuffix';
-  }
-
-  String _dataLabel(PlanItem plan) {
-    if (plan.dataPolicy == 'unlimited') return 'Unlimited';
-    if (plan.dataLimitGb > 0) return '${plan.dataLimitGb.toStringAsFixed(0)} GB';
-    return plan.dataPolicy.toUpperCase();
-  }
-
-  String _dataPolicyLabel(PlanItem plan) {
-    switch (plan.dataPolicy) {
-      case 'fup':
-        return 'FUP';
-      case 'hard_cap':
-        return 'Hard cap';
-      default:
-        return 'Unlimited';
-    }
-  }
-
-  String _validityLabel(PlanItem plan) {
-    final labels = <String>[
-      if (plan.validityMonthly) 'M',
-      if (plan.validityQuarterly) 'Q',
-      if (plan.validityHalfYearly) 'H',
-      if (plan.validityYearly) 'Y',
-    ];
-    return labels.isEmpty ? 'M' : labels.join(' / ');
-  }
-
-  Widget _planPriceRow(String label, double amount) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
+  Widget _line(String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(children: [
           Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
           const Spacer(),
-          Text(
-            'Rs ${amount.toStringAsFixed(0)}',
-            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
+          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700)),
+        ]),
+      );
+
+  Future<void> _selectPlan(PlanItem plan, AppState appState) async {
+    final terms = _terms(plan);
+    setState(() {
+      selectedPlan = plan;
+      billingTerm = terms.first;
+      step = 1;
+      preview = null;
+    });
+    await appState.savePlanChangeDraft(planCode: plan.planCode, planName: plan.name, billingTerm: billingTerm, effectiveMode: effectiveMode, step: 1);
   }
 
-  Widget _planTextRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _previewPlan(BuildContext context, AppState appState, PlanItem plan) async {
-    final preview = await appState.previewPlanChange(planCode: plan.planCode, effectiveMode: effectiveMode);
-    if (!context.mounted || preview == null) {
-      if (context.mounted && appState.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error!)));
-      }
-      return;
+  Future<void> _loadCheckout(AppState appState, {bool quiet = false}) async {
+    if (selectedPlan == null) return;
+    setState(() => _loadingCheckout = true);
+    final nextPreview = await appState.previewPlanChange(planCode: selectedPlan!.planCode, effectiveMode: effectiveMode, billingTerm: billingTerm);
+    if (!mounted) return;
+    setState(() {
+      preview = nextPreview;
+      _loadingCheckout = false;
+      if (nextPreview != null) step = 2;
+    });
+    if (nextPreview != null) {
+      await appState.savePlanChangeDraft(planCode: selectedPlan!.planCode, planName: selectedPlan!.name, billingTerm: billingTerm, effectiveMode: effectiveMode, step: 2);
+    } else if (!quiet) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to prepare checkout')));
     }
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 52, height: 6, decoration: BoxDecoration(color: const Color(0x228224E3), borderRadius: BorderRadius.circular(99)))),
-              const SizedBox(height: 18),
-              Text(
-                preview.nextPlanName,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 30, color: Color(0xFF131313)),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                effectiveMode == 'next_cycle'
-                    ? 'This switch will queue for the next billing cycle.'
-                    : 'This switch applies with current-cycle adjustment rules.',
-                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F4FF),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0x338224E3)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(child: _previewMetric('Current', 'Rs ${preview.currentPrice.toStringAsFixed(0)}')),
-                    Expanded(child: _previewMetric('Next', 'Rs ${preview.nextPrice.toStringAsFixed(0)}')),
-                    Expanded(
-                      child: _previewMetric(
-                        'Delta',
-                        preview.nextPrice == preview.currentPrice
-                            ? 'Same'
-                            : preview.nextPrice > preview.currentPrice
-                                ? '+${(preview.nextPrice - preview.currentPrice).toStringAsFixed(0)}'
-                                : '-${(preview.currentPrice - preview.nextPrice).toStringAsFixed(0)}',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _previewRow('Current price', 'Rs ${preview.currentPrice.toStringAsFixed(0)}'),
-              _previewRow('Next price', 'Rs ${preview.nextPrice.toStringAsFixed(0)}'),
-              _previewRow('Remaining days', '${preview.remainingDays}'),
-              _previewRow('Adjustment', 'Rs ${preview.adjustmentAmount.toStringAsFixed(0)}'),
-              if (preview.payableNow > 0) _previewRow('Payable now', 'Rs ${preview.payableNow.toStringAsFixed(0)}'),
-              if (preview.creditAmount > 0) _previewRow('Credit amount', 'Rs ${preview.creditAmount.toStringAsFixed(0)}'),
-              const SizedBox(height: 10),
-              Text(
-                preview.payableNow > 0
-                    ? 'You will need to pay this adjustment now to complete the plan change.'
-                    : preview.creditAmount > 0
-                        ? 'A credit adjustment will carry into your billing after this change.'
-                        : 'No extra payment is required for this plan change.',
-                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _applyPlan(context, appState, plan);
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-                  ),
-                  child: const Text('Continue with this plan'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
-  Widget _previewRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
-        ],
-      ),
-    );
-  }
-
-  Widget _previewMetric(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313)),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _contextChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Text(
-        '$label: $value',
-        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-
-  Future<void> _applyPlan(BuildContext context, AppState appState, PlanItem plan) async {
-    final request = await appState.requestPlanChange(planCode: plan.planCode, effectiveMode: effectiveMode);
-    if (!context.mounted) return;
+  Future<void> _confirmPlanChange(AppState appState) async {
+    if (selectedPlan == null) return;
+    final request = await appState.requestPlanChange(planCode: selectedPlan!.planCode, effectiveMode: effectiveMode, billingTerm: billingTerm);
+    if (!mounted) return;
     final result = appState.lastPlanChangeResult;
     if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to apply plan change')));
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          result.paymentRequired
-              ? 'Pay Rs ${result.payableNow.toStringAsFixed(0)} to complete this plan change.'
-              : result.scheduled
-                  ? 'Plan change scheduled: ${request ?? result.requestNumber}'
-                  : 'Plan updated successfully.',
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.paymentRequired ? 'Pay Rs ${result.payableNow.toStringAsFixed(0)} to complete this change.' : 'Plan change submitted: ${request ?? result.requestNumber}')));
+    if (result.paymentRequired && result.payableNow > 0) {
+      final paymentOrder = await appState.loadBillingPaymentOrder(amount: result.payableNow);
+      if (!mounted || paymentOrder == null) return;
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)));
+    }
+    if (mounted) {
+      await appState.refresh();
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _previewPlan(PlanItem plan, AppState appState) async {
+    final tempPreview = await appState.previewPlanChange(planCode: plan.planCode, effectiveMode: effectiveMode, billingTerm: 'monthly');
+    if (!mounted || tempPreview == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        child: _card(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: Color(0xFF131313))),
+            const SizedBox(height: 10),
+            _line('Monthly price', 'Rs ${tempPreview.nextPrice.toStringAsFixed(0)}'),
+            _line('Apply mode', effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
+            const SizedBox(height: 12),
+            SizedBox(width: double.infinity, child: FilledButton(onPressed: () { Navigator.of(context).pop(); _selectPlan(plan, appState); }, style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)), child: const Text('Select this plan'))),
+          ]),
         ),
       ),
     );
-    if (result.paymentRequired && result.payableNow > 0) {
-      final paymentOrder = await appState.loadBillingPaymentOrder(amount: result.payableNow);
-      if (!context.mounted || paymentOrder == null) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)),
+  }
+
+  Future<void> _saveDraftAndExit(AppState appState) async {
+    if (selectedPlan != null && step > 0) {
+      await appState.savePlanChangeDraft(
+        planCode: selectedPlan!.planCode,
+        planName: selectedPlan!.name,
+        billingTerm: billingTerm,
+        effectiveMode: effectiveMode,
+        step: step,
+        notifyResume: true,
       );
     }
-    if (context.mounted) {
-      await appState.refresh();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  List<String> _terms(PlanItem plan) {
+    final terms = <String>[
+      if (plan.validityMonthly) 'monthly',
+      if (plan.validityQuarterly) 'quarterly',
+      if (plan.validityHalfYearly) 'halfYearly',
+      if (plan.validityYearly) 'yearly',
+    ];
+    return terms.isEmpty ? const ['monthly'] : terms;
+  }
+
+  double _termPrice(PlanItem plan, String term) {
+    switch (term) {
+      case 'quarterly':
+        return plan.quarterlyPrice > 0 ? plan.quarterlyPrice : plan.monthlyPrice;
+      case 'halfYearly':
+        return plan.halfYearlyPrice > 0 ? plan.halfYearlyPrice : plan.monthlyPrice;
+      case 'yearly':
+        return plan.yearlyPrice > 0 ? plan.yearlyPrice : plan.monthlyPrice;
+      default:
+        return plan.monthlyPrice;
+    }
+  }
+
+  String _termLabel(String term) {
+    switch (term) {
+      case 'quarterly':
+        return 'Quarterly';
+      case 'halfYearly':
+        return 'Half yearly';
+      case 'yearly':
+        return 'Yearly';
+      default:
+        return 'Monthly';
     }
   }
 }
-
-class _HeroMetric extends StatelessWidget {
-  const _HeroMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(value, style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
-        ],
-      ),
-    );
-  }
-}
-
-
-
-
-
-

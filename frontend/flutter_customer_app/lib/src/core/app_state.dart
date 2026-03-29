@@ -12,6 +12,7 @@ const _mobileKey = 'justfiber.mobile';
 const _accessTokenKey = 'justfiber.access_token';
 const _refreshTokenKey = 'justfiber.refresh_token';
 const _selectedCustomerKey = 'justfiber.selected_customer_id';
+const _planChangeDraftKey = 'justfiber.plan_change_draft';
 
 class AppState extends ChangeNotifier {
   AppState() {
@@ -115,6 +116,7 @@ class AppState extends ChangeNotifier {
   BookingQuote? bookingDraft;
   FeasibilityResult? feasibility;
   PlanChangeApplyResult? lastPlanChangeResult;
+  PlanChangeDraft? planChangeDraft;
 
   SpeedTestData speedTest = const SpeedTestData(
     downloadMbps: 0,
@@ -245,6 +247,53 @@ class AppState extends ChangeNotifier {
         payload: payload,
       );
     }
+  }
+
+  Future<void> savePlanChangeDraft({
+    required String planCode,
+    required String planName,
+    required String billingTerm,
+    required String effectiveMode,
+    required int step,
+    bool notifyResume = false,
+  }) async {
+    planChangeDraft = PlanChangeDraft(
+      planCode: planCode,
+      planName: planName,
+      billingTerm: billingTerm,
+      effectiveMode: effectiveMode,
+      step: step,
+      savedAt: DateTime.now().toIso8601String(),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _planChangeDraftKey,
+      jsonEncode({
+        'planCode': planCode,
+        'planName': planName,
+        'billingTerm': billingTerm,
+        'effectiveMode': effectiveMode,
+        'step': step,
+        'savedAt': planChangeDraft!.savedAt,
+      }),
+    );
+    if (notifyResume) {
+      await CustomerNotificationService.instance.initialize();
+      await CustomerNotificationService.instance.showAlert(
+        id: CustomerNotificationService.instance.stableIdFor('plan-change-resume'),
+        title: 'Resume your plan change',
+        body: 'Continue switching to $planName when you are ready.',
+        payload: jsonEncode({'target': 'plans_resume'}),
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> clearPlanChangeDraft() async {
+    planChangeDraft = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_planChangeDraftKey);
+    notifyListeners();
   }
 
   String _notificationTarget(NotificationItem item) {
@@ -691,6 +740,7 @@ class AppState extends ChangeNotifier {
   Future<PlanChangePreview?> previewPlanChange({
     required String planCode,
     required String effectiveMode,
+    required String billingTerm,
   }) async {
     final current = session;
     if (current == null) return null;
@@ -703,6 +753,7 @@ class AppState extends ChangeNotifier {
         customerId: selectedCustomerId,
         planCode: planCode,
         effectiveMode: effectiveMode,
+        billingTerm: billingTerm,
       );
     } catch (e) {
       error = e.toString();
@@ -716,6 +767,7 @@ class AppState extends ChangeNotifier {
   Future<String?> requestPlanChange({
     required String planCode,
     required String effectiveMode,
+    required String billingTerm,
   }) async {
     final current = session;
     if (current == null) return null;
@@ -729,8 +781,10 @@ class AppState extends ChangeNotifier {
         customerId: selectedCustomerId,
         planCode: planCode,
         effectiveMode: effectiveMode,
+        billingTerm: billingTerm,
       );
       lastPlanChangeResult = result;
+      await clearPlanChangeDraft();
       return result.requestNumber.isEmpty ? null : result.requestNumber;
     } catch (e) {
       error = e.toString();
@@ -988,6 +1042,7 @@ class AppState extends ChangeNotifier {
     bookingDraft = null;
     feasibility = null;
     lastPlanChangeResult = null;
+    planChangeDraft = null;
     speedTest = const SpeedTestData(
       downloadMbps: 0,
       uploadMbps: 0,
@@ -1018,6 +1073,22 @@ class AppState extends ChangeNotifier {
     final accessToken = prefs.getString(_accessTokenKey);
     final refreshToken = prefs.getString(_refreshTokenKey);
     selectedCustomerId = prefs.getString(_selectedCustomerKey);
+    final savedPlanChangeDraft = prefs.getString(_planChangeDraftKey);
+    if (savedPlanChangeDraft != null && savedPlanChangeDraft.isNotEmpty) {
+      try {
+        final map = jsonDecode(savedPlanChangeDraft);
+        if (map is Map<String, dynamic>) {
+          planChangeDraft = PlanChangeDraft(
+            planCode: (map['planCode'] ?? '').toString(),
+            planName: (map['planName'] ?? '').toString(),
+            billingTerm: (map['billingTerm'] ?? 'monthly').toString(),
+            effectiveMode: (map['effectiveMode'] ?? 'immediate').toString(),
+            step: int.tryParse('${map['step'] ?? 0}') ?? 0,
+            savedAt: (map['savedAt'] ?? '').toString(),
+          );
+        }
+      } catch (_) {}
+    }
     if (mobile == null || accessToken == null || refreshToken == null) {
       restoringSession = false;
       notifyListeners();

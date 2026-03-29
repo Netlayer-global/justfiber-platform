@@ -142,7 +142,8 @@ export const deviceAccessSchema = z.object({
 
 export const planChangeSchema = z.object({
   planCode: z.string().min(2),
-  effectiveMode: z.enum(["immediate", "next_cycle"]).default("next_cycle")
+  effectiveMode: z.enum(["immediate", "next_cycle"]).default("next_cycle"),
+  billingTerm: z.enum(["monthly", "quarterly", "halfYearly", "yearly"]).default("monthly")
 });
 
 export const serviceRequestSchema = z.object({
