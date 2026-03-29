@@ -13,6 +13,7 @@ const _accessTokenKey = 'justfiber.access_token';
 const _refreshTokenKey = 'justfiber.refresh_token';
 const _selectedCustomerKey = 'justfiber.selected_customer_id';
 const _planChangeDraftKey = 'justfiber.plan_change_draft';
+const _surfacedNotificationIdsKey = 'justfiber.surfaced_notification_ids';
 
 class AppState extends ChangeNotifier {
   AppState() {
@@ -33,6 +34,7 @@ class AppState extends ChangeNotifier {
   String? pendingNavigationTarget;
   DateTime? lastSyncedAt;
   final Set<String> _seenNotificationIds = <String>{};
+  final Map<String, DateTime> _recentNotificationFingerprints = <String, DateTime>{};
 
   DashboardData dashboard = const DashboardData(
     customerName: 'JustFiber Customer',
@@ -184,6 +186,7 @@ class AppState extends ChangeNotifier {
       await prefs.setString(_refreshTokenKey, session!.refreshToken);
       await prefs.remove(_selectedCustomerKey);
       await prefs.remove(_planChangeDraftKey);
+      await prefs.remove(_surfacedNotificationIdsKey);
       await refresh();
       return true;
     } catch (e) {
@@ -241,9 +244,32 @@ class AppState extends ChangeNotifier {
 
   Future<void> _surfaceNewNotifications() async {
     await CustomerNotificationService.instance.initialize();
-    for (final item in notifications) {
-      if (item.id.isEmpty || item.readAt.isNotEmpty || _seenNotificationIds.contains(item.id)) continue;
+    final prefs = await SharedPreferences.getInstance();
+    if (_seenNotificationIds.isEmpty) {
+      _seenNotificationIds.addAll(prefs.getStringList(_surfacedNotificationIdsKey) ?? const <String>[]);
+    }
+
+    final candidates = notifications.where((item) => item.id.isNotEmpty && item.readAt.isEmpty && !_seenNotificationIds.contains(item.id)).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    final latestByFingerprint = <String, NotificationItem>{};
+    for (final item in candidates) {
+      latestByFingerprint[_notificationFingerprint(item)] = item;
+    }
+
+    for (final item in candidates) {
+      final fingerprint = _notificationFingerprint(item);
+      if (latestByFingerprint[fingerprint]?.id != item.id) {
+        _seenNotificationIds.add(item.id);
+        continue;
+      }
+      final lastShownAt = _recentNotificationFingerprints[fingerprint];
+      if (lastShownAt != null && DateTime.now().difference(lastShownAt) < const Duration(minutes: 10)) {
+        _seenNotificationIds.add(item.id);
+        continue;
+      }
       _seenNotificationIds.add(item.id);
+      _recentNotificationFingerprints[fingerprint] = DateTime.now();
       final payload = jsonEncode({'target': _notificationTarget(item)});
       await CustomerNotificationService.instance.showAlert(
         id: CustomerNotificationService.instance.stableIdFor(item.id),
@@ -252,6 +278,16 @@ class AppState extends ChangeNotifier {
         payload: payload,
       );
     }
+
+    await prefs.setStringList(_surfacedNotificationIdsKey, _seenNotificationIds.take(200).toList(growable: false));
+  }
+
+  String _notificationFingerprint(NotificationItem item) {
+    final type = item.type.trim().toLowerCase();
+    final target = _notificationTarget(item);
+    final title = item.title.trim().toLowerCase();
+    final body = item.body.trim().toLowerCase();
+    return '$type|$target|$title|$body';
   }
 
   Future<void> savePlanChangeDraft({
@@ -978,6 +1014,7 @@ class AppState extends ChangeNotifier {
       await prefs.remove(_accessTokenKey);
       await prefs.remove(_refreshTokenKey);
       await prefs.remove(_selectedCustomerKey);
+      await prefs.remove(_surfacedNotificationIdsKey);
     });
     session = null;
     demoOtp = null;
@@ -1086,6 +1123,7 @@ class AppState extends ChangeNotifier {
     pendingNavigationTarget = null;
     lastSyncedAt = null;
     _seenNotificationIds.clear();
+    _recentNotificationFingerprints.clear();
     busy = false;
     bookingBusy = false;
   }
