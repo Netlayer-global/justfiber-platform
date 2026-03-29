@@ -178,9 +178,12 @@ class HomeTab extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 20),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  Expanded(
+                  SizedBox(
+                    width: 150,
                     child: FilledButton(
                       onPressed: () async {
                         await Navigator.of(context).push(
@@ -197,8 +200,22 @@ class HomeTab extends StatelessWidget {
                       child: const Text('Book now'),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  SizedBox(
+                    width: 150,
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
+                      child: Text(hasService ? 'View plans' : 'Explore plans'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 150,
                     child: OutlinedButton(
                       onPressed: hasService
                           ? (appState.busy ? null : () => _payBill(context, appState))
