@@ -59,11 +59,15 @@ class HomeTab extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFFFFF),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: const Color(0x228224E3)),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFFFFF), Color(0xFFF8F4FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(36),
+            border: Border.all(color: const Color(0x338224E3)),
             boxShadow: const [
-              BoxShadow(color: Color(0x10030B14), blurRadius: 26, offset: Offset(0, 12)),
+              BoxShadow(color: Color(0x14030B14), blurRadius: 32, offset: Offset(0, 16)),
             ],
           ),
           child: Column(
@@ -76,20 +80,29 @@ class HomeTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'CUSTOMER DASHBOARD',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: const Color(0xFF8224E3),
-                                letterSpacing: 2.6,
-                                fontWeight: FontWeight.w700,
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFFFF),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: const Color(0x228224E3)),
+                          ),
+                          child: Text(
+                            'CUSTOMER CONSOLE',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: const Color(0xFF8224E3),
+                                  letterSpacing: 2.2,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Text(
                           'Hi, $displayName',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: const Color(0xFF131313),
-                                fontSize: 30,
+                                fontSize: 32,
+                                height: 1.05,
                               ),
                         ),
                         const SizedBox(height: 6),
@@ -104,6 +117,23 @@ class HomeTab extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 14),
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF8224E3), Color(0xFFB667FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x338224E3), blurRadius: 18, offset: Offset(0, 10)),
+                      ],
+                    ),
+                    child: const Icon(Icons.wifi_rounded, color: Color(0xFFFFFFFF), size: 30),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -115,6 +145,62 @@ class HomeTab extends StatelessWidget {
                   _metricPill('Status', hasService ? (wifi.paused ? 'Paused' : serviceStatusLabel) : 'No service'),
                   _metricPill('Devices', '${wifi.connectedDevicesCount}'),
                 ],
+              ),
+              const SizedBox(height: 18),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFFFF),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0x228224E3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            hasService ? planName : 'No active service yet',
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: hasService ? const Color(0xFFF1E8FF) : const Color(0xFFF7F4F0),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: hasService ? const Color(0x448224E3) : const Color(0x1A131313)),
+                          ),
+                          child: Text(
+                            hasService ? serviceStatusLabel.toUpperCase() : 'NEW',
+                            style: TextStyle(
+                              color: hasService ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      hasService
+                          ? '${selectedConnection?.serviceId.isNotEmpty == true ? '${selectedConnection!.serviceId} • ' : ''}$wifiName'
+                          : 'Check feasibility, explore plans, and start your broadband onboarding.',
+                      style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(child: _summaryBox('Next bill', nextBillDateLabel)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _summaryBox('Cycle', billingCycleLabel)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               if (dashboardAlert.isNotEmpty) ...[
                 const SizedBox(height: 14),
@@ -232,16 +318,6 @@ class HomeTab extends StatelessWidget {
                   ),
                 ],
               ),
-              if (hasService) ...[
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _summaryBox('Next bill', nextBillDateLabel)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _summaryBox('Cycle', billingCycleLabel)),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
@@ -412,7 +488,7 @@ class HomeTab extends StatelessWidget {
                 hasService
                     ? '${selectedConnection?.serviceId.isNotEmpty == true ? '${selectedConnection!.serviceId} • ' : ''}$planName | $wifiName'
                     : 'No active connection yet. Start with a new booking.',
-                style: const TextStyle(color: Color(0xFF9CA3AF), height: 1.45),
+                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
               ),
               const SizedBox(height: 18),
               Row(
@@ -428,7 +504,7 @@ class HomeTab extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
+                    color: const Color(0xFFF8F4FF),
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(color: const Color(0x228224E3)),
                   ),
@@ -463,7 +539,7 @@ class HomeTab extends StatelessWidget {
                       const SizedBox(height: 8),
                       const Text(
                         'Your connection tenure, recurring cycle, and current payment baseline for this service.',
-                        style: TextStyle(color: Color(0xFF9CA3AF), height: 1.4),
+                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
                       ),
                       const SizedBox(height: 14),
                       Row(
