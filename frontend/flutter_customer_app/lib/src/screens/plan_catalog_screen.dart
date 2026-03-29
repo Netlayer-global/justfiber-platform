@@ -171,6 +171,19 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                   const SizedBox(width: 12),
                   Expanded(child: FilledButton(onPressed: appState.busy || preview == null ? null : () => _confirmPlanChange(appState), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)), child: const Text('Confirm'))),
                 ]),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => _cancelCheckout(appState),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFB42318),
+                      backgroundColor: const Color(0xFFFFFFFF),
+                      side: const BorderSide(color: Color(0x33B42318)),
+                    ),
+                    child: const Text('Cancel plan change'),
+                  ),
+                ),
               ],
             ],
           ),
@@ -323,6 +336,15 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       );
     }
     if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _cancelCheckout(AppState appState) async {
+    await appState.clearPlanChangeDraft();
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Plan change checkout cancelled')),
+    );
   }
 
   List<String> _terms(PlanItem plan) {
