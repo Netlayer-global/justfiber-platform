@@ -18,6 +18,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final plans = appState.planChangeOptions;
+    final billing = appState.billing;
     final currentPlan = appState.billing.currentPlan.toLowerCase();
     final wifiName = appState.wifi.ssid24.isEmpty ? 'Active connection' : appState.wifi.ssid24;
     final premiumPlans = plans.where((plan) => _isPremium(plan)).toList();
@@ -38,7 +39,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
           children: [
-          _heroCard(context, wifiName, appState.billing.currentPlan),
+          _heroCard(context, wifiName, billing.currentPlan, billing.recurringAmount),
+          const SizedBox(height: 18),
+          _currentPlanStrip(billing),
+          if (billing.pendingPlanChange != null) ...[
+            const SizedBox(height: 18),
+            _pendingPlanStrip(billing.pendingPlanChange!),
+          ],
           const SizedBox(height: 18),
           _modeSwitcher(),
           const SizedBox(height: 20),
@@ -106,7 +113,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     );
   }
 
-  Widget _heroCard(BuildContext context, String wifiName, String currentPlanName) {
+  Widget _heroCard(BuildContext context, String wifiName, String currentPlanName, double recurringAmount) {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -148,6 +155,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             currentPlanName.isEmpty ? 'Pick a plan for this connection.' : 'Current plan: $currentPlanName',
             style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
           ),
+          if (recurringAmount > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Current recurring amount: Rs ${recurringAmount.toStringAsFixed(0)}',
+              style: const TextStyle(color: Color(0xFFF3E8FF), fontWeight: FontWeight.w700),
+            ),
+          ],
           const SizedBox(height: 18),
           Row(
             children: const [
@@ -156,6 +170,96 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               Expanded(child: _HeroMetric(label: 'Billing', value: 'Instant')),
               SizedBox(width: 10),
               Expanded(child: _HeroMetric(label: 'Upgrade', value: 'Live')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _currentPlanStrip(BillingData billing) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: const Color(0x338224E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'CURRENT PLAN',
+            style: TextStyle(
+              color: Color(0xFF8224E3),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.2,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            billing.currentPlan.isEmpty ? 'No active plan' : billing.currentPlan,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313)),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _contextChip('Recurring', billing.recurringAmount > 0 ? 'Rs ${billing.recurringAmount.toStringAsFixed(0)}' : 'Will update'),
+              _contextChip('Bill cycle', billing.billCycle.isEmpty ? 'Monthly' : billing.billCycle),
+              _contextChip('Current due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
+              if (billing.nextBillDate.isNotEmpty) _contextChip('Next bill', billing.nextBillDate),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pendingPlanStrip(PendingPlanChange pending) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: const Color(0x668224E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'PENDING PLAN CHANGE',
+            style: TextStyle(
+              color: Color(0xFF8224E3),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.2,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            pending.planName,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313)),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            pending.noteNumber.isEmpty
+                ? 'This change is waiting in your billing queue.'
+                : 'Reference: ${pending.noteNumber}',
+            style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _contextChip('Mode', pending.effectiveMode == 'next_cycle' ? 'Next cycle' : 'Switch now'),
+              _contextChip('Current', 'Rs ${pending.currentPrice.toStringAsFixed(0)}'),
+              _contextChip('Next', 'Rs ${pending.nextPrice.toStringAsFixed(0)}'),
             ],
           ),
         ],
@@ -237,7 +341,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     String currentPlan, {
     bool featured = false,
   }) {
+    final billing = appState.billing;
     final isCurrent = currentPlan.contains(plan.name.toLowerCase()) || currentPlan.contains(plan.planCode.toLowerCase());
+    final priceDelta = plan.monthlyPrice - billing.recurringAmount;
     final accent = featured ? const Color(0xFF8224E3) : const Color(0xFF8224E3);
     final background = const Color(0xFFFFFFFF);
 
@@ -357,6 +463,38 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 ],
               ),
             ),
+            if (!isCurrent) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFFFF),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0x228224E3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Change summary',
+                      style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+                    ),
+                    const SizedBox(height: 8),
+                    _planTextRow('Current recurring', billing.recurringAmount > 0 ? 'Rs ${billing.recurringAmount.toStringAsFixed(0)}' : 'Not available'),
+                    _planTextRow(
+                      'Difference',
+                      priceDelta == 0
+                          ? 'Same monthly value'
+                          : priceDelta > 0
+                              ? '+ Rs ${priceDelta.toStringAsFixed(0)}'
+                              : '- Rs ${priceDelta.abs().toStringAsFixed(0)}',
+                    ),
+                    _planTextRow('Mode', effectiveMode == 'next_cycle' ? 'Apply next cycle' : 'Apply now'),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             Row(
               children: [
@@ -547,12 +685,47 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
               ),
               const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F4FF),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: const Color(0x338224E3)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: _previewMetric('Current', 'Rs ${preview.currentPrice.toStringAsFixed(0)}')),
+                    Expanded(child: _previewMetric('Next', 'Rs ${preview.nextPrice.toStringAsFixed(0)}')),
+                    Expanded(
+                      child: _previewMetric(
+                        'Delta',
+                        preview.nextPrice == preview.currentPrice
+                            ? 'Same'
+                            : preview.nextPrice > preview.currentPrice
+                                ? '+${(preview.nextPrice - preview.currentPrice).toStringAsFixed(0)}'
+                                : '-${(preview.currentPrice - preview.nextPrice).toStringAsFixed(0)}',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               _previewRow('Current price', 'Rs ${preview.currentPrice.toStringAsFixed(0)}'),
               _previewRow('Next price', 'Rs ${preview.nextPrice.toStringAsFixed(0)}'),
               _previewRow('Remaining days', '${preview.remainingDays}'),
               _previewRow('Adjustment', 'Rs ${preview.adjustmentAmount.toStringAsFixed(0)}'),
               if (preview.payableNow > 0) _previewRow('Payable now', 'Rs ${preview.payableNow.toStringAsFixed(0)}'),
               if (preview.creditAmount > 0) _previewRow('Credit amount', 'Rs ${preview.creditAmount.toStringAsFixed(0)}'),
+              const SizedBox(height: 10),
+              Text(
+                preview.payableNow > 0
+                    ? 'You will need to pay this adjustment now to complete the plan change.'
+                    : preview.creditAmount > 0
+                        ? 'A credit adjustment will carry into your billing after this change.'
+                        : 'No extra payment is required for this plan change.',
+                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+              ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -584,6 +757,35 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           const Spacer(),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
         ],
+      ),
+    );
+  }
+
+  Widget _previewMetric(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313)),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
+      ],
+    );
+  }
+
+  Widget _contextChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
       ),
     );
   }
