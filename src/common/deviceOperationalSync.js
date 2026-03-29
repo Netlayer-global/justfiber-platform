@@ -332,34 +332,39 @@ export async function getLiveGenieDeviceList(limit = 100) {
 
   const baseItems = liveDevices
     .map((device) => {
-      const parsed = summarizeGenieDevice(device, undefined);
-      const cached = cacheByDeviceId.get(parsed.deviceId);
-      return {
-        ...(cached || {}),
-        ...parsed,
-        customerId: cached?.customerId || null,
-        serviceId: cached?.serviceId || null,
-        provisioningState: cached?.provisioningState || "live_only",
-        wanInfo: {
-          ...(cached?.wanInfo || {}),
-          ...(parsed.wanInfo || {})
-        },
-        wifiInfo: {
-          ...(cached?.wifiInfo || {}),
-          ...(parsed.wifiInfo || {})
-        },
-        lanInfo: {
-          ...(cached?.lanInfo || {}),
-          ...(parsed.lanInfo || {})
-        },
-        opticalInfo: {
-          ...(cached?.opticalInfo || {}),
-          ...(parsed.opticalInfo || {})
-        },
-        updatedAt: cached?.updatedAt || parsed.lastInformAt || new Date()
-      };
+      try {
+        const parsed = summarizeGenieDevice(device, undefined);
+        const cached = cacheByDeviceId.get(parsed.deviceId);
+        return {
+          ...(cached || {}),
+          ...parsed,
+          customerId: cached?.customerId || null,
+          serviceId: cached?.serviceId || null,
+          provisioningState: cached?.provisioningState || "live_only",
+          wanInfo: {
+            ...(cached?.wanInfo || {}),
+            ...(parsed.wanInfo || {})
+          },
+          wifiInfo: {
+            ...(cached?.wifiInfo || {}),
+            ...(parsed.wifiInfo || {})
+          },
+          lanInfo: {
+            ...(cached?.lanInfo || {}),
+            ...(parsed.lanInfo || {})
+          },
+          opticalInfo: {
+            ...(cached?.opticalInfo || {}),
+            ...(parsed.opticalInfo || {})
+          },
+          updatedAt: cached?.updatedAt || parsed.lastInformAt || new Date()
+        };
+      } catch (error) {
+        console.error("[devices] Failed to summarize live device:", error);
+        return null;
+      }
     })
-    .filter((device) => device.deviceId);
+    .filter((device) => device?.deviceId);
 
   return Promise.all(
     baseItems.map(async (device) => {
