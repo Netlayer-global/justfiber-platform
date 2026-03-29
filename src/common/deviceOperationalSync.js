@@ -50,6 +50,20 @@ function readPath(root, path) {
   return readValue(current);
 }
 
+function collectMatchingPaths(root, predicate, basePath = "", acc = []) {
+  if (!root || typeof root !== "object") return acc;
+  for (const [key, value] of Object.entries(root)) {
+    const nextPath = basePath ? `${basePath}.${key}` : key;
+    if (predicate(nextPath, value)) {
+      acc.push(nextPath);
+    }
+    if (value && typeof value === "object") {
+      collectMatchingPaths(value, predicate, nextPath, acc);
+    }
+  }
+  return acc;
+}
+
 function firstValue(root, paths) {
   for (const path of paths) {
     const value = readPath(root, path);
