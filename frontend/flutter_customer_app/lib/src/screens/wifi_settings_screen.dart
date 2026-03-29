@@ -98,6 +98,19 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             'Quality: ${appState.networkQuality.quality} | Devices: $connectedCount',
                             style: const TextStyle(color: Color(0xFF6E6A67)),
                           ),
+                          if (wifi.ssid24.isEmpty) ...[
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Set your Wi-Fi name and password to finish the home network setup for this connection.',
+                              style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                            ),
+                          ] else if (connectedCount == 0) ...[
+                            const SizedBox(height: 6),
+                            const Text(
+                              'No active devices are connected right now. Refresh later or open diagnostics if the network feels slow.',
+                              style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                            ),
+                          ],
                         ],
                       ),
                     ),

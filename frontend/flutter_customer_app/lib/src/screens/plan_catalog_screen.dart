@@ -43,7 +43,44 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           _modeSwitcher(),
           const SizedBox(height: 20),
           if (plans.isEmpty)
-            const Text('No alternate plans available right now.')
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFFFF),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: const Color(0x338224E3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'No alternate plans available right now.',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Your current connection may already be on the best available plan for this area. You can refresh later or ask support for upgrade options.',
+                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: appState.busy ? null : appState.refresh,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF8224E3),
+                            foregroundColor: const Color(0xFFFFFFFF),
+                          ),
+                          child: const Text('Refresh plans'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
           else ...[
             if (premiumPlans.isNotEmpty) ...[
               _sectionHeader(

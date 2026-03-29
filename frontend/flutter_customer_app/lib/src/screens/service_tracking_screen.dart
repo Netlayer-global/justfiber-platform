@@ -65,7 +65,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Current booking',
+                  latestBooking == null ? 'No active booking yet' : 'Current booking',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: const Color(0xFFFFFFFF), fontSize: 28),
                 ),
                 const SizedBox(height: 12),
@@ -75,6 +75,13 @@ class ServiceTrackingScreen extends StatelessWidget {
                 _row('Current step', bookingTracking?.currentStep ?? latestBooking?.currentStep ?? '-'),
                 _row('Preferred date', latestBooking?.preferredDate.isNotEmpty == true ? latestBooking!.preferredDate : '-'),
                 _row('Preferred slot', latestBooking?.preferredSlotLabel.isNotEmpty == true ? latestBooking!.preferredSlotLabel : '-'),
+                if (latestBooking == null) ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Create a new connection request to start installation tracking, installer updates, and service movement here.',
+                    style: TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -389,8 +396,8 @@ class ServiceTrackingScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 _activityRow('Open requests', '${requests.length}'),
                 _activityRow('Open tickets', '${tickets.length}'),
-                _activityRow('Latest request', requests.isEmpty ? 'None' : '${requests.first.referenceNumber} | ${requests.first.status}'),
-                _activityRow('Latest ticket', tickets.isEmpty ? 'None' : '${tickets.first.ticketNumber} | ${tickets.first.status}', last: true),
+                _activityRow('Latest request', requests.isEmpty ? 'No request raised yet' : '${requests.first.referenceNumber} | ${requests.first.status}'),
+                _activityRow('Latest ticket', tickets.isEmpty ? 'No complaint raised yet' : '${tickets.first.ticketNumber} | ${tickets.first.status}', last: true),
                 const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
@@ -430,7 +437,7 @@ class ServiceTrackingScreen extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(color: const Color(0xFF131313), fontWeight: FontWeight.w600),
+              style: const TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w600),
             ),
           ),
         ],
