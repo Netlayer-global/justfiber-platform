@@ -151,7 +151,20 @@ export default function DevicesPage() {
   async function loadDevices(preferredDeviceId?: string) {
     try {
       setIsLoading(true)
-      const res = await adminAPI.getDevices(1, 200, { live: true, liveLimit: 200, sync: true, syncLimit: 100 })
+      let res = await adminAPI.getDevices(1, 200, { live: true, liveLimit: 200, sync: true, syncLimit: 100 })
+      if (!res.success) {
+        const cachedRes = await adminAPI.getDevices(1, 200, { sync: true, syncLimit: 100 })
+        if (cachedRes.success) {
+          res = cachedRes
+          toast.info('Showing cached device inventory because live Genie inventory could not be loaded')
+        }
+      } else if (res.success && !res.data?.items?.length) {
+        const cachedRes = await adminAPI.getDevices(1, 200, { sync: true, syncLimit: 100 })
+        if (cachedRes.success && cachedRes.data?.items?.length) {
+          res = cachedRes
+          toast.info('Showing cached device inventory because live Genie inventory is empty')
+        }
+      }
       if (!res.success || !res.data?.items) {
         toast.error(res.error || 'Failed to load device inventory')
         return
