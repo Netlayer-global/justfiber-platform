@@ -18,6 +18,8 @@ class SupportHistoryScreen extends StatelessWidget {
     final openRequests = appState.requests
         .where((item) => !item.status.toLowerCase().contains('closed') && !item.status.toLowerCase().contains('completed'))
         .length;
+    final latestTicket = appState.tickets.isNotEmpty ? appState.tickets.first : null;
+    final latestRequest = appState.requests.isNotEmpty ? appState.requests.first : null;
     CustomerConnection? selectedConnection;
     for (final item in appState.connections) {
       if (item.customerId == appState.selectedCustomerId) {
@@ -93,6 +95,18 @@ class SupportHistoryScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _issueShortcut(context, appState, 'Internet', 'internet'),
+                    _issueShortcut(context, appState, 'Wi-Fi', 'wifi'),
+                    _issueShortcut(context, appState, 'Speed', 'speed'),
+                    _issueShortcut(context, appState, 'Billing', 'billing'),
+                    _issueShortcut(context, appState, 'Plan', 'plan'),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
                   spacing: 10,
                   runSpacing: 10,
                   children: [
@@ -134,6 +148,41 @@ class SupportHistoryScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (latestTicket != null || latestRequest != null) ...[
+            const SizedBox(height: 18),
+            AppCard(
+              color: const Color(0xFFFFFFFF),
+              borderColor: const Color(0x228224E3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'RECENT SUPPORT ACTIVITY',
+                    style: TextStyle(
+                      color: Color(0xFF8224E3),
+                      letterSpacing: 2.2,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (latestTicket != null)
+                    _recentActivityTile(
+                      title: latestTicket.subject,
+                      subtitle: '${latestTicket.ticketNumber} • ${latestTicket.status}',
+                      note: latestTicket.latestUpdateNote.isEmpty ? latestTicket.description : latestTicket.latestUpdateNote,
+                    ),
+                  if (latestTicket != null && latestRequest != null) const SizedBox(height: 10),
+                  if (latestRequest != null)
+                    _recentActivityTile(
+                      title: latestRequest.title,
+                      subtitle: '${latestRequest.referenceNumber} • ${latestRequest.status}',
+                      note: latestRequest.latestUpdateNote.isEmpty ? latestRequest.note : latestRequest.latestUpdateNote,
+                    ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           _sectionCard(
             title: 'Support tickets',
@@ -261,6 +310,78 @@ class SupportHistoryScreen extends StatelessWidget {
       child: Text(
         '$label: $value',
         style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Widget _issueShortcut(BuildContext context, AppState appState, String label, String issueType) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => SupportAssistantScreen(issueType: issueType)),
+        );
+        if (context.mounted) {
+          await appState.refresh();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0x228224E3)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF8224E3),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _recentActivityTile({
+    required String title,
+    required String subtitle,
+    required String note,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFF131313),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: Color(0xFF8224E3),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              note,
+              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+            ),
+          ],
+        ],
       ),
     );
   }
