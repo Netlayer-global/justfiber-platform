@@ -696,6 +696,7 @@ class HomeTab extends StatelessWidget {
 
   Future<void> _openPromo(BuildContext context, AppState appState, AppBannerItem banner) async {
     switch (banner.targetType) {
+      case 'plans':
       case 'plan_catalog':
         await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
         break;

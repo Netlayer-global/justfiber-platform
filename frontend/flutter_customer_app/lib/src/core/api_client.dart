@@ -436,7 +436,8 @@ class ApiClient {
     final list = _asList(await _request('/api/v1/customer/banners'));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
-      final targetType = (map['targetType'] ?? 'shop').toString();
+      final rawTargetType = (map['targetType'] ?? 'shop').toString();
+      final targetType = rawTargetType == 'plans' ? 'plan_catalog' : rawTargetType;
       final targetValue = (map['targetValue'] ?? '').toString();
       String description;
       String ctaLabel;

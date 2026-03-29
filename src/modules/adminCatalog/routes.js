@@ -121,7 +121,7 @@ const planSchema = z.object({
 
 const bannerSchema = z.object({
   title: z.string().min(2),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().optional(),
   targetType: z.string().optional(),
   targetValue: z.string().optional(),
   audience: z.string().default("all"),

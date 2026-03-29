@@ -303,6 +303,21 @@ export default function SettingsPage() {
     }
   }
 
+  async function uploadBannerImage(file?: File) {
+    if (!file) return
+    try {
+      setIsSavingBanner(true)
+      const dataUrl = await fileToDataUrl(file)
+      setBannerForm((prev) => ({ ...prev, imageUrl: dataUrl }))
+      toast.success('Banner image attached')
+    } catch (error) {
+      console.error('[v0] Failed to process banner image:', error)
+      toast.error('Failed to process banner image')
+    } finally {
+      setIsSavingBanner(false)
+    }
+  }
+
   async function saveActiveSection() {
     try {
       setIsSaving(true)
@@ -896,11 +911,31 @@ export default function SettingsPage() {
                           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Image URL</div>
                           <input className="input" value={bannerForm.imageUrl} onChange={(e) => setBannerForm((prev) => ({ ...prev, imageUrl: e.target.value }))} placeholder="https://..." />
                         </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Upload banner image</div>
+                          <label className="flex cursor-pointer items-center justify-center rounded-[18px] border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-600 hover:border-[#5B6CFF]/35 hover:bg-[#eef1ff]">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => void uploadBannerImage(e.target.files?.[0])}
+                            />
+                            {isSavingBanner ? 'Processing image...' : 'Choose image file'}
+                          </label>
+                          {bannerForm.imageUrl ? (
+                            <div className="rounded-[18px] border border-slate-200 bg-white p-3">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={bannerForm.imageUrl} alt="Banner preview" className="h-28 w-full rounded-xl object-cover" />
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-400">You can paste an image URL or upload a local image.</div>
+                          )}
+                        </label>
                         <div className="grid gap-3 md:grid-cols-2">
                           <label className="space-y-2">
                             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Target</div>
                             <select className="input" value={bannerForm.targetType} onChange={(e) => setBannerForm((prev) => ({ ...prev, targetType: e.target.value }))}>
-                              <option value="plans">Plans</option>
+                              <option value="plan_catalog">Plans</option>
                               <option value="billing">Billing</option>
                               <option value="support">Support</option>
                               <option value="tracking">Tracking</option>
