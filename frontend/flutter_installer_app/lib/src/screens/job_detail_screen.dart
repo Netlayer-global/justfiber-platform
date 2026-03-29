@@ -813,6 +813,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required TextEditingController controller,
     required String title,
     required String subtitle,
+    bool refreshOntDetails = false,
   }) async {
     final scanned = await Navigator.of(context).push<String>(
       MaterialPageRoute(
@@ -826,6 +827,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     setState(() {
       controller.text = scanned.trim();
     });
+    if (refreshOntDetails) {
+      await _refreshPreviewAndDiagnostics(successMessage: 'ONT details refreshed');
+      return;
+    }
     _show('Serial scanned: ${scanned.trim()}');
   }
 
@@ -1618,15 +1623,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       controller: _serialController,
                                       title: 'Scan ONT serial',
                                       subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                                      refreshOntDetails: true,
                                     ),
                             child: const Text('Scan barcode'),
                           ),
                           OutlinedButton(
-                            onPressed: _busy ? null : () => _run(() async {}, 'Preview refreshed'),
+                            onPressed: _busy ? null : () => _refreshPreviewAndDiagnostics(successMessage: 'Preview refreshed'),
                             child: const Text('Load preview'),
                           ),
                           OutlinedButton(
-                            onPressed: _busy ? null : () => _run(() async {}, 'Diagnostics refreshed'),
+                            onPressed: _busy ? null : () => _refreshPreviewAndDiagnostics(successMessage: 'Diagnostics refreshed'),
                             child: const Text('Diagnostics'),
                           ),
                           FilledButton(
@@ -2832,6 +2838,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                           controller: _serialController,
                                           title: 'Scan ONT serial',
                                           subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                                          refreshOntDetails: true,
                                         ),
                                 child: const Text('Scan barcode'),
                               ),
@@ -3181,6 +3188,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             controller: _serialController,
                             title: 'Scan ONT serial',
                             subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                            refreshOntDetails: true,
                           ),
                   child: const Text('Scan serial'),
                 ),
