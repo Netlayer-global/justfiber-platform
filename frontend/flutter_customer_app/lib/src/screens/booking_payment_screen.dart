@@ -138,6 +138,20 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
     );
   }
 
+  String _failureGuidance() {
+    if (paymentError == null || paymentError!.trim().isEmpty) {
+      return 'Open Razorpay checkout to complete this booking payment.';
+    }
+    final text = paymentError!.toLowerCase();
+    if (text.contains('cancel')) {
+      return 'Checkout was closed before payment was completed. You can retry from this screen.';
+    }
+    if (text.contains('network') || text.contains('timeout') || text.contains('unable to connect')) {
+      return 'This looks like a network issue. Retry once after connection stabilizes.';
+    }
+    return 'Retry the booking payment once. If the amount was deducted but the booking did not update, create a support ticket from here.';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -211,13 +225,30 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          paymentError ?? 'Open Razorpay checkout to complete this booking payment.',
+                          _failureGuidance(),
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                         ),
                       ],
                     ),
                   ),
+                  if (paymentError != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x33F97316)),
+                      ),
+                      child: const Text(
+                        'If money was debited, wait briefly before retrying. If the booking still does not update, create a support ticket so our team can confirm the payment manually.',
+                        style: TextStyle(color: Color(0xFF9A3412), height: 1.45),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   SizedBox(
                     width: double.infinity,

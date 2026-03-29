@@ -167,6 +167,23 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     );
   }
 
+  String _failureGuidance() {
+    if (paymentError == null || paymentError!.trim().isEmpty) {
+      return 'Confirm the bill details above, then continue to secure payment.';
+    }
+    final text = paymentError!.toLowerCase();
+    if (text.contains('cancel')) {
+      return 'The payment window was closed before completion. You can retry safely from this screen.';
+    }
+    if (text.contains('network') || text.contains('timeout') || text.contains('unable to connect')) {
+      return 'This looks like a network issue. Check internet, retry once, and contact support if the amount was debited but not confirmed.';
+    }
+    if (text.contains('signature') || text.contains('verify')) {
+      return 'Payment may have reached us but verification is still pending. Wait a few seconds, refresh billing, and contact support if the receipt does not appear.';
+    }
+    return 'Retry once from this screen. If money is deducted without a receipt, copy the order reference and raise a billing ticket.';
+  }
+
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -353,10 +370,39 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    paymentError ?? 'Confirm the bill details above, then continue to secure payment.',
+                    _failureGuidance(),
                     style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
+                  if (paymentError != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x33F97316)),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'If amount was debited',
+                            style: TextStyle(
+                              color: Color(0xFF9A3412),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '1. Do not pay again immediately.\n2. Copy the order reference.\n3. Open support and mention the debited amount.',
+                            style: TextStyle(color: Color(0xFF9A3412), height: 1.45),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 22),
                   SizedBox(
                     width: double.infinity,
