@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../widgets/app_card.dart';
+import '../billing_history_screen.dart';
 import '../billing_payment_screen.dart';
 import '../booking_flow_screen.dart';
 import '../plan_catalog_screen.dart';
@@ -699,7 +700,7 @@ class HomeTab extends StatelessWidget {
         await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
         break;
       case 'billing':
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingPaymentScreen()));
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()));
         break;
       case 'tracking':
         await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
