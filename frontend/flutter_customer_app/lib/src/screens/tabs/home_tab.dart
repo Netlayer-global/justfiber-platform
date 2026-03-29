@@ -21,6 +21,7 @@ class HomeTab extends StatelessWidget {
     final wifi = appState.wifi;
     final latestBooking = appState.latestBooking;
     final connections = appState.connections;
+    final banners = appState.banners;
     CustomerConnection? selectedConnection;
     for (final item in connections) {
       if (item.customerId == appState.selectedCustomerId) {
@@ -224,6 +225,35 @@ class HomeTab extends StatelessWidget {
             ],
           ),
         ),
+        if (banners.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          _lightPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recommended for you',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Latest offers and service actions from JustFiber.',
+                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  height: 174,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: banners.length > 3 ? 3 : banners.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (_, index) => _promoCard(context, appState, banners[index]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (connections.length > 1) ...[
           const SizedBox(height: 18),
           _lightPanel(
@@ -658,6 +688,80 @@ class HomeTab extends StatelessWidget {
             ),
           ),
         ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPromo(BuildContext context, AppState appState, AppBannerItem banner) async {
+    switch (banner.targetType) {
+      case 'plan_catalog':
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
+        break;
+      case 'billing':
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingPaymentScreen()));
+        break;
+      case 'tracking':
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
+        break;
+      default:
+        return;
+    }
+    if (context.mounted) {
+      await appState.refresh();
+    }
+  }
+
+  Widget _promoCard(BuildContext context, AppState appState, AppBannerItem banner) {
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F4FF),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0x338224E3)),
+            ),
+            child: const Text(
+              'JustFiber offer',
+              style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, fontSize: 12),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            banner.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            banner.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
+          ),
+          const Spacer(),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton(
+              onPressed: () => _openPromo(context, appState, banner),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF8224E3),
+                foregroundColor: const Color(0xFFFFFFFF),
+              ),
+              child: Text(banner.ctaLabel),
+            ),
+          ),
         ],
       ),
     );

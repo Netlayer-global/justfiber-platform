@@ -432,6 +432,46 @@ class ApiClient {
     }).toList();
   }
 
+  Future<List<AppBannerItem>> fetchAppBanners() async {
+    final list = _asList(await _request('/api/v1/customer/banners'));
+    return list.map((item) {
+      final map = item as Map<String, dynamic>;
+      final targetType = (map['targetType'] ?? 'shop').toString();
+      final targetValue = (map['targetValue'] ?? '').toString();
+      String description;
+      String ctaLabel;
+      switch (targetType) {
+        case 'plan_catalog':
+          description = targetValue.isEmpty ? 'Explore available upgrade plans and higher speed options.' : targetValue;
+          ctaLabel = 'Explore plans';
+          break;
+        case 'billing':
+          description = targetValue.isEmpty ? 'Review invoices, payments, and due amount from billing.' : targetValue;
+          ctaLabel = 'Open billing';
+          break;
+        case 'support':
+          description = targetValue.isEmpty ? 'Reach support for service and billing help.' : targetValue;
+          ctaLabel = 'Get help';
+          break;
+        case 'tracking':
+          description = targetValue.isEmpty ? 'Track booking progress and installer updates.' : targetValue;
+          ctaLabel = 'Track service';
+          break;
+        default:
+          description = targetValue.isEmpty ? 'Latest JustFiber offers and service actions.' : targetValue;
+          ctaLabel = 'Open';
+      }
+      return AppBannerItem(
+        title: (map['title'] ?? 'JustFiber offer').toString(),
+        description: description,
+        imageUrl: (map['imageUrl'] ?? '').toString(),
+        targetType: targetType,
+        targetValue: targetValue,
+        ctaLabel: ctaLabel,
+      );
+    }).toList();
+  }
+
   Future<List<ConnectedDevice>> fetchConnectedDevices(CustomerSession session, {String? customerId}) async {
     final list = _asList(await _request(_withCustomerId('/api/v1/customer/device/connected-devices', customerId), token: session.accessToken));
     return list.map((item) {

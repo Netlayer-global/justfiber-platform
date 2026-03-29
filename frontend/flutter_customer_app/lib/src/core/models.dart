@@ -322,6 +322,24 @@ class AddonItem {
   final String description;
 }
 
+class AppBannerItem {
+  const AppBannerItem({
+    required this.title,
+    required this.description,
+    required this.imageUrl,
+    required this.targetType,
+    required this.targetValue,
+    required this.ctaLabel,
+  });
+
+  final String title;
+  final String description;
+  final String imageUrl;
+  final String targetType;
+  final String targetValue;
+  final String ctaLabel;
+}
+
 class PlanItem {
   const PlanItem({
     required this.planCode,

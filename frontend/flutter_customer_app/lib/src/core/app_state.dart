@@ -25,6 +25,7 @@ const _latestBookingDurationLabelKey = 'justfiber.latest_booking_duration_label'
 class AppState extends ChangeNotifier {
   AppState() {
     api.onUnauthorized = _refreshAccessToken;
+    loadAppBanners();
     loadPlans();
     restoreSession();
   }
@@ -103,6 +104,7 @@ class AppState extends ChangeNotifier {
   List<NotificationItem> notifications = const [];
   List<FaqItem> faqs = const [];
   List<AddonItem> addons = const [];
+  List<AppBannerItem> banners = const [];
   List<ConnectedDevice> connectedDevices = const [];
   List<PlanItem> plans = const [];
   BookingQuote? latestBooking;
@@ -207,6 +209,7 @@ class AppState extends ChangeNotifier {
     notifications = const [];
     faqs = const [];
     addons = const [];
+    banners = const [];
     connectedDevices = const [];
     latestBooking = preservedBooking;
     bookingTracking = preservedTracking;
@@ -325,6 +328,11 @@ class AppState extends ChangeNotifier {
       }
       try {
         addons = await api.fetchAddons(current);
+      } catch (e) {
+        firstError ??= e.toString();
+      }
+      try {
+        banners = await api.fetchAppBanners();
       } catch (e) {
         firstError ??= e.toString();
       }
@@ -482,6 +490,15 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     } catch (_) {
       // Keep the app usable even if plans are temporarily unavailable.
+    }
+  }
+
+  Future<void> loadAppBanners() async {
+    try {
+      banners = await api.fetchAppBanners();
+      notifyListeners();
+    } catch (_) {
+      // Promo banners are optional and should not block app usage.
     }
   }
 
