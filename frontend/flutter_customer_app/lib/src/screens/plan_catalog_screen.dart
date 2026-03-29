@@ -72,6 +72,8 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               _hero(step == 0 ? (billing.currentPlan.isEmpty ? 'Choose your next plan' : billing.currentPlan) : selectedPlan?.name ?? 'Plan change',
                   step == 0 ? 'Select a plan first, then choose duration like booking flow.' : step == 1 ? 'Choose the duration before checkout.' : 'Review and confirm the plan change.'),
               const SizedBox(height: 16),
+              _stepper(),
+              const SizedBox(height: 16),
               if (step == 0) ...[
                 _modeSwitcher(),
                 const SizedBox(height: 16),
@@ -164,6 +166,67 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _stepper() {
+    const labels = ['Plan', 'Duration', 'Checkout'];
+    return _surface(
+      child: Column(
+        children: [
+          Row(
+            children: List.generate(labels.length, (index) {
+              final active = index <= step;
+              return Expanded(
+                child: Container(
+                  height: 5,
+                  margin: EdgeInsets.only(left: index == 0 ? 12 : 6, right: index == labels.length - 1 ? 12 : 6),
+                  decoration: BoxDecoration(
+                    color: active ? const Color(0xFF8224E3) : const Color(0xFFE7E1DA),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: List.generate(labels.length, (index) {
+              final active = index == step;
+              final complete = index < step;
+              return Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: active || complete ? const Color(0xFF8224E3) : const Color(0xFFF8F4FF),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: active || complete ? const Color(0xFF8224E3) : const Color(0x338224E3)),
+                      ),
+                      child: Icon(
+                        complete ? Icons.check_rounded : Icons.circle,
+                        size: complete ? 18 : 12,
+                        color: active || complete ? const Color(0xFFFFFFFF) : const Color(0xFF8224E3),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      labels[index],
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: active || complete ? const Color(0xFF131313) : const Color(0xFF7B746D),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
