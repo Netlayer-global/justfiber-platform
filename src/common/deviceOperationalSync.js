@@ -91,18 +91,40 @@ function discoverOpticalMetric(summary, direction) {
     normalizedDirection === "tx"
       ? ["txpower", "txopticalpower", "opticaltxpower"]
       : ["rxpower", "rxopticalpower", "opticalrxpower"];
-  const transportHints = ["pon", "optical", "gpon", "xgpon", "wanpon", "ont"];
+  const primaryHints = ["pon", "optical", "gpon", "xgpon", "wanpon", "ont", "dasan"];
+  const excludedHints = ["wifi", "wlan", "radio", "ssid", "neighbor"];
 
   const matches = collectMatchingPaths(summary, (path, value) => {
     if (!value || typeof value !== "object" || !("_value" in value)) {
       return false;
     }
     const normalizedPath = String(path || "").toLowerCase();
-    return directionTokens.some((token) => normalizedPath.includes(token)) &&
-      transportHints.some((hint) => normalizedPath.includes(hint));
+    if (!directionTokens.some((token) => normalizedPath.includes(token))) {
+      return false;
+    }
+    if (excludedHints.some((hint) => normalizedPath.includes(hint))) {
+      return false;
+    }
+    return primaryHints.some((hint) => normalizedPath.includes(hint));
   });
 
   for (const path of matches) {
+    const value = readPath(summary, path);
+    if (value !== undefined && value !== null && value !== "") {
+      return value;
+    }
+  }
+
+  const fallbackMatches = collectMatchingPaths(summary, (path, value) => {
+    if (!value || typeof value !== "object" || !("_value" in value)) {
+      return false;
+    }
+    const normalizedPath = String(path || "").toLowerCase();
+    return directionTokens.some((token) => normalizedPath.includes(token)) &&
+      !excludedHints.some((hint) => normalizedPath.includes(hint));
+  });
+
+  for (const path of fallbackMatches) {
     const value = readPath(summary, path);
     if (value !== undefined && value !== null && value !== "") {
       return value;
