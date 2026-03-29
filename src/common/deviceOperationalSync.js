@@ -36,6 +36,10 @@ function readValue(node) {
   return node;
 }
 
+function extractNodeValue(node) {
+  return readValue(node);
+}
+
 function readPath(root, path) {
   const parts = Array.isArray(path) ? path : String(path || "").split(".");
   let current = root;
