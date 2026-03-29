@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +29,7 @@ class AppState extends ChangeNotifier {
   String? error;
   String? bookingError;
   String? selectedCustomerId;
+  String? pendingNavigationTarget;
   DateTime? lastSyncedAt;
   final Set<String> _seenNotificationIds = <String>{};
 
@@ -234,12 +237,72 @@ class AppState extends ChangeNotifier {
     for (final item in notifications) {
       if (item.id.isEmpty || item.readAt.isNotEmpty || _seenNotificationIds.contains(item.id)) continue;
       _seenNotificationIds.add(item.id);
+      final payload = jsonEncode({'target': _notificationTarget(item)});
       await CustomerNotificationService.instance.showAlert(
         id: CustomerNotificationService.instance.stableIdFor(item.id),
         title: item.title.isEmpty ? 'JustFiber update' : item.title,
         body: item.body.isEmpty ? 'Open the app to review the latest update.' : item.body,
+        payload: payload,
       );
     }
+  }
+
+  String _notificationTarget(NotificationItem item) {
+    final payload = item.payload;
+    if (payload['upgradeRecommended'] == true ||
+        (payload['recommendedPlanCode'] ?? '').toString().isNotEmpty) {
+      return 'plans';
+    }
+    final type = item.type.toLowerCase();
+    final text = '${item.title} ${item.body}'.toLowerCase();
+    if (type.contains('billing_') || type.contains('refund') || type.contains('receipt')) {
+      return 'billing';
+    }
+    if (type.contains('booking') || type.contains('installer') || type.contains('job')) {
+      return 'tracking';
+    }
+    if (type.contains('ticket') || type.contains('request') || type.contains('support')) {
+      return 'support';
+    }
+    if (text.contains('invoice') ||
+        text.contains('payment') ||
+        text.contains('due') ||
+        text.contains('receipt') ||
+        text.contains('gst')) {
+      return 'billing';
+    }
+    if (text.contains('booking') ||
+        text.contains('install') ||
+        text.contains('installer') ||
+        text.contains('visit')) {
+      return 'tracking';
+    }
+    if (text.contains('ticket') ||
+        text.contains('request') ||
+        text.contains('complaint') ||
+        text.contains('support')) {
+      return 'support';
+    }
+    return 'support';
+  }
+
+  void handleNotificationPayload(String payload) {
+    try {
+      final data = jsonDecode(payload);
+      if (data is Map<String, dynamic>) {
+        final target = (data['target'] ?? '').toString().trim();
+        if (target.isNotEmpty) {
+          pendingNavigationTarget = target;
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
+  }
+
+  String? consumePendingNavigationTarget() {
+    final target = pendingNavigationTarget;
+    pendingNavigationTarget = null;
+    return target;
   }
 
   Future<void> refreshBookingTracking({bool silent = false}) async {
@@ -841,6 +904,7 @@ class AppState extends ChangeNotifier {
     demoOtp = null;
     error = null;
     selectedCustomerId = null;
+    pendingNavigationTarget = null;
     _resetCustomerState();
     notifyListeners();
   }
@@ -939,6 +1003,7 @@ class AppState extends ChangeNotifier {
       quality: '',
     );
     bookingError = null;
+    pendingNavigationTarget = null;
     lastSyncedAt = null;
     _seenNotificationIds.clear();
     busy = false;

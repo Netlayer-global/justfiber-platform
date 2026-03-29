@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
 import 'billing_history_screen.dart';
+import 'plan_catalog_screen.dart';
+import 'service_tracking_screen.dart';
 import 'service_hub_screen.dart';
 import 'support_history_screen.dart';
 import 'tabs/home_tab.dart';
@@ -16,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
+  bool _handlingPendingNavigation = false;
 
   Future<void> _setIndex(int value) async {
     final appState = AppStateScope.of(context);
@@ -34,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
+    _handlePendingNavigation(appState);
     final unreadAlerts = appState.notifications.where((item) => item.readAt.isEmpty).length;
     final billingAttention = appState.billing.dueAmount > 0;
     final pages = [
@@ -123,6 +127,59 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  void _handlePendingNavigation(AppState appState) {
+    if (_handlingPendingNavigation) return;
+    final target = appState.consumePendingNavigationTarget();
+    if (target == null || target.isEmpty) return;
+    _handlingPendingNavigation = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        _handlingPendingNavigation = false;
+        return;
+      }
+      try {
+        switch (target) {
+          case 'billing':
+            if (index != 2) {
+              setState(() => index = 2);
+            }
+            break;
+          case 'support':
+            if (index != 3) {
+              setState(() => index = 3);
+            }
+            break;
+          case 'services':
+            if (index != 1) {
+              setState(() => index = 1);
+            }
+            break;
+          case 'profile':
+            if (index != 4) {
+              setState(() => index = 4);
+            }
+            break;
+          case 'plans':
+            await Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
+            );
+            break;
+          case 'tracking':
+            await Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
+            );
+            break;
+          default:
+            if (index != 3) {
+              setState(() => index = 3);
+            }
+        }
+      } finally {
+        _handlingPendingNavigation = false;
+      }
+    });
   }
 }
 
