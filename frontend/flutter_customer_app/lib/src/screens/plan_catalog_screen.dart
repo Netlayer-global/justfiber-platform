@@ -17,6 +17,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   int step = 0;
   bool hydratedDraft = false;
   bool loadingCheckout = false;
+  bool loadingPlans = false;
   PlanItem? selectedPlan;
   PlanChangePreview? preview;
 
@@ -26,6 +27,14 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     if (hydratedDraft) return;
     hydratedDraft = true;
     final appState = AppStateScope.of(context);
+    if (appState.planChangeOptions.isEmpty && appState.plans.isEmpty && !loadingPlans) {
+      loadingPlans = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await appState.refreshPlans();
+        if (!mounted) return;
+        setState(() => loadingPlans = false);
+      });
+    }
     final draft = appState.planChangeDraft;
     if (draft == null) return;
     final availablePlans = _availablePlans(appState);
@@ -100,10 +109,31 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                       children: [
                         const Text('No plans available right now.', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
                         const SizedBox(height: 8),
-                        const Text('We could not load alternate or catalog plans right now. Pull to refresh and try again.', style: TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
-                        if ((appState.error ?? '').isNotEmpty) ...[
+                        Text(
+                          loadingPlans
+                              ? 'Loading full plan catalog...'
+                              : 'We could not load alternate or catalog plans right now. Pull to refresh and try again.',
+                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                        ),
+                        if (!loadingPlans && (appState.error ?? '').isNotEmpty) ...[
                           const SizedBox(height: 10),
                           Text(appState.error!, style: const TextStyle(color: Color(0xFFB42318), fontWeight: FontWeight.w700)),
+                        ],
+                        if (!loadingPlans) ...[
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: () async {
+                                setState(() => loadingPlans = true);
+                                await appState.refreshPlans();
+                                if (!mounted) return;
+                                setState(() => loadingPlans = false);
+                              },
+                              style: _filledStyle(),
+                              child: const Text('Reload plans'),
+                            ),
+                          ),
                         ],
                       ],
                     ),
