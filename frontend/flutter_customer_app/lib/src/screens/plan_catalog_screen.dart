@@ -28,7 +28,8 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     final appState = AppStateScope.of(context);
     final draft = appState.planChangeDraft;
     if (draft == null) return;
-    final match = appState.planChangeOptions.cast<PlanItem?>().firstWhere(
+    final availablePlans = _availablePlans(appState);
+    final match = availablePlans.cast<PlanItem?>().firstWhere(
           (item) => item?.planCode == draft.planCode,
           orElse: () => null,
         );
@@ -47,7 +48,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
-    final plans = appState.planChangeOptions;
+    final plans = _availablePlans(appState);
     return WillPopScope(
       onWillPop: () async {
         if (step == 0 || selectedPlan == null) return true;
@@ -93,7 +94,20 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                   ),
                 if (appState.planChangeDraft != null) const SizedBox(height: 16),
               if (plans.isEmpty)
-                  _surface(child: const Text('No alternate plans available right now.', style: TextStyle(color: Color(0xFF6E6A67))))
+                  _surface(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('No plans available right now.', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
+                        const SizedBox(height: 8),
+                        const Text('We could not load alternate or catalog plans right now. Pull to refresh and try again.', style: TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
+                        if ((appState.error ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(appState.error!, style: const TextStyle(color: Color(0xFFB42318), fontWeight: FontWeight.w700)),
+                        ],
+                      ],
+                    ),
+                  )
                 else
                   ...plans.map((plan) => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
@@ -596,6 +610,23 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     if (!mounted) return;
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Plan change checkout cancelled' : (appState.error ?? 'Unable to cancel plan change'))));
+  }
+
+  List<PlanItem> _availablePlans(AppState appState) {
+    final currentPlanCode = appState.connections.cast<CustomerConnection?>().firstWhere(
+          (item) => item?.customerId == appState.selectedCustomerId,
+          orElse: () => null,
+        )?.planName;
+    final alternates = appState.planChangeOptions.where((item) => item.planCode.isNotEmpty).toList(growable: false);
+    if (alternates.isNotEmpty) {
+      return alternates;
+    }
+    final catalog = appState.plans.where((item) => item.planCode.isNotEmpty).toList();
+    if (catalog.isEmpty) {
+      return const <PlanItem>[];
+    }
+    final filtered = catalog.where((item) => item.name != currentPlanCode).toList();
+    return filtered.isNotEmpty ? filtered : catalog;
   }
 
   List<String> _terms(PlanItem plan) {
