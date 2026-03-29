@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
 import 'models.dart';
+import 'notification_service.dart';
 
 const defaultApiBase = 'http://103.139.191.114:4000';
 const _mobileKey = 'justfiber.mobile';
@@ -27,6 +28,7 @@ class AppState extends ChangeNotifier {
   String? bookingError;
   String? selectedCustomerId;
   DateTime? lastSyncedAt;
+  final Set<String> _seenNotificationIds = <String>{};
 
   DashboardData dashboard = const DashboardData(
     customerName: 'JustFiber Customer',
@@ -218,11 +220,25 @@ class AppState extends ChangeNotifier {
 
       await refreshBookingTracking(silent: true);
       lastSyncedAt = DateTime.now();
+      await _surfaceNewNotifications();
     } catch (e) {
       error = e.toString();
     } finally {
       busy = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _surfaceNewNotifications() async {
+    await CustomerNotificationService.instance.initialize();
+    for (final item in notifications) {
+      if (item.id.isEmpty || item.readAt.isNotEmpty || _seenNotificationIds.contains(item.id)) continue;
+      _seenNotificationIds.add(item.id);
+      await CustomerNotificationService.instance.showAlert(
+        id: CustomerNotificationService.instance.stableIdFor(item.id),
+        title: item.title.isEmpty ? 'JustFiber update' : item.title,
+        body: item.body.isEmpty ? 'Open the app to review the latest update.' : item.body,
+      );
     }
   }
 
@@ -924,6 +940,7 @@ class AppState extends ChangeNotifier {
     );
     bookingError = null;
     lastSyncedAt = null;
+    _seenNotificationIds.clear();
     busy = false;
     bookingBusy = false;
   }
