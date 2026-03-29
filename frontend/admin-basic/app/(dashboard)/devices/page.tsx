@@ -47,6 +47,27 @@ function formatPower(value: unknown) {
   return Number.isFinite(num) ? `${num} dBm` : '-'
 }
 
+function isDzsDevice(device?: Device) {
+  const fingerprint = [
+    device?.deviceId,
+    device?.serialNumber,
+    device?.productClass,
+    device?.type,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return fingerprint.includes('dsnw2a') || fingerprint.includes('dzs') || fingerprint.includes('dasan')
+}
+
+function formatOpticalPower(device: Device | undefined, value: unknown) {
+  const formatted = formatPower(value)
+  if (formatted !== '-') return formatted
+  if (isDzsDevice(device)) return 'Telemetry unavailable'
+  return '-'
+}
+
 function formatBoolean(value: unknown) {
   if (value === true) return 'Enabled'
   if (value === false) return 'Disabled'
@@ -656,7 +677,7 @@ export default function DevicesPage() {
                   <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-500 xl:grid-cols-4">
                     <div>IP {formatValue(device.ip || device.wanInfo?.ipAddress)}</div>
                     <div>PPPoE {formatValue(device.wanInfo?.pppoeUsernameMasked || device.wanInfo?.pppoeUsername)}</div>
-                    <div>RX {formatPower(device.opticalInfo?.rxPower)}</div>
+                    <div>RX {formatOpticalPower(device, device.opticalInfo?.rxPower)}</div>
                     <div>Last sync {formatDateTime(device.updatedAt)}</div>
                   </div>
                 </div>
@@ -694,7 +715,7 @@ export default function DevicesPage() {
               <div className="grid gap-3 md:grid-cols-4">
                 <DetailTile label="IPv4" value={formatValue(selectedDevice.ip || selectedDevice.wanInfo?.ipAddress)} />
                 <DetailTile label="PPPoE" value={formatValue(selectedDevice.wanInfo?.pppoeUsernameMasked || selectedDevice.wanInfo?.pppoeUsername)} />
-                <DetailTile label="RX power" value={formatPower(selectedDevice.opticalInfo?.rxPower)} />
+                <DetailTile label="RX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.rxPower)} />
                 <DetailTile
                   label="LAN clients"
                   value={selectedClients.length ? String(selectedClients.length) : formatCount(selectedDevice.lanInfo?.leasedClients)}
@@ -845,8 +866,8 @@ export default function DevicesPage() {
                   </div>
                   <div className="space-y-3">
                     <DetailRow label="Health" value={formatValue(selectedDevice.opticalInfo?.healthStatus, summarizeOptical(selectedDevice.opticalInfo))} />
-                    <DetailRow label="RX power" value={formatPower(selectedDevice.opticalInfo?.rxPower)} />
-                    <DetailRow label="TX power" value={formatPower(selectedDevice.opticalInfo?.txPower)} />
+                    <DetailRow label="RX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.rxPower)} />
+                    <DetailRow label="TX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.txPower)} />
                     <DetailRow label="Last optical update" value={formatDateTime(selectedDevice.opticalInfo?.lastInformAt || selectedDevice.opticalInfo?.measuredAt)} />
                   </div>
                 </div>
