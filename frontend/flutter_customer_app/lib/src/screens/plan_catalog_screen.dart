@@ -281,7 +281,16 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Select duration', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313))),
           const SizedBox(height: 8),
-          const Text('Choose duration exactly like booking flow, then continue to checkout.', style: TextStyle(color: Color(0xFF6E6A67), height: 1.45)),
+          Text('${plan.name} ke liye booking jaisa duration choose karo, then checkout continue karo.', style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45)),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _pill('${plan.speedMbps.toStringAsFixed(0)} Mbps', true),
+              _pill(effectiveMode == 'next_cycle' ? 'Apply next cycle' : 'Apply now', false),
+            ],
+          ),
           const SizedBox(height: 16),
           ..._terms(plan).map((term) => Padding(padding: const EdgeInsets.only(bottom: 12), child: _durationOption(plan, term))),
           const SizedBox(height: 6),
@@ -299,6 +308,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               _row('Plan', plan.name),
               _row('Duration', _termLabel(billingTerm)),
               _row('Payable value', 'Rs ${_price(plan, billingTerm).toStringAsFixed(0)}'),
+              _row('Billing mode', _termBillingCaption(billingTerm)),
             ]),
           ),
         ]),
@@ -325,6 +335,8 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                 Text(_termLabel(term), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
                 const SizedBox(height: 4),
                 Text(_durationHelp(term), style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35)),
+                const SizedBox(height: 8),
+                Text(_termBillingCaption(term), style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700)),
               ],
             );
             final price = Column(
@@ -525,10 +537,10 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
 
   List<String> _terms(PlanItem plan) {
     final terms = <String>[
-      if (plan.validityMonthly) 'monthly',
-      if (plan.validityQuarterly) 'quarterly',
-      if (plan.validityHalfYearly) 'halfYearly',
-      if (plan.validityYearly) 'yearly',
+      if (plan.validityMonthly || plan.monthlyPrice > 0) 'monthly',
+      if (plan.validityQuarterly || plan.quarterlyPrice > 0) 'quarterly',
+      if (plan.validityHalfYearly || plan.halfYearlyPrice > 0) 'halfYearly',
+      if (plan.validityYearly || plan.yearlyPrice > 0) 'yearly',
     ];
     return terms.isEmpty ? const ['monthly'] : terms;
   }
@@ -549,13 +561,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   String _termLabel(String term) {
     switch (term) {
       case 'quarterly':
-        return 'Quarterly';
+        return '3 months';
       case 'halfYearly':
-        return 'Half yearly';
+        return '6 months';
       case 'yearly':
-        return 'Yearly';
+        return '12 months';
       default:
-        return 'Monthly';
+        return '1 month';
     }
   }
 
@@ -586,13 +598,26 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   String _durationHelp(String term) {
     switch (term) {
       case 'quarterly':
-        return 'Best if you want fewer renewals across the quarter.';
+        return 'Booking jaisa 3 month commitment with fewer renewals.';
       case 'halfYearly':
-        return 'Longer term with fewer payment cycles through the half year.';
+        return '6 month duration for a longer uninterrupted billing cycle.';
       case 'yearly':
-        return 'Annual term for one cleaner commercial commitment.';
+        return '12 month duration for the longest stable commercial term.';
       default:
-        return 'Keep billing on a monthly cycle.';
+        return 'Monthly duration for a flexible short-term cycle.';
+    }
+  }
+
+  String _termBillingCaption(String term) {
+    switch (term) {
+      case 'quarterly':
+        return 'Billed once for 3 months';
+      case 'halfYearly':
+        return 'Billed once for 6 months';
+      case 'yearly':
+        return 'Billed once for 12 months';
+      default:
+        return 'Billed monthly';
     }
   }
 }
