@@ -174,11 +174,16 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      session = await api.verifyOtp(mobile, otp);
+      final nextSession = await api.verifyOtp(mobile, otp);
+      _resetCustomerState();
+      session = nextSession;
+      selectedCustomerId = null;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_mobileKey, session!.mobile);
       await prefs.setString(_accessTokenKey, session!.accessToken);
       await prefs.setString(_refreshTokenKey, session!.refreshToken);
+      await prefs.remove(_selectedCustomerKey);
+      await prefs.remove(_planChangeDraftKey);
       await refresh();
       return true;
     } catch (e) {
