@@ -224,9 +224,13 @@ class AppState extends ChangeNotifier {
       faqs = await api.fetchFaqs();
       addons = await api.fetchAddons(current);
       banners = await api.fetchAppBanners();
-      connectedDevices = await api.fetchConnectedDevices(current, customerId: selectedCustomerId);
-      planChangeOptions = await api.fetchPlanChangeOptions(current, customerId: selectedCustomerId);
       plans = await api.fetchPlans();
+      connectedDevices = await api.fetchConnectedDevices(current, customerId: selectedCustomerId);
+      try {
+        planChangeOptions = await api.fetchPlanChangeOptions(current, customerId: selectedCustomerId);
+      } catch (_) {
+        planChangeOptions = const [];
+      }
       parentalRules = await api.fetchParentalRules(current, customerId: selectedCustomerId);
       networkQuality = await api.fetchNetworkQuality(current, customerId: selectedCustomerId);
       speedTest = await api.fetchSpeedTest(current, customerId: selectedCustomerId);
