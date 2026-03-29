@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
@@ -22,7 +24,7 @@ class HomeTab extends StatelessWidget {
     final wifi = appState.wifi;
     final latestBooking = appState.latestBooking;
     final connections = appState.connections;
-    final banners = appState.banners;
+    final banners = _displayBanners(appState.banners);
     CustomerConnection? selectedConnection;
     for (final item in connections) {
       if (item.customerId == appState.selectedCustomerId) {
@@ -226,35 +228,35 @@ class HomeTab extends StatelessWidget {
             ],
           ),
         ),
-        if (banners.isNotEmpty) ...[
-          const SizedBox(height: 18),
-          _lightPanel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Recommended for you',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+        const SizedBox(height: 18),
+        _lightPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Recommended for you',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                appState.banners.isEmpty
+                    ? 'Curated JustFiber offers are ready here while live promotions sync in.'
+                    : 'Latest offers and service actions from JustFiber.',
+                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 228,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: banners.length > 4 ? 4 : banners.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, index) => _promoCard(context, appState, banners[index]),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Latest offers and service actions from JustFiber.',
-                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: 196,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: banners.length > 4 ? 4 : banners.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (_, index) => _promoCard(context, appState, banners[index]),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
         if (connections.length > 1) ...[
           const SizedBox(height: 18),
           _lightPanel(
@@ -703,6 +705,9 @@ class HomeTab extends StatelessWidget {
       case 'billing':
         await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()));
         break;
+      case 'support':
+        onNavigate(3);
+        return;
       case 'tracking':
         await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
         break;
@@ -717,7 +722,6 @@ class HomeTab extends StatelessWidget {
   Widget _promoCard(BuildContext context, AppState appState, AppBannerItem banner) {
     return Container(
       width: 280,
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(24),
@@ -726,45 +730,157 @@ class HomeTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0x338224E3)),
-            ),
-            child: const Text(
-              'JustFiber offer',
-              style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, fontSize: 12),
+          _promoMedia(banner),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F4FF),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0x338224E3)),
+              ),
+              child: Text(
+                banner.imageUrl.isNotEmpty ? 'Featured banner' : 'JustFiber offer',
+                style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, fontSize: 12),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            banner.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+            child: Text(
+              banner.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            banner.description,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+            child: Text(
+              banner.description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
+            ),
           ),
           const Spacer(),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: () => _openPromo(context, appState, banner),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF8224E3),
-                foregroundColor: const Color(0xFFFFFFFF),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: () => _openPromo(context, appState, banner),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF8224E3),
+                  foregroundColor: const Color(0xFFFFFFFF),
+                ),
+                child: Text(banner.ctaLabel),
               ),
-              child: Text(banner.ctaLabel),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  List<AppBannerItem> _displayBanners(List<AppBannerItem> source) {
+    if (source.isNotEmpty) return source;
+    return const [
+      AppBannerItem(
+        title: 'Upgrade to a faster plan',
+        description: 'Explore higher-speed plans for streaming, work, and gaming without interruption.',
+        imageUrl: '',
+        targetType: 'plan_catalog',
+        targetValue: '',
+        ctaLabel: 'Explore plans',
+      ),
+      AppBannerItem(
+        title: 'Pay your latest bill',
+        description: 'Review invoices, complete dues, and keep your connection in good standing.',
+        imageUrl: '',
+        targetType: 'billing',
+        targetValue: '',
+        ctaLabel: 'Open billing',
+      ),
+      AppBannerItem(
+        title: 'Track installation progress',
+        description: 'See booking steps, installer updates, and the latest service movement in one place.',
+        imageUrl: '',
+        targetType: 'tracking',
+        targetValue: '',
+        ctaLabel: 'Track service',
+      ),
+      AppBannerItem(
+        title: 'Need help with service?',
+        description: 'Reach support fast for Wi-Fi, speed, billing, and service-related help.',
+        imageUrl: '',
+        targetType: 'support',
+        targetValue: '',
+        ctaLabel: 'Get help',
+      ),
+    ];
+  }
+
+  Widget _promoMedia(AppBannerItem banner) {
+    final imageUrl = banner.imageUrl.trim();
+    if (imageUrl.isEmpty) {
+      return Container(
+        height: 92,
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          gradient: LinearGradient(
+            colors: [Color(0xFF8224E3), Color(0xFFB66BFF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: const Center(
+          child: Text(
+            'JustFiber',
+            style: TextStyle(
+              color: Color(0xFFFFFFFF),
+              fontWeight: FontWeight.w800,
+              fontSize: 24,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ),
+      );
+    }
+    if (imageUrl.startsWith('data:image')) {
+      final base64Index = imageUrl.indexOf('base64,');
+      if (base64Index != -1) {
+        try {
+          final bytes = base64Decode(imageUrl.substring(base64Index + 7));
+          return ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: Image.memory(
+              bytes,
+              height: 92,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          );
+        } catch (_) {}
+      }
+    }
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      child: Image.network(
+        imageUrl,
+        height: 92,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: 92,
+          color: const Color(0xFFF8F4FF),
+          alignment: Alignment.center,
+          child: const Text(
+            'JustFiber',
+            style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, fontSize: 22),
+          ),
+        ),
       ),
     );
   }

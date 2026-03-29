@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
@@ -14,7 +16,7 @@ class ShopTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
-    final promoBanners = appState.banners;
+    final promoBanners = _displayBanners(appState.banners);
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
       children: [
@@ -43,18 +45,18 @@ class ShopTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        ...(promoBanners.isEmpty
-            ? [
-                _offer(context, 'Upgrade to JustFiber 200', 'Double speed for streaming and gaming', 'Upgrade'),
-                const SizedBox(height: 14),
-                _offer(context, 'OTT Add-on', 'Bundle your favorite content apps with broadband', 'Explore'),
-                const SizedBox(height: 14),
-                _offer(context, 'Static IP', 'For CCTV, office and remote access use cases', 'Activate'),
-              ]
-            : promoBanners.take(3).expand((banner) => [
-                  _promoBanner(context, appState, banner),
-                  const SizedBox(height: 14),
-                ])),
+        if (appState.banners.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Showing default JustFiber offers while live promotions sync in.',
+              style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+            ),
+          ),
+        ...promoBanners.take(3).expand((banner) => [
+              _promoBanner(context, appState, banner),
+              const SizedBox(height: 14),
+            ]),
         const SizedBox(height: 18),
         Text('Available add-ons', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
@@ -103,26 +105,6 @@ class ShopTab extends StatelessWidget {
     );
   }
 
-  Widget _offer(BuildContext context, String title, String description, String cta) {
-    return AppCard(
-      color: const Color(0xFFFFFFFF),
-      borderColor: const Color(0x228224E3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 10),
-          Text(description, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(onPressed: () {}, child: Text(cta)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _openPromo(BuildContext context, AppState appState, AppBannerItem banner) async {
     switch (banner.targetType) {
       case 'plans':
@@ -150,21 +132,123 @@ class ShopTab extends StatelessWidget {
     return AppCard(
       color: const Color(0xFFFFFFFF),
       borderColor: const Color(0x228224E3),
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(banner.title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 10),
-          Text(banner.description, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: () => _openPromo(context, appState, banner),
-              child: Text(banner.ctaLabel),
+          _promoMedia(banner),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(banner.title, style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 10),
+                Text(banner.description, style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton(
+                    onPressed: () => _openPromo(context, appState, banner),
+                    child: Text(banner.ctaLabel),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  List<AppBannerItem> _displayBanners(List<AppBannerItem> source) {
+    if (source.isNotEmpty) return source;
+    return const [
+      AppBannerItem(
+        title: 'Upgrade to JustFiber 200',
+        description: 'Move to a faster plan for streaming, gaming, and office use.',
+        imageUrl: '',
+        targetType: 'plan_catalog',
+        targetValue: '',
+        ctaLabel: 'Upgrade',
+      ),
+      AppBannerItem(
+        title: 'Pay your latest bill',
+        description: 'Open billing to review dues, invoices, and payment history.',
+        imageUrl: '',
+        targetType: 'billing',
+        targetValue: '',
+        ctaLabel: 'Open billing',
+      ),
+      AppBannerItem(
+        title: 'Need service help?',
+        description: 'Raise a complaint or service request from the support center.',
+        imageUrl: '',
+        targetType: 'support',
+        targetValue: '',
+        ctaLabel: 'Get help',
+      ),
+    ];
+  }
+
+  Widget _promoMedia(AppBannerItem banner) {
+    final imageUrl = banner.imageUrl.trim();
+    if (imageUrl.isEmpty) {
+      return Container(
+        height: 112,
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          gradient: LinearGradient(
+            colors: [Color(0xFF8224E3), Color(0xFFD8B4FE)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: const Text(
+          'JustFiber Offers',
+          style: TextStyle(
+            color: Color(0xFFFFFFFF),
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+          ),
+        ),
+      );
+    }
+    if (imageUrl.startsWith('data:image')) {
+      final base64Index = imageUrl.indexOf('base64,');
+      if (base64Index != -1) {
+        try {
+          final bytes = base64Decode(imageUrl.substring(base64Index + 7));
+          return ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: Image.memory(
+              bytes,
+              height: 112,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          );
+        } catch (_) {}
+      }
+    }
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      child: Image.network(
+        imageUrl,
+        height: 112,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: 112,
+          color: const Color(0xFFF8F4FF),
+          alignment: Alignment.center,
+          child: const Text(
+            'JustFiber Offers',
+            style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, fontSize: 22),
+          ),
+        ),
       ),
     );
   }
