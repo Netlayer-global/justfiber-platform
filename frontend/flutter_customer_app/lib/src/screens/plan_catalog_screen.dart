@@ -90,7 +90,7 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                     ]),
                   ),
                 if (appState.planChangeDraft != null) const SizedBox(height: 16),
-                if (plans.isEmpty)
+              if (plans.isEmpty)
                   _surface(child: const Text('No alternate plans available right now.', style: TextStyle(color: Color(0xFF6E6A67))))
                 else
                   ...plans.map((plan) => Padding(
@@ -100,11 +100,17 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               ] else if (step == 1 && selectedPlan != null) ...[
                 _durationCard(selectedPlan!),
                 const SizedBox(height: 16),
-                Row(children: [
-                  Expanded(child: OutlinedButton(onPressed: () => setState(() => step = 0), child: const Text('Back to plans'))),
-                  const SizedBox(width: 12),
-                  Expanded(child: FilledButton(onPressed: loadingCheckout ? null : () => _loadCheckout(appState), style: _filledStyle(), child: Text(loadingCheckout ? 'Preparing...' : 'Continue to checkout'))),
-                ]),
+                _responsiveActionButtons(
+                  primary: FilledButton(
+                    onPressed: loadingCheckout ? null : () => _loadCheckout(appState),
+                    style: _filledStyle(),
+                    child: Text(loadingCheckout ? 'Preparing...' : 'Continue to checkout'),
+                  ),
+                  secondary: OutlinedButton(
+                    onPressed: () => setState(() => step = 0),
+                    child: const Text('Back to plans'),
+                  ),
+                ),
               ] else if (step == 2 && selectedPlan != null) ...[
                 _surface(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -130,11 +136,17 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
                         ]),
                 ),
                 const SizedBox(height: 16),
-                Row(children: [
-                  Expanded(child: OutlinedButton(onPressed: () => setState(() => step = 1), child: const Text('Back to Duration'))),
-                  const SizedBox(width: 12),
-                  Expanded(child: FilledButton(onPressed: appState.busy || preview == null ? null : () => _confirm(appState), style: _filledStyle(), child: const Text('Confirm'))),
-                ]),
+                _responsiveActionButtons(
+                  primary: FilledButton(
+                    onPressed: appState.busy || preview == null ? null : () => _confirm(appState),
+                    style: _filledStyle(),
+                    child: const Text('Confirm'),
+                  ),
+                  secondary: OutlinedButton(
+                    onPressed: () => setState(() => step = 1),
+                    child: const Text('Back to Duration'),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -236,22 +248,32 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: const Color(0x338224E3)),
             ),
-            child: Row(children: [
-              Expanded(child: _metric('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed')),
-              Expanded(child: _metric('${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps', 'Upload')),
-              Expanded(child: _metric(_dataLabel(plan), 'Data')),
-              Expanded(child: _metric(_terms(plan).length.toString(), 'Terms')),
-            ]),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _metricTile('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed'),
+                _metricTile('${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps', 'Upload'),
+                _metricTile(_dataLabel(plan), 'Data'),
+                _metricTile(_terms(plan).length.toString(), 'Terms'),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
           _row('Current recurring', currentRecurring > 0 ? 'Rs ${currentRecurring.toStringAsFixed(0)}' : 'Not available'),
           _row('Available durations', _terms(plan).map(_termLabel).join(' / ')),
           const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: OutlinedButton(onPressed: () => _previewPlan(plan, appState), child: const Text('View details'))),
-            const SizedBox(width: 12),
-            Expanded(child: FilledButton(onPressed: () => _selectPlan(plan, appState), style: _filledStyle(), child: const Text('Select plan'))),
-          ]),
+          _responsiveActionButtons(
+            primary: FilledButton(
+              onPressed: () => _selectPlan(plan, appState),
+              style: _filledStyle(),
+              child: const Text('Select plan'),
+            ),
+            secondary: OutlinedButton(
+              onPressed: () => _previewPlan(plan, appState),
+              child: const Text('View details'),
+            ),
+          ),
         ]),
       );
 
@@ -294,26 +316,49 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x338224E3)),
         ),
-        child: Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_termLabel(term), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
-              const SizedBox(height: 4),
-              Text(_durationHelp(term), style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35)),
-            ]),
-          ),
-          const SizedBox(width: 12),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('Rs ${_price(plan, term).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF8224E3))),
-            const SizedBox(height: 6),
-            if (selected)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFF8224E3), borderRadius: BorderRadius.circular(999)),
-                child: const Text('Selected', style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800, fontSize: 11)),
-              ),
-          ]),
-        ]),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 340;
+            final details = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_termLabel(term), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
+                const SizedBox(height: 4),
+                Text(_durationHelp(term), style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35)),
+              ],
+            );
+            final price = Column(
+              crossAxisAlignment: compact ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+              children: [
+                Text('Rs ${_price(plan, term).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF8224E3))),
+                const SizedBox(height: 6),
+                if (selected)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(color: const Color(0xFF8224E3), borderRadius: BorderRadius.circular(999)),
+                    child: const Text('Selected', style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800, fontSize: 11)),
+                  ),
+              ],
+            );
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  details,
+                  const SizedBox(height: 12),
+                  price,
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: details),
+                const SizedBox(width: 12),
+                price,
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -348,6 +393,11 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
         ],
       );
 
+  Widget _metricTile(String value, String label) => SizedBox(
+        width: 120,
+        child: _metric(value, label),
+      );
+
   Widget _row(String label, String value) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
@@ -355,6 +405,28 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           const Spacer(),
           Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700))),
         ]),
+      );
+
+  Widget _responsiveActionButtons({required Widget primary, required Widget secondary}) => LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 360) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                primary,
+                const SizedBox(height: 12),
+                secondary,
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: secondary),
+              const SizedBox(width: 12),
+              Expanded(child: primary),
+            ],
+          );
+        },
       );
 
   ButtonStyle _filledStyle() => FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF));
