@@ -132,7 +132,10 @@ function isWritableParameterNode(node) {
 function selectExistingPaths(summary, pathOrPaths) {
   const paths = Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths];
   if (!summary) return paths.filter(Boolean);
-  const matched = paths.filter((path) => path && pathExistsInSummary(summary, path));
+  const matched = paths.filter((path) => {
+    const normalizedPath = String(path || "").split("|")[0];
+    return normalizedPath && pathExistsInSummary(summary, normalizedPath);
+  });
   return matched.length ? matched : paths.filter(Boolean).slice(0, 1);
 }
 
@@ -561,7 +564,10 @@ export class GenieacsClient {
       const preferredPaths = dynamicPaths.length ? [...dynamicPaths, ...(Array.isArray(pathOrPaths) ? pathOrPaths : [pathOrPaths])] : pathOrPaths;
       const paths = selectExistingPaths(liveSummary, preferredPaths);
       const writablePaths = liveSummary
-        ? paths.filter((path) => isWritableParameterNode(readNodeAtPath(liveSummary, path)))
+        ? paths.filter((path) => {
+            const normalizedPath = String(path || "").split("|")[0];
+            return isWritableParameterNode(readNodeAtPath(liveSummary, normalizedPath));
+          })
         : paths;
       const selectedPaths = wifiMultiPath
         ? paths
@@ -570,8 +576,10 @@ export class GenieacsClient {
           : (writablePaths.length ? writablePaths : paths).slice(0, 1);
       for (const path of selectedPaths) {
         if (path && value !== undefined && value !== null && value !== "") {
+          const [rawPath, inlineValue] = String(path).split("|");
           const normalizedValue = transform(value);
-          const entry = valueType ? [path, normalizedValue, valueType] : [path, normalizedValue];
+          const finalValue = inlineValue ?? normalizedValue;
+          const entry = valueType ? [rawPath, finalValue, valueType] : [rawPath, finalValue];
           values.push(entry);
           if (wifiMultiPath) {
             wifiValues.push(entry);
@@ -594,8 +602,10 @@ export class GenieacsClient {
     } else {
       push(profile.ssid24Path, ssid24);
       push(profile.pass24Path, wifiPassword24 ?? wifiPassword);
+      push(profile.wifiSecurity24Path, true);
       push(profile.ssid5Path, ssid5);
       push(profile.pass5Path, wifiPassword5 ?? wifiPassword24 ?? wifiPassword);
+      push(profile.wifiSecurity5Path, true);
     }
 
     if (values.length > 0) {

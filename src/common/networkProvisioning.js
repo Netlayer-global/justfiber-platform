@@ -47,6 +47,7 @@ const GENERIC_PROFILE = {
     `${DEVICE_WIFI_24}.SSID`,
     `${IGD_WIFI_24}.SSID`
   ],
+  wifiSecurity24Path: [],
   pass24Path: [
     `${DEVICE_AP_24}.KeyPassphrase`,
     `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`,
@@ -57,6 +58,7 @@ const GENERIC_PROFILE = {
     `${DEVICE_WIFI_5}.SSID`,
     `${IGD_WIFI_5}.SSID`
   ],
+  wifiSecurity5Path: [],
   pass5Path: [
     `${DEVICE_AP_5}.KeyPassphrase`,
     `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`,
@@ -147,6 +149,18 @@ const BRAND_OVERRIDES = {
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID"
     ],
+    wifiSecurity24Path: [
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.BeaconType|WPAand11i",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.WPAAuthenticationMode|PSKAuthentication",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.IEEE11iAuthenticationMode|PSKAuthentication",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.WPAEncryptionModes|TKIPandAESEncryption",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.IEEE11iEncryptionModes|AESEncryption",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.BeaconType|WPAand11i",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.WPAAuthenticationMode|PSKAuthentication",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.IEEE11iAuthenticationMode|PSKAuthentication",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.WPAEncryptionModes|TKIPandAESEncryption",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.IEEE11iEncryptionModes|AESEncryption"
+    ],
     pass24Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
@@ -158,6 +172,18 @@ const BRAND_OVERRIDES = {
     ssid5Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID"
+    ],
+    wifiSecurity5Path: [
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.BeaconType|WPAand11i",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.WPAAuthenticationMode|PSKAuthentication",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.IEEE11iAuthenticationMode|PSKAuthentication",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.WPAEncryptionModes|TKIPandAESEncryption",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.IEEE11iEncryptionModes|AESEncryption",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.BeaconType|WPAand11i",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.WPAAuthenticationMode|PSKAuthentication",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.IEEE11iAuthenticationMode|PSKAuthentication",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.WPAEncryptionModes|TKIPandAESEncryption",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.IEEE11iEncryptionModes|AESEncryption"
     ],
     pass5Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase",
