@@ -1579,6 +1579,30 @@ export default function BillingPage() {
                   Success {lastBulkExecution.succeeded} | Failed {lastBulkExecution.failed}
                 </div>
               </div>
+              <div className="mt-4 space-y-2">
+                {lastBulkExecution.results.slice(0, 10).map((item) => (
+                  <div key={`${item.customerId}-${item.status}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                    <div>
+                      <div className="font-medium text-white">{item.customerId}</div>
+                      <div className="mt-1 text-xs text-slate-400">
+                        {item.status === 'success' ? 'Bulk action completed' : item.error || 'Bulk action failed'}
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                      item.status === 'success'
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'bg-rose-500/15 text-rose-300'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </div>
+                ))}
+                {lastBulkExecution.results.length > 10 ? (
+                  <div className="text-xs text-slate-500">
+                    Showing first 10 results out of {lastBulkExecution.results.length}.
+                  </div>
+                ) : null}
+              </div>
             </div>
           ) : null}
           {bulkPreview ? (
