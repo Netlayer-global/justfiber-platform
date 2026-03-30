@@ -26,26 +26,61 @@ function summarizeServiceControl(result) {
   };
 }
 
+async function resolveServiceCandidate(preferredServiceId) {
+  const candidates = [];
+  const preferred = preferredServiceId ? await SubscriberService.findOne({ serviceId: preferredServiceId }) : null;
+  if (preferred) {
+    candidates.push(preferred);
+  }
+  const recentServices = await SubscriberService.find({
+    radiusUsername: { $exists: true, $ne: null },
+    customerId: { $exists: true, $ne: null },
+    status: { $in: ["active", "suspended"] }
+  })
+    .sort({ updatedAt: -1 })
+    .limit(20);
+  for (const service of recentServices) {
+    if (!candidates.some((item) => String(item._id) === String(service._id))) {
+      candidates.push(service);
+    }
+  }
+
+  for (const service of candidates) {
+    const storedPassword = service.metadata?.radiusPassword;
+    if (storedPassword) {
+      return { service, password: storedPassword, passwordSource: "service_metadata" };
+    }
+    const snapshot = await radiusServiceManager.getSubscriberAccessSnapshot({
+      serviceId: service.serviceId
+    }).catch(() => null);
+    const cleartextPassword = snapshot?.radcheck?.find((entry) => entry.attribute === "Cleartext-Password")?.value;
+    if (cleartextPassword) {
+      return { service, password: cleartextPassword, passwordSource: "radcheck" };
+    }
+  }
+
+  return { service: candidates[0] || null, password: null, passwordSource: null };
+}
+
 await connectMongo();
 
 async function main() {
   const serviceId = process.env.TEST_RADIUS_SERVICE_ID || "SVC-1001";
-  const service =
-    (await SubscriberService.findOne({ serviceId })) ||
-    (await SubscriberService.findOne({
-      radiusUsername: { $exists: true, $ne: null },
-      customerId: { $exists: true, $ne: null },
-      status: { $in: ["active", "suspended"] }
-    }).sort({ updatedAt: -1 }));
+  const resolved = await resolveServiceCandidate(serviceId);
+  const service = resolved.service;
   if (!service) {
     fail(`Subscriber service not found: ${serviceId} and no fallback service was available`);
   }
 
   const resolvedServiceId = service.serviceId;
   const username = process.env.TEST_RADIUS_USERNAME || service.radiusUsername;
-  const password = process.env.TEST_RADIUS_PASSWORD || service.metadata?.radiusPassword;
+  const password = process.env.TEST_RADIUS_PASSWORD || resolved.password;
   if (!username || !password) {
-    fail("Radius test requires an existing username and password");
+    fail("Radius test requires an existing username and password", {
+      serviceId: resolvedServiceId,
+      username,
+      passwordSource: resolved.passwordSource
+    });
   }
 
   const provisionResult = await radiusServiceManager.createSubscriberAccess({
@@ -68,7 +103,7 @@ async function main() {
       checks: activeState.checks
     });
   }
-  pass(`Provision verified (${JSON.stringify(summarizeServiceControl(provisionResult))})`);
+  pass(`Provision verified (${resolvedServiceId}/${resolved.passwordSource || "env"} -> ${JSON.stringify(summarizeServiceControl(provisionResult))})`);
 
   const suspendReason = process.env.TEST_RADIUS_SUSPEND_REASON || "Integration test suspend";
   const suspendResult = await radiusServiceManager.suspendSubscriberAccess({
