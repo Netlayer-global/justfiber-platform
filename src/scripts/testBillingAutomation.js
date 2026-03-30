@@ -143,8 +143,15 @@ async function verifyAdminBilling(adminToken) {
     path: "/api/v1/admin/billing/reconciliation/summary",
     token: adminToken
   });
-  expect(typeof reconciliation.data?.unreconciledCount === "number", "Reconciliation summary missing unreconciledCount");
-  printPass("Billing reconciliation summary", String(reconciliation.data.unreconciledCount));
+  expect(
+    reconciliation.data?.reconciliationSummary && typeof reconciliation.data.reconciliationSummary === "object",
+    "Reconciliation summary missing reconciliationSummary object"
+  );
+  const unresolvedCount = Object.values(reconciliation.data.reconciliationSummary || {}).reduce(
+    (sum, item) => sum + Number(item?.count || 0),
+    0
+  );
+  printPass("Billing reconciliation summary", String(unresolvedCount));
 
   const resolutions = await requestJson({
     path: "/api/v1/admin/billing/finance/resolutions",
