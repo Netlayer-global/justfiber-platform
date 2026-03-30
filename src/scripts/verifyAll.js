@@ -11,7 +11,8 @@ const BASE_URL = process.env.SMOKE_BASE_URL || `http://127.0.0.1:${VERIFY_PORT}`
 const VERIFY_ENV = {
   ...process.env,
   PORT: String(VERIFY_PORT),
-  SMOKE_BASE_URL: BASE_URL
+  SMOKE_BASE_URL: BASE_URL,
+  EXPOSE_DEMO_OTP: process.env.EXPOSE_DEMO_OTP || "true"
 };
 
 // Ensure in-process smoke runner also targets isolated verify server.

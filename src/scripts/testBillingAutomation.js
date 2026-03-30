@@ -123,7 +123,10 @@ async function verifyAdminBilling(adminToken) {
     token: adminToken
   });
   expect(Array.isArray(workbench.data?.items), "Billing collections workbench missing items array");
-  expect(workbench.data?.summary && typeof workbench.data.summary.totalDueAmount === "number", "Billing workbench missing summary");
+  expect(
+    workbench.data?.totals && typeof workbench.data.totals.totalDueAmount === "number",
+    "Billing workbench missing totals summary"
+  );
   printPass("Admin billing workbench", `${workbench.data.items.length} items`);
 
   const preview = await requestJson({
