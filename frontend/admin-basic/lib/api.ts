@@ -341,6 +341,7 @@ function mapBngNode(node: any): BngNode {
     createdAt: node.createdAt || '',
     updatedAt: node.updatedAt || '',
     freeradiusClientSync: node.freeradiusClientSync || undefined,
+    lastFreeradiusSync: node.lastFreeradiusSync || undefined,
   }
 }
 
@@ -1367,6 +1368,15 @@ export const adminAPI = {
     request<BngNodeTestResult>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/test`, {
       method: 'POST',
     }),
+  syncBngNodeFreeradius: async (nodeCode: string) => {
+    const res = await request<any>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/sync-freeradius`, {
+      method: 'POST',
+    })
+    return {
+      ...res,
+      data: res.data ? mapBngNode(res.data) : undefined,
+    }
+  },
   sendBngNodeCoaDisconnect: (nodeCode: string, data: { radiusUsername: string; reason?: string }) =>
     request<BngNodeCoaDispatchResult>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/coa-disconnect`, {
       method: 'POST',

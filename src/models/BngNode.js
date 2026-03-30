@@ -23,7 +23,22 @@ const bngNodeSchema = new mongoose.Schema(
     snmpCommunity: String,
     apiPort: Number,
     wwwPort: Number,
-    notes: String
+    notes: String,
+    lastFreeradiusSync: {
+      synced: Boolean,
+      filePath: String,
+      mode: String,
+      reason: String,
+      radiusClientIp: String,
+      radiusClientIps: { type: [String], default: [] },
+      validated: Boolean,
+      reloaded: Boolean,
+      validationCommand: String,
+      validationReason: String,
+      reloadCommand: String,
+      reloadReason: String,
+      syncedAt: Date
+    }
   },
   { timestamps: true }
 );

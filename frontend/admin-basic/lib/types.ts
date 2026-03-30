@@ -268,6 +268,21 @@ export interface BngNode {
       }
     }
   }
+  lastFreeradiusSync?: {
+    synced?: boolean
+    filePath?: string
+    mode?: string
+    reason?: string
+    radiusClientIp?: string
+    radiusClientIps?: string[]
+    validated?: boolean
+    reloaded?: boolean
+    validationCommand?: string
+    validationReason?: string
+    reloadCommand?: string
+    reloadReason?: string
+    syncedAt?: string
+  }
 }
 
 export interface BngNodeTestResult {

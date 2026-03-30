@@ -101,6 +101,7 @@ export default function RoutersPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
+  const [isSyncingFreeradius, setIsSyncingFreeradius] = useState(false)
   const [isCoaSending, setIsCoaSending] = useState(false)
   const [testResult, setTestResult] = useState<BngNodeTestResult | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -317,6 +318,28 @@ export default function RoutersPage() {
     }
   }
 
+  async function handleSyncFreeradiusSelected() {
+    if (!selectedRouter?.nodeCode) return
+    setIsSyncingFreeradius(true)
+    try {
+      const res = await adminAPI.syncBngNodeFreeradius(selectedRouter.nodeCode)
+      if (!res.success || !res.data) {
+        throw new Error(res.error || 'Failed to sync FreeRADIUS client')
+      }
+      toast.success(
+        res.data.freeradiusClientSync?.serviceReload?.reloaded === false
+          ? 'FreeRADIUS client synced, but reload needs attention'
+          : 'FreeRADIUS client synced and reloaded'
+      )
+      await loadRouters(res.data.id)
+    } catch (error) {
+      console.error('[v0] Failed to sync FreeRADIUS client:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to sync FreeRADIUS client')
+    } finally {
+      setIsSyncingFreeradius(false)
+    }
+  }
+
   const activeCount = routers.filter((item) => item.status === 'active').length
   const coaEnabledCount = routers.filter((item) => item.useCoa !== false).length
 
@@ -500,6 +523,19 @@ export default function RoutersPage() {
                       ) : null}
                     </div>
                   ) : null}
+                  {selectedRouter.lastFreeradiusSync ? (
+                    <div className="mt-3 border-t border-slate-200 pt-3 text-xs text-slate-500">
+                      <div className="flex items-center justify-between gap-3"><span>Last recorded sync</span><span>{selectedRouter.lastFreeradiusSync.syncedAt ? new Date(selectedRouter.lastFreeradiusSync.syncedAt).toLocaleString() : '-'}</span></div>
+                      <div className="mt-2 flex items-center justify-between gap-3"><span>Stored health</span><span>{selectedRouter.lastFreeradiusSync.synced ? 'Synced' : 'Failed'}</span></div>
+                      <div className="mt-2 flex items-center justify-between gap-3"><span>Stored reload</span><span>{selectedRouter.lastFreeradiusSync.reloaded ? 'Succeeded' : 'Needs attention'}</span></div>
+                      {selectedRouter.lastFreeradiusSync.radiusClientIps?.length ? (
+                        <div className="mt-2 break-all">Tracked IPs: {selectedRouter.lastFreeradiusSync.radiusClientIps.join(', ')}</div>
+                      ) : null}
+                      {selectedRouter.lastFreeradiusSync.reason ? (
+                        <div className="mt-2 break-all text-red-600">Stored sync error: {selectedRouter.lastFreeradiusSync.reason}</div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : (
@@ -521,6 +557,12 @@ export default function RoutersPage() {
                 <button type="button" className="btn-secondary" disabled={isTesting} onClick={() => void handleTestSelected()}>
                   {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
                   Test router
+                </button>
+              ) : null}
+              {selectedRouter ? (
+                <button type="button" className="btn-secondary" disabled={isSyncingFreeradius} onClick={() => void handleSyncFreeradiusSelected()}>
+                  {isSyncingFreeradius ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                  Sync FreeRADIUS
                 </button>
               ) : null}
               {selectedRouter ? (

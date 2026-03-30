@@ -469,6 +469,36 @@ async function validateAndReloadFreeradius() {
   };
 }
 
+function buildFreeradiusSyncSnapshot(syncResult = {}) {
+  return {
+    synced: Boolean(syncResult.synced),
+    filePath: syncResult.filePath || "",
+    mode: syncResult.mode || "",
+    reason: syncResult.reason || "",
+    radiusClientIp: syncResult.radiusClientIp || "",
+    radiusClientIps: Array.isArray(syncResult.radiusClientIps) ? syncResult.radiusClientIps : [],
+    validated: syncResult.serviceReload?.validated !== false,
+    reloaded: syncResult.serviceReload?.reloaded !== false,
+    validationCommand: syncResult.serviceReload?.validation?.command || "",
+    validationReason: syncResult.serviceReload?.validation?.reason || "",
+    reloadCommand: syncResult.serviceReload?.reload?.command || "",
+    reloadReason: syncResult.serviceReload?.reload?.reason || "",
+    syncedAt: new Date()
+  };
+}
+
+async function persistFreeradiusSyncStatus(nodeCode, syncResult) {
+  if (!nodeCode) return;
+  await BngNode.updateOne(
+    { nodeCode },
+    {
+      $set: {
+        lastFreeradiusSync: buildFreeradiusSyncSnapshot(syncResult)
+      }
+    }
+  );
+}
+
 async function syncFreeradiusClientForNode(node) {
   if (!env.FREERADIUS_CLIENTS_AUTOSYNC) {
     return { synced: false, reason: "disabled" };
@@ -486,7 +516,7 @@ async function syncFreeradiusClientForNode(node) {
     const next = block ? `${nextBase}\n\n${block}\n` : `${nextBase}\n`;
     await fs.writeFile(filePath, next, "utf8");
     const reloadStatus = await validateAndReloadFreeradius();
-    return {
+    const result = {
       synced: true,
       filePath,
       mode: block ? "upserted" : "removed",
@@ -497,12 +527,16 @@ async function syncFreeradiusClientForNode(node) {
       ].map((item) => String(item || "").trim()).filter(Boolean),
       serviceReload: reloadStatus
     };
+    await persistFreeradiusSyncStatus(node.nodeCode, result);
+    return result;
   } catch (error) {
-    return {
+    const result = {
       synced: false,
       filePath,
       reason: error instanceof Error ? error.message : "sync_failed"
     };
+    await persistFreeradiusSyncStatus(node.nodeCode, result);
+    return result;
   }
 }
 
@@ -701,6 +735,21 @@ platformFoundationRouter.post(
         }
       }
     });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/bng-nodes/:nodeCode/sync-freeradius",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const nodeCode = String(req.params.nodeCode || "").trim();
+    const node = await BngNode.findOne({ nodeCode }).lean();
+    if (!node) {
+      throw new Error("BNG node not found");
+    }
+    const freeradiusClientSync = await syncFreeradiusClientForNode(node);
+    const item = await BngNode.findOne({ nodeCode }).lean();
+    return ok(res, { ...item, freeradiusClientSync });
   })
 );
 
