@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, Settings2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -92,6 +92,8 @@ export default function BillingPage() {
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
+  const [collectionsWorkbench, setCollectionsWorkbench] = useState<BillingCollectionsWorkbench | null>(null)
+  const [collectionsPlaybooks, setCollectionsPlaybooks] = useState<BillingCollectionsPlaybook[]>([])
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [billingRuns, setBillingRuns] = useState<BillingRun[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
@@ -238,6 +240,7 @@ export default function BillingPage() {
     [collectionBucket, collections]
   )
   const latestRecurringRuns = useMemo(() => billingRuns.slice(0, 6), [billingRuns])
+  const collectionExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/collections.csv${collectionBucket ? `?bucket=${encodeURIComponent(collectionBucket)}` : ''}`
   useEffect(() => {
     void loadBilling()
   }, [invoiceFilters, collectionBucket])
@@ -271,12 +274,14 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, collectionRes, collectionAgentRes, billingRunRes, invoiceTemplateRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, collectionRes, collectionWorkbenchRes, collectionPlaybooksRes, collectionAgentRes, billingRunRes, invoiceTemplateRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
         adminAPI.getBillingPayments(),
         adminAPI.getBillingCollections(collectionBucket || undefined),
+        adminAPI.getBillingCollectionsWorkbench(collectionBucket || undefined),
+        adminAPI.getBillingCollectionsPlaybooks(),
         adminAPI.getBillingCollectionAgents(),
         adminAPI.getBillingRuns(),
         adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
@@ -347,6 +352,12 @@ export default function BillingPage() {
       }
       if (collectionRes.success && collectionRes.data) {
         setCollections(collectionRes.data)
+      }
+      if (collectionWorkbenchRes.success && collectionWorkbenchRes.data) {
+        setCollectionsWorkbench(collectionWorkbenchRes.data)
+      }
+      if (collectionPlaybooksRes.success && Array.isArray(collectionPlaybooksRes.data)) {
+        setCollectionsPlaybooks(collectionPlaybooksRes.data as BillingCollectionsPlaybook[])
       }
       if (collectionAgentRes.success && collectionAgentRes.data) {
         setCollectionAgents(collectionAgentRes.data)
@@ -583,6 +594,43 @@ export default function BillingPage() {
     }
   }
 
+  async function suspendCollectionService(customerId: string) {
+    const reason = window.prompt('Suspend reason', 'Billing collections suspension')
+    if (reason === null) return
+    try {
+      const res = await adminAPI.suspendBillingCollectionService(customerId, reason.trim() || undefined)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to suspend service')
+        return
+      }
+      toast.success('Service suspended')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to suspend service from collections:', error)
+      toast.error('Failed to suspend service')
+    }
+  }
+
+  async function resumeCollectionService(customerId: string, force = false) {
+    const reason = window.prompt('Resume reason', force ? 'Collections force resume' : 'Billing collections resume')
+    if (reason === null) return
+    try {
+      const res = await adminAPI.resumeBillingCollectionService(customerId, {
+        reason: reason.trim() || undefined,
+        force,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to resume service')
+        return
+      }
+      toast.success(force ? 'Service force-resumed' : 'Service resumed')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to resume service from collections:', error)
+      toast.error('Failed to resume service')
+    }
+  }
+
   async function markInvoicePaid(invoiceId: string) {
     try {
       const res = await adminAPI.markInvoicePaid(invoiceId)
@@ -783,6 +831,16 @@ export default function BillingPage() {
               rel="noreferrer"
             >
               Export Payments CSV
+            </a>
+          ) : null}
+          {billingSectionTab === 'collections' ? (
+            <a
+              className="btn-secondary"
+              href={collectionExportUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Export Collections CSV
             </a>
           ) : null}
           {billingSectionTab === 'settings' ? (
@@ -1062,6 +1120,84 @@ export default function BillingPage() {
 
       {billingSectionTab === 'collections' ? (
       <div className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+          <div className="card p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Collections workbench</div>
+                <div className="mt-1 text-sm text-slate-400">Priority queue, action load, and ownership snapshot.</div>
+              </div>
+              <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+                {collectionsWorkbench?.totals.accounts || visibleCollections.length} tracked
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Due exposure</div>
+                <div className="mt-2 text-2xl font-semibold text-white">
+                  Rs {Number(collectionsWorkbench?.totals.totalDueAmount || 0).toFixed(2)}
+                </div>
+                <div className="mt-1 text-xs text-slate-400">{collectionsWorkbench?.totals.accounts || 0} accounts in current queue</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Action queue</div>
+                <div className="mt-2 text-2xl font-semibold text-white">{collectionsWorkbench?.actionQueue.suspend || 0}</div>
+                <div className="mt-1 text-xs text-slate-400">Suspend candidates now</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Critical risk</div>
+                <div className="mt-2 text-2xl font-semibold text-white">{collectionsWorkbench?.priorityCounts.critical || 0}</div>
+                <div className="mt-1 text-xs text-slate-400">High-risk accounts needing immediate handling</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Promises active</div>
+                <div className="mt-2 text-2xl font-semibold text-white">{collectionsWorkbench?.actionQueue.promiseToPayActive || 0}</div>
+                <div className="mt-1 text-xs text-slate-400">Accounts currently under PTP watch</div>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Priority mix</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(['critical', 'high', 'medium', 'low'] as const).map((priority) => (
+                    <div key={priority} className="rounded-full border border-white/10 px-3 py-2 text-xs text-slate-300">
+                      <span className="font-semibold capitalize text-white">{priority}</span> {collectionsWorkbench?.priorityCounts?.[priority] || 0}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Bucket load</div>
+                <div className="mt-3 space-y-2 text-sm text-slate-300">
+                  {(collectionsWorkbench?.byBucket || []).slice(0, 4).map((item) => (
+                    <div key={item.bucket} className="flex items-center justify-between gap-3">
+                      <span className="capitalize">{item.bucket.replaceAll('_', ' ')}</span>
+                      <span>{item.count} | Rs {item.dueAmount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="card p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Playbooks</div>
+            <div className="mt-1 text-sm text-slate-400">Suggested workflows for each bucket.</div>
+            <div className="mt-4 space-y-3">
+              {collectionsPlaybooks.map((playbook) => (
+                <div key={playbook.code} className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-medium text-white">{playbook.label}</div>
+                    <span className="rounded-full bg-white/5 px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-slate-300">
+                      {playbook.bucket.replaceAll('_', ' ')}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-400">{playbook.description}</div>
+                  <div className="mt-3 text-xs text-[#8eb9ff]">Primary action: {playbook.primaryAction.replaceAll('_', ' ')}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
         <div className="card p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -1093,6 +1229,38 @@ export default function BillingPage() {
           </div>
         </div>
         <div className="card overflow-hidden">
+          <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Top priority accounts</div>
+              <div className="mt-1 text-sm text-slate-400">Use this to work the riskiest accounts first.</div>
+            </div>
+            <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+              {(collectionsWorkbench?.topPriorityAccounts || []).length} ranked
+            </div>
+          </div>
+          <div className="divide-y divide-[#2a2f4a]">
+            {(collectionsWorkbench?.topPriorityAccounts || []).map((item) => (
+              <div key={`${item.customerId}-${item.bucket}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <div>
+                  <div className="font-medium text-white">{item.customerName}</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {item.customerId} | {item.bucket.replaceAll('_', ' ')} | {item.overdueDays} day(s) overdue
+                  </div>
+                </div>
+                <div className="text-right text-sm">
+                  <div className="font-semibold text-white">Rs {item.dueAmount.toFixed(2)}</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Risk {item.riskScore} | {item.priority.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!(collectionsWorkbench?.topPriorityAccounts || []).length ? (
+              <div className="px-4 py-6 text-sm text-slate-500">No priority accounts in current queue.</div>
+            ) : null}
+          </div>
+        </div>
+        <div className="card overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="bg-[#0a0e27]">
@@ -1100,6 +1268,7 @@ export default function BillingPage() {
                 <th className="table-header">Queue</th>
                 <th className="table-header">Due</th>
                 <th className="table-header">Owner</th>
+                <th className="table-header">Risk</th>
                 <th className="table-header text-right">Actions</th>
               </tr>
             </thead>
@@ -1138,6 +1307,24 @@ export default function BillingPage() {
                       <div className="mt-1 text-xs text-slate-500">{item.latestFollowUpNote}</div>
                     ) : null}
                   </td>
+                  <td className="table-cell">
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className={`inline-flex w-fit rounded-full px-2 py-1 font-semibold ${
+                        item.suspendEligible ? 'bg-rose-500/15 text-rose-300' :
+                        item.resumeEligible ? 'bg-emerald-500/15 text-emerald-300' :
+                        item.promiseActive ? 'bg-amber-500/15 text-amber-300' :
+                        'bg-white/5 text-slate-300'
+                      }`}>
+                        {item.suspendEligible ? 'Suspend now' : item.resumeEligible ? 'Resume ready' : item.promiseActive ? 'PTP active' : 'Monitor'}
+                      </span>
+                      <span className="text-slate-500">
+                        Grace {Number(item.graceDays || 0)} | Follow-ups {Number(item.followUpCount || 0)}
+                      </span>
+                      {item.lastServiceAction ? (
+                        <span className="text-slate-500">{item.lastServiceAction.replaceAll('_', ' ')}</span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="table-cell text-right">
                     <div className="flex flex-wrap justify-end gap-2">
                       <button className="btn-secondary" onClick={() => void sendCollectionReminder(item.customerId, item.invoiceId)}>
@@ -1152,13 +1339,23 @@ export default function BillingPage() {
                       <button className="btn-secondary" onClick={() => void assignCollection(item.customerId)}>
                         Assign
                       </button>
+                      {item.suspendEligible ? (
+                        <button className="btn-secondary" onClick={() => void suspendCollectionService(item.customerId)}>
+                          Suspend
+                        </button>
+                      ) : null}
+                      {item.resumeEligible ? (
+                        <button className="btn-secondary" onClick={() => void resumeCollectionService(item.customerId, false)}>
+                          Resume
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
               ))}
               {!visibleCollections.length ? (
                 <tr className="border-t border-[#2a2f4a]">
-                  <td className="table-cell text-slate-500" colSpan={5}>
+                  <td className="table-cell text-slate-500" colSpan={6}>
                     No accounts in the selected collection bucket.
                   </td>
                 </tr>

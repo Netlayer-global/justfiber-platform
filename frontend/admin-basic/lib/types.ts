@@ -713,6 +713,7 @@ export interface BillingCollectionItem {
   invoiceDueDate?: string
   invoiceStatus?: string
   overdueDays: number
+  graceDays?: number
   bucket: 'pending_due' | 'overdue' | 'pending_plan_change' | 'suspend_ready'
   pendingPlanName?: string
   pendingPlanMode?: string
@@ -720,6 +721,7 @@ export interface BillingCollectionItem {
   suspendRecommended?: boolean
   lastReminderAt?: string
   promiseToPayAt?: string
+  promiseActive?: boolean
   promiseAmount?: number
   promiseNote?: string
   assignedAdminId?: string
@@ -727,6 +729,69 @@ export interface BillingCollectionItem {
   latestFollowUpNote?: string
   latestFollowUpAt?: string
   followUpCount?: number
+  lastServiceAction?: string
+  lastServiceActionAt?: string
+  suspendEligible?: boolean
+  resumeEligible?: boolean
+}
+
+export interface BillingCollectionsWorkbenchSummary {
+  bucket: string
+  count: number
+  dueAmount: number
+}
+
+export interface BillingCollectionsAssigneeLoad {
+  adminId?: string
+  adminName: string
+  count: number
+  dueAmount: number
+}
+
+export interface BillingCollectionsPriorityAccount {
+  customerId: string
+  customerName: string
+  bucket: string
+  dueAmount: number
+  overdueDays: number
+  riskScore: number
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  suspendEligible: boolean
+  resumeEligible: boolean
+  assignedAdminName?: string
+  promiseActive?: boolean
+}
+
+export interface BillingCollectionsWorkbench {
+  totals: {
+    accounts: number
+    totalDueAmount: number
+  }
+  byBucket: BillingCollectionsWorkbenchSummary[]
+  byAssignee: BillingCollectionsAssigneeLoad[]
+  actionQueue: {
+    remind: number
+    followUp: number
+    suspend: number
+    resume: number
+    promiseToPayActive: number
+  }
+  priorityCounts: {
+    critical: number
+    high: number
+    medium: number
+    low: number
+  }
+  topPriorityAccounts: BillingCollectionsPriorityAccount[]
+  items: BillingCollectionItem[]
+}
+
+export interface BillingCollectionsPlaybook {
+  code: string
+  label: string
+  bucket: BillingCollectionItem['bucket']
+  primaryAction: string
+  description: string
 }
 
 export interface BillingCollectionAgent {

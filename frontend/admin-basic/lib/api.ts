@@ -848,6 +848,7 @@ function mapBillingCollectionItem(item: any): BillingCollectionItem {
     invoiceDueDate: item.invoiceDueDate,
     invoiceStatus: item.invoiceStatus,
     overdueDays: Number(item.overdueDays || 0),
+    graceDays: Number(item.graceDays || 0),
     bucket: item.bucket || 'pending_due',
     pendingPlanName: item.pendingPlanName,
     pendingPlanMode: item.pendingPlanMode,
@@ -855,6 +856,7 @@ function mapBillingCollectionItem(item: any): BillingCollectionItem {
     suspendRecommended: item.suspendRecommended === true,
     lastReminderAt: item.lastReminderAt,
     promiseToPayAt: item.promiseToPayAt,
+    promiseActive: item.promiseActive === true,
     promiseAmount: Number(item.promiseAmount || 0),
     promiseNote: item.promiseNote,
     assignedAdminId: item.assignedAdminId,
@@ -862,6 +864,63 @@ function mapBillingCollectionItem(item: any): BillingCollectionItem {
     latestFollowUpNote: item.latestFollowUpNote,
     latestFollowUpAt: item.latestFollowUpAt,
     followUpCount: Number(item.followUpCount || 0),
+    lastServiceAction: item.lastServiceAction || '',
+    lastServiceActionAt: item.lastServiceActionAt,
+    suspendEligible: item.suspendEligible === true,
+    resumeEligible: item.resumeEligible === true,
+  }
+}
+
+function mapBillingCollectionsWorkbench(item: any) {
+  return {
+    totals: {
+      accounts: Number(item?.totals?.accounts || 0),
+      totalDueAmount: Number(item?.totals?.totalDueAmount || 0),
+    },
+    byBucket: Array.isArray(item?.byBucket)
+      ? item.byBucket.map((bucket: any) => ({
+          bucket: bucket.bucket || '',
+          count: Number(bucket.count || 0),
+          dueAmount: Number(bucket.dueAmount || 0),
+        }))
+      : [],
+    byAssignee: Array.isArray(item?.byAssignee)
+      ? item.byAssignee.map((assignee: any) => ({
+          adminId: assignee.adminId || '',
+          adminName: assignee.adminName || 'Unassigned',
+          count: Number(assignee.count || 0),
+          dueAmount: Number(assignee.dueAmount || 0),
+        }))
+      : [],
+    actionQueue: {
+      remind: Number(item?.actionQueue?.remind || 0),
+      followUp: Number(item?.actionQueue?.followUp || 0),
+      suspend: Number(item?.actionQueue?.suspend || 0),
+      resume: Number(item?.actionQueue?.resume || 0),
+      promiseToPayActive: Number(item?.actionQueue?.promiseToPayActive || 0),
+    },
+    priorityCounts: {
+      critical: Number(item?.priorityCounts?.critical || 0),
+      high: Number(item?.priorityCounts?.high || 0),
+      medium: Number(item?.priorityCounts?.medium || 0),
+      low: Number(item?.priorityCounts?.low || 0),
+    },
+    topPriorityAccounts: Array.isArray(item?.topPriorityAccounts)
+      ? item.topPriorityAccounts.map((account: any) => ({
+          customerId: account.customerId || '',
+          customerName: account.customerName || account.customerId || 'Customer',
+          bucket: account.bucket || 'pending_due',
+          dueAmount: Number(account.dueAmount || 0),
+          overdueDays: Number(account.overdueDays || 0),
+          riskScore: Number(account.riskScore || 0),
+          priority: account.priority || 'low',
+          suspendEligible: account.suspendEligible === true,
+          resumeEligible: account.resumeEligible === true,
+          assignedAdminName: account.assignedAdminName || '',
+          promiseActive: account.promiseActive === true,
+        }))
+      : [],
+    items: Array.isArray(item?.items) ? item.items.map(mapBillingCollectionItem) : [],
   }
 }
 
@@ -1673,6 +1732,15 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapBillingCollectionItem) : [],
     }
   },
+  getBillingCollectionsWorkbench: async (bucket?: string) => {
+    const query = bucket ? `?bucket=${encodeURIComponent(bucket)}` : ''
+    const res = await request<any>(`/api/v1/admin/billing/collections/workbench${query}`)
+    return {
+      ...res,
+      data: res.data ? mapBillingCollectionsWorkbench(res.data) : undefined,
+    }
+  },
+  getBillingCollectionsPlaybooks: async () => request('/api/v1/admin/billing/collections/playbooks'),
   getBillingCollectionAgents: async () => {
     const res = await request<any[]>('/api/v1/admin/billing/collections/agents')
     return {
@@ -1738,6 +1806,16 @@ export const adminAPI = {
     request(`/api/v1/admin/billing/collections/${customerId}/promise-to-pay`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  suspendBillingCollectionService: (customerId: string, reason?: string) =>
+    request(`/api/v1/admin/billing/collections/${customerId}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify(reason ? { reason } : {}),
+    }),
+  resumeBillingCollectionService: (customerId: string, data?: { reason?: string; force?: boolean }) =>
+    request(`/api/v1/admin/billing/collections/${customerId}/resume`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
     }),
   reconcileBillingPayment: async (transactionId: string, invoiceId?: string) =>
     request(`/api/v1/admin/billing/payments/${transactionId}/reconcile`, {
