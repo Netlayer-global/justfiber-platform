@@ -3362,8 +3362,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _canActivate(String status) => ['onsite', 'ont_scanned', 'failed'].contains(status);
 
   bool _canRetry(String status, String configStatus) {
-    if (status == 'failed') return true;
-    return ['failed', 'pushed', 'retried'].contains(configStatus);
+    if (['failed', 'ont_scanned', 'activation_in_progress', 'active'].contains(status)) {
+      return configStatus != 'verified';
+    }
+    return ['pending', 'failed', 'pushed', 'retried'].contains(configStatus);
   }
 
   bool _canStartComplaint(String status) => ['assigned', 'accepted', 'enroute', 'onsite'].contains(status);
