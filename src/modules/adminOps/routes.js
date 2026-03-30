@@ -35,6 +35,13 @@ import { radiusServiceManager } from "../../integrations/radiusServiceManager.js
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SystemConfig } from "../../models/SystemConfig.js";
+import {
+  createLedgerEntry,
+  findBestInvoiceForPayment,
+  markInvoicePaid,
+  reconcilePaymentToInvoice,
+  syncCustomerBillingState
+} from "../../common/billingAccounting.js";
 
 export const adminOpsRouter = Router();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -86,10 +93,6 @@ adminOpsRouter.get(
     });
   })
 );
-
-function computeBalanceAfter({ currentBalance, direction, amount }) {
-  return currentBalance + (direction === "debit" ? amount : -amount);
-}
 
 function parseCsvRows(rawText = "") {
   const lines = String(rawText || "")
@@ -601,117 +604,6 @@ function buildCustomerPortalRetryUrl(customerId) {
   return `${base.replace(/\/$/, "")}/profile?tab=billing&customerId=${encodeURIComponent(customerId)}`;
 }
 
-async function findBestInvoiceForPayment(payment, explicitInvoiceId) {
-  if (explicitInvoiceId) {
-    const invoice = await BillingInvoice.findOne({ $or: [{ invoiceId: explicitInvoiceId }, { invoiceNumber: explicitInvoiceId }] });
-    return invoice
-      ? { invoice, confidenceScore: 1, matchReason: "Explicit invoice selected by admin", matchedBy: "manual_explicit" }
-      : null;
-  }
-
-  const exactRef = String(payment.reference || "").trim();
-  if (exactRef) {
-    const byReference = await BillingInvoice.findOne({
-      $or: [{ invoiceId: exactRef }, { invoiceNumber: exactRef }]
-    });
-    if (byReference) {
-      return {
-        invoice: byReference,
-        confidenceScore: 0.99,
-        matchReason: "Payment reference exactly matched invoice number/id",
-        matchedBy: "reference_exact"
-      };
-    }
-  }
-
-  const amount = Number(payment.amount || 0);
-  const refTokens = [payment.reference, payment.transactionId, payment.metadata?.bankReference, payment.metadata?.upiTxnId]
-    .filter(Boolean)
-    .map((value) => String(value).trim().toLowerCase());
-
-  const candidates = await BillingInvoice.find({
-    customerId: payment.customerId,
-    paymentStatus: { $in: ["pending", "overdue"] }
-  }).sort({ dueDate: 1, generatedAt: 1 });
-
-  let best = null;
-  let bestScore = -1;
-  let bestReasons = [];
-  for (const invoice of candidates) {
-    let score = 0;
-    const reasons = [];
-    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 1) {
-      score += 4;
-      reasons.push("Amount within Rs 1");
-    }
-    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 0.01) {
-      score += 2;
-      reasons.push("Exact amount match");
-    }
-    const invoiceTokens = [
-      invoice.invoiceId,
-      invoice.invoiceNumber,
-      invoice.metadata?.lastPaymentId,
-      ...(Array.isArray(invoice.metadata?.externalReferences) ? invoice.metadata.externalReferences : [])
-    ]
-      .filter(Boolean)
-      .map((value) => String(value).trim().toLowerCase());
-    if (refTokens.some((token) => invoiceTokens.includes(token))) {
-      score += 8;
-      reasons.push("Reference token matched invoice metadata");
-    }
-    if (score > bestScore) {
-      best = invoice;
-      bestScore = score;
-      bestReasons = reasons;
-    }
-  }
-
-  return bestScore >= 4 && best
-    ? {
-        invoice: best,
-        confidenceScore: Math.min(0.98, Number((bestScore / 14).toFixed(2))),
-        matchReason: bestReasons.join("; ") || "Best open invoice based on customer and amount",
-        matchedBy: bestReasons.some((reason) => reason.includes("Reference")) ? "reference_and_amount" : "amount_similarity"
-      }
-    : null;
-}
-
-async function createLedgerEntry({
-  customerId,
-  serviceId,
-  invoiceId,
-  paymentId,
-  category,
-  direction,
-  amount,
-  reference,
-  note,
-  source,
-  createdByAdminId,
-  metadata
-}) {
-  const latestEntry = await BillingLedgerEntry.findOne({ customerId }).sort({ postedAt: -1, createdAt: -1 }).lean();
-  const currentBalance = latestEntry?.balanceAfter || 0;
-  const balanceAfter = computeBalanceAfter({ currentBalance, direction, amount });
-  return BillingLedgerEntry.create({
-    entryId: `BL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-    customerId,
-    serviceId,
-    invoiceId,
-    paymentId,
-    category,
-    direction,
-    amount,
-    balanceAfter,
-    reference,
-    note,
-    source,
-    createdByAdminId,
-    metadata
-  });
-}
-
 async function settleLatestPendingInvoice({ customerId, serviceId, paymentId, amount, source }) {
   const invoice = await BillingInvoice.findOne({
     customerId,
@@ -720,21 +612,17 @@ async function settleLatestPendingInvoice({ customerId, serviceId, paymentId, am
   if (!invoice) {
     return null;
   }
-  invoice.paymentStatus = "paid";
-  invoice.status = "settled";
-  invoice.metadata = {
-    ...(invoice.metadata || {}),
-    lastPaymentId: paymentId,
-    lastPaymentSource: source,
-    lastPaymentAmount: amount,
+  return markInvoicePaid({
+    invoice,
+    paymentId,
+    amount,
+    source,
     settledBy: "admin_ops",
-    settledAt: new Date()
-  };
-  if (!invoice.serviceId && serviceId) {
-    invoice.serviceId = serviceId;
-  }
-  await invoice.save();
-  return invoice;
+    serviceId,
+    metadata: {
+      settledAt: new Date()
+    }
+  });
 }
 
 adminOpsRouter.get(
@@ -2363,25 +2251,25 @@ adminOpsRouter.post(
       throw new ApiError(404, "Invoice not found");
     }
 
-    invoice.paymentStatus = "paid";
-    invoice.status = "settled";
-    invoice.metadata = {
-      ...(invoice.metadata || {}),
-      manuallyMarkedPaidAt: new Date(),
-      manuallyMarkedPaidByAdminId: req.admin?._id || null
-    };
-    await invoice.save();
+    await markInvoicePaid({
+      invoice,
+      paymentId: invoice.metadata?.lastPaymentId || `manual-${Date.now()}`,
+      amount: invoice.totalAmount,
+      source: "admin_manual_mark_paid",
+      metadata: {
+        manuallyMarkedPaidAt: new Date(),
+        manuallyMarkedPaidByAdminId: req.admin?._id || null
+      }
+    });
 
     const customer = await Customer.findOne({ customerId: invoice.customerId });
     if (customer) {
       customer.billingSnapshot = {
         ...(customer.billingSnapshot || {}),
-        dueAmount: 0,
-        lastPaymentStatus: "paid",
-        lastPaidAt: new Date(),
         lastSettledInvoiceId: invoice.invoiceId
       };
       await customer.save();
+      await syncCustomerBillingState(customer.customerId, customer);
     }
 
     await auditFromRequest(req, {
@@ -2486,40 +2374,27 @@ adminOpsRouter.post(
       throw new ApiError(404, "Matching invoice not found");
     }
     const { invoice, confidenceScore, matchReason, matchedBy } = match;
-
-    invoice.paymentStatus = "paid";
-    invoice.status = "settled";
-    invoice.metadata = {
-      ...(invoice.metadata || {}),
-      reconciledPaymentId: payment.transactionId,
-      reconciledAt: new Date()
-    };
-    await invoice.save();
-
-    payment.invoiceId = invoice.invoiceId;
-    payment.reconciliationStatus = "reconciled";
-    payment.reconciledInvoiceId = invoice.invoiceId;
-    payment.reconciledAt = new Date();
-    payment.reconciledByAdminId = req.admin?._id;
-    payment.metadata = {
-      ...(payment.metadata || {}),
+    const settlement = await reconcilePaymentToInvoice({
+      payment,
+      invoice,
+      confidenceScore,
+      matchReason,
+      matchedBy,
       reconciliationMode: req.body?.invoiceId ? "manual_explicit" : "smart_match",
-      reconciliationConfidence: confidenceScore,
-      reconciliationMatchReason: matchReason,
-      reconciliationMatchedBy: matchedBy
-    };
-    await payment.save();
+      reconciledByAdminId: req.admin?._id,
+      ledgerSource: "admin_payment_reconciliation",
+      ledgerNote: "Payment reconciled from billing console",
+      ledgerMetadata: { requestId: req.requestId }
+    });
 
-    const customer = await Customer.findOne({ customerId: payment.customerId });
+    const customer = settlement.customer || (await Customer.findOne({ customerId: payment.customerId }));
     if (customer) {
       customer.billingSnapshot = {
         ...(customer.billingSnapshot || {}),
-        dueAmount: 0,
-        lastPaymentStatus: "paid",
-        lastPaidAt: payment.paidAt || new Date(),
         lastReconciledPaymentId: payment.transactionId
       };
       await customer.save();
+      await syncCustomerBillingState(customer.customerId, customer);
       await notifyLinkedCustomerUsers(customer.customerId, {
         type: "billing_payment_reconciled",
         title: "Payment reconciled",
@@ -2530,24 +2405,6 @@ adminOpsRouter.post(
           invoiceId: invoice.invoiceId,
           amount: Number(payment.amount || 0)
         }
-      });
-    }
-
-    const existingLedger = await BillingLedgerEntry.findOne({ paymentId: payment.transactionId }).lean();
-    if (!existingLedger) {
-      await createLedgerEntry({
-        customerId: payment.customerId,
-        serviceId: payment.serviceId,
-        invoiceId: invoice.invoiceId,
-        paymentId: payment.transactionId,
-        category: "payment",
-        direction: "credit",
-        amount: Number(payment.amount || 0),
-        reference: payment.reference || payment.transactionId,
-        note: "Payment reconciled from billing console",
-        source: "admin_payment_reconciliation",
-        createdByAdminId: req.admin?._id,
-        metadata: { requestId: req.requestId }
       });
     }
 
@@ -2593,6 +2450,7 @@ adminOpsRouter.post(
             invoiceId: invoiceId || undefined,
             provider: row.provider || "csv_import",
             amount,
+            unallocatedAmount: amount,
             currency: row.currency || "INR",
             status: row.status || "success",
             method: row.method || "bank_import",
@@ -2630,57 +2488,27 @@ adminOpsRouter.post(
       }
 
       const { invoice, confidenceScore, matchReason, matchedBy } = match;
-      invoice.paymentStatus = "paid";
-      invoice.status = "settled";
-      invoice.metadata = {
-        ...(invoice.metadata || {}),
-        reconciledPaymentId: payment.transactionId,
-        reconciledAt: new Date()
-      };
-      await invoice.save();
-
-      payment.invoiceId = invoice.invoiceId;
-      payment.reconciliationStatus = "reconciled";
-      payment.reconciledInvoiceId = invoice.invoiceId;
-      payment.reconciledAt = new Date();
-      payment.reconciledByAdminId = req.admin?._id;
-      payment.metadata = {
-        ...(payment.metadata || {}),
+      await reconcilePaymentToInvoice({
+        payment,
+        invoice,
+        confidenceScore,
+        matchReason,
+        matchedBy,
         reconciliationMode: invoiceId ? "csv_explicit" : "csv_smart_match",
-        reconciliationConfidence: confidenceScore,
-        reconciliationMatchReason: matchReason,
-        reconciliationMatchedBy: matchedBy
-      };
-      await payment.save();
+        reconciledByAdminId: req.admin?._id,
+        ledgerSource: "admin_csv_import",
+        ledgerNote: "CSV import reconciliation",
+        ledgerMetadata: { requestId: req.requestId }
+      });
 
       const customer = await Customer.findOne({ customerId: payment.customerId });
       if (customer) {
         customer.billingSnapshot = {
           ...(customer.billingSnapshot || {}),
-          dueAmount: 0,
-          lastPaymentStatus: "paid",
-          lastPaidAt: payment.paidAt || new Date(),
           lastReconciledPaymentId: payment.transactionId
         };
         await customer.save();
-      }
-
-      const existingLedger = await BillingLedgerEntry.findOne({ paymentId: payment.transactionId }).lean();
-      if (!existingLedger) {
-        await createLedgerEntry({
-          customerId: payment.customerId,
-          serviceId: payment.serviceId,
-          invoiceId: invoice.invoiceId,
-          paymentId: payment.transactionId,
-          category: "payment",
-          direction: "credit",
-          amount: Number(payment.amount || 0),
-          reference: payment.reference || payment.transactionId,
-          note: "CSV import reconciliation",
-          source: "admin_csv_import",
-          createdByAdminId: req.admin?._id,
-          metadata: { requestId: req.requestId }
-        });
+        await syncCustomerBillingState(customer.customerId, customer);
       }
 
       results.push({

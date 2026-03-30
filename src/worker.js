@@ -32,6 +32,12 @@ import { writeAuditLog } from "./common/audit.js";
 import { buildPppoeCredentials, buildWifiCredentials, detectOntBrand, resolveProvisioningProfile } from "./common/networkProvisioning.js";
 import { normalizeInstallerIdentifier } from "./modules/installerApp/routes.js";
 import { renderInstallerActivationSms } from "./common/installerMessaging.js";
+import {
+  createLedgerEntry,
+  findBestInvoiceForPayment,
+  reconcilePaymentToInvoice,
+  syncCustomerBillingState
+} from "./common/billingAccounting.js";
 
 await connectMongo();
 await seedSystemData();
@@ -1214,74 +1220,6 @@ async function runRecurringUsagePolicyTasks() {
   }
 }
 
-async function findBestInvoiceForPayment(payment) {
-  const exactRef = String(payment.reference || "").trim();
-  if (exactRef) {
-    const byReference = await BillingInvoice.findOne({
-      $or: [{ invoiceId: exactRef }, { invoiceNumber: exactRef }]
-    });
-    if (byReference) {
-      return {
-        invoice: byReference,
-        confidenceScore: 0.99,
-        matchReason: "Payment reference exactly matched invoice number/id",
-        matchedBy: "reference_exact"
-      };
-    }
-  }
-
-  const amount = Number(payment.amount || 0);
-  const refTokens = [payment.reference, payment.transactionId, payment.metadata?.bankReference, payment.metadata?.upiTxnId]
-    .filter(Boolean)
-    .map((value) => String(value).trim().toLowerCase());
-
-  const candidates = await BillingInvoice.find({
-    customerId: payment.customerId,
-    paymentStatus: { $in: ["pending", "overdue"] }
-  }).sort({ dueDate: 1, generatedAt: 1 });
-
-  let best = null;
-  let bestScore = -1;
-  let bestReasons = [];
-  for (const invoice of candidates) {
-    let score = 0;
-    const reasons = [];
-    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 1) {
-      score += 4;
-      reasons.push("Amount within Rs 1");
-    }
-    if (Math.abs(Number(invoice.totalAmount || 0) - amount) <= 0.01) {
-      score += 2;
-      reasons.push("Exact amount match");
-    }
-    const invoiceTokens = [
-      invoice.invoiceId,
-      invoice.invoiceNumber,
-      invoice.metadata?.lastPaymentId,
-      ...(Array.isArray(invoice.metadata?.externalReferences) ? invoice.metadata.externalReferences : [])
-    ]
-      .filter(Boolean)
-      .map((value) => String(value).trim().toLowerCase());
-    if (refTokens.some((token) => invoiceTokens.includes(token))) {
-      score += 8;
-      reasons.push("Reference token matched invoice metadata");
-    }
-    if (score > bestScore) {
-      best = invoice;
-      bestScore = score;
-      bestReasons = reasons;
-    }
-  }
-  return bestScore >= 4 && best
-    ? {
-        invoice: best,
-        confidenceScore: Math.min(0.98, Number((bestScore / 14).toFixed(2))),
-        matchReason: bestReasons.join("; ") || "Best open invoice based on customer and amount",
-        matchedBy: bestReasons.some((reason) => reason.includes("Reference")) ? "reference_and_amount" : "amount_similarity"
-      }
-    : null;
-}
-
 async function runRecurringBillingTasks() {
   if (billingSchedulerRunning) return;
   billingSchedulerRunning = true;
@@ -1500,60 +1438,25 @@ async function runRecurringBillingTasks() {
       }
       const { invoice, confidenceScore, matchReason, matchedBy } = match;
 
-      invoice.paymentStatus = "paid";
-      invoice.status = "settled";
-      invoice.metadata = {
-        ...(invoice.metadata || {}),
-        reconciledPaymentId: payment.transactionId,
-        reconciledAt: new Date(),
-        reconciliationSource: "auto_worker"
-      };
-      await invoice.save();
-
-      payment.invoiceId = invoice.invoiceId;
-      payment.reconciliationStatus = "reconciled";
-      payment.reconciledInvoiceId = invoice.invoiceId;
-      payment.reconciledAt = new Date();
-      payment.metadata = {
-        ...(payment.metadata || {}),
+      const settlement = await reconcilePaymentToInvoice({
+        payment,
+        invoice,
+        confidenceScore,
+        matchReason,
+        matchedBy,
         reconciliationMode: "auto_worker",
-        reconciliationConfidence: confidenceScore,
-        reconciliationMatchReason: matchReason,
-        reconciliationMatchedBy: matchedBy
-      };
-      await payment.save();
+        ledgerSource: "billing_scheduler",
+        ledgerNote: "Auto-reconciled payment",
+        ledgerMetadata: {
+          reconciliationMode: "auto_worker"
+        }
+      });
 
-      const existingLedger = await BillingLedgerEntry.findOne({ paymentId: payment.transactionId }).lean();
-      if (!existingLedger) {
-        const latestEntry = await BillingLedgerEntry.findOne({ customerId: payment.customerId })
-          .sort({ postedAt: -1, createdAt: -1 })
-          .lean();
-        const currentBalance = latestEntry?.balanceAfter || 0;
-        const balanceAfter = currentBalance - Number(payment.amount || 0);
-        await BillingLedgerEntry.create({
-          entryId: `BL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-          customerId: payment.customerId,
-          serviceId: payment.serviceId,
-          invoiceId: invoice.invoiceId,
-          paymentId: payment.transactionId,
-          category: "payment",
-          direction: "credit",
-          amount: Number(payment.amount || 0),
-          currency: payment.currency || "INR",
-          balanceAfter,
-          reference: payment.reference || payment.transactionId,
-          note: "Auto-reconciled payment",
-          source: "billing_scheduler",
-          postedAt: payment.paidAt || new Date()
-        });
-      }
-
-      const customer = await Customer.findOne({ customerId: payment.customerId });
+      const customer = settlement.customer || (await Customer.findOne({ customerId: payment.customerId }));
       let resumed = false;
       if (customer) {
         customer.billingSnapshot = {
           ...(customer.billingSnapshot || {}),
-          dueAmount: 0,
           lastPaymentStatus: "paid",
           lastPaidAt: payment.paidAt || new Date(),
           lastReconciledPaymentId: payment.transactionId,
@@ -1573,6 +1476,7 @@ async function runRecurringBillingTasks() {
                 `Auto resume after payment reconciliation ${payment.transactionId}`
               )
             : (await customer.save(), false);
+        await syncCustomerBillingState(customer.customerId, customer);
         if ((customer.phone || customer.email) && resumed) {
           const message = await buildBillingNotificationContent({
             eventKey: "paid_invoice",

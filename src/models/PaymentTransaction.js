@@ -22,6 +22,21 @@ const paymentTransactionSchema = new mongoose.Schema(
     reconciledAt: Date,
     reconciledInvoiceId: { type: String, index: true },
     reconciledByAdminId: { type: mongoose.Schema.Types.ObjectId, ref: "AdminUser" },
+    unallocatedAmount: { type: Number, default: 0 },
+    allocations: {
+      type: [
+        new mongoose.Schema(
+          {
+            invoiceId: String,
+            amount: Number,
+            allocatedAt: Date,
+            mode: String
+          },
+          { _id: false }
+        )
+      ],
+      default: []
+    },
     metadata: mongoose.Schema.Types.Mixed
   },
   { timestamps: true }

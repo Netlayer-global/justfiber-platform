@@ -37,6 +37,12 @@ import { buildBillingNotificationContent, notificationDispatcher } from "../../i
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
 import {
+  createLedgerEntry,
+  markInvoicePaid,
+  reconcilePaymentToInvoice,
+  syncCustomerBillingState
+} from "../../common/billingAccounting.js";
+import {
   buildFixedPppoeUsername,
   buildJustFiberWifiName,
   detectOntBrand
@@ -76,10 +82,6 @@ import {
 
 export const customerPortalRouter = Router();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function computeBalanceAfter({ currentBalance, direction, amount }) {
-  return currentBalance + (direction === "debit" ? amount : -amount);
-}
 
 function buildInvoiceHtml(invoice) {
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
@@ -412,39 +414,6 @@ async function evaluateFeasibility({ lat, lng, address, pinCode }) {
   };
 }
 
-async function createLedgerEntry({
-  customerId,
-  serviceId,
-  invoiceId,
-  paymentId,
-  category,
-  direction,
-  amount,
-  reference,
-  note,
-  source,
-  metadata
-}) {
-  const latestEntry = await BillingLedgerEntry.findOne({ customerId }).sort({ postedAt: -1, createdAt: -1 }).lean();
-  const currentBalance = latestEntry?.balanceAfter || 0;
-  const balanceAfter = computeBalanceAfter({ currentBalance, direction, amount });
-  return BillingLedgerEntry.create({
-    entryId: `BL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-    customerId,
-    serviceId,
-    invoiceId,
-    paymentId,
-    category,
-    direction,
-    amount,
-    balanceAfter,
-    reference,
-    note,
-    source,
-    metadata
-  });
-}
-
 async function getOwnedBookingOrThrow(bookingNumber, customerUserId) {
   const booking = await ConnectionBooking.findOne({
     bookingNumber,
@@ -647,17 +616,15 @@ async function markLatestInvoicePaid({ customerId, paymentId, amount, source }) 
   if (!invoice) {
     return null;
   }
-  invoice.paymentStatus = "paid";
-  invoice.status = "settled";
-  invoice.metadata = {
-    ...(invoice.metadata || {}),
-    lastPaymentId: paymentId,
-    lastPaymentSource: source,
-    lastPaymentAmount: amount,
-    lastPaidAt: new Date()
-  };
-  await invoice.save();
-  return invoice;
+  return markInvoicePaid({
+    invoice,
+    paymentId,
+    amount,
+    source,
+    metadata: {
+      lastPaymentSource: source
+    }
+  });
 }
 
 async function findOrCreatePortalUserForBooking({ mobile, email, fullName, existingUser }) {
@@ -1083,8 +1050,9 @@ async function finalizeSuccessfulBillingPayment({
   }
 
   let createdLedgerEntry = null;
+  let invoice = null;
   if (!existingPayment) {
-    await PaymentTransaction.create({
+    const payment = await PaymentTransaction.create({
       transactionId,
       customerId: customer.customerId,
       serviceId: customer.serviceId,
@@ -1094,9 +1062,10 @@ async function finalizeSuccessfulBillingPayment({
       paidAt: new Date(),
       method: "onlinePayment",
       reference,
+      unallocatedAmount: Number(amount || 0),
       metadata
     });
-    const invoice = await markLatestInvoicePaid({
+    invoice = await markLatestInvoicePaid({
       customerId: customer.customerId,
       paymentId,
       amount,
@@ -1115,24 +1084,39 @@ async function finalizeSuccessfulBillingPayment({
         });
       }
     }
-    createdLedgerEntry = await createLedgerEntry({
-      customerId: customer.customerId,
-      serviceId: customer.serviceId,
-      invoiceId: invoice?.invoiceId,
-      paymentId,
-      category: "payment",
-      direction: "credit",
-      amount,
-      reference,
-      note: `${provider} payment received`,
-      source: `${provider}_billing`,
-      metadata
-    });
+    if (invoice) {
+      const settlement = await reconcilePaymentToInvoice({
+        payment,
+        invoice,
+        confidenceScore: 1,
+        matchReason: "Customer payment settled against the earliest open invoice",
+        matchedBy: "customer_payment",
+        reconciliationMode: "customer_payment",
+        ledgerSource: `${provider}_billing`,
+        ledgerNote: `${provider} payment received`,
+        ledgerMetadata: metadata
+      });
+      createdLedgerEntry = settlement.ledgerEntry;
+      customer = settlement.customer || customer;
+    } else {
+      createdLedgerEntry = await createLedgerEntry({
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        paymentId,
+        category: "payment",
+        direction: "credit",
+        amount,
+        reference,
+        note: `${provider} payment received`,
+        source: `${provider}_billing`,
+        metadata
+      });
+    }
   }
 
   customer.billingSnapshot = {
     ...(customer.billingSnapshot || {}),
-    lastInvoiceAmount: amount,
+    lastInvoiceAmount: Number(amount || 0),
     dueAmount: 0,
     lastPaymentStatus: "paid",
     lastPaidAt: new Date(),
@@ -1163,6 +1147,7 @@ async function finalizeSuccessfulBillingPayment({
     customer.operationalStatus = "active";
   }
   await customer.save();
+  await syncCustomerBillingState(customer.customerId, customer);
 
   if (customerUserId) {
     await CustomerNotification.create({

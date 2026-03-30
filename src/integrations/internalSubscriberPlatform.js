@@ -8,6 +8,7 @@ import { CustomerUser } from "../models/CustomerUser.js";
 import { PlanCatalog } from "../models/PlanCatalog.js";
 import { SubscriberService } from "../models/SubscriberService.js";
 import { buildPppoeCredentials } from "../common/networkProvisioning.js";
+import { syncCustomerBillingState } from "../common/billingAccounting.js";
 import { internalBillingEngine } from "./internalBillingEngine.js";
 
 function deriveNumericSuffix(value) {
@@ -180,6 +181,7 @@ async function settleActivationInvoiceIfPaid({ customerId, billCycle, paymentRef
       }
     }
   );
+  await syncCustomerBillingState(customerId);
   return invoice;
 }
 
