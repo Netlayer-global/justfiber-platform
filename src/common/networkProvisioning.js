@@ -144,7 +144,11 @@ const BRAND_OVERRIDES = {
     ],
     pass24Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase"
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.PreSharedKey",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.PreSharedKey"
     ],
     ssid5Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
@@ -152,7 +156,11 @@ const BRAND_OVERRIDES = {
     ],
     pass5Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase"
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.PreSharedKey",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.PreSharedKey"
     ]
   },
   zte: {

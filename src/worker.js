@@ -491,13 +491,13 @@ const worker = new Worker(
             lastConfigError: configError.message
           });
         }
-        if (brand === "nokia" && wifi.password) {
+        if ((brand === "nokia" || brand === "dasan") && wifi.password) {
           await genieacsClient.rebootDevice(deviceId);
           jobRecord.timeline.push({
             event: "job.device_reboot_requested",
             actorType: "system",
             actorId: "worker",
-            note: "Queued reboot after Nokia Wi-Fi security update",
+            note: `Queued reboot after ${brand} Wi-Fi security update`,
             at: new Date()
           });
         }
@@ -572,7 +572,7 @@ const worker = new Worker(
         jobRecord.activation = {
           ...(jobRecord.activation || {}),
           configStatus: verification.verified ? "verified" : "pushed",
-          rebootQueuedAt: brand === "nokia" && wifi.password ? new Date() : jobRecord.activation?.rebootQueuedAt,
+          rebootQueuedAt: (brand === "nokia" || brand === "dasan") && wifi.password ? new Date() : jobRecord.activation?.rebootQueuedAt,
           internetVerifiedAt: new Date(),
           smsSentAt: new Date(),
           notificationSentAt: new Date(),
