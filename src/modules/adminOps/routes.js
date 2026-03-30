@@ -36,6 +36,7 @@ import { SubscriberService } from "../../models/SubscriberService.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SystemConfig } from "../../models/SystemConfig.js";
 import {
+  applyBillingNoteAdjustment,
   createLedgerEntry,
   deriveInvoiceLifecycle,
   findBestInvoiceForPayment,
@@ -2557,51 +2558,22 @@ adminOpsRouter.post(
     }
     const type = req.body?.type === "debit" ? "debit" : "credit";
     const totalAmount = Number((amount + taxAmount).toFixed(2));
-    const note = await BillingNote.create({
-      noteNumber: `${type === "credit" ? "CN" : "DN"}-${Date.now()}`,
+    const result = await applyBillingNoteAdjustment({
+      customer,
       type,
-      customerId: customer.customerId,
-      serviceId: customer.serviceId,
+      amount,
+      taxAmount,
+      taxMode: req.body?.taxMode || "india_gst",
+      taxBreakdown: Array.isArray(req.body?.taxBreakdown) ? req.body.taxBreakdown : [],
       invoiceId: req.body?.invoiceId,
       reasonCode: req.body?.reasonCode || (type === "credit" ? "credit_adjustment" : "debit_adjustment"),
       note: req.body?.note,
-      amount,
-      taxAmount,
-      totalAmount,
-      taxMode: req.body?.taxMode || "india_gst",
-      taxBreakdown: Array.isArray(req.body?.taxBreakdown) ? req.body.taxBreakdown : [],
-      createdByAdminId: req.admin?._id,
       metadata: req.body?.metadata || {},
-      appliedAt: new Date()
-    });
-
-    const direction = type === "credit" ? "credit" : "debit";
-    const category = type === "credit" ? "credit_adjustment" : "debit_adjustment";
-    const entry = await createLedgerEntry({
-      customerId: customer.customerId,
-      serviceId: customer.serviceId,
-      invoiceId: req.body?.invoiceId,
-      category,
-      direction,
-      amount: totalAmount,
-      reference: note.noteNumber,
-      note: note.note || `${type} note issued`,
-      source: "admin_billing_note",
       createdByAdminId: req.admin?._id,
-      metadata: {
-        noteNumber: note.noteNumber,
-        reasonCode: note.reasonCode
-      }
+      source: "admin_billing_note"
     });
-
-    customer.billingSnapshot = {
-      ...(customer.billingSnapshot || {}),
-      dueAmount: Math.max(0, entry.balanceAfter),
-      lastBillingNoteNumber: note.noteNumber,
-      lastBillingNoteType: type,
-      lastBillingNoteAt: new Date()
-    };
-    await customer.save();
+    const note = result.note;
+    const entry = result.ledgerEntry;
     await auditFromRequest(req, {
       action: `billing.${type}_note.created`,
       entityType: "customer",
@@ -2646,6 +2618,7 @@ adminOpsRouter.post(
       dueAmount: Math.max(0, entry.balanceAfter)
     };
     await customer.save();
+    await syncCustomerBillingState(customer.customerId, customer);
     await auditFromRequest(req, {
       action: "billing.adjustment.created",
       entityType: "customer",
@@ -2706,6 +2679,7 @@ adminOpsRouter.post(
       lastRefundAt: new Date()
     };
     await customer.save();
+    await syncCustomerBillingState(customer.customerId, customer);
     await notifyLinkedCustomerUsers(customer.customerId, {
       type: "billing_refund_created",
       title: "Refund posted",
@@ -2813,6 +2787,7 @@ adminOpsRouter.post(
       lastRefundAt: new Date()
     };
     await customer.save();
+    await syncCustomerBillingState(customer.customerId, customer);
     await notifyLinkedCustomerUsers(customer.customerId, {
       type: "billing_refund_created",
       title: "Refund initiated",

@@ -1,5 +1,6 @@
 import { BillingInvoice } from "../models/BillingInvoice.js";
 import { BillingLedgerEntry } from "../models/BillingLedgerEntry.js";
+import { BillingNote } from "../models/BillingNote.js";
 import { Customer } from "../models/Customer.js";
 import { PaymentTransaction } from "../models/PaymentTransaction.js";
 
@@ -204,9 +205,11 @@ function buildInvoiceSummary({ latestInvoice, openInvoices }) {
 
 function buildBillingSnapshot({ customer, latestInvoice, openInvoices, latestPayment, latestLedgerEntry }) {
   const currentSnapshot = customer?.billingSnapshot || {};
-  const dueAmount = roundCurrency(
+  const openInvoiceDueAmount = roundCurrency(
     openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
   );
+  const ledgerBalance = roundCurrency(Math.max(0, latestLedgerEntry?.balanceAfter || 0));
+  const dueAmount = latestLedgerEntry ? ledgerBalance : openInvoiceDueAmount;
   const latestOpenInvoice = openInvoices[0] || null;
   const lastInvoiceAmount =
     Number(latestInvoice?.totalAmount || 0) ||
@@ -231,6 +234,7 @@ function buildBillingSnapshot({ customer, latestInvoice, openInvoices, latestPay
       currentSnapshot.lastReconciledPaymentId ||
       currentSnapshot.lastPaymentId,
     ledgerBalance: roundCurrency(latestLedgerEntry?.balanceAfter || 0),
+    openInvoiceDueAmount,
     remainingDays,
     collections: {
       ...(currentSnapshot.collections || {}),
@@ -368,4 +372,80 @@ export async function reconcilePaymentToInvoice({
 
   const customer = await syncCustomerBillingState(payment.customerId);
   return { payment, invoice, ledgerEntry, customer };
+}
+
+export async function applyBillingNoteAdjustment({
+  customer,
+  type,
+  amount,
+  taxAmount = 0,
+  taxMode = "india_gst",
+  taxBreakdown = [],
+  invoiceId,
+  reasonCode,
+  note,
+  metadata = {},
+  createdByAdminId = null,
+  source = "billing_note"
+}) {
+  if (!customer?.customerId) {
+    return { note: null, ledgerEntry: null, customer: null };
+  }
+  const safeAmount = roundCurrency(amount);
+  const safeTaxAmount = roundCurrency(taxAmount);
+  const totalAmount = roundCurrency(safeAmount + safeTaxAmount);
+  if (!(totalAmount > 0)) {
+    return { note: null, ledgerEntry: null, customer };
+  }
+
+  const noteDoc = await BillingNote.create({
+    noteNumber: `${type === "credit" ? "CN" : "DN"}-${Date.now()}`,
+    type,
+    customerId: customer.customerId,
+    serviceId: customer.serviceId,
+    invoiceId,
+    reasonCode: reasonCode || (type === "credit" ? "credit_adjustment" : "debit_adjustment"),
+    note,
+    amount: safeAmount,
+    taxAmount: safeTaxAmount,
+    totalAmount,
+    taxMode,
+    taxBreakdown,
+    status: "applied",
+    createdByAdminId,
+    metadata,
+    appliedAt: new Date()
+  });
+
+  const ledgerEntry = await createLedgerEntry({
+    customerId: customer.customerId,
+    serviceId: customer.serviceId,
+    invoiceId,
+    category: type === "credit" ? "credit_adjustment" : "debit_adjustment",
+    direction: type === "credit" ? "credit" : "debit",
+    amount: totalAmount,
+    reference: noteDoc.noteNumber,
+    note: note || `${type} note issued`,
+    source,
+    createdByAdminId,
+    metadata: {
+      noteNumber: noteDoc.noteNumber,
+      reasonCode: noteDoc.reasonCode,
+      ...metadata
+    }
+  });
+
+  customer.billingSnapshot = {
+    ...(customer.billingSnapshot || {}),
+    lastBillingNoteNumber: noteDoc.noteNumber,
+    lastBillingNoteType: type,
+    lastBillingNoteAt: new Date()
+  };
+  await customer.save();
+  const syncedCustomer = await syncCustomerBillingState(customer.customerId, customer);
+  return {
+    note: noteDoc,
+    ledgerEntry,
+    customer: syncedCustomer || customer
+  };
 }

@@ -45,6 +45,7 @@ import { Lead } from "../../models/Lead.js";
 import { LeadKycDocument } from "../../models/LeadKycDocument.js";
 import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
+import { applyBillingNoteAdjustment } from "../../common/billingAccounting.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
@@ -347,24 +348,19 @@ async function buildCustomerResponse(customer) {
 }
 
 async function createPlanChangeBillingNote({ customer, type, amount, reasonCode, note, metadata, createdByAdminId }) {
-  const safeAmount = Number(amount || 0);
-  if (!(safeAmount > 0)) return null;
-  return BillingNote.create({
-    noteNumber: `${type === "credit" ? "CN" : "DN"}-${Date.now()}`,
+  const result = await applyBillingNoteAdjustment({
+    customer,
     type,
-    customerId: customer.customerId,
-    serviceId: customer.serviceId,
+    amount,
+    taxAmount: 0,
+    taxMode: "flat_tax",
     reasonCode,
     note,
-    amount: safeAmount,
-    taxAmount: 0,
-    totalAmount: safeAmount,
-    taxMode: "flat_tax",
-    status: "applied",
     metadata,
     createdByAdminId,
-    appliedAt: new Date()
+    source: "admin_plan_change"
   });
+  return result.note;
 }
 
 customersRouter.get(

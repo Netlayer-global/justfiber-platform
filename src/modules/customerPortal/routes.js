@@ -37,6 +37,7 @@ import { buildBillingNotificationContent, notificationDispatcher } from "../../i
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
 import {
+  applyBillingNoteAdjustment,
   createLedgerEntry,
   deriveInvoiceLifecycle,
   markInvoicePaid,
@@ -959,23 +960,18 @@ function computePlanChangePreview({ customer, currentPlan, nextPlan, effectiveMo
 }
 
 async function createPlanChangeBillingNote({ customer, type, amount, reasonCode, note, metadata }) {
-  const safeAmount = Number(amount || 0);
-  if (!(safeAmount > 0)) return null;
-  return BillingNote.create({
-    noteNumber: `${type === "credit" ? "CN" : "DN"}-${Date.now()}`,
+  const result = await applyBillingNoteAdjustment({
+    customer,
     type,
-    customerId: customer.customerId,
-    serviceId: customer.serviceId,
+    amount,
+    taxAmount: 0,
+    taxMode: "flat_tax",
     reasonCode,
     note,
-    amount: safeAmount,
-    taxAmount: 0,
-    totalAmount: safeAmount,
-    taxMode: "flat_tax",
-    status: "applied",
     metadata,
-    appliedAt: new Date()
+    source: "customer_plan_change"
   });
+  return result.note;
 }
 
 async function finalizePendingPlanChange(customer, customerUserId) {
