@@ -1766,7 +1766,7 @@ export default function CustomerDetailPage() {
                                 Open note
                               </button>
                               {item.invoiceId ? (
-                                <button className="btn-secondary" onClick={() => void openInvoicePdf(item.invoiceId)}>
+                                <button className="btn-secondary" onClick={() => void openInvoicePdf(item.invoiceId || '')}>
                                   Open invoice
                                 </button>
                               ) : null}
