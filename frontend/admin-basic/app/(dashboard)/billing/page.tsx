@@ -1533,6 +1533,14 @@ export default function BillingPage() {
                   <div className="mt-1 text-xs text-slate-500">
                     {item.customerId} | {item.bucket.replaceAll('_', ' ')} | {item.overdueDays} day(s) overdue
                   </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Link href={`/customers/${encodeURIComponent(item.customerId)}`} className="btn-secondary">
+                      Open customer
+                    </Link>
+                    <button className="btn-secondary" onClick={() => void sendCollectionReminder(item.customerId)}>
+                      Send reminder
+                    </button>
+                  </div>
                 </div>
                 <div className="text-right text-sm">
                   <div className="font-semibold text-white">Rs {item.dueAmount.toFixed(2)}</div>
