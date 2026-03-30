@@ -811,6 +811,58 @@ export interface BillingCollectionsBulkPreview {
   }
 }
 
+export interface BillingReconciliationStatusBucket {
+  status: string
+  count: number
+  totalAmount: number
+  unallocatedAmount: number
+}
+
+export interface BillingReconciliationItem {
+  transactionId: string
+  customerId: string
+  customerName: string
+  phone?: string
+  customerStatus?: string
+  dueAmount: number
+  amount: number
+  unallocatedAmount: number
+  status?: string
+  reconciliationStatus: string
+  provider?: string
+  method?: string
+  invoiceId?: string
+  reference?: string
+  paidAt?: string
+  createdAt?: string
+}
+
+export interface BillingReconciliationSummary {
+  statusBuckets: BillingReconciliationStatusBucket[]
+  items: BillingReconciliationItem[]
+}
+
+export interface BillingFinanceResolutionItem {
+  customerId: string
+  customerName: string
+  phone?: string
+  customerStatus?: string
+  invoiceId?: string
+  totalAmount?: number
+  amount?: number
+  noteNumber?: string
+  entryId?: string
+  reasonCode?: string
+  reference?: string
+  appliedAt?: string | null
+  postedAt?: string | null
+}
+
+export interface BillingFinanceResolutions {
+  waivers: BillingFinanceResolutionItem[]
+  writeoffs: BillingFinanceResolutionItem[]
+}
+
 export interface BillingControlCenter {
   customerId: string
   customerName: string

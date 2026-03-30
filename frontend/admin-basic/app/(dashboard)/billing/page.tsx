@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, Settings2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -91,6 +91,8 @@ export default function BillingPage() {
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
+  const [reconciliationSummary, setReconciliationSummary] = useState<BillingReconciliationSummary | null>(null)
+  const [financeResolutions, setFinanceResolutions] = useState<BillingFinanceResolutions | null>(null)
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
   const [collectionsWorkbench, setCollectionsWorkbench] = useState<BillingCollectionsWorkbench | null>(null)
   const [collectionsPlaybooks, setCollectionsPlaybooks] = useState<BillingCollectionsPlaybook[]>([])
@@ -141,6 +143,7 @@ export default function BillingPage() {
   ).toString()
   const invoiceExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/invoices.csv${exportQuery ? `?${exportQuery}` : ''}`
   const paymentExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/payments.csv${exportQuery ? `?${exportQuery}` : ''}`
+  const reconciliationExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/reconciliation.csv`
   const gstExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/gst-summary?format=csv${exportQuery ? `&${exportQuery}` : ''}`
   const activeInvoiceTemplate = useMemo(() => {
     const templates = invoiceTemplateSettings?.templates || []
@@ -233,6 +236,10 @@ export default function BillingPage() {
       }),
     [paymentFilters, payments]
   )
+  const reconciliationBuckets = useMemo(() => reconciliationSummary?.statusBuckets || [], [reconciliationSummary])
+  const openReconciliationItems = useMemo(() => (reconciliationSummary?.items || []).slice(0, 6), [reconciliationSummary])
+  const recentWaivers = useMemo(() => (financeResolutions?.waivers || []).slice(0, 5), [financeResolutions])
+  const recentWriteoffs = useMemo(() => (financeResolutions?.writeoffs || []).slice(0, 5), [financeResolutions])
   const paymentProviders = useMemo(
     () => Array.from(new Set(payments.map((payment) => payment.provider).filter((provider): provider is string => Boolean(provider)))).sort(),
     [payments]
@@ -285,11 +292,13 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, collectionRes, collectionWorkbenchRes, collectionPlaybooksRes, collectionAgentRes, billingRunRes, invoiceTemplateRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionPlaybooksRes, collectionAgentRes, billingRunRes, invoiceTemplateRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
         adminAPI.getBillingPayments(),
+        adminAPI.getBillingReconciliationSummary(),
+        adminAPI.getBillingFinanceResolutions(20),
         adminAPI.getBillingCollections(collectionBucket || undefined),
         adminAPI.getBillingCollectionsWorkbench(collectionBucket || undefined),
         adminAPI.getBillingCollectionsPlaybooks(),
@@ -360,6 +369,12 @@ export default function BillingPage() {
       }
       if (paymentRes.success && paymentRes.data) {
         setPayments(paymentRes.data.items)
+      }
+      if (reconciliationRes.success && reconciliationRes.data) {
+        setReconciliationSummary(reconciliationRes.data as BillingReconciliationSummary)
+      }
+      if (financeResolutionRes.success && financeResolutionRes.data) {
+        setFinanceResolutions(financeResolutionRes.data as BillingFinanceResolutions)
       }
       if (collectionRes.success && collectionRes.data) {
         setCollections(collectionRes.data)
@@ -888,6 +903,16 @@ export default function BillingPage() {
               rel="noreferrer"
             >
               Export Payments CSV
+            </a>
+          ) : null}
+          {billingSectionTab === 'payments' ? (
+            <a
+              className="btn-secondary"
+              href={reconciliationExportUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Export Reconciliation CSV
             </a>
           ) : null}
           {billingSectionTab === 'collections' ? (
@@ -1740,6 +1765,93 @@ export default function BillingPage() {
 
           {billingSectionTab === 'payments' ? (
           <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+            <div className="card p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Reconciliation summary</div>
+                  <div className="mt-1 text-sm text-slate-500">Open payment matching and allocation health.</div>
+                </div>
+                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                  {reconciliationBuckets.reduce((sum, item) => sum + Number(item.count || 0), 0)} tracked
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {reconciliationBuckets.slice(0, 4).map((bucket) => (
+                  <div key={bucket.status} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{bucket.status}</div>
+                    <div className="mt-2 text-2xl font-semibold text-slate-900">{bucket.count}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Rs {Number(bucket.totalAmount || 0).toFixed(2)} | Unallocated Rs {Number(bucket.unallocatedAmount || 0).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+                {!reconciliationBuckets.length ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 md:col-span-2 xl:col-span-4">
+                    No reconciliation summary available yet.
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Recent unresolved items</div>
+                <div className="mt-3 space-y-3">
+                  {openReconciliationItems.map((item) => (
+                    <div key={item.transactionId} className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="font-medium text-slate-900">{item.customerName || item.customerId}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {item.transactionId} | {item.reconciliationStatus} | {item.provider || '-'}
+                        </div>
+                      </div>
+                      <div className="text-right text-sm">
+                        <div className="font-semibold text-slate-900">Rs {Number(item.amount || 0).toFixed(2)}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Unallocated Rs {Number(item.unallocatedAmount || 0).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {!openReconciliationItems.length ? (
+                    <div className="text-sm text-slate-500">No unresolved payment items right now.</div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+            <div className="card p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Finance resolutions</div>
+              <div className="mt-1 text-sm text-slate-500">Latest waivers and write-offs for commercial review.</div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Recent waivers</div>
+                  <div className="mt-3 space-y-2">
+                    {recentWaivers.map((item) => (
+                      <div key={item.noteNumber || `${item.customerId}-${item.appliedAt}`} className="rounded-xl bg-white px-3 py-2">
+                        <div className="font-medium text-slate-900">{item.customerName || item.customerId}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {item.reasonCode || 'waiver'} | Rs {Number(item.totalAmount || 0).toFixed(2)}
+                        </div>
+                      </div>
+                    ))}
+                    {!recentWaivers.length ? <div className="text-sm text-slate-500">No recent waivers.</div> : null}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Recent write-offs</div>
+                  <div className="mt-3 space-y-2">
+                    {recentWriteoffs.map((item) => (
+                      <div key={item.entryId || `${item.customerId}-${item.postedAt}`} className="rounded-xl bg-white px-3 py-2">
+                        <div className="font-medium text-slate-900">{item.customerName || item.customerId}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {item.reference || 'writeoff'} | Rs {Number(item.amount || 0).toFixed(2)}
+                        </div>
+                      </div>
+                    ))}
+                    {!recentWriteoffs.length ? <div className="text-sm text-slate-500">No recent write-offs.</div> : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="card p-5">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <input

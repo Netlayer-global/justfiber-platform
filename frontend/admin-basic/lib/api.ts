@@ -1746,6 +1746,12 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(data || {}),
     }),
+  getBillingReconciliationSummary: async () =>
+    request('/api/v1/admin/billing/reconciliation/summary'),
+  getBillingFinanceResolutions: async (limit?: number) => {
+    const query = limit ? `?limit=${encodeURIComponent(String(limit))}` : ''
+    return request(`/api/v1/admin/billing/finance/resolutions${query}`)
+  },
   getBillingCollectionAgents: async () => {
     const res = await request<any[]>('/api/v1/admin/billing/collections/agents')
     return {
