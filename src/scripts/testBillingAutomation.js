@@ -144,10 +144,10 @@ async function verifyAdminBilling(adminToken) {
     token: adminToken
   });
   expect(
-    reconciliation.data?.reconciliationSummary && typeof reconciliation.data.reconciliationSummary === "object",
-    "Reconciliation summary missing reconciliationSummary object"
+    Array.isArray(reconciliation.data?.statusBuckets),
+    "Reconciliation summary missing statusBuckets"
   );
-  const unresolvedCount = Object.values(reconciliation.data.reconciliationSummary || {}).reduce(
+  const unresolvedCount = (reconciliation.data.statusBuckets || []).reduce(
     (sum, item) => sum + Number(item?.count || 0),
     0
   );
@@ -157,8 +157,9 @@ async function verifyAdminBilling(adminToken) {
     path: "/api/v1/admin/billing/finance/resolutions",
     token: adminToken
   });
-  expect(typeof resolutions.data?.totals?.waivers === "number", "Finance resolutions missing waiver totals");
-  printPass("Billing finance resolutions");
+  expect(Array.isArray(resolutions.data?.waivers), "Finance resolutions missing waivers");
+  expect(Array.isArray(resolutions.data?.writeoffs), "Finance resolutions missing writeoffs");
+  printPass("Billing finance resolutions", `${resolutions.data.waivers.length}/${resolutions.data.writeoffs.length}`);
 
   const customerBilling = await requestJson({
     path: "/api/v1/admin/customers/CUST-1002/billing",
