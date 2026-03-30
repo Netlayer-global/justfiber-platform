@@ -30,6 +30,7 @@ import { env } from "../../config/env.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
+import { AuditLog } from "../../models/AuditLog.js";
 import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../common/customerPortalOtpStore.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
@@ -2170,16 +2171,102 @@ adminOpsRouter.get(
     if (!customer) {
       return ok(res, null);
     }
-    const [invoices, payments, ledger] = await Promise.all([
+    const [invoices, payments, ledger, service, waivers, writeoffs, timeline] = await Promise.all([
       BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1 }).limit(12).lean(),
       PaymentTransaction.find({ customerId: customer.customerId }).sort({ paidAt: -1 }).limit(12).lean(),
-      BillingLedgerEntry.find({ customerId: customer.customerId }).sort({ postedAt: -1, createdAt: -1 }).limit(25).lean()
+      BillingLedgerEntry.find({ customerId: customer.customerId }).sort({ postedAt: -1, createdAt: -1 }).limit(25).lean(),
+      SubscriberService.findOne({ customerId: customer.customerId, status: { $in: ["active", "suspended", "expired", "pending_installation"] } })
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .lean(),
+      BillingNote.find({
+        customerId: customer.customerId,
+        type: "credit",
+        "metadata.resolutionType": "waiver"
+      })
+        .sort({ appliedAt: -1, createdAt: -1 })
+        .limit(10)
+        .lean(),
+      BillingLedgerEntry.find({
+        customerId: customer.customerId,
+        category: "writeoff"
+      })
+        .sort({ postedAt: -1, createdAt: -1 })
+        .limit(10)
+        .lean(),
+      AuditLog.find({
+        entityType: "customer",
+        entityId: customer.customerId,
+        action: {
+          $in: [
+            "billing.waiver.created",
+            "billing.writeoff.created",
+            "billing.adjustment.created",
+            "billing.refund.created",
+            "billing.collections.suspend",
+            "billing.collections.resume"
+          ]
+        }
+      })
+        .sort({ createdAt: -1 })
+        .limit(25)
+        .lean()
     ]);
+    const collections = customer.billingSnapshot?.collections || {};
+    const controlCenter = {
+      customerId: customer.customerId,
+      customerName: customer.fullName || customer.customerId,
+      operationalStatus: customer.operationalStatus || "unknown",
+      serviceStatus: service?.status || customer.operationalStatus || "unknown",
+      serviceId: customer.serviceId || service?.serviceId || "",
+      radiusUsername: service?.radiusUsername || "",
+      dueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
+      ledgerBalance: Number(customer.billingSnapshot?.ledgerBalance || 0),
+      openInvoiceDueAmount: Number(customer.billingSnapshot?.openInvoiceDueAmount || 0),
+      paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "",
+      billMode: customer.billingSnapshot?.billMode || "",
+      graceDays: Number(customer.billingSnapshot?.graceDays || 0),
+      promiseToPayAt: collections.promiseToPayAt || null,
+      promiseAmount: Number(collections.promiseAmount || 0),
+      promiseNote: collections.promiseNote || "",
+      assignedAdminId: collections.assignedToAdminId || "",
+      assignedAdminName: collections.assignedToName || "",
+      lastReminderAt: collections.lastReminderAt || null,
+      latestFollowUpNote: collections.latestFollowUpNote || "",
+      latestFollowUpAt: collections.latestFollowUpAt || null,
+      followUpCount: Number(collections.followUpCount || 0),
+      lastServiceAction: collections.lastServiceAction || "",
+      lastServiceActionAt: collections.lastServiceActionAt || null,
+      lastServiceActionReason: collections.lastServiceActionReason || "",
+      lastResolutionType: collections.lastResolutionType || "",
+      lastResolutionAt: collections.lastResolutionAt || null,
+      lastResolutionAmount: Number(collections.lastResolutionAmount || 0),
+      lastResolutionReference: collections.lastResolutionReference || "",
+      resumeEligible:
+        (service?.status || customer.operationalStatus) === "suspended" &&
+        Number(customer.billingSnapshot?.dueAmount || 0) <= 0,
+      suspendEligible:
+        (service?.status || customer.operationalStatus) === "active" &&
+        Number(customer.billingSnapshot?.dueAmount || 0) > 0
+    };
     return ok(res, {
       summary: customer.billingSnapshot || {},
+      invoiceSummary: customer.invoiceSummary || {},
+      controlCenter,
       invoices,
       payments,
-      ledger
+      ledger,
+      waivers,
+      writeoffs,
+      timeline: timeline.map((item) => ({
+        id: String(item._id),
+        action: item.action,
+        actorName: item.actorName || "",
+        actorType: item.actorType || "",
+        result: item.result || "success",
+        reason: item.reason || "",
+        metadata: item.metadata || {},
+        createdAt: item.createdAt
+      }))
     });
   })
 );
