@@ -1278,6 +1278,46 @@ export default function BillingPage() {
                 </div>
               ))}
             </div>
+            <div className="mt-5 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Assignee load</div>
+              <div className="mt-3 space-y-2">
+                {(collectionsWorkbench?.byAssignee || []).slice(0, 5).map((item) => (
+                  <div key={`${item.adminId || item.adminName}`} className="flex items-center justify-between gap-3 text-sm">
+                    <div>
+                      <div className="text-white">{item.adminName || 'Unassigned'}</div>
+                      <div className="mt-1 text-xs text-slate-500">{item.count} account(s)</div>
+                    </div>
+                    <div className="text-right text-xs text-slate-400">
+                      Rs {Number(item.dueAmount || 0).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+                {!(collectionsWorkbench?.byAssignee || []).length ? (
+                  <div className="text-sm text-slate-500">No collection ownership assigned yet.</div>
+                ) : null}
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Action queue breakdown</div>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl bg-white/5 px-3 py-3">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Reminders</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{collectionsWorkbench?.actionQueue.remind || 0}</div>
+                </div>
+                <div className="rounded-xl bg-white/5 px-3 py-3">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Follow-ups</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{collectionsWorkbench?.actionQueue.followUp || 0}</div>
+                </div>
+                <div className="rounded-xl bg-white/5 px-3 py-3">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Suspend</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{collectionsWorkbench?.actionQueue.suspend || 0}</div>
+                </div>
+                <div className="rounded-xl bg-white/5 px-3 py-3">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Resume</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{collectionsWorkbench?.actionQueue.resume || 0}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div className="card p-5">
