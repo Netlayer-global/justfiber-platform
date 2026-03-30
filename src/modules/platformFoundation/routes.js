@@ -95,6 +95,10 @@ const billingProfileSchema = z.object({
       stateName: z.string().optional(),
       invoicePrefix: z.string().optional(),
       invoiceSeriesCode: z.string().optional(),
+      templateKey: z.string().optional(),
+      companyLegalName: z.string().optional(),
+      companyAddress: z.string().optional(),
+      gstNumber: z.string().optional(),
       defaultBillMode: z.enum(["prepaid", "postpaid"]).optional()
     })
   ).default([]),
