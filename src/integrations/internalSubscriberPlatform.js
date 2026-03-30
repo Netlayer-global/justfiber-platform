@@ -151,6 +151,38 @@ function buildBillCycle(now = new Date()) {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+async function settleActivationInvoiceIfPaid({ customerId, billCycle, paymentReference }) {
+  if (!customerId || !billCycle) return null;
+  const invoice = await BillingInvoice.findOne({
+    customerId,
+    billCycle,
+    paymentStatus: { $in: ["pending", "overdue"] }
+  });
+  if (!invoice) {
+    return null;
+  }
+  invoice.paymentStatus = "paid";
+  invoice.status = "settled";
+  invoice.metadata = {
+    ...(invoice.metadata || {}),
+    activationPaymentReconciledAt: new Date(),
+    activationPaymentReference: paymentReference || ""
+  };
+  await invoice.save();
+  await Customer.updateOne(
+    { customerId },
+    {
+      $set: {
+        "billingSnapshot.dueAmount": 0,
+        "billingSnapshot.lastPaymentStatus": "paid",
+        "billingSnapshot.lastPaidAt": new Date(),
+        "invoiceSummary.lastInvoiceNumber": invoice.invoiceNumber || invoice.invoiceId
+      }
+    }
+  );
+  return invoice;
+}
+
 function buildInvoicePayload({ customer, plan, booking, serviceId }) {
   const generatedAt = new Date();
   const dueDate = addDays(generatedAt, 30);
@@ -473,6 +505,13 @@ export class InternalSubscriberPlatform {
           sourceEvent: "activation"
         }
       );
+      if (booking?.payment?.status === "paid") {
+        await settleActivationInvoiceIfPaid({
+          customerId: identifiers.customerId,
+          billCycle: buildBillCycle(),
+          paymentReference: booking.payment?.paymentId || booking.payment?.reference
+        });
+      }
     }
 
     if (booking) {

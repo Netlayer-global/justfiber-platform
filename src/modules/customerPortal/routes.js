@@ -1867,7 +1867,7 @@ customerPortalRouter.get(
         || customer.address?.address
         || "",
       remainingDays: customer.expiryAt ? Math.max(0, Math.ceil((new Date(customer.expiryAt) - Date.now()) / (1000 * 60 * 60 * 24))) : null,
-      billDueAmount: customer.billingSnapshot?.lastInvoiceAmount || 0,
+      billDueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
       dataLeftMb: 0,
       status: customer.operationalStatus,
       quickActions: ["pay_bill", "wifi_settings", "router_reboot", "raise_complaint", "change_plan"],
@@ -2311,6 +2311,10 @@ customerPortalRouter.get(
       ? openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
       : Number(customer.billingSnapshot?.dueAmount || 0);
     const collections = customer.billingSnapshot?.collections || {};
+    const effectivePaymentStatus =
+      dueAmount > 0
+        ? (latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "pending")
+        : "paid";
 
     return ok(res, {
       customerId: customer.customerId,
@@ -2324,12 +2328,12 @@ customerPortalRouter.get(
         amount: latestInvoice?.totalAmount || customer.billingSnapshot?.lastInvoiceAmount || 0,
         dueAmount,
         recurringAmount,
-        paymentStatus: latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "unknown",
+        paymentStatus: effectivePaymentStatus,
         lastPaymentAmount: payments[0]?.amount || 0,
         lastPaymentDate: payments[0]?.paidAt || null,
         invoiceCount,
         latestInvoiceNumber: latestInvoice?.invoiceNumber || latestInvoice?.invoiceId || "",
-        latestInvoiceStatus: latestInvoice?.paymentStatus || "",
+        latestInvoiceStatus: effectivePaymentStatus,
         serviceStatus: service?.status || customer.operationalStatus || "unknown",
         lastDueReminderAt: collections.lastDueReminderAt || null,
         lastOverdueReminderAt: collections.lastOverdueReminderAt || null,
@@ -2448,6 +2452,10 @@ customerPortalRouter.get(
       BillingInvoice.countDocuments({ customerId: customer.customerId }),
       BillingInvoice.findOne({ customerId: customer.customerId }).sort({ generatedAt: -1, createdAt: -1 }).lean()
     ]);
+    const openInvoices = await BillingInvoice.find({
+      customerId: customer.customerId,
+      paymentStatus: { $in: ["pending", "overdue"] }
+    }).lean();
     const nextBillingDate = service?.nextBillingDate || customer.expiryAt || latestInvoice?.dueDate || null;
     const billCycle =
       service?.billingPeriodMonths
@@ -2457,6 +2465,13 @@ customerPortalRouter.get(
           latestInvoice?.metadata?.billCycleLabel ||
           "Monthly";
     const collections = customer.billingSnapshot?.collections || {};
+    const dueAmount = openInvoices.length
+      ? openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
+      : Number(customer.billingSnapshot?.dueAmount || 0);
+    const effectivePaymentStatus =
+      dueAmount > 0
+        ? (latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "pending")
+        : "paid";
     return ok(res, {
       currentPlan: customer.planName,
       dueDate: nextBillingDate,
@@ -2476,11 +2491,11 @@ customerPortalRouter.get(
             customer.billingSnapshot?.lastInvoiceAmount ||
             0
         ) || 0,
-      paymentStatus: latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "unknown",
-      dueAmount: customer.billingSnapshot?.dueAmount || 0,
+      paymentStatus: effectivePaymentStatus,
+      dueAmount,
       invoiceCount,
       latestInvoiceNumber: latestInvoice?.invoiceNumber || latestInvoice?.invoiceId || "",
-      latestInvoiceStatus: latestInvoice?.paymentStatus || "",
+      latestInvoiceStatus: effectivePaymentStatus,
       serviceStatus: service?.status || customer.operationalStatus || "unknown",
       lastDueReminderAt: collections.lastDueReminderAt || null,
       lastOverdueReminderAt: collections.lastOverdueReminderAt || null,

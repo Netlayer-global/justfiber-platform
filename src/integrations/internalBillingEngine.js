@@ -4,6 +4,8 @@ import { BillingProfile } from "../models/BillingProfile.js";
 import { Customer } from "../models/Customer.js";
 import { SubscriberService } from "../models/SubscriberService.js";
 
+const ADVANCE_INVOICE_LEAD_DAYS = 7;
+
 function resolveDurationMonths(source = {}) {
   return Math.max(1, Number(source?.durationMonths || 1));
 }
@@ -459,7 +461,11 @@ export class InternalBillingEngine {
     for (const service of services) {
       const nextBillingDate = resolveServiceNextBillingDate(service);
       const explicitScope = Boolean(options.customerId || options.serviceId);
-      const shouldProcess = explicitScope || !nextBillingDate || nextBillingDate.getTime() <= referenceDate.getTime();
+      const invoiceWindowStart = nextBillingDate ? addDays(nextBillingDate, -ADVANCE_INVOICE_LEAD_DAYS) : null;
+      const shouldProcess =
+        explicitScope ||
+        !nextBillingDate ||
+        (invoiceWindowStart ? invoiceWindowStart.getTime() <= referenceDate.getTime() : nextBillingDate.getTime() <= referenceDate.getTime());
       if (!shouldProcess) {
         results.push({
           skipped: true,
@@ -474,6 +480,7 @@ export class InternalBillingEngine {
         durationMonths: resolveServiceDurationMonths(service),
         billCycle: options.billCycle || buildBillCycle(nextBillingDate || referenceDate),
         billingAnchorDate: nextBillingDate || referenceDate,
+        dueDate: options.dueDate || nextBillingDate || undefined,
         advanceBillingSchedule: explicitScope ? false : options.advanceBillingSchedule !== false
       }));
     }
