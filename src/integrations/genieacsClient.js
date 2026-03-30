@@ -543,6 +543,7 @@ export class GenieacsClient {
         pathOrPaths === profile.ssid5Path ||
         pathOrPaths === profile.pass5Path
       );
+      const configMultiPath = Boolean(options.configMultiPath);
       const dynamicPaths =
         pathOrPaths === profile.pppoeUsernamePath
           ? dynamicPppoeUsernamePaths
@@ -564,7 +565,9 @@ export class GenieacsClient {
         : paths;
       const selectedPaths = wifiMultiPath
         ? paths
-        : (writablePaths.length ? writablePaths : paths).slice(0, 1);
+        : configMultiPath
+          ? (writablePaths.length ? writablePaths : paths)
+          : (writablePaths.length ? writablePaths : paths).slice(0, 1);
       for (const path of selectedPaths) {
         if (path && value !== undefined && value !== null && value !== "") {
           const normalizedValue = transform(value);
@@ -576,8 +579,9 @@ export class GenieacsClient {
         }
       }
     };
-    push(profile.pppoeUsernamePath, pppoeUsername);
-    push(profile.pppoePasswordPath, pppoePassword);
+    const isDasan = String(brand || "").toLowerCase() === "dasan";
+    push(profile.pppoeUsernamePath, pppoeUsername, undefined, (input) => input, { configMultiPath: isDasan });
+    push(profile.pppoePasswordPath, pppoePassword, undefined, (input) => input, { configMultiPath: isDasan });
     if (vlanId !== undefined && vlanId !== null && vlanId !== "") {
       push(profile.vlanPath, vlanId, "xsd:unsignedInt", Number);
     }

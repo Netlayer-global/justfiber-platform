@@ -124,12 +124,17 @@ const BRAND_OVERRIDES = {
     pppoeUsernamePath: [
       `${IGD_PPP}.Username`,
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Username",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username"
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.UserName",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.UserName",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.Username",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.UserName"
     ],
     pppoePasswordPath: [
       `${IGD_PPP}.Password`,
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Password",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password"
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.Password"
     ],
     vlanPath: [
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.X_DZS_VlanID",
