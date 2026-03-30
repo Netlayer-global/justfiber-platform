@@ -533,6 +533,21 @@ export default function BillingPage() {
     }
   }
 
+  async function sendPaymentRetryReminder(transactionId: string) {
+    try {
+      const res = await adminAPI.sendBillingRetryReminder(transactionId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to send retry reminder')
+        return
+      }
+      toast.success('Retry reminder sent')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to send payment retry reminder:', error)
+      toast.error('Failed to send retry reminder')
+    }
+  }
+
   async function dispatchInvoice(invoiceId: string) {
     try {
       const res = await adminAPI.dispatchInvoice(invoiceId)
@@ -1848,6 +1863,17 @@ export default function BillingPage() {
                         <div className="mt-1 text-xs text-slate-500">
                           Unallocated Rs {Number(item.unallocatedAmount || 0).toFixed(2)}
                         </div>
+                        <div className="mt-2 flex flex-wrap justify-end gap-2">
+                          <button className="btn-secondary" onClick={() => void reconcilePayment(item.transactionId, item.invoiceId)}>
+                            Reconcile
+                          </button>
+                          <button className="btn-secondary" onClick={() => void sendPaymentRetryReminder(item.transactionId)}>
+                            Retry reminder
+                          </button>
+                          <Link href={`/customers/${encodeURIComponent(item.customerId)}`} className="btn-secondary">
+                            Open customer
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1978,9 +2004,14 @@ export default function BillingPage() {
                     </td>
                     <td className="table-cell text-right">
                       {payment.reconciliationStatus !== 'reconciled' ? (
-                        <button className="btn-secondary" onClick={() => void reconcilePayment(payment.transactionId, payment.invoiceId)}>
-                          Reconcile
-                        </button>
+                        <>
+                          <button className="btn-secondary" onClick={() => void reconcilePayment(payment.transactionId, payment.invoiceId)}>
+                            Reconcile
+                          </button>
+                          <button className="btn-secondary mt-2" onClick={() => void sendPaymentRetryReminder(payment.transactionId)}>
+                            Retry reminder
+                          </button>
+                        </>
                       ) : null}
                       {(payment.provider === 'razorpay' && (payment.status === 'captured' || payment.status === 'success')) ? (
                         <button
