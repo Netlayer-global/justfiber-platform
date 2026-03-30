@@ -34,8 +34,10 @@ import { normalizeInstallerIdentifier } from "./modules/installerApp/routes.js";
 import { renderInstallerActivationSms } from "./common/installerMessaging.js";
 import {
   createLedgerEntry,
+  deriveInvoiceLifecycle,
   findBestInvoiceForPayment,
   reconcilePaymentToInvoice,
+  syncInvoiceLifecycle,
   syncCustomerBillingState
 } from "./common/billingAccounting.js";
 
@@ -1260,6 +1262,62 @@ async function runRecurringBillingTasks() {
       };
       run.results = result.results || [];
       await run.save();
+
+      const createdInvoices = (result.results || [])
+        .filter((item) => item?.invoice?.invoiceId)
+        .map((item) => item.invoice);
+      for (const createdInvoice of createdInvoices) {
+        const invoice = await BillingInvoice.findOne({ invoiceId: createdInvoice.invoiceId });
+        if (!invoice) continue;
+        if (String(invoice.paymentStatus || "").toLowerCase() === "paid") {
+          await syncInvoiceLifecycle(invoice);
+          continue;
+        }
+        const customer = await Customer.findOne({ customerId: invoice.customerId });
+        if (!customer || (!customer.phone && !customer.email)) {
+          await syncInvoiceLifecycle(invoice);
+          continue;
+        }
+        if (invoice.metadata?.dispatchedAt) {
+          await syncInvoiceLifecycle(invoice);
+          continue;
+        }
+        const invoiceUrl = `${env.appBaseUrl.replace(/\/$/, "")}/api/v1/admin/billing/invoices/${encodeURIComponent(invoice.invoiceId)}/pdf`;
+        const message = await buildBillingNotificationContent({
+          eventKey: "billing_invoice",
+          customer,
+          invoice,
+          actionUrl: invoiceUrl,
+          metadata: {
+            invoiceId: invoice.invoiceId,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceUrl,
+            automation: "billing_generation_dispatch"
+          }
+        });
+        await notificationDispatcher.dispatchEvent({
+          eventKey: "billing_invoice",
+          recipients: {
+            email: customer.email,
+            sms: customer.phone
+          },
+          subject: message?.subject || `Invoice ${invoice.invoiceNumber}`,
+          body:
+            message?.body ||
+            `Dear ${customer.fullName}, your invoice ${invoice.invoiceNumber} for Rs ${Number(invoice.totalAmount || 0).toFixed(2)} is now ready. Due date is ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}.`,
+          entityType: "billing_invoice",
+          entityId: invoice.invoiceId,
+          metadata: {
+            invoiceId: invoice.invoiceId,
+            automation: "billing_generation_dispatch",
+            ...(message?.branding || {})
+          }
+        }).catch(() => null);
+        await syncInvoiceLifecycle(invoice, {
+          dispatchedAt: new Date(),
+          dispatchSource: "billing_scheduler"
+        });
+      }
     }
 
     const upcomingDueInvoices = await BillingInvoice.find({
@@ -1305,7 +1363,10 @@ async function runRecurringBillingTasks() {
     });
     for (const invoice of overdueInvoices) {
       invoice.paymentStatus = "overdue";
-      await invoice.save();
+      await syncInvoiceLifecycle(invoice, {
+        overdueMarkedAt: new Date(),
+        overdueMarkedBy: "billing_scheduler"
+      });
       await Customer.updateOne(
         { customerId: invoice.customerId },
         {
@@ -1316,6 +1377,9 @@ async function runRecurringBillingTasks() {
         }
       );
       const customer = await Customer.findOne({ customerId: invoice.customerId });
+      if (customer) {
+        await syncCustomerBillingState(customer.customerId, customer);
+      }
       if (customer?.phone || customer?.email) {
         if (canSendCollectionEvent(customer, "lastOverdueReminderAt", invoice.invoiceId, now)) {
           const message = await buildBillingNotificationContent({
@@ -1437,6 +1501,7 @@ async function runRecurringBillingTasks() {
         continue;
       }
       const { invoice, confidenceScore, matchReason, matchedBy } = match;
+      const lifecycleBefore = deriveInvoiceLifecycle(invoice);
 
       const settlement = await reconcilePaymentToInvoice({
         payment,
@@ -1448,7 +1513,8 @@ async function runRecurringBillingTasks() {
         ledgerSource: "billing_scheduler",
         ledgerNote: "Auto-reconciled payment",
         ledgerMetadata: {
-          reconciliationMode: "auto_worker"
+          reconciliationMode: "auto_worker",
+          lifecycleBefore
         }
       });
 

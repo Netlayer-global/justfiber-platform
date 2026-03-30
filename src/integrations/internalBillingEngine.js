@@ -3,6 +3,7 @@ import { BillingLedgerEntry } from "../models/BillingLedgerEntry.js";
 import { BillingProfile } from "../models/BillingProfile.js";
 import { Customer } from "../models/Customer.js";
 import { SubscriberService } from "../models/SubscriberService.js";
+import { deriveInvoiceLifecycle, syncInvoiceLifecycle } from "../common/billingAccounting.js";
 
 const ADVANCE_INVOICE_LEAD_DAYS = 7;
 
@@ -398,7 +399,7 @@ export class InternalBillingEngine {
       taxBreakdown: amounts.taxBreakdown || [],
       lineItems,
       currency: billingProfile?.currency || "INR",
-      status: "generated",
+      status: options.paymentStatus === "paid" ? "settled" : "generated",
       paymentStatus: options.paymentStatus || "pending",
       source: options.source || "internal_platform",
       metadata: {
@@ -413,6 +414,10 @@ export class InternalBillingEngine {
         sourceEvent,
         activationJobId
       }
+    });
+
+    await syncInvoiceLifecycle(invoice, {
+      lifecycleStatus: deriveInvoiceLifecycle(invoice)
     });
 
     await createInvoiceLedgerEntry(invoice);

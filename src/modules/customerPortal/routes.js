@@ -38,6 +38,7 @@ import { radiusServiceManager } from "../../integrations/radiusServiceManager.js
 import { syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
 import {
   createLedgerEntry,
+  deriveInvoiceLifecycle,
   markInvoicePaid,
   reconcilePaymentToInvoice,
   syncCustomerBillingState
@@ -2314,6 +2315,7 @@ customerPortalRouter.get(
         dueAmount,
         recurringAmount,
         paymentStatus: effectivePaymentStatus,
+        invoiceLifecycle: latestInvoice ? deriveInvoiceLifecycle(latestInvoice) : "unknown",
         lastPaymentAmount: payments[0]?.amount || 0,
         lastPaymentDate: payments[0]?.paidAt || null,
         invoiceCount,
@@ -2331,6 +2333,7 @@ customerPortalRouter.get(
       },
       invoices: invoices.map((invoice) => ({
         ...invoice,
+        lifecycleStatus: deriveInvoiceLifecycle(invoice),
         viewUrl: `/api/v1/customer/billing/invoices/${encodeURIComponent(invoice.invoiceId || invoice.invoiceNumber)}/pdf?format=html`,
         pdfUrl: `/api/v1/customer/billing/invoices/${encodeURIComponent(invoice.invoiceId || invoice.invoiceNumber)}/pdf`
       })),
@@ -2477,6 +2480,7 @@ customerPortalRouter.get(
             0
         ) || 0,
       paymentStatus: effectivePaymentStatus,
+      invoiceLifecycle: latestInvoice ? deriveInvoiceLifecycle(latestInvoice) : "unknown",
       dueAmount,
       invoiceCount,
       latestInvoiceNumber: latestInvoice?.invoiceNumber || latestInvoice?.invoiceId || "",

@@ -37,9 +37,11 @@ import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SystemConfig } from "../../models/SystemConfig.js";
 import {
   createLedgerEntry,
+  deriveInvoiceLifecycle,
   findBestInvoiceForPayment,
   markInvoicePaid,
   reconcilePaymentToInvoice,
+  syncInvoiceLifecycle,
   syncCustomerBillingState
 } from "../../common/billingAccounting.js";
 
@@ -2236,6 +2238,14 @@ adminOpsRouter.post(
       entityId: invoice.invoiceId,
       metadata: { invoiceId: invoice.invoiceId, invoiceNumber: invoice.invoiceNumber, invoiceUrl, attachments, ...(message?.branding || {}) }
     });
+    const invoiceDoc = await BillingInvoice.findOne({ invoiceId: invoice.invoiceId });
+    if (invoiceDoc) {
+      await syncInvoiceLifecycle(invoiceDoc, {
+        dispatchedAt: new Date(),
+        dispatchSource: "admin_console",
+        dispatchedByAdminId: req.admin?._id || null
+      });
+    }
     return ok(res, { dispatched: true, invoiceId: invoice.invoiceId, invoiceUrl, attachments });
   })
 );
@@ -2412,6 +2422,7 @@ adminOpsRouter.post(
       transactionId: payment.transactionId,
       invoiceId: invoice.invoiceId,
       reconciliationStatus: payment.reconciliationStatus,
+      invoiceLifecycle: deriveInvoiceLifecycle(invoice),
       confidenceScore,
       matchReason,
       matchedBy
@@ -2516,7 +2527,8 @@ adminOpsRouter.post(
         customerId,
         amount,
         status: "reconciled",
-        invoiceId: invoice.invoiceId
+        invoiceId: invoice.invoiceId,
+        invoiceLifecycle: deriveInvoiceLifecycle(invoice)
       });
     }
 

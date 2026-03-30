@@ -7,6 +7,38 @@ function roundCurrency(value) {
   return Number(Number(value || 0).toFixed(2));
 }
 
+export function deriveInvoiceLifecycle(invoice, now = new Date()) {
+  if (!invoice) return "unknown";
+  const status = String(invoice.status || "").toLowerCase();
+  const paymentStatus = String(invoice.paymentStatus || "").toLowerCase();
+  const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
+  const dispatchedAt = invoice.metadata?.dispatchedAt ? new Date(invoice.metadata.dispatchedAt) : null;
+
+  if (status === "void") return "void";
+  if (paymentStatus === "paid" || status === "settled") return "settled";
+  if (paymentStatus === "overdue") return "overdue";
+  if (dueDate && !Number.isNaN(dueDate.getTime()) && dueDate.getTime() < now.getTime() && paymentStatus !== "paid") {
+    return "overdue";
+  }
+  if (status === "partially_paid" || paymentStatus === "partially_paid") return "partially_paid";
+  if (status === "dispatched" || (dispatchedAt && !Number.isNaN(dispatchedAt.getTime()))) return "dispatched";
+  if (status === "draft") return "draft";
+  return "generated";
+}
+
+export async function syncInvoiceLifecycle(invoice, updates = {}) {
+  if (!invoice) return null;
+  const lifecycle = deriveInvoiceLifecycle(invoice);
+  invoice.status = lifecycle === "overdue" ? "overdue" : lifecycle;
+  invoice.metadata = {
+    ...(invoice.metadata || {}),
+    lifecycleStatus: lifecycle,
+    ...updates
+  };
+  await invoice.save();
+  return invoice;
+}
+
 export function computeBalanceAfter({ currentBalance, direction, amount }) {
   return roundCurrency(Number(currentBalance || 0) + (direction === "debit" ? Number(amount || 0) : -Number(amount || 0)));
 }
