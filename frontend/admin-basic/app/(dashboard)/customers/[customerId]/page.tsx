@@ -647,6 +647,112 @@ export default function CustomerDetailPage() {
     }
   }
 
+  async function handleBillingReminder() {
+    if (!customer) return
+    const targetCustomerId = customer.customerId || customerId
+    try {
+      setIsSaving(true)
+      const invoiceId =
+        typeof billingCollections.lastReminderInvoiceId === 'string'
+          ? billingCollections.lastReminderInvoiceId
+          : undefined
+      const res = await adminAPI.sendBillingCollectionReminder(targetCustomerId, invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to send billing reminder')
+        return
+      }
+      toast.success('Billing reminder sent')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to send billing reminder:', error)
+      toast.error('Failed to send billing reminder')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleBillingFollowUp() {
+    if (!customer) return
+    const targetCustomerId = customer.customerId || customerId
+    const note = window.prompt('Follow-up note', billingControlCenter?.latestFollowUpNote || 'Customer contacted from billing console')
+    if (!note || !note.trim()) return
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.addBillingCollectionFollowUp(targetCustomerId, note.trim())
+      if (!res.success) {
+        toast.error(res.error || 'Failed to save follow-up')
+        return
+      }
+      toast.success('Follow-up saved')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to save billing follow-up:', error)
+      toast.error('Failed to save follow-up')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleBillingPromiseReview() {
+    if (!customer) return
+    const targetCustomerId = customer.customerId || customerId
+    const promisedAt = window.prompt(
+      'Promise date (YYYY-MM-DD)',
+      String(billingControlCenter?.promiseToPayAt || new Date().toISOString().slice(0, 10)).slice(0, 10)
+    )
+    if (!promisedAt || !promisedAt.trim()) return
+    const amountInput = window.prompt(
+      'Promise amount (optional)',
+      billingControlCenter?.promiseAmount ? String(billingControlCenter.promiseAmount) : ''
+    )
+    const note = window.prompt('Promise note', billingControlCenter?.promiseNote || 'Reviewed from billing control center') || ''
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.setBillingPromiseToPay(targetCustomerId, {
+        promisedAt: promisedAt.trim(),
+        amount: amountInput && amountInput.trim() ? Number(amountInput) : undefined,
+        note,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to update promise to pay')
+        return
+      }
+      toast.success('Promise to pay updated')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to update billing promise to pay:', error)
+      toast.error('Failed to update promise to pay')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleRecommendedBillingAction(code: string) {
+    switch (code) {
+      case 'send_reminder':
+        await handleBillingReminder()
+        return
+      case 'log_follow_up':
+        await handleBillingFollowUp()
+        return
+      case 'suspend_service':
+        await handleBillingSuspendService()
+        return
+      case 'resume_service':
+        await handleBillingResumeService(false)
+        return
+      case 'review_promise_to_pay':
+        await handleBillingPromiseReview()
+        return
+      case 'sync_service_state':
+        await loadCustomer()
+        toast.success('Billing state refreshed')
+        return
+      default:
+        toast.message(`Action ${code} is available in control center workflows`)
+    }
+  }
+
   async function handlePreviewPlanChange(targetPlanCode?: string) {
     const nextPlanCode = targetPlanCode || planCode
     if (!customer || !nextPlanCode) {
@@ -1450,6 +1556,13 @@ export default function CustomerDetailPage() {
                               </span>
                             </div>
                             <p className="mt-2 text-sm text-slate-600">{item.reason}</p>
+                            <button
+                              className="btn-secondary mt-3"
+                              onClick={() => void handleRecommendedBillingAction(item.code)}
+                              disabled={isSaving}
+                            >
+                              Run action
+                            </button>
                           </div>
                         )) : (
                           <p className="text-sm text-slate-500">No immediate billing actions recommended.</p>
