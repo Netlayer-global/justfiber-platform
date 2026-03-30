@@ -65,13 +65,31 @@ async function loginAdmin() {
   return token;
 }
 
-async function loginCustomer(mobile) {
+async function resolveCustomerOtp({ mobile, adminToken }) {
   const otpResponse = await requestJson({
     method: "POST",
     path: "/api/v1/customer/auth/send-otp",
     body: { mobile }
   });
-  const otp = requireDemoOtp(otpResponse, "/api/v1/customer/auth/send-otp");
+  if (otpResponse?.data?.demoOtp) {
+    return otpResponse.data.demoOtp;
+  }
+  if (!adminToken) {
+    return requireDemoOtp(otpResponse, "/api/v1/customer/auth/send-otp");
+  }
+  const adminOtp = await requestJson({
+    path: `/api/v1/admin/customer-auth/demo-otp?mobile=${encodeURIComponent(mobile)}`,
+    token: adminToken
+  });
+  const otp = String(adminOtp?.data?.otp || "").trim();
+  if (!otp) {
+    throw new Error(`Admin demo OTP lookup did not return OTP for ${mobile}`);
+  }
+  return otp;
+}
+
+async function loginCustomer(mobile, adminToken) {
+  const otp = await resolveCustomerOtp({ mobile, adminToken });
   const login = await requestJson({
     method: "POST",
     path: "/api/v1/customer/auth/verify-otp",
@@ -83,8 +101,8 @@ async function loginCustomer(mobile) {
   return token;
 }
 
-async function verifyCustomerBilling({ mobile, expectedDueState }) {
-  const token = await loginCustomer(mobile);
+async function verifyCustomerBilling({ mobile, expectedDueState, adminToken }) {
+  const token = await loginCustomer(mobile, adminToken);
   const summary = await requestJson({
     path: "/api/v1/customer/billing/summary",
     token
@@ -208,11 +226,13 @@ async function runBillingAutomationTest() {
   await verifyAdminBilling(adminToken);
   await verifyCustomerBilling({
     mobile: process.env.BILLING_TEST_CLEAR_MOBILE || "9876543210",
-    expectedDueState: "clear"
+    expectedDueState: "clear",
+    adminToken
   });
   await verifyCustomerBilling({
     mobile: process.env.BILLING_TEST_OVERDUE_MOBILE || "9876543211",
-    expectedDueState: "overdue"
+    expectedDueState: "overdue",
+    adminToken
   });
   await verifySchedulerGuardrails();
 
