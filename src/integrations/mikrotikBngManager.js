@@ -6,6 +6,24 @@ import { SubscriberService } from "../models/SubscriberService.js";
 
 const execFileAsync = promisify(execFile);
 
+function parseRadclientResult({ target, stdout = "", stderr = "", exitCode = 0 } = {}) {
+  const normalizedStdout = String(stdout || "").trim();
+  const normalizedStderr = String(stderr || "").trim();
+  const combined = `${normalizedStdout}\n${normalizedStderr}`;
+  const acknowledged =
+    /Disconnect-ACK/i.test(combined) ||
+    /CoA-ACK/i.test(combined) ||
+    /Received\s+Disconnect-ACK/i.test(combined);
+
+  return {
+    target,
+    stdout: normalizedStdout,
+    stderr: normalizedStderr,
+    exitCode,
+    acknowledged
+  };
+}
+
 function resolveCoaConfig(bngNode) {
   const host = String(bngNode?.coaHost || bngNode?.managementIp || bngNode?.radiusClientIp || "").trim();
   const secret = String(bngNode?.coaSecret || env.MIKROTIK_BNG_COA_SECRET || "").trim();
@@ -31,20 +49,39 @@ function buildDisconnectPayload({ radiusUsername, service, bngNode }) {
 
 async function runDisconnect({ host, port, secret, payload }) {
   const target = `${host}:${port}`;
-  const result = await execFileAsync(
-    env.RADCLIENT_BIN,
-    ["-x", target, "disconnect", secret],
-    {
-      input: payload,
-      windowsHide: true,
-      timeout: 15000,
-      maxBuffer: 1024 * 1024
+  try {
+    const result = await execFileAsync(
+      env.RADCLIENT_BIN,
+      ["-x", target, "disconnect", secret],
+      {
+        input: payload,
+        windowsHide: true,
+        timeout: 15000,
+        maxBuffer: 1024 * 1024
+      }
+    );
+    return parseRadclientResult({
+      target,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      exitCode: 0
+    });
+  } catch (error) {
+    const parsed = parseRadclientResult({
+      target,
+      stdout: error?.stdout,
+      stderr: error?.stderr,
+      exitCode: Number(error?.code ?? 1)
+    });
+    if (parsed.acknowledged) {
+      return parsed;
     }
-  );
-  return {
-    target,
-    stdout: String(result.stdout || "").trim(),
-    stderr: String(result.stderr || "").trim()
+    throw Object.assign(error instanceof Error ? error : new Error("COA disconnect failed"), {
+      target,
+      stdout: parsed.stdout,
+      stderr: parsed.stderr,
+      exitCode: parsed.exitCode
+    });
   };
 }
 
@@ -91,6 +128,8 @@ export class MikrotikBngManager {
         action: reason,
         bngNodeCode: bngNode.nodeCode,
         target: result.target,
+        exitCode: result.exitCode,
+        acknowledged: Boolean(result.acknowledged),
         stdout: result.stdout,
         stderr: result.stderr
       };
@@ -101,6 +140,9 @@ export class MikrotikBngManager {
         action: reason,
         bngNodeCode: bngNode.nodeCode,
         target: `${host}:${port}`,
+        exitCode: Number(error?.exitCode ?? 1),
+        stdout: String(error?.stdout || "").trim(),
+        stderr: String(error?.stderr || "").trim(),
         error: error instanceof Error ? error.message : "COA disconnect failed"
       };
     }
