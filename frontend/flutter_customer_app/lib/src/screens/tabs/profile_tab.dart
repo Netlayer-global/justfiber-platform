@@ -27,6 +27,7 @@ class ProfileTab extends StatelessWidget {
     final recurringAmountLabel = billing.lastPaymentAmount > 0
         ? 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'
         : 'Rs ${billing.dueAmount.toStringAsFixed(0)}';
+    final billingStateLabel = billing.customerStateLabel;
 
     return RefreshIndicator(
       color: const Color(0xFF8224E3),
@@ -80,7 +81,7 @@ class ProfileTab extends StatelessWidget {
                   children: [
                     Expanded(child: _topMetric('Due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}')),
                     const SizedBox(width: 10),
-                    Expanded(child: _topMetric('Devices', '${wifi.connectedDevicesCount} online')),
+                    Expanded(child: _topMetric('Billing', billingStateLabel)),
                   ],
                 ),
               ],
@@ -182,6 +183,7 @@ class ProfileTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _row('Billing state', billingStateLabel),
               _row('Payment status', billing.paymentStatus.isEmpty ? '-' : billing.paymentStatus),
               _row('Due amount', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
               _row('Next bill date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),

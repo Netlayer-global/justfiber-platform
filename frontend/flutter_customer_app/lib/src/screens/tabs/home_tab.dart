@@ -43,6 +43,7 @@ class HomeTab extends StatelessWidget {
     final showUpgradePrompt = hasService && hasUsagePressure;
     final billingCycleLabel = billing.billCycle.isNotEmpty ? billing.billCycle : 'Monthly';
     final nextBillDateLabel = billing.nextBillDate.isNotEmpty ? billing.nextBillDate : 'Will update after activation';
+    final billingStateLabel = billing.customerStateLabel;
     final serviceStatusLabel = dashboard.serviceStatus.isNotEmpty
         ? dashboard.serviceStatus
         : (selectedConnection?.status.isNotEmpty == true ? selectedConnection!.status : (hasService ? 'active' : 'no service'));
@@ -141,7 +142,7 @@ class HomeTab extends StatelessWidget {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _metricPill('Due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
+                  _metricPill('Due', billing.dueAmount > 0 ? 'Rs ${billing.dueAmount.toStringAsFixed(0)}' : 'Clear'),
                   _metricPill('Status', hasService ? (wifi.paused ? 'Paused' : serviceStatusLabel) : 'No service'),
                   _metricPill('Devices', '${wifi.connectedDevicesCount}'),
                 ],
@@ -196,7 +197,7 @@ class HomeTab extends StatelessWidget {
                       children: [
                         Expanded(child: _summaryBox('Next bill', nextBillDateLabel)),
                         const SizedBox(width: 10),
-                        Expanded(child: _summaryBox('Cycle', billingCycleLabel)),
+                        Expanded(child: _summaryBox('Billing state', billingStateLabel)),
                       ],
                     ),
                   ],
@@ -253,7 +254,7 @@ class HomeTab extends StatelessWidget {
                             Text(
                               billing.dueAmount > 0
                                   ? 'Pay Rs ${billing.dueAmount.toStringAsFixed(0)} to keep the line in good standing.'
-                                  : 'Your latest billing status has been refreshed.',
+                                  : 'Current billing state: $billingStateLabel.',
                               style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
                             ),
                           ],
@@ -549,6 +550,14 @@ class HomeTab extends StatelessWidget {
                           Expanded(child: _summaryBox('Next bill / expiry', nextBillDateLabel)),
                         ],
                       ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(child: _summaryBox('Billing state', billingStateLabel)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _summaryBox('Latest invoice', billing.latestInvoiceNumber.isEmpty ? 'Pending generation' : billing.latestInvoiceNumber)),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -744,6 +753,7 @@ class HomeTab extends StatelessWidget {
               const SizedBox(height: 14),
               _infoRow('Current plan', planName),
               _infoRow('Wi-Fi name', wifiName),
+              _infoRow('Billing state', billingStateLabel),
               _infoRow('Next bill date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),
               _infoRow('Recurring amount', billing.recurringAmount > 0 ? 'Rs ${billing.recurringAmount.toStringAsFixed(2)}' : '-'),
               _infoRow('Connected devices', '${wifi.connectedDevicesCount}'),

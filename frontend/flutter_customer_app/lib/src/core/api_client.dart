@@ -245,6 +245,7 @@ class ApiClient {
         generatedAt: (map['generatedAt'] ?? '').toString(),
         dueDate: (map['dueDate'] ?? '').toString(),
         paymentStatus: (map['paymentStatus'] ?? 'unknown').toString(),
+        lifecycleStatus: (map['lifecycleStatus'] ?? '').toString(),
         viewUrl: (map['viewUrl'] ?? '').toString(),
         pdfUrl: (map['pdfUrl'] ?? '').toString(),
       );
@@ -284,6 +285,7 @@ class ApiClient {
       billMode: (data['billMode'] ?? '').toString(),
       generatedDate: (data['generatedDate'] ?? '').toString(),
       paymentStatus: (data['paymentStatus'] ?? 'unknown').toString(),
+      invoiceLifecycle: (data['invoiceLifecycle'] ?? invoices.firstOrNull?.lifecycleStatus ?? '').toString(),
       latestInvoiceNumber: (data['latestInvoiceNumber'] ?? invoices.firstOrNull?.invoiceNumber ?? '').toString(),
       latestInvoiceStatus: (data['latestInvoiceStatus'] ?? invoices.firstOrNull?.paymentStatus ?? '').toString(),
       invoiceCount: int.tryParse('${data['invoiceCount'] ?? invoices.length}') ?? invoices.length,

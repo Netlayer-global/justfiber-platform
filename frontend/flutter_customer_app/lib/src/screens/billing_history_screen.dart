@@ -42,8 +42,8 @@ class BillingHistoryScreen extends StatelessWidget {
     final hasPromiseToPay = billing.promiseToPayAt.isNotEmpty;
 
     final latestInvoiceStatus = billing.latestInvoiceStatus.isEmpty
-        ? (latestInvoice?.paymentStatus.isNotEmpty == true ? latestInvoice!.paymentStatus : 'Not generated yet')
-        : billing.latestInvoiceStatus;
+        ? (latestInvoice?.customerStateLabel.isNotEmpty == true ? latestInvoice!.customerStateLabel : 'Not generated yet')
+        : billing.customerStateLabel;
     final lastPaymentLabel = billing.lastPaymentDate.isNotEmpty
         ? billing.lastPaymentDate
         : (latestPayment?.paidAt.isNotEmpty == true ? latestPayment!.paidAt : 'No payment recorded');
@@ -91,7 +91,7 @@ class BillingHistoryScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text(billing.dueAmount > 0 ? 'Current due' : 'Billing status', style: theme.textTheme.headlineSmall),
+                Text(billing.dueHeadline, style: theme.textTheme.headlineSmall),
                 const SizedBox(height: 10),
                 Text(
                   billing.dueAmount > 0 ? 'Rs ${billing.dueAmount.toStringAsFixed(2)}' : 'No due right now',
@@ -101,7 +101,7 @@ class BillingHistoryScreen extends StatelessWidget {
                 Text(
                   billing.paymentStatus.isEmpty
                       ? 'Your active billing snapshot for this cycle'
-                      : 'Status: ${billing.paymentStatus}',
+                      : 'Status: ${billing.customerStateLabel}',
                   style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 14),
@@ -565,7 +565,7 @@ class BillingHistoryScreen extends StatelessWidget {
                                   ? 'Generated ${item.generatedAt.isEmpty ? '-' : item.generatedAt}'
                                   : 'Due ${item.dueDate}',
                               amount: 'Rs ${item.totalAmount.toStringAsFixed(2)}',
-                              meta: item.paymentStatus,
+                              meta: item.customerStateLabel,
                               viewUrl: item.viewUrl,
                               pdfUrl: item.pdfUrl,
                               primaryActionLabel: 'Open invoice',

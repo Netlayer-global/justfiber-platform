@@ -107,6 +107,7 @@ class BillingData {
     required this.billMode,
     required this.generatedDate,
     required this.paymentStatus,
+    required this.invoiceLifecycle,
     required this.latestInvoiceNumber,
     required this.latestInvoiceStatus,
     required this.invoiceCount,
@@ -144,6 +145,7 @@ class BillingData {
   final String billMode;
   final String generatedDate;
   final String paymentStatus;
+  final String invoiceLifecycle;
   final String latestInvoiceNumber;
   final String latestInvoiceStatus;
   final int invoiceCount;
@@ -179,6 +181,7 @@ class BillingInvoiceItem {
     required this.generatedAt,
     required this.dueDate,
     required this.paymentStatus,
+    required this.lifecycleStatus,
     required this.viewUrl,
     required this.pdfUrl,
   });
@@ -188,8 +191,45 @@ class BillingInvoiceItem {
   final String generatedAt;
   final String dueDate;
   final String paymentStatus;
+  final String lifecycleStatus;
   final String viewUrl;
   final String pdfUrl;
+}
+
+extension BillingPresentation on BillingData {
+  String get customerStateLabel {
+    final service = serviceStatus.trim().toLowerCase();
+    final lifecycle = invoiceLifecycle.trim().toLowerCase();
+    final payment = paymentStatus.trim().toLowerCase();
+    if (service == 'suspended' && dueAmount > 0) return 'Suspended for non-payment';
+    if (lastSuspensionWarningAt.isNotEmpty) return 'Suspension risk';
+    if (lifecycle == 'overdue' || lastOverdueReminderAt.isNotEmpty) return 'Overdue';
+    if (dueAmount > 0) return 'Due soon';
+    if (lifecycle == 'settled' || payment == 'paid') return 'Settled';
+    if (service == 'active') return 'In good standing';
+    return _humanizeBillingToken(paymentStatus.isNotEmpty ? paymentStatus : invoiceLifecycle);
+  }
+
+  String get dueHeadline => dueAmount > 0 ? 'Current due' : customerStateLabel;
+}
+
+extension BillingInvoicePresentation on BillingInvoiceItem {
+  String get customerStateLabel {
+    if (lifecycleStatus.trim().isNotEmpty) {
+      return _humanizeBillingToken(lifecycleStatus);
+    }
+    return _humanizeBillingToken(paymentStatus);
+  }
+}
+
+String _humanizeBillingToken(String raw) {
+  final normalized = raw.trim();
+  if (normalized.isEmpty) return '-';
+  final compact = normalized.replaceAll(RegExp(r'[_-]+'), ' ');
+  final words = compact.split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+  return words
+      .map((word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
+      .join(' ');
 }
 
 class BillingPaymentItem {
