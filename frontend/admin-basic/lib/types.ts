@@ -960,6 +960,17 @@ export interface CustomerBillingControlResponse {
   controlCenter?: BillingControlCenter
   riskProfile?: BillingRiskProfile
   recommendedActions?: BillingRecommendedAction[]
+  pendingApprovals?: Array<{
+    id: string
+    actionType: string
+    status: string
+    createdAt?: string
+    requestedBy?: string
+    amount?: number
+    invoiceId?: string
+    note?: string
+    reasonCode?: string
+  }>
   invoices: any[]
   payments: any[]
   ledger: any[]

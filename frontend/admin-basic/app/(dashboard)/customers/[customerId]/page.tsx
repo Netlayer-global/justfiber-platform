@@ -201,6 +201,7 @@ export default function CustomerDetailPage() {
   const billingControlCenter = customerBillingControl?.controlCenter
   const billingRiskProfile = customerBillingControl?.riskProfile
   const billingRecommendedActions = customerBillingControl?.recommendedActions || []
+  const billingPendingApprovals = customerBillingControl?.pendingApprovals || []
   const billingTimeline = customerBillingControl?.timeline || []
   const billingWaivers = customerBillingControl?.waivers || []
   const billingWriteoffs = customerBillingControl?.writeoffs || []
@@ -620,7 +621,11 @@ export default function CustomerDetailPage() {
         toast.error(res.error || 'Failed to create waiver')
         return
       }
-      toast.success('Billing waiver posted')
+      if ((res.data as any)?.approvalRequired) {
+        toast.success('Billing waiver submitted for approval')
+      } else {
+        toast.success('Billing waiver posted')
+      }
       await loadCustomer()
     } catch (error) {
       console.error('[v0] Failed to create billing waiver:', error)
@@ -649,7 +654,11 @@ export default function CustomerDetailPage() {
         toast.error(res.error || 'Failed to create write-off')
         return
       }
-      toast.success('Billing write-off posted')
+      if ((res.data as any)?.approvalRequired) {
+        toast.success('Billing write-off submitted for approval')
+      } else {
+        toast.success('Billing write-off posted')
+      }
       await loadCustomer()
     } catch (error) {
       console.error('[v0] Failed to create billing write-off:', error)
@@ -1672,6 +1681,33 @@ export default function CustomerDetailPage() {
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                           <div className="font-semibold text-slate-900">Risk score {billingRiskProfile.score}</div>
                           <div className="mt-1">{billingRiskProfile.reason}</div>
+                        </div>
+                      ) : null}
+                      {billingPendingApprovals.length ? (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <h3 className="font-semibold text-amber-900">Pending finance approvals</h3>
+                              <p className="mt-1 text-sm text-amber-800">High-value commercial actions waiting for maker-checker approval.</p>
+                            </div>
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-700">
+                              {billingPendingApprovals.length} pending
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {billingPendingApprovals.map((item) => (
+                              <div key={item.id} className="rounded-lg bg-white px-3 py-3 text-sm text-slate-700">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="font-semibold text-slate-900">
+                                    {item.actionType === 'billing_waiver' ? 'Waiver approval' : 'Write-off approval'}
+                                  </div>
+                                  <div className="text-xs text-slate-500">{formatDateTime(item.createdAt)}</div>
+                                </div>
+                                <div className="mt-1">Rs {Number(item.amount || 0).toFixed(2)} {item.invoiceId ? `| Invoice ${item.invoiceId}` : ''}</div>
+                                {item.note ? <div className="mt-1 text-xs text-slate-500">{item.note}</div> : null}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ) : null}
                     </div>

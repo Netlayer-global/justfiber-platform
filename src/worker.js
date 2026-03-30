@@ -40,6 +40,7 @@ import {
   syncInvoiceLifecycle,
   syncCustomerBillingState
 } from "./common/billingAccounting.js";
+import { applyCustomerWaiverResolution, applyCustomerWriteoffResolution } from "./common/billingResolutions.js";
 
 await connectMongo();
 await seedSystemData();
@@ -322,6 +323,55 @@ const worker = new Worker(
           deviceId: request.targetId,
           presetName: request.payload.presetName
         });
+      }
+      if (request.actionType === "billing_waiver") {
+        const customer = await Customer.findOne({ customerId: request.targetId });
+        if (!customer) {
+          throw new Error("Customer not found for billing waiver approval");
+        }
+        const result = await applyCustomerWaiverResolution({
+          customer,
+          amount: Number(request.payload?.amount || 0),
+          taxAmount: Number(request.payload?.taxAmount || 0),
+          taxMode: request.payload?.taxMode || "india_gst",
+          taxBreakdown: Array.isArray(request.payload?.taxBreakdown) ? request.payload.taxBreakdown : [],
+          invoiceId: request.payload?.invoiceId,
+          reasonCode: request.payload?.reasonCode || "waiver",
+          note: request.payload?.note || "Billing waiver approved",
+          metadata: {
+            ...(request.payload?.metadata || {}),
+            actionRequestId: request._id.toString()
+          },
+          createdByAdminId: request.approvers?.[request.approvers.length - 1]?.adminUserId || request.requestedBy,
+          source: "approval_billing_waiver"
+        });
+        request.status = "executed";
+        request.lastError = undefined;
+        await request.save();
+        return result;
+      }
+      if (request.actionType === "billing_writeoff") {
+        const customer = await Customer.findOne({ customerId: request.targetId });
+        if (!customer) {
+          throw new Error("Customer not found for billing write-off approval");
+        }
+        const result = await applyCustomerWriteoffResolution({
+          customer,
+          amount: Number(request.payload?.amount || 0),
+          invoiceId: request.payload?.invoiceId,
+          reference: request.payload?.reference || `WO-${Date.now()}`,
+          note: request.payload?.note || "Billing write-off approved",
+          metadata: {
+            ...(request.payload?.metadata || {}),
+            actionRequestId: request._id.toString()
+          },
+          createdByAdminId: request.approvers?.[request.approvers.length - 1]?.adminUserId || request.requestedBy,
+          source: "approval_billing_writeoff"
+        });
+        request.status = "executed";
+        request.lastError = undefined;
+        await request.save();
+        return result;
       }
       throw new Error(`Unsupported approved action type: ${request.actionType}`);
     }

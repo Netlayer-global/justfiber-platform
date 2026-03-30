@@ -46,9 +46,13 @@ import {
   syncInvoiceLifecycle,
   syncCustomerBillingState
 } from "../../common/billingAccounting.js";
+import { applyCustomerWaiverResolution, applyCustomerWriteoffResolution } from "../../common/billingResolutions.js";
+import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 
 export const adminOpsRouter = Router();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const WAIVER_APPROVAL_THRESHOLD = 1000;
+const WRITEOFF_APPROVAL_THRESHOLD = 2000;
 
 adminOpsRouter.use(requireAuth);
 
@@ -2699,7 +2703,7 @@ adminOpsRouter.get(
     if (!customer) {
       return ok(res, null);
     }
-    const [invoices, payments, ledger, service, waivers, writeoffs, timeline] = await Promise.all([
+    const [invoices, payments, ledger, service, waivers, writeoffs, timeline, pendingApprovals] = await Promise.all([
       BillingInvoice.find({ customerId: customer.customerId }).sort({ generatedAt: -1 }).limit(12).lean(),
       PaymentTransaction.find({ customerId: customer.customerId }).sort({ paidAt: -1 }).limit(12).lean(),
       BillingLedgerEntry.find({ customerId: customer.customerId }).sort({ postedAt: -1, createdAt: -1 }).limit(25).lean(),
@@ -2737,6 +2741,15 @@ adminOpsRouter.get(
       })
         .sort({ createdAt: -1 })
         .limit(25)
+        .lean(),
+      AdminActionRequest.find({
+        targetType: "customer",
+        targetId: customer.customerId,
+        actionType: { $in: ["billing_waiver", "billing_writeoff"] },
+        status: { $in: ["pending", "approved"] }
+      })
+        .sort({ createdAt: -1 })
+        .limit(10)
         .lean()
     ]);
     const collections = customer.billingSnapshot?.collections || {};
@@ -2828,6 +2841,17 @@ adminOpsRouter.get(
       ledger,
       waivers,
       writeoffs,
+      pendingApprovals: pendingApprovals.map((item) => ({
+        id: String(item._id),
+        actionType: item.actionType,
+        status: item.status,
+        createdAt: item.createdAt,
+        requestedBy: String(item.requestedBy || ""),
+        amount: Number(item.payload?.amount || 0),
+        invoiceId: item.payload?.invoiceId || "",
+        note: item.payload?.note || "",
+        reasonCode: item.payload?.reasonCode || ""
+      })),
       timeline: timeline.map((item) => ({
         id: String(item._id),
         action: item.action,
@@ -3778,9 +3802,50 @@ adminOpsRouter.post(
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new ApiError(400, "Valid positive waiver amount is required");
     }
-    const result = await applyBillingNoteAdjustment({
+    const requiresApproval = req.body?.submitForApproval === true || amount > WAIVER_APPROVAL_THRESHOLD;
+    if (requiresApproval) {
+      const request = await AdminActionRequest.create({
+        actionType: "billing_waiver",
+        targetType: "customer",
+        targetId: customer.customerId,
+        payload: {
+          amount,
+          taxAmount,
+          taxMode: req.body?.taxMode || "india_gst",
+          taxBreakdown: Array.isArray(req.body?.taxBreakdown) ? req.body.taxBreakdown : [],
+          invoiceId: req.body?.invoiceId,
+          reasonCode: req.body?.reasonCode || "waiver",
+          note: req.body?.note || "Billing waiver approved",
+          metadata: {
+            ...(req.body?.metadata || {}),
+            requestId: req.requestId
+          }
+        },
+        requestedBy: req.admin?._id,
+        status: "pending"
+      });
+      await auditFromRequest(req, {
+        action: "billing.waiver.approval_requested",
+        entityType: "customer",
+        entityId: customer.customerId,
+        metadata: {
+          actionRequestId: request._id.toString(),
+          amount,
+          threshold: WAIVER_APPROVAL_THRESHOLD
+        }
+      });
+      return ok(res, {
+        approvalRequired: true,
+        actionRequestId: request._id.toString(),
+        customerId: customer.customerId,
+        amount,
+        thresholdAmount: WAIVER_APPROVAL_THRESHOLD,
+        status: request.status
+      }, { created: true });
+    }
+
+    const result = await applyCustomerWaiverResolution({
       customer,
-      type: "credit",
       amount,
       taxAmount,
       taxMode: req.body?.taxMode || "india_gst",
@@ -3790,24 +3855,11 @@ adminOpsRouter.post(
       note: req.body?.note || "Billing waiver approved",
       metadata: {
         ...(req.body?.metadata || {}),
-        resolutionType: "waiver",
         requestId: req.requestId
       },
       createdByAdminId: req.admin?._id,
       source: "admin_billing_waiver"
     });
-
-    const refreshedCustomer = result.customer || (await Customer.findOne({ customerId: customer.customerId }));
-    if (refreshedCustomer) {
-      refreshedCustomer.billingSnapshot = buildCollectionsResolutionSnapshot(refreshedCustomer, {
-        lastResolutionType: "waiver",
-        lastResolutionAt: new Date(),
-        lastResolutionAmount: Number(result.note?.totalAmount || amount + taxAmount),
-        lastResolutionReference: result.note?.noteNumber || ""
-      });
-      await refreshedCustomer.save();
-      await syncCustomerBillingState(refreshedCustomer.customerId, refreshedCustomer);
-    }
 
     await auditFromRequest(req, {
       action: "billing.waiver.created",
@@ -3841,45 +3893,58 @@ adminOpsRouter.post(
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new ApiError(400, "Valid positive write-off amount is required");
     }
-    const entry = await createLedgerEntry({
-      customerId: customer.customerId,
-      serviceId: customer.serviceId,
-      invoiceId: req.body?.invoiceId,
-      category: "writeoff",
-      direction: "credit",
+    const requiresApproval = req.body?.submitForApproval === true || amount > WRITEOFF_APPROVAL_THRESHOLD;
+    if (requiresApproval) {
+      const request = await AdminActionRequest.create({
+        actionType: "billing_writeoff",
+        targetType: "customer",
+        targetId: customer.customerId,
+        payload: {
+          amount,
+          invoiceId: req.body?.invoiceId,
+          reference: req.body?.reference || "",
+          note: req.body?.note || "Billing write-off approved",
+          metadata: {
+            ...(req.body?.metadata || {}),
+            requestId: req.requestId
+          }
+        },
+        requestedBy: req.admin?._id,
+        status: "pending"
+      });
+      await auditFromRequest(req, {
+        action: "billing.writeoff.approval_requested",
+        entityType: "customer",
+        entityId: customer.customerId,
+        metadata: {
+          actionRequestId: request._id.toString(),
+          amount,
+          threshold: WRITEOFF_APPROVAL_THRESHOLD
+        }
+      });
+      return ok(res, {
+        approvalRequired: true,
+        actionRequestId: request._id.toString(),
+        customerId: customer.customerId,
+        amount,
+        thresholdAmount: WRITEOFF_APPROVAL_THRESHOLD,
+        status: request.status
+      }, { created: true });
+    }
+
+    const result = await applyCustomerWriteoffResolution({
+      customer,
       amount,
+      invoiceId: req.body?.invoiceId,
       reference: req.body?.reference || `WO-${Date.now()}`,
       note: req.body?.note || "Billing write-off approved",
-      source: "admin_writeoff",
-      createdByAdminId: req.admin?._id,
       metadata: {
         ...(req.body?.metadata || {}),
-        resolutionType: "writeoff",
         requestId: req.requestId
-      }
+      },
+      createdByAdminId: req.admin?._id,
+      source: "admin_writeoff"
     });
-
-    customer.billingSnapshot = buildCollectionsResolutionSnapshot(customer, {
-      lastResolutionType: "writeoff",
-      lastResolutionAt: new Date(),
-      lastResolutionAmount: amount,
-      lastResolutionReference: entry.entryId
-    });
-    await customer.save();
-    await syncCustomerBillingState(customer.customerId, customer);
-
-    if (req.body?.invoiceId) {
-      await BillingInvoice.updateOne(
-        { invoiceId: req.body.invoiceId, customerId: customer.customerId },
-        {
-          $set: {
-            "metadata.writeOffEntryId": entry.entryId,
-            "metadata.writeOffAt": new Date(),
-            "metadata.writeOffByAdminId": req.admin?._id
-          }
-        }
-      );
-    }
 
     await auditFromRequest(req, {
       action: "billing.writeoff.created",
@@ -3887,7 +3952,7 @@ adminOpsRouter.post(
       entityId: customer.customerId,
       metadata: {
         invoiceId: req.body?.invoiceId || "",
-        ledgerEntryId: entry.entryId,
+        ledgerEntryId: result.ledgerEntry.entryId,
         amount
       }
     });
@@ -3895,7 +3960,7 @@ adminOpsRouter.post(
     return ok(res, {
       writtenOff: true,
       customerId: customer.customerId,
-      ledgerEntry: entry
+      ledgerEntry: result.ledgerEntry
     }, { created: true });
   })
 );
