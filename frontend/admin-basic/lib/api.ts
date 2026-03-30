@@ -1746,6 +1746,19 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(data || {}),
     }),
+  executeBillingCollectionsBulkAction: async (data: {
+    action: string
+    bucket?: string
+    customerIds?: string[]
+    note?: string
+    reason?: string
+    force?: boolean
+    adminId?: string
+  }) =>
+    request('/api/v1/admin/billing/collections/bulk-execute', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   getBillingReconciliationSummary: async () =>
     request('/api/v1/admin/billing/reconciliation/summary'),
   getBillingFinanceResolutions: async (limit?: number) => {

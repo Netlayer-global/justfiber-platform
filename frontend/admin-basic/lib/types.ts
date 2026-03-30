@@ -811,6 +811,19 @@ export interface BillingCollectionsBulkPreview {
   }
 }
 
+export interface BillingCollectionsBulkExecuteResult {
+  action: string
+  selectedAccounts: number
+  succeeded: number
+  failed: number
+  results: Array<{
+    customerId: string
+    status: 'success' | 'failed'
+    error?: string
+    result?: Record<string, unknown>
+  }>
+}
+
 export interface BillingReconciliationStatusBucket {
   status: string
   count: number

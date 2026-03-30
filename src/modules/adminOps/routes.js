@@ -1058,6 +1058,156 @@ function buildCollectionsBulkPreview(items = [], customerIds = []) {
   };
 }
 
+async function executeCollectionsBulkAction({
+  req,
+  action,
+  item,
+  note,
+  reason,
+  force,
+  adminId
+}) {
+  const customer = await Customer.findOne({ customerId: item.customerId });
+  if (!customer) {
+    throw new ApiError(404, "Customer not found");
+  }
+
+  switch (action) {
+    case "send_reminder": {
+      const invoice = item.invoiceId
+        ? await BillingInvoice.findOne({ invoiceId: item.invoiceId, customerId: customer.customerId }).lean()
+        : await BillingInvoice.findOne({
+            customerId: customer.customerId,
+            paymentStatus: { $in: ["pending", "overdue"] }
+          })
+            .sort({ dueDate: 1, generatedAt: -1 })
+            .lean();
+      const invoiceUrl = invoice
+        ? `${req.protocol}://${req.get("host")}/api/v1/admin/billing/invoices/${encodeURIComponent(invoice.invoiceId)}/pdf`
+        : undefined;
+      const amount = Number(customer.billingSnapshot?.dueAmount || invoice?.totalAmount || 0).toFixed(2);
+      const message = await buildBillingNotificationContent({
+        eventKey: invoice?.paymentStatus === "overdue" ? "unpaid_invoice" : "invoice_due_date",
+        customer,
+        invoice,
+        actionUrl: invoiceUrl,
+        metadata: {
+          customerId: customer.customerId,
+          invoiceId: invoice?.invoiceId,
+          reminderSource: "billing_collection_bulk"
+        }
+      });
+      await notificationDispatcher.dispatchEvent({
+        eventKey: invoice?.paymentStatus === "overdue" ? "unpaid_invoice" : "invoice_due_date",
+        recipients: {
+          email: customer.email,
+          sms: customer.phone
+        },
+        subject: message?.subject || `Payment reminder for ${customer.customerId}`,
+        body: message?.body || `Dear ${customer.fullName}, your pending amount is Rs ${amount}.${invoiceUrl ? ` Invoice: ${invoiceUrl}` : ""}`,
+        attachments: invoice
+          ? buildBillingAttachment({
+              title: `Invoice ${invoice.invoiceNumber || invoice.invoiceId}`,
+              url: invoiceUrl,
+              reference: invoice.invoiceNumber || invoice.invoiceId
+            })
+          : [],
+        entityType: "customer",
+        entityId: customer.customerId,
+        metadata: {
+          customerId: customer.customerId,
+          invoiceId: invoice?.invoiceId,
+          reminderSource: "billing_collection_bulk",
+          ...(message?.branding || {})
+        }
+      });
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        collections: {
+          ...(customer.billingSnapshot?.collections || {}),
+          lastReminderAt: new Date(),
+          lastReminderInvoiceId: invoice?.invoiceId || null
+        }
+      };
+      await customer.save();
+      return { customerId: customer.customerId, action, invoiceId: invoice?.invoiceId || null };
+    }
+    case "log_follow_up": {
+      const current = customer.billingSnapshot?.collections || {};
+      const followUps = Array.isArray(current.followUps) ? current.followUps.slice(-19) : [];
+      const entry = {
+        note: String(note || "Bulk collections follow-up logged").trim(),
+        createdAt: new Date(),
+        adminId: req.admin?._id,
+        adminName: req.admin?.fullName || req.admin?.username || "Admin"
+      };
+      followUps.push(entry);
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        collections: {
+          ...current,
+          followUps,
+          latestFollowUpNote: entry.note,
+          latestFollowUpAt: entry.createdAt,
+          followUpCount: Number(current.followUpCount || 0) + 1
+        }
+      };
+      await customer.save();
+      return { customerId: customer.customerId, action, latestFollowUpAt: entry.createdAt };
+    }
+    case "assign_owner": {
+      const targetAdminId = String(adminId || req.admin?._id || "");
+      const targetAdmin = await AdminUser.findById(targetAdminId).lean();
+      if (!targetAdmin) {
+        throw new ApiError(404, "Admin user not found");
+      }
+      customer.billingSnapshot = {
+        ...(customer.billingSnapshot || {}),
+        collections: {
+          ...(customer.billingSnapshot?.collections || {}),
+          assignedToAdminId: String(targetAdmin._id),
+          assignedToName: targetAdmin.fullName || targetAdmin.username,
+          assignedAt: new Date(),
+          assignedByAdminId: req.admin?._id
+        }
+      };
+      await customer.save();
+      return {
+        customerId: customer.customerId,
+        action,
+        assignedAdminId: String(targetAdmin._id),
+        assignedAdminName: targetAdmin.fullName || targetAdmin.username
+      };
+    }
+    case "suspend_service": {
+      const updatedCustomer = await applyBillingCollectionsStatusChange({
+        customer,
+        req,
+        nextStatus: "suspended",
+        reason: String(reason || "Bulk collections suspension").trim(),
+        actionSource: "admin_collections_bulk"
+      });
+      return { customerId: updatedCustomer.customerId, action, operationalStatus: updatedCustomer.operationalStatus };
+    }
+    case "resume_service": {
+      const dueAmount = Number(customer.billingSnapshot?.dueAmount || 0);
+      if (dueAmount > 0 && force !== true) {
+        throw new ApiError(400, "Customer still has due amount. Clear payment first or use force=true.");
+      }
+      const updatedCustomer = await applyBillingCollectionsStatusChange({
+        customer,
+        req,
+        nextStatus: "active",
+        reason: String(reason || "Bulk collections resume").trim(),
+        actionSource: force === true ? "admin_collections_bulk_force_resume" : "admin_collections_bulk"
+      });
+      return { customerId: updatedCustomer.customerId, action, operationalStatus: updatedCustomer.operationalStatus };
+    }
+    default:
+      throw new ApiError(400, "Unsupported bulk collections action");
+  }
+}
+
 function buildCustomerPortalRetryUrl(customerId) {
   const configuredBase = String(env.USER_DOMAIN || "").trim();
   if (!configuredBase) return "";
@@ -1502,6 +1652,65 @@ adminOpsRouter.post(
       Array.isArray(req.body?.customerIds) ? req.body.customerIds : []
     );
     return ok(res, preview);
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/collections/bulk-execute",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const action = String(req.body?.action || "").trim();
+    if (!action) {
+      throw new ApiError(400, "Bulk action is required");
+    }
+
+    const items = await buildCollectionsQueueItems(String(req.body?.bucket || "").trim());
+    const selectedSet = new Set(
+      (Array.isArray(req.body?.customerIds) ? req.body.customerIds : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    );
+    const selectedItems = selectedSet.size
+      ? items.filter((item) => selectedSet.has(String(item.customerId || "").trim()))
+      : items;
+
+    if (!selectedItems.length) {
+      throw new ApiError(400, "No customer accounts selected for bulk action");
+    }
+
+    const results = [];
+    for (const item of selectedItems) {
+      try {
+        const result = await executeCollectionsBulkAction({
+          req,
+          action,
+          item,
+          note: req.body?.note,
+          reason: req.body?.reason,
+          force: req.body?.force === true,
+          adminId: req.body?.adminId
+        });
+        results.push({
+          customerId: item.customerId,
+          status: "success",
+          result
+        });
+      } catch (error) {
+        results.push({
+          customerId: item.customerId,
+          status: "failed",
+          error: error?.message || "Bulk action failed"
+        });
+      }
+    }
+
+    return ok(res, {
+      action,
+      selectedAccounts: selectedItems.length,
+      succeeded: results.filter((item) => item.status === "success").length,
+      failed: results.filter((item) => item.status === "failed").length,
+      results
+    });
   })
 );
 

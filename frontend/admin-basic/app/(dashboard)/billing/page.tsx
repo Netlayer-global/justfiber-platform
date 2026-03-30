@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, Settings2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -98,6 +98,8 @@ export default function BillingPage() {
   const [collectionsPlaybooks, setCollectionsPlaybooks] = useState<BillingCollectionsPlaybook[]>([])
   const [bulkSelection, setBulkSelection] = useState<string[]>([])
   const [bulkPreview, setBulkPreview] = useState<BillingCollectionsBulkPreview | null>(null)
+  const [bulkAction, setBulkAction] = useState('send_reminder')
+  const [lastBulkExecution, setLastBulkExecution] = useState<BillingCollectionsBulkExecuteResult | null>(null)
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [billingRuns, setBillingRuns] = useState<BillingRun[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
@@ -306,6 +308,7 @@ export default function BillingPage() {
   useEffect(() => {
     setBulkSelection([])
     setBulkPreview(null)
+    setLastBulkExecution(null)
   }, [collectionBucket])
 
   useEffect(() => {
@@ -760,6 +763,65 @@ export default function BillingPage() {
     } catch (error) {
       console.error('[v0] Failed to preview bulk collection actions:', error)
       toast.error('Failed to preview bulk actions')
+    }
+  }
+
+  async function executeBulkCollectionsAction() {
+    if (!bulkSelection.length) {
+      toast.error('Select at least one account first')
+      return
+    }
+
+    const payload: {
+      action: string
+      bucket?: string
+      customerIds: string[]
+      note?: string
+      reason?: string
+      force?: boolean
+      adminId?: string
+    } = {
+      action: bulkAction,
+      bucket: collectionBucket || undefined,
+      customerIds: bulkSelection,
+    }
+
+    if (bulkAction === 'log_follow_up') {
+      const note = window.prompt('Bulk follow-up note', 'Bulk collections follow-up logged')
+      if (!note || !note.trim()) return
+      payload.note = note.trim()
+    }
+    if (bulkAction === 'assign_owner') {
+      const options = collectionAgents.map((agent) => `${agent.id}:${agent.fullName || agent.username}`).join('\n')
+      const adminId = window.prompt(`Assign agent using ID.\n${options}`, collectionAgents[0]?.id || '')
+      if (adminId === null || !adminId.trim()) return
+      payload.adminId = adminId.trim()
+    }
+    if (bulkAction === 'suspend_service' || bulkAction === 'resume_service') {
+      const reason = window.prompt(
+        'Bulk action reason',
+        bulkAction === 'suspend_service' ? 'Bulk collections suspension' : 'Bulk collections resume'
+      )
+      if (reason === null) return
+      payload.reason = reason.trim() || undefined
+    }
+    if (bulkAction === 'resume_service') {
+      payload.force = window.confirm('Force resume customers who still have due amount?')
+    }
+
+    try {
+      const res = await adminAPI.executeBillingCollectionsBulkAction(payload)
+      if (!res.success || !res.data) {
+        toast.error(res.error || 'Failed to execute bulk action')
+        return
+      }
+      const result = res.data as BillingCollectionsBulkExecuteResult
+      setLastBulkExecution(result)
+      toast.success(`${result.succeeded} account(s) updated`)
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to execute bulk collections action:', error)
+      toast.error('Failed to execute bulk action')
     }
   }
 
@@ -1478,7 +1540,18 @@ export default function BillingPage() {
                 {bulkSelection.length} selected in current queue
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="input min-w-[180px]"
+                value={bulkAction}
+                onChange={(e) => setBulkAction(e.target.value)}
+              >
+                <option value="send_reminder">Send reminder</option>
+                <option value="log_follow_up">Log follow-up</option>
+                <option value="assign_owner">Assign owner</option>
+                <option value="suspend_service">Suspend service</option>
+                <option value="resume_service">Resume service</option>
+              </select>
               <button className="btn-secondary" onClick={toggleSelectAllVisible}>
                 {allVisibleSelected ? 'Clear visible' : 'Select visible'}
               </button>
@@ -1488,8 +1561,26 @@ export default function BillingPage() {
               <button className="btn-primary" onClick={() => void previewBulkCollectionsActions()}>
                 Preview bulk actions
               </button>
+              <button className="btn-primary" onClick={() => void executeBulkCollectionsAction()}>
+                Run bulk action
+              </button>
             </div>
           </div>
+          {lastBulkExecution ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Last bulk execution</div>
+                  <div className="mt-1 text-sm text-slate-300">
+                    {lastBulkExecution.action.replaceAll('_', ' ')} on {lastBulkExecution.selectedAccounts} account(s)
+                  </div>
+                </div>
+                <div className="text-sm text-slate-300">
+                  Success {lastBulkExecution.succeeded} | Failed {lastBulkExecution.failed}
+                </div>
+              </div>
+            </div>
+          ) : null}
           {bulkPreview ? (
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
