@@ -787,6 +787,39 @@ async function buildCollectionsQueueItems(bucketFilter = "") {
   return bucketFilter ? items.filter((item) => item.bucket === bucketFilter) : items;
 }
 
+function scoreCollectionsRisk(item = {}) {
+  let score = 0;
+  const dueAmount = Number(item.dueAmount || 0);
+  const overdueDays = Number(item.overdueDays || 0);
+  const graceDays = Number(item.graceDays || 0);
+  const followUpCount = Number(item.followUpCount || 0);
+
+  if (item.suspendEligible) score += 50;
+  if (item.resumeEligible) score += 20;
+  if (overdueDays > graceDays) score += 20;
+  if (overdueDays > 30) score += 15;
+  if (overdueDays > 60) score += 20;
+  if (dueAmount >= 1000) score += 10;
+  if (dueAmount >= 3000) score += 15;
+  if (!item.lastReminderAt) score += 10;
+  if (!item.latestFollowUpAt) score += 10;
+  if (followUpCount >= 3) score += 5;
+  if (item.promiseActive) score -= 15;
+  if (item.assignedAdminId) score -= 5;
+  if (item.bucket === "pending_plan_change") score -= 10;
+
+  const priority =
+    score >= 70 ? "critical" :
+    score >= 40 ? "high" :
+    score >= 20 ? "medium" :
+    "low";
+
+  return {
+    score,
+    priority
+  };
+}
+
 function buildCollectionsWorkbench(items = []) {
   const byBucket = {};
   const byAssignee = {};
@@ -797,8 +830,18 @@ function buildCollectionsWorkbench(items = []) {
     resume: 0,
     promiseToPayActive: 0
   };
+  const priorityCounts = {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0
+  };
+  const rankedItems = items.map((item) => ({
+    ...item,
+    risk: scoreCollectionsRisk(item)
+  }));
 
-  for (const item of items) {
+  for (const item of rankedItems) {
     const bucket = item.bucket || "unknown";
     byBucket[bucket] = {
       count: Number(byBucket[bucket]?.count || 0) + 1,
@@ -818,12 +861,13 @@ function buildCollectionsWorkbench(items = []) {
     if (item.suspendEligible) actionQueue.suspend += 1;
     if (item.resumeEligible) actionQueue.resume += 1;
     if (item.promiseActive) actionQueue.promiseToPayActive += 1;
+    priorityCounts[item.risk.priority] += 1;
   }
 
   return {
     totals: {
-      accounts: items.length,
-      totalDueAmount: Number(items.reduce((sum, item) => sum + Number(item.dueAmount || 0), 0).toFixed(2))
+      accounts: rankedItems.length,
+      totalDueAmount: Number(rankedItems.reduce((sum, item) => sum + Number(item.dueAmount || 0), 0).toFixed(2))
     },
     byBucket: Object.entries(byBucket).map(([bucket, value]) => ({
       bucket,
@@ -831,7 +875,28 @@ function buildCollectionsWorkbench(items = []) {
       dueAmount: value.dueAmount
     })),
     byAssignee: Object.values(byAssignee).sort((left, right) => right.count - left.count),
-    actionQueue
+    actionQueue,
+    priorityCounts,
+    topPriorityAccounts: rankedItems
+      .slice()
+      .sort((left, right) => {
+        if (right.risk.score !== left.risk.score) return right.risk.score - left.risk.score;
+        return Number(right.dueAmount || 0) - Number(left.dueAmount || 0);
+      })
+      .slice(0, 15)
+      .map((item) => ({
+        customerId: item.customerId,
+        customerName: item.customerName,
+        bucket: item.bucket,
+        dueAmount: Number(item.dueAmount || 0),
+        overdueDays: Number(item.overdueDays || 0),
+        riskScore: item.risk.score,
+        priority: item.risk.priority,
+        suspendEligible: Boolean(item.suspendEligible),
+        resumeEligible: Boolean(item.resumeEligible),
+        assignedAdminName: item.assignedAdminName || "",
+        promiseActive: Boolean(item.promiseActive)
+      }))
   };
 }
 
@@ -891,6 +956,31 @@ function buildCustomerBillingActions({ customer, service, controlCenter }) {
     });
   }
   return actions;
+}
+
+function buildCustomerBillingRisk(controlCenter = {}) {
+  const risk = scoreCollectionsRisk({
+    dueAmount: controlCenter.dueAmount,
+    overdueDays: controlCenter.overdueDays,
+    graceDays: controlCenter.graceDays,
+    lastReminderAt: controlCenter.lastReminderAt,
+    latestFollowUpAt: controlCenter.latestFollowUpAt,
+    followUpCount: controlCenter.followUpCount,
+    suspendEligible: controlCenter.suspendEligible,
+    resumeEligible: controlCenter.resumeEligible,
+    promiseActive: controlCenter.promiseActive,
+    assignedAdminId: controlCenter.assignedAdminId
+  });
+  return {
+    ...risk,
+    reason: controlCenter.suspendEligible
+      ? "Account is overdue beyond grace policy and needs immediate collections handling."
+      : controlCenter.resumeEligible
+        ? "Service can be resumed because dues appear clear."
+        : Number(controlCenter.dueAmount || 0) > 0
+          ? "Account has open due amount and needs monitoring."
+          : "No immediate billing risk detected."
+  };
 }
 
 function buildCustomerPortalRetryUrl(customerId) {
@@ -2343,7 +2433,20 @@ adminOpsRouter.get(
       paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "",
       billMode: customer.billingSnapshot?.billMode || "",
       graceDays: Number(customer.billingSnapshot?.graceDays || 0),
+      overdueDays: invoices.find((invoice) => String(invoice.paymentStatus || "").toLowerCase() === "overdue")?.dueDate
+        ? Math.max(
+            0,
+            Math.floor(
+              (Date.now() - new Date(invoices.find((invoice) => String(invoice.paymentStatus || "").toLowerCase() === "overdue").dueDate).getTime()) /
+              (1000 * 60 * 60 * 24)
+            )
+          )
+        : 0,
       promiseToPayAt: collections.promiseToPayAt || null,
+      promiseActive:
+        Boolean(collections.promiseToPayAt) &&
+        !Number.isNaN(new Date(collections.promiseToPayAt).getTime()) &&
+        new Date(collections.promiseToPayAt).getTime() >= Date.now(),
       promiseAmount: Number(collections.promiseAmount || 0),
       promiseNote: collections.promiseNote || "",
       assignedAdminId: collections.assignedToAdminId || "",
@@ -2371,10 +2474,12 @@ adminOpsRouter.get(
       service,
       controlCenter
     });
+    const riskProfile = buildCustomerBillingRisk(controlCenter);
     return ok(res, {
       summary: customer.billingSnapshot || {},
       invoiceSummary: customer.invoiceSummary || {},
       controlCenter,
+      riskProfile,
       recommendedActions,
       invoices,
       payments,
