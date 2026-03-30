@@ -31,8 +31,11 @@ function resolveCoaConfig(bngNode) {
   return { host, secret, port };
 }
 
-function buildDisconnectPayload({ radiusUsername, service, bngNode }) {
+function buildDisconnectPayload({ radiusUsername, service, bngNode, mode = "full" }) {
   const lines = [`User-Name = "${radiusUsername}"`];
+  if (mode === "minimal") {
+    return `${lines.join("\n")}\n`;
+  }
   if (service?.currentIpv4) {
     lines.push(`Framed-IP-Address = ${service.currentIpv4}`);
   }
@@ -119,7 +122,7 @@ export class MikrotikBngManager {
       };
     }
 
-    const payload = buildDisconnectPayload({ radiusUsername: username, service, bngNode });
+    const payload = buildDisconnectPayload({ radiusUsername: username, service, bngNode, mode: "full" });
     try {
       const result = await runDisconnect({ host, port, secret, payload });
       return {
@@ -128,23 +131,49 @@ export class MikrotikBngManager {
         action: reason,
         bngNodeCode: bngNode.nodeCode,
         target: result.target,
+        payloadMode: "full",
         exitCode: result.exitCode,
         acknowledged: Boolean(result.acknowledged),
         stdout: result.stdout,
         stderr: result.stderr
       };
     } catch (error) {
+      const minimalPayload = buildDisconnectPayload({
+        radiusUsername: username,
+        service,
+        bngNode,
+        mode: "minimal"
+      });
+      try {
+        const fallback = await runDisconnect({ host, port, secret, payload: minimalPayload });
+        return {
+          attempted: true,
+          status: "sent",
+          action: reason,
+          bngNodeCode: bngNode.nodeCode,
+          target: fallback.target,
+          payloadMode: "minimal_fallback",
+          exitCode: fallback.exitCode,
+          acknowledged: Boolean(fallback.acknowledged),
+          stdout: fallback.stdout,
+          stderr: fallback.stderr,
+          initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed"
+        };
+      } catch (fallbackError) {
       return {
         attempted: true,
         status: "failed",
         action: reason,
         bngNodeCode: bngNode.nodeCode,
         target: `${host}:${port}`,
-        exitCode: Number(error?.exitCode ?? 1),
-        stdout: String(error?.stdout || "").trim(),
-        stderr: String(error?.stderr || "").trim(),
-        error: error instanceof Error ? error.message : "COA disconnect failed"
+        payloadMode: "full_then_minimal",
+        exitCode: Number(fallbackError?.exitCode ?? error?.exitCode ?? 1),
+        stdout: String(fallbackError?.stdout || error?.stdout || "").trim(),
+        stderr: String(fallbackError?.stderr || error?.stderr || "").trim(),
+        error: fallbackError instanceof Error ? fallbackError.message : "COA disconnect failed",
+        initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed"
       };
+      }
     }
   }
 }
