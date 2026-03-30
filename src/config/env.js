@@ -3,6 +3,12 @@ import { z } from "zod";
 
 dotenv.config();
 
+function parseOptionalCommand(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return [];
+  return normalized.split(/\s+/).filter(Boolean);
+}
+
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(4000),
@@ -47,6 +53,14 @@ const schema = z.object({
     .string()
     .transform((value) => value === "true")
     .default("true"),
+  FREERADIUS_VALIDATE_COMMAND: z
+    .string()
+    .transform(parseOptionalCommand)
+    .default("freeradius -XC"),
+  FREERADIUS_RELOAD_COMMAND: z
+    .string()
+    .transform(parseOptionalCommand)
+    .default("systemctl reload freeradius"),
   MIKROTIK_BNG_COA_PORT: z.coerce.number().default(3799),
   MIKROTIK_BNG_COA_SECRET: z.string().optional(),
   USAGE_API_URL: z.string().url().optional(),

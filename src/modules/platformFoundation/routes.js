@@ -1,6 +1,8 @@
 import { Router } from "express";
 import fs from "node:fs/promises";
 import net from "node:net";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { z } from "zod";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
@@ -36,6 +38,8 @@ import { buildPagination } from "../../common/pagination.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { mikrotikBngManager } from "../../integrations/mikrotikBngManager.js";
 import { env } from "../../config/env.js";
+
+const execFileAsync = promisify(execFile);
 
 const accessProfileSchema = z.object({
   code: z.string().min(2),
@@ -418,6 +422,53 @@ function stripManagedFreeradiusClientBlock(contents, nodeCode) {
   return contents.replace(pattern, "\n").replace(/\n{3,}/g, "\n\n");
 }
 
+async function runFreeradiusCommand(commandParts = []) {
+  if (!Array.isArray(commandParts) || commandParts.length === 0) {
+    return { ran: false, skipped: true, reason: "missing_command" };
+  }
+
+  const [command, ...args] = commandParts;
+  try {
+    const result = await execFileAsync(command, args, { timeout: 15000 });
+    return {
+      ran: true,
+      ok: true,
+      command: [command, ...args].join(" "),
+      stdout: String(result?.stdout || "").trim(),
+      stderr: String(result?.stderr || "").trim()
+    };
+  } catch (error) {
+    return {
+      ran: true,
+      ok: false,
+      command: [command, ...args].join(" "),
+      stdout: String(error?.stdout || "").trim(),
+      stderr: String(error?.stderr || "").trim(),
+      reason: error instanceof Error ? error.message : "command_failed"
+    };
+  }
+}
+
+async function validateAndReloadFreeradius() {
+  const validate = await runFreeradiusCommand(env.FREERADIUS_VALIDATE_COMMAND);
+  if (validate.ran && !validate.ok) {
+    return {
+      validated: false,
+      reloaded: false,
+      validation: validate,
+      reload: { ran: false, skipped: true, reason: "validation_failed" }
+    };
+  }
+
+  const reload = await runFreeradiusCommand(env.FREERADIUS_RELOAD_COMMAND);
+  return {
+    validated: Boolean(!validate.ran || validate.ok),
+    reloaded: Boolean(!reload.ran || reload.ok),
+    validation: validate,
+    reload
+  };
+}
+
 async function syncFreeradiusClientForNode(node) {
   if (!env.FREERADIUS_CLIENTS_AUTOSYNC) {
     return { synced: false, reason: "disabled" };
@@ -434,6 +485,7 @@ async function syncFreeradiusClientForNode(node) {
     const block = buildManagedFreeradiusClientBlock(node);
     const next = block ? `${nextBase}\n\n${block}\n` : `${nextBase}\n`;
     await fs.writeFile(filePath, next, "utf8");
+    const reloadStatus = await validateAndReloadFreeradius();
     return {
       synced: true,
       filePath,
@@ -442,7 +494,8 @@ async function syncFreeradiusClientForNode(node) {
       radiusClientIps: [
         String(node.radiusClientIp || "").trim(),
         ...(Array.isArray(node.additionalRadiusClientIps) ? node.additionalRadiusClientIps : [])
-      ].map((item) => String(item || "").trim()).filter(Boolean)
+      ].map((item) => String(item || "").trim()).filter(Boolean),
+      serviceReload: reloadStatus
     };
   } catch (error) {
     return {
@@ -467,7 +520,8 @@ async function removeFreeradiusClientForNode(nodeCode) {
     const current = await fs.readFile(filePath, "utf8");
     const next = `${stripManagedFreeradiusClientBlock(current, nodeCode).trimEnd()}\n`;
     await fs.writeFile(filePath, next, "utf8");
-    return { synced: true, filePath, mode: "removed" };
+    const reloadStatus = await validateAndReloadFreeradius();
+    return { synced: true, filePath, mode: "removed", serviceReload: reloadStatus };
   } catch (error) {
     return {
       synced: false,

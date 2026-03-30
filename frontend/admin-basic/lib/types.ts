@@ -247,6 +247,26 @@ export interface BngNode {
     reason?: string
     radiusClientIp?: string | null
     radiusClientIps?: string[]
+    serviceReload?: {
+      validated?: boolean
+      reloaded?: boolean
+      validation?: {
+        ran?: boolean
+        ok?: boolean
+        command?: string
+        stdout?: string
+        stderr?: string
+        reason?: string
+      }
+      reload?: {
+        ran?: boolean
+        ok?: boolean
+        command?: string
+        stdout?: string
+        stderr?: string
+        reason?: string
+      }
+    }
   }
 }
 

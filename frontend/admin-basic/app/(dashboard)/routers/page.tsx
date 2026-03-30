@@ -205,8 +205,12 @@ export default function RoutersPage() {
       if (!res.success || !res.data) {
         throw new Error(res.error || 'Failed to save router')
       }
-      if (res.data.freeradiusClientSync?.synced) {
+      const reloadOk = res.data.freeradiusClientSync?.serviceReload?.reloaded !== false
+      const validationOk = res.data.freeradiusClientSync?.serviceReload?.validated !== false
+      if (res.data.freeradiusClientSync?.synced && reloadOk && validationOk) {
         toast.success(`${selectedId ? 'Router updated' : 'Router added'} | FreeRADIUS client synced`)
+      } else if (res.data.freeradiusClientSync?.synced) {
+        toast.warning(`${selectedId ? 'Router updated' : 'Router added'} | client synced but FreeRADIUS reload needs attention`)
       } else if (res.data.freeradiusClientSync?.reason && res.data.freeradiusClientSync.reason !== 'disabled') {
         toast.warning(`Router saved, but FreeRADIUS sync skipped: ${res.data.freeradiusClientSync.reason}`)
       } else {
@@ -245,8 +249,10 @@ export default function RoutersPage() {
         throw new Error(res.error || 'Failed to delete router')
       }
       toast.success(
-        res.data?.freeradiusClientSync?.synced
-          ? 'Router deleted and FreeRADIUS client removed'
+        res.data?.freeradiusClientSync?.synced && res.data?.freeradiusClientSync?.serviceReload?.reloaded !== false
+          ? 'Router deleted, client removed, and FreeRADIUS reloaded'
+          : res.data?.freeradiusClientSync?.synced
+            ? 'Router deleted and client removed, but reload needs attention'
           : 'Router deleted'
       )
       setSelectedId(null)
@@ -476,6 +482,24 @@ export default function RoutersPage() {
                       ? `Managed clients synced for ${(selectedRouter.freeradiusClientSync.radiusClientIps || [selectedRouter.freeradiusClientSync.radiusClientIp || selectedRouter.radiusClientIp || '-']).filter(Boolean).join(', ')}`
                       : 'Router save/delete will sync a managed client block into FreeRADIUS when clients file access is available.'}
                   </div>
+                  {selectedRouter.freeradiusClientSync?.serviceReload ? (
+                    <div className="mt-3 space-y-2 text-xs text-slate-500">
+                      <div className="flex items-center justify-between gap-3"><span>Config validation</span><span>{selectedRouter.freeradiusClientSync.serviceReload.validated ? 'Passed' : 'Failed'}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Service reload</span><span>{selectedRouter.freeradiusClientSync.serviceReload.reloaded ? 'Succeeded' : 'Skipped / failed'}</span></div>
+                      {selectedRouter.freeradiusClientSync.serviceReload.validation?.command ? (
+                        <div className="break-all">Validate: {selectedRouter.freeradiusClientSync.serviceReload.validation.command}</div>
+                      ) : null}
+                      {selectedRouter.freeradiusClientSync.serviceReload.reload?.command ? (
+                        <div className="break-all">Reload: {selectedRouter.freeradiusClientSync.serviceReload.reload.command}</div>
+                      ) : null}
+                      {selectedRouter.freeradiusClientSync.serviceReload.validation?.reason ? (
+                        <div className="break-all text-red-600">Validation error: {selectedRouter.freeradiusClientSync.serviceReload.validation.reason}</div>
+                      ) : null}
+                      {selectedRouter.freeradiusClientSync.serviceReload.reload?.reason ? (
+                        <div className="break-all text-red-600">Reload error: {selectedRouter.freeradiusClientSync.serviceReload.reload.reason}</div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : (
