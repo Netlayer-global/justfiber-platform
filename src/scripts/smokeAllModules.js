@@ -57,6 +57,7 @@ function requireDemoOtp(payload, path) {
 
 export async function runSmokeAllModules() {
   const checks = [];
+  let publicPlanCodes = [];
 
   async function run(label, fn) {
     try {
@@ -90,7 +91,10 @@ export async function runSmokeAllModules() {
   });
 
   await run("Customer public plans", async () => {
-    await requestJson({ path: "/api/v1/customer/plans" });
+    const payload = await requestJson({ path: "/api/v1/customer/plans" });
+    publicPlanCodes = Array.isArray(payload.data)
+      ? payload.data.map((item) => String(item?.planCode || "").trim()).filter(Boolean)
+      : [];
   });
 
   await run("Customer public banners", async () => {
@@ -330,11 +334,18 @@ export async function runSmokeAllModules() {
   });
 
   await run("Customer plan change apply", async () => {
+    const selectedPlanCode =
+      process.env.SMOKE_PLAN_CHANGE_CODE ||
+      publicPlanCodes.find((code) => code !== "PLAN-100") ||
+      publicPlanCodes[0];
+    if (!selectedPlanCode) {
+      throw new Error("No plan codes available for customer plan-change smoke test");
+    }
     await requestJson({
       method: "POST",
       path: "/api/v1/customer/plan/change/apply",
       token: customerToken,
-      body: { planCode: process.env.SMOKE_PLAN_CHANGE_CODE || "PLAN-200", effectiveMode: "immediate" }
+      body: { planCode: selectedPlanCode, effectiveMode: "immediate" }
     });
   });
 

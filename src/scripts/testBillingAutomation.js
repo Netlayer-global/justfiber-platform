@@ -135,8 +135,9 @@ async function verifyAdminBilling(adminToken) {
     token: adminToken,
     body: { customerIds: (workbench.data.items || []).slice(0, 2).map((item) => item.customerId).filter(Boolean) }
   });
-  expect(preview.data?.counts && typeof preview.data.counts.selected === "number", "Bulk preview missing counts");
-  printPass("Billing bulk preview", `${preview.data.counts.selected} selected`);
+  expect(typeof preview.data?.selectedAccounts === "number", "Bulk preview missing selectedAccounts");
+  expect(preview.data?.counts && typeof preview.data.counts.remind === "number", "Bulk preview missing action counts");
+  printPass("Billing bulk preview", `${preview.data.selectedAccounts} selected`);
 
   const reconciliation = await requestJson({
     path: "/api/v1/admin/billing/reconciliation/summary",
