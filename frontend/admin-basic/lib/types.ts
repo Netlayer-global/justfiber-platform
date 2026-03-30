@@ -794,6 +794,89 @@ export interface BillingCollectionsPlaybook {
   description: string
 }
 
+export interface BillingControlCenter {
+  customerId: string
+  customerName: string
+  operationalStatus?: string
+  serviceStatus?: string
+  serviceId?: string
+  radiusUsername?: string
+  dueAmount: number
+  ledgerBalance?: number
+  openInvoiceDueAmount?: number
+  paymentStatus?: string
+  billMode?: string
+  graceDays?: number
+  overdueDays?: number
+  promiseToPayAt?: string | null
+  promiseActive?: boolean
+  promiseAmount?: number
+  promiseNote?: string
+  assignedAdminId?: string
+  assignedAdminName?: string
+  lastReminderAt?: string | null
+  latestFollowUpNote?: string
+  latestFollowUpAt?: string | null
+  followUpCount?: number
+  lastServiceAction?: string
+  lastServiceActionAt?: string | null
+  lastServiceActionReason?: string
+  lastResolutionType?: string
+  lastResolutionAt?: string | null
+  lastResolutionAmount?: number
+  lastResolutionReference?: string
+  resumeEligible?: boolean
+  suspendEligible?: boolean
+}
+
+export interface BillingRiskProfile {
+  score: number
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  reason: string
+}
+
+export interface BillingRecommendedAction {
+  code: string
+  label: string
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  reason: string
+}
+
+export interface BillingTimelineItem {
+  id: string
+  action: string
+  actorName?: string
+  actorType?: string
+  result?: string
+  reason?: string
+  metadata?: Record<string, unknown>
+  createdAt?: string
+}
+
+export interface CustomerBillingControlResponse {
+  summary: Record<string, unknown>
+  invoiceSummary?: Record<string, unknown>
+  controlCenter?: BillingControlCenter
+  riskProfile?: BillingRiskProfile
+  recommendedActions?: BillingRecommendedAction[]
+  invoices: any[]
+  payments: any[]
+  ledger: any[]
+  waivers?: BillingNote[]
+  writeoffs?: Array<{
+    entryId: string
+    customerId: string
+    customerName?: string
+    phone?: string
+    customerStatus?: string
+    invoiceId?: string
+    reference?: string
+    amount: number
+    postedAt?: string
+  }>
+  timeline?: BillingTimelineItem[]
+}
+
 export interface BillingCollectionAgent {
   id: string
   username: string

@@ -1905,12 +1905,7 @@ export const adminAPI = {
       body: JSON.stringify(data),
     }),
   getCustomerBilling: async (customerId: string) =>
-    request<{
-      summary: Record<string, unknown>
-      invoices: any[]
-      payments: any[]
-      ledger: any[]
-    }>(`/api/v1/admin/customers/${customerId}/billing`),
+    request(`/api/v1/admin/customers/${customerId}/billing`),
   confirmCustomerPayment: async (
     customerId: string,
     data: { amount: number; method?: string; reference?: string; paymentId?: string }

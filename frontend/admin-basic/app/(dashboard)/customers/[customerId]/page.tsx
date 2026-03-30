@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import type { AdminPlanChangePreview, Customer, CustomerDevice, Installer, Plan } from '@/lib/types'
+import type { AdminPlanChangePreview, Customer, CustomerBillingControlResponse, CustomerDevice, Installer, Plan } from '@/lib/types'
 import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -63,6 +63,7 @@ export default function CustomerDetailPage() {
   const searchParams = useSearchParams()
   const customerId = params.customerId
   const [customer, setCustomer] = useState<Customer | null>(null)
+  const [customerBillingControl, setCustomerBillingControl] = useState<CustomerBillingControlResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [isSaving, setIsSaving] = useState(false)
@@ -119,6 +120,12 @@ export default function CustomerDetailPage() {
       const res = await adminAPI.getCustomer(customerId)
       if (res.success && res.data) {
         setCustomer(res.data)
+        const billingRes = await adminAPI.getCustomerBilling(customerId)
+        if (billingRes.success && billingRes.data) {
+          setCustomerBillingControl(billingRes.data as CustomerBillingControlResponse)
+        } else {
+          setCustomerBillingControl(null)
+        }
         setProfileForm({
           name: res.data.name || '',
           phone: res.data.phone || '',
@@ -152,6 +159,7 @@ export default function CustomerDetailPage() {
         })
         setWifiForms(nextForms)
       } else {
+        setCustomerBillingControl(null)
         toast.error(res.error || 'Failed to load customer')
       }
     } catch (error) {
@@ -187,9 +195,15 @@ export default function CustomerDetailPage() {
   }
 
   const billingSummary = useMemo(
-    () => customer?.billingSnapshot || {},
-    [customer]
+    () => customerBillingControl?.summary || customer?.billingSnapshot || {},
+    [customer, customerBillingControl]
   )
+  const billingControlCenter = customerBillingControl?.controlCenter
+  const billingRiskProfile = customerBillingControl?.riskProfile
+  const billingRecommendedActions = customerBillingControl?.recommendedActions || []
+  const billingTimeline = customerBillingControl?.timeline || []
+  const billingWaivers = customerBillingControl?.waivers || []
+  const billingWriteoffs = customerBillingControl?.writeoffs || []
   const usageGb = Number(billingSummary.usageGb || 0)
   const usageCapGb = Number(billingSummary.usageCapGb || billingSummary.dataLimitGb || 0)
   const usagePercent = usageCapGb > 0 ? Math.min(100, Math.round((usageGb / usageCapGb) * 100)) : 0
@@ -1236,6 +1250,87 @@ export default function CustomerDetailPage() {
                     <p className="text-lg font-semibold">Rs {Number(billingSummary.adjustmentPreview || billingSummary.dueAmount || 0)}</p>
                   </div>
                 </div>
+                {billingControlCenter || billingRiskProfile ? (
+                  <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-4">
+                    <div className="card p-5 space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold">Billing Control Center</h2>
+                          <p className="mt-1 text-sm text-slate-500">Operational billing, collections, and service state in one place.</p>
+                        </div>
+                        {billingRiskProfile ? (
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            billingRiskProfile.priority === 'critical'
+                              ? 'bg-rose-500/15 text-rose-300'
+                              : billingRiskProfile.priority === 'high'
+                                ? 'bg-amber-500/15 text-amber-300'
+                                : billingRiskProfile.priority === 'medium'
+                                  ? 'bg-sky-500/15 text-sky-300'
+                                  : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {billingRiskProfile.priority.toUpperCase()} RISK
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <div className="metric-tile p-4">
+                          <p className="text-xs uppercase tracking-[0.22em] text-black/40">Due amount</p>
+                          <p className="text-lg font-semibold">Rs {Number(billingControlCenter?.dueAmount || 0).toFixed(2)}</p>
+                        </div>
+                        <div className="metric-tile p-4">
+                          <p className="text-xs uppercase tracking-[0.22em] text-black/40">Ledger balance</p>
+                          <p className="text-lg font-semibold">Rs {Number(billingControlCenter?.ledgerBalance || 0).toFixed(2)}</p>
+                        </div>
+                        <div className="metric-tile p-4">
+                          <p className="text-xs uppercase tracking-[0.22em] text-black/40">Service status</p>
+                          <p className="text-lg font-semibold">{String(billingControlCenter?.serviceStatus || '-')}</p>
+                        </div>
+                        <div className="metric-tile p-4">
+                          <p className="text-xs uppercase tracking-[0.22em] text-black/40">Collections owner</p>
+                          <p className="text-lg font-semibold">{String(billingControlCenter?.assignedAdminName || 'Unassigned')}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="rounded bg-[#0a0e27] px-3 py-3 text-slate-300">
+                          <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Promise to pay</div>
+                          <div className="mt-2">{billingControlCenter?.promiseToPayAt ? formatDateTime(billingControlCenter.promiseToPayAt) : 'Not set'}</div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {billingControlCenter?.promiseAmount ? `Rs ${Number(billingControlCenter.promiseAmount || 0).toFixed(2)}` : 'No promised amount'}
+                          </div>
+                        </div>
+                        <div className="rounded bg-[#0a0e27] px-3 py-3 text-slate-300">
+                          <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Last service action</div>
+                          <div className="mt-2">{formatValue(billingControlCenter?.lastServiceAction?.replaceAll('_', ' '), 'No recent action')}</div>
+                          <div className="mt-1 text-xs text-slate-500">{formatDateTime(billingControlCenter?.lastServiceActionAt)}</div>
+                        </div>
+                      </div>
+                      {billingRiskProfile ? (
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                          <div className="font-semibold text-slate-900">Risk score {billingRiskProfile.score}</div>
+                          <div className="mt-1">{billingRiskProfile.reason}</div>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="card p-5">
+                      <h2 className="text-lg font-semibold">Recommended Actions</h2>
+                      <div className="mt-4 space-y-3">
+                        {billingRecommendedActions.length ? billingRecommendedActions.map((item) => (
+                          <div key={item.code} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="font-semibold text-slate-900">{item.label}</p>
+                              <span className="rounded-full bg-slate-900/5 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                {item.priority}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-slate-600">{item.reason}</p>
+                          </div>
+                        )) : (
+                          <p className="text-sm text-slate-500">No immediate billing actions recommended.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Usage & FUP State</h2>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1371,6 +1466,58 @@ export default function CustomerDetailPage() {
                   <h2 className="text-lg font-semibold">Billing Summary</h2>
                   <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-xs text-slate-300">{JSON.stringify(billingSummary, null, 2)}</pre>
                 </div>
+                {(billingTimeline.length || billingWaivers.length || billingWriteoffs.length) ? (
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                    <div className="card p-5 space-y-4 xl:col-span-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <h2 className="text-lg font-semibold">Billing Action Timeline</h2>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                          {billingTimeline.length} item{billingTimeline.length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      {billingTimeline.length ? (
+                        <div className="space-y-3">
+                          {billingTimeline.map((entry) => (
+                            <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                  <p className="font-semibold text-slate-900">{formatValue(entry.action.replaceAll('.', ' '), '-')}</p>
+                                  <p className="mt-1 text-xs text-slate-500">{formatValue(entry.actorName || entry.actorType, 'System')}</p>
+                                </div>
+                                <span className="text-xs text-slate-500">{formatDateTime(entry.createdAt)}</span>
+                              </div>
+                              {entry.reason ? <p className="mt-2 text-sm text-slate-600">{entry.reason}</p> : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500">No billing actions recorded yet.</p>
+                      )}
+                    </div>
+                    <div className="space-y-4">
+                      <div className="card p-5 space-y-3">
+                        <h2 className="text-lg font-semibold">Waivers</h2>
+                        {billingWaivers.length ? billingWaivers.map((item) => (
+                          <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+                            <div className="font-semibold text-slate-900">{item.noteNumber}</div>
+                            <div className="mt-1 text-slate-600">Rs {Number(item.totalAmount || 0).toFixed(2)}</div>
+                            <div className="mt-1 text-xs text-slate-500">{formatDateTime(item.issuedAt)}</div>
+                          </div>
+                        )) : <p className="text-sm text-slate-500">No waivers recorded.</p>}
+                      </div>
+                      <div className="card p-5 space-y-3">
+                        <h2 className="text-lg font-semibold">Write-offs</h2>
+                        {billingWriteoffs.length ? billingWriteoffs.map((item) => (
+                          <div key={item.entryId} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+                            <div className="font-semibold text-slate-900">{item.reference || item.entryId}</div>
+                            <div className="mt-1 text-slate-600">Rs {Number(item.amount || 0).toFixed(2)}</div>
+                            <div className="mt-1 text-xs text-slate-500">{formatDateTime(item.postedAt)}</div>
+                          </div>
+                        )) : <p className="text-sm text-slate-500">No write-offs recorded.</p>}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="card p-5 space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
