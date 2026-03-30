@@ -241,6 +241,15 @@ export default function BillingPage() {
       }),
     [paymentFilters, payments]
   )
+  const activePaymentFilterTokens = useMemo(
+    () =>
+      [
+        paymentFilters.search ? { key: 'search', label: `Search ${paymentFilters.search}` } : null,
+        paymentFilters.status ? { key: 'status', label: `Status ${paymentFilters.status}` } : null,
+        paymentFilters.provider ? { key: 'provider', label: `Provider ${paymentFilters.provider}` } : null,
+      ].filter(Boolean) as Array<{ key: string; label: string }>,
+    [paymentFilters]
+  )
   const reconciliationBuckets = useMemo(() => reconciliationSummary?.statusBuckets || [], [reconciliationSummary])
   const openReconciliationItems = useMemo(() => (reconciliationSummary?.items || []).slice(0, 6), [reconciliationSummary])
   const recentWaivers = useMemo(() => (financeResolutions?.waivers || []).slice(0, 5), [financeResolutions])
@@ -2036,6 +2045,28 @@ export default function BillingPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                {activePaymentFilterTokens.map((token) => (
+                  <div key={token.key} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
+                    {token.label}
+                  </div>
+                ))}
+                {!activePaymentFilterTokens.length ? (
+                  <div className="rounded-full border border-dashed border-slate-200 px-3 py-1 text-xs text-slate-500">
+                    No payment filters applied
+                  </div>
+                ) : null}
+              </div>
+              {activePaymentFilterTokens.length ? (
+                <button
+                  className="btn-secondary"
+                  onClick={() => setPaymentFilters({ search: '', status: '', provider: '' })}
+                >
+                  Clear filters
+                </button>
+              ) : null}
             </div>
           </div>
           <div className="card overflow-hidden">
