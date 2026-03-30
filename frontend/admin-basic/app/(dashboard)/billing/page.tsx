@@ -1160,6 +1160,18 @@ export default function BillingPage() {
             onChange={(e) => setInvoiceFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
           />
         </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {activeInvoiceFilterTokens.map((token) => (
+            <div key={token.key} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+              {token.label}
+            </div>
+          ))}
+          {!activeInvoiceFilterTokens.length ? (
+            <div className="rounded-full border border-dashed border-white/10 px-3 py-1 text-xs text-slate-500">
+              No invoice filters applied
+            </div>
+          ) : null}
+        </div>
       </div>
       ) : null}
 
