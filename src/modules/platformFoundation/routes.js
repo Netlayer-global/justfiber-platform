@@ -116,6 +116,7 @@ const bngNodeSchema = z.object({
   nasIdentifier: z.string().optional(),
   managementIp: z.string().optional(),
   radiusClientIp: z.string().optional(),
+  additionalRadiusClientIps: z.array(z.string().min(3)).optional(),
   apiBaseUrl: z.string().optional(),
   useCoa: z.boolean().optional(),
   coaHost: z.string().optional(),
@@ -387,18 +388,24 @@ export const platformFoundationRouter = Router();
 platformFoundationRouter.use(requireAuth);
 
 function buildManagedFreeradiusClientBlock(node) {
-  const clientIp = String(node.radiusClientIp || "").trim();
+  const primaryClientIp = String(node.radiusClientIp || "").trim();
+  const additionalClientIps = Array.isArray(node.additionalRadiusClientIps)
+    ? node.additionalRadiusClientIps.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+  const clientIps = Array.from(new Set([primaryClientIp, ...additionalClientIps].filter(Boolean)));
   const secret = String(node.coaSecret || env.MIKROTIK_BNG_COA_SECRET || "").trim();
-  if (!clientIp || !secret) return "";
+  if (!clientIps.length || !secret) return "";
   const marker = node.nodeCode;
   return [
     `# BEGIN JUSTFIBER BNG ${marker}`,
-    `client justfiber-${marker} {`,
-    `  ipaddr = ${clientIp}`,
-    `  secret = ${secret}`,
-    `  shortname = ${marker}`,
-    `  nastype = mikrotik`,
-    `}`,
+    ...clientIps.flatMap((clientIp, index) => [
+      `client justfiber-${marker}${index === 0 ? "" : `-${index + 1}`} {`,
+      `  ipaddr = ${clientIp}`,
+      `  secret = ${secret}`,
+      `  shortname = ${index === 0 ? marker : `${marker}-${index + 1}`}`,
+      `  nastype = mikrotik`,
+      `}`
+    ]),
     `# END JUSTFIBER BNG ${marker}`
   ].join("\n");
 }
@@ -431,7 +438,11 @@ async function syncFreeradiusClientForNode(node) {
       synced: true,
       filePath,
       mode: block ? "upserted" : "removed",
-      radiusClientIp: node.radiusClientIp || null
+      radiusClientIp: node.radiusClientIp || null,
+      radiusClientIps: [
+        String(node.radiusClientIp || "").trim(),
+        ...(Array.isArray(node.additionalRadiusClientIps) ? node.additionalRadiusClientIps : [])
+      ].map((item) => String(item || "").trim()).filter(Boolean)
     };
   } catch (error) {
     return {
@@ -550,8 +561,12 @@ platformFoundationRouter.post(
   asyncHandler(async (req, res) => {
     const payload = bngNodeSchema.parse(req.body);
     const existing = await BngNode.findOne({ nodeCode: payload.nodeCode }).lean();
+    const normalizedAdditionalIps = Array.from(
+      new Set((payload.additionalRadiusClientIps || []).map((item) => String(item || "").trim()).filter(Boolean))
+    ).filter((item) => item !== String(payload.radiusClientIp || "").trim());
     const nextPayload = {
       ...payload,
+      additionalRadiusClientIps: normalizedAdditionalIps,
       coaSecret:
         String(payload.coaSecret || "").trim() ||
         String(existing?.coaSecret || "").trim() ||

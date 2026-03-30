@@ -16,6 +16,7 @@ type RouterForm = {
   nasIdentifier: string
   managementIp: string
   radiusClientIp: string
+  additionalRadiusClientIps: string
   apiBaseUrl: string
   useCoa: boolean
   coaHost: string
@@ -40,6 +41,7 @@ const initialForm: RouterForm = {
   nasIdentifier: '',
   managementIp: '',
   radiusClientIp: '',
+  additionalRadiusClientIps: '',
   apiBaseUrl: '',
   useCoa: true,
   coaHost: '',
@@ -74,6 +76,7 @@ function toForm(node?: BngNode | null): RouterForm {
     nasIdentifier: node.nasIdentifier || '',
     managementIp: node.managementIp || '',
     radiusClientIp: node.radiusClientIp || '',
+    additionalRadiusClientIps: Array.isArray(node.additionalRadiusClientIps) ? node.additionalRadiusClientIps.join(', ') : '',
     apiBaseUrl: node.apiBaseUrl || '',
     useCoa: node.useCoa !== false,
     coaHost: node.coaHost || node.managementIp || '',
@@ -182,6 +185,10 @@ export default function RoutersPage() {
         nasIdentifier: form.nasIdentifier.trim(),
         managementIp: form.managementIp.trim(),
         radiusClientIp: form.radiusClientIp.trim(),
+        additionalRadiusClientIps: form.additionalRadiusClientIps
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
         apiBaseUrl: form.apiBaseUrl.trim(),
         useCoa: form.useCoa,
         coaHost: form.coaHost.trim(),
@@ -444,6 +451,7 @@ export default function RoutersPage() {
                   <div className="mt-3 space-y-2 text-sm text-slate-600">
                     <div className="flex items-center justify-between gap-3"><span>Router IP</span><span>{selectedRouter.managementIp || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>RADIUS client IP</span><span>{selectedRouter.radiusClientIp || '-'}</span></div>
+                    <div className="flex items-center justify-between gap-3"><span>Extra NAS IPs</span><span>{selectedRouter.additionalRadiusClientIps?.join(', ') || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>NAS identifier</span><span>{selectedRouter.nasIdentifier || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>API port</span><span>{selectedRouter.apiPort || 8728}</span></div>
                   </div>
@@ -465,7 +473,7 @@ export default function RoutersPage() {
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-400">FreeRADIUS sync</div>
                   <div className="mt-3 text-sm leading-6 text-slate-600">
                     {selectedRouter.freeradiusClientSync?.synced
-                      ? `Managed client synced for ${selectedRouter.freeradiusClientSync.radiusClientIp || selectedRouter.radiusClientIp || '-'}`
+                      ? `Managed clients synced for ${(selectedRouter.freeradiusClientSync.radiusClientIps || [selectedRouter.freeradiusClientSync.radiusClientIp || selectedRouter.radiusClientIp || '-']).filter(Boolean).join(', ')}`
                       : 'Router save/delete will sync a managed client block into FreeRADIUS when clients file access is available.'}
                   </div>
                 </div>
@@ -615,6 +623,16 @@ export default function RoutersPage() {
                 <label className="space-y-2">
                   <div className="text-sm font-semibold text-slate-700">RADIUS client IP</div>
                   <input className="input" value={form.radiusClientIp} onChange={(event) => setForm({ ...form, radiusClientIp: event.target.value })} />
+                </label>
+                <label className="space-y-2 md:col-span-2">
+                  <div className="text-sm font-semibold text-slate-700">Additional NAS source IPs</div>
+                  <input
+                    className="input"
+                    value={form.additionalRadiusClientIps}
+                    placeholder="103.139.191.113, 10.0.0.2"
+                    onChange={(event) => setForm({ ...form, additionalRadiusClientIps: event.target.value })}
+                  />
+                  <div className="text-xs text-slate-500">Comma-separated source IPs that may send RADIUS auth/accounting from this same BNG.</div>
                 </label>
                 <label className="space-y-2">
                   <div className="text-sm font-semibold text-slate-700">NAS identifier</div>

@@ -11,6 +11,7 @@ const bngNodeSchema = new mongoose.Schema(
     nasIdentifier: String,
     managementIp: String,
     radiusClientIp: String,
+    additionalRadiusClientIps: { type: [String], default: [] },
     apiBaseUrl: String,
     useCoa: { type: Boolean, default: true },
     coaHost: String,

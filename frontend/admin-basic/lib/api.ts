@@ -325,6 +325,7 @@ function mapBngNode(node: any): BngNode {
     nasIdentifier: node.nasIdentifier || '',
     managementIp: node.managementIp || '',
     radiusClientIp: node.radiusClientIp || '',
+    additionalRadiusClientIps: Array.isArray(node.additionalRadiusClientIps) ? node.additionalRadiusClientIps : [],
     apiBaseUrl: node.apiBaseUrl || '',
     useCoa: node.useCoa !== false,
     coaHost: node.coaHost || '',

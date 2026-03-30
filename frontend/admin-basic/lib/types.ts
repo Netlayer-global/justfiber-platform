@@ -225,6 +225,7 @@ export interface BngNode {
   nasIdentifier?: string
   managementIp?: string
   radiusClientIp?: string
+  additionalRadiusClientIps?: string[]
   apiBaseUrl?: string
   useCoa?: boolean
   coaHost?: string
@@ -245,6 +246,7 @@ export interface BngNode {
     mode?: string
     reason?: string
     radiusClientIp?: string | null
+    radiusClientIps?: string[]
   }
 }
 
