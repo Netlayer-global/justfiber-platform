@@ -794,6 +794,23 @@ export interface BillingCollectionsPlaybook {
   description: string
 }
 
+export interface BillingCollectionsBulkPreview {
+  selectedAccounts: number
+  totalDueAmount: number
+  eligible: {
+    remind: string[]
+    followUp: string[]
+    suspend: string[]
+    resume: string[]
+  }
+  counts: {
+    remind: number
+    followUp: number
+    suspend: number
+    resume: number
+  }
+}
+
 export interface BillingControlCenter {
   customerId: string
   customerName: string

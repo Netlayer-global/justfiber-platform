@@ -1741,6 +1741,11 @@ export const adminAPI = {
     }
   },
   getBillingCollectionsPlaybooks: async () => request('/api/v1/admin/billing/collections/playbooks'),
+  getBillingCollectionsBulkPreview: async (data?: { bucket?: string; customerIds?: string[] }) =>
+    request('/api/v1/admin/billing/collections/bulk-preview', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
   getBillingCollectionAgents: async () => {
     const res = await request<any[]>('/api/v1/admin/billing/collections/agents')
     return {

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
+import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingOverview, BillingProfile, BillingPayment, BillingRun, Customer } from '@/lib/types'
 import { CreditCard, Loader, RefreshCw, Settings2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -94,6 +94,8 @@ export default function BillingPage() {
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
   const [collectionsWorkbench, setCollectionsWorkbench] = useState<BillingCollectionsWorkbench | null>(null)
   const [collectionsPlaybooks, setCollectionsPlaybooks] = useState<BillingCollectionsPlaybook[]>([])
+  const [bulkSelection, setBulkSelection] = useState<string[]>([])
+  const [bulkPreview, setBulkPreview] = useState<BillingCollectionsBulkPreview | null>(null)
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [billingRuns, setBillingRuns] = useState<BillingRun[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
@@ -239,11 +241,20 @@ export default function BillingPage() {
     () => (collectionBucket ? collections.filter((item) => item.bucket === collectionBucket) : collections),
     [collectionBucket, collections]
   )
+  const allVisibleSelected = useMemo(
+    () => visibleCollections.length > 0 && visibleCollections.every((item) => bulkSelection.includes(item.customerId)),
+    [bulkSelection, visibleCollections]
+  )
   const latestRecurringRuns = useMemo(() => billingRuns.slice(0, 6), [billingRuns])
   const collectionExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/collections.csv${collectionBucket ? `?bucket=${encodeURIComponent(collectionBucket)}` : ''}`
   useEffect(() => {
     void loadBilling()
   }, [invoiceFilters, collectionBucket])
+
+  useEffect(() => {
+    setBulkSelection([])
+    setBulkPreview(null)
+  }, [collectionBucket])
 
   useEffect(() => {
     const customerId = invoiceDraft.customerId.trim()
@@ -628,6 +639,52 @@ export default function BillingPage() {
     } catch (error) {
       console.error('[v0] Failed to resume service from collections:', error)
       toast.error('Failed to resume service')
+    }
+  }
+
+  function toggleBulkSelection(customerId: string) {
+    setBulkSelection((current) =>
+      current.includes(customerId)
+        ? current.filter((item) => item !== customerId)
+        : [...current, customerId]
+    )
+    setBulkPreview(null)
+  }
+
+  function toggleSelectAllVisible() {
+    if (allVisibleSelected) {
+      setBulkSelection((current) =>
+        current.filter((customerId) => !visibleCollections.some((item) => item.customerId === customerId))
+      )
+    } else {
+      setBulkSelection((current) => {
+        const next = new Set(current)
+        visibleCollections.forEach((item) => next.add(item.customerId))
+        return Array.from(next)
+      })
+    }
+    setBulkPreview(null)
+  }
+
+  async function previewBulkCollectionsActions() {
+    if (!bulkSelection.length) {
+      toast.error('Select at least one account first')
+      return
+    }
+    try {
+      const res = await adminAPI.getBillingCollectionsBulkPreview({
+        bucket: collectionBucket || undefined,
+        customerIds: bulkSelection,
+      })
+      if (!res.success || !res.data) {
+        toast.error(res.error || 'Failed to preview bulk actions')
+        return
+      }
+      setBulkPreview(res.data)
+      toast.success('Bulk preview ready')
+    } catch (error) {
+      console.error('[v0] Failed to preview bulk collection actions:', error)
+      toast.error('Failed to preview bulk actions')
     }
   }
 
@@ -1227,6 +1284,49 @@ export default function BillingPage() {
               </button>
             ))}
           </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+            <div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Bulk action preview</div>
+              <div className="mt-1 text-sm text-slate-300">
+                {bulkSelection.length} selected in current queue
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-secondary" onClick={toggleSelectAllVisible}>
+                {allVisibleSelected ? 'Clear visible' : 'Select visible'}
+              </button>
+              <button className="btn-secondary" onClick={() => { setBulkSelection([]); setBulkPreview(null) }}>
+                Reset selection
+              </button>
+              <button className="btn-primary" onClick={() => void previewBulkCollectionsActions()}>
+                Preview bulk actions
+              </button>
+            </div>
+          </div>
+          {bulkPreview ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Selected accounts</div>
+                <div className="mt-2 text-2xl font-semibold text-white">{bulkPreview.selectedAccounts}</div>
+                <div className="mt-1 text-xs text-slate-400">Current batch scope</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Total due</div>
+                <div className="mt-2 text-2xl font-semibold text-white">Rs {Number(bulkPreview.totalDueAmount || 0).toFixed(2)}</div>
+                <div className="mt-1 text-xs text-slate-400">Exposure across selected accounts</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Suspend eligible</div>
+                <div className="mt-2 text-2xl font-semibold text-white">{bulkPreview.counts.suspend}</div>
+                <div className="mt-1 text-xs text-slate-400">Immediate service action candidates</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Reminder / follow-up</div>
+                <div className="mt-2 text-2xl font-semibold text-white">{bulkPreview.counts.remind} / {bulkPreview.counts.followUp}</div>
+                <div className="mt-1 text-xs text-slate-400">Ops outreach opportunities</div>
+              </div>
+            </div>
+          ) : null}
         </div>
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
@@ -1264,6 +1364,14 @@ export default function BillingPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#0a0e27]">
+                <th className="table-header w-12">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleSelectAllVisible}
+                    aria-label="Select visible accounts"
+                  />
+                </th>
                 <th className="table-header">Customer</th>
                 <th className="table-header">Queue</th>
                 <th className="table-header">Due</th>
@@ -1275,6 +1383,14 @@ export default function BillingPage() {
             <tbody>
               {visibleCollections.map((item) => (
                 <tr key={`${item.customerId}-${item.bucket}-${item.invoiceId || 'none'}`} className="border-t border-[#2a2f4a]">
+                  <td className="table-cell align-top">
+                    <input
+                      type="checkbox"
+                      checked={bulkSelection.includes(item.customerId)}
+                      onChange={() => toggleBulkSelection(item.customerId)}
+                      aria-label={`Select ${item.customerName}`}
+                    />
+                  </td>
                   <td className="table-cell">
                     <div className="font-medium text-white">{item.customerName}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.customerId} {item.phone ? `| ${item.phone}` : ''}</div>
@@ -1355,7 +1471,7 @@ export default function BillingPage() {
               ))}
               {!visibleCollections.length ? (
                 <tr className="border-t border-[#2a2f4a]">
-                  <td className="table-cell text-slate-500" colSpan={6}>
+                  <td className="table-cell text-slate-500" colSpan={7}>
                     No accounts in the selected collection bucket.
                   </td>
                 </tr>
