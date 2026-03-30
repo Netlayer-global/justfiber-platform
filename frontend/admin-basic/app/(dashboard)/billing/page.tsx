@@ -105,6 +105,11 @@ export default function BillingPage() {
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
   const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections' | 'settings'>('invoices')
   const [collectionBucket, setCollectionBucket] = useState<'' | 'pending_due' | 'overdue' | 'pending_plan_change' | 'suspend_ready'>('')
+  const [collectionFilters, setCollectionFilters] = useState({
+    search: '',
+    ownership: '',
+    posture: '',
+  })
   const [invoiceQuickView, setInvoiceQuickView] = useState<'all' | 'pending' | 'paid' | 'overdue' | 'activation'>('all')
   const [invoiceFilters, setInvoiceFilters] = useState({
     search: '',
@@ -245,8 +250,30 @@ export default function BillingPage() {
     [payments]
   )
   const visibleCollections = useMemo(
-    () => (collectionBucket ? collections.filter((item) => item.bucket === collectionBucket) : collections),
-    [collectionBucket, collections]
+    () =>
+      (collectionBucket ? collections.filter((item) => item.bucket === collectionBucket) : collections).filter((item) => {
+        const search = collectionFilters.search.trim().toLowerCase()
+        const matchesSearch =
+          !search ||
+          [
+            item.customerName,
+            item.customerId,
+            item.phone,
+            item.invoiceNumber,
+            item.pendingPlanName,
+            item.assignedAdminName,
+          ].some((value) => String(value || '').toLowerCase().includes(search))
+        const matchesOwnership =
+          !collectionFilters.ownership ||
+          (collectionFilters.ownership === 'assigned'
+            ? Boolean(item.assignedAdminName)
+            : !item.assignedAdminName)
+        const posture =
+          item.suspendEligible ? 'suspend' : item.resumeEligible ? 'resume' : item.promiseActive ? 'ptp' : 'monitor'
+        const matchesPosture = !collectionFilters.posture || collectionFilters.posture === posture
+        return matchesSearch && matchesOwnership && matchesPosture
+      }),
+    [collectionBucket, collectionFilters, collections]
   )
   const allVisibleSelected = useMemo(
     () => visibleCollections.length > 0 && visibleCollections.every((item) => bulkSelection.includes(item.customerId)),
@@ -1363,6 +1390,34 @@ export default function BillingPage() {
                 {label}
               </button>
             ))}
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <input
+              className="input"
+              placeholder="Search customer / invoice / owner"
+              value={collectionFilters.search}
+              onChange={(e) => setCollectionFilters((prev) => ({ ...prev, search: e.target.value }))}
+            />
+            <select
+              className="input"
+              value={collectionFilters.ownership}
+              onChange={(e) => setCollectionFilters((prev) => ({ ...prev, ownership: e.target.value }))}
+            >
+              <option value="">All ownership</option>
+              <option value="assigned">Assigned only</option>
+              <option value="unassigned">Unassigned only</option>
+            </select>
+            <select
+              className="input"
+              value={collectionFilters.posture}
+              onChange={(e) => setCollectionFilters((prev) => ({ ...prev, posture: e.target.value }))}
+            >
+              <option value="">All postures</option>
+              <option value="suspend">Suspend now</option>
+              <option value="resume">Resume ready</option>
+              <option value="ptp">PTP active</option>
+              <option value="monitor">Monitor</option>
+            </select>
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
             <div>
