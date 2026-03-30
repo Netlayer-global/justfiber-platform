@@ -758,7 +758,7 @@ export default function BillingPage() {
         toast.error(res.error || 'Failed to preview bulk actions')
         return
       }
-      setBulkPreview(res.data)
+      setBulkPreview(res.data as BillingCollectionsBulkPreview)
       toast.success('Bulk preview ready')
     } catch (error) {
       console.error('[v0] Failed to preview bulk collection actions:', error)
