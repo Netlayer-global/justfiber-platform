@@ -204,6 +204,18 @@ export default function CustomerDetailPage() {
   const billingTimeline = customerBillingControl?.timeline || []
   const billingWaivers = customerBillingControl?.waivers || []
   const billingWriteoffs = customerBillingControl?.writeoffs || []
+  const controlDisconnectStatus = String(billingControlCenter?.lastBngDisconnectStatus || '').toLowerCase()
+  const controlHasRecentSession = Boolean(billingControlCenter?.lastSessionHint?.hasRecentSession)
+  const serviceControlState =
+    controlDisconnectStatus === 'sent'
+      ? 'disconnect_sent'
+      : controlDisconnectStatus === 'failed' && !controlHasRecentSession
+        ? 'no_live_session'
+        : controlDisconnectStatus === 'failed'
+          ? 'disconnect_failed'
+          : controlDisconnectStatus === 'skipped'
+            ? 'disconnect_skipped'
+            : 'unknown'
   const usageGb = Number(billingSummary.usageGb || 0)
   const usageCapGb = Number(billingSummary.usageCapGb || billingSummary.dataLimitGb || 0)
   const usagePercent = usageCapGb > 0 ? Math.min(100, Math.round((usageGb / usageCapGb) * 100)) : 0
@@ -1500,6 +1512,125 @@ export default function CustomerDetailPage() {
                         <div className="metric-tile p-4">
                           <p className="text-xs uppercase tracking-[0.22em] text-black/40">Collections owner</p>
                           <p className="text-lg font-semibold">{String(billingControlCenter?.assignedAdminName || 'Unassigned')}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Service control diagnostics</p>
+                            <span
+                              className={
+                                serviceControlState === 'disconnect_sent'
+                                  ? 'rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'
+                                  : serviceControlState === 'no_live_session'
+                                    ? 'rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700'
+                                    : serviceControlState === 'disconnect_failed'
+                                      ? 'rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700'
+                                      : 'rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600'
+                              }
+                            >
+                              {serviceControlState === 'disconnect_sent'
+                                ? 'Disconnect acknowledged'
+                                : serviceControlState === 'no_live_session'
+                                  ? 'No live session detected'
+                                  : serviceControlState === 'disconnect_failed'
+                                    ? 'Disconnect failed'
+                                    : serviceControlState === 'disconnect_skipped'
+                                      ? 'Disconnect skipped'
+                                      : 'State unknown'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Last radius state</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatValue(billingControlCenter?.lastRadiusState, billingControlCenter?.serviceStatus || '-')}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Last control action</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatValue(billingControlCenter?.lastServiceControlAction?.replaceAll('_', ' '), 'No action')}</p>
+                              <p className="mt-1 text-xs text-slate-500">{formatDateTime(billingControlCenter?.lastServiceControlAt)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">BNG node / target</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatValue(billingControlCenter?.bngNodeCode, '-')}</p>
+                              <p className="mt-1 text-xs text-slate-500">{formatValue(billingControlCenter?.lastBngDisconnectTarget, 'No target')}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Disconnect mode</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatValue(billingControlCenter?.lastBngDisconnectPayloadMode?.replaceAll('_', ' '), 'No payload')}</p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {billingControlCenter?.lastBngDisconnectAttempted ? 'Disconnect attempted' : 'No disconnect attempted'}
+                              </p>
+                            </div>
+                          </div>
+                          {serviceControlState === 'disconnect_sent' ? (
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                              Last PPP session disconnect was acknowledged by the BNG. Support can treat current auth state as actively enforced.
+                            </div>
+                          ) : null}
+                          {serviceControlState === 'no_live_session' ? (
+                            <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                              No recent PPP session was found for this subscriber, so disconnect may fail harmlessly. RADIUS auth state is still updated and will apply on the next login attempt.
+                            </div>
+                          ) : null}
+                          {serviceControlState === 'disconnect_failed' ? (
+                            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                              BNG disconnect did not complete cleanly. Check router reachability, CoA settings, and support logs before treating this as a billing or provisioning issue.
+                            </div>
+                          ) : null}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Recent session</p>
+                              <p className="mt-2 font-semibold text-slate-900">{controlHasRecentSession ? 'Seen recently' : 'No recent session'}</p>
+                              <p className="mt-1 text-xs text-slate-500">{formatDateTime(billingControlCenter?.lastSessionHint?.latestUpdateAt)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Latest session start</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatDateTime(billingControlCenter?.lastSessionHint?.latestSessionStart)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Usage seen in RADIUS</p>
+                              <p className="mt-2 font-semibold text-slate-900">{Number(billingControlCenter?.lastSessionHint?.totalOctets || 0).toLocaleString()} octets</p>
+                            </div>
+                          </div>
+                          {billingControlCenter?.lastBngDisconnectError ? (
+                            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                              <div className="font-semibold text-slate-900">Last disconnect error</div>
+                              <div className="mt-1 break-all">{billingControlCenter.lastBngDisconnectError}</div>
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Support shortcuts</p>
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                              OSS/BSS support
+                            </span>
+                          </div>
+                          <div className="space-y-2 text-sm text-slate-600">
+                            <p>Use these to jump from billing state to actual access-state validation without hunting through multiple tabs.</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button className="btn-secondary" onClick={handleOpenRadiusAudit}>
+                              Open PPPoE audit
+                            </button>
+                            <button className="btn-secondary" onClick={handleOpenBillingRecords}>
+                              Open billing records
+                            </button>
+                            <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>
+                              Re-sync PPPoE
+                            </button>
+                          </div>
+                          <div className="rounded-lg bg-white px-3 py-3 text-sm text-slate-600">
+                            <div className="font-semibold text-slate-900">Support note</div>
+                            <div className="mt-1">
+                              {serviceControlState === 'no_live_session'
+                                ? 'If the customer still reports no internet, ask them to reconnect PPPoE or reboot the ONT/router before treating this as a service-control failure.'
+                                : serviceControlState === 'disconnect_failed'
+                                  ? 'If billing state is correct but service is still live, verify MikroTik CoA and active session state before doing a manual suspend/resume cycle.'
+                                  : 'Billing and service-control data are aligned. Remaining troubleshooting should focus on device, PPPoE credentials, or physical link state.'}
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

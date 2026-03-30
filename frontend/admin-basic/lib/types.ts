@@ -883,6 +883,8 @@ export interface BillingControlCenter {
   serviceStatus?: string
   serviceId?: string
   radiusUsername?: string
+  bngNodeCode?: string
+  accessProfileCode?: string
   dueAmount: number
   ledgerBalance?: number
   openInvoiceDueAmount?: number
@@ -903,6 +905,23 @@ export interface BillingControlCenter {
   lastServiceAction?: string
   lastServiceActionAt?: string | null
   lastServiceActionReason?: string
+  lastRadiusState?: string
+  lastServiceControlAction?: string
+  lastServiceControlAt?: string | null
+  lastServiceControlReason?: string
+  lastBngDisconnectStatus?: string
+  lastBngDisconnectAction?: string
+  lastBngDisconnectTarget?: string
+  lastBngDisconnectPayloadMode?: string
+  lastBngDisconnectError?: string
+  lastBngDisconnectAttempted?: boolean
+  lastBngDisconnectAcknowledged?: boolean
+  lastSessionHint?: {
+    hasRecentSession?: boolean
+    latestSessionStart?: string | null
+    latestUpdateAt?: string | null
+    totalOctets?: number
+  }
   lastResolutionType?: string
   lastResolutionAt?: string | null
   lastResolutionAmount?: number

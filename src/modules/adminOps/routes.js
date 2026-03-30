@@ -2740,6 +2740,9 @@ adminOpsRouter.get(
         .lean()
     ]);
     const collections = customer.billingSnapshot?.collections || {};
+    const serviceControlMeta = service?.metadata || {};
+    const lastBngDisconnect = serviceControlMeta.lastBngDisconnect || {};
+    const lastSessionHint = serviceControlMeta.lastSessionHint || {};
     const controlCenter = {
       customerId: customer.customerId,
       customerName: customer.fullName || customer.customerId,
@@ -2782,6 +2785,25 @@ adminOpsRouter.get(
       lastResolutionAt: collections.lastResolutionAt || null,
       lastResolutionAmount: Number(collections.lastResolutionAmount || 0),
       lastResolutionReference: collections.lastResolutionReference || "",
+      bngNodeCode: service?.bngNodeCode || "",
+      accessProfileCode: service?.accessProfileCode || "",
+      lastRadiusState: serviceControlMeta.lastRadiusState || "",
+      lastServiceControlAction: serviceControlMeta.lastServiceControlAction || "",
+      lastServiceControlAt: serviceControlMeta.lastServiceControlAt || null,
+      lastServiceControlReason: serviceControlMeta.lastServiceControlReason || "",
+      lastBngDisconnectStatus: lastBngDisconnect.status || "",
+      lastBngDisconnectAction: lastBngDisconnect.action || "",
+      lastBngDisconnectTarget: lastBngDisconnect.target || "",
+      lastBngDisconnectPayloadMode: lastBngDisconnect.payloadMode || "",
+      lastBngDisconnectError: lastBngDisconnect.error || "",
+      lastBngDisconnectAttempted: Boolean(lastBngDisconnect.attempted),
+      lastBngDisconnectAcknowledged: Boolean(lastBngDisconnect.acknowledged),
+      lastSessionHint: {
+        hasRecentSession: Boolean(lastSessionHint.hasRecentSession),
+        latestSessionStart: lastSessionHint.latestSessionStart || null,
+        latestUpdateAt: lastSessionHint.latestUpdateAt || null,
+        totalOctets: Number(lastSessionHint.totalOctets || 0)
+      },
       resumeEligible:
         (service?.status || customer.operationalStatus) === "suspended" &&
         Number(customer.billingSnapshot?.dueAmount || 0) <= 0,
