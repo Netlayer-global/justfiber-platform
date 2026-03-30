@@ -123,6 +123,54 @@ function buildCollectionsResolutionSnapshot(customer, updates = {}) {
   };
 }
 
+async function applyBillingCollectionsStatusChange({
+  customer,
+  req,
+  nextStatus,
+  reason,
+  actionSource
+}) {
+  if (!customer?.serviceId) {
+    throw new ApiError(400, "Customer serviceId missing");
+  }
+  if (nextStatus === "suspended") {
+    await radiusServiceManager.suspendSubscriberAccess({
+      serviceId: customer.serviceId,
+      reason
+    });
+  } else if (nextStatus === "active") {
+    await radiusServiceManager.resumeSubscriberAccess({
+      serviceId: customer.serviceId
+    });
+  } else {
+    throw new ApiError(400, "Unsupported collections status change");
+  }
+
+  customer.operationalStatus = nextStatus;
+  customer.billingSnapshot = buildCollectionsResolutionSnapshot(customer, {
+    lastServiceAction: nextStatus === "suspended" ? "collections_suspend" : "collections_resume",
+    lastServiceActionAt: new Date(),
+    lastServiceActionByAdminId: req.admin?._id,
+    lastServiceActionReason: reason || "",
+    suspensionLiftEligible: nextStatus === "active"
+      ? Number(customer.billingSnapshot?.dueAmount || 0) <= 0
+      : false
+  });
+  await customer.save();
+  await syncCustomerBillingState(customer.customerId, customer);
+  await auditFromRequest(req, {
+    action: `billing.collections.${nextStatus === "suspended" ? "suspend" : "resume"}`,
+    entityType: "customer",
+    entityId: customer.customerId,
+    metadata: {
+      serviceId: customer.serviceId,
+      actionSource,
+      reason: reason || ""
+    }
+  });
+  return customer;
+}
+
 async function notifyLinkedCustomerUsers(customerId, { type, title, body, payload }) {
   if (!customerId) return;
   const users = await CustomerUser.find({ linkedCustomerIds: customerId }).select({ _id: 1 }).lean();
@@ -971,23 +1019,30 @@ adminOpsRouter.get(
       const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
       const overdueDays = dueDate ? Math.max(0, Math.floor((now - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
       const graceDays = Number(customer.billingSnapshot?.graceDays || 0);
+      const dueAmountValue = Number(customer.billingSnapshot?.dueAmount || invoice.totalAmount || 0);
+      const promiseToPayAt = customer.billingSnapshot?.collections?.promiseToPayAt
+        ? new Date(customer.billingSnapshot.collections.promiseToPayAt)
+        : null;
+      const promiseActive = promiseToPayAt && !Number.isNaN(promiseToPayAt.getTime()) && promiseToPayAt.getTime() >= now;
       const baseItem = {
         customerId: customer.customerId,
         customerName: customer.fullName || customer.customerId,
         phone: customer.phone,
         status: customer.operationalStatus || "active",
         billMode: customer.billingSnapshot?.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid"),
-        dueAmount: Number(customer.billingSnapshot?.dueAmount || invoice.totalAmount || 0),
+        dueAmount: dueAmountValue,
         invoiceId: invoice.invoiceId,
         invoiceNumber: invoice.invoiceNumber,
         invoiceDueDate: invoice.dueDate,
         invoiceStatus: invoice.paymentStatus,
         overdueDays,
+        graceDays,
         pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
         pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
         adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
         lastReminderAt: customer.billingSnapshot?.collections?.lastReminderAt,
         promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
+        promiseActive,
         promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
         promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
         assignedAdminId: customer.billingSnapshot?.collections?.assignedToAdminId || "",
@@ -995,6 +1050,16 @@ adminOpsRouter.get(
         latestFollowUpNote: customer.billingSnapshot?.collections?.latestFollowUpNote || "",
         latestFollowUpAt: customer.billingSnapshot?.collections?.latestFollowUpAt,
         followUpCount: Number(customer.billingSnapshot?.collections?.followUpCount || 0),
+        lastServiceAction: customer.billingSnapshot?.collections?.lastServiceAction || "",
+        lastServiceActionAt: customer.billingSnapshot?.collections?.lastServiceActionAt || null,
+        suspendEligible:
+          customer.operationalStatus === "active" &&
+          dueAmountValue > 0 &&
+          overdueDays > graceDays &&
+          !promiseActive,
+        resumeEligible:
+          customer.operationalStatus === "suspended" &&
+          dueAmountValue <= 0
       };
 
       items.push({
@@ -1031,6 +1096,7 @@ adminOpsRouter.get(
         billMode: customer.billingSnapshot?.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid"),
         dueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
         overdueDays: 0,
+        graceDays: Number(customer.billingSnapshot?.graceDays || 0),
         bucket: "pending_plan_change",
         pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
         pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
@@ -1045,6 +1111,13 @@ adminOpsRouter.get(
         latestFollowUpNote: customer.billingSnapshot?.collections?.latestFollowUpNote || "",
         latestFollowUpAt: customer.billingSnapshot?.collections?.latestFollowUpAt,
         followUpCount: Number(customer.billingSnapshot?.collections?.followUpCount || 0),
+        promiseActive: false,
+        lastServiceAction: customer.billingSnapshot?.collections?.lastServiceAction || "",
+        lastServiceActionAt: customer.billingSnapshot?.collections?.lastServiceActionAt || null,
+        suspendEligible: false,
+        resumeEligible:
+          customer.operationalStatus === "suspended" &&
+          Number(customer.billingSnapshot?.dueAmount || 0) <= 0
       });
     }
 
@@ -1526,6 +1599,61 @@ adminOpsRouter.post(
       customerId: customer.customerId,
       promiseToPayAt: promisedAt,
       promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0)
+    });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/collections/:customerId/suspend",
+  requirePermission(permissions.customerSuspend),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const reason = String(req.body?.reason || "Billing collections suspension").trim();
+    const updatedCustomer = await applyBillingCollectionsStatusChange({
+      customer,
+      req,
+      nextStatus: "suspended",
+      reason,
+      actionSource: "admin_collections_console"
+    });
+    return ok(res, {
+      updated: true,
+      customerId: updatedCustomer.customerId,
+      operationalStatus: updatedCustomer.operationalStatus,
+      dueAmount: Number(updatedCustomer.billingSnapshot?.dueAmount || 0),
+      lastServiceAction: updatedCustomer.billingSnapshot?.collections?.lastServiceAction || ""
+    });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/collections/:customerId/resume",
+  requirePermission(permissions.customerResume),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const dueAmount = Number(customer.billingSnapshot?.dueAmount || 0);
+    if (dueAmount > 0 && req.body?.force !== true) {
+      throw new ApiError(400, "Customer still has due amount. Clear payment first or use force=true.");
+    }
+    const updatedCustomer = await applyBillingCollectionsStatusChange({
+      customer,
+      req,
+      nextStatus: "active",
+      reason: String(req.body?.reason || "Billing collections resume").trim(),
+      actionSource: req.body?.force === true ? "admin_collections_force_resume" : "admin_collections_console"
+    });
+    return ok(res, {
+      updated: true,
+      customerId: updatedCustomer.customerId,
+      operationalStatus: updatedCustomer.operationalStatus,
+      dueAmount: Number(updatedCustomer.billingSnapshot?.dueAmount || 0),
+      lastServiceAction: updatedCustomer.billingSnapshot?.collections?.lastServiceAction || ""
     });
   })
 );
