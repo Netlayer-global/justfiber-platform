@@ -275,6 +275,15 @@ export default function BillingPage() {
       }),
     [collectionBucket, collectionFilters, collections]
   )
+  const activeCollectionFilterTokens = useMemo(
+    () =>
+      [
+        collectionFilters.search ? { key: 'search', label: `Search ${collectionFilters.search}` } : null,
+        collectionFilters.ownership ? { key: 'ownership', label: collectionFilters.ownership === 'assigned' ? 'Assigned only' : 'Unassigned only' } : null,
+        collectionFilters.posture ? { key: 'posture', label: `Posture ${collectionFilters.posture}` } : null,
+      ].filter(Boolean) as Array<{ key: string; label: string }>,
+    [collectionFilters]
+  )
   const allVisibleSelected = useMemo(
     () => visibleCollections.length > 0 && visibleCollections.every((item) => bulkSelection.includes(item.customerId)),
     [bulkSelection, visibleCollections]
@@ -1418,6 +1427,28 @@ export default function BillingPage() {
               <option value="ptp">PTP active</option>
               <option value="monitor">Monitor</option>
             </select>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {activeCollectionFilterTokens.map((token) => (
+                <div key={token.key} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+                  {token.label}
+                </div>
+              ))}
+              {!activeCollectionFilterTokens.length ? (
+                <div className="rounded-full border border-dashed border-white/10 px-3 py-1 text-xs text-slate-500">
+                  No extra queue filters applied
+                </div>
+              ) : null}
+            </div>
+            {activeCollectionFilterTokens.length ? (
+              <button
+                className="btn-secondary"
+                onClick={() => setCollectionFilters({ search: '', ownership: '', posture: '' })}
+              >
+                Clear filters
+              </button>
+            ) : null}
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
             <div>
