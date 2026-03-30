@@ -1917,6 +1917,22 @@ export const adminAPI = {
     }),
   getCustomerBilling: async (customerId: string) =>
     request(`/api/v1/admin/customers/${customerId}/billing`),
+  waiveCustomerBilling: async (
+    customerId: string,
+    data: { amount: number; taxAmount?: number; invoiceId?: string; reasonCode?: string; note?: string }
+  ) =>
+    request(`/api/v1/admin/billing/customers/${customerId}/waive`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  writeOffCustomerBilling: async (
+    customerId: string,
+    data: { amount: number; invoiceId?: string; reference?: string; note?: string }
+  ) =>
+    request(`/api/v1/admin/billing/customers/${customerId}/write-off`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   confirmCustomerPayment: async (
     customerId: string,
     data: { amount: number; method?: string; reference?: string; paymentId?: string }

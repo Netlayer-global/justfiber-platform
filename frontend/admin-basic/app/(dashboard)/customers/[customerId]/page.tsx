@@ -541,6 +541,112 @@ export default function CustomerDetailPage() {
     }
   }
 
+  async function handleBillingSuspendService() {
+    if (!customer) return
+    const targetCustomerId = customer.customerId || customerId
+    const suspendReason = window.prompt('Suspend reason', reason || 'Billing collections suspension')
+    if (suspendReason === null) return
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.suspendBillingCollectionService(targetCustomerId, suspendReason.trim() || undefined)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to suspend billing service')
+        return
+      }
+      toast.success('Billing service suspended')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to suspend billing service:', error)
+      toast.error('Failed to suspend billing service')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleBillingResumeService(force = false) {
+    if (!customer) return
+    const targetCustomerId = customer.customerId || customerId
+    const resumeReason = window.prompt('Resume reason', force ? 'Force billing resume' : reason || 'Billing collections resume')
+    if (resumeReason === null) return
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.resumeBillingCollectionService(targetCustomerId, {
+        reason: resumeReason.trim() || undefined,
+        force,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to resume billing service')
+        return
+      }
+      toast.success(force ? 'Billing service force-resumed' : 'Billing service resumed')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to resume billing service:', error)
+      toast.error('Failed to resume billing service')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleBillingWaiver() {
+    if (!customer) return
+    const targetCustomerId = customer.customerId || customerId
+    const amount = Number(window.prompt('Waiver amount', String(Number(billingControlCenter?.dueAmount || 0).toFixed(2))) || '')
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Enter a valid waiver amount')
+      return
+    }
+    const note = window.prompt('Waiver note', 'Billing waiver approved') || 'Billing waiver approved'
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.waiveCustomerBilling(targetCustomerId, {
+        amount,
+        note,
+        reasonCode: 'waiver',
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to create waiver')
+        return
+      }
+      toast.success('Billing waiver posted')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to create billing waiver:', error)
+      toast.error('Failed to create waiver')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleBillingWriteOff() {
+    if (!customer) return
+    const targetCustomerId = customer.customerId || customerId
+    const amount = Number(window.prompt('Write-off amount', String(Number(billingControlCenter?.dueAmount || 0).toFixed(2))) || '')
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Enter a valid write-off amount')
+      return
+    }
+    const note = window.prompt('Write-off note', 'Billing write-off approved') || 'Billing write-off approved'
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.writeOffCustomerBilling(targetCustomerId, {
+        amount,
+        note,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to create write-off')
+        return
+      }
+      toast.success('Billing write-off posted')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to create billing write-off:', error)
+      toast.error('Failed to create write-off')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   async function handlePreviewPlanChange(targetPlanCode?: string) {
     const nextPlanCode = targetPlanCode || planCode
     if (!customer || !nextPlanCode) {
@@ -1303,6 +1409,27 @@ export default function CustomerDetailPage() {
                           <div className="mt-2">{formatValue(billingControlCenter?.lastServiceAction?.replaceAll('_', ' '), 'No recent action')}</div>
                           <div className="mt-1 text-xs text-slate-500">{formatDateTime(billingControlCenter?.lastServiceActionAt)}</div>
                         </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {billingControlCenter?.suspendEligible ? (
+                          <button className="btn-secondary" onClick={() => void handleBillingSuspendService()} disabled={isSaving}>
+                            Suspend service
+                          </button>
+                        ) : null}
+                        {(billingControlCenter?.resumeEligible || Number(billingControlCenter?.dueAmount || 0) <= 0) ? (
+                          <button className="btn-secondary" onClick={() => void handleBillingResumeService(false)} disabled={isSaving}>
+                            Resume service
+                          </button>
+                        ) : null}
+                        <button className="btn-secondary" onClick={() => void handleBillingResumeService(true)} disabled={isSaving}>
+                          Force resume
+                        </button>
+                        <button className="btn-secondary" onClick={() => void handleBillingWaiver()} disabled={isSaving}>
+                          Add waiver
+                        </button>
+                        <button className="btn-secondary" onClick={() => void handleBillingWriteOff()} disabled={isSaving}>
+                          Write-off
+                        </button>
                       </div>
                       {billingRiskProfile ? (
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
