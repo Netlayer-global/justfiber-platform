@@ -3362,7 +3362,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   bool _canActivate(String status) => ['onsite', 'ont_scanned', 'failed'].contains(status);
 
   bool _canRetry(String status, String configStatus) {
-    if (['failed', 'ont_scanned', 'activation_in_progress', 'active'].contains(status)) {
+    if (status == 'active') {
+      return true;
+    }
+    if (['failed', 'ont_scanned', 'activation_in_progress'].contains(status)) {
       return configStatus != 'verified';
     }
     return ['pending', 'failed', 'pushed', 'retried'].contains(configStatus);
