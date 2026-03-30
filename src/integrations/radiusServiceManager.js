@@ -6,6 +6,30 @@ import { mikrotikBngManager } from "./mikrotikBngManager.js";
 
 let pool;
 
+function summarizeBngSession(bngSession = {}) {
+  return {
+    attempted: Boolean(bngSession?.attempted),
+    status: String(bngSession?.status || "unknown"),
+    reason: bngSession?.reason || null,
+    action: bngSession?.action || null,
+    bngNodeCode: bngSession?.bngNodeCode || null,
+    target: bngSession?.target || null,
+    error: bngSession?.error || null
+  };
+}
+
+function buildServiceControlMetadata(action, { bngSession, radiusState, reason = null } = {}) {
+  const now = new Date();
+  return {
+    lastServiceControlAction: action,
+    lastServiceControlAt: now,
+    lastRadiusState: radiusState,
+    lastServiceControlReason: reason,
+    lastBngDisconnect: summarizeBngSession(bngSession),
+    lastBngDisconnectAt: now
+  };
+}
+
 function getPool() {
   if (!pool) {
     pool = mysql.createPool({
@@ -236,10 +260,20 @@ export class RadiusServiceManager {
       radiusUsername: username,
       reason: "provision_refresh"
     });
+    nextService.metadata = {
+      ...(nextService.metadata || {}),
+      ...buildServiceControlMetadata("provision", {
+        bngSession,
+        radiusState: "active"
+      })
+    };
+    await nextService.save();
 
     return {
       ...nextService.toObject(),
-      bngSession
+      bngSession,
+      radiusState: "active",
+      serviceControl: summarizeBngSession(bngSession)
     };
   }
 
@@ -268,15 +302,25 @@ export class RadiusServiceManager {
       ...(service.metadata || {}),
       suspensionReason: reason || env.RADIUS_REJECT_MESSAGE
     };
-    await service.save();
     const bngSession = await mikrotikBngManager.disconnectSubscriberSession({
       serviceId: service.serviceId,
       radiusUsername: service.radiusUsername,
       reason: "suspend_disconnect"
     });
+    service.metadata = {
+      ...(service.metadata || {}),
+      ...buildServiceControlMetadata("suspend", {
+        bngSession,
+        radiusState: "suspended",
+        reason: reason || env.RADIUS_REJECT_MESSAGE
+      })
+    };
+    await service.save();
     return {
       ...service.toObject(),
-      bngSession
+      bngSession,
+      radiusState: "suspended",
+      serviceControl: summarizeBngSession(bngSession)
     };
   }
 
@@ -334,6 +378,37 @@ export class RadiusServiceManager {
       serviceId: service?.serviceId || serviceId || null,
       radiusUsername: username,
       purgeAccounting
+    };
+  }
+
+  async verifySubscriberAccessState({ serviceId, radiusUsername, expectedState, expectedReplyMessage } = {}) {
+    const snapshot = await this.getSubscriberAccessSnapshot({ serviceId, radiusUsername });
+    const radcheck = Array.isArray(snapshot.radcheck) ? snapshot.radcheck : [];
+    const radreply = Array.isArray(snapshot.radreply) ? snapshot.radreply : [];
+    const cleartextPassword = radcheck.find((entry) => entry.attribute === "Cleartext-Password");
+    const authTypeReject = radcheck.find(
+      (entry) => entry.attribute === "Auth-Type" && String(entry.value || "").trim().toLowerCase() === "reject"
+    );
+    const replyMessage = radreply.find((entry) => entry.attribute === "Reply-Message");
+
+    const derivedState = authTypeReject ? "suspended" : cleartextPassword ? "active" : "unknown";
+    const matchesExpectedState = expectedState ? derivedState === expectedState : true;
+    const matchesExpectedReplyMessage =
+      expectedReplyMessage === undefined
+        ? true
+        : String(replyMessage?.value || "") === String(expectedReplyMessage || "");
+
+    return {
+      ...snapshot,
+      derivedState,
+      matchesExpectedState,
+      matchesExpectedReplyMessage,
+      checks: {
+        hasCleartextPassword: Boolean(cleartextPassword),
+        hasAuthTypeReject: Boolean(authTypeReject),
+        hasReplyMessage: Boolean(replyMessage),
+        replyMessage: replyMessage?.value || null
+      }
     };
   }
 }

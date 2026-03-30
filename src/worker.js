@@ -170,27 +170,31 @@ async function persistCollectionEvent(customer, key, invoiceId, now, extra = {})
 
 async function applyAutomatedCustomerStatusChange(customer, nextStatus, reason) {
   if (!customer?.serviceId || customer.operationalStatus === nextStatus) {
-    return false;
+    return { changed: false, skipped: true };
   }
+  let serviceControlResult = null;
   if (nextStatus === "suspended") {
-    await radiusServiceManager.suspendSubscriberAccess({
+    serviceControlResult = await radiusServiceManager.suspendSubscriberAccess({
       serviceId: customer.serviceId,
       reason
     });
   } else if (nextStatus === "active") {
-    await radiusServiceManager.resumeSubscriberAccess({
+    serviceControlResult = await radiusServiceManager.resumeSubscriberAccess({
       serviceId: customer.serviceId
     });
   } else {
-    return false;
+    return { changed: false, skipped: true };
   }
 
   const device = await DeviceOperationalCache.findOne({ customerId: customer.customerId });
+  let geniePresetApplied = false;
   if (device) {
     await genieacsClient.applyPreset({
       deviceId: device.deviceId,
       presetName: nextStatus === "suspended" ? "SERVICE_SUSPEND" : "SERVICE_RESUME",
       correlationId: `billing-${customer.customerId}-${nextStatus}`
+    }).then(() => {
+      geniePresetApplied = true;
     }).catch(() => null);
   }
 
@@ -203,9 +207,19 @@ async function applyAutomatedCustomerStatusChange(customer, nextStatus, reason) 
     action: `customer.${nextStatus}.automated`,
     entityType: "customer",
     entityId: customer.customerId,
-    metadata: { reason }
+    metadata: {
+      reason,
+      serviceId: customer.serviceId,
+      geniePresetApplied,
+      radiusState: serviceControlResult?.radiusState || null,
+      bngSession: serviceControlResult?.serviceControl || serviceControlResult?.bngSession || null
+    }
   });
-  return true;
+  return {
+    changed: true,
+    geniePresetApplied,
+    serviceControlResult
+  };
 }
 
 async function resolveActivationTarget(jobRecord, requestedSerial) {
@@ -319,8 +333,10 @@ const worker = new Worker(
         if (!request || !customer) {
           throw new Error("Customer action prerequisites missing");
         }
+        let serviceControlResult = null;
+        let geniePresetApplied = false;
         if (job.data.actionType === "suspend") {
-          await radiusServiceManager.suspendSubscriberAccess({
+          serviceControlResult = await radiusServiceManager.suspendSubscriberAccess({
             serviceId: job.data.serviceId,
             reason: request.payload.reason
           });
@@ -331,10 +347,11 @@ const worker = new Worker(
               presetName: "SERVICE_SUSPEND",
               correlationId: request._id.toString()
             });
+            geniePresetApplied = true;
           }
           customer.operationalStatus = "suspended";
         } else {
-          await radiusServiceManager.resumeSubscriberAccess({
+          serviceControlResult = await radiusServiceManager.resumeSubscriberAccess({
             serviceId: job.data.serviceId
           });
           const device = await DeviceOperationalCache.findOne({ customerId: job.data.customerId });
@@ -344,6 +361,7 @@ const worker = new Worker(
               presetName: "SERVICE_RESUME",
               correlationId: request._id.toString()
             });
+            geniePresetApplied = true;
           }
           customer.operationalStatus = "active";
         }
@@ -358,7 +376,13 @@ const worker = new Worker(
           action: `customer.${job.data.actionType}.executed`,
           entityType: "customer",
           entityId: customer.customerId,
-          metadata: { actionRequestId: request._id.toString() }
+          metadata: {
+            actionRequestId: request._id.toString(),
+            serviceId: job.data.serviceId,
+            geniePresetApplied,
+            radiusState: serviceControlResult?.radiusState || null,
+            bngSession: serviceControlResult?.serviceControl || serviceControlResult?.bngSession || null
+          }
         });
         break;
       }
@@ -1451,12 +1475,12 @@ async function runRecurringBillingTasks() {
           overdueDays > graceDays &&
           !hasValidPromise
         ) {
-          const suspended = await applyAutomatedCustomerStatusChange(
+          const suspensionResult = await applyAutomatedCustomerStatusChange(
             customer,
             "suspended",
             `Auto collections suspension for overdue invoice ${invoice.invoiceNumber || invoice.invoiceId}`
           );
-          if (suspended && (customer.phone || customer.email)) {
+          if (suspensionResult?.changed && (customer.phone || customer.email)) {
             const message = await buildBillingNotificationContent({
               eventKey: "account_suspension",
               customer,
@@ -1517,7 +1541,6 @@ async function runRecurringBillingTasks() {
           lifecycleBefore
         }
       });
-
       const customer = settlement.customer || (await Customer.findOne({ customerId: payment.customerId }));
       let resumed = false;
       if (customer) {
@@ -1534,14 +1557,15 @@ async function runRecurringBillingTasks() {
             promiseNote: ""
           }
         };
-        resumed =
+        const resumeResult =
           customer.operationalStatus === "suspended"
             ? await applyAutomatedCustomerStatusChange(
                 customer,
                 "active",
                 `Auto resume after payment reconciliation ${payment.transactionId}`
               )
-            : (await customer.save(), false);
+            : (await customer.save(), { changed: false });
+        resumed = Boolean(resumeResult?.changed);
         await syncCustomerBillingState(customer.customerId, customer);
         if ((customer.phone || customer.email) && resumed) {
           const message = await buildBillingNotificationContent({

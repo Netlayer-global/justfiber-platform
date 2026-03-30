@@ -134,13 +134,14 @@ async function applyBillingCollectionsStatusChange({
   if (!customer?.serviceId) {
     throw new ApiError(400, "Customer serviceId missing");
   }
+  let serviceControlResult = null;
   if (nextStatus === "suspended") {
-    await radiusServiceManager.suspendSubscriberAccess({
+    serviceControlResult = await radiusServiceManager.suspendSubscriberAccess({
       serviceId: customer.serviceId,
       reason
     });
   } else if (nextStatus === "active") {
-    await radiusServiceManager.resumeSubscriberAccess({
+    serviceControlResult = await radiusServiceManager.resumeSubscriberAccess({
       serviceId: customer.serviceId
     });
   } else {
@@ -166,10 +167,12 @@ async function applyBillingCollectionsStatusChange({
     metadata: {
       serviceId: customer.serviceId,
       actionSource,
-      reason: reason || ""
+      reason: reason || "",
+      radiusState: serviceControlResult?.radiusState || null,
+      bngSession: serviceControlResult?.serviceControl || serviceControlResult?.bngSession || null
     }
   });
-  return customer;
+  return { customer, serviceControlResult };
 }
 
 async function notifyLinkedCustomerUsers(customerId, { type, title, body, payload }) {
@@ -1180,28 +1183,38 @@ async function executeCollectionsBulkAction({
       };
     }
     case "suspend_service": {
-      const updatedCustomer = await applyBillingCollectionsStatusChange({
+      const { customer: updatedCustomer, serviceControlResult } = await applyBillingCollectionsStatusChange({
         customer,
         req,
         nextStatus: "suspended",
         reason: String(reason || "Bulk collections suspension").trim(),
         actionSource: "admin_collections_bulk"
       });
-      return { customerId: updatedCustomer.customerId, action, operationalStatus: updatedCustomer.operationalStatus };
+      return {
+        customerId: updatedCustomer.customerId,
+        action,
+        operationalStatus: updatedCustomer.operationalStatus,
+        serviceControl: serviceControlResult?.serviceControl || serviceControlResult?.bngSession || null
+      };
     }
     case "resume_service": {
       const dueAmount = Number(customer.billingSnapshot?.dueAmount || 0);
       if (dueAmount > 0 && force !== true) {
         throw new ApiError(400, "Customer still has due amount. Clear payment first or use force=true.");
       }
-      const updatedCustomer = await applyBillingCollectionsStatusChange({
+      const { customer: updatedCustomer, serviceControlResult } = await applyBillingCollectionsStatusChange({
         customer,
         req,
         nextStatus: "active",
         reason: String(reason || "Bulk collections resume").trim(),
         actionSource: force === true ? "admin_collections_bulk_force_resume" : "admin_collections_bulk"
       });
-      return { customerId: updatedCustomer.customerId, action, operationalStatus: updatedCustomer.operationalStatus };
+      return {
+        customerId: updatedCustomer.customerId,
+        action,
+        operationalStatus: updatedCustomer.operationalStatus,
+        serviceControl: serviceControlResult?.serviceControl || serviceControlResult?.bngSession || null
+      };
     }
     default:
       throw new ApiError(400, "Unsupported bulk collections action");
@@ -2260,7 +2273,7 @@ adminOpsRouter.post(
       throw new ApiError(404, "Customer not found");
     }
     const reason = String(req.body?.reason || "Billing collections suspension").trim();
-    const updatedCustomer = await applyBillingCollectionsStatusChange({
+    const { customer: updatedCustomer, serviceControlResult } = await applyBillingCollectionsStatusChange({
       customer,
       req,
       nextStatus: "suspended",
@@ -2272,7 +2285,8 @@ adminOpsRouter.post(
       customerId: updatedCustomer.customerId,
       operationalStatus: updatedCustomer.operationalStatus,
       dueAmount: Number(updatedCustomer.billingSnapshot?.dueAmount || 0),
-      lastServiceAction: updatedCustomer.billingSnapshot?.collections?.lastServiceAction || ""
+      lastServiceAction: updatedCustomer.billingSnapshot?.collections?.lastServiceAction || "",
+      serviceControl: serviceControlResult?.serviceControl || serviceControlResult?.bngSession || null
     });
   })
 );
@@ -2289,7 +2303,7 @@ adminOpsRouter.post(
     if (dueAmount > 0 && req.body?.force !== true) {
       throw new ApiError(400, "Customer still has due amount. Clear payment first or use force=true.");
     }
-    const updatedCustomer = await applyBillingCollectionsStatusChange({
+    const { customer: updatedCustomer, serviceControlResult } = await applyBillingCollectionsStatusChange({
       customer,
       req,
       nextStatus: "active",
@@ -2301,7 +2315,8 @@ adminOpsRouter.post(
       customerId: updatedCustomer.customerId,
       operationalStatus: updatedCustomer.operationalStatus,
       dueAmount: Number(updatedCustomer.billingSnapshot?.dueAmount || 0),
-      lastServiceAction: updatedCustomer.billingSnapshot?.collections?.lastServiceAction || ""
+      lastServiceAction: updatedCustomer.billingSnapshot?.collections?.lastServiceAction || "",
+      serviceControl: serviceControlResult?.serviceControl || serviceControlResult?.bngSession || null
     });
   })
 );
@@ -3130,7 +3145,9 @@ adminOpsRouter.post(
       serviceId: result.serviceId,
       customerId: result.customerId,
       status: result.status,
-      updated: true
+      updated: true,
+      radiusState: result.radiusState || null,
+      serviceControl: result.serviceControl || result.bngSession || null
     });
   })
 );
@@ -3153,7 +3170,9 @@ adminOpsRouter.post(
       serviceId: result.serviceId,
       customerId: result.customerId,
       status: result.status,
-      updated: true
+      updated: true,
+      radiusState: result.radiusState || null,
+      serviceControl: result.serviceControl || result.bngSession || null
     });
   })
 );
