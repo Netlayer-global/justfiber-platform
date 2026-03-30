@@ -103,6 +103,8 @@ async function main() {
     await waitForApiReady(api);
     console.log("API is ready. Running smoke checks...");
     await runSmokeAllModules();
+    console.log("Smoke checks passed. Running billing automation checks...");
+    await runNodeScript("src/scripts/testBillingAutomation.js", "billing-verify", VERIFY_ENV);
     console.log("verify:all completed successfully");
   } finally {
     await stopChild(api, "API");
