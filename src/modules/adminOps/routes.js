@@ -113,6 +113,16 @@ function parseCsvRows(rawText = "") {
   });
 }
 
+function buildCollectionsResolutionSnapshot(customer, updates = {}) {
+  return {
+    ...(customer.billingSnapshot || {}),
+    collections: {
+      ...(customer.billingSnapshot?.collections || {}),
+      ...updates
+    }
+  };
+}
+
 async function notifyLinkedCustomerUsers(customerId, { type, title, body, payload }) {
   if (!customerId) return;
   const users = await CustomerUser.find({ linkedCustomerIds: customerId }).select({ _id: 1 }).lean();
@@ -632,7 +642,20 @@ adminOpsRouter.get(
   "/billing/overview",
   requirePermission(permissions.billingRead),
   asyncHandler(async (_req, res) => {
-    const [totalInvoices, overdueInvoices, paidTransactions, dueAmount, collectedAmount, taxCollected, stateWiseGst, agingInvoices, customers] = await Promise.all([
+    const [
+      totalInvoices,
+      overdueInvoices,
+      paidTransactions,
+      dueAmount,
+      collectedAmount,
+      taxCollected,
+      stateWiseGst,
+      agingInvoices,
+      customers,
+      reconciliationStats,
+      writeOffStats,
+      waiverStats
+    ] = await Promise.all([
       BillingInvoice.countDocuments(),
       BillingInvoice.countDocuments({ paymentStatus: "overdue" }),
       PaymentTransaction.countDocuments({ status: "success" }),
@@ -672,7 +695,42 @@ adminOpsRouter.get(
         operationalStatus: 1,
         customerType: 1,
         billingSnapshot: 1
-      }).lean()
+      }).lean(),
+      PaymentTransaction.aggregate([
+        {
+          $group: {
+            _id: "$reconciliationStatus",
+            count: { $sum: 1 },
+            amount: { $sum: "$amount" },
+            unallocatedAmount: { $sum: "$unallocatedAmount" }
+          }
+        }
+      ]),
+      BillingLedgerEntry.aggregate([
+        { $match: { category: "writeoff" } },
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+            amount: { $sum: "$amount" }
+          }
+        }
+      ]),
+      BillingNote.aggregate([
+        {
+          $match: {
+            type: "credit",
+            "metadata.resolutionType": "waiver"
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+            amount: { $sum: "$totalAmount" }
+          }
+        }
+      ])
     ]);
 
     const now = Date.now();
@@ -742,6 +800,16 @@ adminOpsRouter.get(
       }
     }
 
+    const reconciliationSummary = reconciliationStats.reduce((acc, item) => {
+      const key = item?._id || "pending";
+      acc[key] = {
+        count: Number(item?.count || 0),
+        amount: Number(item?.amount || 0),
+        unallocatedAmount: Number(item?.unallocatedAmount || 0)
+      };
+      return acc;
+    }, {});
+
     return ok(res, {
       totalInvoices,
       overdueInvoices,
@@ -758,7 +826,14 @@ adminOpsRouter.get(
         totalAmount: item.totalAmount || 0
       })),
       agingBuckets,
-      collectionStats
+      collectionStats,
+      reconciliationSummary,
+      financeControls: {
+        writeOffCount: Number(writeOffStats[0]?.count || 0),
+        writeOffAmount: Number(writeOffStats[0]?.amount || 0),
+        waiverCount: Number(waiverStats[0]?.count || 0),
+        waiverAmount: Number(waiverStats[0]?.amount || 0)
+      }
     });
   })
 );
@@ -1109,6 +1184,71 @@ adminOpsRouter.post(
         updatedAt: item.updatedAt
       };
     }));
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/reconciliation/summary",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    const [statusBuckets, recentItems] = await Promise.all([
+      PaymentTransaction.aggregate([
+        {
+          $group: {
+            _id: "$reconciliationStatus",
+            count: { $sum: 1 },
+            totalAmount: { $sum: "$amount" },
+            unallocatedAmount: { $sum: "$unallocatedAmount" }
+          }
+        }
+      ]),
+      PaymentTransaction.find({
+        $or: [
+          { reconciliationStatus: { $in: ["pending", "matched", "manual_review"] } },
+          { unallocatedAmount: { $gt: 0 } }
+        ]
+      })
+        .sort({ paidAt: -1, createdAt: -1 })
+        .limit(100)
+        .lean()
+    ]);
+
+    const customerIds = [...new Set(recentItems.map((item) => item.customerId).filter(Boolean))];
+    const customers = await Customer.find(
+      { customerId: { $in: customerIds } },
+      { customerId: 1, fullName: 1, phone: 1, operationalStatus: 1, billingSnapshot: 1 }
+    ).lean();
+    const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
+
+    return ok(res, {
+      statusBuckets: statusBuckets.map((item) => ({
+        status: item?._id || "pending",
+        count: Number(item?.count || 0),
+        totalAmount: Number(item?.totalAmount || 0),
+        unallocatedAmount: Number(item?.unallocatedAmount || 0)
+      })),
+      items: recentItems.map((item) => {
+        const customer = customerMap.get(item.customerId);
+        return {
+          transactionId: item.transactionId,
+          customerId: item.customerId,
+          customerName: customer?.fullName || item.customerId,
+          phone: customer?.phone || "",
+          customerStatus: customer?.operationalStatus || "",
+          dueAmount: Number(customer?.billingSnapshot?.dueAmount || 0),
+          amount: Number(item.amount || 0),
+          unallocatedAmount: Number(item.unallocatedAmount || 0),
+          status: item.status || "",
+          reconciliationStatus: item.reconciliationStatus || "pending",
+          provider: item.provider || "",
+          method: item.method || "",
+          invoiceId: item.invoiceId || item.reconciledInvoiceId || "",
+          reference: item.reference || "",
+          paidAt: item.paidAt,
+          createdAt: item.createdAt
+        };
+      })
+    });
   })
 );
 
@@ -2698,6 +2838,141 @@ adminOpsRouter.post(
       metadata: { ledgerEntryId: entry.entryId, refundId, amount }
     });
     return ok(res, entry, { created: true });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/customers/:customerId/waive",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const amount = Number(req.body?.amount);
+    const taxAmount = Number(req.body?.taxAmount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ApiError(400, "Valid positive waiver amount is required");
+    }
+    const result = await applyBillingNoteAdjustment({
+      customer,
+      type: "credit",
+      amount,
+      taxAmount,
+      taxMode: req.body?.taxMode || "india_gst",
+      taxBreakdown: Array.isArray(req.body?.taxBreakdown) ? req.body.taxBreakdown : [],
+      invoiceId: req.body?.invoiceId,
+      reasonCode: req.body?.reasonCode || "waiver",
+      note: req.body?.note || "Billing waiver approved",
+      metadata: {
+        ...(req.body?.metadata || {}),
+        resolutionType: "waiver",
+        requestId: req.requestId
+      },
+      createdByAdminId: req.admin?._id,
+      source: "admin_billing_waiver"
+    });
+
+    const refreshedCustomer = result.customer || (await Customer.findOne({ customerId: customer.customerId }));
+    if (refreshedCustomer) {
+      refreshedCustomer.billingSnapshot = buildCollectionsResolutionSnapshot(refreshedCustomer, {
+        lastResolutionType: "waiver",
+        lastResolutionAt: new Date(),
+        lastResolutionAmount: Number(result.note?.totalAmount || amount + taxAmount),
+        lastResolutionReference: result.note?.noteNumber || ""
+      });
+      await refreshedCustomer.save();
+      await syncCustomerBillingState(refreshedCustomer.customerId, refreshedCustomer);
+    }
+
+    await auditFromRequest(req, {
+      action: "billing.waiver.created",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: {
+        invoiceId: req.body?.invoiceId || "",
+        noteNumber: result.note?.noteNumber || "",
+        amount: Number(result.note?.totalAmount || amount + taxAmount)
+      }
+    });
+
+    return ok(res, {
+      waived: true,
+      customerId: customer.customerId,
+      note: result.note,
+      ledgerEntry: result.ledgerEntry
+    }, { created: true });
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/customers/:customerId/write-off",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ApiError(400, "Valid positive write-off amount is required");
+    }
+    const entry = await createLedgerEntry({
+      customerId: customer.customerId,
+      serviceId: customer.serviceId,
+      invoiceId: req.body?.invoiceId,
+      category: "writeoff",
+      direction: "credit",
+      amount,
+      reference: req.body?.reference || `WO-${Date.now()}`,
+      note: req.body?.note || "Billing write-off approved",
+      source: "admin_writeoff",
+      createdByAdminId: req.admin?._id,
+      metadata: {
+        ...(req.body?.metadata || {}),
+        resolutionType: "writeoff",
+        requestId: req.requestId
+      }
+    });
+
+    customer.billingSnapshot = buildCollectionsResolutionSnapshot(customer, {
+      lastResolutionType: "writeoff",
+      lastResolutionAt: new Date(),
+      lastResolutionAmount: amount,
+      lastResolutionReference: entry.entryId
+    });
+    await customer.save();
+    await syncCustomerBillingState(customer.customerId, customer);
+
+    if (req.body?.invoiceId) {
+      await BillingInvoice.updateOne(
+        { invoiceId: req.body.invoiceId, customerId: customer.customerId },
+        {
+          $set: {
+            "metadata.writeOffEntryId": entry.entryId,
+            "metadata.writeOffAt": new Date(),
+            "metadata.writeOffByAdminId": req.admin?._id
+          }
+        }
+      );
+    }
+
+    await auditFromRequest(req, {
+      action: "billing.writeoff.created",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: {
+        invoiceId: req.body?.invoiceId || "",
+        ledgerEntryId: entry.entryId,
+        amount
+      }
+    });
+
+    return ok(res, {
+      writtenOff: true,
+      customerId: customer.customerId,
+      ledgerEntry: entry
+    }, { created: true });
   })
 );
 
