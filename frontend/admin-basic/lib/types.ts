@@ -283,6 +283,17 @@ export interface BngNode {
     reloadReason?: string
     syncedAt?: string
   }
+  lastRadiusAuthTelemetry?: {
+    radiusUsername?: string
+    sourceIp?: string
+    reply?: string
+    authDate?: string
+    matchedTrustedClient?: boolean
+    trustedClientIps?: string[]
+    mismatch?: boolean
+    detailFile?: string
+    reason?: string
+  }
 }
 
 export interface BngNodeTestResult {

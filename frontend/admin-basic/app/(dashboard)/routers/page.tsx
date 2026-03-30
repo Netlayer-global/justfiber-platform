@@ -102,6 +102,8 @@ export default function RoutersPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [isSyncingFreeradius, setIsSyncingFreeradius] = useState(false)
+  const [isSyncingAuthTelemetry, setIsSyncingAuthTelemetry] = useState(false)
+  const [isTrustingAuthSource, setIsTrustingAuthSource] = useState(false)
   const [isCoaSending, setIsCoaSending] = useState(false)
   const [testResult, setTestResult] = useState<BngNodeTestResult | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -340,6 +342,47 @@ export default function RoutersPage() {
     }
   }
 
+  async function handleSyncAuthTelemetrySelected() {
+    if (!selectedRouter?.nodeCode) return
+    setIsSyncingAuthTelemetry(true)
+    try {
+      const res = await adminAPI.syncBngNodeAuthTelemetry(selectedRouter.nodeCode)
+      if (!res.success || !res.data) {
+        throw new Error(res.error || 'Failed to refresh auth telemetry')
+      }
+      toast.success(
+        res.data.lastRadiusAuthTelemetry?.mismatch
+          ? 'Auth telemetry refreshed | source IP mismatch detected'
+          : 'Auth telemetry refreshed'
+      )
+      await loadRouters(res.data.id)
+    } catch (error) {
+      console.error('[v0] Failed to refresh auth telemetry:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to refresh auth telemetry')
+    } finally {
+      setIsSyncingAuthTelemetry(false)
+    }
+  }
+
+  async function handleTrustAuthSourceSelected() {
+    if (!selectedRouter?.nodeCode) return
+    setIsTrustingAuthSource(true)
+    try {
+      const sourceIp = selectedRouter.lastRadiusAuthTelemetry?.sourceIp
+      const res = await adminAPI.trustBngNodeRadiusSource(selectedRouter.nodeCode, sourceIp)
+      if (!res.success || !res.data) {
+        throw new Error(res.error || 'Failed to trust live RADIUS source')
+      }
+      toast.success('Live RADIUS source trusted and synced')
+      await loadRouters(res.data.id)
+    } catch (error) {
+      console.error('[v0] Failed to trust live RADIUS source:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to trust live RADIUS source')
+    } finally {
+      setIsTrustingAuthSource(false)
+    }
+  }
+
   const activeCount = routers.filter((item) => item.status === 'active').length
   const coaEnabledCount = routers.filter((item) => item.useCoa !== false).length
 
@@ -537,6 +580,32 @@ export default function RoutersPage() {
                     </div>
                   ) : null}
                 </div>
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">RADIUS auth telemetry</div>
+                  <div className="mt-3 text-sm leading-6 text-slate-600">
+                    {selectedRouter.lastRadiusAuthTelemetry?.sourceIp
+                      ? `Latest auth source ${selectedRouter.lastRadiusAuthTelemetry.sourceIp}`
+                      : 'No recent auth telemetry captured yet.'}
+                  </div>
+                  {selectedRouter.lastRadiusAuthTelemetry ? (
+                    <div className="mt-3 space-y-2 text-xs text-slate-500">
+                      <div className="flex items-center justify-between gap-3"><span>Radius username</span><span>{selectedRouter.lastRadiusAuthTelemetry.radiusUsername || '-'}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Source IP</span><span>{selectedRouter.lastRadiusAuthTelemetry.sourceIp || '-'}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Trusted match</span><span>{selectedRouter.lastRadiusAuthTelemetry.matchedTrustedClient ? 'Matched' : 'Mismatch'}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Last reply</span><span>{selectedRouter.lastRadiusAuthTelemetry.reply || '-'}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Last auth time</span><span>{selectedRouter.lastRadiusAuthTelemetry.authDate ? new Date(selectedRouter.lastRadiusAuthTelemetry.authDate).toLocaleString() : '-'}</span></div>
+                      {selectedRouter.lastRadiusAuthTelemetry.trustedClientIps?.length ? (
+                        <div className="break-all">Trusted IPs: {selectedRouter.lastRadiusAuthTelemetry.trustedClientIps.join(', ')}</div>
+                      ) : null}
+                      {selectedRouter.lastRadiusAuthTelemetry.mismatch ? (
+                        <div className="break-all text-amber-600">Live auth source is not currently trusted. One-click trust can add it to this router and sync FreeRADIUS.</div>
+                      ) : null}
+                      {selectedRouter.lastRadiusAuthTelemetry.reason ? (
+                        <div className="break-all text-red-600">Telemetry note: {selectedRouter.lastRadiusAuthTelemetry.reason}</div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ) : (
               <div className="mt-6 rounded-[22px] border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
@@ -563,6 +632,18 @@ export default function RoutersPage() {
                 <button type="button" className="btn-secondary" disabled={isSyncingFreeradius} onClick={() => void handleSyncFreeradiusSelected()}>
                   {isSyncingFreeradius ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                   Sync FreeRADIUS
+                </button>
+              ) : null}
+              {selectedRouter ? (
+                <button type="button" className="btn-secondary" disabled={isSyncingAuthTelemetry} onClick={() => void handleSyncAuthTelemetrySelected()}>
+                  {isSyncingAuthTelemetry ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                  Refresh auth telemetry
+                </button>
+              ) : null}
+              {selectedRouter?.lastRadiusAuthTelemetry?.mismatch ? (
+                <button type="button" className="btn-secondary" disabled={isTrustingAuthSource} onClick={() => void handleTrustAuthSourceSelected()}>
+                  {isTrustingAuthSource ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                  Trust live source IP
                 </button>
               ) : null}
               {selectedRouter ? (

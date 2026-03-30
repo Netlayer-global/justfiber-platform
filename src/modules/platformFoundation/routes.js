@@ -422,6 +422,16 @@ function stripManagedFreeradiusClientBlock(contents, nodeCode) {
   return contents.replace(pattern, "\n").replace(/\n{3,}/g, "\n\n");
 }
 
+function getTrustedRadiusClientIps(node) {
+  return Array.from(
+    new Set(
+      [String(node?.radiusClientIp || "").trim(), ...(Array.isArray(node?.additionalRadiusClientIps) ? node.additionalRadiusClientIps : [])]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
+
 async function runFreeradiusCommand(commandParts = []) {
   if (!Array.isArray(commandParts) || commandParts.length === 0) {
     return { ran: false, skipped: true, reason: "missing_command" };
@@ -497,6 +507,113 @@ async function persistFreeradiusSyncStatus(nodeCode, syncResult) {
       }
     }
   );
+}
+
+function parseFreeradiusAuthBlocks(contents) {
+  return String(contents || "")
+    .split(/\n\s*\n/g)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => {
+      const radiusUsername = (block.match(/User-Name\s*=\s*"([^"]+)"/) || [])[1] || "";
+      const sourceIp =
+        (block.match(/Packet-Src-IP-Address\s*=\s*([^\s]+)/) || [])[1] ||
+        (block.match(/Client-IP-Address\s*=\s*([^\s]+)/) || [])[1] ||
+        "";
+      const reply = (block.match(/Reply-Message\s*=\s*"([^"]+)"/) || [])[1] || "";
+      const packetType = (block.match(/reply:Packet-Type\s*=\s*([^\s]+)/) || [])[1] || "";
+      const authDateRaw = (block.match(/^([A-Z][a-z]{2}\s+\d+\s+\d{4}\s+\d{2}:\d{2}:\d{2})/m) || [])[1] || "";
+      return {
+        radiusUsername,
+        sourceIp,
+        reply: reply || packetType || "",
+        authDate: authDateRaw ? new Date(authDateRaw) : null,
+        raw: block
+      };
+    });
+}
+
+async function readLatestRadiusAuthTelemetry({ radiusUsername, limit = 20 } = {}) {
+  const baseDir = String(env.FREERADIUS_AUTH_DETAIL_DIR || "").trim();
+  if (!baseDir) {
+    return { found: false, reason: "missing_auth_detail_dir" };
+  }
+
+  try {
+    const dirEntries = await fs.readdir(baseDir, { withFileTypes: true });
+    const candidateDirs = dirEntries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).slice(-limit);
+    let latestMatch = null;
+
+    for (const dirName of candidateDirs) {
+      const dirPath = `${baseDir}/${dirName}`;
+      let files = [];
+      try {
+        files = await fs.readdir(dirPath);
+      } catch {
+        continue;
+      }
+      const authFiles = files.filter((file) => file.startsWith("auth-detail-")).sort().reverse().slice(0, 2);
+      for (const fileName of authFiles) {
+        const filePath = `${dirPath}/${fileName}`;
+        let fileContents = "";
+        try {
+          fileContents = await fs.readFile(filePath, "utf8");
+        } catch {
+          continue;
+        }
+        const matches = parseFreeradiusAuthBlocks(fileContents)
+          .filter((item) => !radiusUsername || item.radiusUsername === radiusUsername)
+          .sort((left, right) => new Date(right.authDate || 0).getTime() - new Date(left.authDate || 0).getTime());
+        if (matches[0]) {
+          latestMatch = {
+            ...matches[0],
+            detailFile: filePath
+          };
+          break;
+        }
+      }
+      if (latestMatch) break;
+    }
+
+    if (!latestMatch) {
+      return { found: false, reason: "no_recent_auth_entry" };
+    }
+
+    return { found: true, ...latestMatch };
+  } catch (error) {
+    return {
+      found: false,
+      reason: error instanceof Error ? error.message : "auth_telemetry_read_failed"
+    };
+  }
+}
+
+async function syncRadiusAuthTelemetryForNode(node) {
+  const service = await SubscriberService.findOne({ bngNodeCode: node.nodeCode }).sort({ updatedAt: -1 }).lean();
+  const radiusUsername = String(service?.radiusUsername || "").trim();
+  if (!radiusUsername) {
+    const result = { found: false, reason: "no_service_radius_username" };
+    await BngNode.updateOne({ nodeCode: node.nodeCode }, { $set: { lastRadiusAuthTelemetry: { ...result, trustedClientIps: getTrustedRadiusClientIps(node) } } });
+    return result;
+  }
+
+  const telemetry = await readLatestRadiusAuthTelemetry({ radiusUsername });
+  const trustedClientIps = getTrustedRadiusClientIps(node);
+  const sourceIp = String(telemetry.sourceIp || "").trim();
+  const matchedTrustedClient = Boolean(sourceIp && trustedClientIps.includes(sourceIp));
+  const snapshot = {
+    radiusUsername,
+    sourceIp,
+    reply: telemetry.reply || "",
+    authDate: telemetry.authDate || null,
+    matchedTrustedClient,
+    trustedClientIps,
+    mismatch: Boolean(sourceIp) && !matchedTrustedClient,
+    detailFile: telemetry.detailFile || "",
+    reason: telemetry.reason || ""
+  };
+  await BngNode.updateOne({ nodeCode: node.nodeCode }, { $set: { lastRadiusAuthTelemetry: snapshot } });
+  return { found: telemetry.found, ...snapshot };
 }
 
 async function syncFreeradiusClientForNode(node) {
@@ -753,6 +870,51 @@ platformFoundationRouter.post(
   })
 );
 
+platformFoundationRouter.post(
+  "/foundation/bng-nodes/:nodeCode/sync-auth-telemetry",
+  requirePermission(permissions.configRead),
+  asyncHandler(async (req, res) => {
+    const nodeCode = String(req.params.nodeCode || "").trim();
+    const node = await BngNode.findOne({ nodeCode }).lean();
+    if (!node) {
+      throw new Error("BNG node not found");
+    }
+    const authTelemetry = await syncRadiusAuthTelemetryForNode(node);
+    const item = await BngNode.findOne({ nodeCode }).lean();
+    return ok(res, { ...item, authTelemetry });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/bng-nodes/:nodeCode/trust-radius-source",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const nodeCode = String(req.params.nodeCode || "").trim();
+    const node = await BngNode.findOne({ nodeCode }).lean();
+    if (!node) {
+      throw new Error("BNG node not found");
+    }
+    const sourceIp = String(req.body?.sourceIp || node.lastRadiusAuthTelemetry?.sourceIp || "").trim();
+    if (!sourceIp) {
+      throw new Error("Source IP is required");
+    }
+    const trustedIps = getTrustedRadiusClientIps(node);
+    const primaryIp = String(node.radiusClientIp || "").trim();
+    const additionalIps = Array.isArray(node.additionalRadiusClientIps) ? node.additionalRadiusClientIps.map((item) => String(item || "").trim()).filter(Boolean) : [];
+    if (!trustedIps.includes(sourceIp)) {
+      if (!primaryIp) {
+        await BngNode.updateOne({ nodeCode }, { $set: { radiusClientIp: sourceIp } });
+      } else {
+        await BngNode.updateOne({ nodeCode }, { $set: { additionalRadiusClientIps: Array.from(new Set([...additionalIps, sourceIp])) } });
+      }
+    }
+    const refreshedNode = await BngNode.findOne({ nodeCode }).lean();
+    const freeradiusClientSync = refreshedNode ? await syncFreeradiusClientForNode(refreshedNode) : { synced: false, reason: "node_not_found" };
+    const authTelemetry = refreshedNode ? await syncRadiusAuthTelemetryForNode(refreshedNode) : { found: false, reason: "node_not_found" };
+    const item = await BngNode.findOne({ nodeCode }).lean();
+    return ok(res, { ...item, freeradiusClientSync, authTelemetry });
+  })
+);
 platformFoundationRouter.post(
   "/foundation/bng-nodes/:nodeCode/coa-disconnect",
   requirePermission(permissions.configUpdate),

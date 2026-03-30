@@ -342,6 +342,7 @@ function mapBngNode(node: any): BngNode {
     updatedAt: node.updatedAt || '',
     freeradiusClientSync: node.freeradiusClientSync || undefined,
     lastFreeradiusSync: node.lastFreeradiusSync || undefined,
+    lastRadiusAuthTelemetry: node.lastRadiusAuthTelemetry || undefined,
   }
 }
 
@@ -1371,6 +1372,25 @@ export const adminAPI = {
   syncBngNodeFreeradius: async (nodeCode: string) => {
     const res = await request<any>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/sync-freeradius`, {
       method: 'POST',
+    })
+    return {
+      ...res,
+      data: res.data ? mapBngNode(res.data) : undefined,
+    }
+  },
+  syncBngNodeAuthTelemetry: async (nodeCode: string) => {
+    const res = await request<any>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/sync-auth-telemetry`, {
+      method: 'POST',
+    })
+    return {
+      ...res,
+      data: res.data ? mapBngNode(res.data) : undefined,
+    }
+  },
+  trustBngNodeRadiusSource: async (nodeCode: string, sourceIp?: string) => {
+    const res = await request<any>(`/api/v1/admin/foundation/bng-nodes/${encodeURIComponent(nodeCode)}/trust-radius-source`, {
+      method: 'POST',
+      body: JSON.stringify(sourceIp ? { sourceIp } : {}),
     })
     return {
       ...res,

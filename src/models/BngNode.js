@@ -38,6 +38,17 @@ const bngNodeSchema = new mongoose.Schema(
       reloadCommand: String,
       reloadReason: String,
       syncedAt: Date
+    },
+    lastRadiusAuthTelemetry: {
+      radiusUsername: String,
+      sourceIp: String,
+      reply: String,
+      authDate: Date,
+      matchedTrustedClient: Boolean,
+      trustedClientIps: { type: [String], default: [] },
+      mismatch: Boolean,
+      detailFile: String,
+      reason: String
     }
   },
   { timestamps: true }
