@@ -610,20 +610,22 @@ async function main() {
     );
   }
 
-  await CustomerUser.updateOne(
-    { mobile: "9876543210" },
-    {
-      $set: {
-        mobile: "9876543210",
-        email: "amit@example.com",
-        fullName: "Amit Singh",
-        authMode: "mobile_otp",
-        linkedCustomerIds: ["CUST-1001"],
-        state: "active_customer"
-      }
-    },
-    { upsert: true }
-  );
+  for (const customer of customers) {
+    await CustomerUser.updateOne(
+      { mobile: customer.phone },
+      {
+        $set: {
+          mobile: customer.phone,
+          email: customer.email,
+          fullName: customer.fullName,
+          authMode: "mobile_otp",
+          linkedCustomerIds: [customer.customerId],
+          state: "active_customer"
+        }
+      },
+      { upsert: true }
+    );
+  }
 
   const customerUser = await CustomerUser.findOne({ mobile: "9876543210" });
 
