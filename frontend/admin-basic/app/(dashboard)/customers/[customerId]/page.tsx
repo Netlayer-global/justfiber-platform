@@ -1717,18 +1717,37 @@ export default function CustomerDetailPage() {
                       </div>
                       {billingTimeline.length ? (
                         <div className="space-y-3">
-                          {billingTimeline.map((entry) => (
-                            <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div>
-                                  <p className="font-semibold text-slate-900">{formatValue(entry.action.replaceAll('.', ' '), '-')}</p>
-                                  <p className="mt-1 text-xs text-slate-500">{formatValue(entry.actorName || entry.actorType, 'System')}</p>
+                          {billingTimeline.map((entry) => {
+                            const metadata = (entry.metadata || {}) as Record<string, unknown>
+                            const invoiceId = String(metadata.invoiceId || metadata.invoiceNumber || '')
+                            const noteNumber = String(metadata.noteNumber || metadata.reference || '')
+                            return (
+                              <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{formatValue(entry.action.replaceAll('.', ' '), '-')}</p>
+                                    <p className="mt-1 text-xs text-slate-500">{formatValue(entry.actorName || entry.actorType, 'System')}</p>
+                                  </div>
+                                  <span className="text-xs text-slate-500">{formatDateTime(entry.createdAt)}</span>
                                 </div>
-                                <span className="text-xs text-slate-500">{formatDateTime(entry.createdAt)}</span>
+                                {entry.reason ? <p className="mt-2 text-sm text-slate-600">{entry.reason}</p> : null}
+                                {invoiceId || noteNumber ? (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {invoiceId ? (
+                                      <button className="btn-secondary" onClick={() => void openInvoicePdf(invoiceId)}>
+                                        Open invoice
+                                      </button>
+                                    ) : null}
+                                    {noteNumber ? (
+                                      <button className="btn-secondary" onClick={() => void openBillingNotePdf(noteNumber)}>
+                                        Open note
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                ) : null}
                               </div>
-                              {entry.reason ? <p className="mt-2 text-sm text-slate-600">{entry.reason}</p> : null}
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       ) : (
                         <p className="text-sm text-slate-500">No billing actions recorded yet.</p>
@@ -1742,6 +1761,16 @@ export default function CustomerDetailPage() {
                             <div className="font-semibold text-slate-900">{item.noteNumber}</div>
                             <div className="mt-1 text-slate-600">Rs {Number(item.totalAmount || 0).toFixed(2)}</div>
                             <div className="mt-1 text-xs text-slate-500">{formatDateTime(item.issuedAt)}</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button className="btn-secondary" onClick={() => void openBillingNotePdf(item.noteNumber)}>
+                                Open note
+                              </button>
+                              {item.invoiceId ? (
+                                <button className="btn-secondary" onClick={() => void openInvoicePdf(item.invoiceId)}>
+                                  Open invoice
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
                         )) : <p className="text-sm text-slate-500">No waivers recorded.</p>}
                       </div>
@@ -1752,6 +1781,13 @@ export default function CustomerDetailPage() {
                             <div className="font-semibold text-slate-900">{item.reference || item.entryId}</div>
                             <div className="mt-1 text-slate-600">Rs {Number(item.amount || 0).toFixed(2)}</div>
                             <div className="mt-1 text-xs text-slate-500">{formatDateTime(item.postedAt)}</div>
+                            {item.invoiceId ? (
+                              <div className="mt-3">
+                                <button className="btn-secondary" onClick={() => void openInvoicePdf(item.invoiceId || '')}>
+                                  Open invoice
+                                </button>
+                              </div>
+                            ) : null}
                           </div>
                         )) : <p className="text-sm text-slate-500">No write-offs recorded.</p>}
                       </div>
