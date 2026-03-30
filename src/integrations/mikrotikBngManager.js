@@ -89,7 +89,7 @@ async function runDisconnect({ host, port, secret, payload }) {
 }
 
 export class MikrotikBngManager {
-  async disconnectSubscriberSession({ serviceId, radiusUsername, reason = "refresh" } = {}) {
+  async disconnectSubscriberSession({ serviceId, radiusUsername, reason = "refresh", sessionHint = null } = {}) {
     const service =
       (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
       (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
@@ -118,7 +118,8 @@ export class MikrotikBngManager {
         attempted: false,
         status: "skipped",
         reason: !host ? "missing_coa_host" : "missing_coa_secret",
-        bngNodeCode: bngNode.nodeCode
+        bngNodeCode: bngNode.nodeCode,
+        sessionHint
       };
     }
 
@@ -135,7 +136,8 @@ export class MikrotikBngManager {
         exitCode: result.exitCode,
         acknowledged: Boolean(result.acknowledged),
         stdout: result.stdout,
-        stderr: result.stderr
+        stderr: result.stderr,
+        sessionHint
       };
     } catch (error) {
       const minimalPayload = buildDisconnectPayload({
@@ -157,7 +159,8 @@ export class MikrotikBngManager {
           acknowledged: Boolean(fallback.acknowledged),
           stdout: fallback.stdout,
           stderr: fallback.stderr,
-          initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed"
+          initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed",
+          sessionHint
         };
       } catch (fallbackError) {
       return {
@@ -171,7 +174,8 @@ export class MikrotikBngManager {
         stdout: String(fallbackError?.stdout || error?.stdout || "").trim(),
         stderr: String(fallbackError?.stderr || error?.stderr || "").trim(),
         error: fallbackError instanceof Error ? fallbackError.message : "COA disconnect failed",
-        initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed"
+        initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed",
+        sessionHint
       };
       }
     }

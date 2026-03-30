@@ -21,8 +21,10 @@ function summarizeServiceControl(result) {
     serviceStatus: result?.status || null,
     disconnectStatus: result?.serviceControl?.status || result?.bngSession?.status || null,
     disconnectAttempted: Boolean(result?.serviceControl?.attempted ?? result?.bngSession?.attempted),
+    disconnectPayloadMode: result?.serviceControl?.payloadMode || result?.bngSession?.payloadMode || null,
     disconnectReason: result?.serviceControl?.reason || result?.bngSession?.reason || null,
-    disconnectError: result?.serviceControl?.error || result?.bngSession?.error || null
+    disconnectError: result?.serviceControl?.error || result?.bngSession?.error || null,
+    disconnectSessionHint: result?.serviceControl?.sessionHint || result?.bngSession?.sessionHint || null
   };
 }
 

@@ -18,6 +18,15 @@ function summarizeBngSession(bngSession = {}) {
   };
 }
 
+function summarizeSessionHint(sessionHint = {}) {
+  return {
+    hasRecentSession: Boolean(sessionHint?.hasRecentSession),
+    latestSessionStart: sessionHint?.latestSessionStart || null,
+    latestUpdateAt: sessionHint?.latestUpdateAt || null,
+    totalOctets: Number(sessionHint?.totalOctets || 0)
+  };
+}
+
 function buildServiceControlMetadata(action, { bngSession, radiusState, reason = null } = {}) {
   const now = new Date();
   return {
@@ -26,6 +35,7 @@ function buildServiceControlMetadata(action, { bngSession, radiusState, reason =
     lastRadiusState: radiusState,
     lastServiceControlReason: reason,
     lastBngDisconnect: summarizeBngSession(bngSession),
+    lastSessionHint: summarizeSessionHint(bngSession?.sessionHint),
     lastBngDisconnectAt: now
   };
 }
@@ -255,17 +265,21 @@ export class RadiusServiceManager {
     };
     await nextService.save();
 
+    const usageSummary = await this.getSubscriberUsageSummary({
+      serviceId: nextService.serviceId
+    }).catch(() => null);
     const bngSession = await mikrotikBngManager.disconnectSubscriberSession({
       serviceId: nextService.serviceId,
       radiusUsername: username,
-      reason: "provision_refresh"
+      reason: "provision_refresh",
+      sessionHint: usageSummary
     });
     nextService.metadata = {
       ...(nextService.metadata || {}),
       ...buildServiceControlMetadata("provision", {
-        bngSession,
-        radiusState: "active"
-      })
+      bngSession,
+      radiusState: "active"
+    })
     };
     await nextService.save();
 
@@ -273,7 +287,10 @@ export class RadiusServiceManager {
       ...nextService.toObject(),
       bngSession,
       radiusState: "active",
-      serviceControl: summarizeBngSession(bngSession)
+      serviceControl: {
+        ...summarizeBngSession(bngSession),
+        sessionHint: summarizeSessionHint(usageSummary || bngSession?.sessionHint)
+      }
     };
   }
 
@@ -302,25 +319,32 @@ export class RadiusServiceManager {
       ...(service.metadata || {}),
       suspensionReason: reason || env.RADIUS_REJECT_MESSAGE
     };
+    const usageSummary = await this.getSubscriberUsageSummary({
+      serviceId: service.serviceId
+    }).catch(() => null);
     const bngSession = await mikrotikBngManager.disconnectSubscriberSession({
       serviceId: service.serviceId,
       radiusUsername: service.radiusUsername,
-      reason: "suspend_disconnect"
+      reason: "suspend_disconnect",
+      sessionHint: usageSummary
     });
     service.metadata = {
       ...(service.metadata || {}),
       ...buildServiceControlMetadata("suspend", {
-        bngSession,
-        radiusState: "suspended",
-        reason: reason || env.RADIUS_REJECT_MESSAGE
-      })
+      bngSession,
+      radiusState: "suspended",
+      reason: reason || env.RADIUS_REJECT_MESSAGE
+    })
     };
     await service.save();
     return {
       ...service.toObject(),
       bngSession,
       radiusState: "suspended",
-      serviceControl: summarizeBngSession(bngSession)
+      serviceControl: {
+        ...summarizeBngSession(bngSession),
+        sessionHint: summarizeSessionHint(usageSummary || bngSession?.sessionHint)
+      }
     };
   }
 
