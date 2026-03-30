@@ -658,6 +658,134 @@ async function buildBillingExportFilters(query = {}) {
   return { invoiceFilter, paymentFilter };
 }
 
+async function buildCollectionsQueueItems(bucketFilter = "") {
+  const invoices = await BillingInvoice.find({
+    paymentStatus: { $in: ["pending", "overdue"] }
+  }).sort({ dueDate: 1, generatedAt: 1 }).lean();
+
+  const customerIds = [...new Set(invoices.map((invoice) => invoice.customerId).filter(Boolean))];
+  const customers = await Customer.find({
+    $or: [
+      { customerId: { $in: customerIds } },
+      { "billingSnapshot.pendingPlanChange": { $exists: true, $ne: null } }
+    ]
+  }).lean();
+
+  const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
+  const now = Date.now();
+  const items = [];
+
+  for (const invoice of invoices) {
+    const customer = customerMap.get(invoice.customerId);
+    if (!customer) continue;
+    const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
+    const overdueDays = dueDate ? Math.max(0, Math.floor((now - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+    const graceDays = Number(customer.billingSnapshot?.graceDays || 0);
+    const dueAmountValue = Number(customer.billingSnapshot?.dueAmount || invoice.totalAmount || 0);
+    const promiseToPayAt = customer.billingSnapshot?.collections?.promiseToPayAt
+      ? new Date(customer.billingSnapshot.collections.promiseToPayAt)
+      : null;
+    const promiseActive = promiseToPayAt && !Number.isNaN(promiseToPayAt.getTime()) && promiseToPayAt.getTime() >= now;
+    const baseItem = {
+      customerId: customer.customerId,
+      customerName: customer.fullName || customer.customerId,
+      phone: customer.phone,
+      status: customer.operationalStatus || "active",
+      billMode: customer.billingSnapshot?.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid"),
+      dueAmount: dueAmountValue,
+      invoiceId: invoice.invoiceId,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDueDate: invoice.dueDate,
+      invoiceStatus: invoice.paymentStatus,
+      overdueDays,
+      graceDays,
+      pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
+      pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
+      adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
+      lastReminderAt: customer.billingSnapshot?.collections?.lastReminderAt,
+      promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
+      promiseActive,
+      promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
+      promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
+      assignedAdminId: customer.billingSnapshot?.collections?.assignedToAdminId || "",
+      assignedAdminName: customer.billingSnapshot?.collections?.assignedToName || "",
+      latestFollowUpNote: customer.billingSnapshot?.collections?.latestFollowUpNote || "",
+      latestFollowUpAt: customer.billingSnapshot?.collections?.latestFollowUpAt,
+      followUpCount: Number(customer.billingSnapshot?.collections?.followUpCount || 0),
+      lastServiceAction: customer.billingSnapshot?.collections?.lastServiceAction || "",
+      lastServiceActionAt: customer.billingSnapshot?.collections?.lastServiceActionAt || null,
+      suspendEligible:
+        customer.operationalStatus === "active" &&
+        dueAmountValue > 0 &&
+        overdueDays > graceDays &&
+        !promiseActive,
+      resumeEligible:
+        customer.operationalStatus === "suspended" &&
+        dueAmountValue <= 0
+    };
+
+    items.push({
+      ...baseItem,
+      bucket: overdueDays > 0 ? "overdue" : "pending_due",
+      suspendRecommended: overdueDays > graceDays && customer.operationalStatus === "active",
+    });
+
+    if (customer.billingSnapshot?.pendingPlanChange) {
+      items.push({
+        ...baseItem,
+        bucket: "pending_plan_change",
+        suspendRecommended: false,
+      });
+    }
+
+    if (overdueDays > graceDays && customer.operationalStatus === "active") {
+      items.push({
+        ...baseItem,
+        bucket: "suspend_ready",
+        suspendRecommended: true,
+      });
+    }
+  }
+
+  for (const customer of customers) {
+    if (!customer.billingSnapshot?.pendingPlanChange) continue;
+    if (items.some((item) => item.customerId === customer.customerId && item.bucket === "pending_plan_change")) continue;
+    items.push({
+      customerId: customer.customerId,
+      customerName: customer.fullName || customer.customerId,
+      phone: customer.phone,
+      status: customer.operationalStatus || "active",
+      billMode: customer.billingSnapshot?.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid"),
+      dueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
+      overdueDays: 0,
+      graceDays: Number(customer.billingSnapshot?.graceDays || 0),
+      bucket: "pending_plan_change",
+      pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
+      pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
+      adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
+      suspendRecommended: false,
+      lastReminderAt: customer.billingSnapshot?.collections?.lastReminderAt,
+      promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
+      promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
+      promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
+      assignedAdminId: customer.billingSnapshot?.collections?.assignedToAdminId || "",
+      assignedAdminName: customer.billingSnapshot?.collections?.assignedToName || "",
+      latestFollowUpNote: customer.billingSnapshot?.collections?.latestFollowUpNote || "",
+      latestFollowUpAt: customer.billingSnapshot?.collections?.latestFollowUpAt,
+      followUpCount: Number(customer.billingSnapshot?.collections?.followUpCount || 0),
+      promiseActive: false,
+      lastServiceAction: customer.billingSnapshot?.collections?.lastServiceAction || "",
+      lastServiceActionAt: customer.billingSnapshot?.collections?.lastServiceActionAt || null,
+      suspendEligible: false,
+      resumeEligible:
+        customer.operationalStatus === "suspended" &&
+        Number(customer.billingSnapshot?.dueAmount || 0) <= 0
+    });
+  }
+
+  return bucketFilter ? items.filter((item) => item.bucket === bucketFilter) : items;
+}
+
 function buildCustomerPortalRetryUrl(customerId) {
   const configuredBase = String(env.USER_DOMAIN || "").trim();
   if (!configuredBase) return "";
@@ -993,135 +1121,81 @@ adminOpsRouter.get(
 );
 
 adminOpsRouter.get(
+  "/billing/exports/collections.csv",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const items = await buildCollectionsQueueItems(String(req.query.bucket || "").trim());
+    const csv = buildCsv(items.map((item) => ({
+      bucket: item.bucket,
+      customerId: item.customerId,
+      customerName: item.customerName,
+      phone: item.phone || "",
+      status: item.status || "",
+      billMode: item.billMode || "",
+      dueAmount: Number(item.dueAmount || 0).toFixed(2),
+      invoiceNumber: item.invoiceNumber || item.invoiceId || "",
+      invoiceStatus: item.invoiceStatus || "",
+      invoiceDueDate: item.invoiceDueDate ? new Date(item.invoiceDueDate).toISOString() : "",
+      overdueDays: Number(item.overdueDays || 0),
+      graceDays: Number(item.graceDays || 0),
+      promiseActive: item.promiseActive ? "yes" : "no",
+      promiseToPayAt: item.promiseToPayAt ? new Date(item.promiseToPayAt).toISOString() : "",
+      promiseAmount: Number(item.promiseAmount || 0).toFixed(2),
+      assignedAdminName: item.assignedAdminName || "",
+      followUpCount: Number(item.followUpCount || 0),
+      lastServiceAction: item.lastServiceAction || "",
+      lastServiceActionAt: item.lastServiceActionAt ? new Date(item.lastServiceActionAt).toISOString() : "",
+      suspendEligible: item.suspendEligible ? "yes" : "no",
+      resumeEligible: item.resumeEligible ? "yes" : "no"
+    })));
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=\"billing-collections.csv\"");
+    return res.send(csv);
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/exports/reconciliation.csv",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const filter = {};
+    const status = String(req.query.status || "").trim();
+    if (status) {
+      filter.reconciliationStatus = status;
+    }
+    const unallocatedOnly = String(req.query.unallocatedOnly || "").trim().toLowerCase() === "true";
+    if (unallocatedOnly) {
+      filter.unallocatedAmount = { $gt: 0 };
+    }
+    const items = await PaymentTransaction.find(filter)
+      .sort({ paidAt: -1, createdAt: -1 })
+      .limit(5000)
+      .lean();
+    const csv = buildCsv(items.map((item) => ({
+      transactionId: item.transactionId,
+      customerId: item.customerId || "",
+      invoiceId: item.invoiceId || item.reconciledInvoiceId || "",
+      provider: item.provider || "",
+      method: item.method || "",
+      status: item.status || "",
+      reconciliationStatus: item.reconciliationStatus || "",
+      amount: Number(item.amount || 0).toFixed(2),
+      unallocatedAmount: Number(item.unallocatedAmount || 0).toFixed(2),
+      reference: item.reference || "",
+      paidAt: item.paidAt ? new Date(item.paidAt).toISOString() : "",
+      createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : ""
+    })));
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=\"billing-reconciliation.csv\"");
+    return res.send(csv);
+  })
+);
+
+adminOpsRouter.get(
   "/billing/collections",
   requirePermission(permissions.billingRead),
-  asyncHandler(async (_req, res) => {
-    const invoices = await BillingInvoice.find({
-      paymentStatus: { $in: ["pending", "overdue"] }
-    }).sort({ dueDate: 1, generatedAt: 1 }).lean();
-
-    const customerIds = [...new Set(invoices.map((invoice) => invoice.customerId).filter(Boolean))];
-    const customers = await Customer.find({
-      $or: [
-        { customerId: { $in: customerIds } },
-        { "billingSnapshot.pendingPlanChange": { $exists: true, $ne: null } }
-      ]
-    }).lean();
-
-    const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
-    const now = Date.now();
-    const bucketFilter = String(_req.query.bucket || "").trim();
-    const items = [];
-
-    for (const invoice of invoices) {
-      const customer = customerMap.get(invoice.customerId);
-      if (!customer) continue;
-      const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
-      const overdueDays = dueDate ? Math.max(0, Math.floor((now - dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
-      const graceDays = Number(customer.billingSnapshot?.graceDays || 0);
-      const dueAmountValue = Number(customer.billingSnapshot?.dueAmount || invoice.totalAmount || 0);
-      const promiseToPayAt = customer.billingSnapshot?.collections?.promiseToPayAt
-        ? new Date(customer.billingSnapshot.collections.promiseToPayAt)
-        : null;
-      const promiseActive = promiseToPayAt && !Number.isNaN(promiseToPayAt.getTime()) && promiseToPayAt.getTime() >= now;
-      const baseItem = {
-        customerId: customer.customerId,
-        customerName: customer.fullName || customer.customerId,
-        phone: customer.phone,
-        status: customer.operationalStatus || "active",
-        billMode: customer.billingSnapshot?.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid"),
-        dueAmount: dueAmountValue,
-        invoiceId: invoice.invoiceId,
-        invoiceNumber: invoice.invoiceNumber,
-        invoiceDueDate: invoice.dueDate,
-        invoiceStatus: invoice.paymentStatus,
-        overdueDays,
-        graceDays,
-        pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
-        pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
-        adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
-        lastReminderAt: customer.billingSnapshot?.collections?.lastReminderAt,
-        promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
-        promiseActive,
-        promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
-        promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
-        assignedAdminId: customer.billingSnapshot?.collections?.assignedToAdminId || "",
-        assignedAdminName: customer.billingSnapshot?.collections?.assignedToName || "",
-        latestFollowUpNote: customer.billingSnapshot?.collections?.latestFollowUpNote || "",
-        latestFollowUpAt: customer.billingSnapshot?.collections?.latestFollowUpAt,
-        followUpCount: Number(customer.billingSnapshot?.collections?.followUpCount || 0),
-        lastServiceAction: customer.billingSnapshot?.collections?.lastServiceAction || "",
-        lastServiceActionAt: customer.billingSnapshot?.collections?.lastServiceActionAt || null,
-        suspendEligible:
-          customer.operationalStatus === "active" &&
-          dueAmountValue > 0 &&
-          overdueDays > graceDays &&
-          !promiseActive,
-        resumeEligible:
-          customer.operationalStatus === "suspended" &&
-          dueAmountValue <= 0
-      };
-
-      items.push({
-        ...baseItem,
-        bucket: overdueDays > 0 ? "overdue" : "pending_due",
-        suspendRecommended: overdueDays > graceDays && customer.operationalStatus === "active",
-      });
-
-      if (customer.billingSnapshot?.pendingPlanChange) {
-        items.push({
-          ...baseItem,
-          bucket: "pending_plan_change",
-          suspendRecommended: false,
-        });
-      }
-
-      if (overdueDays > graceDays && customer.operationalStatus === "active") {
-        items.push({
-          ...baseItem,
-          bucket: "suspend_ready",
-          suspendRecommended: true,
-        });
-      }
-    }
-
-    for (const customer of customers) {
-      if (!customer.billingSnapshot?.pendingPlanChange) continue;
-      if (items.some((item) => item.customerId === customer.customerId && item.bucket === "pending_plan_change")) continue;
-      items.push({
-        customerId: customer.customerId,
-        customerName: customer.fullName || customer.customerId,
-        phone: customer.phone,
-        status: customer.operationalStatus || "active",
-        billMode: customer.billingSnapshot?.billMode || (customer.customerType === "business" ? "postpaid" : "prepaid"),
-        dueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
-        overdueDays: 0,
-        graceDays: Number(customer.billingSnapshot?.graceDays || 0),
-        bucket: "pending_plan_change",
-        pendingPlanName: customer.billingSnapshot?.pendingPlanChange?.planName,
-        pendingPlanMode: customer.billingSnapshot?.pendingPlanChange?.effectiveMode,
-        adjustmentPreview: Number(customer.billingSnapshot?.adjustmentPreview || 0),
-        suspendRecommended: false,
-        lastReminderAt: customer.billingSnapshot?.collections?.lastReminderAt,
-        promiseToPayAt: customer.billingSnapshot?.collections?.promiseToPayAt,
-        promiseAmount: Number(customer.billingSnapshot?.collections?.promiseAmount || 0),
-        promiseNote: customer.billingSnapshot?.collections?.promiseNote || "",
-        assignedAdminId: customer.billingSnapshot?.collections?.assignedToAdminId || "",
-        assignedAdminName: customer.billingSnapshot?.collections?.assignedToName || "",
-        latestFollowUpNote: customer.billingSnapshot?.collections?.latestFollowUpNote || "",
-        latestFollowUpAt: customer.billingSnapshot?.collections?.latestFollowUpAt,
-        followUpCount: Number(customer.billingSnapshot?.collections?.followUpCount || 0),
-        promiseActive: false,
-        lastServiceAction: customer.billingSnapshot?.collections?.lastServiceAction || "",
-        lastServiceActionAt: customer.billingSnapshot?.collections?.lastServiceActionAt || null,
-        suspendEligible: false,
-        resumeEligible:
-          customer.operationalStatus === "suspended" &&
-          Number(customer.billingSnapshot?.dueAmount || 0) <= 0
-      });
-    }
-
-    const filtered = bucketFilter ? items.filter((item) => item.bucket === bucketFilter) : items;
+  asyncHandler(async (req, res) => {
+    const filtered = await buildCollectionsQueueItems(String(req.query.bucket || "").trim());
     return ok(res, filtered);
   })
 );
@@ -1321,6 +1395,66 @@ adminOpsRouter.get(
           createdAt: item.createdAt
         };
       })
+    });
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/finance/resolutions",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit || 100)));
+    const [waivers, writeoffs] = await Promise.all([
+      BillingNote.find({
+        type: "credit",
+        "metadata.resolutionType": "waiver"
+      })
+        .sort({ appliedAt: -1, createdAt: -1 })
+        .limit(limit)
+        .lean(),
+      BillingLedgerEntry.find({
+        category: "writeoff"
+      })
+        .sort({ postedAt: -1, createdAt: -1 })
+        .limit(limit)
+        .lean()
+    ]);
+
+    const customerIds = [
+      ...new Set([
+        ...waivers.map((item) => item.customerId),
+        ...writeoffs.map((item) => item.customerId)
+      ].filter(Boolean))
+    ];
+    const customers = await Customer.find(
+      { customerId: { $in: customerIds } },
+      { customerId: 1, fullName: 1, phone: 1, operationalStatus: 1 }
+    ).lean();
+    const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
+
+    return ok(res, {
+      waivers: waivers.map((item) => ({
+        noteNumber: item.noteNumber,
+        customerId: item.customerId,
+        customerName: customerMap.get(item.customerId)?.fullName || item.customerId,
+        phone: customerMap.get(item.customerId)?.phone || "",
+        customerStatus: customerMap.get(item.customerId)?.operationalStatus || "",
+        invoiceId: item.invoiceId || "",
+        reasonCode: item.reasonCode || "",
+        totalAmount: Number(item.totalAmount || 0),
+        appliedAt: item.appliedAt || item.createdAt || null
+      })),
+      writeoffs: writeoffs.map((item) => ({
+        entryId: item.entryId,
+        customerId: item.customerId,
+        customerName: customerMap.get(item.customerId)?.fullName || item.customerId,
+        phone: customerMap.get(item.customerId)?.phone || "",
+        customerStatus: customerMap.get(item.customerId)?.operationalStatus || "",
+        invoiceId: item.invoiceId || "",
+        reference: item.reference || "",
+        amount: Number(item.amount || 0),
+        postedAt: item.postedAt || item.createdAt || null
+      }))
     });
   })
 );
