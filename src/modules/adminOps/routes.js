@@ -983,6 +983,81 @@ function buildCustomerBillingRisk(controlCenter = {}) {
   };
 }
 
+function buildCollectionsPlaybooks() {
+  return [
+    {
+      code: "pre_due_reminder",
+      label: "Pre-due reminder",
+      bucket: "pending_due",
+      primaryAction: "send_reminder",
+      description: "Send reminder before due date and assign follow-up owner if needed."
+    },
+    {
+      code: "overdue_followup",
+      label: "Overdue follow-up",
+      bucket: "overdue",
+      primaryAction: "log_follow_up",
+      description: "Call customer, record outcome, and capture promise-to-pay if offered."
+    },
+    {
+      code: "suspend_ready_action",
+      label: "Suspend-ready action",
+      bucket: "suspend_ready",
+      primaryAction: "suspend_service",
+      description: "Suspend accounts that crossed grace policy and have no active promise-to-pay."
+    },
+    {
+      code: "resume_clearance",
+      label: "Resume after clearance",
+      bucket: "suspend_ready",
+      primaryAction: "resume_service",
+      description: "Resume suspended accounts immediately after dues clear or approved override."
+    },
+    {
+      code: "plan_change_hold",
+      label: "Pending plan change hold",
+      bucket: "pending_plan_change",
+      primaryAction: "review_plan_change",
+      description: "Resolve plan-change commercial notes before the next billing event."
+    }
+  ];
+}
+
+function buildCollectionsBulkPreview(items = [], customerIds = []) {
+  const selectedSet = new Set((customerIds || []).map((value) => String(value || "").trim()).filter(Boolean));
+  const selectedItems = selectedSet.size
+    ? items.filter((item) => selectedSet.has(String(item.customerId || "").trim()))
+    : items;
+
+  const preview = {
+    selectedAccounts: selectedItems.length,
+    totalDueAmount: Number(selectedItems.reduce((sum, item) => sum + Number(item.dueAmount || 0), 0).toFixed(2)),
+    eligible: {
+      remind: [],
+      followUp: [],
+      suspend: [],
+      resume: []
+    }
+  };
+
+  for (const item of selectedItems) {
+    if (!item.lastReminderAt) preview.eligible.remind.push(item.customerId);
+    if (!item.latestFollowUpAt) preview.eligible.followUp.push(item.customerId);
+    if (item.suspendEligible) preview.eligible.suspend.push(item.customerId);
+    if (item.resumeEligible) preview.eligible.resume.push(item.customerId);
+  }
+
+  return {
+    ...preview,
+    counts: {
+      remind: preview.eligible.remind.length,
+      followUp: preview.eligible.followUp.length,
+      suspend: preview.eligible.suspend.length,
+      resume: preview.eligible.resume.length
+    }
+  };
+}
+
 function buildCustomerPortalRetryUrl(customerId) {
   const configuredBase = String(env.USER_DOMAIN || "").trim();
   if (!configuredBase) return "";
@@ -1406,6 +1481,27 @@ adminOpsRouter.get(
       ...buildCollectionsWorkbench(items),
       items
     });
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/collections/playbooks",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (_req, res) => {
+    return ok(res, buildCollectionsPlaybooks());
+  })
+);
+
+adminOpsRouter.post(
+  "/billing/collections/bulk-preview",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const items = await buildCollectionsQueueItems(String(req.body?.bucket || "").trim());
+    const preview = buildCollectionsBulkPreview(
+      items,
+      Array.isArray(req.body?.customerIds) ? req.body.customerIds : []
+    );
+    return ok(res, preview);
   })
 );
 
