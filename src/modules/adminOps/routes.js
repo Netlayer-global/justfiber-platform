@@ -787,6 +787,112 @@ async function buildCollectionsQueueItems(bucketFilter = "") {
   return bucketFilter ? items.filter((item) => item.bucket === bucketFilter) : items;
 }
 
+function buildCollectionsWorkbench(items = []) {
+  const byBucket = {};
+  const byAssignee = {};
+  const actionQueue = {
+    remind: 0,
+    followUp: 0,
+    suspend: 0,
+    resume: 0,
+    promiseToPayActive: 0
+  };
+
+  for (const item of items) {
+    const bucket = item.bucket || "unknown";
+    byBucket[bucket] = {
+      count: Number(byBucket[bucket]?.count || 0) + 1,
+      dueAmount: Number((Number(byBucket[bucket]?.dueAmount || 0) + Number(item.dueAmount || 0)).toFixed(2))
+    };
+
+    const assigneeKey = item.assignedAdminId || "unassigned";
+    byAssignee[assigneeKey] = {
+      adminId: item.assignedAdminId || "",
+      adminName: item.assignedAdminName || "Unassigned",
+      count: Number(byAssignee[assigneeKey]?.count || 0) + 1,
+      dueAmount: Number((Number(byAssignee[assigneeKey]?.dueAmount || 0) + Number(item.dueAmount || 0)).toFixed(2))
+    };
+
+    if (!item.lastReminderAt) actionQueue.remind += 1;
+    if (!item.latestFollowUpAt) actionQueue.followUp += 1;
+    if (item.suspendEligible) actionQueue.suspend += 1;
+    if (item.resumeEligible) actionQueue.resume += 1;
+    if (item.promiseActive) actionQueue.promiseToPayActive += 1;
+  }
+
+  return {
+    totals: {
+      accounts: items.length,
+      totalDueAmount: Number(items.reduce((sum, item) => sum + Number(item.dueAmount || 0), 0).toFixed(2))
+    },
+    byBucket: Object.entries(byBucket).map(([bucket, value]) => ({
+      bucket,
+      count: value.count,
+      dueAmount: value.dueAmount
+    })),
+    byAssignee: Object.values(byAssignee).sort((left, right) => right.count - left.count),
+    actionQueue
+  };
+}
+
+function buildCustomerBillingActions({ customer, service, controlCenter }) {
+  const actions = [];
+  const dueAmount = Number(controlCenter?.dueAmount || 0);
+  const status = String(controlCenter?.serviceStatus || customer?.operationalStatus || "").toLowerCase();
+
+  if (dueAmount > 0 && !controlCenter?.lastReminderAt) {
+    actions.push({
+      code: "send_reminder",
+      label: "Send reminder",
+      priority: "high",
+      reason: "Due amount exists and no reminder has been logged yet."
+    });
+  }
+  if (dueAmount > 0 && !controlCenter?.latestFollowUpAt) {
+    actions.push({
+      code: "log_follow_up",
+      label: "Log follow-up",
+      priority: "medium",
+      reason: "Account has due amount but no follow-up note is recorded."
+    });
+  }
+  if (controlCenter?.suspendEligible) {
+    actions.push({
+      code: "suspend_service",
+      label: "Suspend service",
+      priority: "critical",
+      reason: `Account is overdue beyond grace period${controlCenter?.promiseToPayAt ? " and promise-to-pay is no longer active" : ""}.`
+    });
+  }
+  if (controlCenter?.resumeEligible) {
+    actions.push({
+      code: "resume_service",
+      label: "Resume service",
+      priority: "high",
+      reason: "Service is suspended but due amount is now clear."
+    });
+  }
+  if (status === "active" && dueAmount <= 0 && service?.status === "suspended") {
+    actions.push({
+      code: "sync_service_state",
+      label: "Sync service state",
+      priority: "medium",
+      reason: "Customer billing state is clear but subscriber service record is still suspended."
+    });
+  }
+  if (controlCenter?.promiseToPayAt) {
+    actions.push({
+      code: "review_promise_to_pay",
+      label: "Review promise-to-pay",
+      priority: controlCenter.promiseActive ? "medium" : "high",
+      reason: controlCenter.promiseActive
+        ? "Promise-to-pay is active and should be monitored."
+        : "Promise-to-pay date has elapsed and needs review."
+    });
+  }
+  return actions;
+}
+
 function buildCustomerPortalRetryUrl(customerId) {
   const configuredBase = String(env.USER_DOMAIN || "").trim();
   if (!configuredBase) return "";
@@ -1198,6 +1304,18 @@ adminOpsRouter.get(
   asyncHandler(async (req, res) => {
     const filtered = await buildCollectionsQueueItems(String(req.query.bucket || "").trim());
     return ok(res, filtered);
+  })
+);
+
+adminOpsRouter.get(
+  "/billing/collections/workbench",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const items = await buildCollectionsQueueItems(String(req.query.bucket || "").trim());
+    return ok(res, {
+      ...buildCollectionsWorkbench(items),
+      items
+    });
   })
 );
 
@@ -2248,10 +2366,16 @@ adminOpsRouter.get(
         (service?.status || customer.operationalStatus) === "active" &&
         Number(customer.billingSnapshot?.dueAmount || 0) > 0
     };
+    const recommendedActions = buildCustomerBillingActions({
+      customer,
+      service,
+      controlCenter
+    });
     return ok(res, {
       summary: customer.billingSnapshot || {},
       invoiceSummary: customer.invoiceSummary || {},
       controlCenter,
+      recommendedActions,
       invoices,
       payments,
       ledger,
