@@ -187,7 +187,9 @@ async function verifySchedulerGuardrails() {
     "Billing engine no longer aligns due date to next billing date"
   );
   expect(
-    workerSource.includes('paymentStatus: "overdue"'),
+    workerSource.includes('paymentStatus: "pending"') &&
+      workerSource.includes("invoice.paymentStatus = \"overdue\"") &&
+      workerSource.includes("overdueMarkedAt"),
     "Worker no longer marks pending invoices as overdue"
   );
   expect(
