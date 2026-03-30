@@ -30,11 +30,18 @@ await connectMongo();
 
 async function main() {
   const serviceId = process.env.TEST_RADIUS_SERVICE_ID || "SVC-1001";
-  const service = await SubscriberService.findOne({ serviceId });
+  const service =
+    (await SubscriberService.findOne({ serviceId })) ||
+    (await SubscriberService.findOne({
+      radiusUsername: { $exists: true, $ne: null },
+      customerId: { $exists: true, $ne: null },
+      status: { $in: ["active", "suspended"] }
+    }).sort({ updatedAt: -1 }));
   if (!service) {
-    fail(`Subscriber service not found: ${serviceId}`);
+    fail(`Subscriber service not found: ${serviceId} and no fallback service was available`);
   }
 
+  const resolvedServiceId = service.serviceId;
   const username = process.env.TEST_RADIUS_USERNAME || service.radiusUsername;
   const password = process.env.TEST_RADIUS_PASSWORD || service.metadata?.radiusPassword;
   if (!username || !password) {
@@ -42,7 +49,7 @@ async function main() {
   }
 
   const provisionResult = await radiusServiceManager.createSubscriberAccess({
-    serviceId,
+    serviceId: resolvedServiceId,
     customerId: service.customerId,
     radiusUsername: username,
     radiusPassword: password,
@@ -52,7 +59,7 @@ async function main() {
     metadata: service.metadata || {}
   });
   const activeState = await radiusServiceManager.verifySubscriberAccessState({
-    serviceId,
+    serviceId: resolvedServiceId,
     expectedState: "active"
   });
   if (!activeState.matchesExpectedState || !activeState.checks.hasCleartextPassword || activeState.checks.hasAuthTypeReject) {
@@ -65,11 +72,11 @@ async function main() {
 
   const suspendReason = process.env.TEST_RADIUS_SUSPEND_REASON || "Integration test suspend";
   const suspendResult = await radiusServiceManager.suspendSubscriberAccess({
-    serviceId,
+    serviceId: resolvedServiceId,
     reason: suspendReason
   });
   const suspendedState = await radiusServiceManager.verifySubscriberAccessState({
-    serviceId,
+    serviceId: resolvedServiceId,
     expectedState: "suspended",
     expectedReplyMessage: suspendReason
   });
@@ -86,10 +93,10 @@ async function main() {
   pass(`Suspend verified (${JSON.stringify(summarizeServiceControl(suspendResult))})`);
 
   const resumeResult = await radiusServiceManager.resumeSubscriberAccess({
-    serviceId
+    serviceId: resolvedServiceId
   });
   const resumedState = await radiusServiceManager.verifySubscriberAccessState({
-    serviceId,
+    serviceId: resolvedServiceId,
     expectedState: "active"
   });
   if (!resumedState.matchesExpectedState || !resumedState.checks.hasCleartextPassword || resumedState.checks.hasAuthTypeReject) {
@@ -98,7 +105,7 @@ async function main() {
       checks: resumedState.checks
     });
   }
-  pass(`Resume verified (${JSON.stringify(summarizeServiceControl(resumeResult))})`);
+  pass(`Resume verified (${resolvedServiceId} -> ${JSON.stringify(summarizeServiceControl(resumeResult))})`);
 
   console.log("\nRADIUS automation summary:");
   console.log("- provision writes active radcheck/radreply state: OK");
