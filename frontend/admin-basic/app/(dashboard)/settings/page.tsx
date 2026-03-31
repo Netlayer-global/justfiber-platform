@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { SettingsCatalogItem } from '@/lib/types'
-import { Loader2, Save, Search, Settings2 } from 'lucide-react'
+import { ArrowRight, Building2, GitBranchPlus, Loader2, Router, Save, Search, Settings2, ShieldCheck, WalletCards } from 'lucide-react'
 import { toast } from 'sonner'
 
 type SectionValue = Record<string, any>
@@ -114,6 +115,42 @@ const SECTION_META: Record<string, SectionMeta> = {
 
 const GROUP_ORDER = ['Core Settings', 'Billing & Finance', 'User Management', 'Apps & Integrations', 'Zone & Franchise', 'Advanced']
 
+const GROUP_DESCRIPTIONS: Record<string, string> = {
+  'Core Settings': 'Organization identity, defaults, customer creation rules, and day-one behavior.',
+  'Billing & Finance': 'Invoice, prefix, collection, tax, and payment-control rules used across the workspace.',
+  'User Management': 'Profile field exposure and extra data blocks for customer/admin operators.',
+  'Apps & Integrations': 'External systems, tokens, connector visibility, and invoice/integration surfaces.',
+  'Zone & Franchise': 'Zone governance, router visibility, sub-zone policy, and franchise inheritance.',
+  Advanced: 'Low-frequency operational switches that should stay out of day-to-day screens.',
+}
+
+const ZONE_WORKSPACE_LINKS = [
+  {
+    href: '/my-zone-details',
+    title: 'My Zone Details',
+    description: 'See company, zone, and contact records exactly how operators view them.',
+    icon: Building2,
+  },
+  {
+    href: '/create-sub-zone',
+    title: 'Create Sub-Zone',
+    description: 'Launch a new sub-zone with franchise and parent-router inheritance controls.',
+    icon: GitBranchPlus,
+  },
+  {
+    href: '/routers',
+    title: 'Router Settings',
+    description: 'Review BNG, RADIUS, and zone-side router exposure before changing access workflows.',
+    icon: Router,
+  },
+  {
+    href: '/apps',
+    title: 'Payment / Integrations',
+    description: 'Open payment gateways and external integrations mapped to this admin environment.',
+    icon: WalletCards,
+  },
+]
+
 function titleCase(value: string) {
   return value
     .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -168,6 +205,52 @@ function getSectionMeta(section: string): SectionMeta {
       advanced: true,
     }
   )
+}
+
+function getSectionPlaybook(section: string) {
+  switch (section) {
+    case 'general':
+      return {
+        title: 'Zone identity workflow',
+        bullets: [
+          'Update organization, zone, contact, and timezone details here before creating new sub-zones.',
+          'Use My Zone Details to verify what downstream operators will actually see.',
+        ],
+      }
+    case 'franchise_configuration':
+      return {
+        title: 'Franchise workflow',
+        bullets: [
+          'Use this section for inheritance and approval behavior; use Create Sub-Zone for new zone provisioning.',
+          'Keep franchise payout and router inheritance decisions together to avoid partial setup.',
+        ],
+      }
+    case 'router_visibility':
+      return {
+        title: 'Router governance workflow',
+        bullets: [
+          'Use Router Visibility for exposure policy; use Routers for actual BNG and FreeRADIUS execution.',
+          'Hide low-frequency router surfaces here instead of cluttering user or customer pages.',
+        ],
+      }
+    case 'tag_payment_gateway':
+    case 'external_integrations':
+      return {
+        title: 'Integration workflow',
+        bullets: [
+          'Use Apps for provider records and tokens; keep only environment-wide policy in Settings.',
+          'Map payment or messaging behavior here when the same rule should apply across the whole zone.',
+        ],
+      }
+    default:
+      return {
+        title: 'Operator note',
+        bullets: [
+          'Keep this section for policy and defaults, not high-frequency day-to-day actions.',
+          'If a setting directly affects operator flow, verify the related screen after saving changes.',
+        ],
+      }
+  }
 }
 
 function isLongText(fieldKey: string, value: string) {
@@ -353,6 +436,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSectionLoading, setIsSectionLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   const visibleCatalog = useMemo(() => {
     return catalog
@@ -392,6 +476,7 @@ export default function SettingsPage() {
   }, [visibleCatalog])
 
   const activeMeta = getSectionMeta(activeSection)
+  const activePlaybook = getSectionPlaybook(activeSection)
 
   useEffect(() => {
     void loadCatalog()
@@ -494,6 +579,61 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone Admin Flow</div>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Settings, zone, and sub-zone workspace</h2>
+              <div className="mt-2 text-sm text-slate-500">
+                Yeh area Phase 2 ka control room hai. Day-to-day screens ko clean rakhne ke liye low-frequency zone, franchise, and inheritance controls yahin grouped rahenge.
+              </div>
+            </div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              Curated admin
+            </span>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {ZONE_WORKSPACE_LINKS.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-2xl bg-white p-2 text-[#5B6CFF]">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">{item.title}</div>
+                        <div className="mt-1 text-sm text-slate-500">{item.description}</div>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-400" />
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Current Section</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">{activePlaybook.title}</h2>
+          <div className="mt-4 space-y-3">
+            {activePlaybook.bullets.map((item) => (
+              <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-600" />
+                <div className="text-sm text-slate-600">{item}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {isLoading ? (
         <div className="card p-8 text-center">
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
@@ -530,7 +670,10 @@ export default function SettingsPage() {
             <div className="mt-4 space-y-4">
               {groupedCatalog.map(({ group, items }) => (
                 <div key={group}>
-                  <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{group}</div>
+                  <div className="mb-2 px-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{group}</div>
+                    <div className="mt-1 text-xs text-slate-400">{GROUP_DESCRIPTIONS[group]}</div>
+                  </div>
                   <div className="space-y-2">
                     {items.map((item) => {
                       const meta = getSectionMeta(item.section)
@@ -599,10 +742,20 @@ export default function SettingsPage() {
                 </section>
 
                 <section className="card p-5">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Section Preview</div>
-                  <pre className="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-4 text-xs leading-6 text-slate-200">
-                    {JSON.stringify(sectionValue, null, 2)}
-                  </pre>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Raw Preview</div>
+                      <div className="mt-1 text-sm text-slate-500">Backend snapshot for advanced validation and debugging.</div>
+                    </div>
+                    <button type="button" className="btn-secondary" onClick={() => setShowPreview((value) => !value)}>
+                      {showPreview ? 'Hide preview' : 'Show preview'}
+                    </button>
+                  </div>
+                  {showPreview ? (
+                    <pre className="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-4 text-xs leading-6 text-slate-200">
+                      {JSON.stringify(sectionValue, null, 2)}
+                    </pre>
+                  ) : null}
                 </section>
               </>
             )}

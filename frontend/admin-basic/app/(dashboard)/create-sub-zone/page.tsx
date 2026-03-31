@@ -1,8 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import { Loader } from 'lucide-react'
+import { ArrowRight, Building2, GitBranchPlus, Loader, Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 type FormState = {
@@ -153,7 +154,66 @@ export default function CreateSubZonePage() {
   return (
     <div className="space-y-6">
       <section className="card p-6">
-        <h1 className="text-4xl font-semibold tracking-tight text-slate-900">Create sub-zone</h1>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Zone & Franchise</div>
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-900">Create sub-zone</h1>
+            <div className="mt-2 max-w-3xl text-sm text-slate-500">
+              Parent zone se new operating unit create karo. Yeh flow franchise details, service zone, and inheritance defaults ko ek saath stitch karta hai.
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/settings" className="btn-secondary">Zone Settings</Link>
+            <Link href="/my-zone-details" className="btn-secondary">My Zone Details</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="card p-5">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+                <Building2 className="h-4 w-4" />
+                Parent Zone
+              </div>
+              <div className="mt-3 text-lg font-semibold text-slate-900">{general?.organizationName || 'JustFiber'}</div>
+              <div className="mt-1 text-sm text-slate-500">{general?.zoneName || 'default'}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+                <GitBranchPlus className="h-4 w-4" />
+                Inheritance
+              </div>
+              <div className="mt-3 text-lg font-semibold text-slate-900">{form.useParentRouters ? 'Parent routers' : 'Dedicated routers'}</div>
+              <div className="mt-1 text-sm text-slate-500">Choose whether the new zone should reuse parent router inventory.</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+                <Settings2 className="h-4 w-4" />
+                Delegation
+              </div>
+              <div className="mt-3 text-lg font-semibold text-slate-900">{form.canCreateSubZone ? 'Can create child zones' : 'Leaf zone'}</div>
+              <div className="mt-1 text-sm text-slate-500">Control whether this sub-zone can create further child zones.</div>
+            </div>
+          </div>
+        </div>
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Phase 2 Flow</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Recommended order</h2>
+          <div className="mt-4 space-y-3">
+            {[
+              'Create the sub-zone identity and contact details here.',
+              'Open Zone Settings to review prefixes, billing, and franchise policy.',
+              'Open Routers and Payment / Integrations after creation if this zone needs dedicated infrastructure.',
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <ArrowRight className="mt-0.5 h-4 w-4 text-[#5B6CFF]" />
+                <div>{item}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       <form onSubmit={handleSubmit} className="card p-6">

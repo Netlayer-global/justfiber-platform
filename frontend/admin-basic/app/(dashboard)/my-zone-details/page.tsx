@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { FranchiseProfile } from '@/lib/types'
-import { Download, Loader } from 'lucide-react'
+import { Building2, Download, GitBranchPlus, Loader, Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 type ZoneRow = {
@@ -103,6 +103,33 @@ export default function MyZoneDetailsPage() {
               Export
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <div className="card p-5">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+            <Building2 className="h-4 w-4" />
+            Zone Records
+          </div>
+          <div className="mt-3 text-3xl font-semibold text-slate-900">{rows.length}</div>
+          <div className="mt-2 text-sm text-slate-500">Company and zone identities currently visible to admin operators.</div>
+        </div>
+        <div className="card p-5">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+            <GitBranchPlus className="h-4 w-4" />
+            Next Action
+          </div>
+          <div className="mt-3 text-lg font-semibold text-slate-900">Create sub-zone</div>
+          <div className="mt-2 text-sm text-slate-500">Launch a new franchise or child operating zone with inheritance controls.</div>
+        </div>
+        <div className="card p-5">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+            <Settings2 className="h-4 w-4" />
+            Settings Link
+          </div>
+          <div className="mt-3 text-lg font-semibold text-slate-900">Zone policy</div>
+          <div className="mt-2 text-sm text-slate-500">Use Settings for prefixes, franchise policy, router visibility, and payment tagging.</div>
         </div>
       </section>
 
