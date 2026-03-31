@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RADIUS_USERNAME="${1:-}"
+AUTH_DETAIL_DIR="${FREERADIUS_AUTH_DETAIL_DIR:-/var/log/freeradius/radacct}"
+
+python3 - <<'PY' "$AUTH_DETAIL_DIR" "$RADIUS_USERNAME"
+import json, os, re, sys
+from datetime import datetime
+
+base_dir, radius_username = sys.argv[1], sys.argv[2]
+if not os.path.isdir(base_dir):
+    print(json.dumps({"found": False, "reason": "auth_detail_dir_missing"}))
+    sys.exit(1)
+
+date_re = re.compile(r'^([A-Z][a-z]{2}\s+\d+\s+\d{4}\s+\d{2}:\d{2}:\d{2})', re.M)
+user_re = re.compile(r'User-Name\s*=\s*"([^"]+)"')
+src_re = re.compile(r'(?:Packet-Src-IP-Address|Client-IP-Address)\s*=\s*([^\s]+)')
+reply_re = re.compile(r'Reply-Message\s*=\s*"([^"]+)"')
+
+latest = None
+for directory in sorted([d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))], reverse=True)[:20]:
+    dir_path = os.path.join(base_dir, directory)
+    for file_name in sorted([f for f in os.listdir(dir_path) if f.startswith("auth-detail-")], reverse=True)[:2]:
+        file_path = os.path.join(dir_path, file_name)
+        try:
+            contents = open(file_path, "r", encoding="utf-8").read()
+        except Exception:
+            continue
+        for block in re.split(r'\n\s*\n', contents):
+            block = block.strip()
+            if not block:
+                continue
+            user_match = user_re.search(block)
+            if radius_username and (not user_match or user_match.group(1) != radius_username):
+                continue
+            date_match = date_re.search(block)
+            source_match = src_re.search(block)
+            reply_match = reply_re.search(block)
+            auth_date = None
+            if date_match:
+                try:
+                    auth_date = datetime.strptime(date_match.group(1), "%b %d %Y %H:%M:%S")
+                except Exception:
+                    auth_date = None
+            item = {
+                "radiusUsername": user_match.group(1) if user_match else "",
+                "sourceIp": source_match.group(1) if source_match else "",
+                "reply": reply_match.group(1) if reply_match else "",
+                "authDate": auth_date.isoformat() if auth_date else "",
+                "detailFile": file_path,
+            }
+            if not latest or item["authDate"] > latest["authDate"]:
+                latest = item
+        if latest:
+            break
+    if latest:
+        break
+
+if not latest:
+    print(json.dumps({"found": False, "reason": "no_recent_auth_entry"}))
+    sys.exit(1)
+
+latest["found"] = True
+print(json.dumps(latest))
+PY

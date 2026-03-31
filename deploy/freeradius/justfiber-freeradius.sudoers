@@ -1,0 +1,5 @@
+Defaults! /usr/local/bin/justfiber-freeradius-sync !requiretty
+Defaults! /usr/local/bin/justfiber-freeradius-auth-telemetry !requiretty
+
+netlayer-admin ALL=(root) NOPASSWD: /usr/local/bin/justfiber-freeradius-sync
+netlayer-admin ALL=(root) NOPASSWD: /usr/local/bin/justfiber-freeradius-auth-telemetry

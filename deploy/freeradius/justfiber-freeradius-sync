@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+NODE_CODE="${1:-}"
+PAYLOAD_B64="${2:-}"
+CLIENTS_FILE="${FREERADIUS_CLIENTS_FILE:-/etc/freeradius/3.0/clients.conf}"
+VALIDATE_CMD="${FREERADIUS_VALIDATE_COMMAND:-freeradius -XC}"
+RELOAD_CMD="${FREERADIUS_RELOAD_COMMAND:-systemctl reload freeradius}"
+
+if [[ -z "${NODE_CODE}" || -z "${PAYLOAD_B64}" ]]; then
+  echo '{"ok":false,"reason":"missing_arguments"}'
+  exit 1
+fi
+
+PAYLOAD_JSON="$(python3 - <<'PY' "$PAYLOAD_B64"
+import base64, sys
+payload = sys.argv[1]
+padding = '=' * (-len(payload) % 4)
+print(base64.urlsafe_b64decode(payload + padding).decode('utf-8'))
+PY
+)"
+
+TMP_FILE="$(mktemp)"
+cp "$CLIENTS_FILE" "$TMP_FILE"
+
+cleanup() {
+  rm -f "$TMP_FILE"
+}
+trap cleanup EXIT
+
+python3 - <<'PY' "$TMP_FILE" "$NODE_CODE" "$PAYLOAD_JSON"
+import json, re, sys
+
+file_path, node_code, payload_json = sys.argv[1], sys.argv[2], sys.argv[3]
+payload = json.loads(payload_json)
+with open(file_path, "r", encoding="utf-8") as fh:
+    current = fh.read()
+
+pattern = re.compile(rf"\n?# BEGIN JUSTFIBER BNG {re.escape(node_code)}[\s\S]*?# END JUSTFIBER BNG {re.escape(node_code)}\n?", re.MULTILINE)
+base = re.sub(pattern, "\n", current).rstrip()
+
+def normalized_ips():
+    values = [str(payload.get("radiusClientIp") or "").strip()]
+    values.extend(str(item or "").strip() for item in (payload.get("additionalRadiusClientIps") or []))
+    seen = []
+    for value in values:
+        if value and value not in seen:
+            seen.append(value)
+    return seen
+
+ips = normalized_ips()
+secret = str(payload.get("coaSecret") or "").strip()
+action = str(payload.get("action") or "upsert").strip()
+block = ""
+if action != "remove" and ips and secret:
+    lines = [f"# BEGIN JUSTFIBER BNG {node_code}"]
+    for index, ip in enumerate(ips, start=1):
+        suffix = "" if index == 1 else f"-{index}"
+        shortname = node_code if index == 1 else f"{node_code}-{index}"
+        lines.extend([
+            f"client justfiber-{node_code}{suffix} {{",
+            f"  ipaddr = {ip}",
+            f"  secret = {secret}",
+            f"  shortname = {shortname}",
+            "  nastype = mikrotik",
+            "}",
+        ])
+    lines.append(f"# END JUSTFIBER BNG {node_code}")
+    block = "\n".join(lines)
+
+next_contents = f"{base}\n"
+mode = "removed"
+if block:
+    next_contents = f"{base}\n\n{block}\n" if base else f"{block}\n"
+    mode = "upserted"
+
+with open(file_path, "w", encoding="utf-8") as fh:
+    fh.write(next_contents)
+
+print(json.dumps({
+    "mode": mode,
+    "filePath": file_path,
+    "radiusClientIps": ips,
+}))
+PY
+
+PY_RESULT="$(python3 - <<'PY' "$TMP_FILE" "$VALIDATE_CMD" "$RELOAD_CMD"
+import json, shlex, subprocess, sys
+
+file_path, validate_cmd, reload_cmd = sys.argv[1], sys.argv[2], sys.argv[3]
+
+def run(cmd):
+    parts = shlex.split(cmd)
+    if not parts:
+        return {"ran": False, "ok": True, "command": ""}
+    result = subprocess.run(parts, capture_output=True, text=True)
+    return {
+        "ran": True,
+        "ok": result.returncode == 0,
+        "command": cmd,
+        "stdout": (result.stdout or "").strip(),
+        "stderr": (result.stderr or "").strip(),
+        "code": result.returncode,
+    }
+
+validate = run(validate_cmd)
+if not validate.get("ok", False):
+    print(json.dumps({
+        "validated": False,
+        "reloaded": False,
+        "validationCommand": validate.get("command", ""),
+        "validationReason": validate.get("stderr") or validate.get("stdout") or f"exit_{validate.get('code', 1)}",
+        "reloadCommand": "",
+        "reloadReason": "validation_failed",
+    }))
+    sys.exit(1)
+
+reload = run(reload_cmd)
+print(json.dumps({
+    "validated": True,
+    "reloaded": reload.get("ok", False),
+    "validationCommand": validate.get("command", ""),
+    "validationReason": "",
+    "reloadCommand": reload.get("command", ""),
+    "reloadReason": "" if reload.get("ok", False) else (reload.get("stderr") or reload.get("stdout") or f"exit_{reload.get('code', 1)}"),
+}))
+sys.exit(0 if reload.get("ok", False) else 1)
+PY
+)" || {
+  cp "$CLIENTS_FILE" "${CLIENTS_FILE}.failed.$(date +%s)"
+  cp "$TMP_FILE" "$CLIENTS_FILE"
+  echo "$PY_RESULT"
+  exit 1
+}
+
+cp "$TMP_FILE" "$CLIENTS_FILE"
+
+python3 - <<'PY' "$PAYLOAD_JSON" "$CLIENTS_FILE" "$PY_RESULT"
+import json, sys
+payload = json.loads(sys.argv[1])
+file_path = sys.argv[2]
+status = json.loads(sys.argv[3])
+ips = []
+for value in [payload.get("radiusClientIp", "")] + list(payload.get("additionalRadiusClientIps", []) or []):
+    value = str(value or "").strip()
+    if value and value not in ips:
+        ips.append(value)
+print(json.dumps({
+    "filePath": file_path,
+    "mode": "removed" if str(payload.get("action") or "").strip() == "remove" else "upserted",
+    "radiusClientIps": ips,
+    "serviceReload": {
+        "validated": status.get("validated", True),
+        "reloaded": status.get("reloaded", True),
+        "validation": {
+            "command": status.get("validationCommand", ""),
+            "reason": status.get("validationReason", ""),
+        },
+        "reload": {
+            "command": status.get("reloadCommand", ""),
+            "reason": status.get("reloadReason", ""),
+        },
+    },
+}))
+PY
