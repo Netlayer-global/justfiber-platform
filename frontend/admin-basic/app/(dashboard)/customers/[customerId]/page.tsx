@@ -1416,10 +1416,10 @@ function CustomerDetailContent() {
           <div className="flex flex-wrap gap-2">
             <button className="btn-secondary inline-flex items-center gap-2" onClick={() => { setActiveTab('billing'); window.setTimeout(() => document.getElementById('payment-renew-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80) }}>
               <BadgeIndianRupee className="h-4 w-4" />
-              Renew
+              Renewal Desk
             </button>
             <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void handleBillingPromiseReview()} disabled={isSaving}>
-              Grace
+              Promise / Grace
             </button>
             <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void handleDisconnectSession()} disabled={isSaving}>
               <PlugZap className="h-4 w-4" />
@@ -1440,6 +1440,10 @@ function CustomerDetailContent() {
                 Block
               </button>
             )}
+            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('tickets')}>
+              <FilePlus2 className="h-4 w-4" />
+              More
+            </button>
           </div>
         </div>
         <div className={`mt-5 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm ${
@@ -1996,6 +2000,34 @@ function CustomerDetailContent() {
                   <div className="metric-tile p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-black/40">Adjustment / payable</p>
                     <p className="text-lg font-semibold">Rs {Number(billingSummary.adjustmentPreview || billingSummary.dueAmount || 0)}</p>
+                  </div>
+                </div>
+                <div className="card p-5 space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold">Commercial shortcuts</h2>
+                      <p className="mt-1 text-sm text-slate-500">Fast operator actions for renewal, payment confirmation, records, and service-control follow-up.</p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                      Daily desk
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="btn-secondary" onClick={() => document.getElementById('payment-renew-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                      Renewal summary
+                    </button>
+                    <button className="btn-secondary" onClick={() => void handleConfirmPayment()} disabled={isSaving}>
+                      Confirm payment
+                    </button>
+                    <button className="btn-secondary" onClick={handleOpenBillingRecords}>
+                      Open billing records
+                    </button>
+                    <button className="btn-secondary" onClick={() => void handleBillingPromiseReview()} disabled={isSaving}>
+                      Promise / grace
+                    </button>
+                    <button className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving}>
+                      Disconnect session
+                    </button>
                   </div>
                 </div>
                 {billingControlCenter || billingRiskProfile ? (
@@ -3207,6 +3239,41 @@ function CustomerDetailContent() {
                       <input className="input" placeholder="Ticket subject" value={ticketForm.subject} onChange={(e) => setTicketForm((current) => ({ ...current, subject: e.target.value }))} />
                       <textarea className="input min-h-40" placeholder="Comments / issue details" value={ticketForm.description} onChange={(e) => setTicketForm((current) => ({ ...current, description: e.target.value }))} />
                       <button className="btn-primary" onClick={() => void handleCreateTicket()} disabled={isSaving}>Create ticket</button>
+                    </div>
+
+                    <div className="card p-5 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold">Support shortcuts</h2>
+                          <p className="mt-1 text-sm text-slate-500">Use these when the operator needs to jump from customer context into diagnostics or recovery tools.</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                          Rapid actions
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button className="btn-secondary" onClick={handleOpenRadiusAudit}>
+                          Open PPPoE audit
+                        </button>
+                        <Link href={natLogHref} className="btn-secondary">
+                          Open NAT Logs
+                        </Link>
+                        <button className="btn-secondary" onClick={handleOpenBillingRecords}>
+                          Open billing records
+                        </button>
+                        <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>
+                          Re-sync PPPoE
+                        </button>
+                        <button className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving}>
+                          Disconnect session
+                        </button>
+                        <button className="btn-secondary" onClick={() => void handleCopyPppoeUsername()}>
+                          Copy PPPoE
+                        </button>
+                        <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">
+                          Edit user
+                        </Link>
+                      </div>
                     </div>
 
                     <div className="card p-5 space-y-5">
