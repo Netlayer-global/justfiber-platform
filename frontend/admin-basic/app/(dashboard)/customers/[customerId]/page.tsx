@@ -33,6 +33,15 @@ function formatPower(value: unknown) {
   return Number.isFinite(num) ? `${num} dBm` : '-'
 }
 
+function safePreviewJson(value: unknown, fallback = '') {
+  if (value === null || value === undefined) return fallback
+  try {
+    return JSON.stringify(value).slice(0, 220)
+  } catch {
+    return '[unserializable payload]'
+  }
+}
+
 function normalizeConnectedClients(device: CustomerDevice) {
   const lanClients = Array.isArray(device.lanInfo?.connectedDevices) ? device.lanInfo?.connectedDevices : []
   return lanClients.slice(0, 8).map((item: any, index: number) => ({
@@ -1307,6 +1316,8 @@ function CustomerDetailContent() {
     return <div className="text-[#b4bcc4]">Customer not found</div>
   }
 
+  const customerPlanName = formatValue(customer.plan?.name, 'Unassigned plan')
+  const customerPlanId = formatValue(customer.plan?.id, '-')
   const topStats = [
     {
       label: 'Lifecycle status',
@@ -1360,7 +1371,7 @@ function CustomerDetailContent() {
       title: String(entry.actionType || 'customer action').replaceAll('_', ' '),
       status: String(entry.status || 'logged'),
       at: entry.createdAt || '',
-      note: entry.payload ? JSON.stringify(entry.payload).slice(0, 220) : '',
+      note: safePreviewJson(entry.payload, ''),
       source: 'Customer action',
     }))
     const billingEvents = billingTimeline.map((entry: any) => ({
@@ -1392,7 +1403,7 @@ function CustomerDetailContent() {
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
               <span>User management</span>
               <span>/</span>
-              <span>{customer.plan.name} Group</span>
+              <span>{customerPlanName} Group</span>
               <span>/</span>
               <span>{customer.pppoeUsername || customer.customerId || customer.id}</span>
             </div>
@@ -1403,7 +1414,7 @@ function CustomerDetailContent() {
                 Rs {Number(billingSummary.dueAmount || 0).toFixed(2)} unpaid
               </span>
               <span className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#2d7dff]">
-                Package : {customer.plan.name}
+                Package : {customerPlanName}
               </span>
               <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                 Open tickets : {customer.tickets?.filter((ticket) => !['resolved', 'closed'].includes(String(ticket.status).toLowerCase())).length || 0}
@@ -1472,7 +1483,7 @@ function CustomerDetailContent() {
                   {customer.customerId || customer.id} â€¢ {customer.phone} â€¢ {customer.email}
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
-                  Plan {customer.plan.name} â€¢ PPPoE {customer.pppoeUsername || '-'} â€¢ Service {customer.serviceId || '-'}
+                  Plan {customerPlanName} â€¢ PPPoE {customer.pppoeUsername || '-'} â€¢ Service {customer.serviceId || '-'}
                 </p>
               </div>
             </div>
@@ -1506,7 +1517,7 @@ function CustomerDetailContent() {
             </div>
             <div>
               <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">Current plan</p>
-              <p className="mt-2 text-lg font-semibold text-slate-900">{customer.plan.name}</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900">{customerPlanName}</p>
             </div>
             <div>
               <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">Expiry</p>
@@ -1561,7 +1572,7 @@ function CustomerDetailContent() {
                   <div className="card p-5 space-y-4">
                     <div>
                       <h2 className="text-xl font-semibold text-slate-900">{customer.pppoeUsername || customer.name}</h2>
-                      <p className="mt-1 text-sm text-slate-500">{customer.plan.name} • {customer.billingSnapshot?.zoneName || 'Default zone'}</p>
+                      <p className="mt-1 text-sm text-slate-500">{customerPlanName} • {customer.billingSnapshot?.zoneName || 'Default zone'}</p>
                     </div>
 
                     {[
@@ -2412,7 +2423,7 @@ function CustomerDetailContent() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="metric-tile p-4">
                         <p className="text-xs uppercase tracking-[0.22em] text-black/40">Current</p>
-                        <p className="text-lg font-semibold">{customer.plan.name}</p>
+                        <p className="text-lg font-semibold">{customerPlanName}</p>
                         <p className="mt-1 text-sm text-black/55">{currentSpeedMbps.toFixed(0)} Mbps</p>
                       </div>
                       <div className="metric-tile p-4">
@@ -2627,7 +2638,7 @@ function CustomerDetailContent() {
                   </div>
                   {planChangePreview ? (
                     <div className="rounded bg-[#0a0e27] p-4 text-sm space-y-2">
-                      <p>Current: {planChangePreview.currentPlanCode || customer.plan.id}</p>
+                      <p>Current: {planChangePreview.currentPlanCode || customerPlanId}</p>
                       <p>Target: {planChangePreview.nextPlanName} ({planChangePreview.nextPlanCode})</p>
                       <p>Mode: {planChangePreview.effectiveMode}</p>
                       <p>Billing: {planChangePreview.billMode || '-'}</p>
@@ -2850,7 +2861,7 @@ function CustomerDetailContent() {
                           <h2 className="text-lg font-semibold">{device.deviceId}</h2>
                           <p className="text-sm text-slate-500">{device.productClass || '-'} | {device.serialNumber || '-'}</p>
                           <p className="text-sm text-slate-500">
-                            Bound to {customer.customerId || customer.id} / {customer.serviceId || '-'} / {customer.plan.name}
+                            Bound to {customer.customerId || customer.id} / {customer.serviceId || '-'} / {customerPlanName}
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -3436,7 +3447,7 @@ function CustomerDetailContent() {
                 </div>
                 <div>
                   <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Plan</p>
-                  <p className="font-medium">{customer.plan.name}</p>
+                  <p className="font-medium">{customerPlanName}</p>
                 </div>
                 <div>
                   <p className="text-black/40 text-xs uppercase tracking-[0.2em]">PPPoE</p>
