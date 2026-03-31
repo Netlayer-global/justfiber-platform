@@ -141,6 +141,8 @@ export interface Customer {
     accessProfileCode?: string
     billingProfileCode?: string
     bngNodeCode?: string
+    currentIpv4?: string | null
+    ipv4Pool?: string | null
     status?: 'draft' | 'active' | 'suspended' | 'expired' | 'terminated' | 'pending_installation'
     activatedAt?: string
     suspendedAt?: string

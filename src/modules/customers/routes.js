@@ -330,12 +330,14 @@ async function buildCustomerResponse(customer) {
     ...customer,
     pppoeUsername: subscriberService?.radiusUsername || customer.pppoeUsername || null,
     radiusService: subscriberService
-      ? {
+        ? {
           serviceId: subscriberService.serviceId,
           radiusUsername: subscriberService.radiusUsername,
           accessProfileCode: subscriberService.accessProfileCode,
           billingProfileCode: subscriberService.billingProfileCode,
           bngNodeCode: subscriberService.bngNodeCode,
+          currentIpv4: subscriberService.currentIpv4 || null,
+          ipv4Pool: subscriberService.ipv4Pool || null,
           status: subscriberService.status,
           activatedAt: subscriberService.activatedAt,
           suspendedAt: subscriberService.suspendedAt,
@@ -771,13 +773,49 @@ customersRouter.patch(
   requirePermission(permissions.customerUpdate),
   asyncHandler(async (req, res) => {
     const payload = updateCustomerSchema.parse(req.body || {});
+    const { radiusService: radiusServicePayload, ...customerPayload } = payload;
     const customer = await Customer.findOneAndUpdate(
       { customerId: req.params.customerId },
-      { $set: payload },
+      { $set: customerPayload },
       { new: true }
-    ).lean();
+    );
     if (!customer) {
       throw new ApiError(404, "Customer not found");
+    }
+    let radiusSyncApplied = false;
+    if (radiusServicePayload) {
+      const subscriberService =
+        (await SubscriberService.findOne({ serviceId: customer.serviceId })) ||
+        (await SubscriberService.findOne({ customerId: customer.customerId }));
+      if (subscriberService) {
+        const nextCurrentIpv4 =
+          radiusServicePayload.currentIpv4 === undefined
+            ? subscriberService.currentIpv4 || null
+            : (radiusServicePayload.currentIpv4 || "").trim() || null;
+        const nextIpv4Pool =
+          radiusServicePayload.ipv4Pool === undefined
+            ? subscriberService.ipv4Pool || null
+            : (radiusServicePayload.ipv4Pool || "").trim() || null;
+        subscriberService.currentIpv4 = nextCurrentIpv4;
+        subscriberService.ipv4Pool = nextCurrentIpv4 ? null : nextIpv4Pool;
+        await subscriberService.save();
+
+        if (subscriberService.status === "active" && subscriberService.metadata?.radiusPassword) {
+          await radiusServiceManager.createSubscriberAccess({
+            serviceId: subscriberService.serviceId,
+            customerId: subscriberService.customerId,
+            radiusUsername: subscriberService.radiusUsername,
+            radiusPassword: subscriberService.metadata.radiusPassword,
+            accessProfileCode: subscriberService.accessProfileCode,
+            billingProfileCode: subscriberService.billingProfileCode,
+            bngNodeCode: subscriberService.bngNodeCode,
+            currentIpv4: subscriberService.currentIpv4,
+            ipv4Pool: subscriberService.ipv4Pool,
+            metadata: subscriberService.metadata || {}
+          });
+          radiusSyncApplied = true;
+        }
+      }
     }
     await auditFromRequest(req, {
       action: "customer.updated",
@@ -785,7 +823,7 @@ customersRouter.patch(
       entityId: customer.customerId,
       metadata: Object.keys(payload)
     });
-    return ok(res, customer);
+    return ok(res, await buildCustomerResponse(customer.toObject()), { radiusSyncApplied });
   })
 );
 

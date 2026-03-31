@@ -409,6 +409,8 @@ function mapCustomer(customer: any): Customer {
           accessProfileCode: customer.radiusService.accessProfileCode || '',
           billingProfileCode: customer.radiusService.billingProfileCode || '',
           bngNodeCode: customer.radiusService.bngNodeCode || '',
+          currentIpv4: customer.radiusService.currentIpv4 || null,
+          ipv4Pool: customer.radiusService.ipv4Pool || null,
           status: customer.radiusService.status || 'draft',
           activatedAt: customer.radiusService.activatedAt,
           suspendedAt: customer.radiusService.suspendedAt,
@@ -1232,6 +1234,12 @@ export const adminAPI = {
         address: data.rawAddress,
         billingSnapshot: data.billingSnapshot,
         invoiceSummary: data.invoiceSummary,
+        radiusService: data.radiusService
+          ? {
+              currentIpv4: data.radiusService.currentIpv4 ?? null,
+              ipv4Pool: data.radiusService.ipv4Pool ?? null,
+            }
+          : undefined,
       }),
     }),
   updateCustomerBooking: (customerId: string, bookingId: string, data: { status: string; note?: string }) =>
@@ -1270,7 +1278,7 @@ export const adminAPI = {
     }),
   provisionCustomerPppoe: (
     id: string,
-    data?: { pppoeUsername?: string; pppoePassword?: string }
+    data?: { pppoeUsername?: string; pppoePassword?: string; currentIpv4?: string | null; ipv4Pool?: string | null }
   ) =>
     request(`/api/v1/admin/customers/${id}/pppoe/provision`, {
       method: 'POST',

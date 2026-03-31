@@ -100,6 +100,10 @@ export default function CustomerDetailPage() {
     natEnabled: boolean
   }>>({})
   const [bookingInstallerSelections, setBookingInstallerSelections] = useState<Record<string, string>>({})
+  const [staticIpForm, setStaticIpForm] = useState({
+    currentIpv4: '',
+    ipv4Pool: '',
+  })
 
   useEffect(() => {
     if (!customerId) return
@@ -114,6 +118,13 @@ export default function CustomerDetailPage() {
       setActiveTab(tab as TabKey)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    setStaticIpForm({
+      currentIpv4: String(customer?.radiusService?.currentIpv4 || ''),
+      ipv4Pool: String(customer?.radiusService?.ipv4Pool || ''),
+    })
+  }, [customer?.radiusService?.currentIpv4, customer?.radiusService?.ipv4Pool])
 
   async function loadCustomer() {
     try {
@@ -369,6 +380,8 @@ export default function CustomerDetailPage() {
   const radiusRejectState = radiusService?.radcheck?.some((row) => row.attribute === 'Auth-Type' && row.value === 'Reject') || false
   const radiusPasswordPresent = radiusService?.radcheck?.some((row) => row.attribute === 'Cleartext-Password') || false
   const radiusRateLimit = radiusService?.radreply?.find((row) => row.attribute === 'Mikrotik-Rate-Limit')?.value || ''
+  const radiusStaticIpv4 = radiusService?.radreply?.find((row) => row.attribute === 'Framed-IP-Address')?.value || radiusService?.currentIpv4 || ''
+  const radiusIpv4Pool = radiusService?.radreply?.find((row) => row.attribute === 'Framed-Pool')?.value || radiusService?.ipv4Pool || ''
   const radiusHealthState =
     radiusService?.status === 'suspended'
       ? radiusRejectState
@@ -919,6 +932,8 @@ export default function CustomerDetailPage() {
       const res = await adminAPI.provisionCustomerPppoe(customer.id, {
         pppoeUsername: form?.pppoeUsername || undefined,
         pppoePassword: form?.pppoePassword || undefined,
+        currentIpv4: staticIpForm.currentIpv4.trim() || null,
+        ipv4Pool: staticIpForm.currentIpv4.trim() ? null : (staticIpForm.ipv4Pool.trim() || null),
       })
       if (!res.success) {
         toast.error(res.error || 'Failed to create PPPoE in FreeRADIUS')
@@ -967,6 +982,32 @@ export default function CustomerDetailPage() {
     } catch (error) {
       console.error('[v0] Failed to resume PPPoE:', error)
       toast.error('Failed to resume PPPoE')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleSaveStaticIp() {
+    if (!customer) return
+    const currentIpv4 = staticIpForm.currentIpv4.trim()
+    const ipv4Pool = staticIpForm.ipv4Pool.trim()
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.updateCustomer(customer.id, {
+        radiusService: {
+          currentIpv4: currentIpv4 || null,
+          ipv4Pool: currentIpv4 ? null : (ipv4Pool || null),
+        },
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to save static IP settings')
+        return
+      }
+      toast.success(currentIpv4 ? 'Static IP saved and synced' : ipv4Pool ? 'IPv4 pool saved and synced' : 'Static IP settings cleared')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[v0] Failed to save static IP settings:', error)
+      toast.error('Failed to save static IP settings')
     } finally {
       setIsSaving(false)
     }
@@ -2400,6 +2441,14 @@ export default function CustomerDetailPage() {
                               <p className="mt-2 font-semibold text-slate-900">{wanIpv4}</p>
                             </div>
                             <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Static IPv4</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatValue(radiusStaticIpv4)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">IPv4 pool</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatValue(radiusIpv4Pool)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
                               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Gateway</p>
                               <p className="mt-2 font-semibold text-slate-900">{wanGateway}</p>
                             </div>
@@ -2510,6 +2559,60 @@ export default function CustomerDetailPage() {
                             NAT Enabled
                           </label>
                           <button className="btn-primary" onClick={() => void handleDeviceWanUpdate(device)} disabled={isSaving}>Apply WAN + FreeRADIUS</button>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold text-slate-900">Static IPv4 Control</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                              Save karte hi active PPPoE subscriber ke RADIUS reply attributes refresh ho jayenge.
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-slate-600">
+                            {radiusStaticIpv4 ? 'Framed-IP-Address' : radiusIpv4Pool ? 'Framed-Pool' : 'Dynamic IP'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-lg bg-white px-3 py-3">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Current static IPv4</p>
+                            <p className="mt-2 font-semibold text-slate-900">{formatValue(radiusStaticIpv4)}</p>
+                          </div>
+                          <div className="rounded-lg bg-white px-3 py-3">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Current IPv4 pool</p>
+                            <p className="mt-2 font-semibold text-slate-900">{formatValue(radiusIpv4Pool)}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <input
+                            className="input"
+                            placeholder="Static IPv4 e.g. 103.139.191.210"
+                            value={staticIpForm.currentIpv4}
+                            onChange={(e) => setStaticIpForm((prev) => ({ ...prev, currentIpv4: e.target.value }))}
+                          />
+                          <input
+                            className="input"
+                            placeholder="IPv4 pool name e.g. static-home"
+                            value={staticIpForm.ipv4Pool}
+                            onChange={(e) => setStaticIpForm((prev) => ({ ...prev, ipv4Pool: e.target.value }))}
+                            disabled={Boolean(staticIpForm.currentIpv4.trim())}
+                          />
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Static IPv4 aur pool me se ek use karo. Static IPv4 filled hai to pool ignore hoga.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <button className="btn-primary" onClick={() => void handleSaveStaticIp()} disabled={isSaving}>
+                            Save Static IP
+                          </button>
+                          <button
+                            className="btn-secondary"
+                            onClick={() => setStaticIpForm({ currentIpv4: '', ipv4Pool: '' })}
+                            disabled={isSaving}
+                          >
+                            Clear Form
+                          </button>
                         </div>
                       </div>
 

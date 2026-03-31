@@ -55,7 +55,13 @@ function getPool() {
   return pool;
 }
 
-function buildReplyAttributes(accessProfile, networkProfile = {}) {
+function normalizeOptionalValue(value) {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+function buildReplyAttributes(accessProfile, networkProfile = {}, serviceConfig = {}) {
   const attributes = { ...(accessProfile?.radiusAttributes || {}) };
   const downMbps = Number(networkProfile?.speedMbps || accessProfile?.downMbps || 0) || 0;
   const upMbps = Number(networkProfile?.uploadSpeedMbps || accessProfile?.upMbps || 0) || 0;
@@ -75,6 +81,18 @@ function buildReplyAttributes(accessProfile, networkProfile = {}) {
   }
   if (dataPolicy === "hard_cap" && dataLimitGb && !attributes["Mikrotik-Total-Limit"]) {
     attributes["Mikrotik-Total-Limit"] = String(Math.round(dataLimitGb * 1024 * 1024 * 1024));
+  }
+  const currentIpv4 = normalizeOptionalValue(serviceConfig?.currentIpv4);
+  const ipv4Pool = normalizeOptionalValue(serviceConfig?.ipv4Pool);
+  if (currentIpv4) {
+    attributes["Framed-IP-Address"] = currentIpv4;
+    delete attributes["Framed-Pool"];
+  } else if (ipv4Pool) {
+    attributes["Framed-Pool"] = ipv4Pool;
+    delete attributes["Framed-IP-Address"];
+  } else {
+    delete attributes["Framed-IP-Address"];
+    delete attributes["Framed-Pool"];
   }
   return Object.entries(attributes)
     .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "")
@@ -195,6 +213,8 @@ export class RadiusServiceManager {
     accessProfileCode,
     billingProfileCode,
     bngNodeCode,
+    currentIpv4,
+    ipv4Pool,
     metadata = {}
   }) {
     const service =
@@ -212,6 +232,10 @@ export class RadiusServiceManager {
       ...(service?.metadata || {}),
       ...metadata
     };
+    const effectiveCurrentIpv4 =
+      currentIpv4 !== undefined ? normalizeOptionalValue(currentIpv4) : normalizeOptionalValue(service?.currentIpv4);
+    const effectiveIpv4Pool =
+      ipv4Pool !== undefined ? normalizeOptionalValue(ipv4Pool) : normalizeOptionalValue(service?.ipv4Pool);
     const accessProfile = effectiveAccessProfileCode
       ? await AccessProfile.findOne({ code: effectiveAccessProfileCode, active: true }).lean()
       : null;
@@ -225,7 +249,10 @@ export class RadiusServiceManager {
       await replaceRadreplyEntries(
         connection,
         username,
-        buildReplyAttributes(accessProfile, effectiveMetadata.networkProfile)
+        buildReplyAttributes(accessProfile, effectiveMetadata.networkProfile, {
+          currentIpv4: effectiveCurrentIpv4,
+          ipv4Pool: effectiveIpv4Pool
+        })
       );
       await connection.commit();
     } catch (error) {
@@ -255,6 +282,8 @@ export class RadiusServiceManager {
     nextService.accessProfileCode = effectiveAccessProfileCode || nextService.accessProfileCode;
     nextService.billingProfileCode = billingProfileCode || nextService.billingProfileCode;
     nextService.bngNodeCode = bngNodeCode || nextService.bngNodeCode;
+    nextService.currentIpv4 = effectiveCurrentIpv4;
+    nextService.ipv4Pool = effectiveIpv4Pool;
     nextService.status = "active";
     nextService.activatedAt = nextService.activatedAt || new Date();
     nextService.suspendedAt = null;

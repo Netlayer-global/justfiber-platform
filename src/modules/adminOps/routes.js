@@ -3282,6 +3282,14 @@ adminOpsRouter.post(
       subscriberService?.metadata?.radiusPassword ||
       ""
     ).trim();
+    const currentIpv4 =
+      req.body?.currentIpv4 === undefined
+        ? subscriberService?.currentIpv4
+        : String(req.body?.currentIpv4 || "").trim() || null;
+    const ipv4Pool =
+      req.body?.ipv4Pool === undefined
+        ? subscriberService?.ipv4Pool
+        : String(req.body?.ipv4Pool || "").trim() || null;
 
     if (!radiusUsername || !radiusPassword) {
       throw new ApiError(400, "PPPoE username and password are required");
@@ -3295,6 +3303,8 @@ adminOpsRouter.post(
       accessProfileCode: plan?.provisioning?.accessProfileCode || subscriberService?.accessProfileCode,
       billingProfileCode: subscriberService?.billingProfileCode,
       bngNodeCode: subscriberService?.bngNodeCode,
+      currentIpv4,
+      ipv4Pool: currentIpv4 ? null : ipv4Pool,
       metadata: {
         ...(subscriberService?.metadata || {}),
         source: "admin_manual_pppoe",
@@ -3312,6 +3322,8 @@ adminOpsRouter.post(
       serviceId: result.serviceId,
       customerId: result.customerId,
       radiusUsername: result.radiusUsername,
+      currentIpv4: result.currentIpv4 || null,
+      ipv4Pool: result.ipv4Pool || null,
       status: result.status,
       updated: true
     });

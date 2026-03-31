@@ -46,7 +46,11 @@ export const updateCustomerSchema = z.object({
     }).optional()
   }).partial().optional(),
   billingSnapshot: z.record(z.any()).optional(),
-  invoiceSummary: z.record(z.any()).optional()
+  invoiceSummary: z.record(z.any()).optional(),
+  radiusService: z.object({
+    currentIpv4: z.string().max(64).nullable().optional(),
+    ipv4Pool: z.string().max(128).nullable().optional()
+  }).optional()
 });
 
 export const manualCreateCustomerSchema = z.object({
