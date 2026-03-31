@@ -358,6 +358,43 @@ export interface BngNodeCoaDispatchResult {
   }
 }
 
+export interface IpPoolRange {
+  id: string
+  name: string
+  zone?: string
+  routerNodeCode?: string | null
+  routerDisplayName?: string
+  type: 'public' | 'private'
+  format: 'range' | 'cidr'
+  ipFrom?: string
+  ipTo?: string
+  networkCidr?: string
+  excludedIps?: string[]
+  excludeZone?: string
+  comments?: string
+  useForRadius?: boolean
+  active?: boolean
+  lastRouterSyncs?: Array<{
+    routerNodeCode?: string
+    routerDisplayName?: string
+    status?: string
+    action?: string
+    target?: string
+    detail?: string
+    syncedAt?: string
+  }>
+  metrics?: {
+    totalIps: number
+    activeIps: number
+    inactiveIps: number
+    activePercent: number
+    excludedCount: number
+    radiusCount: number
+  }
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface CustomerDevice {
   id: string
   deviceId: string

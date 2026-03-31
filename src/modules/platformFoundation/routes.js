@@ -23,6 +23,7 @@ import { IntegrationEventLog } from "../../models/IntegrationEventLog.js";
 import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { InventoryItem } from "../../models/InventoryItem.js";
 import { InventoryLocation } from "../../models/InventoryLocation.js";
+import { IpPoolRange } from "../../models/IpPoolRange.js";
 import { KycVerificationRequest } from "../../models/KycVerificationRequest.js";
 import { NatLogEntry } from "../../models/NatLogEntry.js";
 import { OttSubscription } from "../../models/OttSubscription.js";
@@ -134,6 +135,150 @@ const bngNodeSchema = z.object({
   wwwPort: z.number().int().positive().optional(),
   notes: z.string().optional()
 });
+
+const ipPoolRangeSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(2),
+  zone: z.string().optional(),
+  routerNodeCode: z.string().optional(),
+  type: z.enum(["public", "private"]).default("public"),
+  format: z.enum(["range", "cidr"]).default("range"),
+  ipFrom: z.string().optional(),
+  ipTo: z.string().optional(),
+  networkCidr: z.string().optional(),
+  excludedIps: z.array(z.string()).optional(),
+  excludeZone: z.string().optional(),
+  comments: z.string().optional(),
+  useForRadius: z.boolean().default(false),
+  active: z.boolean().default(true)
+});
+
+function parseIpv4(ip) {
+  const value = String(ip || "").trim();
+  const parts = value.split(".");
+  if (parts.length !== 4) return null;
+  const octets = parts.map((part) => Number(part));
+  if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return null;
+  }
+  return octets;
+}
+
+function ipv4ToLong(ip) {
+  const parts = parseIpv4(ip);
+  if (!parts) return null;
+  return (((parts[0] * 256 + parts[1]) * 256 + parts[2]) * 256 + parts[3]) >>> 0;
+}
+
+function longToIpv4(value) {
+  const normalized = Number(value);
+  if (!Number.isInteger(normalized) || normalized < 0 || normalized > 0xffffffff) return null;
+  return [
+    (normalized >>> 24) & 255,
+    (normalized >>> 16) & 255,
+    (normalized >>> 8) & 255,
+    normalized & 255
+  ].join(".");
+}
+
+function deriveRangeFromCidr(networkCidr) {
+  const [ip, prefixValue] = String(networkCidr || "").trim().split("/");
+  const prefix = Number(prefixValue);
+  const ipLong = ipv4ToLong(ip);
+  if (ipLong === null || !Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
+    throw new Error("Invalid CIDR block");
+  }
+  const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+  const network = ipLong & mask;
+  const broadcast = network | (~mask >>> 0);
+  const hostStart = prefix <= 30 ? network + 1 : network;
+  const hostEnd = prefix <= 30 ? broadcast - 1 : broadcast;
+  return {
+    ipFrom: longToIpv4(hostStart),
+    ipTo: longToIpv4(hostEnd),
+    networkCidr: `${longToIpv4(network)}/${prefix}`
+  };
+}
+
+function normalizeExcludedIps(values = []) {
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function normalizeIpPoolPayload(payload) {
+  const normalized = {
+    name: String(payload.name || "").trim(),
+    zone: String(payload.zone || "").trim() || undefined,
+    routerNodeCode: String(payload.routerNodeCode || "").trim() || undefined,
+    type: payload.type || "public",
+    format: payload.format || "range",
+    excludedIps: normalizeExcludedIps(payload.excludedIps),
+    excludeZone: String(payload.excludeZone || "").trim() || undefined,
+    comments: String(payload.comments || "").trim() || undefined,
+    useForRadius: Boolean(payload.useForRadius),
+    active: payload.active !== false
+  };
+
+  if (normalized.format === "cidr") {
+    const derived = deriveRangeFromCidr(payload.networkCidr);
+    return {
+      ...normalized,
+      ipFrom: derived.ipFrom,
+      ipTo: derived.ipTo,
+      networkCidr: derived.networkCidr
+    };
+  }
+
+  const ipFrom = String(payload.ipFrom || "").trim();
+  const ipTo = String(payload.ipTo || "").trim();
+  const fromLong = ipv4ToLong(ipFrom);
+  const toLong = ipv4ToLong(ipTo);
+  if (fromLong === null || toLong === null || fromLong > toLong) {
+    throw new Error("Invalid IPv4 range");
+  }
+  return {
+    ...normalized,
+    ipFrom,
+    ipTo,
+    networkCidr: String(payload.networkCidr || "").trim() || undefined
+  };
+}
+
+function isIpv4WithinRange(ip, ipFrom, ipTo) {
+  const value = ipv4ToLong(ip);
+  const start = ipv4ToLong(ipFrom);
+  const end = ipv4ToLong(ipTo);
+  if (value === null || start === null || end === null) return false;
+  return value >= start && value <= end;
+}
+
+function computeIpPoolStats(pool, services = []) {
+  const start = ipv4ToLong(pool.ipFrom);
+  const end = ipv4ToLong(pool.ipTo);
+  const excludedIps = normalizeExcludedIps(pool.excludedIps);
+  const excludedSet = new Set(excludedIps);
+  const totalIps = start === null || end === null ? 0 : Math.max(0, end - start + 1 - excludedSet.size);
+  const activeIps = new Set(
+    services
+      .map((service) => String(service?.currentIpv4 || "").trim())
+      .filter((ip) => ip && !excludedSet.has(ip) && isIpv4WithinRange(ip, pool.ipFrom, pool.ipTo))
+  ).size;
+  const radiusCount = services.filter((service) => String(service?.ipv4Pool || "").trim() === String(pool.name || "").trim()).length;
+  const inactiveIps = Math.max(0, totalIps - activeIps);
+  return {
+    totalIps,
+    activeIps,
+    inactiveIps,
+    activePercent: totalIps > 0 ? Math.round((activeIps / totalIps) * 100) : 0,
+    excludedCount: excludedIps.length,
+    radiusCount
+  };
+}
 
 function testTcpPort(host, port, timeoutMs = 3000) {
   return new Promise((resolve) => {
@@ -1149,6 +1294,103 @@ platformFoundationRouter.post(
       nodeCode,
       radiusUsername: payload.radiusUsername,
       result
+    });
+  })
+);
+
+platformFoundationRouter.get(
+  "/foundation/ip-pools",
+  requirePermission(permissions.configRead),
+  asyncHandler(async (_req, res) => {
+    const [items, services, routers] = await Promise.all([
+      IpPoolRange.find({}).sort({ createdAt: -1 }).lean(),
+      SubscriberService.find({}).select({ currentIpv4: 1, ipv4Pool: 1 }).lean(),
+      BngNode.find({}).select({ nodeCode: 1, displayName: 1 }).lean()
+    ]);
+    const routerNameMap = new Map(routers.map((router) => [String(router.nodeCode || "").trim(), router.displayName || router.nodeCode]));
+    const enriched = items.map((item) => {
+      const stats = computeIpPoolStats(item, services);
+      return {
+        ...item,
+        id: String(item._id),
+        routerDisplayName: item.routerNodeCode ? routerNameMap.get(String(item.routerNodeCode || "").trim()) || item.routerNodeCode : "All",
+        metrics: stats
+      };
+    });
+    const summary = enriched.reduce(
+      (acc, item) => {
+        acc.totalIps += Number(item.metrics?.totalIps || 0);
+        acc.activeIps += Number(item.metrics?.activeIps || 0);
+        acc.inactiveIps += Number(item.metrics?.inactiveIps || 0);
+        return acc;
+      },
+      { totalIps: 0, activeIps: 0, inactiveIps: 0 }
+    );
+    return ok(res, enriched, {
+      summary: {
+        ...summary,
+        activePercent: summary.totalIps > 0 ? Math.round((summary.activeIps / summary.totalIps) * 100) : 0
+      }
+    });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/ip-pools",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = ipPoolRangeSchema.parse(req.body || {});
+    const normalized = normalizeIpPoolPayload(payload);
+    const saved = await IpPoolRange.findOneAndUpdate(
+      payload.id
+        ? { _id: payload.id }
+        : {
+            name: normalized.name,
+            routerNodeCode: normalized.routerNodeCode || null
+          },
+      {
+        $set: {
+          ...normalized,
+          routerNodeCode: normalized.routerNodeCode || null
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    const routerSyncs = await mikrotikBngManager.syncIpPoolRange({
+      pool: saved.toObject ? saved.toObject() : saved,
+      routerNodeCodes: normalized.routerNodeCode ? [normalized.routerNodeCode] : []
+    });
+    saved.lastRouterSyncs = routerSyncs;
+    await saved.save();
+    const services = await SubscriberService.find({}).select({ currentIpv4: 1, ipv4Pool: 1 }).lean();
+    const savedObject = saved.toObject ? saved.toObject() : saved;
+    const metrics = computeIpPoolStats(savedObject, services);
+    return ok(res, {
+      ...savedObject,
+      id: String(savedObject._id),
+      lastRouterSyncs: routerSyncs,
+      metrics
+    }, { created: true });
+  })
+);
+
+platformFoundationRouter.delete(
+  "/foundation/ip-pools/:poolId",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const pool = await IpPoolRange.findById(req.params.poolId).lean();
+    const routerSyncs = pool
+      ? await mikrotikBngManager.deleteIpPoolRange({
+          poolName: pool.name,
+          routerNodeCodes: pool.routerNodeCode ? [pool.routerNodeCode] : []
+        })
+      : [];
+    const deleted = await IpPoolRange.findByIdAndDelete(req.params.poolId).lean();
+    return ok(res, {
+      deleted: true,
+      poolId: req.params.poolId,
+      name: deleted?.name || null,
+      lastRouterSyncs: routerSyncs
     });
   })
 );

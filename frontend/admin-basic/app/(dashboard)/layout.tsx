@@ -10,6 +10,7 @@ import {
   Cable,
   CreditCard,
   HardDrive,
+  Network,
   LogOut,
   MapPinned,
   Menu,
@@ -61,6 +62,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/devices', label: 'Devices', icon: HardDrive },
       { href: '/routers', label: 'Routers', icon: Router },
+      { href: '/ip-management', label: 'IP Management', icon: Network },
       { href: '/serviceability', label: 'Serviceability', icon: MapPinned },
       { href: '/provisioning', label: 'Provisioning', icon: ShieldCheck },
     ],

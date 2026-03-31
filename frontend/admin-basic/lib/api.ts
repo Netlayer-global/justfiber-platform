@@ -42,6 +42,7 @@ import type {
   SupportQueueRequest,
   SupportDiagnosticItem,
   AppBanner,
+  IpPoolRange,
 } from './types'
 
 export function getApiBaseUrl() {
@@ -345,6 +346,39 @@ function mapBngNode(node: any): BngNode {
     lastFreeradiusSync: node.lastFreeradiusSync || undefined,
     lastRadiusAuthTelemetry: node.lastRadiusAuthTelemetry || undefined,
     freeradiusIntegrationHealth: node.freeradiusIntegrationHealth || undefined,
+  }
+}
+
+function mapIpPoolRange(item: any): IpPoolRange {
+  return {
+    id: item._id || item.id || '',
+    name: item.name || 'Unnamed pool',
+    zone: item.zone || '',
+    routerNodeCode: item.routerNodeCode || null,
+    routerDisplayName: item.routerDisplayName || '',
+    type: item.type || 'public',
+    format: item.format || 'range',
+    ipFrom: item.ipFrom || '',
+    ipTo: item.ipTo || '',
+    networkCidr: item.networkCidr || '',
+    excludedIps: Array.isArray(item.excludedIps) ? item.excludedIps : [],
+    excludeZone: item.excludeZone || '',
+    comments: item.comments || '',
+    useForRadius: Boolean(item.useForRadius),
+    active: item.active !== false,
+    lastRouterSyncs: Array.isArray(item.lastRouterSyncs) ? item.lastRouterSyncs : [],
+    metrics: item.metrics
+      ? {
+          totalIps: Number(item.metrics.totalIps || 0),
+          activeIps: Number(item.metrics.activeIps || 0),
+          inactiveIps: Number(item.metrics.inactiveIps || 0),
+          activePercent: Number(item.metrics.activePercent || 0),
+          excludedCount: Number(item.metrics.excludedCount || 0),
+          radiusCount: Number(item.metrics.radiusCount || 0),
+        }
+      : undefined,
+    createdAt: item.createdAt || '',
+    updatedAt: item.updatedAt || '',
   }
 }
 
@@ -1380,6 +1414,46 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapBngNode) : [],
     }
   },
+  getIpPools: async () => {
+    const res = await request<any[]>('/api/v1/admin/foundation/ip-pools')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapIpPoolRange) : [],
+      meta: {
+        ...(res.meta || {}),
+        summary: (res as any).meta?.summary,
+      } as any,
+    }
+  },
+  saveIpPool: async (data: {
+    id?: string
+    name: string
+    zone?: string
+    routerNodeCode?: string
+    type?: 'public' | 'private'
+    format?: 'range' | 'cidr'
+    ipFrom?: string
+    ipTo?: string
+    networkCidr?: string
+    excludedIps?: string[]
+    excludeZone?: string
+    comments?: string
+    useForRadius?: boolean
+    active?: boolean
+  }) => {
+    const res = await request<any>('/api/v1/admin/foundation/ip-pools', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapIpPoolRange(res.data) : undefined,
+    }
+  },
+  deleteIpPool: (poolId: string) =>
+    request(`/api/v1/admin/foundation/ip-pools/${encodeURIComponent(poolId)}`, {
+      method: 'DELETE',
+    }),
   saveBngNode: async (data: Partial<BngNode> & { nodeCode: string; displayName: string }) => {
     const res = await request<any>('/api/v1/admin/foundation/bng-nodes', {
       method: 'POST',
