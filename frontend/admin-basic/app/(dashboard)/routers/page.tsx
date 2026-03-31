@@ -92,6 +92,14 @@ function toForm(node?: BngNode | null): RouterForm {
   }
 }
 
+function describeFreeradiusMode(mode?: string) {
+  if (mode === 'helper') return 'Privileged helper'
+  if (mode === 'direct') return 'Direct filesystem'
+  if (mode === 'disabled') return 'Disabled'
+  if (mode === 'missing') return 'Not configured'
+  return '-'
+}
+
 export default function RoutersPage() {
   const [routers, setRouters] = useState<BngNode[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -385,6 +393,7 @@ export default function RoutersPage() {
 
   const activeCount = routers.filter((item) => item.status === 'active').length
   const coaEnabledCount = routers.filter((item) => item.useCoa !== false).length
+  const integrationHealth = selectedRouter?.freeradiusIntegrationHealth
 
   return (
     <div className="space-y-6">
@@ -542,6 +551,37 @@ export default function RoutersPage() {
                   <div className="mt-3 text-sm leading-6 text-slate-600">{selectedRouter.notes || 'No extra notes saved for this router.'}</div>
                 </div>
                 <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">FreeRADIUS integration health</div>
+                  <div className="mt-3 text-sm leading-6 text-slate-600">
+                    {integrationHealth?.overallReady
+                      ? 'Admin-side FreeRADIUS integration looks ready for this router.'
+                      : 'This panel shows whether helper-backed FreeRADIUS operations are ready or still depending on direct file access.'}
+                  </div>
+                  {integrationHealth ? (
+                    <div className="mt-3 space-y-2 text-xs text-slate-500">
+                      <div className="flex items-center justify-between gap-3"><span>Overall</span><span>{integrationHealth.overallReady ? 'Ready' : 'Needs setup'}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Sync path</span><span>{describeFreeradiusMode(integrationHealth.sync?.mode)}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Telemetry path</span><span>{describeFreeradiusMode(integrationHealth.telemetry?.mode)}</span></div>
+                      {integrationHealth.sync?.command ? (
+                        <div className="break-all">Sync command: {integrationHealth.sync.command}</div>
+                      ) : null}
+                      {integrationHealth.telemetry?.command ? (
+                        <div className="break-all">Telemetry source: {integrationHealth.telemetry.command}</div>
+                      ) : null}
+                      {integrationHealth.issues?.length ? (
+                        <div className="space-y-1">
+                          {integrationHealth.issues.map((issue) => (
+                            <div key={issue} className="break-all text-red-600">{issue}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {integrationHealth.installDoc ? (
+                        <div className="break-all text-slate-500">Setup guide: {integrationHealth.installDoc}</div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-400">FreeRADIUS sync</div>
                   <div className="mt-3 text-sm leading-6 text-slate-600">
                     {selectedRouter.freeradiusClientSync?.synced
@@ -577,6 +617,9 @@ export default function RoutersPage() {
                       {selectedRouter.lastFreeradiusSync.reason ? (
                         <div className="mt-2 break-all text-red-600">Stored sync error: {selectedRouter.lastFreeradiusSync.reason}</div>
                       ) : null}
+                      {integrationHealth?.sync?.needsPrivilegeSetup ? (
+                        <div className="mt-2 break-all text-amber-600">This router is still hitting direct filesystem permissions. Install the privileged helper path to make sync reliable.</div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -602,6 +645,9 @@ export default function RoutersPage() {
                       ) : null}
                       {selectedRouter.lastRadiusAuthTelemetry.reason ? (
                         <div className="break-all text-red-600">Telemetry note: {selectedRouter.lastRadiusAuthTelemetry.reason}</div>
+                      ) : null}
+                      {integrationHealth?.telemetry?.needsPrivilegeSetup ? (
+                        <div className="break-all text-amber-600">Telemetry is still blocked by direct log access permissions. Helper-backed telemetry will clear this.</div>
                       ) : null}
                     </div>
                   ) : null}

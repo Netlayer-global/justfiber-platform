@@ -534,6 +534,56 @@ function buildFreeradiusSyncSnapshot(syncResult = {}) {
   };
 }
 
+function buildFreeradiusIntegrationHealth(node = {}) {
+  const autosyncEnabled = Boolean(env.FREERADIUS_CLIENTS_AUTOSYNC);
+  const syncUsesHelper = Boolean(env.FREERADIUS_SYNC_HELPER_COMMAND?.length);
+  const telemetryUsesHelper = Boolean(env.FREERADIUS_AUTH_TELEMETRY_HELPER_COMMAND?.length);
+  const directSyncConfigured = Boolean(String(env.FREERADIUS_CLIENTS_FILE || "").trim());
+  const directTelemetryConfigured = Boolean(String(env.FREERADIUS_AUTH_DETAIL_DIR || "").trim());
+  const trustedClientIps = getTrustedRadiusClientIps(node);
+
+  const syncMode = !autosyncEnabled ? "disabled" : syncUsesHelper ? "helper" : directSyncConfigured ? "direct" : "missing";
+  const telemetryMode = telemetryUsesHelper ? "helper" : directTelemetryConfigured ? "direct" : "missing";
+
+  const issues = [];
+  if (autosyncEnabled && syncMode === "missing") {
+    issues.push("FreeRADIUS sync path is not configured");
+  }
+  if (telemetryMode === "missing") {
+    issues.push("RADIUS auth telemetry path is not configured");
+  }
+  if (!syncUsesHelper && node?.lastFreeradiusSync?.reason?.includes("EACCES")) {
+    issues.push("FreeRADIUS sync needs privileged helper access");
+  }
+  if (!telemetryUsesHelper && node?.lastRadiusAuthTelemetry?.reason?.includes("EACCES")) {
+    issues.push("RADIUS auth telemetry needs privileged helper access");
+  }
+
+  return {
+    overallReady: issues.length === 0,
+    installDoc: "docs/freeradius-helper-setup.md",
+    sync: {
+      autosyncEnabled,
+      mode: syncMode,
+      helperConfigured: syncUsesHelper,
+      directConfigured: directSyncConfigured,
+      command: syncUsesHelper ? env.FREERADIUS_SYNC_HELPER_COMMAND.join(" ") : env.FREERADIUS_VALIDATE_COMMAND.join(" "),
+      needsPrivilegeSetup:
+        syncMode === "direct" && Boolean(node?.lastFreeradiusSync?.reason?.includes("EACCES"))
+    },
+    telemetry: {
+      mode: telemetryMode,
+      helperConfigured: telemetryUsesHelper,
+      directConfigured: directTelemetryConfigured,
+      command: telemetryUsesHelper ? env.FREERADIUS_AUTH_TELEMETRY_HELPER_COMMAND.join(" ") : String(env.FREERADIUS_AUTH_DETAIL_DIR || ""),
+      needsPrivilegeSetup:
+        telemetryMode === "direct" && Boolean(node?.lastRadiusAuthTelemetry?.reason?.includes("EACCES"))
+    },
+    trustedClientIps,
+    issues
+  };
+}
+
 async function persistFreeradiusSyncStatus(nodeCode, syncResult) {
   if (!nodeCode) return;
   await BngNode.updateOne(
@@ -744,6 +794,13 @@ async function syncFreeradiusClientForNode(node) {
   }
 }
 
+function serializeBngNode(node = {}) {
+  return {
+    ...node,
+    freeradiusIntegrationHealth: buildFreeradiusIntegrationHealth(node)
+  };
+}
+
 async function removeFreeradiusClientForNode(nodeCode) {
   if (!env.FREERADIUS_CLIENTS_AUTOSYNC) {
     return { synced: false, reason: "disabled" };
@@ -865,7 +922,7 @@ platformFoundationRouter.get(
   requirePermission(permissions.configRead),
   asyncHandler(async (_req, res) => {
     const items = await BngNode.find({}).sort({ status: 1, nodeCode: 1 }).lean();
-    return ok(res, items);
+    return ok(res, items.map(serializeBngNode));
   })
 );
 
@@ -902,7 +959,7 @@ platformFoundationRouter.post(
     await BngNode.updateOne({ nodeCode: payload.nodeCode }, { $set: nextPayload }, { upsert: true });
     const item = await BngNode.findOne({ nodeCode: payload.nodeCode }).lean();
     const freeradiusClientSync = item ? await syncFreeradiusClientForNode(item) : { synced: false, reason: "node_not_found" };
-    return ok(res, { ...item, freeradiusClientSync }, { created: true });
+    return ok(res, serializeBngNode({ ...item, freeradiusClientSync }), { created: true });
   })
 );
 
@@ -916,7 +973,7 @@ platformFoundationRouter.delete(
     }
     await BngNode.deleteOne({ nodeCode });
     const freeradiusClientSync = await removeFreeradiusClientForNode(nodeCode);
-    return ok(res, { deleted: true, nodeCode, freeradiusClientSync });
+    return ok(res, { deleted: true, nodeCode, freeradiusClientSync, freeradiusIntegrationHealth: buildFreeradiusIntegrationHealth({ nodeCode }) });
   })
 );
 
@@ -975,7 +1032,7 @@ platformFoundationRouter.post(
     }
     const freeradiusClientSync = await syncFreeradiusClientForNode(node);
     const item = await BngNode.findOne({ nodeCode }).lean();
-    return ok(res, { ...item, freeradiusClientSync });
+    return ok(res, serializeBngNode({ ...item, freeradiusClientSync }));
   })
 );
 
@@ -990,7 +1047,7 @@ platformFoundationRouter.post(
     }
     const authTelemetry = await syncRadiusAuthTelemetryForNode(node);
     const item = await BngNode.findOne({ nodeCode }).lean();
-    return ok(res, { ...item, authTelemetry });
+    return ok(res, serializeBngNode({ ...item, authTelemetry }));
   })
 );
 
@@ -1021,7 +1078,7 @@ platformFoundationRouter.post(
     const freeradiusClientSync = refreshedNode ? await syncFreeradiusClientForNode(refreshedNode) : { synced: false, reason: "node_not_found" };
     const authTelemetry = refreshedNode ? await syncRadiusAuthTelemetryForNode(refreshedNode) : { found: false, reason: "node_not_found" };
     const item = await BngNode.findOne({ nodeCode }).lean();
-    return ok(res, { ...item, freeradiusClientSync, authTelemetry });
+    return ok(res, serializeBngNode({ ...item, freeradiusClientSync, authTelemetry }));
   })
 );
 platformFoundationRouter.post(

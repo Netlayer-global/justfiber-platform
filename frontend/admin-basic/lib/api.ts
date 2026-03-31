@@ -343,6 +343,7 @@ function mapBngNode(node: any): BngNode {
     freeradiusClientSync: node.freeradiusClientSync || undefined,
     lastFreeradiusSync: node.lastFreeradiusSync || undefined,
     lastRadiusAuthTelemetry: node.lastRadiusAuthTelemetry || undefined,
+    freeradiusIntegrationHealth: node.freeradiusIntegrationHealth || undefined,
   }
 }
 

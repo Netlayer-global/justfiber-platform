@@ -294,6 +294,27 @@ export interface BngNode {
     detailFile?: string
     reason?: string
   }
+  freeradiusIntegrationHealth?: {
+    overallReady?: boolean
+    installDoc?: string
+    trustedClientIps?: string[]
+    issues?: string[]
+    sync?: {
+      autosyncEnabled?: boolean
+      mode?: 'helper' | 'direct' | 'disabled' | 'missing'
+      helperConfigured?: boolean
+      directConfigured?: boolean
+      command?: string
+      needsPrivilegeSetup?: boolean
+    }
+    telemetry?: {
+      mode?: 'helper' | 'direct' | 'missing'
+      helperConfigured?: boolean
+      directConfigured?: boolean
+      command?: string
+      needsPrivilegeSetup?: boolean
+    }
+  }
 }
 
 export interface BngNodeTestResult {
