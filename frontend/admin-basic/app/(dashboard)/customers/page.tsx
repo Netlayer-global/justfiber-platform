@@ -242,29 +242,33 @@ function CustomersContent() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-3">
         <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Total Customers</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Lookup Base</div>
           <div className="mt-2 text-3xl font-semibold text-slate-900">{metrics.total}</div>
-        </div>
-        <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Active</div>
-          <div className="mt-2 text-3xl font-semibold text-emerald-600">{metrics.active}</div>
+          <div className="mt-1 text-sm text-slate-500">Customers available for quick open.</div>
         </div>
         <div className="card p-5">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Onboarding Queue</div>
           <div className="mt-2 text-3xl font-semibold text-[#5d87ff]">{metrics.onboarding}</div>
+          <div className="mt-1 text-sm text-slate-500">Pending installs and fresh activations.</div>
         </div>
         <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Suspended</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Needs Follow-up</div>
           <div className="mt-2 text-3xl font-semibold text-amber-600">{metrics.suspended}</div>
+          <div className="mt-1 text-sm text-slate-500">Suspended or risky service accounts.</div>
         </div>
       </section>
 
       {createdSummary ? (
         <div className="rounded-[24px] border border-[#5B6CFF]/20 bg-[#eef1ff] px-5 py-5 text-slate-900">
-          <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Last created subscriber</div>
-          <div className="mt-3 text-2xl font-semibold tracking-[-0.03em]">{createdSummary.name}</div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Last created subscriber</div>
+              <div className="mt-3 text-2xl font-semibold tracking-[-0.03em]">{createdSummary.name}</div>
+            </div>
+            <Link href="/user-management?view=users" className="btn-secondary">Open user desk</Link>
+          </div>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
             <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
               <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Customer ID</div>
@@ -291,7 +295,7 @@ function CustomersContent() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">Quick customer lookup</h2>
-              <p className="mt-1 text-sm text-slate-500">Recent customers, fast open flow, no duplicate heavy table here.</p>
+              <p className="mt-1 text-sm text-slate-500">Search, open, and move on. Full browsing stays in User Management.</p>
             </div>
             <Link href="/user-management?view=users" className="btn-secondary">Open full list</Link>
           </div>
