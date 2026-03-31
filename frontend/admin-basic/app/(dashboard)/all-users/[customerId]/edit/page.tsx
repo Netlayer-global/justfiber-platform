@@ -217,7 +217,13 @@ export default function EditUserPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Login Information</h2>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Account</h2>
+              <p className="mt-1 text-sm text-slate-500">Only the account identity operators need every day.</p>
+            </div>
+            <Link href={`/customers/${customer.id}`} className="btn-secondary">Open customer page</Link>
+          </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">User Name</div>
@@ -255,7 +261,7 @@ export default function EditUserPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Personal Information</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Customer</h2>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Full Name</div>
@@ -290,7 +296,7 @@ export default function EditUserPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Installation Address</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Service & Billing</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 md:col-span-2">
               <div className="text-sm font-medium text-slate-600">Address Line 1</div>
@@ -317,10 +323,6 @@ export default function EditUserPage() {
               <input className="input" value={form.pinCode} onChange={(e) => setForm((prev) => ({ ...prev, pinCode: e.target.value }))} />
             </label>
           </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Billing Information</h2>
           <div className="grid gap-4 md:grid-cols-3">
             <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               <input type="checkbox" checked={form.createIptvBilling} onChange={(e) => setForm((prev) => ({ ...prev, createIptvBilling: e.target.checked }))} />
@@ -338,7 +340,16 @@ export default function EditUserPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Network Information</h2>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Network & Status</h2>
+              <p className="mt-1 text-sm text-slate-500">Static IP, pool, bound MAC, and live service state in one place.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/customers/${customer.id}?tab=devices`} className="btn-secondary">Open network</Link>
+              <Link href={natLogHref} className="btn-secondary">NAT logs</Link>
+            </div>
+          </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Static IP allocation</div>
@@ -368,6 +379,26 @@ export default function EditUserPage() {
                 disabled
               />
             </label>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {([
+              { key: 'inactive', label: 'Blocked' },
+              { key: 'suspended', label: 'Suspended' },
+              { key: 'active', label: 'Active' },
+            ] as const).map((option) => (
+              <label key={option.key} className={`flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm ${form.operationalStatus === option.key ? 'border-[#5B6CFF]/30 bg-[#eef1ff] text-[#2a44ff]' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                <input
+                  type="radio"
+                  name="operationalStatus"
+                  checked={form.operationalStatus === option.key}
+                  onChange={() => setForm((prev) => ({ ...prev, operationalStatus: option.key }))}
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+            Proof uploads, Aadhaar link, installation report, and advanced session bind actions ko alag workflow me rakhenge. Is page par sirf daily operator edits rakhe gaye hain.
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -399,32 +430,6 @@ export default function EditUserPage() {
             >
               Copy IP / Pool
             </button>
-            <Link href={`/customers/${customer.id}?tab=devices`} className="btn-secondary">Open device desk</Link>
-            <Link href={natLogHref} className="btn-secondary">Open NAT Logs</Link>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Activation</h2>
-          <div className="grid gap-3 md:grid-cols-3">
-            {([
-              { key: 'inactive', label: 'Blocked' },
-              { key: 'suspended', label: 'Suspended' },
-              { key: 'active', label: 'Active' },
-            ] as const).map((option) => (
-              <label key={option.key} className={`flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm ${form.operationalStatus === option.key ? 'border-[#5B6CFF]/30 bg-[#eef1ff] text-[#2a44ff]' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
-                <input
-                  type="radio"
-                  name="operationalStatus"
-                  checked={form.operationalStatus === option.key}
-                  onChange={() => setForm((prev) => ({ ...prev, operationalStatus: option.key }))}
-                />
-                {option.label}
-              </label>
-            ))}
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-            Profile photo, signature, proof upload, Aadhaar link, installation report, session MAC bind, and free-IP allocation ko next task me document/network manager ke saath fully wire karenge. Is pass me customer core profile, package, billing flags, address, static IP/pool, activation state, aur operator quick actions working hain.
           </div>
         </section>
 
