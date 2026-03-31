@@ -68,6 +68,7 @@ export default function CustomerDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [isSaving, setIsSaving] = useState(false)
   const [bookingBusyId, setBookingBusyId] = useState<string | null>(null)
+  const [isTrustingRadiusSource, setIsTrustingRadiusSource] = useState(false)
   const [reason, setReason] = useState('Admin action')
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentReference, setPaymentReference] = useState('')
@@ -167,6 +168,29 @@ export default function CustomerDetailPage() {
       toast.error('Failed to load customer')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleTrustCustomerAuthSource() {
+    const nodeCode = String(billingControlCenter?.bngNodeCode || '').trim()
+    const sourceIp = String(billingControlCenter?.latestAuthSourceIp || '').trim()
+    if (!nodeCode || !sourceIp) {
+      toast.error('Missing BNG node or auth source IP')
+      return
+    }
+    setIsTrustingRadiusSource(true)
+    try {
+      const res = await adminAPI.trustBngNodeRadiusSource(nodeCode, sourceIp)
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to trust auth source')
+      }
+      await loadCustomer()
+      toast.success('Live auth source trusted and synced')
+    } catch (error) {
+      console.error('[customer-detail] Failed to trust auth source:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to trust auth source')
+    } finally {
+      setIsTrustingRadiusSource(false)
     }
   }
 
@@ -1665,6 +1689,11 @@ export default function CustomerDetailPage() {
                             <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>
                               Re-sync PPPoE
                             </button>
+                            {billingControlCenter?.latestAuthMismatch ? (
+                              <button className="btn-secondary" onClick={() => void handleTrustCustomerAuthSource()} disabled={isTrustingRadiusSource}>
+                                {isTrustingRadiusSource ? 'Trusting...' : 'Trust auth source'}
+                              </button>
+                            ) : null}
                           </div>
                           <div className="rounded-lg bg-white px-3 py-3 text-sm text-slate-600">
                             <div className="font-semibold text-slate-900">Support note</div>
