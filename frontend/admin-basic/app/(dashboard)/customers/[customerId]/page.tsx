@@ -45,11 +45,11 @@ function safePreviewJson(value: unknown, fallback = '') {
 
 class CustomerDetailErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean }
+  { hasError: boolean; message: string }
 > {
   constructor(props: { children: React.ReactNode }) {
     super(props)
-    this.state = { hasError: false }
+    this.state = { hasError: false, message: '' }
   }
 
   static getDerivedStateFromError() {
@@ -58,6 +58,7 @@ class CustomerDetailErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error) {
     console.error('[customer-detail] Render crash caught by boundary:', error)
+    this.setState({ message: error?.message || 'Unknown render error' })
   }
 
   render() {
@@ -66,7 +67,11 @@ class CustomerDetailErrorBoundary extends React.Component<
         <div className="card p-6 text-sm text-slate-600">
           <div className="text-lg font-semibold text-slate-900">Customer page could not render fully</div>
           <div className="mt-2">
-            We caught a customer-detail render error and prevented the full admin app from crashing. Refresh once, and if it still happens, share the browser console error so we can clear the remaining edge case.
+            We caught a customer-detail render error and prevented the full admin app from crashing.
+          </div>
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em]">Captured error</div>
+            <div className="mt-2 break-words font-mono text-xs">{this.state.message || 'Unknown render error'}</div>
           </div>
         </div>
       )
