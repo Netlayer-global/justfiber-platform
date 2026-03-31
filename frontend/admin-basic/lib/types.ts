@@ -564,6 +564,7 @@ export interface Job {
   proofUploadedAt?: string
   routerPhotoUploaded?: boolean
   cablePhotoUploaded?: boolean
+  extraPhotoCount?: number
   completionOtpVerifiedAt?: string
   completionOtpDemo?: string
   completionOtpSmsPreview?: string
@@ -581,6 +582,33 @@ export interface Job {
   latestEventNote?: string
   scheduledDate?: string
   completedDate?: string
+}
+
+export interface KycVerificationRequest {
+  id: string
+  requestNumber: string
+  customerId?: string
+  customerUserId?: string
+  providerKey?: string
+  provider?: string
+  documentType: 'aadhaar' | 'pan' | 'gst' | 'passport' | 'voter' | 'driving_license' | 'other'
+  documentNumberMasked?: string
+  verificationMode?: 'otp' | 'ocr' | 'offline_xml' | 'manual_review' | 'other'
+  status: 'draft' | 'queued' | 'submitted' | 'verified' | 'rejected' | 'failed'
+  payload?: Record<string, any>
+  providerResponse?: Record<string, any>
+  errorMessage?: string
+  verifiedAt?: string
+  rejectedAt?: string
+  createdAt?: string
+  updatedAt?: string
+  timeline?: Array<{
+    type?: string
+    actorType?: string
+    actorId?: string
+    note?: string
+    at?: string
+  }>
 }
 
 export interface ServiceZone {

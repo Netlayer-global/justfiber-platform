@@ -4,8 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import type { AdminPlanChangePreview, Customer, CustomerBillingControlResponse, CustomerDevice, Installer, Plan } from '@/lib/types'
-import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet, ChevronDown, ChevronUp, CircleDot, Ban, ShieldCheck, PlugZap, Pencil, BadgeIndianRupee, FilePlus2 } from 'lucide-react'
+import type { AdminPlanChangePreview, Customer, CustomerBillingControlResponse, CustomerDevice, Installer, IpPoolRange, Job, KycVerificationRequest, Plan } from '@/lib/types'
+import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet, ChevronDown, ChevronUp, CircleDot, Ban, ShieldCheck, PlugZap, Pencil, BadgeIndianRupee, FilePlus2, Fingerprint, HardDriveDownload, Network } from 'lucide-react'
 import { toast } from 'sonner'
 
 type TabKey = 'overview' | 'billing' | 'devices' | 'tickets' | 'actions'
@@ -75,6 +75,9 @@ function CustomerDetailContent() {
   const [paymentReference, setPaymentReference] = useState('')
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([])
   const [availableInstallers, setAvailableInstallers] = useState<Installer[]>([])
+  const [availableIpPools, setAvailableIpPools] = useState<IpPoolRange[]>([])
+  const [recentKycRequests, setRecentKycRequests] = useState<KycVerificationRequest[]>([])
+  const [latestInstallJob, setLatestInstallJob] = useState<Job | null>(null)
   const [planCode, setPlanCode] = useState('')
   const [planChangeMode, setPlanChangeMode] = useState<'immediate' | 'next_cycle'>('immediate')
   const [planChangeNote, setPlanChangeNote] = useState('')
@@ -118,13 +121,24 @@ function CustomerDetailContent() {
     subject: '',
     description: '',
   })
+  const [kycForm, setKycForm] = useState({
+    documentType: 'aadhaar' as KycVerificationRequest['documentType'],
+    verificationMode: 'otp' as KycVerificationRequest['verificationMode'],
+    documentNumberMasked: '',
+  })
 
   useEffect(() => {
     if (!customerId) return
     void loadCustomer()
     void loadPlans()
     void loadInstallers()
+    void loadIpPools()
   }, [customerId])
+
+  useEffect(() => {
+    if (!customer?.id) return
+    void loadCustomerSupportData(customer)
+  }, [customer?.id, customer?.bookings])
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -240,6 +254,45 @@ function CustomerDetailContent() {
       }
     } catch (error) {
       console.error('[v0] Failed to load installers:', error)
+    }
+  }
+
+  async function loadIpPools() {
+    try {
+      const res = await adminAPI.getIpPools()
+      if (res.success && res.data) {
+        setAvailableIpPools(res.data.filter((pool) => pool.active !== false))
+      }
+    } catch (error) {
+      console.error('[v0] Failed to load IP pools:', error)
+    }
+  }
+
+  async function loadCustomerSupportData(targetCustomer: Customer) {
+    try {
+      const [kycRes, jobResults] = await Promise.all([
+        adminAPI.getKycRequests({ customerId: targetCustomer.customerId || targetCustomer.id, limit: 8 }),
+        Promise.all(
+          (targetCustomer.bookings || [])
+            .map((booking) => booking.installerJobId)
+            .filter(Boolean)
+            .slice(0, 4)
+            .map(async (jobId) => {
+              const res = await adminAPI.getJob(String(jobId))
+              return res.success ? res.data || null : null
+            })
+        ),
+      ])
+      if (kycRes.success && kycRes.data) {
+        setRecentKycRequests(kycRes.data)
+      }
+      const latestJob =
+        jobResults
+          .filter(Boolean)
+          .sort((left, right) => new Date(String(right?.completedDate || right?.scheduledDate || 0)).getTime() - new Date(String(left?.completedDate || left?.scheduledDate || 0)).getTime())[0] || null
+      setLatestInstallJob(latestJob)
+    } catch (error) {
+      console.error('[customer-detail] Failed to load KYC / proof context:', error)
     }
   }
 
@@ -396,6 +449,13 @@ function CustomerDetailContent() {
   const radiusRateLimit = radiusService?.radreply?.find((row) => row.attribute === 'Mikrotik-Rate-Limit')?.value || ''
   const radiusStaticIpv4 = radiusService?.radreply?.find((row) => row.attribute === 'Framed-IP-Address')?.value || radiusService?.currentIpv4 || ''
   const radiusIpv4Pool = radiusService?.radreply?.find((row) => row.attribute === 'Framed-Pool')?.value || radiusService?.ipv4Pool || ''
+  const poolPresets = availableIpPools
+    .filter((pool) => pool.useForRadius)
+    .filter((pool) => !pool.routerNodeCode || pool.routerNodeCode === radiusService?.bngNodeCode)
+    .slice(0, 6)
+  const privateIpv4 =
+    String(primaryDevice?.wanInfo?.ipAddress || primaryDevice?.wanInfo?.ipv4Address || primaryDevice?.lanInfo?.ipAddress || '').trim()
+  const natLogHref = `/nat-logs?pppoeUsername=${encodeURIComponent(radiusService?.radiusUsername || customer?.pppoeUsername || '')}${privateIpv4 ? `&privateIp=${encodeURIComponent(privateIpv4)}` : ''}`
   const radiusHealthState =
     radiusService?.status === 'suspended'
       ? radiusRejectState
@@ -1126,6 +1186,68 @@ function CustomerDetailContent() {
     }
   }
 
+  async function handleCreateKycRequest() {
+    if (!customer) return
+    try {
+      setIsSaving(true)
+      const created = await adminAPI.createKycRequest({
+        customerId: customer.customerId || customer.id,
+        documentType: kycForm.documentType,
+        verificationMode: kycForm.verificationMode,
+        documentNumberMasked: kycForm.documentNumberMasked.trim() || undefined,
+        payload: {
+          customerName: customer.name,
+          phone: customer.phone,
+          email: customer.email,
+        },
+      })
+      if (!created.success || !created.data) {
+        toast.error(created.error || 'Failed to create KYC request')
+        return
+      }
+      const submitted = await adminAPI.submitKycRequest(created.data.requestNumber)
+      if (!submitted.success) {
+        toast.error(submitted.error || 'KYC created but submit queue failed')
+      } else {
+        toast.success('KYC request queued')
+      }
+      setKycForm((current) => ({ ...current, documentNumberMasked: '' }))
+      await loadCustomerSupportData(customer)
+    } catch (error) {
+      console.error('[customer-detail] Failed to create KYC request:', error)
+      toast.error('Failed to create KYC request')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleSubmitKycRequest(requestNumber: string) {
+    if (!customer) return
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.submitKycRequest(requestNumber)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to queue KYC request')
+        return
+      }
+      toast.success('KYC request queued')
+      await loadCustomerSupportData(customer)
+    } catch (error) {
+      console.error('[customer-detail] Failed to submit KYC request:', error)
+      toast.error('Failed to submit KYC request')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  function applyPoolPreset(poolName: string) {
+    setStaticIpForm({
+      currentIpv4: '',
+      ipv4Pool: poolName,
+    })
+    toast.success(`IPv4 pool preset applied: ${poolName}`)
+  }
+
   function handleOpenRadiusAudit() {
     setActiveTab('overview')
     if (typeof window !== 'undefined') {
@@ -1235,6 +1357,12 @@ function CustomerDetailContent() {
     controlHasRecentSession ||
     String(billingControlCenter?.latestAuthReply || '').toLowerCase().includes('accept')
   const lastPayment = customer.payments?.[0]
+  const latestKycRequest = recentKycRequests[0] || null
+  const proofState = latestInstallJob?.proofUploadedAt
+    ? 'proof_ready'
+    : latestInstallJob
+      ? 'awaiting_proof'
+      : 'no_job'
   const accountBadgeClass =
     customer.status === 'active'
       ? 'rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'
@@ -1598,6 +1726,115 @@ function CustomerDetailContent() {
                       </div>
                       <div className="flex justify-end">
                         <button className="btn-primary" onClick={() => void handleCreateTicket()} disabled={isSaving}>Create ticket</button>
+                      </div>
+                    </div>
+
+                    <div className="card p-5 space-y-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold text-slate-900">KYC & proof desk</h2>
+                          <p className="mt-1 text-sm text-slate-500">Customer-side document readiness, Aadhaar/PAN verification queue, and install proof snapshot.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${proofState === 'proof_ready' ? 'bg-emerald-50 text-emerald-700' : proofState === 'awaiting_proof' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {proofState === 'proof_ready' ? 'Proof uploaded' : proofState === 'awaiting_proof' ? 'Proof pending' : 'No install job'}
+                          </span>
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${latestKycRequest?.status === 'verified' ? 'bg-emerald-50 text-emerald-700' : latestKycRequest?.status === 'rejected' || latestKycRequest?.status === 'failed' ? 'bg-rose-50 text-rose-700' : latestKycRequest ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {latestKycRequest ? `KYC ${latestKycRequest.status}` : 'No KYC request'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <HardDriveDownload className="h-4 w-4 text-slate-500" />
+                            <h3 className="font-semibold text-slate-900">Installation proof snapshot</h3>
+                          </div>
+                          {latestInstallJob ? (
+                            <div className="space-y-3 text-sm text-slate-600">
+                              <div><span className="font-medium text-slate-900">Job:</span> {formatValue(latestInstallJob.jobNumber || latestInstallJob.id)}</div>
+                              <div><span className="font-medium text-slate-900">Status:</span> {formatValue(latestInstallJob.rawStatus || latestInstallJob.status)}</div>
+                              <div><span className="font-medium text-slate-900">Proof uploaded:</span> {formatDateTime(latestInstallJob.proofUploadedAt)}</div>
+                              <div className="grid gap-2 md:grid-cols-3">
+                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob.routerPhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Router photo {latestInstallJob.routerPhotoUploaded ? 'yes' : 'no'}</div>
+                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob.cablePhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Cable photo {latestInstallJob.cablePhotoUploaded ? 'yes' : 'no'}</div>
+                                <div className="rounded-xl bg-white px-3 py-3 text-center text-slate-600">Extra photos {Number(latestInstallJob.extraPhotoCount || 0)}</div>
+                              </div>
+                              <div><span className="font-medium text-slate-900">Completion OTP:</span> {formatDateTime(latestInstallJob.completionOtpVerifiedAt)}</div>
+                              <div><span className="font-medium text-slate-900">Latest event:</span> {formatValue(latestInstallJob.latestEventNote || latestInstallJob.latestEventCode)}</div>
+                              {latestInstallJob.installerName ? (
+                                <div><span className="font-medium text-slate-900">Installer:</span> {latestInstallJob.installerName}</div>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="rounded-xl bg-white px-4 py-4 text-sm text-slate-500">
+                              No installer proof context found for this customer yet.
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Fingerprint className="h-4 w-4 text-slate-500" />
+                            <h3 className="font-semibold text-slate-900">Create KYC request</h3>
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <select className="input" value={kycForm.documentType} onChange={(e) => setKycForm((current) => ({ ...current, documentType: e.target.value as KycVerificationRequest['documentType'] }))}>
+                              <option value="aadhaar">Aadhaar</option>
+                              <option value="pan">PAN</option>
+                              <option value="gst">GST</option>
+                              <option value="passport">Passport</option>
+                              <option value="voter">Voter ID</option>
+                              <option value="driving_license">Driving License</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <select className="input" value={kycForm.verificationMode} onChange={(e) => setKycForm((current) => ({ ...current, verificationMode: e.target.value as KycVerificationRequest['verificationMode'] }))}>
+                              <option value="otp">OTP</option>
+                              <option value="manual_review">Manual Review</option>
+                              <option value="ocr">OCR</option>
+                              <option value="offline_xml">Offline XML</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <input className="input" placeholder="Masked doc no. e.g. XXXX1234" value={kycForm.documentNumberMasked} onChange={(e) => setKycForm((current) => ({ ...current, documentNumberMasked: e.target.value }))} />
+                          </div>
+                          <div className="flex justify-end">
+                            <button className="btn-primary inline-flex items-center gap-2" onClick={() => void handleCreateKycRequest()} disabled={isSaving}>
+                              <ShieldCheck className="h-4 w-4" />
+                              Create & Queue KYC
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {recentKycRequests.length ? recentKycRequests.slice(0, 4).map((request) => (
+                              <div key={request.id} className="rounded-xl bg-white px-4 py-3 text-sm text-slate-600">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div>
+                                    <div className="font-semibold text-slate-900">{request.requestNumber}</div>
+                                    <div className="mt-1">{String(request.documentType || '').toUpperCase()} • {formatValue(request.documentNumberMasked, 'No masked number')}</div>
+                                    <div className="mt-1 text-xs text-slate-500">{formatDateTime(request.createdAt)}</div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${request.status === 'verified' ? 'bg-emerald-50 text-emerald-700' : request.status === 'rejected' || request.status === 'failed' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
+                                      {request.status}
+                                    </span>
+                                    {request.status === 'draft' ? (
+                                      <button className="btn-secondary" onClick={() => void handleSubmitKycRequest(request.requestNumber)} disabled={isSaving}>
+                                        Queue
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                                {request.errorMessage ? (
+                                  <div className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{request.errorMessage}</div>
+                                ) : null}
+                              </div>
+                            )) : (
+                              <div className="rounded-xl bg-white px-4 py-4 text-sm text-slate-500">
+                                No KYC requests created for this customer yet.
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2965,6 +3202,53 @@ function CustomerDetailContent() {
                           >
                             Clear Form
                           </button>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold text-slate-900">Network quick actions</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                              Pool presets, NAT lookup jump, and session-side shortcuts for support team.
+                            </p>
+                          </div>
+                          <Network className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                          <div className="rounded-lg bg-white px-3 py-3">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Private IPv4</p>
+                            <p className="mt-2 font-semibold text-slate-900">{formatValue(privateIpv4)}</p>
+                          </div>
+                          <div className="rounded-lg bg-white px-3 py-3">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">PPPoE Username</p>
+                            <p className="mt-2 font-semibold text-slate-900">{formatValue(radiusService?.radiusUsername || customer?.pppoeUsername)}</p>
+                          </div>
+                          <div className="rounded-lg bg-white px-3 py-3">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">BNG Node</p>
+                            <p className="mt-2 font-semibold text-slate-900">{formatValue(radiusService?.bngNodeCode)}</p>
+                          </div>
+                        </div>
+                        {poolPresets.length ? (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Radius pool presets</p>
+                            <div className="flex flex-wrap gap-2">
+                              {poolPresets.map((pool) => (
+                                <button key={pool.id} className="btn-secondary" onClick={() => applyPoolPreset(pool.name)} disabled={isSaving}>
+                                  {pool.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg bg-white px-3 py-3 text-sm text-slate-500">
+                            No radius-enabled pool preset matched this router yet.
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <Link href={natLogHref} className="btn-secondary">Open NAT Logs</Link>
+                          <button className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving}>Disconnect Session</button>
+                          <button className="btn-secondary" onClick={() => void handleCopyPppoeUsername()}>Copy PPPoE</button>
                         </div>
                       </div>
 

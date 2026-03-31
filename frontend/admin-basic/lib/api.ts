@@ -45,6 +45,7 @@ import type {
   AppBanner,
   NatLogEntry,
   IpPoolRange,
+  KycVerificationRequest,
 } from './types'
 
 export function getApiBaseUrl() {
@@ -649,6 +650,37 @@ function mapSupportQueueRequest(request: any): SupportQueueRequest {
   }
 }
 
+function mapKycVerificationRequest(item: any): KycVerificationRequest {
+  return {
+    id: item._id || item.requestNumber || '',
+    requestNumber: item.requestNumber || item._id || '',
+    customerId: item.customerId || '',
+    customerUserId: item.customerUserId || '',
+    providerKey: item.providerKey || '',
+    provider: item.provider || '',
+    documentType: item.documentType || 'aadhaar',
+    documentNumberMasked: item.documentNumberMasked || '',
+    verificationMode: item.verificationMode || 'otp',
+    status: item.status || 'draft',
+    payload: item.payload || {},
+    providerResponse: item.providerResponse || {},
+    errorMessage: item.errorMessage || '',
+    verifiedAt: item.verifiedAt || '',
+    rejectedAt: item.rejectedAt || '',
+    createdAt: item.createdAt || '',
+    updatedAt: item.updatedAt || '',
+    timeline: Array.isArray(item.timeline)
+      ? item.timeline.map((entry: any) => ({
+          type: entry.type,
+          actorType: entry.actorType,
+          actorId: entry.actorId,
+          note: entry.note,
+          at: entry.at,
+        }))
+      : [],
+  }
+}
+
 function mapSupportDiagnosticItem(item: any): SupportDiagnosticItem {
   return {
     key: item.key || `${item.customerId || 'customer'}:${item.issueCode || 'issue'}`,
@@ -723,6 +755,7 @@ function mapJob(job: any): Job {
     proofUploadedAt: job.proof?.uploadedAt || '',
     routerPhotoUploaded: Boolean(job.proof?.routerPhotoUrl),
     cablePhotoUploaded: Boolean(job.proof?.cablePhotoUrl),
+    extraPhotoCount: Array.isArray(job.proof?.extraPhotos) ? job.proof.extraPhotos.length : 0,
     completionOtpVerifiedAt: job.otp?.verifiedAt || '',
     completionOtpDemo: job.adminPreview?.completionOtpDemo || '',
     completionOtpSmsPreview: job.adminPreview?.completionOtpSmsPreview || '',
@@ -1474,6 +1507,45 @@ export const adminAPI = {
       } as any,
     }
   },
+  getKycRequests: async (filters?: { customerId?: string; status?: string; documentType?: string; page?: number; limit?: number }) => {
+    const search = new URLSearchParams()
+    if (filters?.customerId) search.set('customerId', filters.customerId)
+    if (filters?.status) search.set('status', filters.status)
+    if (filters?.documentType) search.set('documentType', filters.documentType)
+    if (filters?.page) search.set('page', String(filters.page))
+    if (filters?.limit) search.set('limit', String(filters.limit))
+    const res = await request<any[]>(`/api/v1/admin/foundation/kyc/requests${search.toString() ? `?${search.toString()}` : ''}`)
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapKycVerificationRequest) : [],
+    }
+  },
+  createKycRequest: async (data: {
+    customerId: string
+    customerUserId?: string
+    providerKey?: string
+    documentType?: KycVerificationRequest['documentType']
+    documentNumberMasked?: string
+    verificationMode?: KycVerificationRequest['verificationMode']
+    payload?: Record<string, any>
+  }) => {
+    const res = await request<any>('/api/v1/admin/foundation/kyc/requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapKycVerificationRequest(res.data) : undefined,
+    }
+  },
+  submitKycRequest: async (requestNumber: string) =>
+    request<{ queued?: boolean; requestNumber?: string; jobId?: string }>(
+      `/api/v1/admin/foundation/kyc/requests/${encodeURIComponent(requestNumber)}/submit`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }
+    ),
   getNatLogs: async (filters?: {
     page?: number
     limit?: number
