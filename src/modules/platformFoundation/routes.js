@@ -1491,10 +1491,47 @@ platformFoundationRouter.get(
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = buildPagination(req.query);
     const filter = {};
-    if (req.query.publicIp) filter.publicIp = req.query.publicIp;
-    if (req.query.pppoeUsername) filter.pppoeUsername = req.query.pppoeUsername;
-    if (req.query.customerId) filter.customerId = req.query.customerId;
-    if (req.query.subscriberId) filter.subscriberId = req.query.subscriberId;
+    const publicIp = String(req.query.publicIp || "").trim();
+    const publicPort = Number(req.query.publicPort || 0);
+    const privateIp = String(req.query.privateIp || "").trim();
+    const privatePort = Number(req.query.privatePort || 0);
+    const destinationIp = String(req.query.destinationIp || "").trim();
+    const destinationPort = Number(req.query.destinationPort || 0);
+    const translatedDestinationIp = String(req.query.translatedDestinationIp || "").trim();
+    const translatedDestinationPort = Number(req.query.translatedDestinationPort || 0);
+    const protocol = Number(req.query.protocol || 0);
+    const routerIp = String(req.query.routerIp || "").trim();
+    const pppoeUsername = String(req.query.pppoeUsername || "").trim();
+    const customerId = String(req.query.customerId || "").trim();
+    const subscriberId = String(req.query.subscriberId || "").trim();
+    const timeFrom = req.query.timeFrom ? new Date(String(req.query.timeFrom)) : null;
+    const timeTo = req.query.timeTo ? new Date(String(req.query.timeTo)) : null;
+
+    if (publicIp) filter.publicIp = publicIp;
+    if (Number.isFinite(publicPort) && publicPort > 0) filter.publicPort = publicPort;
+    if (privateIp) filter.privateIp = privateIp;
+    if (Number.isFinite(privatePort) && privatePort > 0) filter.privatePort = privatePort;
+    if (destinationIp) filter.destinationIp = destinationIp;
+    if (Number.isFinite(destinationPort) && destinationPort > 0) filter.destinationPort = destinationPort;
+    if (translatedDestinationIp) filter.translatedDestinationIp = translatedDestinationIp;
+    if (Number.isFinite(translatedDestinationPort) && translatedDestinationPort > 0) filter.translatedDestinationPort = translatedDestinationPort;
+    if (Number.isFinite(protocol) && protocol > 0) filter.protocol = protocol;
+    if (routerIp) filter.routerIp = routerIp;
+    if (pppoeUsername) filter.pppoeUsername = pppoeUsername;
+    if (customerId) filter.customerId = customerId;
+    if (subscriberId) filter.subscriberId = subscriberId;
+    if (
+      timeFrom &&
+      !Number.isNaN(timeFrom.getTime()) &&
+      timeTo &&
+      !Number.isNaN(timeTo.getTime())
+    ) {
+      filter.loggedAt = { $gte: timeFrom, $lte: timeTo };
+    } else if (timeFrom && !Number.isNaN(timeFrom.getTime())) {
+      filter.loggedAt = { $gte: timeFrom };
+    } else if (timeTo && !Number.isNaN(timeTo.getTime())) {
+      filter.loggedAt = { $lte: timeTo };
+    }
     const [items, total] = await Promise.all([
       NatLogEntry.find(filter).sort({ loggedAt: -1 }).skip(skip).limit(limit).lean(),
       NatLogEntry.countDocuments(filter)

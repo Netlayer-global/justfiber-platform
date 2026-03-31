@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
+  Blocks,
   BarChart3,
   Bell,
   Cable,
@@ -62,10 +63,15 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/devices', label: 'Devices', icon: HardDrive },
       { href: '/routers', label: 'Routers', icon: Router },
+      { href: '/nat-logs', label: 'NAT Logs', icon: Search },
       { href: '/ip-management', label: 'IP Management', icon: Network },
       { href: '/serviceability', label: 'Serviceability', icon: MapPinned },
       { href: '/provisioning', label: 'Provisioning', icon: ShieldCheck },
     ],
+  },
+  {
+    subheader: 'APPS',
+    items: [{ href: '/apps', label: 'External Integrations', icon: Blocks }],
   },
   {
     subheader: 'SYSTEM',

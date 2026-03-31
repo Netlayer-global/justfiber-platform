@@ -42,6 +42,7 @@ import type {
   SupportQueueRequest,
   SupportDiagnosticItem,
   AppBanner,
+  NatLogEntry,
   IpPoolRange,
 } from './types'
 
@@ -312,6 +313,33 @@ function mapAppBanner(item: any): AppBanner {
     sortOrder: Number(item.sortOrder || 1),
     createdAt: item.createdAt || '',
     updatedAt: item.updatedAt || '',
+  }
+}
+
+function mapNatLogEntry(item: any): NatLogEntry {
+  return {
+    id: item._id || '',
+    loggedAt: item.loggedAt,
+    eventType: item.eventType,
+    subscriberId: item.subscriberId,
+    customerId: item.customerId,
+    pppoeUsername: item.pppoeUsername,
+    sessionId: item.sessionId,
+    nasIdentifier: item.nasIdentifier,
+    routerIp: item.routerIp,
+    privateIp: item.privateIp,
+    privatePort: item.privatePort,
+    publicIp: item.publicIp,
+    publicPort: item.publicPort,
+    destinationIp: item.destinationIp,
+    destinationPort: item.destinationPort,
+    translatedDestinationIp: item.translatedDestinationIp,
+    translatedDestinationPort: item.translatedDestinationPort,
+    protocol: item.protocol,
+    bytesUp: item.bytesUp,
+    bytesDown: item.bytesDown,
+    connectionState: item.connectionState,
+    raw: item.raw && typeof item.raw === 'object' ? item.raw : {},
   }
 }
 
@@ -781,6 +809,9 @@ function mapIntegrationSummary(item: any): IntegrationSummary {
     capabilities: Array.isArray(item.capabilities) ? item.capabilities : [],
     notes: item.notes,
     lastCheckedAt: item.lastCheckedAt,
+    credentialsMasked: item.credentialsMasked && typeof item.credentialsMasked === 'object' ? item.credentialsMasked : {},
+    config: item.config && typeof item.config === 'object' ? item.config : {},
+    health: item.health && typeof item.health === 'object' ? item.health : {},
   }
 }
 
@@ -1425,6 +1456,45 @@ export const adminAPI = {
       } as any,
     }
   },
+  getNatLogs: async (filters?: {
+    page?: number
+    limit?: number
+    routerIp?: string
+    pppoeUsername?: string
+    privateIp?: string
+    privatePort?: number | string
+    publicIp?: string
+    publicPort?: number | string
+    destinationIp?: string
+    destinationPort?: number | string
+    translatedDestinationIp?: string
+    translatedDestinationPort?: number | string
+    protocol?: number | string
+    timeFrom?: string
+    timeTo?: string
+  }) => {
+    const search = new URLSearchParams()
+    search.set('page', String(filters?.page || 1))
+    search.set('limit', String(filters?.limit || 100))
+    if (filters?.routerIp) search.set('routerIp', filters.routerIp)
+    if (filters?.pppoeUsername) search.set('pppoeUsername', filters.pppoeUsername)
+    if (filters?.privateIp) search.set('privateIp', filters.privateIp)
+    if (filters?.privatePort) search.set('privatePort', String(filters.privatePort))
+    if (filters?.publicIp) search.set('publicIp', filters.publicIp)
+    if (filters?.publicPort) search.set('publicPort', String(filters.publicPort))
+    if (filters?.destinationIp) search.set('destinationIp', filters.destinationIp)
+    if (filters?.destinationPort) search.set('destinationPort', String(filters.destinationPort))
+    if (filters?.translatedDestinationIp) search.set('translatedDestinationIp', filters.translatedDestinationIp)
+    if (filters?.translatedDestinationPort) search.set('translatedDestinationPort', String(filters.translatedDestinationPort))
+    if (filters?.protocol) search.set('protocol', String(filters.protocol))
+    if (filters?.timeFrom) search.set('timeFrom', filters.timeFrom)
+    if (filters?.timeTo) search.set('timeTo', filters.timeTo)
+    const res = await request<any[]>(`/api/v1/admin/foundation/nat-logs?${search.toString()}`)
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapNatLogEntry) : [],
+    }
+  },
   saveIpPool: async (data: {
     id?: string
     name: string
@@ -2004,6 +2074,55 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapIntegrationSummary) : [],
     }
   },
+  createIntegration: async (payload: {
+    key: string
+    category: string
+    provider: string
+    displayName: string
+    status?: string
+    mode?: string
+    capabilities?: string[]
+    credentialsMasked?: Record<string, any>
+    config?: Record<string, any>
+    health?: Record<string, any>
+    notes?: string
+  }) => {
+    const res = await request<any>('/api/v1/admin/integrations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    return {
+      ...res,
+      data: res.data ? mapIntegrationSummary(res.data) : undefined,
+    }
+  },
+  updateIntegration: async (
+    key: string,
+    payload: {
+      displayName?: string
+      provider?: string
+      status?: string
+      mode?: string
+      capabilities?: string[]
+      credentialsMasked?: Record<string, any>
+      config?: Record<string, any>
+      health?: Record<string, any>
+      notes?: string
+    }
+  ) => {
+    const res = await request<any>(`/api/v1/admin/integrations/${key}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+    return {
+      ...res,
+      data: res.data ? mapIntegrationSummary(res.data) : undefined,
+    }
+  },
+  deleteIntegration: (key: string) =>
+    request<{ deleted: boolean; key: string }>(`/api/v1/admin/integrations/${key}`, {
+      method: 'DELETE',
+    }),
   getSettingsCatalog: async () => {
     const res = await request<any[]>('/api/v1/admin/configs/settings/catalog')
     return {

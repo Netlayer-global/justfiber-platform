@@ -4308,6 +4308,7 @@ adminOpsRouter.patch(
       {
         $set: {
           ...(req.body?.displayName ? { displayName: req.body.displayName } : {}),
+          ...(req.body?.provider ? { provider: req.body.provider } : {}),
           ...(req.body?.status ? { status: req.body.status } : {}),
           ...(req.body?.mode ? { mode: req.body.mode } : {}),
           ...(req.body?.capabilities ? { capabilities: req.body.capabilities } : {}),
@@ -4329,5 +4330,23 @@ adminOpsRouter.patch(
       metadata: { status: integration.status, mode: integration.mode }
     });
     return ok(res, integration);
+  })
+);
+
+adminOpsRouter.delete(
+  "/integrations/:key",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const integration = await IntegrationConnection.findOneAndDelete({ key: req.params.key }).lean();
+    if (!integration) {
+      throw new ApiError(404, "Integration not found");
+    }
+    await auditFromRequest(req, {
+      action: "integration.deleted",
+      entityType: "integration",
+      entityId: integration.key,
+      metadata: { category: integration.category, provider: integration.provider }
+    });
+    return ok(res, { deleted: true, key: integration.key });
   })
 );

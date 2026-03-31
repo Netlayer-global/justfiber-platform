@@ -232,10 +232,12 @@ const settingsSectionDefaults = {
     s3: { enabled: false, providerKey: "" },
     oneSignal: { enabled: false, providerKey: "" },
     webhooks: { enabled: true, providerKey: "" },
+    quickbooks: { enabled: false, providerKey: "" },
     iptv: { enabled: false, providerKey: "" },
     voicePhone: { enabled: false, providerKey: "" },
     ott: { enabled: false, providerKey: "" },
     ivr: { enabled: false, providerKey: "" },
+    enach: { enabled: false, providerKey: "" },
     aadhaarKyc: { enabled: false, providerKey: "" },
     eInvoiceGateway: { enabled: false, providerKey: "" }
   },

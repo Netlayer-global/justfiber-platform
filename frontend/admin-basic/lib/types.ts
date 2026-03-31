@@ -658,6 +658,9 @@ export interface IntegrationSummary {
   capabilities: string[]
   notes?: string
   lastCheckedAt?: string
+  credentialsMasked?: Record<string, any>
+  config?: Record<string, any>
+  health?: Record<string, any>
 }
 
 export interface SettingsCatalogItem {
@@ -688,6 +691,31 @@ export interface AppBanner {
   sortOrder: number
   createdAt?: string
   updatedAt?: string
+}
+
+export interface NatLogEntry {
+  id: string
+  loggedAt?: string
+  eventType?: string
+  subscriberId?: string
+  customerId?: string
+  pppoeUsername?: string
+  sessionId?: string
+  nasIdentifier?: string
+  routerIp?: string
+  privateIp?: string
+  privatePort?: number
+  publicIp?: string
+  publicPort?: number
+  destinationIp?: string
+  destinationPort?: number
+  translatedDestinationIp?: string
+  translatedDestinationPort?: number
+  protocol?: number
+  bytesUp?: number
+  bytesDown?: number
+  connectionState?: string
+  raw?: Record<string, any>
 }
 
 export interface BillingOverview {
