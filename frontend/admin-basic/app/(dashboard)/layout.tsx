@@ -50,7 +50,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/plans', label: 'Plans', icon: Cable },
       { href: '/user-management', label: 'User Management', icon: UserSquare2 },
-      { href: '/all-users', label: 'All Users', icon: UserRound },
       { href: '/usage-packages', label: 'Usage Packages', icon: Cable },
       { href: '/caf-templates', label: 'CAF Templates', icon: FileText },
       { href: '/customers', label: 'Customers', icon: UserRound },
