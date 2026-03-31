@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
@@ -245,7 +245,7 @@ function toForm(plan?: Plan | null): PlanFormState {
   }
 }
 
-export default function PlansPage() {
+function PlansContent() {
   const searchParams = useSearchParams()
   const [plans, setPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -979,5 +979,19 @@ export default function PlansPage() {
         </section>
       )}
     </div>
+  )
+}
+
+export default function PlansPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="card p-8 text-center">
+          <Loader className="mx-auto h-6 w-6 animate-spin text-[#2d7dff]" />
+        </div>
+      }
+    >
+      <PlansContent />
+    </Suspense>
   )
 }

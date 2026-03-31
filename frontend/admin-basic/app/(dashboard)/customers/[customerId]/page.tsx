@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import type { AdminPlanChangePreview, Customer, CustomerBillingControlResponse, CustomerDevice, Installer, Plan } from '@/lib/types'
@@ -58,7 +58,7 @@ function normalizeConnectedClients(device: CustomerDevice) {
   }))
 }
 
-export default function CustomerDetailPage() {
+function CustomerDetailContent() {
   const params = useParams<{ customerId: string }>()
   const searchParams = useSearchParams()
   const customerId = params.customerId
@@ -2744,5 +2744,19 @@ export default function CustomerDetailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CustomerDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-96">
+          <Loader className="h-6 w-6 animate-spin text-[#5B6CFF]" />
+        </div>
+      }
+    >
+      <CustomerDetailContent />
+    </Suspense>
   )
 }

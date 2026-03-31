@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
@@ -8,7 +8,7 @@ import type { BngNode, Customer, Plan } from '@/lib/types'
 import { Eye, Loader, Plus, RefreshCw, Search, Trash2, Users, Wifi, UserX, X } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function CustomersPage() {
+function CustomersContent() {
   const searchParams = useSearchParams()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
@@ -658,5 +658,19 @@ export default function CustomersPage() {
         </div>
       ) : null}
     </div>
+  )
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-96">
+          <Loader className="h-6 w-6 animate-spin text-[#5B6CFF]" />
+        </div>
+      }
+    >
+      <CustomersContent />
+    </Suspense>
   )
 }

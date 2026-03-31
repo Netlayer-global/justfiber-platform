@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
@@ -19,7 +20,7 @@ function csvEscape(value: unknown) {
   return `"${text.replace(/"/g, '""')}"`
 }
 
-export default function AllUsersPage() {
+function AllUsersContent() {
   const searchParams = useSearchParams()
   const defaultGroup = searchParams.get('group') || ''
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -248,5 +249,19 @@ export default function AllUsersPage() {
         </section>
       )}
     </div>
+  )
+}
+
+export default function AllUsersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="card p-10 text-center">
+          <Loader className="mx-auto h-6 w-6 animate-spin text-[#5d87ff]" />
+        </div>
+      }
+    >
+      <AllUsersContent />
+    </Suspense>
   )
 }
