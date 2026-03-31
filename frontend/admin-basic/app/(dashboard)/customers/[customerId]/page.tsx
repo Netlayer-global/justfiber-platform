@@ -1241,6 +1241,35 @@ function CustomerDetailContent() {
       : customer.status === 'suspended'
         ? 'rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'
         : 'rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600'
+  const activityFeed = useMemo(() => {
+    const customerActions = (customer.actions || []).map((entry) => ({
+      id: `action-${entry.id}`,
+      title: String(entry.actionType || 'customer action').replaceAll('_', ' '),
+      status: String(entry.status || 'logged'),
+      at: entry.createdAt || '',
+      note: entry.payload ? JSON.stringify(entry.payload).slice(0, 220) : '',
+      source: 'Customer action',
+    }))
+    const billingEvents = billingTimeline.map((entry: any) => ({
+      id: `billing-${entry.id}`,
+      title: String(entry.action || 'billing event').replaceAll('.', ' '),
+      status: String(entry.status || 'logged'),
+      at: entry.createdAt || '',
+      note: String(entry.reason || entry.note || ''),
+      source: 'Billing',
+    }))
+    const radiusEvents = radiusTimeline.map((entry) => ({
+      id: `radius-${entry.label}-${entry.at}`,
+      title: entry.label,
+      status: entry.tone,
+      at: entry.at,
+      note: 'FreeRADIUS subscriber timeline',
+      source: 'RADIUS',
+    }))
+    return [...customerActions, ...billingEvents, ...radiusEvents]
+      .filter((item) => item.at || item.note)
+      .sort((left, right) => new Date(right.at || 0).getTime() - new Date(left.at || 0).getTime())
+  }, [billingTimeline, customer.actions, radiusTimeline])
 
   return (
     <div className="space-y-6">
@@ -1392,6 +1421,21 @@ function CustomerDetailContent() {
       </div>
 
       <div className="card p-4 md:p-5 space-y-5">
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('overview')}>Stats</button>
+            <button type="button" className="btn-secondary" onClick={() => { setActiveTab('overview'); window.setTimeout(() => document.getElementById('radius-audit-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80) }}>Details</button>
+            <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('devices')}>Sessions</button>
+            <button type="button" className={activeTab === 'actions' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('actions')}>Logs</button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit</Link>
+            <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('billing')}>Billing</button>
+            <button type="button" className="btn-secondary" onClick={() => { setActiveTab('overview'); window.setTimeout(() => document.getElementById('payment-renew-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80) }}>FUP</button>
+            <button type="button" className={activeTab === 'tickets' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('tickets')}>More</button>
+          </div>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           {tabs.map((tab) => (
             (() => {
@@ -2980,24 +3024,73 @@ function CustomerDetailContent() {
             ) : null}
 
             {activeTab === 'tickets' ? (
-              <div className="card p-5 space-y-3">
-                <h2 className="text-lg font-semibold">Tickets</h2>
-                {(customer.tickets || []).length ? customer.tickets?.map((ticket) => (
-                  <div key={ticket.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                    {ticket.ticketNumber || ticket.id} | {ticket.subject} | {ticket.status} | {ticket.priority}
+              <div className="space-y-4">
+                <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                  <div className="card p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-lg font-semibold">Tickets</h2>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                        {(customer.tickets || []).length} total
+                      </span>
+                    </div>
+                    {(customer.tickets || []).length ? customer.tickets?.map((ticket) => (
+                      <div key={ticket.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-slate-900">{ticket.ticketNumber || ticket.id}</div>
+                            <div className="mt-1">{ticket.subject}</div>
+                            <div className="mt-2 text-xs text-slate-500">{ticket.category || 'support'} • {formatDateTime(ticket.createdAt)}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">{ticket.status}</div>
+                            <div className="mt-2 text-xs text-slate-500">{ticket.priority}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )) : <p className="text-slate-500 text-sm">No tickets found</p>}
                   </div>
-                )) : <p className="text-slate-500 text-sm">No tickets found</p>}
+                  <div className="card p-5 space-y-4">
+                    <h2 className="text-lg font-semibold">Raise ticket</h2>
+                    <input className="input" placeholder="Ticket type / category" value={ticketForm.category} onChange={(e) => setTicketForm((current) => ({ ...current, category: e.target.value }))} />
+                    <select className="input" value={ticketForm.priority} onChange={(e) => setTicketForm((current) => ({ ...current, priority: e.target.value as typeof current.priority }))}>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                    <input className="input" placeholder="Ticket subject" value={ticketForm.subject} onChange={(e) => setTicketForm((current) => ({ ...current, subject: e.target.value }))} />
+                    <textarea className="input min-h-40" placeholder="Comments / issue details" value={ticketForm.description} onChange={(e) => setTicketForm((current) => ({ ...current, description: e.target.value }))} />
+                    <button className="btn-primary" onClick={() => void handleCreateTicket()} disabled={isSaving}>Create ticket</button>
+                  </div>
+                </div>
               </div>
             ) : null}
 
             {activeTab === 'actions' ? (
-              <div className="card p-5 space-y-3">
-                <h2 className="text-lg font-semibold">Action History</h2>
-                {(customer.actions || []).length ? customer.actions?.map((action) => (
-                  <div key={action.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
-                    {action.actionType} | {action.status} | {action.createdAt ? new Date(action.createdAt).toLocaleString() : '-'}
+              <div className="space-y-4">
+                <div className="card p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-semibold">Logs & action history</h2>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                      {activityFeed.length} events
+                    </span>
                   </div>
-                )) : <p className="text-slate-500 text-sm">No actions found</p>}
+                  {activityFeed.length ? activityFeed.map((entry) => (
+                    <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-slate-900">{entry.title}</div>
+                          <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">{entry.source}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">{entry.status}</div>
+                          <div className="mt-2 text-xs text-slate-500">{formatDateTime(entry.at)}</div>
+                        </div>
+                      </div>
+                      {entry.note ? <div className="mt-3 text-slate-600 break-words">{entry.note}</div> : null}
+                    </div>
+                  )) : <p className="text-slate-500 text-sm">No actions found</p>}
+                </div>
               </div>
             ) : null}
           </div>
