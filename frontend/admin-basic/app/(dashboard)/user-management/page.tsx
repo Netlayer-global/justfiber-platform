@@ -195,7 +195,7 @@ function UserManagementWorkspace() {
               <Users className="h-4 w-4" />
               All Users
             </button>
-            <Link href="/plans" className="btn-secondary inline-flex items-center gap-2">
+            <Link href="/plans?view=library" className="btn-secondary inline-flex items-center gap-2">
               <ChevronDown className="h-4 w-4" />
               Packages
             </Link>

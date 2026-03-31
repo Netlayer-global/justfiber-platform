@@ -247,6 +247,7 @@ function toForm(plan?: Plan | null): PlanFormState {
 
 function PlansContent() {
   const searchParams = useSearchParams()
+  const requestedView = searchParams.get('view') === 'composer' ? 'composer' : 'library'
   const [plans, setPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -258,6 +259,7 @@ function PlansContent() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [merchFilter, setMerchFilter] = useState<'all' | 'featured' | 'recommended'>('all')
   const [form, setForm] = useState<PlanFormState>(initialForm)
+  const [workspaceView, setWorkspaceView] = useState<'library' | 'composer'>(requestedView)
 
   useEffect(() => {
     void loadPlans()
@@ -277,6 +279,10 @@ function PlansContent() {
       beginEdit(found)
     }
   }, [plans, searchParams])
+
+  useEffect(() => {
+    setWorkspaceView(requestedView)
+  }, [requestedView])
 
   async function loadPlans() {
     try {
@@ -333,6 +339,7 @@ function PlansContent() {
     setEditingPlanId(null)
     setForm({ ...initialForm, status: 'inactive' })
     setComposerMode('create')
+    setWorkspaceView('composer')
   }
 
   function beginEdit(plan: Plan) {
@@ -340,6 +347,7 @@ function PlansContent() {
     setSelectedPlanId(plan.id)
     setForm(toForm(plan))
     setComposerMode('edit')
+    setWorkspaceView('composer')
   }
 
   function cancelEdit() {
@@ -481,6 +489,33 @@ function PlansContent() {
       sortOrder: String((plan.sortOrder || 1) + 1),
     })
     setComposerMode('clone')
+    setWorkspaceView('composer')
+  }
+
+  function exportLibrary() {
+    const rows = filteredPlans.map((plan) =>
+      [
+        plan.planCode || plan.id,
+        plan.name,
+        plan.category || 'home',
+        plan.speed,
+        plan.uploadSpeed || 0,
+        plan.price,
+        plan.dataPolicy || 'unlimited',
+        plan.status,
+      ]
+        .map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`)
+        .join(',')
+    )
+    const blob = new Blob([['plan_code,name,category,download_mbps,upload_mbps,monthly_price,data_policy,status', ...rows].join('\n')], {
+      type: 'text/csv;charset=utf-8',
+    })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'plan-library.csv'
+    anchor.click()
+    URL.revokeObjectURL(url)
   }
 
   async function removePlan(plan: Plan) {
@@ -546,15 +581,36 @@ function PlansContent() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Commercial workspace</div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Manage broadband plans</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Plans & package library</h1>
             <p className="mt-2 text-sm text-slate-500">
-              Keep this screen commercial-only: plan name, speed, pricing, validity, invoice breakup, and visibility.
+              Hamare system me plan, usage package, pricing ladder, and provisioning metadata ek hi catalog object me rehte hain. Isliye package library bhi isi workspace me merge ki gayi hai.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setWorkspaceView('library')}
+              className={workspaceView === 'library' ? 'btn-primary inline-flex items-center gap-2' : 'btn-secondary inline-flex items-center gap-2'}
+            >
+              Package library
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!composerMode) setComposerMode('create')
+                setWorkspaceView('composer')
+              }}
+              className={workspaceView === 'composer' ? 'btn-primary inline-flex items-center gap-2' : 'btn-secondary inline-flex items-center gap-2'}
+            >
+              Composer
+            </button>
             <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New plan
+            </button>
+            <button type="button" onClick={exportLibrary} className="btn-secondary inline-flex items-center gap-2">
+              <Copy className="h-4 w-4" />
+              Export library
             </button>
             <button type="button" onClick={() => void loadPlans()} className="btn-secondary inline-flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
@@ -564,7 +620,7 @@ function PlansContent() {
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Total plans</div>
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Package objects</div>
             <div className="mt-2 text-2xl font-semibold text-slate-900">{plans.length}</div>
           </div>
           <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
@@ -579,7 +635,17 @@ function PlansContent() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        {composerOpen ? (
+        <div className="space-y-6">
+        {workspaceView === 'library' ? (
+          <div className="card p-6">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Unified package flow</div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">Usage packages now live inside plans</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Operator ko alag `Usage Packages` screen dikhane ki zarurat nahi hai. Yahin se package list, edit, duplicate, pricing, visibility, and provisioning mapping manage honge.
+            </p>
+          </div>
+        ) : null}
+        {workspaceView === 'composer' && composerOpen ? (
         <form onSubmit={handleSavePlan} className="card space-y-6 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
@@ -745,7 +811,7 @@ function PlansContent() {
             </button>
           </div>
         </form>
-        ) : (
+        ) : workspaceView === 'composer' ? (
         <div className="card p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -778,7 +844,7 @@ function PlansContent() {
             </div>
           </div>
         </div>
-        )}
+        ) : null}
 
         <div className="space-y-6">
           <div className="card p-6">
@@ -809,6 +875,7 @@ function PlansContent() {
             </div>
           </div>
 
+          {workspaceView === 'composer' ? (
           <div className="card p-6">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Current draft</div>
             <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
@@ -826,6 +893,22 @@ function PlansContent() {
               </div>
             </div>
           </div>
+          ) : (
+          <div className="card p-6">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Operator notes</div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">What stays visible</div>
+                <div className="mt-2 text-sm text-slate-500">Plan name, speed, pricing, validity, package visibility, and core provisioning tags.</div>
+              </div>
+              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">What stays hidden</div>
+                <div className="mt-2 text-sm text-slate-500">Low-frequency setup and deeper configuration remain in backend/settings so operator surface clean rahe.</div>
+              </div>
+            </div>
+          </div>
+          )}
+        </div>
         </div>
       </section>
 
