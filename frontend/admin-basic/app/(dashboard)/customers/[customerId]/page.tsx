@@ -1571,6 +1571,26 @@ export default function CustomerDetailPage() {
                                 {billingControlCenter?.lastBngDisconnectAttempted ? 'Disconnect attempted' : 'No disconnect attempted'}
                               </p>
                             </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Latest auth source</p>
+                              <p className="mt-2 font-semibold text-slate-900">{formatValue(billingControlCenter?.latestAuthSourceIp, 'No recent auth')}</p>
+                              <p className="mt-1 text-xs text-slate-500">{formatDateTime(billingControlCenter?.latestAuthAt)}</p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Auth trust status</p>
+                              <p className="mt-2 font-semibold text-slate-900">
+                                {billingControlCenter?.latestAuthMatchedTrustedClient === true
+                                  ? 'Trusted source'
+                                  : billingControlCenter?.latestAuthMismatch
+                                    ? 'Source mismatch'
+                                    : 'Unknown'}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {billingControlCenter?.latestAuthTrustedClientIps?.length
+                                  ? `Trusted: ${billingControlCenter.latestAuthTrustedClientIps.join(', ')}`
+                                  : 'No trusted client IPs recorded'}
+                              </p>
+                            </div>
                           </div>
                           {serviceControlState === 'disconnect_sent' ? (
                             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -1585,6 +1605,11 @@ export default function CustomerDetailPage() {
                           {serviceControlState === 'disconnect_failed' ? (
                             <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                               BNG disconnect did not complete cleanly. Check router reachability, CoA settings, and support logs before treating this as a billing or provisioning issue.
+                            </div>
+                          ) : null}
+                          {billingControlCenter?.latestAuthMismatch ? (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                              Latest RADIUS auth came from a source IP that is not currently trusted for this BNG. This is a router/FreeRADIUS trust issue, not a customer password issue.
                             </div>
                           ) : null}
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1606,6 +1631,17 @@ export default function CustomerDetailPage() {
                             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
                               <div className="font-semibold text-slate-900">Last disconnect error</div>
                               <div className="mt-1 break-all">{billingControlCenter.lastBngDisconnectError}</div>
+                            </div>
+                          ) : null}
+                          {billingControlCenter?.latestAuthReply || billingControlCenter?.latestAuthTelemetryReason ? (
+                            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                              <div className="font-semibold text-slate-900">Latest auth telemetry</div>
+                              {billingControlCenter?.latestAuthReply ? (
+                                <div className="mt-1">Reply: {billingControlCenter.latestAuthReply}</div>
+                              ) : null}
+                              {billingControlCenter?.latestAuthTelemetryReason ? (
+                                <div className="mt-1 break-all">Note: {billingControlCenter.latestAuthTelemetryReason}</div>
+                              ) : null}
                             </div>
                           ) : null}
                         </div>

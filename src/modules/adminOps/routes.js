@@ -34,6 +34,7 @@ import { AuditLog } from "../../models/AuditLog.js";
 import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../common/customerPortalOtpStore.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
+import { BngNode } from "../../models/BngNode.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
 import { SystemConfig } from "../../models/SystemConfig.js";
 import {
@@ -2752,6 +2753,10 @@ adminOpsRouter.get(
         .limit(10)
         .lean()
     ]);
+    const bngNode = service?.bngNodeCode
+      ? await BngNode.findOne({ nodeCode: service.bngNodeCode }).lean()
+      : null;
+    const latestAuthTelemetry = bngNode?.lastRadiusAuthTelemetry || {};
     const collections = customer.billingSnapshot?.collections || {};
     const serviceControlMeta = service?.metadata || {};
     const lastBngDisconnect = serviceControlMeta.lastBngDisconnect || {};
@@ -2817,6 +2822,13 @@ adminOpsRouter.get(
         latestUpdateAt: lastSessionHint.latestUpdateAt || null,
         totalOctets: Number(lastSessionHint.totalOctets || 0)
       },
+      latestAuthSourceIp: latestAuthTelemetry.sourceIp || "",
+      latestAuthReply: latestAuthTelemetry.reply || "",
+      latestAuthAt: latestAuthTelemetry.authDate || null,
+      latestAuthMatchedTrustedClient: typeof latestAuthTelemetry.matchedTrustedClient === "boolean" ? latestAuthTelemetry.matchedTrustedClient : null,
+      latestAuthMismatch: Boolean(latestAuthTelemetry.mismatch),
+      latestAuthTelemetryReason: latestAuthTelemetry.reason || "",
+      latestAuthTrustedClientIps: Array.isArray(latestAuthTelemetry.trustedClientIps) ? latestAuthTelemetry.trustedClientIps : [],
       resumeEligible:
         (service?.status || customer.operationalStatus) === "suspended" &&
         Number(customer.billingSnapshot?.dueAmount || 0) <= 0,

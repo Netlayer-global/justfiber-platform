@@ -992,6 +992,13 @@ export interface BillingControlCenter {
     latestUpdateAt?: string | null
     totalOctets?: number
   }
+  latestAuthSourceIp?: string
+  latestAuthReply?: string
+  latestAuthAt?: string | null
+  latestAuthMatchedTrustedClient?: boolean | null
+  latestAuthMismatch?: boolean
+  latestAuthTelemetryReason?: string
+  latestAuthTrustedClientIps?: string[]
   lastResolutionType?: string
   lastResolutionAt?: string | null
   lastResolutionAmount?: number
