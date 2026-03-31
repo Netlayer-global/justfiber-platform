@@ -32,6 +32,7 @@ import type {
   BillingProfile,
   AdminPlanChangePreview,
   AdminPlanChangeResult,
+  FranchiseProfile,
   CustomerAction,
   CustomerBooking,
   CustomerServiceRequest,
@@ -766,6 +767,23 @@ function mapServiceZone(zone: any): ServiceZone {
       ? { lat: Number(zone.center.lat), lng: Number(zone.center.lng) }
       : null,
     notes: zone.notes || '',
+  }
+}
+
+function mapFranchiseProfile(item: any): FranchiseProfile {
+  return {
+    id: item._id || item.franchiseCode || '',
+    franchiseCode: item.franchiseCode || '',
+    name: item.name || item.franchiseCode || 'Zone',
+    zoneCode: item.zoneCode || '',
+    status: item.status || 'active',
+    contactName: item.contactName || '',
+    phone: item.phone || '',
+    email: item.email || '',
+    address: item.address || '',
+    payoutMode: item.payoutMode || 'bank',
+    commissionPercent: Number(item.commissionPercent || 0),
+    metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : {},
   }
 }
 
@@ -1822,6 +1840,35 @@ export const adminAPI = {
     request(`/api/v1/admin/serviceability/zones/${zoneId}`, {
       method: 'DELETE',
     }),
+  getFranchises: async () => {
+    const res = await request<any[]>('/api/v1/admin/foundation/franchises')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapFranchiseProfile) : [],
+    }
+  },
+  saveFranchise: async (data: {
+    franchiseCode: string
+    name: string
+    zoneCode?: string
+    status?: 'active' | 'inactive'
+    contactName?: string
+    phone?: string
+    email?: string
+    address?: string
+    payoutMode?: 'bank' | 'wallet' | 'manual'
+    commissionPercent?: number
+    metadata?: Record<string, any>
+  }) => {
+    const res = await request<any>('/api/v1/admin/foundation/franchises', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapFranchiseProfile(res.data) : undefined,
+    }
+  },
 
   // Billing
   getBillingData: async (

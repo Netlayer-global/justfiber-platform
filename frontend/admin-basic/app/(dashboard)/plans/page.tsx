@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import type { Plan } from '@/lib/types'
 import {
@@ -245,6 +246,7 @@ function toForm(plan?: Plan | null): PlanFormState {
 }
 
 export default function PlansPage() {
+  const searchParams = useSearchParams()
   const [plans, setPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -260,6 +262,21 @@ export default function PlansPage() {
   useEffect(() => {
     void loadPlans()
   }, [])
+
+  useEffect(() => {
+    if (!plans.length) return
+    const targetPlan = searchParams.get('plan')
+    const action = searchParams.get('action')
+    if (!targetPlan) return
+    const found = plans.find((plan) => (plan.planCode || plan.id) === targetPlan || plan.id === targetPlan)
+    if (!found) return
+    setSelectedPlanId(found.id)
+    if (action === 'duplicate') {
+      clonePlan(found)
+    } else if (action === 'edit') {
+      beginEdit(found)
+    }
+  }, [plans, searchParams])
 
   async function loadPlans() {
     try {

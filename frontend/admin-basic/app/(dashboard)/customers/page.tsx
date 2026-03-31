@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, Customer, Plan } from '@/lib/types'
 import { Eye, Loader, Plus, RefreshCw, Search, Trash2, Users, Wifi, UserX, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function CustomersPage() {
+  const searchParams = useSearchParams()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
   const [bngNodes, setBngNodes] = useState<BngNode[]>([])
@@ -52,6 +54,13 @@ export default function CustomersPage() {
     void loadCustomers()
     void loadFormOptions()
   }, [])
+
+  useEffect(() => {
+    const searchPlan = searchParams.get('planCode') || ''
+    if (!searchPlan) return
+    setPlanCode(searchPlan)
+    void loadCustomers({ planCode: searchPlan })
+  }, [searchParams])
 
   async function loadCustomers(filters?: { search?: string; status?: string; planCode?: string; city?: string }) {
     try {

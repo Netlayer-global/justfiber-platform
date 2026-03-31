@@ -10,17 +10,20 @@ import {
   Bell,
   Cable,
   CreditCard,
+  FileText,
   HardDrive,
   Network,
   LogOut,
   MapPinned,
   Menu,
+  Plus,
   Router,
   Search,
   Settings,
   ShieldCheck,
   Ticket,
   UserRound,
+  UserSquare2,
   Wrench,
   X,
 } from 'lucide-react'
@@ -46,6 +49,10 @@ const NAV_SECTIONS: NavSection[] = [
     subheader: 'COMMERCIAL',
     items: [
       { href: '/plans', label: 'Plans', icon: Cable },
+      { href: '/user-management', label: 'User Management', icon: UserSquare2 },
+      { href: '/all-users', label: 'All Users', icon: UserRound },
+      { href: '/usage-packages', label: 'Usage Packages', icon: Cable },
+      { href: '/caf-templates', label: 'CAF Templates', icon: FileText },
       { href: '/customers', label: 'Customers', icon: UserRound },
       { href: '/billing', label: 'Billing', icon: CreditCard },
     ],
@@ -75,7 +82,12 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     subheader: 'SYSTEM',
-    items: [{ href: '/settings', label: 'Settings', icon: Settings }],
+    items: [
+      { href: '/users-count', label: 'Users Count', icon: BarChart3 },
+      { href: '/my-zone-details', label: 'My Zone Details', icon: MapPinned },
+      { href: '/create-sub-zone', label: 'Create Sub-zone', icon: Plus },
+      { href: '/settings', label: 'Settings', icon: Settings },
+    ],
   },
 ]
 

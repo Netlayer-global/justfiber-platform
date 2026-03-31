@@ -599,6 +599,21 @@ export interface ServiceZone {
   notes?: string
 }
 
+export interface FranchiseProfile {
+  id: string
+  franchiseCode: string
+  name: string
+  zoneCode?: string
+  status: 'active' | 'inactive'
+  contactName?: string
+  phone?: string
+  email?: string
+  address?: string
+  payoutMode?: 'bank' | 'wallet' | 'manual'
+  commissionPercent?: number
+  metadata?: Record<string, any>
+}
+
 export interface DashboardStats {
   totalCustomers: number
   activeConnections: number
