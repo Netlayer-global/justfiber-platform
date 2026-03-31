@@ -48,6 +48,8 @@ function UserManagementWorkspace() {
   const [query, setQuery] = useState('')
   const [groupFilter, setGroupFilter] = useState(defaultGroup)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
+  const [isBulkRunning, setIsBulkRunning] = useState(false)
 
   useEffect(() => {
     void loadData()
@@ -123,6 +125,10 @@ function UserManagementWorkspace() {
   const activeUsers = customers.filter((customer) => customer.status === 'active').length
   const suspendedUsers = customers.filter((customer) => customer.status === 'suspended').length
 
+  useEffect(() => {
+    setSelectedUserIds((current) => current.filter((id) => filteredUsers.some((customer) => customer.id === id)))
+  }, [customers, filteredUsers])
+
   function exportRows() {
     const header = [
       'username',
@@ -158,6 +164,77 @@ function UserManagementWorkspace() {
     anchor.download = 'users.csv'
     anchor.click()
     URL.revokeObjectURL(url)
+  }
+
+  const selectedUsers = filteredUsers.filter((customer) => selectedUserIds.includes(customer.id))
+  const selectedActiveCount = selectedUsers.filter((customer) => customer.status === 'active').length
+  const selectedSuspendedCount = selectedUsers.filter((customer) => customer.status === 'suspended').length
+  const allVisibleSelected = Boolean(filteredUsers.length) && filteredUsers.every((customer) => selectedUserIds.includes(customer.id))
+
+  function toggleUserSelection(customerId: string) {
+    setSelectedUserIds((current) =>
+      current.includes(customerId) ? current.filter((id) => id !== customerId) : [...current, customerId]
+    )
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedUserIds((current) => {
+      if (allVisibleSelected) {
+        return current.filter((id) => !filteredUsers.some((customer) => customer.id === id))
+      }
+      const next = new Set(current)
+      filteredUsers.forEach((customer) => next.add(customer.id))
+      return Array.from(next)
+    })
+  }
+
+  function clearFilters() {
+    setQuery('')
+    setGroupFilter('')
+    setStatusFilter('all')
+    setSelectedUserIds([])
+  }
+
+  async function runBulkLifecycleAction(mode: 'suspend' | 'resume') {
+    if (!selectedUsers.length) {
+      toast.error('Select at least one user')
+      return
+    }
+
+    const targetUsers =
+      mode === 'suspend'
+        ? selectedUsers.filter((customer) => customer.status === 'active')
+        : selectedUsers.filter((customer) => customer.status === 'suspended')
+
+    if (!targetUsers.length) {
+      toast.error(mode === 'suspend' ? 'No active users selected' : 'No suspended users selected')
+      return
+    }
+
+    try {
+      setIsBulkRunning(true)
+      const reason = mode === 'suspend' ? 'Bulk suspension from user desk' : 'Bulk resume from user desk'
+      const results = await Promise.all(
+        targetUsers.map((customer) =>
+          mode === 'suspend'
+            ? adminAPI.suspendCustomer(customer.id, reason)
+            : adminAPI.resumeCustomer(customer.id, reason)
+        )
+      )
+      const failed = results.filter((result) => !result.success)
+      if (failed.length) {
+        toast.error(`${failed.length} ${mode} action(s) failed`)
+      } else {
+        toast.success(`${targetUsers.length} user(s) ${mode === 'suspend' ? 'suspended' : 'resumed'}`)
+      }
+      await loadData()
+      setSelectedUserIds([])
+    } catch (error) {
+      console.error('[user-management] Bulk lifecycle action failed:', error)
+      toast.error(mode === 'suspend' ? 'Bulk suspend failed' : 'Bulk resume failed')
+    } finally {
+      setIsBulkRunning(false)
+    }
   }
 
   return (
@@ -257,6 +334,33 @@ function UserManagementWorkspace() {
             </div>
           </section>
 
+          <section className="card p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Desk actions</div>
+                <div className="mt-2 text-sm text-slate-600">
+                  {selectedUsers.length
+                    ? `${selectedUsers.length} selected • ${selectedActiveCount} active • ${selectedSuspendedCount} suspended`
+                    : 'Select rows to suspend, resume, or export an exact working set.'}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn-secondary" onClick={clearFilters}>
+                  Clear filters
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => void runBulkLifecycleAction('suspend')} disabled={isBulkRunning || !selectedUsers.length}>
+                  Suspend selected
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => void runBulkLifecycleAction('resume')} disabled={isBulkRunning || !selectedUsers.length}>
+                  Resume selected
+                </button>
+                <button type="button" className="btn-primary" onClick={exportRows}>
+                  Export visible
+                </button>
+              </div>
+            </div>
+          </section>
+
           {isLoading ? (
             <div className="card p-10 text-center">
               <Loader className="mx-auto h-6 w-6 animate-spin text-[#5d87ff]" />
@@ -267,7 +371,9 @@ function UserManagementWorkspace() {
                 <table className="min-w-[1120px] w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-[0.16em] text-slate-500">
-                      <th className="px-4 py-4"></th>
+                      <th className="px-4 py-4">
+                        <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAllVisible} aria-label="Select all visible users" />
+                      </th>
                       <th className="px-4 py-4">Username</th>
                       <th className="px-4 py-4">Status</th>
                       <th className="px-4 py-4">Customer</th>
@@ -290,7 +396,15 @@ function UserManagementWorkspace() {
                       return (
                         <tr key={customer.id} className="border-b border-slate-100 hover:bg-slate-50">
                           <td className="px-4 py-3">
-                            <span className={`inline-block h-2.5 w-2.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedUserIds.includes(customer.id)}
+                                onChange={() => toggleUserSelection(customer.id)}
+                                aria-label={`Select ${customer.name}`}
+                              />
+                              <span className={`inline-block h-2.5 w-2.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                            </div>
                           </td>
                           <td className="px-4 py-3 font-semibold text-[#2a8cff]">
                             <Link href={`/customers/${customer.id}`}>{customer.pppoeUsername || customer.customerId || customer.id}</Link>
