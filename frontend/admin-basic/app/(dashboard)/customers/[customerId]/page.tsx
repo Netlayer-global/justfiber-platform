@@ -5,26 +5,10 @@ import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import type { AdminPlanChangePreview, Customer, CustomerBillingControlResponse, CustomerDevice, Installer, IpPoolRange, Job, KycVerificationRequest, Plan } from '@/lib/types'
-import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet, ChevronDown, ChevronUp, CircleDot, Ban, ShieldCheck, PlugZap, Pencil, BadgeIndianRupee, FilePlus2, Fingerprint, HardDriveDownload, Network } from 'lucide-react'
+import { CreditCard, Loader, RefreshCw, ChevronDown, ChevronUp, CircleDot, Ban, ShieldCheck, PlugZap, Pencil, BadgeIndianRupee, FilePlus2, Fingerprint, HardDriveDownload, Network } from 'lucide-react'
 import { toast } from 'sonner'
 
 type TabKey = 'overview' | 'billing' | 'devices' | 'tickets' | 'actions'
-
-const tabs: Array<{ key: TabKey; label: string }> = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'billing', label: 'Billing & Payments' },
-  { key: 'devices', label: 'Devices / Wi-Fi / WAN / LAN' },
-  { key: 'tickets', label: 'Tickets' },
-  { key: 'actions', label: 'Action History' },
-]
-
-const tabIcons: Record<TabKey, any> = {
-  overview: UserCircle2,
-  billing: Wallet,
-  devices: Router,
-  tickets: Ticket,
-  actions: Activity,
-}
 
 function formatValue(value: unknown, fallback = '-') {
   if (value === null || value === undefined) return fallback
@@ -1564,24 +1548,6 @@ function CustomerDetailContent() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((tab) => (
-            (() => {
-              const Icon = tabIcons[tab.key]
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={activeTab === tab.key ? 'btn-primary inline-flex items-center gap-2' : 'btn-secondary inline-flex items-center gap-2'}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              )
-            })()
-          ))}
-        </div>
-
         <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4">
           <div className="space-y-4">
             {activeTab === 'overview' ? (
@@ -1705,135 +1671,29 @@ function CustomerDetailContent() {
                     <div className="card p-5 space-y-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h2 className="text-lg font-semibold text-slate-900">Raise ticket</h2>
-                          <p className="mt-1 text-sm text-slate-500">Create support case directly from customer screen.</p>
+                          <h2 className="text-lg font-semibold text-slate-900">Support workspace</h2>
+                          <p className="mt-1 text-sm text-slate-500">Ticketing, KYC, and install-proof follow-up are grouped under More so the overview stays focused on live service and billing state.</p>
                         </div>
                         <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('tickets')}>
                           <FilePlus2 className="h-4 w-4" />
-                          View tickets
+                          Open More
                         </button>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <input className="input" placeholder="Ticket type / category" value={ticketForm.category} onChange={(e) => setTicketForm((current) => ({ ...current, category: e.target.value }))} />
-                        <select className="input" value={ticketForm.priority} onChange={(e) => setTicketForm((current) => ({ ...current, priority: e.target.value as typeof current.priority }))}>
-                          <option value="low">Low</option>
-                          <option value="medium">Medium</option>
-                          <option value="high">High</option>
-                          <option value="critical">Critical</option>
-                        </select>
-                        <input className="input md:col-span-2" placeholder="Ticket subject" value={ticketForm.subject} onChange={(e) => setTicketForm((current) => ({ ...current, subject: e.target.value }))} />
-                        <textarea className="input min-h-40 md:col-span-2" placeholder="Comments / issue details" value={ticketForm.description} onChange={(e) => setTicketForm((current) => ({ ...current, description: e.target.value }))} />
-                      </div>
-                      <div className="flex justify-end">
-                        <button className="btn-primary" onClick={() => void handleCreateTicket()} disabled={isSaving}>Create ticket</button>
-                      </div>
-                    </div>
-
-                    <div className="card p-5 space-y-5">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <h2 className="text-lg font-semibold text-slate-900">KYC & proof desk</h2>
-                          <p className="mt-1 text-sm text-slate-500">Customer-side document readiness, Aadhaar/PAN verification queue, and install proof snapshot.</p>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Open tickets</p>
+                          <p className="mt-2 text-2xl font-semibold text-slate-900">{(customer.tickets || []).length}</p>
+                          <p className="mt-2 text-sm text-slate-500">Use More to raise, track, and close customer support cases.</p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${proofState === 'proof_ready' ? 'bg-emerald-50 text-emerald-700' : proofState === 'awaiting_proof' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                            {proofState === 'proof_ready' ? 'Proof uploaded' : proofState === 'awaiting_proof' ? 'Proof pending' : 'No install job'}
-                          </span>
-                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${latestKycRequest?.status === 'verified' ? 'bg-emerald-50 text-emerald-700' : latestKycRequest?.status === 'rejected' || latestKycRequest?.status === 'failed' ? 'bg-rose-50 text-rose-700' : latestKycRequest ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                            {latestKycRequest ? `KYC ${latestKycRequest.status}` : 'No KYC request'}
-                          </span>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">KYC state</p>
+                          <p className="mt-2 text-2xl font-semibold text-slate-900">{latestKycRequest ? String(latestKycRequest.status).toUpperCase() : 'NONE'}</p>
+                          <p className="mt-2 text-sm text-slate-500">Latest verification queue status for this customer.</p>
                         </div>
-                      </div>
-
-                      <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-                          <div className="flex items-center gap-2">
-                            <HardDriveDownload className="h-4 w-4 text-slate-500" />
-                            <h3 className="font-semibold text-slate-900">Installation proof snapshot</h3>
-                          </div>
-                          {latestInstallJob ? (
-                            <div className="space-y-3 text-sm text-slate-600">
-                              <div><span className="font-medium text-slate-900">Job:</span> {formatValue(latestInstallJob.jobNumber || latestInstallJob.id)}</div>
-                              <div><span className="font-medium text-slate-900">Status:</span> {formatValue(latestInstallJob.rawStatus || latestInstallJob.status)}</div>
-                              <div><span className="font-medium text-slate-900">Proof uploaded:</span> {formatDateTime(latestInstallJob.proofUploadedAt)}</div>
-                              <div className="grid gap-2 md:grid-cols-3">
-                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob.routerPhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Router photo {latestInstallJob.routerPhotoUploaded ? 'yes' : 'no'}</div>
-                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob.cablePhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Cable photo {latestInstallJob.cablePhotoUploaded ? 'yes' : 'no'}</div>
-                                <div className="rounded-xl bg-white px-3 py-3 text-center text-slate-600">Extra photos {Number(latestInstallJob.extraPhotoCount || 0)}</div>
-                              </div>
-                              <div><span className="font-medium text-slate-900">Completion OTP:</span> {formatDateTime(latestInstallJob.completionOtpVerifiedAt)}</div>
-                              <div><span className="font-medium text-slate-900">Latest event:</span> {formatValue(latestInstallJob.latestEventNote || latestInstallJob.latestEventCode)}</div>
-                              {latestInstallJob.installerName ? (
-                                <div><span className="font-medium text-slate-900">Installer:</span> {latestInstallJob.installerName}</div>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <div className="rounded-xl bg-white px-4 py-4 text-sm text-slate-500">
-                              No installer proof context found for this customer yet.
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-                          <div className="flex items-center gap-2">
-                            <Fingerprint className="h-4 w-4 text-slate-500" />
-                            <h3 className="font-semibold text-slate-900">Create KYC request</h3>
-                          </div>
-                          <div className="grid gap-3 md:grid-cols-3">
-                            <select className="input" value={kycForm.documentType} onChange={(e) => setKycForm((current) => ({ ...current, documentType: e.target.value as KycVerificationRequest['documentType'] }))}>
-                              <option value="aadhaar">Aadhaar</option>
-                              <option value="pan">PAN</option>
-                              <option value="gst">GST</option>
-                              <option value="passport">Passport</option>
-                              <option value="voter">Voter ID</option>
-                              <option value="driving_license">Driving License</option>
-                              <option value="other">Other</option>
-                            </select>
-                            <select className="input" value={kycForm.verificationMode} onChange={(e) => setKycForm((current) => ({ ...current, verificationMode: e.target.value as KycVerificationRequest['verificationMode'] }))}>
-                              <option value="otp">OTP</option>
-                              <option value="manual_review">Manual Review</option>
-                              <option value="ocr">OCR</option>
-                              <option value="offline_xml">Offline XML</option>
-                              <option value="other">Other</option>
-                            </select>
-                            <input className="input" placeholder="Masked doc no. e.g. XXXX1234" value={kycForm.documentNumberMasked} onChange={(e) => setKycForm((current) => ({ ...current, documentNumberMasked: e.target.value }))} />
-                          </div>
-                          <div className="flex justify-end">
-                            <button className="btn-primary inline-flex items-center gap-2" onClick={() => void handleCreateKycRequest()} disabled={isSaving}>
-                              <ShieldCheck className="h-4 w-4" />
-                              Create & Queue KYC
-                            </button>
-                          </div>
-                          <div className="space-y-2">
-                            {recentKycRequests.length ? recentKycRequests.slice(0, 4).map((request) => (
-                              <div key={request.id} className="rounded-xl bg-white px-4 py-3 text-sm text-slate-600">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                  <div>
-                                    <div className="font-semibold text-slate-900">{request.requestNumber}</div>
-                                    <div className="mt-1">{String(request.documentType || '').toUpperCase()} • {formatValue(request.documentNumberMasked, 'No masked number')}</div>
-                                    <div className="mt-1 text-xs text-slate-500">{formatDateTime(request.createdAt)}</div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${request.status === 'verified' ? 'bg-emerald-50 text-emerald-700' : request.status === 'rejected' || request.status === 'failed' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
-                                      {request.status}
-                                    </span>
-                                    {request.status === 'draft' ? (
-                                      <button className="btn-secondary" onClick={() => void handleSubmitKycRequest(request.requestNumber)} disabled={isSaving}>
-                                        Queue
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                </div>
-                                {request.errorMessage ? (
-                                  <div className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{request.errorMessage}</div>
-                                ) : null}
-                              </div>
-                            )) : (
-                              <div className="rounded-xl bg-white px-4 py-4 text-sm text-slate-500">
-                                No KYC requests created for this customer yet.
-                              </div>
-                            )}
-                          </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Install proof</p>
+                          <p className="mt-2 text-2xl font-semibold text-slate-900">{proofState === 'proof_ready' ? 'READY' : proofState === 'awaiting_proof' ? 'PENDING' : 'NONE'}</p>
+                          <p className="mt-2 text-sm text-slate-500">Document follow-up has been moved into More for support handling.</p>
                         </div>
                       </div>
                     </div>
@@ -3333,18 +3193,129 @@ function CustomerDetailContent() {
                       </div>
                     )) : <p className="text-slate-500 text-sm">No tickets found</p>}
                   </div>
-                  <div className="card p-5 space-y-4">
-                    <h2 className="text-lg font-semibold">Raise ticket</h2>
-                    <input className="input" placeholder="Ticket type / category" value={ticketForm.category} onChange={(e) => setTicketForm((current) => ({ ...current, category: e.target.value }))} />
-                    <select className="input" value={ticketForm.priority} onChange={(e) => setTicketForm((current) => ({ ...current, priority: e.target.value as typeof current.priority }))}>
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
-                    </select>
-                    <input className="input" placeholder="Ticket subject" value={ticketForm.subject} onChange={(e) => setTicketForm((current) => ({ ...current, subject: e.target.value }))} />
-                    <textarea className="input min-h-40" placeholder="Comments / issue details" value={ticketForm.description} onChange={(e) => setTicketForm((current) => ({ ...current, description: e.target.value }))} />
-                    <button className="btn-primary" onClick={() => void handleCreateTicket()} disabled={isSaving}>Create ticket</button>
+                  <div className="space-y-4">
+                    <div className="card p-5 space-y-4">
+                      <h2 className="text-lg font-semibold">Raise ticket</h2>
+                      <input className="input" placeholder="Ticket type / category" value={ticketForm.category} onChange={(e) => setTicketForm((current) => ({ ...current, category: e.target.value }))} />
+                      <select className="input" value={ticketForm.priority} onChange={(e) => setTicketForm((current) => ({ ...current, priority: e.target.value as typeof current.priority }))}>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                      </select>
+                      <input className="input" placeholder="Ticket subject" value={ticketForm.subject} onChange={(e) => setTicketForm((current) => ({ ...current, subject: e.target.value }))} />
+                      <textarea className="input min-h-40" placeholder="Comments / issue details" value={ticketForm.description} onChange={(e) => setTicketForm((current) => ({ ...current, description: e.target.value }))} />
+                      <button className="btn-primary" onClick={() => void handleCreateTicket()} disabled={isSaving}>Create ticket</button>
+                    </div>
+
+                    <div className="card p-5 space-y-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold text-slate-900">KYC & proof desk</h2>
+                          <p className="mt-1 text-sm text-slate-500">Customer-side document readiness, Aadhaar/PAN verification queue, and install proof snapshot.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${proofState === 'proof_ready' ? 'bg-emerald-50 text-emerald-700' : proofState === 'awaiting_proof' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {proofState === 'proof_ready' ? 'Proof uploaded' : proofState === 'awaiting_proof' ? 'Proof pending' : 'No install job'}
+                          </span>
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${latestKycRequest?.status === 'verified' ? 'bg-emerald-50 text-emerald-700' : latestKycRequest?.status === 'rejected' || latestKycRequest?.status === 'failed' ? 'bg-rose-50 text-rose-700' : latestKycRequest ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {latestKycRequest ? `KYC ${latestKycRequest.status}` : 'No KYC request'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <HardDriveDownload className="h-4 w-4 text-slate-500" />
+                            <h3 className="font-semibold text-slate-900">Installation proof snapshot</h3>
+                          </div>
+                          {latestInstallJob ? (
+                            <div className="space-y-3 text-sm text-slate-600">
+                              <div><span className="font-medium text-slate-900">Job:</span> {formatValue(latestInstallJob.jobNumber || latestInstallJob.id)}</div>
+                              <div><span className="font-medium text-slate-900">Status:</span> {formatValue(latestInstallJob.rawStatus || latestInstallJob.status)}</div>
+                              <div><span className="font-medium text-slate-900">Proof uploaded:</span> {formatDateTime(latestInstallJob.proofUploadedAt)}</div>
+                              <div className="grid gap-2 md:grid-cols-3">
+                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob.routerPhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Router photo {latestInstallJob.routerPhotoUploaded ? 'yes' : 'no'}</div>
+                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob.cablePhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Cable photo {latestInstallJob.cablePhotoUploaded ? 'yes' : 'no'}</div>
+                                <div className="rounded-xl bg-white px-3 py-3 text-center text-slate-600">Extra photos {Number(latestInstallJob.extraPhotoCount || 0)}</div>
+                              </div>
+                              <div><span className="font-medium text-slate-900">Completion OTP:</span> {formatDateTime(latestInstallJob.completionOtpVerifiedAt)}</div>
+                              <div><span className="font-medium text-slate-900">Latest event:</span> {formatValue(latestInstallJob.latestEventNote || latestInstallJob.latestEventCode)}</div>
+                              {latestInstallJob.installerName ? (
+                                <div><span className="font-medium text-slate-900">Installer:</span> {latestInstallJob.installerName}</div>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="rounded-xl bg-white px-4 py-4 text-sm text-slate-500">
+                              No installer proof context found for this customer yet.
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Fingerprint className="h-4 w-4 text-slate-500" />
+                            <h3 className="font-semibold text-slate-900">Create KYC request</h3>
+                          </div>
+                          <div className="grid gap-3">
+                            <select className="input" value={kycForm.documentType} onChange={(e) => setKycForm((current) => ({ ...current, documentType: e.target.value as KycVerificationRequest['documentType'] }))}>
+                              <option value="aadhaar">Aadhaar</option>
+                              <option value="pan">PAN</option>
+                              <option value="gst">GST</option>
+                              <option value="passport">Passport</option>
+                              <option value="voter">Voter ID</option>
+                              <option value="driving_license">Driving License</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <select className="input" value={kycForm.verificationMode} onChange={(e) => setKycForm((current) => ({ ...current, verificationMode: e.target.value as KycVerificationRequest['verificationMode'] }))}>
+                              <option value="otp">OTP</option>
+                              <option value="manual_review">Manual Review</option>
+                              <option value="ocr">OCR</option>
+                              <option value="offline_xml">Offline XML</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <input className="input" placeholder="Masked doc no. e.g. XXXX1234" value={kycForm.documentNumberMasked} onChange={(e) => setKycForm((current) => ({ ...current, documentNumberMasked: e.target.value }))} />
+                          </div>
+                          <div className="flex justify-end">
+                            <button className="btn-primary inline-flex items-center gap-2" onClick={() => void handleCreateKycRequest()} disabled={isSaving}>
+                              <ShieldCheck className="h-4 w-4" />
+                              Create & Queue KYC
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {recentKycRequests.length ? recentKycRequests.slice(0, 4).map((request) => (
+                              <div key={request.id} className="rounded-xl bg-white px-4 py-3 text-sm text-slate-600">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div>
+                                    <div className="font-semibold text-slate-900">{request.requestNumber}</div>
+                                    <div className="mt-1">{String(request.documentType || '').toUpperCase()} • {formatValue(request.documentNumberMasked, 'No masked number')}</div>
+                                    <div className="mt-1 text-xs text-slate-500">{formatDateTime(request.createdAt)}</div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${request.status === 'verified' ? 'bg-emerald-50 text-emerald-700' : request.status === 'rejected' || request.status === 'failed' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
+                                      {request.status}
+                                    </span>
+                                    {request.status === 'draft' ? (
+                                      <button className="btn-secondary" onClick={() => void handleSubmitKycRequest(request.requestNumber)} disabled={isSaving}>
+                                        Queue
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                                {request.errorMessage ? (
+                                  <div className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{request.errorMessage}</div>
+                                ) : null}
+                              </div>
+                            )) : (
+                              <div className="rounded-xl bg-white px-4 py-4 text-sm text-slate-500">
+                                No KYC requests created for this customer yet.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
