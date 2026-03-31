@@ -472,6 +472,23 @@ export interface SupportQueueRequest {
   }>
 }
 
+export interface SupportDiagnosticItem {
+  key: string
+  customerId: string
+  customerName: string
+  serviceId?: string
+  radiusUsername?: string
+  bngNodeCode?: string
+  issueCode: 'auth_source_mismatch' | 'disconnect_failed' | 'no_live_session' | 'radius_state_mismatch'
+  priority: 'critical' | 'high' | 'medium'
+  status?: string
+  sourceIp?: string
+  trustedClientIps?: string[]
+  summary: string
+  recommendedAction: string
+  createdAt?: string
+}
+
 export interface Installer {
   id: string
   installerCode?: string

@@ -40,6 +40,7 @@ import type {
   CustomerPayment,
   CustomerTicket,
   SupportQueueRequest,
+  SupportDiagnosticItem,
   AppBanner,
 } from './types'
 
@@ -580,6 +581,25 @@ function mapSupportQueueRequest(request: any): SupportQueueRequest {
           at: item.at,
         }))
       : [],
+  }
+}
+
+function mapSupportDiagnosticItem(item: any): SupportDiagnosticItem {
+  return {
+    key: item.key || `${item.customerId || 'customer'}:${item.issueCode || 'issue'}`,
+    customerId: item.customerId || '',
+    customerName: item.customerName || item.customerId || 'Unknown customer',
+    serviceId: item.serviceId || '',
+    radiusUsername: item.radiusUsername || '',
+    bngNodeCode: item.bngNodeCode || '',
+    issueCode: item.issueCode || 'radius_state_mismatch',
+    priority: item.priority || 'medium',
+    status: item.status || '',
+    sourceIp: item.sourceIp || '',
+    trustedClientIps: Array.isArray(item.trustedClientIps) ? item.trustedClientIps : [],
+    summary: item.summary || '',
+    recommendedAction: item.recommendedAction || '',
+    createdAt: item.createdAt || new Date().toISOString(),
   }
 }
 
@@ -1435,6 +1455,7 @@ export const adminAPI = {
         ? {
             tickets: Array.isArray(res.data.tickets) ? res.data.tickets.map(mapTicket) : [],
             requests: Array.isArray(res.data.requests) ? res.data.requests.map(mapSupportQueueRequest) : [],
+            diagnostics: Array.isArray(res.data.diagnostics) ? res.data.diagnostics.map(mapSupportDiagnosticItem) : [],
             metrics: res.data.metrics || {},
           }
         : undefined,

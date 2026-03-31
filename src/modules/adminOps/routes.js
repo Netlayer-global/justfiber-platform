@@ -991,6 +991,137 @@ function buildCustomerBillingRisk(controlCenter = {}) {
   };
 }
 
+async function buildSupportDiagnosticsQueue(limit = 50) {
+  const services = await SubscriberService.find({})
+    .sort({ updatedAt: -1 })
+    .limit(Math.max(limit * 3, 100))
+    .lean();
+
+  const customerIds = Array.from(new Set(services.map((service) => String(service.customerId || "").trim()).filter(Boolean)));
+  const nodeCodes = Array.from(new Set(services.map((service) => String(service.bngNodeCode || "").trim()).filter(Boolean)));
+
+  const [customers, bngNodes] = await Promise.all([
+    Customer.find({ customerId: { $in: customerIds } }).select({ customerId: 1, fullName: 1, operationalStatus: 1 }).lean(),
+    BngNode.find({ nodeCode: { $in: nodeCodes } })
+      .select({ nodeCode: 1, radiusClientIp: 1, additionalRadiusClientIps: 1, lastRadiusAuthTelemetry: 1 })
+      .lean()
+  ]);
+
+  const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
+  const bngMap = new Map(bngNodes.map((node) => [node.nodeCode, node]));
+  const items = [];
+
+  for (const service of services) {
+    const customer = customerMap.get(String(service.customerId || "").trim());
+    if (!customer) continue;
+
+    const metadata = service.metadata || {};
+    const disconnect = metadata.lastBngDisconnect || {};
+    const sessionHint = metadata.lastSessionHint || {};
+    const bngNode = bngMap.get(String(service.bngNodeCode || "").trim());
+    const authTelemetry = bngNode?.lastRadiusAuthTelemetry || {};
+    const trustedClientIps = Array.from(
+      new Set(
+        [
+          String(bngNode?.radiusClientIp || "").trim(),
+          ...(Array.isArray(bngNode?.additionalRadiusClientIps) ? bngNode.additionalRadiusClientIps : []),
+          ...(Array.isArray(authTelemetry?.trustedClientIps) ? authTelemetry.trustedClientIps : [])
+        ]
+          .map((item) => String(item || "").trim())
+          .filter(Boolean)
+      )
+    );
+    const radiusRejectState = Array.isArray(service.radcheck)
+      ? service.radcheck.some((row) => row.attribute === "Auth-Type" && row.value === "Reject")
+      : false;
+    const radiusPasswordPresent = Array.isArray(service.radcheck)
+      ? service.radcheck.some((row) => row.attribute === "Cleartext-Password")
+      : false;
+
+    if (authTelemetry?.mismatch && authTelemetry?.sourceIp) {
+      items.push({
+        key: `${customer.customerId}:auth_source_mismatch`,
+        customerId: customer.customerId,
+        customerName: customer.fullName || customer.customerId,
+        serviceId: service.serviceId || "",
+        radiusUsername: service.radiusUsername || "",
+        bngNodeCode: service.bngNodeCode || "",
+        issueCode: "auth_source_mismatch",
+        priority: "critical",
+        status: service.status || customer.operationalStatus || "",
+        sourceIp: authTelemetry.sourceIp,
+        trustedClientIps,
+        summary: `Latest RADIUS auth came from ${authTelemetry.sourceIp}, which is not trusted for this BNG.`,
+        recommendedAction: "Trust the live auth source IP and sync FreeRADIUS.",
+        createdAt: authTelemetry.authDate || service.updatedAt || service.createdAt
+      });
+    }
+
+    if (String(disconnect.status || "").toLowerCase() === "failed" && sessionHint.hasRecentSession) {
+      items.push({
+        key: `${customer.customerId}:disconnect_failed`,
+        customerId: customer.customerId,
+        customerName: customer.fullName || customer.customerId,
+        serviceId: service.serviceId || "",
+        radiusUsername: service.radiusUsername || "",
+        bngNodeCode: service.bngNodeCode || "",
+        issueCode: "disconnect_failed",
+        priority: "high",
+        status: service.status || customer.operationalStatus || "",
+        summary: "BNG disconnect failed even though a recent PPP session exists.",
+        recommendedAction: "Check CoA path, router reachability, and active PPP session state.",
+        createdAt: metadata.lastBngDisconnectAt || service.updatedAt || service.createdAt
+      });
+    }
+
+    if (String(disconnect.status || "").toLowerCase() === "failed" && !sessionHint.hasRecentSession) {
+      items.push({
+        key: `${customer.customerId}:no_live_session`,
+        customerId: customer.customerId,
+        customerName: customer.fullName || customer.customerId,
+        serviceId: service.serviceId || "",
+        radiusUsername: service.radiusUsername || "",
+        bngNodeCode: service.bngNodeCode || "",
+        issueCode: "no_live_session",
+        priority: "medium",
+        status: service.status || customer.operationalStatus || "",
+        summary: "No recent PPP session was found, so disconnect failed harmlessly.",
+        recommendedAction: "Ask the customer to reconnect PPPoE or reboot the ONT/router before retrying.",
+        createdAt: metadata.lastBngDisconnectAt || service.updatedAt || service.createdAt
+      });
+    }
+
+    if ((service.status === "suspended" && !radiusRejectState) || (service.status === "active" && !radiusPasswordPresent)) {
+      items.push({
+        key: `${customer.customerId}:radius_state_mismatch`,
+        customerId: customer.customerId,
+        customerName: customer.fullName || customer.customerId,
+        serviceId: service.serviceId || "",
+        radiusUsername: service.radiusUsername || "",
+        bngNodeCode: service.bngNodeCode || "",
+        issueCode: "radius_state_mismatch",
+        priority: "high",
+        status: service.status || customer.operationalStatus || "",
+        summary:
+          service.status === "suspended"
+            ? "Subscriber service is suspended but RADIUS reject state is missing."
+            : "Subscriber service is active but PPP password is missing from RADIUS.",
+        recommendedAction: "Re-sync PPPoE state from the customer support panel.",
+        createdAt: service.updatedAt || service.createdAt
+      });
+    }
+  }
+
+  const priorityRank = { critical: 3, high: 2, medium: 1 };
+  return items
+    .sort((left, right) => {
+      const priorityDelta = (priorityRank[right.priority] || 0) - (priorityRank[left.priority] || 0);
+      if (priorityDelta !== 0) return priorityDelta;
+      return new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime();
+    })
+    .slice(0, limit);
+}
+
 function buildCollectionsPlaybooks() {
   return [
     {
@@ -2625,19 +2756,22 @@ adminOpsRouter.get(
       requestFilter.type = requestType;
     }
 
-    const [tickets, requests] = await Promise.all([
+    const [tickets, requests, diagnostics] = await Promise.all([
       SupportTicket.find(ticketFilter).sort({ createdAt: -1 }).limit(50).lean(),
-      ServiceRequest.find(requestFilter).sort({ createdAt: -1 }).limit(50).lean()
+      ServiceRequest.find(requestFilter).sort({ createdAt: -1 }).limit(50).lean(),
+      buildSupportDiagnosticsQueue(50)
     ]);
 
     return ok(res, {
       tickets,
       requests,
+      diagnostics,
       metrics: {
         openTickets: tickets.filter((item) => ["open", "assigned", "in_progress"].includes(item.status)).length,
         resolvedTickets: tickets.filter((item) => ["resolved", "closed"].includes(item.status)).length,
         openRequests: requests.filter((item) => !["completed", "closed", "cancelled"].includes(item.status)).length,
-        totalRequests: requests.length
+        totalRequests: requests.length,
+        diagnosticAlerts: diagnostics.length
       }
     });
   })

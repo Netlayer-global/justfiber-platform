@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { adminAPI } from '@/lib/api'
-import { SupportQueueRequest, Ticket } from '@/lib/types'
+import { SupportDiagnosticItem, SupportQueueRequest, Ticket } from '@/lib/types'
 import { AlertCircle, ClipboardList, Loader, ShieldCheck, Ticket as TicketIcon } from 'lucide-react'
 
 function extractSnapshot(description: string) {
@@ -28,6 +28,7 @@ function extractRecommendation(description: string) {
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [requests, setRequests] = useState<SupportQueueRequest[]>([])
+  const [diagnostics, setDiagnostics] = useState<SupportDiagnosticItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [ticketBusyId, setTicketBusyId] = useState<string | null>(null)
   const [requestBusyId, setRequestBusyId] = useState<string | null>(null)
@@ -36,10 +37,11 @@ export default function TicketsPage() {
     value: string
     Icon: typeof AlertCircle
   }> = [
+    { label: 'Diag alerts', value: String(diagnostics.length), Icon: AlertCircle },
     { label: 'Open tickets', value: String(tickets.filter((t) => ['open', 'assigned', 'in_progress'].includes(t.status)).length), Icon: AlertCircle },
     { label: 'Resolved', value: String(tickets.filter((t) => t.status === 'resolved').length), Icon: ShieldCheck },
     { label: 'Open requests', value: String(requests.filter((r) => !['completed', 'closed', 'cancelled'].includes(r.status)).length), Icon: ClipboardList },
-    { label: 'Total', value: String(tickets.length + requests.length), Icon: TicketIcon },
+    { label: 'Total', value: String(diagnostics.length + tickets.length + requests.length), Icon: TicketIcon },
   ]
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function TicketsPage() {
       if (response.success && response.data) {
         setTickets(response.data.tickets)
         setRequests(response.data.requests)
+        setDiagnostics(Array.isArray(response.data.diagnostics) ? response.data.diagnostics : [])
       }
     } catch (error) {
       console.error('[v0] Failed to load tickets:', error)
@@ -120,6 +123,70 @@ export default function TicketsPage() {
       {isLoading ? (
         <div className="card p-6 text-center"><Loader className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" /></div>
       ) : (
+        <div className="space-y-6">
+          <div className="overflow-x-auto card">
+            <div className="border-b border-slate-200 px-5 py-4">
+              <div className="text-sm font-semibold text-slate-900">Operations diagnostics queue</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Auth mismatch, disconnect failures, and PPPoE state drift</div>
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50">
+                  <th className="table-header">Customer</th>
+                  <th className="table-header">Issue</th>
+                  <th className="table-header">Priority</th>
+                  <th className="table-header">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {diagnostics.map((item) => (
+                  <tr key={item.key} className="border-t border-slate-200 hover:bg-slate-50">
+                    <td className="table-cell">
+                      <div className="font-medium text-slate-900">{item.customerName}</div>
+                      <div className="mt-1 text-xs text-slate-400">
+                        {item.customerId} {item.radiusUsername ? `• ${item.radiusUsername}` : ''} {item.bngNodeCode ? `• ${item.bngNodeCode}` : ''}
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <div className="font-medium text-slate-900">{item.summary}</div>
+                      <div className="mt-1 text-xs text-slate-500">{item.recommendedAction}</div>
+                      {item.sourceIp ? (
+                        <div className="mt-2 text-xs text-slate-400">Source IP: {item.sourceIp}</div>
+                      ) : null}
+                    </td>
+                    <td className="table-cell">
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          item.priority === 'critical'
+                            ? 'bg-red-100 text-red-700'
+                            : item.priority === 'high'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {item.priority}
+                      </span>
+                    </td>
+                    <td className="table-cell">
+                      <button
+                        className="btn-secondary"
+                        onClick={() => {
+                          window.location.href = `/customers/${encodeURIComponent(item.customerId)}?tab=billing`
+                        }}
+                      >
+                        Open customer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {diagnostics.length === 0 ? (
+                  <tr>
+                    <td className="table-cell text-slate-500" colSpan={4}>No active diagnostics alerts.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         <div className="grid gap-6 xl:grid-cols-2">
           <div className="overflow-x-auto card">
             <div className="border-b border-slate-200 px-5 py-4">
@@ -278,6 +345,7 @@ export default function TicketsPage() {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
     </div>
