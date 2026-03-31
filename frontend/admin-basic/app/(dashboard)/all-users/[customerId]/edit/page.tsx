@@ -56,6 +56,13 @@ export default function EditUserPage() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const username = customer?.pppoeUsername || customer?.customerId || ''
+  const boundMac =
+    customer?.devices?.[0]?.wanInfo?.macAddress ||
+    customer?.devices?.[0]?.wanInfo?.mac ||
+    customer?.devices?.[0]?.lanInfo?.macAddress ||
+    ''
+  const natLogHref = `/nat-logs?username=${encodeURIComponent(username)}&sourceIp=${encodeURIComponent(form.currentIpv4 || '')}`
 
   useEffect(() => {
     if (!customerId) return
@@ -186,46 +193,64 @@ export default function EditUserPage() {
           <p className="mt-2 text-sm text-slate-500">Jaze-style operator edit flow, wired only to fields that backend actually saves today.</p>
         </div>
 
+        <section className="grid gap-4 md:grid-cols-4">
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Customer</div>
+            <div className="mt-2 text-lg font-semibold text-slate-900">{customer.name}</div>
+            <div className="mt-1 text-sm text-slate-500">{customer.customerId || customer.id}</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Package</div>
+            <div className="mt-2 text-lg font-semibold text-slate-900">{customer.plan.name}</div>
+            <div className="mt-1 text-sm text-slate-500">{customer.plan.id}</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Service State</div>
+            <div className="mt-2 text-lg font-semibold text-slate-900">{customer.radiusService?.status || customer.status}</div>
+            <div className="mt-1 text-sm text-slate-500">{customer.radiusService?.bngNodeCode || 'No BNG linked'}</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Due</div>
+            <div className="mt-2 text-lg font-semibold text-slate-900">Rs {Number(customer.invoiceSummary?.dueAmount || customer.billingSnapshot?.dueAmount || 0).toFixed(2)}</div>
+            <div className="mt-1 text-sm text-slate-500">{customer.status === 'active' ? 'Active account' : 'Needs operator review'}</div>
+          </div>
+        </section>
+
         <section className="space-y-4">
           <h2 className="text-xl font-semibold text-slate-900">Login Information</h2>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">User Name</div>
-              <input className="input" value={customer.pppoeUsername || customer.customerId || ''} disabled />
+              <input className="input" value={username} disabled />
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Password</div>
               <input className="input" value="Managed from PPPoE controls" disabled />
             </label>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Personal Information</h2>
-          <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">First Name</div>
-              <input className="input" value={form.fullName} onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))} />
-            </label>
-            <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">Mobile Number</div>
-              <input className="input" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
-            </label>
-            <label className="space-y-2 md:col-span-2">
               <div className="text-sm font-medium text-slate-600">Account Number</div>
               <input className="input" value={customer.accountNumber || customer.customerId || ''} disabled />
             </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Radius Service</div>
+              <input className="input" value={customer.radiusService?.serviceId || customer.serviceId || ''} disabled />
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="btn-secondary inline-flex items-center justify-center gap-2 self-end"
+              className="btn-secondary inline-flex items-center justify-center gap-2"
               onClick={async () => {
-                await navigator.clipboard.writeText(customer.pppoeUsername || customer.customerId || '')
+                await navigator.clipboard.writeText(username)
                 toast.success('Username copied')
               }}
             >
               <Copy className="h-4 w-4" />
               Copy username
             </button>
+            <Link href={`/customers/${customer.id}`} className="btn-secondary">Open customer</Link>
+            <Link href={natLogHref} className="btn-secondary">Open NAT Logs</Link>
+            <Link href="/user-management?view=users" className="btn-secondary">View users</Link>
           </div>
         </section>
 
@@ -339,15 +364,43 @@ export default function EditUserPage() {
               <div className="text-sm font-medium text-slate-600">Bound MAC</div>
               <input
                 className="input"
-                value={
-                  customer.devices?.[0]?.wanInfo?.macAddress ||
-                  customer.devices?.[0]?.wanInfo?.mac ||
-                  customer.devices?.[0]?.lanInfo?.macAddress ||
-                  ''
-                }
+                value={boundMac}
                 disabled
               />
             </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={async () => {
+                if (!boundMac) {
+                  toast.error('No MAC available to copy')
+                  return
+                }
+                await navigator.clipboard.writeText(boundMac)
+                toast.success('MAC copied')
+              }}
+            >
+              Copy MAC
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={async () => {
+                const value = form.currentIpv4 || form.ipv4Pool
+                if (!value) {
+                  toast.error('No static IP or pool assigned')
+                  return
+                }
+                await navigator.clipboard.writeText(value)
+                toast.success('Network value copied')
+              }}
+            >
+              Copy IP / Pool
+            </button>
+            <Link href={`/customers/${customer.id}?tab=devices`} className="btn-secondary">Open device desk</Link>
+            <Link href={natLogHref} className="btn-secondary">Open NAT Logs</Link>
           </div>
         </section>
 
@@ -371,7 +424,7 @@ export default function EditUserPage() {
             ))}
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-            Profile photo, signature, proof upload, Aadhaar link, installation report, session MAC bind, and free-IP allocation ko next task me document/network manager ke saath fully wire karenge. Is pass me customer core profile, package, billing flags, address, static IP/pool, and activation state working hain.
+            Profile photo, signature, proof upload, Aadhaar link, installation report, session MAC bind, and free-IP allocation ko next task me document/network manager ke saath fully wire karenge. Is pass me customer core profile, package, billing flags, address, static IP/pool, activation state, aur operator quick actions working hain.
           </div>
         </section>
 
