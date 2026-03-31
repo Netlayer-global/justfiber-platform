@@ -325,6 +325,7 @@ export interface BngNodeTestResult {
   checks: {
     coa: {
       enabled: boolean
+      protocol?: 'udp' | 'tcp'
       host?: string | null
       port: number
       ok: boolean

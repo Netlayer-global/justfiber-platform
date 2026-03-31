@@ -157,6 +157,46 @@ function testTcpPort(host, port, timeoutMs = 3000) {
   });
 }
 
+function evaluateCoaPath(node) {
+  const host = String(node?.coaHost || node?.managementIp || "").trim();
+  const port = Number(node?.coaPort || 3799);
+  const secret = String(node?.coaSecret || "").trim();
+
+  if (node?.useCoa === false) {
+    return {
+      enabled: false,
+      protocol: "udp",
+      ok: false,
+      reason: "disabled"
+    };
+  }
+
+  if (!host || !port) {
+    return {
+      enabled: true,
+      protocol: "udp",
+      ok: false,
+      reason: "missing_host_or_port"
+    };
+  }
+
+  if (!secret) {
+    return {
+      enabled: true,
+      protocol: "udp",
+      ok: false,
+      reason: "missing_secret"
+    };
+  }
+
+  return {
+    enabled: true,
+    protocol: "udp",
+    ok: true,
+    reason: "configured_udp_control_path"
+  };
+}
+
 const subscriberServiceSchema = z.object({
   serviceId: z.string().min(2),
   customerId: z.string().min(2),
@@ -993,9 +1033,7 @@ platformFoundationRouter.post(
     const apiPort = Number(node.apiPort || 8728);
 
     const [coa, api] = await Promise.all([
-      node.useCoa === false
-        ? Promise.resolve({ ok: false, reason: "disabled" })
-        : testTcpPort(coaHost, coaPort),
+      Promise.resolve(evaluateCoaPath(node)),
       testTcpPort(apiHost, apiPort)
     ]);
 
@@ -1006,7 +1044,8 @@ platformFoundationRouter.post(
       status: node.status,
       checks: {
         coa: {
-          enabled: node.useCoa !== false,
+          enabled: coa.enabled,
+          protocol: coa.protocol,
           host: coaHost || null,
           port: coaPort,
           ...coa

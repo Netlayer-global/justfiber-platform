@@ -727,12 +727,13 @@ export default function RoutersPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-semibold text-slate-900">COA</div>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${testResult.checks.coa.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                      {testResult.checks.coa.ok ? 'reachable' : 'failed'}
+                      {testResult.checks.coa.ok ? 'ready' : 'failed'}
                     </span>
                   </div>
                   <div className="mt-3 space-y-2 text-sm text-slate-600">
                     <div className="flex items-center justify-between gap-3"><span>Host</span><span>{testResult.checks.coa.host || '-'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>Port</span><span>{testResult.checks.coa.port}</span></div>
+                    <div className="flex items-center justify-between gap-3"><span>Protocol</span><span>{testResult.checks.coa.protocol || 'udp'}</span></div>
                     <div className="flex items-center justify-between gap-3"><span>Reason</span><span>{testResult.checks.coa.reason || 'ok'}</span></div>
                   </div>
                 </div>
