@@ -186,7 +186,18 @@ function CustomerDetailContent() {
       setIsLoading(true)
       const res = await adminAPI.getCustomer(customerId)
       if (res.success && res.data) {
-        setCustomer(res.data)
+        const normalizedCustomer: Customer = {
+          ...res.data,
+          devices: Array.isArray(res.data.devices) ? res.data.devices : [],
+          tickets: Array.isArray(res.data.tickets) ? res.data.tickets : [],
+          serviceRequests: Array.isArray(res.data.serviceRequests) ? res.data.serviceRequests : [],
+          bookings: Array.isArray(res.data.bookings) ? res.data.bookings : [],
+          invoices: Array.isArray(res.data.invoices) ? res.data.invoices : [],
+          payments: Array.isArray(res.data.payments) ? res.data.payments : [],
+          billingNotes: Array.isArray(res.data.billingNotes) ? res.data.billingNotes : [],
+          actions: Array.isArray(res.data.actions) ? res.data.actions : [],
+        }
+        setCustomer(normalizedCustomer)
         const billingRes = await adminAPI.getCustomerBilling(customerId)
         if (billingRes.success && billingRes.data) {
           setCustomerBillingControl(billingRes.data as CustomerBillingControlResponse)
@@ -194,15 +205,15 @@ function CustomerDetailContent() {
           setCustomerBillingControl(null)
         }
         setProfileForm({
-          name: res.data.name || '',
-          phone: res.data.phone || '',
-          email: res.data.email === '-' ? '' : res.data.email || '',
-          line1: res.data.rawAddress?.line1 || '',
-          line2: res.data.rawAddress?.line2 || '',
-          area: res.data.rawAddress?.area || '',
-          city: res.data.rawAddress?.city || '',
-          state: res.data.rawAddress?.state || '',
-          pinCode: res.data.rawAddress?.pinCode || '',
+          name: normalizedCustomer.name || '',
+          phone: normalizedCustomer.phone || '',
+          email: normalizedCustomer.email === '-' ? '' : normalizedCustomer.email || '',
+          line1: normalizedCustomer.rawAddress?.line1 || '',
+          line2: normalizedCustomer.rawAddress?.line2 || '',
+          area: normalizedCustomer.rawAddress?.area || '',
+          city: normalizedCustomer.rawAddress?.city || '',
+          state: normalizedCustomer.rawAddress?.state || '',
+          pinCode: normalizedCustomer.rawAddress?.pinCode || '',
         })
         const nextForms: Record<string, {
           ssid24: string
@@ -213,7 +224,7 @@ function CustomerDetailContent() {
           pppoePassword: string
           natEnabled: boolean
         }> = {}
-        ;(res.data.devices || []).forEach((device) => {
+        ;(normalizedCustomer.devices || []).forEach((device) => {
           nextForms[device.deviceId] = {
             ssid24: String(device.wifiInfo?.ssid24Masked || ''),
             ssid5: String(device.wifiInfo?.ssid5Masked || ''),
@@ -1443,7 +1454,7 @@ function CustomerDetailContent() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{customer.pppoeUsername || customer.name}</h1>
-              <span className={accountBadgeClass}>{customer.status.toUpperCase()}</span>
+              <span className={accountBadgeClass}>{String(customer.status || 'unknown').toUpperCase()}</span>
               <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
                 Rs {Number(billingSummary.dueAmount || 0).toFixed(2)} unpaid
               </span>
@@ -2178,7 +2189,7 @@ function CustomerDetailContent() {
                                     : 'Unknown'}
                               </p>
                               <p className="mt-1 text-xs text-slate-500">
-                                {billingControlCenter?.latestAuthTrustedClientIps?.length
+                                {Array.isArray(billingControlCenter?.latestAuthTrustedClientIps) && billingControlCenter.latestAuthTrustedClientIps.length
                                   ? `Trusted: ${billingControlCenter.latestAuthTrustedClientIps.join(', ')}`
                                   : 'No trusted client IPs recorded'}
                               </p>
