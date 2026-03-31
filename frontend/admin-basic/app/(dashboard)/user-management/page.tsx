@@ -29,6 +29,14 @@ function csvEscape(value: unknown) {
   return `"${text.replace(/"/g, '""')}"`
 }
 
+function formatCurrency(value?: number) {
+  return `Rs ${Number(value || 0).toFixed(0)}`
+}
+
+function serviceStateLabel(customer: Customer) {
+  return customer.radiusService?.status || customer.status || 'inactive'
+}
+
 function UserManagementWorkspace() {
   const searchParams = useSearchParams()
   const defaultGroup = searchParams.get('group') || ''
@@ -119,41 +127,26 @@ function UserManagementWorkspace() {
     const header = [
       'username',
       'status',
-      'first_name',
+      'customer_name',
       'phone_number',
-      'email',
-      'activation_date',
-      'expiration_date',
-      'static_ip',
-      'mac',
-      'balance',
+      'package',
+      'service_state',
+      'ip_address',
       'due',
-      'group',
-      'zone',
-      'type',
+      'last_active_at',
     ]
     const lines = filteredUsers.map((customer) => {
       const device = customer.devices?.[0]
-      const mac =
-        device?.wanInfo?.macAddress ||
-        device?.wanInfo?.mac ||
-        device?.lanInfo?.macAddress ||
-        ''
       return [
         customer.pppoeUsername || customer.customerId || customer.id,
         customer.status,
         customer.name,
         customer.phone,
-        customer.email === '-' ? '' : customer.email,
-        customer.installationDate || customer.createdAt,
-        customer.expiryAt || '',
-        customer.radiusService?.currentIpv4 || '',
-        mac,
-        customer.billingSnapshot?.balance ?? '',
-        customer.invoiceSummary?.dueAmount ?? customer.billingSnapshot?.dueAmount ?? '',
         customer.plan.name,
-        customer.billingSnapshot?.zoneName || customer.billingSnapshot?.zoneCode || 'Default',
-        customer.billingSnapshot?.customerType || 'home',
+        serviceStateLabel(customer),
+        customer.radiusService?.currentIpv4 || '',
+        customer.invoiceSummary?.dueAmount ?? customer.billingSnapshot?.dueAmount ?? '',
+        customer.radiusService?.updatedAt || customer.installationDate || customer.createdAt,
       ]
         .map(csvEscape)
         .join(',')
@@ -271,23 +264,19 @@ function UserManagementWorkspace() {
           ) : (
             <section className="card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="min-w-[1400px] w-full text-sm">
+                <table className="min-w-[1120px] w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-[0.16em] text-slate-500">
                       <th className="px-4 py-4"></th>
                       <th className="px-4 py-4">Username</th>
                       <th className="px-4 py-4">Status</th>
-                      <th className="px-4 py-4">First Name</th>
-                      <th className="px-4 py-4">Phone Number</th>
-                      <th className="px-4 py-4">Email</th>
-                      <th className="px-4 py-4">Activation Date</th>
-                      <th className="px-4 py-4">Expiration Date</th>
-                      <th className="px-4 py-4">Static IP and MAC</th>
-                      <th className="px-4 py-4">Balance</th>
+                      <th className="px-4 py-4">Customer</th>
+                      <th className="px-4 py-4">Phone</th>
+                      <th className="px-4 py-4">Package</th>
+                      <th className="px-4 py-4">Service</th>
+                      <th className="px-4 py-4">IP / Session</th>
                       <th className="px-4 py-4">Due</th>
-                      <th className="px-4 py-4">Group</th>
-                      <th className="px-4 py-4">Zone</th>
-                      <th className="px-4 py-4">Type</th>
+                      <th className="px-4 py-4">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -304,22 +293,44 @@ function UserManagementWorkspace() {
                             <span className={`inline-block h-2.5 w-2.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-400' : 'bg-slate-300'}`} />
                           </td>
                           <td className="px-4 py-3 font-semibold text-[#2a8cff]">
-                            <Link href={`/all-users/${customer.id}`}>{customer.pppoeUsername || customer.customerId || customer.id}</Link>
+                            <Link href={`/customers/${customer.id}`}>{customer.pppoeUsername || customer.customerId || customer.id}</Link>
                           </td>
-                          <td className="px-4 py-3">{customer.status}</td>
-                          <td className="px-4 py-3">{customer.name}</td>
-                          <td className="px-4 py-3">{customer.phone}</td>
-                          <td className="px-4 py-3">{customer.email}</td>
-                          <td className="px-4 py-3">{formatDate(customer.installationDate || customer.createdAt)}</td>
-                          <td className="px-4 py-3">{formatDate(customer.expiryAt)}</td>
                           <td className="px-4 py-3">
-                            {(customer.radiusService?.currentIpv4 || '(empty)') + (mac ? ` => ${mac}` : '')}
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${customer.status === 'active' ? 'bg-emerald-50 text-emerald-700' : customer.status === 'suspended' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                              {customer.status}
+                            </span>
                           </td>
-                          <td className="px-4 py-3">{customer.billingSnapshot?.balance ?? 0}</td>
-                          <td className="px-4 py-3">{customer.invoiceSummary?.dueAmount ?? customer.billingSnapshot?.dueAmount ?? 0}</td>
-                          <td className="px-4 py-3">{customer.plan.name}</td>
-                          <td className="px-4 py-3">{customer.billingSnapshot?.zoneName || 'Default Zone'}</td>
-                          <td className="px-4 py-3">{customer.billingSnapshot?.customerType || 'home'}</td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900">{customer.name}</div>
+                            <div className="mt-1 text-xs text-slate-500">{customer.email === '-' ? customer.customerId || customer.id : customer.email}</div>
+                          </td>
+                          <td className="px-4 py-3">{customer.phone}</td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900">{customer.plan.name}</div>
+                            <div className="mt-1 text-xs text-slate-500">{customer.plan.id}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900">{serviceStateLabel(customer)}</div>
+                            <div className="mt-1 text-xs text-slate-500">{formatDate(customer.radiusService?.updatedAt || customer.installationDate || customer.createdAt)}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900">{customer.radiusService?.currentIpv4 || '(empty)'}</div>
+                            <div className="mt-1 text-xs text-slate-500">{mac || 'No MAC bound'}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900">{formatCurrency(customer.invoiceSummary?.dueAmount ?? customer.billingSnapshot?.dueAmount ?? 0)}</div>
+                            <div className="mt-1 text-xs text-slate-500">{customer.billingSnapshot?.zoneName || 'Default Zone'}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-2">
+                              <Link href={`/customers/${customer.id}`} className="rounded-md bg-[#eef7ff] px-3 py-2 text-xs font-semibold text-[#2a8cff]">
+                                Open
+                              </Link>
+                              <Link href={`/all-users/${customer.id}/edit`} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
+                                Edit
+                              </Link>
+                            </div>
+                          </td>
                         </tr>
                       )
                     })}
