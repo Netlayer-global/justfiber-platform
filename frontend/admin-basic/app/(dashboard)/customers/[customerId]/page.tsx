@@ -1611,16 +1611,14 @@ function CustomerDetailContent() {
       <div className="card p-4 md:p-5 space-y-5">
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
-            <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('overview')}>Stats</button>
-            <button type="button" className="btn-secondary" onClick={() => { setActiveTab('overview'); window.setTimeout(() => document.getElementById('radius-audit-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80) }}>Details</button>
-            <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('devices')}>Sessions</button>
-            <button type="button" className={activeTab === 'actions' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('actions')}>Logs</button>
+            <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('overview')}>Overview</button>
+            <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('billing')}>Billing</button>
+            <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('devices')}>Network</button>
+            <button type="button" className={activeTab === 'tickets' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('tickets')}>Support</button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit</Link>
-            <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('billing')}>Billing</button>
-            <button type="button" className="btn-secondary" onClick={() => { setActiveTab('overview'); window.setTimeout(() => document.getElementById('payment-renew-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80) }}>FUP</button>
-            <button type="button" className={activeTab === 'tickets' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('tickets')}>More</button>
+            <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit user</Link>
+            <button type="button" className="btn-secondary" onClick={() => setActiveTab('actions')}>Logs</button>
           </div>
         </div>
 
@@ -1777,28 +1775,40 @@ function CustomerDetailContent() {
                 </div>
 
                 <div id="radius-audit-panel" className="card p-5 space-y-4">
-                  <h2 className="text-lg font-semibold">Profile & Service</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input className="input" placeholder="Full name" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
-                    <input className="input" placeholder="Phone" value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} />
-                    <input className="input" placeholder="Email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} />
-                    <input className="input" placeholder="Address line 1" value={profileForm.line1} onChange={(e) => setProfileForm({ ...profileForm, line1: e.target.value })} />
-                    <input className="input" placeholder="Address line 2" value={profileForm.line2} onChange={(e) => setProfileForm({ ...profileForm, line2: e.target.value })} />
-                    <input className="input" placeholder="Area" value={profileForm.area} onChange={(e) => setProfileForm({ ...profileForm, area: e.target.value })} />
-                    <input className="input" placeholder="City" value={profileForm.city} onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })} />
-                    <input className="input" placeholder="State" value={profileForm.state} onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })} />
-                    <input className="input" placeholder="Pin code" value={profileForm.pinCode} onChange={(e) => setProfileForm({ ...profileForm, pinCode: e.target.value })} />
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold">Customer summary</h2>
+                      <p className="mt-1 text-sm text-slate-500">Only the daily-use subscriber details are shown here. Full edits stay in Edit User.</p>
+                    </div>
+                    <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Open edit form</Link>
                   </div>
-                  <button className="btn-primary" onClick={() => void handleSaveProfile()} disabled={isSaving}>Save Customer Profile</button>
-                </div>
-                <div className="metric-tile p-5 space-y-4">
-                  <h2 className="text-lg font-semibold">Quick status actions</h2>
-                  <input className="input w-full" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for suspend / resume / retry" />
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Customer</div>
+                      <div className="mt-2 font-semibold text-slate-900">{customer.name}</div>
+                      <div className="mt-1 text-slate-500">{customer.phone || '-'}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Address</div>
+                      <div className="mt-2 font-semibold text-slate-900">{formatValue(customer.rawAddress?.city || customer.rawAddress?.area, 'Not set')}</div>
+                      <div className="mt-1 text-slate-500">{formatValue(customer.rawAddress?.line1, 'No line 1')}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">PPPoE / Service</div>
+                      <div className="mt-2 font-semibold text-slate-900">{customer.pppoeUsername || '-'}</div>
+                      <div className="mt-1 text-slate-500">{customer.serviceId || '-'}</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Current IP / Pool</div>
+                      <div className="mt-2 font-semibold text-slate-900">{formatValue(radiusStaticIpv4 || radiusIpv4Pool, '(empty)')}</div>
+                      <div className="mt-1 text-slate-500">{formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac || primaryDevice?.lanInfo?.macAddress, 'No MAC')}</div>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-2">
-                    <button className="btn-secondary" onClick={() => void handleSuspend()} disabled={isSaving}>Suspend</button>
-                    <button className="btn-secondary" onClick={() => void handleResume()} disabled={isSaving}>Resume</button>
-                    <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>Retry Provisioning</button>
-                    <button className="btn-secondary" onClick={() => void handleCustomerUpdate({ status: 'active' })} disabled={isSaving}>Mark Active</button>
+                    <button className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving}>Disconnect</button>
+                    <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>Re-sync PPPoE</button>
+                    <button className="btn-secondary" onClick={() => setActiveTab('devices')}>Open network</button>
+                    <button className="btn-secondary" onClick={() => setActiveTab('billing')}>Open billing</button>
                   </div>
                 </div>
                 <div id="payment-renew-card" className="card p-5 space-y-4">
@@ -3491,7 +3501,7 @@ function CustomerDetailContent() {
 
           <div className="space-y-4">
             <div className="metric-tile p-5 space-y-4">
-              <h2 className="text-lg font-semibold">Status & Commercial</h2>
+              <h2 className="text-lg font-semibold">Account summary</h2>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                     <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Customer ID</p>
@@ -3521,18 +3531,21 @@ function CustomerDetailContent() {
             </div>
 
             <div className="card p-5 space-y-4">
-              <h2 className="text-lg font-semibold">Action rail</h2>
+              <h2 className="text-lg font-semibold">Quick actions</h2>
               <p className="text-sm text-slate-500">
-                Fast operator controls for lifecycle flips and manual recovery.
+                Keep only the actions operators use most often from this page.
               </p>
-              <button className="btn-secondary w-full" onClick={() => void handleCustomerUpdate({ status: customer.status === 'active' ? 'suspended' : 'active' })} disabled={isSaving}>
-                Toggle Active / Suspended Flag
-              </button>
+              <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary block w-full text-center">
+                Edit user
+              </Link>
               <button className="btn-primary w-full" onClick={() => setActiveTab('billing')}>
-                Open billing command
+                Open billing
               </button>
               <button className="btn-secondary w-full" onClick={() => setActiveTab('devices')}>
-                Open device command
+                Open network
+              </button>
+              <button className="btn-secondary w-full" onClick={() => setActiveTab('tickets')}>
+                Open support
               </button>
             </div>
           </div>
