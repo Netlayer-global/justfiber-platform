@@ -9,6 +9,7 @@ import { CreditCard, Loader, RefreshCw, ChevronDown, ChevronUp, CircleDot, Ban, 
 import { toast } from 'sonner'
 
 type TabKey = 'overview' | 'billing' | 'devices' | 'tickets' | 'actions'
+const validTabs: TabKey[] = ['overview', 'billing', 'devices', 'tickets', 'actions']
 
 function formatValue(value: unknown, fallback = '-') {
   if (value === null || value === undefined) return fallback
@@ -126,7 +127,7 @@ function CustomerDetailContent() {
 
   useEffect(() => {
     const tab = searchParams.get('tab')
-    if (tab && tabs.some((item) => item.key === tab)) {
+    if (tab && validTabs.includes(tab as TabKey)) {
       setActiveTab(tab as TabKey)
     }
   }, [searchParams])
