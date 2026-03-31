@@ -20,6 +20,14 @@ type ZoneRow = {
   pincode: string
 }
 
+const ZONE_TABS = [
+  { href: '/settings', label: 'Settings' },
+  { href: '/my-zone-details', label: 'My Zone Details' },
+  { href: '/create-sub-zone', label: 'Create Sub-Zone' },
+  { href: '/apps', label: 'Add Payment Gateway' },
+  { href: '/routers', label: 'Router Settings' },
+]
+
 export default function MyZoneDetailsPage() {
   const [franchises, setFranchises] = useState<FranchiseProfile[]>([])
   const [general, setGeneral] = useState<any>(null)
@@ -103,6 +111,20 @@ export default function MyZoneDetailsPage() {
               Export
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="card p-3">
+        <div className="flex flex-wrap gap-2">
+          {ZONE_TABS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={item.href === '/my-zone-details' ? 'btn-primary' : 'btn-secondary'}
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </section>
 

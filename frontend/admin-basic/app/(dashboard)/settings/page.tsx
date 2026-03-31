@@ -151,6 +151,14 @@ const ZONE_WORKSPACE_LINKS = [
   },
 ]
 
+const ZONE_TABS = [
+  { href: '/settings', label: 'Settings' },
+  { href: '/my-zone-details', label: 'My Zone Details' },
+  { href: '/create-sub-zone', label: 'Create Sub-Zone' },
+  { href: '/apps', label: 'Add Payment Gateway' },
+  { href: '/routers', label: 'Router Settings' },
+]
+
 function titleCase(value: string) {
   return value
     .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -576,6 +584,20 @@ export default function SettingsPage() {
               <div className="mt-2 text-2xl font-bold text-slate-900">{sectionVersion ?? '-'}</div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="card p-3">
+        <div className="flex flex-wrap gap-2">
+          {ZONE_TABS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={item.href === '/settings' ? 'btn-primary' : 'btn-secondary'}
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </section>
 

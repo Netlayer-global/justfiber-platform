@@ -56,6 +56,14 @@ const initialForm: FormState = {
   useParentRouters: false,
 }
 
+const ZONE_TABS = [
+  { href: '/settings', label: 'Settings' },
+  { href: '/my-zone-details', label: 'My Zone Details' },
+  { href: '/create-sub-zone', label: 'Create Sub-Zone' },
+  { href: '/apps', label: 'Add Payment Gateway' },
+  { href: '/routers', label: 'Router Settings' },
+]
+
 export default function CreateSubZonePage() {
   const [form, setForm] = useState<FormState>(initialForm)
   const [isSaving, setIsSaving] = useState(false)
@@ -166,6 +174,20 @@ export default function CreateSubZonePage() {
             <Link href="/settings" className="btn-secondary">Zone Settings</Link>
             <Link href="/my-zone-details" className="btn-secondary">My Zone Details</Link>
           </div>
+        </div>
+      </section>
+
+      <section className="card p-3">
+        <div className="flex flex-wrap gap-2">
+          {ZONE_TABS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={item.href === '/create-sub-zone' ? 'btn-primary' : 'btn-secondary'}
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </section>
 
