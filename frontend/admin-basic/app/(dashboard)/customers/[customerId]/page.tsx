@@ -1521,7 +1521,7 @@ function CustomerDetailContent() {
                           <div className="grid gap-2 text-sm text-slate-600">
                             <div><span className="font-medium text-slate-900">Static IP:</span> {formatValue(radiusStaticIpv4 || radiusIpv4Pool, '(empty)')}</div>
                             <div><span className="font-medium text-slate-900">MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac || primaryDevice?.lanInfo?.macAddress, '-')}</div>
-                            <div><span className="font-medium text-slate-900">NAS port:</span> {formatValue(billingControlCenter?.lastSessionHint?.nasPortId, '-')}</div>
+                            <div><span className="font-medium text-slate-900">Last session update:</span> {formatDateTime(billingControlCenter?.lastSessionHint?.latestUpdateAt)}</div>
                             <div><span className="font-medium text-slate-900">Auth:</span> {radiusRejectState ? 'IP / MAC / PPPoE suspended' : 'IP / MAC / PPPoE / Hotspot ok'}</div>
                           </div>
                         ),
