@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import type { Customer, Plan } from '@/lib/types'
-import { ChevronDown, Download, Loader, Plus, RefreshCw, Search, Users } from 'lucide-react'
+import { Download, Loader, Plus, RefreshCw, Search, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 type GroupRow = {
@@ -35,6 +35,10 @@ function formatCurrency(value?: number) {
 
 function serviceStateLabel(customer: Customer) {
   return customer.radiusService?.status || customer.status || 'inactive'
+}
+
+function planLabel(customer: Customer) {
+  return customer.plan?.name || 'Unassigned plan'
 }
 
 function UserManagementWorkspace() {
@@ -265,10 +269,6 @@ function UserManagementWorkspace() {
               <Users className="h-4 w-4" />
               All Users
             </button>
-            <Link href="/plans?view=library" className="btn-secondary inline-flex items-center gap-2">
-              <ChevronDown className="h-4 w-4" />
-              Packages
-            </Link>
             <Link href="/customers" className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Add user
@@ -295,7 +295,7 @@ function UserManagementWorkspace() {
           <div className="mt-2 text-3xl font-semibold text-emerald-600">{activeUsers}</div>
         </div>
         <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Suspended Users</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Needs Review</div>
           <div className="mt-2 text-3xl font-semibold text-amber-600">{suspendedUsers}</div>
         </div>
       </section>
@@ -341,7 +341,7 @@ function UserManagementWorkspace() {
                 <div className="mt-2 text-sm text-slate-600">
                   {selectedUsers.length
                     ? `${selectedUsers.length} selected • ${selectedActiveCount} active • ${selectedSuspendedCount} suspended`
-                    : 'Select rows to suspend, resume, or export an exact working set.'}
+                    : `${filteredUsers.length} visible • select rows to suspend, resume, or export an exact working set.`}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -420,8 +420,8 @@ function UserManagementWorkspace() {
                           </td>
                           <td className="px-4 py-3">{customer.phone}</td>
                           <td className="px-4 py-3">
-                            <div className="font-medium text-slate-900">{customer.plan.name}</div>
-                            <div className="mt-1 text-xs text-slate-500">{customer.plan.id}</div>
+                            <div className="font-medium text-slate-900">{planLabel(customer)}</div>
+                            <div className="mt-1 text-xs text-slate-500">{customer.plan?.id || '-'}</div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-medium text-slate-900">{serviceStateLabel(customer)}</div>
@@ -496,7 +496,7 @@ function UserManagementWorkspace() {
                           }}
                           className="rounded-md bg-[#eef7ff] px-3 py-2 text-xs font-semibold text-[#2a8cff]"
                         >
-                          View Users
+                          Open group
                         </button>
                         <Link
                           href={`/customers?planCode=${encodeURIComponent(group.id)}`}
@@ -508,7 +508,7 @@ function UserManagementWorkspace() {
                           href={`/plans?plan=${encodeURIComponent(group.id)}`}
                           className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
                         >
-                          Edit Group
+                          Package
                         </Link>
                       </div>
                     </td>
