@@ -2,207 +2,419 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { AppBanner, SettingsCatalogItem } from '@/lib/types'
-import { Loader, Save, Upload, FileImage, SlidersHorizontal } from 'lucide-react'
+import type { SettingsCatalogItem } from '@/lib/types'
+import { Loader2, Save, Search, Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-type InvoiceTemplateSettings = {
-  activeTemplate: string
-  templateName: string
-  templates?: InvoiceTemplateEntry[]
-  zoneTemplateMappings?: ZoneTemplateMapping[]
-  companyName: string
-  companyAddress: string
-  gstNumber: string
-  website: string
-  panNumber: string
-  phoneNumber: string
-  supportEmail: string
-  bankAccountNumber: string
-  bankName: string
-  bankIfscCode: string
-  invoicePrefix: string
-  accentColor: string
-  footerNote: string
-  paymentInstructions: string
-  zoneOverrides?: Array<Record<string, any>>
-  logoDataUrl: string
-  signatureDataUrl: string
-  stampDataUrl: string
-}
+type SectionValue = Record<string, any>
+type PathSegment = string | number
 
-type InvoiceTemplateEntry = {
-  key: string
-  templateName: string
-  companyName: string
-  companyAddress: string
-  gstNumber: string
-  website: string
-  panNumber: string
-  phoneNumber: string
-  supportEmail: string
-  bankAccountNumber: string
-  bankName: string
-  bankIfscCode: string
-  invoicePrefix: string
-  accentColor: string
-  footerNote: string
-  paymentInstructions: string
-  logoDataUrl: string
-  signatureDataUrl: string
-  stampDataUrl: string
-}
-
-type ZoneTemplateMapping = {
-  zoneCode: string
-  templateKey: string
-}
-
-type BannerFormState = {
+type SectionMeta = {
   title: string
-  imageUrl: string
-  targetType: string
-  targetValue: string
-  audience: string
-  active: boolean
-  startAt: string
-  endAt: string
-  sortOrder: string
+  description: string
+  group: string
+  advanced?: boolean
 }
 
-const emptyTemplate = (): InvoiceTemplateEntry => ({
-  key: `template_${Date.now()}`,
-  templateName: 'New Template',
-  companyName: 'JustFiber',
-  companyAddress: '',
-  gstNumber: '',
-  website: '',
-  panNumber: '',
-  phoneNumber: '',
-  supportEmail: '',
-  bankAccountNumber: '',
-  bankName: '',
-  bankIfscCode: '',
-  invoicePrefix: 'JF',
-  accentColor: '#8224E3',
-  footerNote: '',
-  paymentInstructions: '',
-  logoDataUrl: '',
-  signatureDataUrl: '',
-  stampDataUrl: '',
-})
-
-const SECTION_META: Record<string, { title: string; description: string }> = {
-  invoice_template: {
-    title: 'Invoice Template',
-    description: 'Logo, signature, banking, footer, colors, and invoice-branding controls.',
-  },
+const SECTION_META: Record<string, SectionMeta> = {
   general: {
-    title: 'General',
-    description: 'Organization-wide identity, timezone, and communication defaults.',
+    title: 'General Configuration',
+    description: 'Organization identity, zone name, contact details, timezone, currency, and social links.',
+    group: 'Core Settings',
+  },
+  express_configuration: {
+    title: 'Express Configuration',
+    description: 'Fast operational rules for billing address usage, BBPS behavior, and customer gateway preferences.',
+    group: 'Core Settings',
+  },
+  miscellaneous: {
+    title: 'Miscellaneous Configuration',
+    description: 'Security, referral, login, and KYC policy switches.',
+    group: 'Core Settings',
   },
   billing: {
     title: 'Billing Rules',
-    description: 'Core invoice locking, customer payment, and carry-forward billing behavior.',
+    description: 'Invoice lock, carry forward, plan-change billing, and payment workflow behavior.',
+    group: 'Billing & Finance',
   },
   billing_address: {
     title: 'Billing Address',
-    description: 'Tax address, GST/PAN identity, and legal billing coordinates.',
+    description: 'Legal billing address, GST, PAN, and tax coordinates.',
+    group: 'Billing & Finance',
+  },
+  billing_period: {
+    title: 'Billing Period',
+    description: 'Available billing duration units shown to operators and sales flows.',
+    group: 'Billing & Finance',
   },
   prefix_settings: {
     title: 'Prefix Settings',
-    description: 'Invoice, payment, lead, and service numbering sequences.',
+    description: 'Invoice, payment, lead, circuit, helpdesk, and CAF numbering prefixes.',
+    group: 'Billing & Finance',
+  },
+  tag_payment_gateway: {
+    title: 'Tag Payment Gateway',
+    description: 'Zone-level payment tagging and BBPS account mapping.',
+    group: 'Billing & Finance',
   },
   external_integrations: {
-    title: 'Integrations',
-    description: 'Gateway, ACS, notification, and external system wiring.',
+    title: 'External Integrations',
+    description: 'Enable or disable SMS, WhatsApp, ACS, payment gateway, storage, and webhook connectors.',
+    group: 'Apps & Integrations',
+  },
+  api_settings: {
+    title: 'API Settings',
+    description: 'API token labels, IP allowlists, and integration-facing API controls.',
+    group: 'Apps & Integrations',
+  },
+  invoice_template: {
+    title: 'Invoice Template',
+    description: 'Branding, template mappings, invoice prefix, and legal footer settings.',
+    group: 'Apps & Integrations',
+  },
+  user_fields: {
+    title: 'User Fields',
+    description: 'Control which user sections are exposed in the customer workflow.',
+    group: 'User Management',
+  },
+  additional_fields: {
+    title: 'Additional Fields',
+    description: 'Custom extra fields kept outside the main user profile.',
+    group: 'User Management',
+  },
+  franchise_configuration: {
+    title: 'Franchise Configuration',
+    description: 'Sub-zone, payout, and collection approval behavior.',
+    group: 'Zone & Franchise',
+  },
+  router_visibility: {
+    title: 'Router Visibility',
+    description: 'Control whether OLT/CPE, IP management, and analytics surfaces are visible.',
+    group: 'Zone & Franchise',
+  },
+  helpdesk_sla: {
+    title: 'Approval Tasks',
+    description: 'Priority-wise support response and resolution targets.',
+    group: 'Advanced',
+    advanced: true,
+  },
+  helpdesk_rules: {
+    title: 'Helpdesk Rules',
+    description: 'Assignment, reopen windows, OTP requirements, and support-team behavior.',
+    group: 'Advanced',
+    advanced: true,
+  },
+  inventory_configuration: {
+    title: 'Inventory Configuration',
+    description: 'Device reservation, negative stock, and category policy settings.',
+    group: 'Advanced',
+    advanced: true,
   },
 }
 
-const PRIORITY_SECTIONS = [
-  'invoice_template',
-  'general',
-  'billing',
-  'billing_address',
-  'prefix_settings',
-  'external_integrations',
-]
+const GROUP_ORDER = ['Core Settings', 'Billing & Finance', 'User Management', 'Apps & Integrations', 'Zone & Franchise', 'Advanced']
 
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(new Error('Failed to read file'))
-    reader.readAsDataURL(file)
-  })
+function titleCase(value: string) {
+  return value
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-function emptyBannerForm(): BannerFormState {
-  return {
-    title: '',
-    imageUrl: '',
-    targetType: 'plans',
-    targetValue: '',
-    audience: 'all',
-    active: true,
-    startAt: '',
-    endAt: '',
-    sortOrder: '1',
+function cloneValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value))
+}
+
+function setValueAtPath(root: any, path: PathSegment[], nextValue: any) {
+  if (!path.length) return nextValue
+  const nextRoot = cloneValue(root)
+  let cursor = nextRoot
+  for (let index = 0; index < path.length - 1; index += 1) {
+    cursor = cursor[path[index] as keyof typeof cursor]
   }
+  cursor[path[path.length - 1] as keyof typeof cursor] = nextValue
+  return nextRoot
+}
+
+function removeValueAtPath(root: any, path: PathSegment[]) {
+  const nextRoot = cloneValue(root)
+  let cursor = nextRoot
+  for (let index = 0; index < path.length - 1; index += 1) {
+    cursor = cursor[path[index] as keyof typeof cursor]
+  }
+  const last = path[path.length - 1]
+  if (Array.isArray(cursor)) {
+    cursor.splice(Number(last), 1)
+  } else {
+    delete cursor[last as keyof typeof cursor]
+  }
+  return nextRoot
+}
+
+function inputKind(value: any) {
+  if (typeof value === 'boolean') return 'boolean'
+  if (typeof value === 'number') return 'number'
+  if (Array.isArray(value)) return 'array'
+  if (value && typeof value === 'object') return 'object'
+  return 'string'
+}
+
+function getSectionMeta(section: string): SectionMeta {
+  return (
+    SECTION_META[section] || {
+      title: titleCase(section),
+      description: 'Structured configuration for this part of the platform.',
+      group: 'Advanced',
+      advanced: true,
+    }
+  )
+}
+
+function isLongText(fieldKey: string, value: string) {
+  const normalized = fieldKey.toLowerCase()
+  return value.length > 90 || normalized.includes('address') || normalized.includes('note') || normalized.includes('json')
+}
+
+type FieldEditorProps = {
+  label: string
+  value: any
+  path: PathSegment[]
+  depth?: number
+  onChange: (path: PathSegment[], nextValue: any) => void
+  onRemove?: (path: PathSegment[]) => void
+}
+
+function FieldEditor({ label, value, path, depth = 0, onChange, onRemove }: FieldEditorProps) {
+  const kind = inputKind(value)
+  const normalizedLabel = titleCase(label)
+  const keyName = String(path[path.length - 1] ?? label)
+
+  if (kind === 'boolean') {
+    return (
+      <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+        <div>
+          <div className="text-sm font-semibold text-slate-900">{normalizedLabel}</div>
+          <div className="text-xs text-slate-500">Enable or disable this behavior.</div>
+        </div>
+        <input
+          type="checkbox"
+          checked={Boolean(value)}
+          onChange={(event) => onChange(path, event.target.checked)}
+          className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
+        />
+      </label>
+    )
+  }
+
+  if (kind === 'number') {
+    return (
+      <label className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{normalizedLabel}</div>
+        <input
+          type="number"
+          className="input"
+          value={Number.isFinite(value) ? value : 0}
+          onChange={(event) => onChange(path, Number(event.target.value))}
+        />
+      </label>
+    )
+  }
+
+  if (kind === 'string') {
+    const asString = value ?? ''
+    if (isLongText(keyName, asString)) {
+      return (
+        <label className="space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{normalizedLabel}</div>
+          <textarea
+            className="min-h-[112px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+            value={asString}
+            onChange={(event) => onChange(path, event.target.value)}
+          />
+        </label>
+      )
+    }
+
+    return (
+      <label className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{normalizedLabel}</div>
+        <input className="input" value={asString} onChange={(event) => onChange(path, event.target.value)} />
+      </label>
+    )
+  }
+
+  if (kind === 'array') {
+    const arrayValue = Array.isArray(value) ? value : []
+    const primitive = arrayValue.every((item) => item == null || ['string', 'number', 'boolean'].includes(typeof item))
+
+    if (primitive) {
+      return (
+        <label className="space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{normalizedLabel}</div>
+          <textarea
+            className="min-h-[108px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+            value={arrayValue.join('\n')}
+            onChange={(event) => {
+              const next = event.target.value
+                .split('\n')
+                .map((item) => item.trim())
+                .filter(Boolean)
+              onChange(path, next)
+            }}
+            placeholder="One entry per line"
+          />
+          <div className="text-xs text-slate-400">One item per line.</div>
+        </label>
+      )
+    }
+
+    return (
+      <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">{normalizedLabel}</div>
+            <div className="text-xs text-slate-500">Manage nested entries for this section.</div>
+          </div>
+          <button
+            type="button"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+            onClick={() => {
+              const template = arrayValue[0]
+              const nextItem = template && typeof template === 'object' ? cloneValue(template) : ''
+              onChange(path, [...arrayValue, nextItem])
+            }}
+          >
+            Add item
+          </button>
+        </div>
+        <div className="space-y-3">
+          {arrayValue.map((item, index) => (
+            <div key={`${path.join('.')}.${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {normalizedLabel} #{index + 1}
+                </div>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-rose-500"
+                  onClick={() => onRemove?.([...path, index])}
+                >
+                  Remove
+                </button>
+              </div>
+              <FieldEditor label={`${label}_${index}`} value={item} path={[...path, index]} depth={depth + 1} onChange={onChange} onRemove={onRemove} />
+            </div>
+          ))}
+          {!arrayValue.length ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">No items configured yet.</div> : null}
+        </div>
+      </div>
+    )
+  }
+
+  if (kind === 'object') {
+    const objectValue = value || {}
+    return (
+      <div className={`space-y-4 border border-slate-200 p-4 ${depth > 0 ? 'rounded-[24px] bg-white' : 'rounded-[28px] bg-slate-50'}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">{normalizedLabel}</div>
+            <div className="text-xs text-slate-500">Grouped controls for this block.</div>
+          </div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Object.entries(objectValue).map(([childKey, childValue]) => (
+            <div key={`${path.join('.')}.${childKey}`} className={inputKind(childValue) === 'object' || inputKind(childValue) === 'array' ? 'lg:col-span-2' : ''}>
+              <FieldEditor
+                label={childKey}
+                value={childValue}
+                path={[...path, childKey]}
+                depth={depth + 1}
+                onChange={onChange}
+                onRemove={onRemove}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return null
 }
 
 export default function SettingsPage() {
   const [catalog, setCatalog] = useState<SettingsCatalogItem[]>([])
-  const [activeSection, setActiveSection] = useState('invoice_template')
-  const [invoiceTemplate, setInvoiceTemplate] = useState<InvoiceTemplateSettings | null>(null)
-  const [selectedTemplateKey, setSelectedTemplateKey] = useState('justfiber_standard')
-  const [genericJson, setGenericJson] = useState('{}')
-  const [banners, setBanners] = useState<AppBanner[]>([])
-  const [bannerForm, setBannerForm] = useState<BannerFormState>(emptyBannerForm())
+  const [activeSection, setActiveSection] = useState('general')
+  const [sectionValue, setSectionValue] = useState<SectionValue>({})
+  const [sectionVersion, setSectionVersion] = useState<number | null>(null)
+  const [sectionUpdatedAt, setSectionUpdatedAt] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSectionLoading, setIsSectionLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [isSavingBanner, setIsSavingBanner] = useState(false)
-  const [isUploading, setIsUploading] = useState<'logoDataUrl' | 'signatureDataUrl' | 'stampDataUrl' | ''>('')
 
-  const orderedCatalog = useMemo(() => {
-    const sorted = [...catalog].sort((a, b) => {
-      const ai = PRIORITY_SECTIONS.indexOf(a.section)
-      const bi = PRIORITY_SECTIONS.indexOf(b.section)
-      const av = ai === -1 ? 999 : ai
-      const bv = bi === -1 ? 999 : bi
-      return av - bv
-    })
-    return sorted
-  }, [catalog])
+  const visibleCatalog = useMemo(() => {
+    return catalog
+      .filter((item) => {
+        const meta = getSectionMeta(item.section)
+        if (meta.advanced && !showAdvanced) return false
+        if (!search.trim()) return true
+        const query = search.trim().toLowerCase()
+        return (
+          meta.title.toLowerCase().includes(query) ||
+          meta.description.toLowerCase().includes(query) ||
+          item.section.toLowerCase().includes(query)
+        )
+      })
+      .sort((left, right) => {
+        const leftMeta = getSectionMeta(left.section)
+        const rightMeta = getSectionMeta(right.section)
+        const leftGroupIndex = GROUP_ORDER.indexOf(leftMeta.group)
+        const rightGroupIndex = GROUP_ORDER.indexOf(rightMeta.group)
+        if (leftGroupIndex !== rightGroupIndex) return leftGroupIndex - rightGroupIndex
+        return leftMeta.title.localeCompare(rightMeta.title)
+      })
+  }, [catalog, search, showAdvanced])
 
-  const activeMeta = SECTION_META[activeSection] || {
-    title: activeSection.replace(/_/g, ' '),
-    description: 'Structured configuration for this admin section.',
-  }
+  const groupedCatalog = useMemo(() => {
+    const groups = new Map<string, SettingsCatalogItem[]>()
+    for (const item of visibleCatalog) {
+      const meta = getSectionMeta(item.section)
+      const existing = groups.get(meta.group) || []
+      existing.push(item)
+      groups.set(meta.group, existing)
+    }
+    return GROUP_ORDER.map((group) => ({
+      group,
+      items: groups.get(group) || [],
+    })).filter((entry) => entry.items.length)
+  }, [visibleCatalog])
+
+  const activeMeta = getSectionMeta(activeSection)
 
   useEffect(() => {
     void loadCatalog()
-    void loadBanners()
   }, [])
 
   useEffect(() => {
     if (!catalog.length) return
     void loadSection(activeSection)
-  }, [activeSection, catalog.length])
+  }, [catalog.length, activeSection])
 
   async function loadCatalog() {
     try {
       setIsLoading(true)
-      const res = await adminAPI.getSettingsCatalog()
-      if (!res.success || !res.data) {
-        toast.error(res.error || 'Failed to load settings catalog')
+      const response = await adminAPI.getSettingsCatalog()
+      if (!response.success || !response.data) {
+        toast.error(response.error || 'Failed to load settings catalog')
         return
       }
-      setCatalog(res.data)
-      const preferred = res.data.find((item) => item.section === 'invoice_template')?.section || res.data[0]?.section
-      if (preferred) setActiveSection(preferred)
+      setCatalog(response.data)
+      const defaultSection = response.data.find((item) => item.section === 'general')?.section || response.data[0]?.section
+      if (defaultSection) setActiveSection(defaultSection)
     } catch (error) {
-      console.error('[v0] Failed to load settings catalog:', error)
+      console.error('[settings] Failed to load catalog', error)
       toast.error('Failed to load settings catalog')
     } finally {
       setIsLoading(false)
@@ -211,816 +423,188 @@ export default function SettingsPage() {
 
   async function loadSection(section: string) {
     try {
-      const res = await adminAPI.getSettingsSection(section)
-      if (!res.success || !res.data) {
-        toast.error(res.error || `Failed to load ${section}`)
+      setIsSectionLoading(true)
+      const response = await adminAPI.getSettingsSection<SectionValue>(section)
+      if (!response.success || !response.data) {
+        toast.error(response.error || `Failed to load ${section}`)
         return
       }
-      if (section === 'invoice_template') {
-        const value = res.data.value as InvoiceTemplateSettings
-        const normalizedTemplates = Array.isArray(value.templates) && value.templates.length
-          ? value.templates
-          : [{
-              key: value.activeTemplate || 'justfiber_standard',
-              templateName: value.templateName || 'JustFiber Standard',
-              companyName: value.companyName || 'JustFiber',
-              companyAddress: value.companyAddress || '',
-              gstNumber: value.gstNumber || '',
-              website: value.website || '',
-              panNumber: value.panNumber || '',
-              phoneNumber: value.phoneNumber || '',
-              supportEmail: value.supportEmail || '',
-              bankAccountNumber: value.bankAccountNumber || '',
-              bankName: value.bankName || '',
-              bankIfscCode: value.bankIfscCode || '',
-              invoicePrefix: value.invoicePrefix || 'JF',
-              accentColor: value.accentColor || '#8224E3',
-              footerNote: value.footerNote || '',
-              paymentInstructions: value.paymentInstructions || '',
-              logoDataUrl: value.logoDataUrl || '',
-              signatureDataUrl: value.signatureDataUrl || '',
-              stampDataUrl: value.stampDataUrl || '',
-            }]
-        setInvoiceTemplate({
-          ...value,
-          templates: normalizedTemplates,
-          zoneTemplateMappings: Array.isArray(value.zoneTemplateMappings) ? value.zoneTemplateMappings : [],
-        })
-        setSelectedTemplateKey(value.activeTemplate || normalizedTemplates[0]?.key || 'justfiber_standard')
-      } else {
-        setGenericJson(JSON.stringify(res.data.value || {}, null, 2))
-      }
+      setSectionValue(response.data.value || {})
+      setSectionVersion(response.data.version || null)
+      setSectionUpdatedAt(response.data.updatedAt || null)
     } catch (error) {
-      console.error('[v0] Failed to load settings section:', error)
-      toast.error('Failed to load settings section')
-    }
-  }
-
-  async function loadBanners() {
-    try {
-      const res = await adminAPI.getCatalogBanners()
-      if (!res.success) {
-        toast.error(res.error || 'Failed to load customer promotions')
-        return
-      }
-      setBanners(res.data || [])
-    } catch (error) {
-      console.error('[v0] Failed to load customer promotions:', error)
-      toast.error('Failed to load customer promotions')
-    }
-  }
-
-  async function createBanner() {
-    try {
-      if (!bannerForm.title.trim()) {
-        toast.error('Banner title is required')
-        return
-      }
-      setIsSavingBanner(true)
-      const res = await adminAPI.createCatalogBanner({
-        title: bannerForm.title.trim(),
-        imageUrl: bannerForm.imageUrl.trim() || undefined,
-        targetType: bannerForm.targetType || undefined,
-        targetValue: bannerForm.targetValue.trim() || undefined,
-        audience: bannerForm.audience || 'all',
-        active: bannerForm.active,
-        startAt: bannerForm.startAt ? new Date(bannerForm.startAt).toISOString() : undefined,
-        endAt: bannerForm.endAt ? new Date(bannerForm.endAt).toISOString() : undefined,
-        sortOrder: Number(bannerForm.sortOrder || 1),
-      })
-      if (!res.success) {
-        toast.error(res.error || 'Failed to create customer promotion')
-        return
-      }
-      toast.success('Customer promotion created')
-      setBannerForm(emptyBannerForm())
-      await loadBanners()
-    } catch (error) {
-      console.error('[v0] Failed to create customer promotion:', error)
-      toast.error('Failed to create customer promotion')
+      console.error('[settings] Failed to load section', error)
+      toast.error('Failed to load selected section')
     } finally {
-      setIsSavingBanner(false)
+      setIsSectionLoading(false)
     }
   }
 
-  async function uploadBannerImage(file?: File) {
-    if (!file) return
-    try {
-      setIsSavingBanner(true)
-      const dataUrl = await fileToDataUrl(file)
-      setBannerForm((prev) => ({ ...prev, imageUrl: dataUrl }))
-      toast.success('Banner image attached')
-    } catch (error) {
-      console.error('[v0] Failed to process banner image:', error)
-      toast.error('Failed to process banner image')
-    } finally {
-      setIsSavingBanner(false)
-    }
-  }
-
-  async function saveActiveSection() {
+  async function saveSection() {
     try {
       setIsSaving(true)
-      if (activeSection === 'invoice_template') {
-        if (!invoiceTemplate) return
-        const templates = invoiceTemplate.templates || []
-        const selectedTemplate = templates.find((item) => item.key === selectedTemplateKey) || templates[0] || emptyTemplate()
-        const res = await adminAPI.updateSettingsSection(activeSection, {
-          ...invoiceTemplate,
-          activeTemplate: selectedTemplateKey,
-          templateName: selectedTemplate.templateName,
-          companyName: selectedTemplate.companyName,
-          companyAddress: selectedTemplate.companyAddress,
-          gstNumber: selectedTemplate.gstNumber,
-          website: selectedTemplate.website,
-          panNumber: selectedTemplate.panNumber,
-          phoneNumber: selectedTemplate.phoneNumber,
-          supportEmail: selectedTemplate.supportEmail,
-          bankAccountNumber: selectedTemplate.bankAccountNumber,
-          bankName: selectedTemplate.bankName,
-          bankIfscCode: selectedTemplate.bankIfscCode,
-          invoicePrefix: selectedTemplate.invoicePrefix,
-          accentColor: selectedTemplate.accentColor,
-          footerNote: selectedTemplate.footerNote,
-          paymentInstructions: selectedTemplate.paymentInstructions,
-          logoDataUrl: selectedTemplate.logoDataUrl,
-          signatureDataUrl: selectedTemplate.signatureDataUrl,
-          stampDataUrl: selectedTemplate.stampDataUrl,
-          templates,
-          zoneTemplateMappings: invoiceTemplate.zoneTemplateMappings || [],
-        })
-        if (!res.success) {
-          toast.error(res.error || 'Failed to save invoice template settings')
-          return
-        }
-      } else {
-        const parsed = JSON.parse(genericJson || '{}')
-        const res = await adminAPI.updateSettingsSection(activeSection, parsed)
-        if (!res.success) {
-          toast.error(res.error || 'Failed to save settings')
-          return
-        }
+      const response = await adminAPI.updateSettingsSection(activeSection, sectionValue)
+      if (!response.success) {
+        toast.error(response.error || 'Failed to save settings')
+        return
       }
       toast.success(`${activeMeta.title} saved`)
       await loadSection(activeSection)
     } catch (error) {
-      console.error('[v0] Failed to save settings section:', error)
-      toast.error(activeSection === 'invoice_template' ? 'Invalid settings or upload payload' : 'Invalid JSON payload')
+      console.error('[settings] Failed to save section', error)
+      toast.error('Failed to save settings')
     } finally {
       setIsSaving(false)
     }
   }
 
-  async function uploadAsset(field: 'logoDataUrl' | 'signatureDataUrl' | 'stampDataUrl', file?: File | null) {
-    if (!file || !invoiceTemplate) return
-    try {
-      setIsUploading(field)
-      const dataUrl = await fileToDataUrl(file)
-      setInvoiceTemplate({
-        ...invoiceTemplate,
-        templates: (invoiceTemplate.templates || []).map((item) =>
-          item.key === selectedTemplateKey ? { ...item, [field]: dataUrl } : item
-        ),
-      })
-      toast.success('Asset ready to save')
-    } catch (error) {
-      console.error('[v0] Failed to upload settings asset:', error)
-      toast.error('Failed to process image')
-    } finally {
-      setIsUploading('')
-    }
+  function handleValueChange(path: PathSegment[], nextValue: any) {
+    setSectionValue((current) => setValueAtPath(current, path, nextValue))
   }
 
-  const invoicePreview = useMemo(() => {
-    const templates = invoiceTemplate?.templates || []
-    return templates.find((item) => item.key === selectedTemplateKey) || templates[0] || emptyTemplate()
-  }, [invoiceTemplate, selectedTemplateKey])
-
-  function updateSelectedTemplate<K extends keyof InvoiceTemplateEntry>(key: K, value: InvoiceTemplateEntry[K]) {
-    if (!invoiceTemplate) return
-    setInvoiceTemplate({
-      ...invoiceTemplate,
-      templates: (invoiceTemplate.templates || []).map((item) =>
-        item.key === selectedTemplateKey ? { ...item, [key]: value } : item
-      ),
-    })
-  }
-
-  function addTemplate() {
-    if (!invoiceTemplate) return
-    const template = emptyTemplate()
-    setInvoiceTemplate({
-      ...invoiceTemplate,
-      templates: [...(invoiceTemplate.templates || []), template],
-    })
-    setSelectedTemplateKey(template.key)
-  }
-
-  function duplicateTemplate(templateKey: string) {
-    if (!invoiceTemplate) return
-    const source = (invoiceTemplate.templates || []).find((item) => item.key === templateKey)
-    if (!source) return
-    const duplicateKey = `${source.key}_copy_${Date.now()}`
-    const duplicate = {
-      ...source,
-      key: duplicateKey,
-      templateName: `${source.templateName} Copy`,
-    }
-    setInvoiceTemplate({
-      ...invoiceTemplate,
-      templates: [...(invoiceTemplate.templates || []), duplicate],
-    })
-    setSelectedTemplateKey(duplicateKey)
-  }
-
-  function updateSelectedTemplateKey(nextKey: string) {
-    if (!invoiceTemplate) return
-    const normalizedKey = nextKey.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_')
-    if (!normalizedKey) return
-    setInvoiceTemplate({
-      ...invoiceTemplate,
-      templates: (invoiceTemplate.templates || []).map((item) =>
-        item.key === selectedTemplateKey ? { ...item, key: normalizedKey } : item
-      ),
-      zoneTemplateMappings: (invoiceTemplate.zoneTemplateMappings || []).map((item) =>
-        item.templateKey === selectedTemplateKey ? { ...item, templateKey: normalizedKey } : item
-      ),
-    })
-    setSelectedTemplateKey(normalizedKey)
-  }
-
-  function removeTemplate(templateKey: string) {
-    if (!invoiceTemplate) return
-    const nextTemplates = (invoiceTemplate.templates || []).filter((item) => item.key !== templateKey)
-    if (!nextTemplates.length) {
-      toast.error('At least one template required')
-      return
-    }
-    setInvoiceTemplate({
-      ...invoiceTemplate,
-      templates: nextTemplates,
-      zoneTemplateMappings: (invoiceTemplate.zoneTemplateMappings || []).filter((item) => item.templateKey !== templateKey),
-    })
-    if (selectedTemplateKey === templateKey) setSelectedTemplateKey(nextTemplates[0].key)
+  function handleValueRemove(path: PathSegment[]) {
+    setSectionValue((current) => removeValueAtPath(current, path))
   }
 
   return (
     <div className="space-y-6">
       <section className="card p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Settings</div>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">{activeMeta.title}</h1>
-            <div className="mt-2 max-w-3xl text-sm text-slate-500">{activeMeta.description}</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Jaze-style Admin Settings</h1>
+            <div className="mt-2 max-w-3xl text-sm text-slate-500">
+              Low-frequency configuration yahin rakhi gayi hai, so day-to-day operator screens clean rahen. Main workflow pages sirf useful actions dikhayengi.
+            </div>
           </div>
-          <button onClick={saveActiveSection} disabled={isSaving} className="btn-primary inline-flex items-center gap-2">
-            <Save className="h-4 w-4" />
-            {isSaving ? 'Saving...' : 'Save settings'}
-          </button>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Visible Sections</div>
+              <div className="mt-2 text-2xl font-bold text-slate-900">{visibleCatalog.length}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Active Section</div>
+              <div className="mt-2 text-sm font-semibold text-slate-900">{activeMeta.title}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Version</div>
+              <div className="mt-2 text-2xl font-bold text-slate-900">{sectionVersion ?? '-'}</div>
+            </div>
+          </div>
         </div>
       </section>
 
       {isLoading ? (
-        <div className="card p-6 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
-          <div className="mt-2 text-slate-400">Loading settings...</div>
+        <div className="card p-8 text-center">
+          <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
+          <div className="mt-3 text-sm text-slate-500">Loading settings workspace...</div>
         </div>
       ) : (
-        <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-[24px] border border-slate-200 bg-white p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Settings sections</div>
-            <div className="mt-4 space-y-2">
-              {orderedCatalog.map((item) => {
-                const isActive = item.section === activeSection
-                const meta = SECTION_META[item.section]
-                return (
-                  <button
-                    key={item.section}
-                    type="button"
-                    onClick={() => setActiveSection(item.section)}
-                    className={`w-full rounded-[20px] border px-4 py-3 text-left transition ${
-                      isActive
-                        ? 'border-[#5B6CFF]/30 bg-[#eef1ff] text-[#5B6CFF]'
-                        : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-                    }`}
-                  >
-                    <div className="font-semibold">{meta?.title || item.section}</div>
-                    <div className="mt-1 text-xs text-slate-400">{meta?.description || item.fieldsPreview.join(', ')}</div>
-                  </button>
-                )
-              })}
+        <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="rounded-[28px] border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+              <Settings2 className="h-4 w-4" />
+              Settings Menu
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search settings"
+                  className="w-full bg-transparent text-sm text-slate-700 outline-none"
+                />
+              </div>
+            </div>
+            <label className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={showAdvanced}
+                onChange={(event) => setShowAdvanced(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
+              />
+              Show advanced sections
+            </label>
+
+            <div className="mt-4 space-y-4">
+              {groupedCatalog.map(({ group, items }) => (
+                <div key={group}>
+                  <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{group}</div>
+                  <div className="space-y-2">
+                    {items.map((item) => {
+                      const meta = getSectionMeta(item.section)
+                      const active = item.section === activeSection
+                      return (
+                        <button
+                          key={item.section}
+                          type="button"
+                          onClick={() => setActiveSection(item.section)}
+                          className={`w-full rounded-[20px] border px-4 py-3 text-left transition ${
+                            active
+                              ? 'border-[#5B6CFF]/25 bg-[#eef1ff] text-[#2946ff]'
+                              : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+                          }`}
+                        >
+                          <div className="font-semibold">{meta.title}</div>
+                          <div className="mt-1 text-xs text-slate-400">{meta.description}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </aside>
 
           <div className="space-y-4">
-            {activeSection === 'invoice_template' ? (
-              <div className="grid gap-4 xl:grid-cols-[1fr_0.92fr]">
-                <div className="card p-5 space-y-5">
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Templates</div>
-                      <div className="mt-2 text-2xl font-bold text-slate-900">{(invoiceTemplate?.templates || []).length}</div>
-                      <div className="mt-1 text-xs text-slate-500">Saved invoice branding variants</div>
-                    </div>
-                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Default</div>
-                      <div className="mt-2 truncate text-lg font-semibold text-slate-900">
-                        {(invoiceTemplate?.templates || []).find((item) => item.key === invoiceTemplate?.activeTemplate)?.templateName || 'Not set'}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">Used when no zone override matches</div>
-                    </div>
-                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone routing</div>
-                      <div className="mt-2 text-2xl font-bold text-slate-900">{(invoiceTemplate?.zoneTemplateMappings || []).length}</div>
-                      <div className="mt-1 text-xs text-slate-500">Zone-specific template assignments</div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Template library</div>
-                    <div className="text-sm text-slate-400">Choose the active template below, then update brand, tax, bank, and asset details for it.</div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {(invoiceTemplate?.templates || []).map((item) => {
-                        const isSelected = item.key === selectedTemplateKey
-                        return (
-                          <button
-                            key={item.key}
-                            type="button"
-                            onClick={() => setSelectedTemplateKey(item.key)}
-                            className={`rounded-[22px] border p-4 text-left transition ${
-                              isSelected
-                                ? 'border-[#5B6CFF]/35 bg-[#eef1ff]'
-                                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="font-semibold text-slate-900">{item.templateName}</div>
-                                <div className="mt-1 text-xs text-slate-400">{item.key}</div>
-                              </div>
-                              {invoiceTemplate?.activeTemplate === item.key ? (
-                                <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] text-emerald-700">
-                                  Default
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="mt-3 text-xs text-slate-500">
-                              {item.companyName || 'No company name'} • {item.invoicePrefix || 'JF'}
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Selected template</div>
-                      <select className="input" value={selectedTemplateKey} onChange={(e) => setSelectedTemplateKey(e.target.value)}>
-                        {(invoiceTemplate?.templates || []).map((item) => (
-                          <option key={item.key} value={item.key}>{item.templateName}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template name</div>
-                      <input className="input" value={invoicePreview.templateName || ''} onChange={(e) => updateSelectedTemplate('templateName', e.target.value)} />
-                    </label>
-                    <label className="space-y-2 md:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template key</div>
-                      <input className="input" value={invoicePreview.key || ''} onChange={(e) => updateSelectedTemplateKey(e.target.value)} />
-                    </label>
-                    <div className="md:col-span-2 flex flex-wrap gap-3">
-                      <button type="button" className="btn-secondary" onClick={addTemplate}>Create new template</button>
-                      <button type="button" className="btn-secondary" onClick={() => duplicateTemplate(selectedTemplateKey)}>Duplicate template</button>
-                      <button type="button" className="btn-secondary" onClick={() => removeTemplate(selectedTemplateKey)}>Delete template</button>
-                      <button
-                        type="button"
-                        className={invoiceTemplate?.activeTemplate === selectedTemplateKey ? 'btn-secondary opacity-70' : 'btn-secondary'}
-                        disabled={invoiceTemplate?.activeTemplate === selectedTemplateKey}
-                        onClick={() => setInvoiceTemplate((prev) => prev ? { ...prev, activeTemplate: selectedTemplateKey } : prev)}
-                      >
-                        {invoiceTemplate?.activeTemplate === selectedTemplateKey ? 'Default template' : 'Set as default'}
-                      </button>
-                    </div>
-                    <label className="space-y-2 md:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Company name</div>
-                      <input className="input" value={invoicePreview.companyName || ''} onChange={(e) => updateSelectedTemplate('companyName', e.target.value)} />
-                    </label>
-                    <label className="space-y-2 md:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Company address</div>
-                      <textarea className="input min-h-24" value={invoicePreview.companyAddress || ''} onChange={(e) => updateSelectedTemplate('companyAddress', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">GST number</div>
-                      <input className="input" value={invoicePreview.gstNumber || ''} onChange={(e) => updateSelectedTemplate('gstNumber', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">PAN number</div>
-                      <input className="input" value={invoicePreview.panNumber || ''} onChange={(e) => updateSelectedTemplate('panNumber', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Website</div>
-                      <input className="input" value={invoicePreview.website || ''} onChange={(e) => updateSelectedTemplate('website', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Support email</div>
-                      <input className="input" value={invoicePreview.supportEmail || ''} onChange={(e) => updateSelectedTemplate('supportEmail', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Phone number</div>
-                      <input className="input" value={invoicePreview.phoneNumber || ''} onChange={(e) => updateSelectedTemplate('phoneNumber', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Invoice prefix</div>
-                      <input className="input" value={invoicePreview.invoicePrefix || ''} onChange={(e) => updateSelectedTemplate('invoicePrefix', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Accent color</div>
-                      <input className="input h-12" type="color" value={invoicePreview.accentColor || '#8224E3'} onChange={(e) => updateSelectedTemplate('accentColor', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Bank account</div>
-                      <input className="input" value={invoicePreview.bankAccountNumber || ''} onChange={(e) => updateSelectedTemplate('bankAccountNumber', e.target.value)} />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Bank name</div>
-                      <input className="input" value={invoicePreview.bankName || ''} onChange={(e) => updateSelectedTemplate('bankName', e.target.value)} />
-                    </label>
-                    <label className="space-y-2 md:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Bank IFSC</div>
-                      <input className="input" value={invoicePreview.bankIfscCode || ''} onChange={(e) => updateSelectedTemplate('bankIfscCode', e.target.value)} />
-                    </label>
-                    <label className="space-y-2 md:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Footer note</div>
-                      <textarea className="input min-h-24" value={invoicePreview.footerNote || ''} onChange={(e) => updateSelectedTemplate('footerNote', e.target.value)} />
-                    </label>
-                    <label className="space-y-2 md:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Payment instructions</div>
-                      <textarea className="input min-h-24" value={invoicePreview.paymentInstructions || ''} onChange={(e) => updateSelectedTemplate('paymentInstructions', e.target.value)} />
-                    </label>
-                    <label className="space-y-2 md:col-span-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Zone to template mapping</div>
-                      <div className="text-sm text-slate-400">Use this when Haryana, Rajasthan, or other zones need different invoice branding.</div>
-                      <div className="space-y-2 rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
-                        {(invoiceTemplate?.zoneTemplateMappings || []).map((mapping, index) => (
-                          <div key={`${mapping.zoneCode}-${index}`} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-                            <input
-                              className="input"
-                              placeholder="Zone code"
-                              value={mapping.zoneCode}
-                              onChange={(e) => setInvoiceTemplate((prev) => prev ? ({
-                                ...prev,
-                                zoneTemplateMappings: (prev.zoneTemplateMappings || []).map((item, idx) => idx === index ? { ...item, zoneCode: e.target.value.toUpperCase() } : item),
-                              }) : prev)}
-                            />
-                            <select
-                              className="input"
-                              value={mapping.templateKey}
-                              onChange={(e) => setInvoiceTemplate((prev) => prev ? ({
-                                ...prev,
-                                zoneTemplateMappings: (prev.zoneTemplateMappings || []).map((item, idx) => idx === index ? { ...item, templateKey: e.target.value } : item),
-                              }) : prev)}
-                            >
-                              {(invoiceTemplate?.templates || []).map((item) => (
-                                <option key={item.key} value={item.key}>{item.templateName}</option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              className="btn-secondary"
-                              onClick={() => setInvoiceTemplate((prev) => prev ? ({
-                                ...prev,
-                                zoneTemplateMappings: (prev.zoneTemplateMappings || []).filter((_, idx) => idx !== index),
-                              }) : prev)}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => setInvoiceTemplate((prev) => prev ? ({
-                            ...prev,
-                            zoneTemplateMappings: [...(prev.zoneTemplateMappings || []), { zoneCode: '', templateKey: selectedTemplateKey }],
-                          }) : prev)}
-                        >
-                          Add zone mapping
-                        </button>
-                      </div>
-                    </label>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Brand assets</div>
-                      <div className="text-sm text-slate-400">Upload logo, signature, and stamp for the selected template.</div>
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-3">
-                    {[
-                      ['logoDataUrl', 'Logo'],
-                      ['signatureDataUrl', 'Signature'],
-                      ['stampDataUrl', 'Stamp'],
-                    ].map(([field, label]) => {
-                      const key = field as 'logoDataUrl' | 'signatureDataUrl' | 'stampDataUrl'
-                      const value = invoicePreview[key] || ''
-                      return (
-                        <div key={field} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                            <FileImage className="h-4 w-4 text-[#5B6CFF]" />
-                            {label}
-                          </div>
-                          <label className="mt-4 flex cursor-pointer items-center justify-center rounded-[18px] border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-600 hover:border-[#5B6CFF]/35 hover:bg-[#eef1ff]">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => void uploadAsset(key, e.target.files?.[0])}
-                            />
-                            <span className="inline-flex items-center gap-2">
-                              <Upload className="h-4 w-4" />
-                              {isUploading === key ? 'Processing...' : `Upload ${label}`}
-                            </span>
-                          </label>
-                          {value ? (
-                            <div className="mt-4">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={value} alt={label} className="h-20 w-full rounded-xl object-contain bg-white p-2" />
-                              <button
-                                type="button"
-                                className="mt-3 text-xs text-rose-300"
-                                onClick={() => setInvoiceTemplate((prev) => prev ? ({
-                                  ...prev,
-                                  templates: (prev.templates || []).map((item) =>
-                                    item.key === selectedTemplateKey ? { ...item, [key]: '' } : item
-                                  ),
-                                }) : prev)}
-                              >
-                                Remove {label.toLowerCase()}
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="mt-4 text-xs text-slate-500">Upload image and save section to persist it.</div>
-                          )}
-                        </div>
-                      )
-                    })}
-                    </div>
+            <section className="card p-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.24em] text-slate-400">{activeMeta.group}</div>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-900">{activeMeta.title}</h2>
+                  <div className="mt-2 max-w-3xl text-sm text-slate-500">{activeMeta.description}</div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-3 py-1">Section key: {activeSection}</span>
+                    {sectionUpdatedAt ? (
+                      <span className="rounded-full bg-slate-100 px-3 py-1">Updated {new Date(sectionUpdatedAt).toLocaleString()}</span>
+                    ) : null}
                   </div>
                 </div>
+                <button onClick={saveSection} disabled={isSaving || isSectionLoading} className="btn-primary inline-flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  {isSaving ? 'Saving...' : 'Save Section'}
+                </button>
+              </div>
+            </section>
 
-                <div className="card p-5">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Template preview</div>
-                  <div className="mt-4 rounded-[28px] bg-white p-8 text-slate-900 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
-                    <div className="flex items-start justify-between gap-6">
-                      <div>
-                        {invoicePreview.logoDataUrl ? (
-                          <img src={invoicePreview.logoDataUrl} alt="Logo" className="h-16 object-contain" />
-                        ) : (
-                          <div className="text-2xl font-black" style={{ color: invoicePreview.accentColor }}>
-                            {invoicePreview.companyName || 'JustFiber'}
-                          </div>
-                        )}
-                        <div className="mt-4 text-3xl font-black" style={{ color: invoicePreview.accentColor }}>
-                          INVOICE
-                        </div>
-                        <div className="mt-2 text-xs text-slate-500">Prefix: {invoicePreview.invoicePrefix || 'JF'}</div>
-                      </div>
-                      <div className="text-right text-sm">
-                        <div className="font-semibold">{invoicePreview.companyName || '-'}</div>
-                        <div className="mt-1 whitespace-pre-line text-slate-500">{invoicePreview.companyAddress || 'Company address will appear here'}</div>
-                        <div className="mt-2 text-slate-500">{invoicePreview.website || '-'}</div>
-                        <div className="text-slate-500">{invoicePreview.phoneNumber || '-'}</div>
-                      </div>
-                    </div>
-
-                    <div className="mt-8 grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl bg-slate-50 p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Compliance</div>
-                        <div className="mt-3 space-y-2 text-sm">
-                          <div>GST: {invoicePreview.gstNumber || '-'}</div>
-                          <div>PAN: {invoicePreview.panNumber || '-'}</div>
-                          <div>Email: {invoicePreview.supportEmail || '-'}</div>
-                        </div>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-4">
-                        <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Banking</div>
-                        <div className="mt-3 space-y-2 text-sm">
-                          <div>Account: {invoicePreview.bankAccountNumber || '-'}</div>
-                          <div>Bank: {invoicePreview.bankName || '-'}</div>
-                          <div>IFSC: {invoicePreview.bankIfscCode || '-'}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-8 rounded-2xl p-4 text-white" style={{ backgroundColor: invoicePreview.accentColor || '#8224E3' }}>
-                      <div className="text-xs uppercase tracking-[0.2em] text-white/70">Payment note</div>
-                      <div className="mt-2 text-sm">{invoicePreview.paymentInstructions || 'Payment instructions will appear here.'}</div>
-                    </div>
-
-                    <div className="mt-8 grid gap-6 md:grid-cols-2">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Signature</div>
-                        <div className="mt-3 h-16 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2">
-                          {invoicePreview.signatureDataUrl ? (
-                            <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={invoicePreview.signatureDataUrl} alt="Signature" className="h-full object-contain" />
-                            </>
-                          ) : <div className="pt-4 text-xs text-slate-400">No signature uploaded</div>}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Stamp</div>
-                        <div className="mt-3 h-16 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2">
-                          {invoicePreview.stampDataUrl ? (
-                            <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={invoicePreview.stampDataUrl} alt="Stamp" className="h-full object-contain" />
-                            </>
-                          ) : <div className="pt-4 text-xs text-slate-400">No stamp uploaded</div>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-8 border-t border-slate-200 pt-4 text-xs text-slate-500">
-                      {invoicePreview.footerNote || 'Footer note will appear here.'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="card p-5 space-y-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Customer promotions</div>
-                      <div className="mt-1 text-sm text-slate-400">Manage in-app banners shown on customer home and offers screens.</div>
-                    </div>
-                    <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                      {banners.length} live entries
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 space-y-3">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Existing promotions</div>
-                      <div className="space-y-3">
-                        {banners.length ? banners.map((banner) => (
-                          <div key={banner.id} className="rounded-[18px] border border-slate-200 bg-white p-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
-                                <div className="font-semibold text-slate-900">{banner.title}</div>
-                                <div className="mt-1 text-sm text-slate-500">
-                                  {banner.targetType || 'generic'}{banner.targetValue ? ` • ${banner.targetValue}` : ''} • {banner.audience}
-                                </div>
-                              </div>
-                              <div className={`rounded-full px-3 py-1 text-xs font-semibold ${banner.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                                {banner.active ? 'Active' : 'Inactive'}
-                              </div>
-                            </div>
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                              <span className="rounded-full bg-slate-100 px-3 py-1">Sort {banner.sortOrder}</span>
-                              {banner.startAt ? <span className="rounded-full bg-slate-100 px-3 py-1">Starts {new Date(banner.startAt).toLocaleDateString()}</span> : null}
-                              {banner.endAt ? <span className="rounded-full bg-slate-100 px-3 py-1">Ends {new Date(banner.endAt).toLocaleDateString()}</span> : null}
-                            </div>
-                            {banner.imageUrl ? (
-                              <div className="mt-3 text-xs text-[#5B6CFF] break-all">{banner.imageUrl}</div>
-                            ) : (
-                              <div className="mt-3 text-xs text-slate-400">No image URL attached</div>
-                            )}
-                          </div>
-                        )) : (
-                          <div className="rounded-[18px] border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-                            No promotions yet. Create one on the right and it will start appearing in the customer app.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 space-y-4">
-                      <div>
-                        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Create promotion</div>
-                        <div className="mt-1 text-sm text-slate-400">Use this for plan upgrades, billing nudges, support shortcuts, or tracking links.</div>
-                      </div>
-                      <div className="grid gap-3">
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Title</div>
-                          <input className="input" value={bannerForm.title} onChange={(e) => setBannerForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Upgrade to yearly and save more" />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Image URL</div>
-                          <input className="input" value={bannerForm.imageUrl} onChange={(e) => setBannerForm((prev) => ({ ...prev, imageUrl: e.target.value }))} placeholder="https://..." />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Upload banner image</div>
-                          <label className="flex cursor-pointer items-center justify-center rounded-[18px] border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-600 hover:border-[#5B6CFF]/35 hover:bg-[#eef1ff]">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => void uploadBannerImage(e.target.files?.[0])}
-                            />
-                            {isSavingBanner ? 'Processing image...' : 'Choose image file'}
-                          </label>
-                          {bannerForm.imageUrl ? (
-                            <div className="rounded-[18px] border border-slate-200 bg-white p-3">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={bannerForm.imageUrl} alt="Banner preview" className="h-28 w-full rounded-xl object-cover" />
-                            </div>
-                          ) : (
-                            <div className="text-xs text-slate-400">You can paste an image URL or upload a local image.</div>
-                          )}
-                        </label>
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <label className="space-y-2">
-                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Target</div>
-                            <select className="input" value={bannerForm.targetType} onChange={(e) => setBannerForm((prev) => ({ ...prev, targetType: e.target.value }))}>
-                              <option value="plan_catalog">Plans</option>
-                              <option value="billing">Billing</option>
-                              <option value="support">Support</option>
-                              <option value="tracking">Tracking</option>
-                              <option value="generic">Generic</option>
-                            </select>
-                          </label>
-                          <label className="space-y-2">
-                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Audience</div>
-                            <select className="input" value={bannerForm.audience} onChange={(e) => setBannerForm((prev) => ({ ...prev, audience: e.target.value }))}>
-                              <option value="all">All</option>
-                              <option value="active">Active</option>
-                              <option value="prospect">Prospect</option>
-                              <option value="inactive">Inactive</option>
-                            </select>
-                          </label>
-                        </div>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Target value</div>
-                          <input className="input" value={bannerForm.targetValue} onChange={(e) => setBannerForm((prev) => ({ ...prev, targetValue: e.target.value }))} placeholder="Optional route or plan code" />
-                        </label>
-                        <div className="grid gap-3 md:grid-cols-3">
-                          <label className="space-y-2">
-                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Sort order</div>
-                            <input className="input" type="number" value={bannerForm.sortOrder} onChange={(e) => setBannerForm((prev) => ({ ...prev, sortOrder: e.target.value }))} />
-                          </label>
-                          <label className="space-y-2">
-                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Starts</div>
-                            <input className="input" type="datetime-local" value={bannerForm.startAt} onChange={(e) => setBannerForm((prev) => ({ ...prev, startAt: e.target.value }))} />
-                          </label>
-                          <label className="space-y-2">
-                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Ends</div>
-                            <input className="input" type="datetime-local" value={bannerForm.endAt} onChange={(e) => setBannerForm((prev) => ({ ...prev, endAt: e.target.value }))} />
-                          </label>
-                        </div>
-                        <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                          <input type="checkbox" checked={bannerForm.active} onChange={(e) => setBannerForm((prev) => ({ ...prev, active: e.target.checked }))} />
-                          Start this promotion as active
-                        </label>
-                        <div className="rounded-[18px] border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
-                          Tip: use `plans` for upgrade nudges, `billing` for payment reminders, `support` for help shortcuts, and `tracking` for service follow-up banners.
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                          <button type="button" className="btn-primary" onClick={() => void createBanner()} disabled={isSavingBanner}>
-                            {isSavingBanner ? 'Creating...' : 'Create promotion'}
-                          </button>
-                          <button type="button" className="btn-secondary" onClick={() => setBannerForm(emptyBannerForm())} disabled={isSavingBanner}>
-                            Reset form
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {isSectionLoading ? (
+              <div className="card p-8 text-center">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
+                <div className="mt-3 text-sm text-slate-500">Loading {activeMeta.title}...</div>
               </div>
             ) : (
-              <div className="grid gap-4 xl:grid-cols-[1fr_0.9fr]">
-                <div className="card p-5">
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Section editor</div>
-                  <textarea
-                    className="mt-4 min-h-[560px] w-full rounded-[22px] border border-white/10 bg-[#0a0e27] p-4 font-mono text-sm text-slate-200 outline-none"
-                    value={genericJson}
-                    onChange={(e) => setGenericJson(e.target.value)}
-                  />
-                </div>
+              <>
+                <section className="card p-5">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
+                      <div
+                        key={fieldKey}
+                        className={inputKind(fieldValue) === 'object' || inputKind(fieldValue) === 'array' ? 'lg:col-span-2' : ''}
+                      >
+                        <FieldEditor label={fieldKey} value={fieldValue} path={[fieldKey]} onChange={handleValueChange} onRemove={handleValueRemove} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
 
-                <div className="card p-5 space-y-4">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-white/45">
-                    <SlidersHorizontal className="h-4 w-4" />
-                    Future-ready flow
-                  </div>
-                  <div className="text-sm leading-7 text-slate-300">
-                    Yeh section generic JSON editor ke saath rakha gaya hai taaki tum future me quickly naye settings blocks add kar sako without naya page banaye.
-                  </div>
-                  <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Fields preview</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {(orderedCatalog.find((item) => item.section === activeSection)?.fieldsPreview || []).map((field) => (
-                        <span key={field} className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-                          {field}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                <section className="card p-5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Section Preview</div>
+                  <pre className="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-4 text-xs leading-6 text-slate-200">
+                    {JSON.stringify(sectionValue, null, 2)}
+                  </pre>
+                </section>
+              </>
             )}
           </div>
         </section>
