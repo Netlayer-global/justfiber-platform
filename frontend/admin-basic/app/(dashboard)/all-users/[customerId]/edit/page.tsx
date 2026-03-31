@@ -4,20 +4,25 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { Customer } from '@/lib/types'
-import { Loader } from 'lucide-react'
+import type { Customer, Plan } from '@/lib/types'
+import { Copy, Loader } from 'lucide-react'
 import { toast } from 'sonner'
 
 type FormState = {
   fullName: string
   phone: string
   email: string
+  planCode: string
+  customerType: 'home' | 'business'
   line1: string
   line2: string
   area: string
   city: string
   state: string
   pinCode: string
+  createIptvBilling: boolean
+  createOttBilling: boolean
+  createVoiceBilling: boolean
   currentIpv4: string
   ipv4Pool: string
   operationalStatus: 'active' | 'inactive' | 'suspended'
@@ -27,12 +32,17 @@ const emptyForm: FormState = {
   fullName: '',
   phone: '',
   email: '',
+  planCode: '',
+  customerType: 'home',
   line1: '',
   line2: '',
   area: '',
   city: '',
   state: '',
   pinCode: '',
+  createIptvBilling: false,
+  createOttBilling: false,
+  createVoiceBilling: false,
   currentIpv4: '',
   ipv4Pool: '',
   operationalStatus: 'active',
@@ -42,34 +52,45 @@ export default function EditUserPage() {
   const params = useParams<{ customerId: string }>()
   const customerId = params.customerId
   const [customer, setCustomer] = useState<Customer | null>(null)
+  const [plans, setPlans] = useState<Plan[]>([])
   const [form, setForm] = useState<FormState>(emptyForm)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (!customerId) return
-    void loadCustomer()
+    void loadPage()
   }, [customerId])
 
-  async function loadCustomer() {
+  async function loadPage() {
     try {
       setIsLoading(true)
-      const res = await adminAPI.getCustomer(customerId)
-      if (!res.success || !res.data) throw new Error(res.error || 'Failed to load user')
-      setCustomer(res.data)
+      const [customerRes, plansRes] = await Promise.all([
+        adminAPI.getCustomer(customerId),
+        adminAPI.getPlans(),
+      ])
+      if (!customerRes.success || !customerRes.data) throw new Error(customerRes.error || 'Failed to load user')
+      if (!plansRes.success) throw new Error(plansRes.error || 'Failed to load plans')
+      setCustomer(customerRes.data)
+      setPlans(plansRes.data?.items || [])
       setForm({
-        fullName: res.data.name || '',
-        phone: res.data.phone || '',
-        email: res.data.email === '-' ? '' : res.data.email || '',
-        line1: res.data.rawAddress?.line1 || '',
-        line2: res.data.rawAddress?.line2 || '',
-        area: res.data.rawAddress?.area || '',
-        city: res.data.rawAddress?.city || '',
-        state: res.data.rawAddress?.state || '',
-        pinCode: res.data.rawAddress?.pinCode || '',
-        currentIpv4: res.data.radiusService?.currentIpv4 || '',
-        ipv4Pool: res.data.radiusService?.ipv4Pool || '',
-        operationalStatus: res.data.status,
+        fullName: customerRes.data.name || '',
+        phone: customerRes.data.phone || '',
+        email: customerRes.data.email === '-' ? '' : customerRes.data.email || '',
+        planCode: customerRes.data.plan?.id || '',
+        customerType: customerRes.data.billingSnapshot?.customerType === 'business' ? 'business' : 'home',
+        line1: customerRes.data.rawAddress?.line1 || '',
+        line2: customerRes.data.rawAddress?.line2 || '',
+        area: customerRes.data.rawAddress?.area || '',
+        city: customerRes.data.rawAddress?.city || '',
+        state: customerRes.data.rawAddress?.state || '',
+        pinCode: customerRes.data.rawAddress?.pinCode || '',
+        createIptvBilling: Boolean(customerRes.data.billingSnapshot?.serviceFlags?.iptv),
+        createOttBilling: Boolean(customerRes.data.billingSnapshot?.serviceFlags?.ott),
+        createVoiceBilling: Boolean(customerRes.data.billingSnapshot?.serviceFlags?.voice),
+        currentIpv4: customerRes.data.radiusService?.currentIpv4 || '',
+        ipv4Pool: customerRes.data.radiusService?.ipv4Pool || '',
+        operationalStatus: customerRes.data.status,
       })
     } catch (error) {
       console.error('[edit-user] Failed to load user:', error)
@@ -82,13 +103,30 @@ export default function EditUserPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!customer) return
+    const selectedPlan = plans.find((item) => item.id === form.planCode || item.planCode === form.planCode)
     try {
       setIsSaving(true)
       const res = await adminAPI.updateCustomer(customer.id, {
-        name: form.fullName,
+        name: form.fullName.trim(),
         phone: form.phone,
         email: form.email || '-',
         status: form.operationalStatus,
+        plan: selectedPlan
+          ? {
+              id: selectedPlan.planCode || selectedPlan.id,
+              name: selectedPlan.name,
+            }
+          : customer.plan,
+        billingSnapshot: {
+          ...(customer.billingSnapshot || {}),
+          customerType: form.customerType,
+          serviceFlags: {
+            ...(customer.billingSnapshot?.serviceFlags || {}),
+            iptv: form.createIptvBilling,
+            ott: form.createOttBilling,
+            voice: form.createVoiceBilling,
+          },
+        },
         rawAddress: {
           line1: form.line1,
           line2: form.line2,
@@ -98,13 +136,14 @@ export default function EditUserPage() {
           pinCode: form.pinCode,
         },
         radiusService: {
+          ...(customer.radiusService || {}),
           currentIpv4: form.currentIpv4 || null,
           ipv4Pool: form.currentIpv4 ? null : form.ipv4Pool || null,
         },
       })
       if (!res.success) throw new Error(res.error || 'Failed to save user')
       toast.success('User profile updated')
-      await loadCustomer()
+      await loadPage()
     } catch (error) {
       console.error('[edit-user] Failed to save user:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to save user')
@@ -136,7 +175,7 @@ export default function EditUserPage() {
           </div>
           <div className="flex gap-3">
             <Link href={`/all-users/${customer.id}`} className="btn-secondary">View user</Link>
-            <Link href="/all-users" className="btn-secondary">View users</Link>
+            <Link href="/user-management?view=users" className="btn-secondary">View users</Link>
           </div>
         </div>
       </section>
@@ -144,12 +183,12 @@ export default function EditUserPage() {
       <form onSubmit={handleSave} className="card p-6 space-y-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Edit User</h1>
-          <p className="mt-2 text-sm text-slate-500">Jaze-style operator edit flow, wired to current customer and radius service fields.</p>
+          <p className="mt-2 text-sm text-slate-500">Jaze-style operator edit flow, wired only to fields that backend actually saves today.</p>
         </div>
 
         <section className="space-y-4">
           <h2 className="text-xl font-semibold text-slate-900">Login Information</h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">User Name</div>
               <input className="input" value={customer.pppoeUsername || customer.customerId || ''} disabled />
@@ -173,12 +212,54 @@ export default function EditUserPage() {
               <input className="input" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
             </label>
             <label className="space-y-2 md:col-span-2">
+              <div className="text-sm font-medium text-slate-600">Account Number</div>
+              <input className="input" value={customer.accountNumber || customer.customerId || ''} disabled />
+            </label>
+            <button
+              type="button"
+              className="btn-secondary inline-flex items-center justify-center gap-2 self-end"
+              onClick={async () => {
+                await navigator.clipboard.writeText(customer.pppoeUsername || customer.customerId || '')
+                toast.success('Username copied')
+              }}
+            >
+              <Copy className="h-4 w-4" />
+              Copy username
+            </button>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold text-slate-900">Personal Information</h2>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Full Name</div>
+              <input className="input" value={form.fullName} onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))} />
+            </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Mobile Number</div>
+              <input className="input" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
+            </label>
+            <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Email</div>
               <input className="input" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
             </label>
-            <label className="space-y-2 md:col-span-2">
-              <div className="text-sm font-medium text-slate-600">Billing Address Line 1</div>
-              <input className="input" value={form.line1} onChange={(e) => setForm((prev) => ({ ...prev, line1: e.target.value }))} />
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Package</div>
+              <select className="input" value={form.planCode} onChange={(e) => setForm((prev) => ({ ...prev, planCode: e.target.value }))}>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.planCode || plan.id}>
+                    {plan.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Customer Type</div>
+              <select className="input" value={form.customerType} onChange={(e) => setForm((prev) => ({ ...prev, customerType: e.target.value as FormState['customerType'] }))}>
+                <option value="home">Home</option>
+                <option value="business">Business</option>
+              </select>
             </label>
           </div>
         </section>
@@ -186,6 +267,10 @@ export default function EditUserPage() {
         <section className="space-y-4">
           <h2 className="text-xl font-semibold text-slate-900">Installation Address</h2>
           <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 md:col-span-2">
+              <div className="text-sm font-medium text-slate-600">Address Line 1</div>
+              <input className="input" value={form.line1} onChange={(e) => setForm((prev) => ({ ...prev, line1: e.target.value }))} />
+            </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Address Line 2</div>
               <input className="input" value={form.line2} onChange={(e) => setForm((prev) => ({ ...prev, line2: e.target.value }))} />
@@ -210,8 +295,26 @@ export default function EditUserPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Network Information</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Billing Information</h2>
           <div className="grid gap-4 md:grid-cols-3">
+            <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <input type="checkbox" checked={form.createIptvBilling} onChange={(e) => setForm((prev) => ({ ...prev, createIptvBilling: e.target.checked }))} />
+              Create IPTV billing
+            </label>
+            <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <input type="checkbox" checked={form.createOttBilling} onChange={(e) => setForm((prev) => ({ ...prev, createOttBilling: e.target.checked }))} />
+              Create OTT billing
+            </label>
+            <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <input type="checkbox" checked={form.createVoiceBilling} onChange={(e) => setForm((prev) => ({ ...prev, createVoiceBilling: e.target.checked }))} />
+              Create Voice billing
+            </label>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold text-slate-900">Network Information</h2>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Static IP allocation</div>
               <input className="input" placeholder="IP address" value={form.currentIpv4} onChange={(e) => setForm((prev) => ({ ...prev, currentIpv4: e.target.value }))} />
@@ -221,16 +324,54 @@ export default function EditUserPage() {
               <input className="input" placeholder="Pool name" value={form.ipv4Pool} disabled={Boolean(form.currentIpv4)} onChange={(e) => setForm((prev) => ({ ...prev, ipv4Pool: e.target.value }))} />
             </label>
             <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">State</div>
-              <select className="input" value={form.operationalStatus} onChange={(e) => setForm((prev) => ({ ...prev, operationalStatus: e.target.value as FormState['operationalStatus'] }))}>
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-                <option value="inactive">Blocked</option>
-              </select>
+              <div className="text-sm font-medium text-slate-600">BNG</div>
+              <input className="input" value={customer.radiusService?.bngNodeCode || ''} disabled />
+            </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Access Profile</div>
+              <input className="input" value={customer.radiusService?.accessProfileCode || ''} disabled />
+            </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Billing Profile</div>
+              <input className="input" value={customer.radiusService?.billingProfileCode || ''} disabled />
+            </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Bound MAC</div>
+              <input
+                className="input"
+                value={
+                  customer.devices?.[0]?.wanInfo?.macAddress ||
+                  customer.devices?.[0]?.wanInfo?.mac ||
+                  customer.devices?.[0]?.lanInfo?.macAddress ||
+                  ''
+                }
+                disabled
+              />
             </label>
           </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold text-slate-900">Activation</h2>
+          <div className="grid gap-3 md:grid-cols-3">
+            {([
+              { key: 'inactive', label: 'Blocked' },
+              { key: 'suspended', label: 'Suspended' },
+              { key: 'active', label: 'Active' },
+            ] as const).map((option) => (
+              <label key={option.key} className={`flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm ${form.operationalStatus === option.key ? 'border-[#5B6CFF]/30 bg-[#eef1ff] text-[#2a44ff]' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                <input
+                  type="radio"
+                  name="operationalStatus"
+                  checked={form.operationalStatus === option.key}
+                  onChange={() => setForm((prev) => ({ ...prev, operationalStatus: option.key }))}
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-            Profile photo, signature, proof upload, and billing flags ko next phase me document manager ke saath bind karenge. Abhi customer core profile + address + static IP flow working hai.
+            Profile photo, signature, proof upload, Aadhaar link, installation report, session MAC bind, and free-IP allocation ko next task me document/network manager ke saath fully wire karenge. Is pass me customer core profile, package, billing flags, address, static IP/pool, and activation state working hain.
           </div>
         </section>
 
