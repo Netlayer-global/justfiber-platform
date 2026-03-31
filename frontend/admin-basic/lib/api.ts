@@ -1612,6 +1612,23 @@ export const adminAPI = {
       data: res.data ? mapTicket(res.data) : undefined,
     }
   },
+  createTicket: async (data: {
+    customerId: string
+    serviceId?: string
+    category: string
+    priority?: 'low' | 'medium' | 'high' | 'critical'
+    subject: string
+    description: string
+  }) => {
+    const res = await request<any>('/api/v1/admin/tickets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapTicket(res.data) : undefined,
+    }
+  },
   updateTicket: (id: string, data: Partial<Ticket> & { note?: string }) =>
     request<Ticket>(`/api/v1/admin/tickets/${id}`, {
       method: 'PATCH',

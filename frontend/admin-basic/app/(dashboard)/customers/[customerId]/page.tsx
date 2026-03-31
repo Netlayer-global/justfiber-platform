@@ -1,10 +1,11 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import type { AdminPlanChangePreview, Customer, CustomerBillingControlResponse, CustomerDevice, Installer, Plan } from '@/lib/types'
-import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet } from 'lucide-react'
+import { Activity, CreditCard, Loader, RefreshCw, Router, Ticket, UserCircle2, Wallet, ChevronDown, ChevronUp, CircleDot, Ban, ShieldCheck, PlugZap, Pencil, BadgeIndianRupee, FilePlus2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 type TabKey = 'overview' | 'billing' | 'devices' | 'tickets' | 'actions'
@@ -103,6 +104,19 @@ function CustomerDetailContent() {
   const [staticIpForm, setStaticIpForm] = useState({
     currentIpv4: '',
     ipv4Pool: '',
+  })
+  const [detailSections, setDetailSections] = useState({
+    lastPayment: true,
+    userTickets: true,
+    installationAddress: true,
+    billingInformation: true,
+    networkInformation: true,
+  })
+  const [ticketForm, setTicketForm] = useState({
+    category: 'support',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    subject: '',
+    description: '',
   })
 
   useEffect(() => {
@@ -1043,6 +1057,75 @@ function CustomerDetailContent() {
     }
   }
 
+  function toggleDetailSection(section: keyof typeof detailSections) {
+    setDetailSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }))
+  }
+
+  async function handleDisconnectSession() {
+    if (!customer || !radiusService?.bngNodeCode || !(radiusService?.radiusUsername || customer.pppoeUsername)) {
+      toast.error('Missing router node or PPPoE username for disconnect')
+      return
+    }
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.sendBngNodeCoaDisconnect(radiusService.bngNodeCode, {
+        radiusUsername: radiusService.radiusUsername || customer.pppoeUsername || '',
+        reason: reason || 'Customer detail disconnect',
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to disconnect live PPP session')
+        return
+      }
+      toast.success('Disconnect request sent to BNG')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[customer-detail] Failed to disconnect PPP session:', error)
+      toast.error('Failed to disconnect live PPP session')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleCreateTicket() {
+    if (!customer) return
+    if (!ticketForm.subject.trim() || !ticketForm.description.trim()) {
+      toast.error('Ticket subject and description are required')
+      return
+    }
+    try {
+      setIsSaving(true)
+      const res = await adminAPI.createTicket({
+        customerId: customer.customerId || customer.id,
+        serviceId: customer.serviceId || radiusService?.serviceId || undefined,
+        category: ticketForm.category.trim(),
+        priority: ticketForm.priority,
+        subject: ticketForm.subject.trim(),
+        description: ticketForm.description.trim(),
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to create ticket')
+        return
+      }
+      toast.success('Ticket created')
+      setTicketForm({
+        category: 'support',
+        priority: 'medium',
+        subject: '',
+        description: '',
+      })
+      setActiveTab('tickets')
+      await loadCustomer()
+    } catch (error) {
+      console.error('[customer-detail] Failed to create ticket:', error)
+      toast.error('Failed to create ticket')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   function handleOpenRadiusAudit() {
     setActiveTab('overview')
     if (typeof window !== 'undefined') {
@@ -1147,9 +1230,89 @@ function CustomerDetailContent() {
       hint: usageCapGb > 0 ? `${usageGb.toFixed(2)} GB / ${usageCapGb.toFixed(0)} GB` : 'No capped policy',
     },
   ]
+  const customerOnline =
+    primaryDevice?.onlineStatus === 'online' ||
+    controlHasRecentSession ||
+    String(billingControlCenter?.latestAuthReply || '').toLowerCase().includes('accept')
+  const lastPayment = customer.payments?.[0]
+  const accountBadgeClass =
+    customer.status === 'active'
+      ? 'rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'
+      : customer.status === 'suspended'
+        ? 'rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'
+        : 'rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600'
 
   return (
     <div className="space-y-6">
+      <section className="card p-5 md:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+              <span>User management</span>
+              <span>/</span>
+              <span>{customer.plan.name} Group</span>
+              <span>/</span>
+              <span>{customer.pppoeUsername || customer.customerId || customer.id}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{customer.pppoeUsername || customer.name}</h1>
+              <span className={accountBadgeClass}>{customer.status.toUpperCase()}</span>
+              <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                Rs {Number(billingSummary.dueAmount || 0).toFixed(2)} unpaid
+              </span>
+              <span className="rounded-full border border-[#2d7dff]/20 bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#2d7dff]">
+                Package : {customer.plan.name}
+              </span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                Open tickets : {customer.tickets?.filter((ticket) => !['resolved', 'closed'].includes(String(ticket.status).toLowerCase())).length || 0}
+              </span>
+            </div>
+            <div className="text-sm text-slate-500">
+              {customer.name} • {customer.phone} • {customer.email} • Service {customer.serviceId || '-'}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => { setActiveTab('billing'); window.setTimeout(() => document.getElementById('payment-renew-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80) }}>
+              <BadgeIndianRupee className="h-4 w-4" />
+              Renew
+            </button>
+            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void handleBillingPromiseReview()} disabled={isSaving}>
+              Grace
+            </button>
+            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void handleDisconnectSession()} disabled={isSaving}>
+              <PlugZap className="h-4 w-4" />
+              Disconnect
+            </button>
+            <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary inline-flex items-center gap-2">
+              <Pencil className="h-4 w-4" />
+              Edit User
+            </Link>
+            {customer.status === 'suspended' ? (
+              <button className="btn-primary inline-flex items-center gap-2" onClick={() => void handleResume()} disabled={isSaving}>
+                <ShieldCheck className="h-4 w-4" />
+                Resume
+              </button>
+            ) : (
+              <button className="btn-secondary inline-flex items-center gap-2 border-rose-200 text-rose-700" onClick={() => void handleSuspend()} disabled={isSaving}>
+                <Ban className="h-4 w-4" />
+                Block
+              </button>
+            )}
+          </div>
+        </div>
+        <div className={`mt-5 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm ${
+          customerOnline ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'
+        }`}>
+          <div className="flex items-center gap-3">
+            <CircleDot className={`h-4 w-4 ${customerOnline ? 'text-emerald-600' : 'text-amber-600'}`} />
+            <span>{customerOnline ? 'User is online' : 'Live session not confirmed'}</span>
+          </div>
+          <button className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving || !customerOnline}>
+            Disconnect
+          </button>
+        </div>
+      </section>
+
       <div className="grid gap-4 xl:grid-cols-[1.6fr_0.9fr]">
         <section className="card p-6 md:p-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -1251,6 +1414,151 @@ function CustomerDetailContent() {
           <div className="space-y-4">
             {activeTab === 'overview' ? (
               <>
+                <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                  <div className="card p-5 space-y-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-slate-900">{customer.pppoeUsername || customer.name}</h2>
+                      <p className="mt-1 text-sm text-slate-500">{customer.plan.name} • {customer.billingSnapshot?.zoneName || 'Default zone'}</p>
+                    </div>
+
+                    {[
+                      {
+                        key: 'lastPayment',
+                        label: 'Last payment',
+                        body: (
+                          <div className="grid gap-2 text-sm text-slate-600">
+                            <div><span className="font-medium text-slate-900">Amount:</span> Rs {Number(lastPayment?.amount || 0).toFixed(2)}</div>
+                            <div><span className="font-medium text-slate-900">Status:</span> {formatValue(lastPayment?.status, '-')}</div>
+                            <div><span className="font-medium text-slate-900">Paid at:</span> {formatDateTime(lastPayment?.paidAt)}</div>
+                            <div><span className="font-medium text-slate-900">Reference:</span> {formatValue(lastPayment?.transactionId, '-')}</div>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'userTickets',
+                        label: 'User tickets',
+                        body: (
+                          <div className="space-y-2 text-sm text-slate-600">
+                            {(customer.tickets || []).length ? customer.tickets?.slice(0, 4).map((ticket) => (
+                              <div key={ticket.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                                <div className="font-medium text-slate-900">{ticket.ticketNumber || ticket.id}</div>
+                                <div className="mt-1">{ticket.subject}</div>
+                                <div className="mt-1 text-xs text-slate-500">{ticket.status} • {ticket.priority}</div>
+                              </div>
+                            )) : <div className="text-slate-500">No tickets yet</div>}
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'installationAddress',
+                        label: 'Installation address',
+                        body: (
+                          <div className="text-sm text-slate-600">
+                            {formatValue(customer.address, 'No installation address')}
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'billingInformation',
+                        label: 'Billing information',
+                        body: (
+                          <div className="grid gap-2 text-sm text-slate-600">
+                            <div><span className="font-medium text-slate-900">Balance:</span> Rs {Number(billingSummary.balance || 0).toFixed(2)}</div>
+                            <div><span className="font-medium text-slate-900">Due:</span> Rs {Number(billingSummary.dueAmount || 0).toFixed(2)}</div>
+                            <div><span className="font-medium text-slate-900">Bill mode:</span> {formatValue(billingSummary.billMode, '-')}</div>
+                            <div><span className="font-medium text-slate-900">Expiry:</span> {formatDateTime(customer.expiryAt)}</div>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'networkInformation',
+                        label: 'Network information',
+                        body: (
+                          <div className="grid gap-2 text-sm text-slate-600">
+                            <div><span className="font-medium text-slate-900">Static IP:</span> {formatValue(radiusStaticIpv4 || radiusIpv4Pool, '(empty)')}</div>
+                            <div><span className="font-medium text-slate-900">MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac || primaryDevice?.lanInfo?.macAddress, '-')}</div>
+                            <div><span className="font-medium text-slate-900">NAS port:</span> {formatValue(billingControlCenter?.lastSessionHint?.nasPortId, '-')}</div>
+                            <div><span className="font-medium text-slate-900">Auth:</span> {radiusRejectState ? 'IP / MAC / PPPoE suspended' : 'IP / MAC / PPPoE / Hotspot ok'}</div>
+                          </div>
+                        ),
+                      },
+                    ].map((section) => {
+                      const open = detailSections[section.key as keyof typeof detailSections]
+                      return (
+                        <div key={section.key} className="rounded-2xl border border-slate-200">
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between px-4 py-3 text-left"
+                            onClick={() => toggleDetailSection(section.key as keyof typeof detailSections)}
+                          >
+                            <span className="text-sm font-semibold text-slate-900">{section.label}</span>
+                            {open ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+                          </button>
+                          {open ? <div className="border-t border-slate-200 px-4 py-4">{section.body}</div> : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="card p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold text-slate-900">Usage & service health</h2>
+                          <p className="mt-1 text-sm text-slate-500">Jaze-style quick summary for active line, data, and billing position.</p>
+                        </div>
+                        <button className="btn-secondary" onClick={() => setActiveTab('devices')}>Sessions</button>
+                      </div>
+                      <div className="mt-5 grid gap-4 md:grid-cols-4">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+                          <div className="text-2xl font-semibold text-slate-900">{usagePercent}%</div>
+                          <div className="mt-1 text-sm text-slate-500">Data used</div>
+                          <div className="mt-2 text-xs text-slate-400">{usageGb.toFixed(2)} GB</div>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+                          <div className="text-2xl font-semibold text-slate-900">{usageCapGb > 0 ? `${Math.max(0, usageCapGb - usageGb).toFixed(2)} GB` : '∞'}</div>
+                          <div className="mt-1 text-sm text-slate-500">Data remaining</div>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+                          <div className="text-2xl font-semibold text-slate-900">{usageCapGb > 0 ? `${usageCapGb.toFixed(0)} GB` : 'Unlimited'}</div>
+                          <div className="mt-1 text-sm text-slate-500">Total data</div>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+                          <div className="text-2xl font-semibold text-slate-900">{Number(billingSummary.additionalFupGb || 0).toFixed(0)} GB</div>
+                          <div className="mt-1 text-sm text-slate-500">Additional FUP</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card p-5 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold text-slate-900">Raise ticket</h2>
+                          <p className="mt-1 text-sm text-slate-500">Create support case directly from customer screen.</p>
+                        </div>
+                        <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('tickets')}>
+                          <FilePlus2 className="h-4 w-4" />
+                          View tickets
+                        </button>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <input className="input" placeholder="Ticket type / category" value={ticketForm.category} onChange={(e) => setTicketForm((current) => ({ ...current, category: e.target.value }))} />
+                        <select className="input" value={ticketForm.priority} onChange={(e) => setTicketForm((current) => ({ ...current, priority: e.target.value as typeof current.priority }))}>
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                          <option value="critical">Critical</option>
+                        </select>
+                        <input className="input md:col-span-2" placeholder="Ticket subject" value={ticketForm.subject} onChange={(e) => setTicketForm((current) => ({ ...current, subject: e.target.value }))} />
+                        <textarea className="input min-h-40 md:col-span-2" placeholder="Comments / issue details" value={ticketForm.description} onChange={(e) => setTicketForm((current) => ({ ...current, description: e.target.value }))} />
+                      </div>
+                      <div className="flex justify-end">
+                        <button className="btn-primary" onClick={() => void handleCreateTicket()} disabled={isSaving}>Create ticket</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div id="radius-audit-panel" className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Profile & Service</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1276,7 +1584,7 @@ function CustomerDetailContent() {
                     <button className="btn-secondary" onClick={() => void handleCustomerUpdate({ status: 'active' })} disabled={isSaving}>Mark Active</button>
                   </div>
                 </div>
-                <div className="card p-5 space-y-4">
+                <div id="payment-renew-card" className="card p-5 space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h2 className="text-lg font-semibold">Tenure & Billing Cycle</h2>
