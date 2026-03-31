@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
@@ -39,6 +40,38 @@ function safePreviewJson(value: unknown, fallback = '') {
     return JSON.stringify(value).slice(0, 220)
   } catch {
     return '[unserializable payload]'
+  }
+}
+
+class CustomerDetailErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('[customer-detail] Render crash caught by boundary:', error)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="card p-6 text-sm text-slate-600">
+          <div className="text-lg font-semibold text-slate-900">Customer page could not render fully</div>
+          <div className="mt-2">
+            We caught a customer-detail render error and prevented the full admin app from crashing. Refresh once, and if it still happens, share the browser console error so we can clear the remaining edge case.
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
   }
 }
 
@@ -296,11 +329,11 @@ function CustomerDetailContent() {
   )
   const billingControlCenter = customerBillingControl?.controlCenter
   const billingRiskProfile = customerBillingControl?.riskProfile
-  const billingRecommendedActions = customerBillingControl?.recommendedActions || []
-  const billingPendingApprovals = customerBillingControl?.pendingApprovals || []
-  const billingTimeline = customerBillingControl?.timeline || []
-  const billingWaivers = customerBillingControl?.waivers || []
-  const billingWriteoffs = customerBillingControl?.writeoffs || []
+  const billingRecommendedActions = Array.isArray(customerBillingControl?.recommendedActions) ? customerBillingControl.recommendedActions : []
+  const billingPendingApprovals = Array.isArray(customerBillingControl?.pendingApprovals) ? customerBillingControl.pendingApprovals : []
+  const billingTimeline = Array.isArray(customerBillingControl?.timeline) ? customerBillingControl.timeline : []
+  const billingWaivers = Array.isArray(customerBillingControl?.waivers) ? customerBillingControl.waivers : []
+  const billingWriteoffs = Array.isArray(customerBillingControl?.writeoffs) ? customerBillingControl.writeoffs : []
   const controlDisconnectStatus = String(billingControlCenter?.lastBngDisconnectStatus || '').toLowerCase()
   const controlHasRecentSession = Boolean(billingControlCenter?.lastSessionHint?.hasRecentSession)
   const serviceControlState =
@@ -1354,6 +1387,7 @@ function CustomerDetailContent() {
     String(billingControlCenter?.latestAuthReply || '').toLowerCase().includes('accept')
   const lastPayment = customer.payments?.[0]
   const latestKycRequest = recentKycRequests[0] || null
+  const billingRiskPriority = String(billingRiskProfile?.priority || '').toLowerCase()
   const proofState = latestInstallJob?.proofUploadedAt
     ? 'proof_ready'
     : latestInstallJob
@@ -2051,15 +2085,15 @@ function CustomerDetailContent() {
                         </div>
                         {billingRiskProfile ? (
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                            billingRiskProfile.priority === 'critical'
+                            billingRiskPriority === 'critical'
                               ? 'bg-rose-500/15 text-rose-300'
-                              : billingRiskProfile.priority === 'high'
+                              : billingRiskPriority === 'high'
                                 ? 'bg-amber-500/15 text-amber-300'
-                                : billingRiskProfile.priority === 'medium'
+                                : billingRiskPriority === 'medium'
                                   ? 'bg-sky-500/15 text-sky-300'
                                   : 'bg-slate-100 text-slate-600'
                           }`}>
-                            {billingRiskProfile.priority.toUpperCase()} RISK
+                            {billingRiskPriority ? `${billingRiskPriority.toUpperCase()} RISK` : 'RISK'}
                           </span>
                         ) : null}
                       </div>
@@ -3484,14 +3518,16 @@ function CustomerDetailContent() {
 
 export default function CustomerDetailPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center h-96">
-          <Loader className="h-6 w-6 animate-spin text-[#5B6CFF]" />
-        </div>
-      }
-    >
-      <CustomerDetailContent />
-    </Suspense>
+    <CustomerDetailErrorBoundary>
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center h-96">
+            <Loader className="h-6 w-6 animate-spin text-[#5B6CFF]" />
+          </div>
+        }
+      >
+        <CustomerDetailContent />
+      </Suspense>
+    </CustomerDetailErrorBoundary>
   )
 }
