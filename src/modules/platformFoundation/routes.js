@@ -459,6 +459,43 @@ async function runFreeradiusCommand(commandParts = []) {
   }
 }
 
+async function runFreeradiusHelper(commandParts = [], args = []) {
+  if (!Array.isArray(commandParts) || commandParts.length === 0) {
+    return { ran: false, skipped: true, reason: "missing_helper_command" };
+  }
+
+  const [command, ...baseArgs] = commandParts;
+  try {
+    const result = await execFileAsync(command, [...baseArgs, ...args], { timeout: 15000, maxBuffer: 1024 * 1024 });
+    return {
+      ran: true,
+      ok: true,
+      command: [command, ...baseArgs, ...args].join(" "),
+      stdout: String(result?.stdout || "").trim(),
+      stderr: String(result?.stderr || "").trim()
+    };
+  } catch (error) {
+    return {
+      ran: true,
+      ok: false,
+      command: [command, ...baseArgs, ...args].join(" "),
+      stdout: String(error?.stdout || "").trim(),
+      stderr: String(error?.stderr || "").trim(),
+      reason: error instanceof Error ? error.message : "helper_command_failed"
+    };
+  }
+}
+
+function parseHelperJson(stdout = "") {
+  const text = String(stdout || "").trim();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 async function validateAndReloadFreeradius() {
   const validate = await runFreeradiusCommand(env.FREERADIUS_VALIDATE_COMMAND);
   if (validate.ran && !validate.ok) {
@@ -534,6 +571,18 @@ function parseFreeradiusAuthBlocks(contents) {
 }
 
 async function readLatestRadiusAuthTelemetry({ radiusUsername, limit = 20 } = {}) {
+  if (env.FREERADIUS_AUTH_TELEMETRY_HELPER_COMMAND?.length) {
+    const helper = await runFreeradiusHelper(env.FREERADIUS_AUTH_TELEMETRY_HELPER_COMMAND, [radiusUsername || ""]);
+    if (!helper.ok) {
+      return { found: false, reason: helper.reason || helper.stderr || "auth_telemetry_helper_failed", command: helper.command };
+    }
+    const parsed = parseHelperJson(helper.stdout);
+    if (parsed && typeof parsed === "object") {
+      return { found: true, ...parsed, command: helper.command };
+    }
+    return { found: false, reason: "invalid_auth_telemetry_helper_output", command: helper.command };
+  }
+
   const baseDir = String(env.FREERADIUS_AUTH_DETAIL_DIR || "").trim();
   if (!baseDir) {
     return { found: false, reason: "missing_auth_detail_dir" };
@@ -621,6 +670,44 @@ async function syncFreeradiusClientForNode(node) {
     return { synced: false, reason: "disabled" };
   }
 
+  if (env.FREERADIUS_SYNC_HELPER_COMMAND?.length) {
+    const payload = Buffer.from(
+      JSON.stringify({
+        action: "upsert",
+        nodeCode: node.nodeCode,
+        displayName: node.displayName,
+        radiusClientIp: node.radiusClientIp || "",
+        additionalRadiusClientIps: Array.isArray(node.additionalRadiusClientIps) ? node.additionalRadiusClientIps : [],
+        coaSecret: node.coaSecret || "",
+        useCoa: node.useCoa !== false
+      }),
+      "utf8"
+    ).toString("base64url");
+    const helper = await runFreeradiusHelper(env.FREERADIUS_SYNC_HELPER_COMMAND, [node.nodeCode, payload]);
+    const parsed = parseHelperJson(helper.stdout);
+    const result = helper.ok
+      ? {
+          synced: true,
+          filePath: parsed?.filePath || env.FREERADIUS_CLIENTS_FILE,
+          mode: parsed?.mode || "upserted",
+          radiusClientIp: node.radiusClientIp || null,
+          radiusClientIps: getTrustedRadiusClientIps(node),
+          serviceReload: parsed?.serviceReload || {
+            validated: parsed?.validated !== false,
+            reloaded: parsed?.reloaded !== false,
+            validation: { command: parsed?.validationCommand || helper.command, reason: parsed?.validationReason || "" },
+            reload: { command: parsed?.reloadCommand || helper.command, reason: parsed?.reloadReason || "" }
+          }
+        }
+      : {
+          synced: false,
+          filePath: env.FREERADIUS_CLIENTS_FILE,
+          reason: helper.reason || helper.stderr || "sync_helper_failed"
+        };
+    await persistFreeradiusSyncStatus(node.nodeCode, result);
+    return result;
+  }
+
   const filePath = String(env.FREERADIUS_CLIENTS_FILE || "").trim();
   if (!filePath) {
     return { synced: false, reason: "missing_clients_file" };
@@ -660,6 +747,28 @@ async function syncFreeradiusClientForNode(node) {
 async function removeFreeradiusClientForNode(nodeCode) {
   if (!env.FREERADIUS_CLIENTS_AUTOSYNC) {
     return { synced: false, reason: "disabled" };
+  }
+
+  if (env.FREERADIUS_SYNC_HELPER_COMMAND?.length) {
+    const payload = Buffer.from(JSON.stringify({ action: "remove", nodeCode }), "utf8").toString("base64url");
+    const helper = await runFreeradiusHelper(env.FREERADIUS_SYNC_HELPER_COMMAND, [nodeCode, payload]);
+    return helper.ok
+      ? {
+          synced: true,
+          filePath: env.FREERADIUS_CLIENTS_FILE,
+          mode: "removed",
+          serviceReload: {
+            validated: true,
+            reloaded: true,
+            validation: { command: helper.command },
+            reload: { command: helper.command }
+          }
+        }
+      : {
+          synced: false,
+          filePath: env.FREERADIUS_CLIENTS_FILE,
+          reason: helper.reason || helper.stderr || "remove_helper_failed"
+        };
   }
 
   const filePath = String(env.FREERADIUS_CLIENTS_FILE || "").trim();

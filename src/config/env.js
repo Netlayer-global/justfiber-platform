@@ -62,6 +62,14 @@ const schema = z.object({
     .transform(parseOptionalCommand)
     .default("systemctl reload freeradius"),
   FREERADIUS_AUTH_DETAIL_DIR: z.string().default("/var/log/freeradius/radacct"),
+  FREERADIUS_SYNC_HELPER_COMMAND: z
+    .string()
+    .transform(parseOptionalCommand)
+    .default(""),
+  FREERADIUS_AUTH_TELEMETRY_HELPER_COMMAND: z
+    .string()
+    .transform(parseOptionalCommand)
+    .default(""),
   MIKROTIK_BNG_COA_PORT: z.coerce.number().default(3799),
   MIKROTIK_BNG_COA_SECRET: z.string().optional(),
   USAGE_API_URL: z.string().url().optional(),
