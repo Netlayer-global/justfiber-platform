@@ -186,8 +186,16 @@ function CustomerDetailContent() {
       setIsLoading(true)
       const res = await adminAPI.getCustomer(customerId)
       if (res.success && res.data) {
+        const rawPlan = res.data.plan
         const normalizedCustomer: Customer = {
           ...res.data,
+          plan:
+            rawPlan && typeof rawPlan === 'object'
+              ? rawPlan
+              : {
+                  id: '',
+                  name: typeof rawPlan === 'string' ? rawPlan : 'Unassigned plan',
+                } as Customer['plan'],
           devices: Array.isArray(res.data.devices) ? res.data.devices : [],
           tickets: Array.isArray(res.data.tickets) ? res.data.tickets : [],
           serviceRequests: Array.isArray(res.data.serviceRequests) ? res.data.serviceRequests : [],
@@ -472,7 +480,7 @@ function CustomerDetailContent() {
     }
   }
   const currentPlanCode =
-    customer?.plan && 'planCode' in customer.plan
+    customer?.plan && typeof customer.plan === 'object' && customer.plan !== null && 'planCode' in customer.plan
       ? customer.plan.planCode || customer.plan.id
       : customer?.plan?.id
   const currentSpeedMbps = Number(billingSummary.speedMbps || 0)
@@ -481,12 +489,14 @@ function CustomerDetailContent() {
   const remainingDays = Number(billingSummary.remainingDays || 0)
   const recurringInvoiceAmount = Number(billingSummary.lastInvoiceAmount || billingSummary.dueAmount || 0)
   const radiusService = customer?.radiusService || null
+  const radiusRadcheck = Array.isArray(radiusService?.radcheck) ? radiusService.radcheck : []
+  const radiusRadreply = Array.isArray(radiusService?.radreply) ? radiusService.radreply : []
   const primaryDevice = customer?.devices?.[0]
-  const radiusRejectState = radiusService?.radcheck?.some((row) => row.attribute === 'Auth-Type' && row.value === 'Reject') || false
-  const radiusPasswordPresent = radiusService?.radcheck?.some((row) => row.attribute === 'Cleartext-Password') || false
-  const radiusRateLimit = radiusService?.radreply?.find((row) => row.attribute === 'Mikrotik-Rate-Limit')?.value || ''
-  const radiusStaticIpv4 = radiusService?.radreply?.find((row) => row.attribute === 'Framed-IP-Address')?.value || radiusService?.currentIpv4 || ''
-  const radiusIpv4Pool = radiusService?.radreply?.find((row) => row.attribute === 'Framed-Pool')?.value || radiusService?.ipv4Pool || ''
+  const radiusRejectState = radiusRadcheck.some((row) => row.attribute === 'Auth-Type' && row.value === 'Reject')
+  const radiusPasswordPresent = radiusRadcheck.some((row) => row.attribute === 'Cleartext-Password')
+  const radiusRateLimit = radiusRadreply.find((row) => row.attribute === 'Mikrotik-Rate-Limit')?.value || ''
+  const radiusStaticIpv4 = radiusRadreply.find((row) => row.attribute === 'Framed-IP-Address')?.value || radiusService?.currentIpv4 || ''
+  const radiusIpv4Pool = radiusRadreply.find((row) => row.attribute === 'Framed-Pool')?.value || radiusService?.ipv4Pool || ''
   const poolPresets = availableIpPools
     .filter((pool) => pool.useForRadius)
     .filter((pool) => !pool.routerNodeCode || pool.routerNodeCode === radiusService?.bngNodeCode)
@@ -1887,17 +1897,17 @@ function CustomerDetailContent() {
                       </p>
                     </div>
                   </div>
-                  {(radiusService?.radcheck?.length || radiusService?.radreply?.length) ? (
+                  {(radiusRadcheck.length || radiusRadreply.length) ? (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">radcheck</p>
                           <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">
-                            {radiusService?.radcheck?.length || 0} attrs
+                            {radiusRadcheck.length} attrs
                           </span>
                         </div>
                         <div className="space-y-2">
-                          {(radiusService?.radcheck || []).map((row, index) => (
+                          {radiusRadcheck.map((row, index) => (
                             <div key={`check-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
                               <span className="text-slate-500">{row.attribute || '-'}</span>
                               <span className="font-medium text-slate-900">{row.value || '-'}</span>
@@ -1909,11 +1919,11 @@ function CustomerDetailContent() {
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">radreply</p>
                           <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">
-                            {radiusService?.radreply?.length || 0} attrs
+                            {radiusRadreply.length} attrs
                           </span>
                         </div>
                         <div className="space-y-2">
-                          {(radiusService?.radreply || []).map((row, index) => (
+                          {radiusRadreply.map((row, index) => (
                             <div key={`reply-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
                               <span className="text-slate-500">{row.attribute || '-'}</span>
                               <span className="font-medium text-slate-900">{row.value || '-'}</span>
