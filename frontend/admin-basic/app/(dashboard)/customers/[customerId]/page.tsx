@@ -1355,7 +1355,7 @@ function CustomerDetailContent() {
         ? 'rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'
         : 'rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600'
   const activityFeed = useMemo(() => {
-    const customerActions = (customer.actions || []).map((entry) => ({
+    const customerActions = ((customer?.actions) || []).map((entry) => ({
       id: `action-${entry.id}`,
       title: String(entry.actionType || 'customer action').replaceAll('_', ' '),
       status: String(entry.status || 'logged'),
@@ -1382,7 +1382,7 @@ function CustomerDetailContent() {
     return [...customerActions, ...billingEvents, ...radiusEvents]
       .filter((item) => item.at || item.note)
       .sort((left, right) => new Date(right.at || 0).getTime() - new Date(left.at || 0).getTime())
-  }, [billingTimeline, customer.actions, radiusTimeline])
+  }, [billingTimeline, customer?.actions, radiusTimeline])
 
   return (
     <div className="space-y-6">
