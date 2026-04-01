@@ -2155,6 +2155,7 @@ function CustomerDetailContent() {
                 </div>
 
                 {false && (
+                  <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="metric-tile p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-black/40">Billing mode</p>
@@ -2871,6 +2872,7 @@ function CustomerDetailContent() {
                     </div>
                   ) : <p className="text-slate-500 text-sm">No plan/service requests found</p>}
                 </div>
+                  </>
                 )}
               </>
             ) : null}
