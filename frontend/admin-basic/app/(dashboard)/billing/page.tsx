@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { ApprovalRequest, BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
+import { ApprovalRequest, BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
 import { CheckCircle2, Loader, RefreshCw, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -110,7 +110,6 @@ export default function BillingPage() {
   const [financeResolutions, setFinanceResolutions] = useState<BillingFinanceResolutions | null>(null)
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
   const [collectionsWorkbench, setCollectionsWorkbench] = useState<BillingCollectionsWorkbench | null>(null)
-  const [collectionsPlaybooks, setCollectionsPlaybooks] = useState<BillingCollectionsPlaybook[]>([])
   const [bulkSelection, setBulkSelection] = useState<string[]>([])
   const [bulkPreview, setBulkPreview] = useState<BillingCollectionsBulkPreview | null>(null)
   const [bulkAction, setBulkAction] = useState('send_reminder')
@@ -495,7 +494,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionPlaybooksRes, collectionAgentRes, billingRunRes, invoiceTemplateRes, approvalsRes, externalIntegrationsRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionAgentRes, billingRunRes, invoiceTemplateRes, approvalsRes, externalIntegrationsRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -504,7 +503,6 @@ export default function BillingPage() {
         adminAPI.getBillingFinanceResolutions(20),
         adminAPI.getBillingCollections(collectionBucket || undefined),
         adminAPI.getBillingCollectionsWorkbench(collectionBucket || undefined),
-        adminAPI.getBillingCollectionsPlaybooks(),
         adminAPI.getBillingCollectionAgents(),
         adminAPI.getBillingRuns(),
         adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
@@ -586,9 +584,6 @@ export default function BillingPage() {
       }
       if (collectionWorkbenchRes.success && collectionWorkbenchRes.data) {
         setCollectionsWorkbench(collectionWorkbenchRes.data)
-      }
-      if (collectionPlaybooksRes.success && Array.isArray(collectionPlaybooksRes.data)) {
-        setCollectionsPlaybooks(collectionPlaybooksRes.data as BillingCollectionsPlaybook[])
       }
       if (collectionAgentRes.success && collectionAgentRes.data) {
         setCollectionAgents(collectionAgentRes.data)
@@ -742,7 +737,7 @@ export default function BillingPage() {
         paymentStatus: invoiceDraft.paymentStatus,
       }
       if (!payload.customerId && !payload.serviceId) {
-        toast.error('Customer ID ya Service ID required hai')
+        toast.error('Customer ID or Service ID is required')
         return
       }
       const res = await adminAPI.runBillingCycle(payload)
@@ -1545,207 +1540,41 @@ export default function BillingPage() {
 
       {billingSectionTab === 'collections' ? (
       <div className="space-y-4">
-        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-          <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Collections command center</div>
-            <div className="mt-1 text-sm text-slate-600">Focus on queue size, assigned ownership, suspend candidates, and promise-to-pay watchlist.</div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Queue</div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.visible}</div>
-                <div className="mt-1 text-xs text-slate-500">Accounts in current desk view</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Assigned</div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.assigned}</div>
-                <div className="mt-1 text-xs text-slate-500">Owned by collection agents</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Suspend now</div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.suspendNow}</div>
-                <div className="mt-1 text-xs text-slate-500">Immediate action candidates</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Promise to pay</div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.promiseActive}</div>
-                <div className="mt-1 text-xs text-slate-500">Need follow-up before promise date</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Unassigned</div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.unassigned}</div>
-                <div className="mt-1 text-xs text-slate-500">Need owner before outbound work</div>
-              </div>
+        <div className="card p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Collections filters</div>
+              <div className="mt-1 text-sm text-slate-400">Queue, ownership, and follow-up presets.</div>
+            </div>
+            <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+              Rs {collectionsOpsSummary.totalDue.toFixed(2)} due
             </div>
           </div>
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Collections play</div>
-            <div className="mt-3 space-y-3 text-sm text-slate-600">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                Start with bucket filters, then select visible accounts for bulk reminder or assignment.
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                Use `Suspend` only after reminder/follow-up trail is present and due exposure is confirmed.
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                Current queue exposure: <span className="font-semibold text-slate-900">Rs {collectionsOpsSummary.totalDue.toFixed(2)}</span>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button className="btn-secondary" onClick={() => applyCollectionsPreset('unassigned')}>
-                Unassigned queue
-              </button>
-              <button className="btn-secondary" onClick={() => applyCollectionsPreset('assigned_followup')}>
-                Assigned follow-up
-              </button>
-              <button className="btn-secondary" onClick={() => applyCollectionsPreset('suspend_ready')}>
-                Suspend-ready
-              </button>
-              <button className="btn-secondary" onClick={() => applyCollectionsPreset('ptp_watch')}>
-                PTP watch
-              </button>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Owner triage</div>
-                <div className="mt-2 text-sm text-slate-600">Start with unassigned accounts, then move to assigned follow-up to clear stale queues.</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Service posture</div>
-                <div className="mt-2 text-sm text-slate-600">Suspend-ready and PTP watch are the highest-risk slices to clear before end of day.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-          <div className="card p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Collections workbench</div>
-                <div className="mt-1 text-sm text-slate-400">Priority queue, action load, and ownership snapshot.</div>
-              </div>
-              <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-                {collectionsWorkbench?.totals.accounts || visibleCollections.length} tracked
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Due exposure</div>
-                <div className="mt-2 text-2xl font-semibold text-white">
-                  Rs {Number(collectionsWorkbench?.totals.totalDueAmount || 0).toFixed(2)}
-                </div>
-                <div className="mt-1 text-xs text-slate-400">{collectionsWorkbench?.totals.accounts || 0} accounts in current queue</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Action queue</div>
-                <div className="mt-2 text-2xl font-semibold text-white">{collectionsWorkbench?.actionQueue.suspend || 0}</div>
-                <div className="mt-1 text-xs text-slate-400">Suspend candidates now</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Critical risk</div>
-                <div className="mt-2 text-2xl font-semibold text-white">{collectionsWorkbench?.priorityCounts.critical || 0}</div>
-                <div className="mt-1 text-xs text-slate-400">High-risk accounts needing immediate handling</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Promises active</div>
-                <div className="mt-2 text-2xl font-semibold text-white">{collectionsWorkbench?.actionQueue.promiseToPayActive || 0}</div>
-                <div className="mt-1 text-xs text-slate-400">Accounts currently under PTP watch</div>
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Priority mix</div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(['critical', 'high', 'medium', 'low'] as const).map((priority) => (
-                    <div key={priority} className="rounded-full border border-white/10 px-3 py-2 text-xs text-slate-300">
-                      <span className="font-semibold capitalize text-white">{priority}</span> {collectionsWorkbench?.priorityCounts?.[priority] || 0}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Bucket load</div>
-                <div className="mt-3 space-y-2 text-sm text-slate-300">
-                  {(collectionsWorkbench?.byBucket || []).slice(0, 4).map((item) => (
-                    <div key={item.bucket} className="flex items-center justify-between gap-3">
-                      <span className="capitalize">{item.bucket.replaceAll('_', ' ')}</span>
-                      <span>{item.count} | Rs {item.dueAmount.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="card p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Playbooks</div>
-            <div className="mt-1 text-sm text-slate-400">Suggested workflows for each bucket.</div>
-            <div className="mt-4 space-y-3">
-              {collectionsPlaybooks.map((playbook) => (
-                <div key={playbook.code} className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-medium text-white">{playbook.label}</div>
-                    <span className="rounded-full bg-white/5 px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-slate-300">
-                      {playbook.bucket.replaceAll('_', ' ')}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-sm text-slate-400">{playbook.description}</div>
-                  <div className="mt-3 text-xs text-[#8eb9ff]">Primary action: {playbook.primaryAction.replaceAll('_', ' ')}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Assignee load</div>
-              <div className="mt-3 space-y-2">
-                {(collectionsWorkbench?.byAssignee || []).slice(0, 5).map((item) => (
-                  <div key={`${item.adminId || item.adminName}`} className="flex items-center justify-between gap-3 text-sm">
-                    <div>
-                      <div className="text-white">{item.adminName || 'Unassigned'}</div>
-                      <div className="mt-1 text-xs text-slate-500">{item.count} account(s)</div>
-                    </div>
-                    <div className="text-right text-xs text-slate-400">
-                      Rs {Number(item.dueAmount || 0).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-                {!(collectionsWorkbench?.byAssignee || []).length ? (
-                  <div className="text-sm text-slate-500">No collection ownership assigned yet.</div>
-                ) : null}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  className="btn-secondary"
-                  onClick={() => setCollectionFilters((prev) => ({ ...prev, ownership: 'assigned' }))}
-                >
-                  Show assigned
-                </button>
-                <button
-                  className="btn-secondary"
-                  onClick={() => setCollectionFilters((prev) => ({ ...prev, ownership: 'unassigned' }))}
-                >
-                  Show unassigned
-                </button>
-              </div>
-            </div>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Action queue breakdown</div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl bg-white/5 px-3 py-3">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Reminders</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{collectionsWorkbench?.actionQueue.remind || 0}</div>
-                </div>
-                <div className="rounded-xl bg-white/5 px-3 py-3">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Follow-ups</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{collectionsWorkbench?.actionQueue.followUp || 0}</div>
-                </div>
-                <div className="rounded-xl bg-white/5 px-3 py-3">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Suspend</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{collectionsWorkbench?.actionQueue.suspend || 0}</div>
-                </div>
-                <div className="rounded-xl bg-white/5 px-3 py-3">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Resume</div>
-                  <div className="mt-2 text-lg font-semibold text-white">{collectionsWorkbench?.actionQueue.resume || 0}</div>
-                </div>
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-secondary" onClick={() => applyCollectionsPreset('unassigned')}>
+              Unassigned
+            </button>
+            <button className="btn-secondary" onClick={() => applyCollectionsPreset('assigned_followup')}>
+              Assigned follow-up
+            </button>
+            <button className="btn-secondary" onClick={() => applyCollectionsPreset('suspend_ready')}>
+              Suspend ready
+            </button>
+            <button className="btn-secondary" onClick={() => applyCollectionsPreset('ptp_watch')}>
+              Promise to pay
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => setCollectionFilters((prev) => ({ ...prev, ownership: 'assigned' }))}
+            >
+              Assigned
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => setCollectionFilters((prev) => ({ ...prev, ownership: 'unassigned' }))}
+            >
+              Unassigned
+            </button>
           </div>
         </div>
         <div className="card p-5">

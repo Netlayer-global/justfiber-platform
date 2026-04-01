@@ -353,7 +353,6 @@ function PlansContent() {
     null
 
   const composerOpen = composerMode !== null
-  const preview = composerOpen ? form : toForm(selectedPlan)
 
   function beginCreate() {
     setEditingPlanId(null)
@@ -858,43 +857,6 @@ function PlansContent() {
             </button>
           </div>
         </form>
-        ) : workspaceView === 'composer' ? (
-        <div className="card p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plan composer</div>
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">Create a new plan only when needed</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Use this only for new commercial packs. For routine work, pick a plan from the list and edit it.
-              </p>
-            </div>
-            <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New plan
-            </button>
-          </div>
-
-          <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-            <div className="grid gap-3 md:grid-cols-4">
-              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Preview name</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{preview.name || 'New plan'}</div>
-              </div>
-              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Speed</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{preview.speed || '0'} Mbps</div>
-              </div>
-              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Monthly price</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(Number(preview.price || 0))}</div>
-              </div>
-              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Scope</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{preview.planScope === 'zone' ? activeZoneLabel : 'All zones'}</div>
-              </div>
-            </div>
-          </div>
-        </div>
         ) : null}
 
         <div className="space-y-6">
@@ -926,25 +888,7 @@ function PlansContent() {
             </div>
           </div>
 
-          {workspaceView === 'composer' ? (
-          <div className="card p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Current draft</div>
-            <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Plan name</div>
-                  <div className="mt-2 text-lg font-semibold text-slate-900">{preview.name || 'New plan'}</div>
-                  <div className="mt-1 text-sm text-slate-400">{preview.planCode || 'PLAN_CODE'}</div>
-                </div>
-                <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Monthly price</div>
-                  <div className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(Number(preview.price || 0))}</div>
-                  <div className="mt-1 text-sm text-slate-400">{preview.speed || '0'} / {preview.uploadSpeed || '0'} Mbps</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          ) : (
+          {false ? (
           <div className="card p-6">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Operator notes</div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
