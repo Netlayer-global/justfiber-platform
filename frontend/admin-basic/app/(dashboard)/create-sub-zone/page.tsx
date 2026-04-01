@@ -80,6 +80,7 @@ export default function CreateSubZonePage() {
   const [form, setForm] = useState<FormState>(initialForm)
   const [isSaving, setIsSaving] = useState(false)
   const [general, setGeneral] = useState<any>(null)
+  const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<any>(null)
 
   const validationErrors = [
     !form.subZoneName.trim() ? 'Sub-zone name is required' : null,
@@ -96,8 +97,12 @@ export default function CreateSubZonePage() {
 
   async function loadDefaults() {
     try {
-      const res = await adminAPI.getSettingsSection<any>('general')
-      if (res.success) setGeneral(res.data?.value || null)
+      const [generalRes, invoiceTemplateRes] = await Promise.all([
+        adminAPI.getSettingsSection<any>('general'),
+        adminAPI.getSettingsSection<any>('invoice_template'),
+      ])
+      if (generalRes.success) setGeneral(generalRes.data?.value || null)
+      if (invoiceTemplateRes.success) setInvoiceTemplateSettings(invoiceTemplateRes.data?.value || null)
     } catch {}
   }
 
@@ -140,7 +145,7 @@ export default function CreateSubZonePage() {
           invoicePrefix,
           invoiceSeriesCode: 'MAIN',
           sequencePadding: 4,
-          templateKey: franchiseCode,
+          templateKey: invoiceTemplateSettings?.activeTemplate || 'justfiber_standard',
         },
         canCreateSubZone: form.canCreateSubZone,
         useParentRouters: form.useParentRouters,
@@ -206,10 +211,14 @@ export default function CreateSubZonePage() {
           <div>
             <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Zone & Franchise</div>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-900">Create sub-zone</h1>
-            <div className="mt-2 max-w-3xl text-sm text-slate-500">
-              Parent zone se new operating unit create karo. Yeh flow franchise details, service zone, and inheritance defaults ko ek saath stitch karta hai.
-            </div>
+          <div className="mt-2 max-w-3xl text-sm text-slate-500">
+            Parent zone se new operating unit create karo. Yeh flow franchise details, service zone, and inheritance defaults ko ek saath stitch karta hai.
           </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+            <span className="rounded-full bg-slate-100 px-3 py-1">Invoice prefix: {(generatedCode.slice(0, 3).toUpperCase() || 'ZN')}</span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">Template: {invoiceTemplateSettings?.activeTemplate || 'justfiber_standard'}</span>
+          </div>
+        </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/settings" className="btn-secondary">Zone Settings</Link>
             <Link href="/my-zone-details" className="btn-secondary">My Zone Details</Link>

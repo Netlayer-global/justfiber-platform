@@ -17,6 +17,52 @@ type SectionMeta = {
   advanced?: boolean
 }
 
+type InvoiceTemplateEntry = {
+  key: string
+  templateName: string
+  companyName: string
+  companyAddress: string
+  gstNumber: string
+  website: string
+  panNumber: string
+  phoneNumber: string
+  supportEmail: string
+  bankAccountNumber: string
+  bankName: string
+  bankIfscCode: string
+  invoicePrefix: string
+  accentColor: string
+  footerNote: string
+  paymentInstructions: string
+  logoDataUrl: string
+  signatureDataUrl: string
+  stampDataUrl: string
+}
+
+type InvoiceTemplateSection = {
+  activeTemplate: string
+  templateName: string
+  templates: InvoiceTemplateEntry[]
+  zoneTemplateMappings: Array<{ zoneCode: string; templateKey: string }>
+  companyName: string
+  companyAddress: string
+  gstNumber: string
+  website: string
+  panNumber: string
+  phoneNumber: string
+  supportEmail: string
+  bankAccountNumber: string
+  bankName: string
+  bankIfscCode: string
+  invoicePrefix: string
+  accentColor: string
+  footerNote: string
+  paymentInstructions: string
+  logoDataUrl: string
+  signatureDataUrl: string
+  stampDataUrl: string
+}
+
 const SECTION_META: Record<string, SectionMeta> = {
   general: {
     title: 'General Configuration',
@@ -276,6 +322,83 @@ function getSectionPlaybook(section: string) {
   }
 }
 
+function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTemplateSection {
+  const templates = Array.isArray(value?.templates) && value.templates.length
+    ? value.templates
+    : [
+        {
+          key: value?.activeTemplate || 'justfiber_standard',
+          templateName: value?.templateName || 'JustFiber Standard',
+          companyName: value?.companyName || '',
+          companyAddress: value?.companyAddress || '',
+          gstNumber: value?.gstNumber || '',
+          website: value?.website || '',
+          panNumber: value?.panNumber || '',
+          phoneNumber: value?.phoneNumber || '',
+          supportEmail: value?.supportEmail || '',
+          bankAccountNumber: value?.bankAccountNumber || '',
+          bankName: value?.bankName || '',
+          bankIfscCode: value?.bankIfscCode || '',
+          invoicePrefix: value?.invoicePrefix || 'JF',
+          accentColor: value?.accentColor || '#8224E3',
+          footerNote: value?.footerNote || '',
+          paymentInstructions: value?.paymentInstructions || '',
+          logoDataUrl: value?.logoDataUrl || '',
+          signatureDataUrl: value?.signatureDataUrl || '',
+          stampDataUrl: value?.stampDataUrl || '',
+        },
+      ]
+
+  return {
+    activeTemplate: value?.activeTemplate || templates[0]?.key || 'justfiber_standard',
+    templateName: value?.templateName || templates[0]?.templateName || 'JustFiber Standard',
+    templates: templates.map((item: any, index: number) => ({
+      key: String(item?.key || `template_${index + 1}`).trim(),
+      templateName: String(item?.templateName || item?.key || `Template ${index + 1}`).trim(),
+      companyName: String(item?.companyName || value?.companyName || '').trim(),
+      companyAddress: String(item?.companyAddress || value?.companyAddress || '').trim(),
+      gstNumber: String(item?.gstNumber || value?.gstNumber || '').trim(),
+      website: String(item?.website || value?.website || '').trim(),
+      panNumber: String(item?.panNumber || value?.panNumber || '').trim(),
+      phoneNumber: String(item?.phoneNumber || value?.phoneNumber || '').trim(),
+      supportEmail: String(item?.supportEmail || value?.supportEmail || '').trim(),
+      bankAccountNumber: String(item?.bankAccountNumber || value?.bankAccountNumber || '').trim(),
+      bankName: String(item?.bankName || value?.bankName || '').trim(),
+      bankIfscCode: String(item?.bankIfscCode || value?.bankIfscCode || '').trim(),
+      invoicePrefix: String(item?.invoicePrefix || value?.invoicePrefix || 'JF').trim(),
+      accentColor: String(item?.accentColor || value?.accentColor || '#8224E3').trim(),
+      footerNote: String(item?.footerNote || value?.footerNote || '').trim(),
+      paymentInstructions: String(item?.paymentInstructions || value?.paymentInstructions || '').trim(),
+      logoDataUrl: String(item?.logoDataUrl || value?.logoDataUrl || '').trim(),
+      signatureDataUrl: String(item?.signatureDataUrl || value?.signatureDataUrl || '').trim(),
+      stampDataUrl: String(item?.stampDataUrl || value?.stampDataUrl || '').trim(),
+    })),
+    zoneTemplateMappings: Array.isArray(value?.zoneTemplateMappings)
+      ? value.zoneTemplateMappings.map((item: any) => ({
+          zoneCode: String(item?.zoneCode || '').trim().toUpperCase(),
+          templateKey: String(item?.templateKey || '').trim(),
+        }))
+      : [],
+    companyName: String(value?.companyName || '').trim(),
+    companyAddress: String(value?.companyAddress || '').trim(),
+    gstNumber: String(value?.gstNumber || '').trim(),
+    website: String(value?.website || '').trim(),
+    panNumber: String(value?.panNumber || '').trim(),
+    phoneNumber: String(value?.phoneNumber || '').trim(),
+    supportEmail: String(value?.supportEmail || '').trim(),
+    bankAccountNumber: String(value?.bankAccountNumber || '').trim(),
+    bankName: String(value?.bankName || '').trim(),
+    bankIfscCode: String(value?.bankIfscCode || '').trim(),
+    invoicePrefix: String(value?.invoicePrefix || 'JF').trim(),
+    accentColor: String(value?.accentColor || '#8224E3').trim(),
+    footerNote: String(value?.footerNote || '').trim(),
+    paymentInstructions: String(value?.paymentInstructions || '').trim(),
+    logoDataUrl: String(value?.logoDataUrl || '').trim(),
+    signatureDataUrl: String(value?.signatureDataUrl || '').trim(),
+    stampDataUrl: String(value?.stampDataUrl || '').trim(),
+  }
+}
+
 function isLongText(fieldKey: string, value: string) {
   const normalized = fieldKey.toLowerCase()
   return value.length > 90 || normalized.includes('address') || normalized.includes('note') || normalized.includes('json')
@@ -460,6 +583,8 @@ export default function SettingsPage() {
   const [isSectionLoading, setIsSectionLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [activeZoneCode, setActiveZoneCode] = useState('')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('')
 
   const visibleCatalog = useMemo(() => {
     return catalog
@@ -500,6 +625,30 @@ export default function SettingsPage() {
 
   const activeMeta = getSectionMeta(activeSection)
   const activePlaybook = getSectionPlaybook(activeSection)
+  const invoiceTemplateSection = useMemo(
+    () => normalizeInvoiceTemplateSection(sectionValue),
+    [sectionValue]
+  )
+  const selectedInvoiceTemplate = useMemo(
+    () =>
+      invoiceTemplateSection.templates.find((item) => item.key === invoiceTemplateSection.activeTemplate) ||
+      invoiceTemplateSection.templates[0] ||
+      null,
+    [invoiceTemplateSection]
+  )
+  const activeZoneTemplateKey = useMemo(
+    () =>
+      invoiceTemplateSection.zoneTemplateMappings.find(
+        (item) => item.zoneCode === String(activeZoneCode || '').trim().toUpperCase()
+      )?.templateKey || '',
+    [activeZoneCode, invoiceTemplateSection.zoneTemplateMappings]
+  )
+  const activeZoneResolvedTemplate = useMemo(
+    () =>
+      invoiceTemplateSection.templates.find((item) => item.key === activeZoneTemplateKey) ||
+      selectedInvoiceTemplate,
+    [activeZoneTemplateKey, invoiceTemplateSection.templates, selectedInvoiceTemplate]
+  )
   const zoneGroupSummary = useMemo(
     () =>
       GROUP_ORDER.map((group) => ({
@@ -517,6 +666,16 @@ export default function SettingsPage() {
     if (!catalog.length) return
     void loadSection(activeSection)
   }, [catalog.length, activeSection])
+
+  useEffect(() => {
+    const syncZone = () => {
+      setActiveZoneCode(window.localStorage.getItem('justfiber-active-zone-key') || '')
+      setActiveZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || '')
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    return () => window.removeEventListener('storage', syncZone)
+  }, [])
 
   async function loadCatalog() {
     try {
@@ -580,6 +739,80 @@ export default function SettingsPage() {
 
   function handleValueRemove(path: PathSegment[]) {
     setSectionValue((current) => removeValueAtPath(current, path))
+  }
+
+  function replaceInvoiceTemplateSection(nextSection: InvoiceTemplateSection) {
+    setSectionValue(nextSection as unknown as SectionValue)
+  }
+
+  function updateInvoiceTemplate(
+    key: string,
+    updater: (current: InvoiceTemplateEntry) => InvoiceTemplateEntry
+  ) {
+    replaceInvoiceTemplateSection({
+      ...invoiceTemplateSection,
+      templates: invoiceTemplateSection.templates.map((item) => (item.key === key ? updater(item) : item)),
+    })
+  }
+
+  function addInvoiceTemplate() {
+    const nextKey = `zone_template_${invoiceTemplateSection.templates.length + 1}`
+    replaceInvoiceTemplateSection({
+      ...invoiceTemplateSection,
+      activeTemplate: invoiceTemplateSection.activeTemplate || nextKey,
+      templates: [
+        ...invoiceTemplateSection.templates,
+        {
+          key: nextKey,
+          templateName: `Zone Template ${invoiceTemplateSection.templates.length + 1}`,
+          companyName: invoiceTemplateSection.companyName,
+          companyAddress: invoiceTemplateSection.companyAddress,
+          gstNumber: invoiceTemplateSection.gstNumber,
+          website: invoiceTemplateSection.website,
+          panNumber: invoiceTemplateSection.panNumber,
+          phoneNumber: invoiceTemplateSection.phoneNumber,
+          supportEmail: invoiceTemplateSection.supportEmail,
+          bankAccountNumber: invoiceTemplateSection.bankAccountNumber,
+          bankName: invoiceTemplateSection.bankName,
+          bankIfscCode: invoiceTemplateSection.bankIfscCode,
+          invoicePrefix: invoiceTemplateSection.invoicePrefix || 'JF',
+          accentColor: invoiceTemplateSection.accentColor || '#8224E3',
+          footerNote: invoiceTemplateSection.footerNote,
+          paymentInstructions: invoiceTemplateSection.paymentInstructions,
+          logoDataUrl: invoiceTemplateSection.logoDataUrl,
+          signatureDataUrl: invoiceTemplateSection.signatureDataUrl,
+          stampDataUrl: invoiceTemplateSection.stampDataUrl,
+        },
+      ],
+    })
+  }
+
+  function removeInvoiceTemplate(key: string) {
+    const remainingTemplates = invoiceTemplateSection.templates.filter((item) => item.key !== key)
+    replaceInvoiceTemplateSection({
+      ...invoiceTemplateSection,
+      activeTemplate:
+        invoiceTemplateSection.activeTemplate === key
+          ? remainingTemplates[0]?.key || ''
+          : invoiceTemplateSection.activeTemplate,
+      templates: remainingTemplates,
+      zoneTemplateMappings: invoiceTemplateSection.zoneTemplateMappings.map((item) =>
+        item.templateKey === key ? { ...item, templateKey: '' } : item
+      ),
+    })
+  }
+
+  function addZoneTemplateMapping() {
+    replaceInvoiceTemplateSection({
+      ...invoiceTemplateSection,
+      zoneTemplateMappings: [
+        ...invoiceTemplateSection.zoneTemplateMappings,
+        {
+          zoneCode: '',
+          templateKey: invoiceTemplateSection.activeTemplate || invoiceTemplateSection.templates[0]?.key || '',
+        },
+      ],
+    })
   }
 
   return (
@@ -804,18 +1037,286 @@ export default function SettingsPage() {
               </div>
             ) : (
               <>
-                <section className="card p-5">
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
-                      <div
-                        key={fieldKey}
-                        className={inputKind(fieldValue) === 'object' || inputKind(fieldValue) === 'array' ? 'lg:col-span-2' : ''}
-                      >
-                        <FieldEditor label={fieldKey} value={fieldValue} path={[fieldKey]} onChange={handleValueChange} onRemove={handleValueRemove} />
+                {activeSection === 'invoice_template' ? (
+                  <section className="space-y-4">
+                    <section className="card p-5">
+                      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone-wise invoice templates</div>
+                          <h3 className="mt-2 text-2xl font-semibold text-slate-900">Template assignment and fallback</h3>
+                          <div className="mt-2 text-sm text-slate-500">
+                            Har zone ko template assign karo. Agar mapping missing ho, system active/default template par fallback karega.
+                          </div>
+                          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Templates</div>
+                              <div className="mt-2 text-2xl font-bold text-slate-900">{invoiceTemplateSection.templates.length}</div>
+                            </div>
+                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone mappings</div>
+                              <div className="mt-2 text-2xl font-bold text-slate-900">{invoiceTemplateSection.zoneTemplateMappings.filter((item) => item.zoneCode && item.templateKey).length}</div>
+                            </div>
+                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Default template</div>
+                              <div className="mt-2 text-sm font-semibold text-slate-900">{selectedInvoiceTemplate?.templateName || 'Not set'}</div>
+                            </div>
+                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Active zone preview</div>
+                              <div className="mt-2 text-sm font-semibold text-slate-900">{activeZoneResolvedTemplate?.templateName || 'Fallback template'}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Resolved preview</div>
+                          <div className="mt-3 space-y-3 text-sm text-slate-600">
+                            <div>
+                              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Zone</div>
+                              <div className="mt-1 font-semibold text-slate-900">{activeZoneLabel || activeZoneCode || 'Shared scope'}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Template</div>
+                              <div className="mt-1 font-semibold text-slate-900">{activeZoneResolvedTemplate?.templateName || selectedInvoiceTemplate?.templateName || 'Default fallback'}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Invoice prefix</div>
+                              <div className="mt-1 font-semibold text-slate-900">{activeZoneResolvedTemplate?.invoicePrefix || invoiceTemplateSection.invoicePrefix || 'JF'}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">GSTIN</div>
+                              <div className="mt-1 font-semibold text-slate-900">{activeZoneResolvedTemplate?.gstNumber || invoiceTemplateSection.gstNumber || '-'}</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </section>
+                    </section>
+
+                    <section className="card p-5 space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Default fallback</div>
+                          <div className="mt-1 text-sm text-slate-500">Used when a zone-specific mapping is not configured.</div>
+                        </div>
+                        <button type="button" className="btn-secondary" onClick={addInvoiceTemplate}>
+                          Add template
+                        </button>
+                      </div>
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Active default template</div>
+                          <select
+                            className="input"
+                            value={invoiceTemplateSection.activeTemplate}
+                            onChange={(event) =>
+                              replaceInvoiceTemplateSection({
+                                ...invoiceTemplateSection,
+                                activeTemplate: event.target.value,
+                                templateName:
+                                  invoiceTemplateSection.templates.find((item) => item.key === event.target.value)?.templateName ||
+                                  invoiceTemplateSection.templateName,
+                              })
+                            }
+                          >
+                            {invoiceTemplateSection.templates.map((item) => (
+                              <option key={item.key} value={item.key}>
+                                {item.templateName || item.key}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Fallback invoice prefix</div>
+                          <input
+                            className="input"
+                            value={invoiceTemplateSection.invoicePrefix}
+                            onChange={(event) =>
+                              replaceInvoiceTemplateSection({
+                                ...invoiceTemplateSection,
+                                invoicePrefix: event.target.value.toUpperCase(),
+                              })
+                            }
+                          />
+                        </label>
+                      </div>
+                    </section>
+
+                    <section className="card p-5 space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template catalog</div>
+                          <div className="mt-1 text-sm text-slate-500">Build exact branding blocks for each state, city, or franchise zone.</div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        {invoiceTemplateSection.templates.map((template) => (
+                          <div key={template.key} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                            <div className="mb-4 flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-sm font-semibold text-slate-900">{template.templateName || template.key}</div>
+                                <div className="mt-1 text-xs text-slate-500">{template.key}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {invoiceTemplateSection.activeTemplate === template.key ? (
+                                  <span className="rounded-full bg-[#eef1ff] px-3 py-1 text-xs font-medium text-[#2946ff]">Default</span>
+                                ) : null}
+                                {invoiceTemplateSection.templates.length > 1 ? (
+                                  <button type="button" className="text-xs font-semibold text-rose-500" onClick={() => removeInvoiceTemplate(template.key)}>
+                                    Remove
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="grid gap-4 lg:grid-cols-2">
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template key</div>
+                                <input className="input" value={template.key} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, key: event.target.value.trim().toLowerCase().replace(/\s+/g, '_') }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template name</div>
+                                <input className="input" value={template.templateName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, templateName: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Company name</div>
+                                <input className="input" value={template.companyName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, companyName: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GSTIN</div>
+                                <input className="input" value={template.gstNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, gstNumber: event.target.value.toUpperCase() }))} />
+                              </label>
+                              <label className="space-y-2 lg:col-span-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing address</div>
+                                <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.companyAddress} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, companyAddress: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice prefix</div>
+                                <input className="input" value={template.invoicePrefix} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Accent color</div>
+                                <input className="input" value={template.accentColor} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, accentColor: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Website</div>
+                                <input className="input" value={template.website} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, website: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Support email</div>
+                                <input className="input" value={template.supportEmail} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, supportEmail: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</div>
+                                <input className="input" value={template.phoneNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, phoneNumber: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">PAN</div>
+                                <input className="input" value={template.panNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, panNumber: event.target.value.toUpperCase() }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Bank name</div>
+                                <input className="input" value={template.bankName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankName: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Bank account</div>
+                                <input className="input" value={template.bankAccountNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankAccountNumber: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">IFSC</div>
+                                <input className="input" value={template.bankIfscCode} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankIfscCode: event.target.value.toUpperCase() }))} />
+                              </label>
+                              <label className="space-y-2 lg:col-span-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Footer note</div>
+                                <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.footerNote} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, footerNote: event.target.value }))} />
+                              </label>
+                              <label className="space-y-2 lg:col-span-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payment instructions</div>
+                                <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.paymentInstructions} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, paymentInstructions: event.target.value }))} />
+                              </label>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="card p-5 space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone assignments</div>
+                          <div className="mt-1 text-sm text-slate-500">Map a zone code to the exact invoice template it should render.</div>
+                        </div>
+                        <button type="button" className="btn-secondary" onClick={addZoneTemplateMapping}>
+                          Add zone mapping
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {invoiceTemplateSection.zoneTemplateMappings.map((mapping, index) => (
+                          <div key={`${mapping.zoneCode || 'zone'}-${index}`} className="grid gap-3 rounded-[22px] border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_1fr_auto]">
+                            <input
+                              className="input"
+                              placeholder="Zone code"
+                              value={mapping.zoneCode}
+                              onChange={(event) =>
+                                replaceInvoiceTemplateSection({
+                                  ...invoiceTemplateSection,
+                                  zoneTemplateMappings: invoiceTemplateSection.zoneTemplateMappings.map((item, idx) =>
+                                    idx === index ? { ...item, zoneCode: event.target.value.toUpperCase() } : item
+                                  ),
+                                })
+                              }
+                            />
+                            <select
+                              className="input"
+                              value={mapping.templateKey}
+                              onChange={(event) =>
+                                replaceInvoiceTemplateSection({
+                                  ...invoiceTemplateSection,
+                                  zoneTemplateMappings: invoiceTemplateSection.zoneTemplateMappings.map((item, idx) =>
+                                    idx === index ? { ...item, templateKey: event.target.value } : item
+                                  ),
+                                })
+                              }
+                            >
+                              <option value="">Use default template</option>
+                              {invoiceTemplateSection.templates.map((template) => (
+                                <option key={template.key} value={template.key}>
+                                  {template.templateName || template.key}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() =>
+                                replaceInvoiceTemplateSection({
+                                  ...invoiceTemplateSection,
+                                  zoneTemplateMappings: invoiceTemplateSection.zoneTemplateMappings.filter((_, idx) => idx !== index),
+                                })
+                              }
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                        {!invoiceTemplateSection.zoneTemplateMappings.length ? (
+                          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+                            No zone mappings yet. Default template fallback will be used.
+                          </div>
+                        ) : null}
+                      </div>
+                    </section>
+                  </section>
+                ) : (
+                  <section className="card p-5">
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
+                        <div
+                          key={fieldKey}
+                          className={inputKind(fieldValue) === 'object' || inputKind(fieldValue) === 'array' ? 'lg:col-span-2' : ''}
+                        >
+                          <FieldEditor label={fieldKey} value={fieldValue} path={[fieldKey]} onChange={handleValueChange} onRemove={handleValueRemove} />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
                 <section className="card p-5">
                   <div className="flex items-center justify-between gap-3">
