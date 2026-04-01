@@ -437,6 +437,7 @@ export interface CustomerPayment {
   status?: string
   provider?: string
   method?: string
+  createdAt?: string
   paidAt?: string
   invoiceId?: string
 }
