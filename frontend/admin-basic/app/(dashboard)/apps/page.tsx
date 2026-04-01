@@ -280,6 +280,20 @@ export default function AppsPage() {
     )
   }, [categoryItems, query])
 
+  const categorySummary = useMemo(() => {
+    const defaultProvider = currentSettings.providerKey
+      ? categoryItems.find((item) => item.key === currentSettings.providerKey) || null
+      : null
+    return {
+      total: categoryItems.length,
+      active: categoryItems.filter((item) => item.status === 'active').length,
+      testing: categoryItems.filter((item) => item.status === 'testing').length,
+      production: categoryItems.filter((item) => item.mode === 'production').length,
+      withHealth: categoryItems.filter((item) => Boolean(item.health)).length,
+      defaultProvider,
+    }
+  }, [categoryItems, currentSettings.providerKey])
+
   const stats = useMemo(() => {
     const activeConnections = integrations.filter((item) => item.status === 'active').length
     const liveCategories = CATEGORY_DEFINITIONS.filter((item) => {
@@ -523,6 +537,56 @@ export default function AppsPage() {
         </div>
       </section>
 
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Integration command center</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Provider launch and fallback view</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Selected module</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{activeCategory.label}</div>
+              <div className="mt-1 text-xs text-slate-500">{categorySummary.total} configured provider records</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active</div>
+              <div className="mt-2 text-2xl font-semibold text-emerald-600">{categorySummary.active}</div>
+              <div className="mt-1 text-xs text-slate-500">Providers marked ready for live routing</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Testing</div>
+              <div className="mt-2 text-2xl font-semibold text-amber-600">{categorySummary.testing}</div>
+              <div className="mt-1 text-xs text-slate-500">Providers still in test or migration mode</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Production mode</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{categorySummary.production}</div>
+              <div className="mt-1 text-xs text-slate-500">Connections switched out of sandbox</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Default route</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{categorySummary.defaultProvider?.displayName || 'Pending'}</div>
+              <div className="mt-1 text-xs text-slate-500">{currentSettings.enabled ? 'Category enabled' : 'Category disabled'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Operator playbook</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">What to confirm before going live</h2>
+          <div className="mt-4 space-y-3">
+            {[
+              'Keep one clear default provider per category before you enable live routing.',
+              'Leave migration or backup vendors in testing mode unless you intentionally want failover traffic there.',
+              'Map payment, ACS, and messaging providers after zone and router settings are already confirmed.',
+            ].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
         <div className="card overflow-hidden">
           <div className="border-b border-slate-200 px-5 py-4">
@@ -614,6 +678,22 @@ export default function AppsPage() {
                 Connections: <span className="font-semibold text-slate-900">{categoryItems.length}</span>
               </div>
             </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setQuery('')}>
+                All providers
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setQuery('active')}>
+                Active view
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setQuery('testing')}>
+                Testing view
+              </button>
+              {currentSettings.providerKey ? (
+                <button type="button" className="btn-secondary" onClick={() => setQuery(currentSettings.providerKey || '')}>
+                  Default route
+                </button>
+              ) : null}
+            </div>
           </div>
           {isLoading ? (
             <div className="flex items-center justify-center gap-3 px-6 py-24 text-slate-500">
@@ -663,6 +743,15 @@ export default function AppsPage() {
                           {item.lastCheckedAt ? <span>Last checked: <span className="font-medium text-slate-700">{new Date(item.lastCheckedAt).toLocaleString()}</span></span> : null}
                         </div>
                         {item.notes ? <p className="mt-3 text-sm leading-6 text-slate-500">{item.notes}</p> : null}
+                        {item.capabilities?.length ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {item.capabilities.map((capability) => (
+                              <span key={capability} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-600">
+                                {capability}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                         {configEntries.length ? (
                           <div className="mt-4 grid gap-3 sm:grid-cols-2">
                             {configEntries.map(([configKey, value]) => (
@@ -673,6 +762,20 @@ export default function AppsPage() {
                             ))}
                           </div>
                         ) : null}
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Default routing</div>
+                            <div className="mt-2 text-sm font-medium text-slate-700">{isDefault ? 'Primary route' : 'Secondary / backup'}</div>
+                          </div>
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Credentials</div>
+                            <div className="mt-2 text-sm font-medium text-slate-700">{Object.keys(item.credentialsMasked || {}).length || configEntries.length} fields stored</div>
+                          </div>
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Health snapshot</div>
+                            <div className="mt-2 text-sm font-medium text-slate-700">{item.health ? 'Health metadata present' : 'No health metadata yet'}</div>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap gap-2 xl:justify-end">
@@ -833,6 +936,14 @@ export default function AppsPage() {
                   </div>
                 </div>
 
+                <div className="rounded-[24px] border border-slate-200 bg-white p-5">
+                  <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone assignment note</div>
+                  <div className="mt-3 text-lg font-semibold text-slate-900">Link with zone and payment workspace</div>
+                  <div className="mt-2 text-sm leading-6 text-slate-500">
+                    Use this provider editor for credentials and defaults. Use zone settings, payment gateway, and router screens when the same provider needs zone-specific rollout decisions.
+                  </div>
+                </div>
+
                 <label className="flex items-start gap-3 rounded-[24px] border border-slate-200 bg-white p-5">
                   <input
                     type="checkbox"
@@ -861,6 +972,15 @@ export default function AppsPage() {
                     ) : (
                       <div className="text-sm text-slate-500">This category uses lightweight config fields for now. Save the provider and expand the config over time as the workflow matures.</div>
                     )}
+                  </div>
+                </div>
+
+                <div className="rounded-[24px] border border-slate-200 bg-white p-5">
+                  <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Launch checklist</div>
+                  <div className="mt-3 space-y-3 text-sm text-slate-500">
+                    <div>1. Save credentials and keep the provider in sandbox until callbacks and webhook paths are confirmed.</div>
+                    <div>2. Mark it default only when the live route is ready and older providers can step back.</div>
+                    <div>3. Recheck payment, ACS, or messaging behavior from the related zone and customer workflows.</div>
                   </div>
                 </div>
 
