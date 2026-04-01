@@ -92,6 +92,14 @@ export default function ServiceabilityPage() {
     { label: 'Planned', value: String(zones.filter((z) => z.status === 'planned').length), Icon: Map },
     { label: 'Total', value: String(zones.length), Icon: MapPin },
   ]
+  const rolloutSummary = useMemo(() => {
+    const mapped = zones.filter((zone) => (zone.polygon?.length || 0) >= 3 || zone.center)
+    const pinReady = zones.filter((zone) => (zone.pinCodes || []).length > 0)
+    return {
+      mapped: mapped.length,
+      pinReady: pinReady.length,
+    }
+  }, [zones])
 
   useEffect(() => {
     void loadZones()
@@ -261,6 +269,51 @@ export default function ServiceabilityPage() {
               <Plus className="w-4 h-4" />
               New Zone
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Coverage readiness</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Launch-quality mapping summary</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Mapped coverage</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{rolloutSummary.mapped}</div>
+              <div className="mt-1 text-xs text-slate-500">Zones with polygon or center marker ready</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Pin-ready zones</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{rolloutSummary.pinReady}</div>
+              <div className="mt-1 text-xs text-slate-500">Zones already tagged for booking and dispatch filters</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Edit mode</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{editingZoneId ? 'Editing' : 'Creating'}</div>
+              <div className="mt-1 text-xs text-slate-500">Current zone workspace state</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Map mode</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{mapMode === 'polygon' ? 'Polygon' : 'Center'}</div>
+              <div className="mt-1 text-xs text-slate-500">Current coverage editing mode</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone rollout checklist</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Before marking coverage active</h2>
+          <div className="mt-4 space-y-3">
+            {[
+              'Polygon or center marker should exist so booking and feasibility flows do not guess the area.',
+              'Pin codes should be attached for operator filtering and downstream dispatch routing.',
+              'Activate the zone only after parent zone, sub-zone, router, and payment setup are already aligned.',
+            ].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                {item}
+              </div>
+            ))}
           </div>
         </div>
       </section>

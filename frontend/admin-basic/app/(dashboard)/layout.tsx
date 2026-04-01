@@ -91,6 +91,14 @@ const NAV_SECTIONS: NavSection[] = [
 
 const FLAT_NAV = NAV_SECTIONS.flatMap((section) => section.items)
 
+const SHELL_SHORTCUTS = [
+  { href: '/customers', label: 'Customers' },
+  { href: '/billing', label: 'Billing' },
+  { href: '/routers', label: 'Routers' },
+  { href: '/apps', label: 'Apps' },
+  { href: '/settings', label: 'Settings' },
+]
+
 function SidebarContent({
   pathname,
   onNavigate,
@@ -250,9 +258,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <main className="flex-1 pb-[60px]">
             <div className="mx-auto w-full max-w-[1200px] px-4 pt-5 md:px-6">
               <div className="mb-5 flex items-center justify-between rounded-[18px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Admin module</div>
                   <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{currentItem.label}</div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {SHELL_SHORTCUTS.map((item) => {
+                      const active = pathname === item.href
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                            active
+                              ? 'border-[#5d87ff]/20 bg-[#eef1ff] text-[#5d87ff]'
+                              : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300 hover:bg-white hover:text-slate-900'
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div className="hidden text-sm text-slate-400 md:block">Modern operations workspace</div>
               </div>
