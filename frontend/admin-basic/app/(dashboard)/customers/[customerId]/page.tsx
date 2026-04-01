@@ -83,6 +83,14 @@ export default function CustomerDetailPage() {
     void loadCustomer()
   }, [customerId])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    if (tab === 'billing' || tab === 'devices' || tab === 'overview') {
+      setActiveTab(tab)
+    }
+  }, [customerId])
+
   async function runBusy<T>(key: string, work: () => Promise<T>) {
     try {
       setBusyKey(key)
