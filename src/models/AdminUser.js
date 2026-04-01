@@ -23,6 +23,9 @@ const adminUserSchema = new mongoose.Schema(
     lastLoginAt: Date,
     lastLoginIp: String,
     passwordChangedAt: Date,
+    zoneCode: { type: String, index: true },
+    zoneName: String,
+    canAccessAllZones: { type: Boolean, default: false },
     createdBy: mongoose.Schema.Types.ObjectId
   },
   { timestamps: true }

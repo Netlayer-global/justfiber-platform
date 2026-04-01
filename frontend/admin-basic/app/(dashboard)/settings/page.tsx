@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
+import type { AdminRoleSummary, AdminUserSummary, FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
 import { ArrowRight, Building2, GitBranchPlus, Loader2, Router, Save, Search, Settings2, ShieldCheck, WalletCards } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -588,10 +588,21 @@ export default function SettingsPage() {
   const [activeZoneLabel, setActiveZoneLabel] = useState('')
   const [isCopyingLaunchPack, setIsCopyingLaunchPack] = useState(false)
   const [isSavingZoneAdmins, setIsSavingZoneAdmins] = useState(false)
+  const [isCreatingZoneLogin, setIsCreatingZoneLogin] = useState(false)
+  const [zoneLogins, setZoneLogins] = useState<AdminUserSummary[]>([])
+  const [adminRoles, setAdminRoles] = useState<AdminRoleSummary[]>([])
   const [zoneAdminDraft, setZoneAdminDraft] = useState({
     fullName: '',
     email: '',
     phone: '',
+  })
+  const [zoneLoginDraft, setZoneLoginDraft] = useState({
+    fullName: '',
+    username: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'ops_admin',
   })
 
   const visibleCatalog = useMemo(() => {
@@ -680,6 +691,18 @@ export default function SettingsPage() {
   }, [activeZoneFranchise])
 
   useEffect(() => {
+    setZoneLoginDraft((current) => ({
+      ...current,
+      fullName: activeZoneLabel ? `${activeZoneLabel} Admin` : current.fullName,
+      username: activeZoneCode && activeZoneCode !== 'default' ? `${activeZoneCode}_admin` : current.username,
+      email:
+        activeZoneCode && activeZoneCode !== 'default'
+          ? `${activeZoneCode}_admin@justfiber.local`
+          : current.email,
+    }))
+  }, [activeZoneCode, activeZoneLabel])
+
+  useEffect(() => {
     void loadCatalog()
   }, [])
 
@@ -702,10 +725,31 @@ export default function SettingsPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!activeZoneCode || activeZoneCode === 'default') {
+      setZoneLogins([])
+      return
+    }
+    void loadZoneLogins(activeZoneCode)
+  }, [activeZoneCode])
+
   async function refreshFranchises() {
     const franchiseRes = await adminAPI.getFranchises()
     if (franchiseRes.success) {
       setFranchises(franchiseRes.data || [])
+    }
+  }
+
+  async function loadZoneLogins(zoneCode: string) {
+    const [usersRes, rolesRes] = await Promise.all([
+      adminAPI.getAdminUsers(1, 100, { zoneCode }),
+      adminAPI.getAdminRoles(),
+    ])
+    if (usersRes.success) {
+      setZoneLogins(usersRes.data?.items || [])
+    }
+    if (rolesRes.success) {
+      setAdminRoles(rolesRes.data || [])
     }
   }
 
@@ -784,6 +828,43 @@ export default function SettingsPage() {
       toast.error('Failed to save zone admins')
     } finally {
       setIsSavingZoneAdmins(false)
+    }
+  }
+
+  async function handleCreateZoneLogin() {
+    if (!activeZoneCode || activeZoneCode === 'default') {
+      toast.error('Select a sub-zone first')
+      return
+    }
+    if (!zoneLoginDraft.username.trim() || !zoneLoginDraft.email.trim() || !zoneLoginDraft.password.trim()) {
+      toast.error('Username, email, and password are required')
+      return
+    }
+    try {
+      setIsCreatingZoneLogin(true)
+      const response = await adminAPI.createAdminUser({
+        username: zoneLoginDraft.username.trim(),
+        fullName: zoneLoginDraft.fullName.trim() || `${activeZoneLabel} Admin`,
+        email: zoneLoginDraft.email.trim(),
+        phone: zoneLoginDraft.phone.trim(),
+        password: zoneLoginDraft.password,
+        roles: [zoneLoginDraft.role || 'ops_admin'],
+        zoneCode: activeZoneCode,
+        zoneName: activeZoneLabel,
+        canAccessAllZones: false,
+      })
+      if (!response.success) {
+        toast.error(response.error || 'Failed to create zone login')
+        return
+      }
+      toast.success('Zone login created')
+      setZoneLoginDraft((current) => ({ ...current, password: '' }))
+      await loadZoneLogins(activeZoneCode)
+    } catch (error) {
+      console.error('[settings] Failed to create zone login', error)
+      toast.error('Failed to create zone login')
+    } finally {
+      setIsCreatingZoneLogin(false)
     }
   }
 
@@ -1112,6 +1193,102 @@ export default function SettingsPage() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
               Last updated: {activeZoneFranchise?.adminAccountsUpdatedAt ? new Date(activeZoneFranchise.adminAccountsUpdatedAt).toLocaleString() : 'Not saved yet'}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone login manager</div>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Create sub-zone login</h2>
+              <div className="mt-2 text-sm text-slate-500">
+                Main admin yahan se current active zone ke liye username aur password based login bana sakta hai.
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleCreateZoneLogin}
+              disabled={!activeZoneCode || activeZoneCode === 'default' || isCreatingZoneLogin}
+            >
+              {isCreatingZoneLogin ? 'Creating...' : 'Create zone login'}
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <input
+              className="input"
+              placeholder="Full name"
+              value={zoneLoginDraft.fullName}
+              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, fullName: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Username"
+              value={zoneLoginDraft.username}
+              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, username: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Email"
+              value={zoneLoginDraft.email}
+              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, email: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Phone"
+              value={zoneLoginDraft.phone}
+              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, phone: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Password"
+              type="text"
+              value={zoneLoginDraft.password}
+              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, password: event.target.value }))}
+            />
+            <select
+              className="input"
+              value={zoneLoginDraft.role}
+              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, role: event.target.value }))}
+            >
+              {(adminRoles.length ? adminRoles : [{ code: 'ops_admin', name: 'Operations Admin', id: 'ops_admin', permissions: [] }]).map((role) => (
+                <option key={role.code} value={role.code}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Login scope: {activeZoneLabel || 'No zone selected'} ({activeZoneCode || 'default'})
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Existing zone logins</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Current zone admin accounts</h2>
+          <div className="mt-4 space-y-3">
+            {zoneLogins.length ? zoneLogins.map((user) => (
+              <div key={user.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-slate-900">{user.fullName}</div>
+                    <div className="text-sm text-slate-500">{user.username} • {user.email}</div>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                    {user.roles.join(', ') || 'No role'}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-slate-500">
+                  Status: {user.status} {user.lastLoginAt ? `• Last login ${new Date(user.lastLoginAt).toLocaleString()}` : '• Never logged in'}
+                </div>
+              </div>
+            )) : (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                No zone-specific logins found for the current active zone.
+              </div>
+            )}
           </div>
         </div>
       </section>

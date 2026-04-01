@@ -1,5 +1,6 @@
 import type {
   ApiResponse,
+  AdminSessionProfile,
   AdminRoleSummary,
   AdminUserSummary,
   AuditOverview,
@@ -97,6 +98,9 @@ export function clearAuthToken() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('admin_token')
     localStorage.removeItem('admin_refresh_token')
+    localStorage.removeItem('justfiber-admin-zone-code')
+    localStorage.removeItem('justfiber-admin-zone-label')
+    localStorage.removeItem('justfiber-admin-can-access-all-zones')
   }
 }
 
@@ -837,8 +841,12 @@ function mapAdminUser(item: any): AdminUserSummary {
     username: item.username || '',
     fullName: item.fullName || item.username || '',
     email: item.email || '',
+    phone: item.phone || '',
     status: item.status || 'active',
     roles: Array.isArray(item.roles) ? item.roles : [],
+    zoneCode: item.zoneCode || '',
+    zoneName: item.zoneName || '',
+    canAccessAllZones: Boolean(item.canAccessAllZones),
     mfaEnabled: Boolean(item.mfaEnabled),
     lastLoginAt: item.lastLoginAt || '',
     passwordChangedAt: item.passwordChangedAt || '',
@@ -1253,6 +1261,7 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify({ login, password }),
     }),
+  getCurrentAdmin: () => request<AdminSessionProfile>('/api/v1/admin/auth/me'),
 
   // Dashboard
   getDashboardStats: async () => {
@@ -1282,8 +1291,13 @@ export const adminAPI = {
     }
     return primary
   },
-  getAdminUsers: async (page = 1, limit = 100) => {
-    const res = await request<any[]>(`/api/v1/admin/users?page=${page}&limit=${limit}`)
+  getAdminUsers: async (page = 1, limit = 100, filters?: { zoneCode?: string }) => {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(filters?.zoneCode ? { zoneCode: filters.zoneCode } : {}),
+    }).toString()
+    const res = await request<any[]>(`/api/v1/admin/users?${query}`)
     return {
       ...res,
       data: {
@@ -1297,6 +1311,26 @@ export const adminAPI = {
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapAdminRole) : [],
+    }
+  },
+  createAdminUser: async (data: {
+    username: string
+    fullName: string
+    email: string
+    password: string
+    roles: string[]
+    phone?: string
+    zoneCode?: string
+    zoneName?: string
+    canAccessAllZones?: boolean
+  }) => {
+    const res = await request<any>('/api/v1/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapAdminUser(res.data) : undefined,
     }
   },
   getAuditOverview: async () => request<AuditOverview>('/api/v1/admin/foundation/logs/overview'),

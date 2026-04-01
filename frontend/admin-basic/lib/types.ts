@@ -13,6 +13,21 @@ export interface LoginRequest {
 export interface LoginResponse {
   accessToken: string
   refreshToken?: string
+  zoneCode?: string
+  zoneName?: string
+  canAccessAllZones?: boolean
+}
+
+export interface AdminSessionProfile {
+  id: string
+  username: string
+  fullName: string
+  email: string
+  roles: string[]
+  permissions: string[]
+  zoneCode?: string
+  zoneName?: string
+  canAccessAllZones?: boolean
 }
 
 export interface AdminUserSummary {
@@ -20,8 +35,12 @@ export interface AdminUserSummary {
   username: string
   fullName: string
   email: string
+  phone?: string
   status: 'active' | 'disabled' | 'locked'
   roles: string[]
+  zoneCode?: string
+  zoneName?: string
+  canAccessAllZones?: boolean
   mfaEnabled?: boolean
   lastLoginAt?: string
   passwordChangedAt?: string
