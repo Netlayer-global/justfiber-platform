@@ -168,14 +168,7 @@ function CustomersContent() {
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(needle))
       })
-      .slice(0, 10)
   }, [customers, lookup])
-
-  const recentCustomers = useMemo(() => {
-    return [...customers]
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-      .slice(0, 5)
-  }, [customers])
 
   return (
     <div className="space-y-6">
@@ -235,15 +228,14 @@ function CustomersContent() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <section className="card p-5 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Quick customer lookup</h2>
-              <p className="mt-1 text-sm text-slate-500">Search and open. Bas.</p>
-            </div>
-            <Link href="/user-management?view=users" className="btn-secondary">Open full list</Link>
+      <section className="card p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">All customers</h2>
+            <p className="mt-1 text-sm text-slate-500">Yahin full customer list dikhegi. Kisi bhi customer ko direct open karo.</p>
           </div>
+          <div className="text-sm text-slate-500">{quickLookupResults.length} customer</div>
+        </div>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
@@ -258,19 +250,25 @@ function CustomersContent() {
               <Loader className="h-6 w-6 animate-spin text-[#5d87ff]" />
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-[1.4fr_1fr_1fr_120px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <div>Customer</div>
+                <div>PPPoE / Phone</div>
+                <div>Plan</div>
+                <div>Action</div>
+              </div>
               {quickLookupResults.map((customer) => (
-                <div key={customer.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-slate-900">{customer.name}</div>
-                      <div className="mt-1 text-sm text-slate-500">
-                        {customer.pppoeUsername || customer.customerId || customer.id} | {customer.plan?.name || 'Unassigned'}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {customer.phone} | {customer.billingSnapshot?.zoneName || 'Default Zone'}
-                      </div>
-                    </div>
+                <div key={customer.id} className="grid grid-cols-[1.4fr_1fr_1fr_120px] gap-3 border-b border-slate-200 bg-white px-4 py-4 text-sm last:border-b-0">
+                  <div>
+                    <div className="font-semibold text-slate-900">{customer.name}</div>
+                    <div className="mt-1 text-xs text-slate-500">{customer.customerId || customer.id}</div>
+                  </div>
+                  <div className="text-slate-600">
+                    <div>{customer.pppoeUsername || '-'}</div>
+                    <div className="mt-1 text-xs text-slate-500">{customer.phone || '-'}</div>
+                  </div>
+                  <div className="text-slate-600">{customer.plan?.name || 'Unassigned'}</div>
+                  <div>
                     <Link href={`/customers/${customer.id}`} className="btn-secondary inline-flex items-center gap-2">
                       <Eye className="h-4 w-4" />
                       Open
@@ -285,62 +283,7 @@ function CustomersContent() {
               ) : null}
             </div>
           )}
-        </section>
-
-        <div className="space-y-4">
-          <section className="card p-5 space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Only 3 actions</h2>
-              <p className="mt-1 text-sm text-slate-500">Is page par sirf essentials rakhe gaye hain.</p>
-            </div>
-            <div className="space-y-3">
-              <button type="button" onClick={() => setIsCreateOpen(true)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:bg-white">
-                <div>
-                  <div className="font-semibold text-slate-900">Create customer</div>
-                  <div className="mt-1 text-sm text-slate-500">New PPPoE / subscriber onboarding</div>
-                </div>
-                <Plus className="h-4 w-4 text-slate-400" />
-              </button>
-              <Link href="/user-management?view=users" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition hover:bg-white">
-                <div>
-                  <div className="font-semibold text-slate-900">Open user desk</div>
-                  <div className="mt-1 text-sm text-slate-500">Full list, filters, suspend/resume, export</div>
-                </div>
-                <UserRound className="h-4 w-4 text-slate-400" />
-              </Link>
-              <button type="button" onClick={() => void loadWorkspace()} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:bg-white">
-                <div>
-                  <div className="font-semibold text-slate-900">Refresh intake data</div>
-                  <div className="mt-1 text-sm text-slate-500">Reload plans, routers, and lookup data</div>
-                </div>
-                <RefreshCw className="h-4 w-4 text-slate-400" />
-              </button>
-            </div>
-          </section>
-
-          <section className="card p-5 space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Recent customers</h2>
-              <p className="mt-1 text-sm text-slate-500">Bas latest entries for quick open.</p>
-            </div>
-            {recentCustomers.length ? recentCustomers.map((customer) => (
-              <div key={customer.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-slate-900">{customer.name}</div>
-                    <div className="mt-1 text-xs text-slate-500">{formatDate(customer.createdAt)}</div>
-                  </div>
-                  <Link href={`/customers/${customer.id}`} className="text-sm font-medium text-[#2a8cff]">Open</Link>
-                </div>
-              </div>
-            )) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-sm text-slate-500">
-                No customers yet.
-              </div>
-            )}
-          </section>
-        </div>
-      </div>
+      </section>
 
       {isCreateOpen ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/35 px-4 py-10 backdrop-blur-sm">

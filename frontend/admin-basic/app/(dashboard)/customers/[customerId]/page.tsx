@@ -1412,6 +1412,15 @@ function CustomerDetailContent() {
     controlHasRecentSession ||
     String(billingControlCenter?.latestAuthReply || '').toLowerCase().includes('accept')
   const lastPayment = customer.payments?.[0]
+  const sortedInvoices = [...(customer.invoices || [])].sort(
+    (a, b) => new Date(String(b.issuedAt || b.createdAt || b.dueDate || 0)).getTime() - new Date(String(a.issuedAt || a.createdAt || a.dueDate || 0)).getTime()
+  )
+  const latestInvoice = sortedInvoices[0]
+  const currentInvoice = sortedInvoices.find((invoice) => ['pending', 'unpaid', 'overdue'].includes(String(invoice.paymentStatus || '').toLowerCase())) || latestInvoice
+  const recentInvoices = sortedInvoices.slice(0, 5)
+  const latestPayment = [...(customer.payments || [])].sort(
+    (a, b) => new Date(String(b.paidAt || b.createdAt || 0)).getTime() - new Date(String(a.paidAt || a.createdAt || 0)).getTime()
+  )[0]
   const latestKycRequest = recentKycRequests[0] || null
   const billingRiskPriority = String(billingRiskProfile?.priority || '').toLowerCase()
   const proofState = latestInstallJob?.proofUploadedAt
@@ -1613,7 +1622,7 @@ function CustomerDetailContent() {
           <div className="flex flex-wrap gap-2">
             <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('overview')}>Overview</button>
             <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('billing')}>Billing</button>
-            <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('devices')}>Network</button>
+            <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('devices')}>LAN / WAN / WiFi</button>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit user</Link>
@@ -2068,6 +2077,84 @@ function CustomerDetailContent() {
 
             {activeTab === 'billing' ? (
               <>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="card p-5">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Current invoice</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">{formatValue(currentInvoice?.invoiceNumber || currentInvoice?.invoiceId, '-')}</p>
+                    <p className="mt-1 text-sm text-slate-500">{formatDateTime(currentInvoice?.issuedAt || currentInvoice?.createdAt || currentInvoice?.dueDate)}</p>
+                  </div>
+                  <div className="card p-5">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Payment status</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">{formatValue(currentInvoice?.paymentStatus || latestPayment?.status, '-')}</p>
+                    <p className="mt-1 text-sm text-slate-500">Rs {Number(currentInvoice?.amount || billingSummary.dueAmount || 0).toFixed(2)}</p>
+                  </div>
+                  <div className="card p-5">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Transaction ID</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">{formatValue(latestPayment?.transactionId, '-')}</p>
+                    <p className="mt-1 text-sm text-slate-500">{formatDateTime(latestPayment?.paidAt || latestPayment?.createdAt)}</p>
+                  </div>
+                  <div className="card p-5">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Last date</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">{formatDateTime(latestInvoice?.issuedAt || latestInvoice?.createdAt || latestInvoice?.dueDate)}</p>
+                    <p className="mt-1 text-sm text-slate-500">Latest invoice / payment date</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                  <div className="card p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-lg font-semibold text-slate-900">Latest invoice</h2>
+                      {latestInvoice ? (
+                        <button className="btn-secondary" onClick={() => void openInvoicePdf(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}>
+                          Open PDF
+                        </button>
+                      ) : null}
+                    </div>
+                    {latestInvoice ? (
+                      <div className="grid gap-3 md:grid-cols-2 text-sm">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Invoice</div>
+                          <div className="mt-2 font-semibold text-slate-900">{formatValue(latestInvoice.invoiceNumber || latestInvoice.invoiceId, '-')}</div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Amount</div>
+                          <div className="mt-2 font-semibold text-slate-900">Rs {Number(latestInvoice.amount || 0).toFixed(2)}</div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Status</div>
+                          <div className="mt-2 font-semibold text-slate-900">{formatValue(latestInvoice.paymentStatus, '-')}</div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Date</div>
+                          <div className="mt-2 font-semibold text-slate-900">{formatDateTime(latestInvoice.issuedAt || latestInvoice.createdAt || latestInvoice.dueDate)}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500">No invoice found.</p>
+                    )}
+                  </div>
+
+                  <div className="card p-5 space-y-4">
+                    <h2 className="text-lg font-semibold text-slate-900">Last invoices</h2>
+                    {recentInvoices.length ? (
+                      <div className="space-y-3">
+                        {recentInvoices.map((invoice) => (
+                          <div key={invoice.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="font-semibold text-slate-900">{formatValue(invoice.invoiceNumber || invoice.invoiceId, '-')}</div>
+                              <div className="text-slate-500">{formatDateTime(invoice.issuedAt || invoice.createdAt || invoice.dueDate)}</div>
+                            </div>
+                            <div className="mt-2 text-slate-600">Rs {Number(invoice.amount || 0).toFixed(2)} • {formatValue(invoice.paymentStatus, '-')}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500">No invoice history found.</p>
+                    )}
+                  </div>
+                </div>
+
+                {false ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="metric-tile p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-black/40">Billing mode</p>
@@ -2784,6 +2871,7 @@ function CustomerDetailContent() {
                     </div>
                   ) : <p className="text-slate-500 text-sm">No plan/service requests found</p>}
                 </div>
+                ) : null}
               </>
             ) : null}
 
@@ -2792,8 +2880,8 @@ function CustomerDetailContent() {
                 <div className="card p-4 md:p-5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">PPPoE control strip</p>
-                      <h2 className="mt-2 text-lg font-semibold">FreeRADIUS subscriber status</h2>
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Network control</p>
+                      <h2 className="mt-2 text-lg font-semibold">LAN / WAN / WiFi management</h2>
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs">
                       <span className={radiusService?.status === 'active' ? 'rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700' : radiusService?.status === 'suspended' ? 'rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700' : 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'}>
@@ -2961,7 +3049,7 @@ function CustomerDetailContent() {
                       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                           <div className="flex items-center justify-between gap-2">
-                            <h3 className="font-semibold text-slate-900">Binding & Identity</h3>
+                            <h3 className="font-semibold text-slate-900">Connection</h3>
                             <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">Mapped to subscriber</span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2986,7 +3074,7 @@ function CustomerDetailContent() {
 
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                           <div className="flex items-center justify-between gap-2">
-                            <h3 className="font-semibold text-slate-900">WAN Provisioning</h3>
+                            <h3 className="font-semibold text-slate-900">WAN</h3>
                             <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">{wanMode}</span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -3029,7 +3117,7 @@ function CustomerDetailContent() {
                       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 text-sm">
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                           <div className="flex items-center justify-between gap-2">
-                            <h3 className="font-semibold text-slate-900">Wi‑Fi Radios</h3>
+                            <h3 className="font-semibold text-slate-900">WiFi</h3>
                             <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">{connectedClients} clients</span>
                           </div>
                           <div className="space-y-2">
@@ -3071,7 +3159,7 @@ function CustomerDetailContent() {
 
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                           <div className="flex items-center justify-between gap-2">
-                            <h3 className="font-semibold text-slate-900">LAN Clients</h3>
+                            <h3 className="font-semibold text-slate-900">LAN</h3>
                             <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">{connectedClients} seen</span>
                           </div>
                           {clientRows.length ? (
@@ -3255,7 +3343,7 @@ function CustomerDetailContent() {
                         </div>
                       </div>
 
-                      <details className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      {false ? <details className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                         <summary className="cursor-pointer list-none font-semibold text-slate-900">
                           Advanced raw snapshots
                         </summary>
@@ -3273,7 +3361,7 @@ function CustomerDetailContent() {
                             <pre className="overflow-auto rounded border border-slate-200 bg-slate-50 p-3 text-slate-700">{JSON.stringify(device.opticalInfo || {}, null, 2)}</pre>
                           </div>
                         </div>
-                      </details>
+                      </details> : null}
                     </div>
                   )
                 }) : <div className="card p-5 text-slate-500">No devices found</div>}
