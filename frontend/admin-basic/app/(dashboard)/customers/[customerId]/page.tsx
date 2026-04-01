@@ -3549,33 +3549,6 @@ function CustomerDetailContent() {
               </div>
             ) : null}
 
-            {false ? (
-              <div className="space-y-4">
-                <div className="card p-5 space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold">Logs & action history</h2>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                      {activityFeed.length} events
-                    </span>
-                  </div>
-                  {activityFeed.length ? activityFeed.map((entry) => (
-                    <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="font-semibold text-slate-900">{entry.title}</div>
-                          <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">{entry.source}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">{entry.status}</div>
-                          <div className="mt-2 text-xs text-slate-500">{formatDateTime(entry.at)}</div>
-                        </div>
-                      </div>
-                      {entry.note ? <div className="mt-3 text-slate-600 break-words">{entry.note}</div> : null}
-                    </div>
-                  )) : <p className="text-slate-500 text-sm">No actions found</p>}
-                </div>
-              </div>
-            ) : null}
           </div>
 
           <div className="space-y-4">
