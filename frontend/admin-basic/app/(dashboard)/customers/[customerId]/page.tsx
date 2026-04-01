@@ -2197,7 +2197,7 @@ function CustomerDetailContent() {
                     </button>
                   </div>
                 </div>
-                {billingControlCenter || billingRiskProfile ? (
+                <div className="hidden">
                   <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-4">
                     <div className="card p-5 space-y-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2492,7 +2492,7 @@ function CustomerDetailContent() {
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
                 <div className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Usage & FUP State</h2>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
