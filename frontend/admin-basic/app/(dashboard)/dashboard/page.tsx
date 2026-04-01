@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { Activity, AlertTriangle, Gauge, Loader, ShieldCheck, Users, Wallet } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
-import type { Customer, DashboardStats } from '@/lib/types'
+import type { BngNode, Customer, DashboardStats, IntegrationSummary, ServiceZone } from '@/lib/types'
 
 function MiniBarChart() {
   const bars = [62, 44, 88, 56, 74, 24, 18]
@@ -48,6 +49,9 @@ function MiniBarChart() {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [routers, setRouters] = useState<BngNode[]>([])
+  const [integrations, setIntegrations] = useState<IntegrationSummary[]>([])
+  const [serviceZones, setServiceZones] = useState<ServiceZone[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [otpLookup, setOtpLookup] = useState('')
   const [otpValue, setOtpValue] = useState('')
@@ -60,15 +64,27 @@ export default function DashboardPage() {
 
   async function loadStats() {
     try {
-      const [statsRes, customersRes] = await Promise.all([
+      const [statsRes, customersRes, routersRes, integrationsRes, serviceZonesRes] = await Promise.all([
         adminAPI.getDashboardStats(),
         adminAPI.getCustomers(1, 100),
+        adminAPI.getBngNodes(),
+        adminAPI.getIntegrations(),
+        adminAPI.getServiceZones(),
       ])
       if (statsRes.success && statsRes.data) {
         setStats(statsRes.data)
       }
       if (customersRes.success && customersRes.data?.items) {
         setCustomers(customersRes.data.items)
+      }
+      if (routersRes.success && routersRes.data) {
+        setRouters(routersRes.data)
+      }
+      if (integrationsRes.success && integrationsRes.data) {
+        setIntegrations(integrationsRes.data)
+      }
+      if (serviceZonesRes.success && serviceZonesRes.data) {
+        setServiceZones(serviceZonesRes.data)
       }
     } catch (error) {
       console.log('[dashboard] Error loading stats:', error)
@@ -133,6 +149,23 @@ export default function DashboardPage() {
 
     return { watch, high, capReached, unlimited }
   }, [customers])
+
+  const hardeningSummary = useMemo(() => {
+    const helperReadyRouters = routers.filter((router) => router.freeradiusIntegrationHealth?.overallReady).length
+    const authMismatchRouters = routers.filter((router) => router.lastRadiusAuthTelemetry?.matchedTrustedClient === false || router.lastRadiusAuthTelemetry?.mismatch).length
+    const activeIntegrations = integrations.filter((item) => item.status === 'active').length
+    const productionIntegrations = integrations.filter((item) => item.mode === 'production').length
+    const activeZones = serviceZones.filter((zone) => zone.status === 'active').length
+    const plannedZones = serviceZones.filter((zone) => zone.status !== 'active').length
+    return {
+      helperReadyRouters,
+      authMismatchRouters,
+      activeIntegrations,
+      productionIntegrations,
+      activeZones,
+      plannedZones,
+    }
+  }, [integrations, routers, serviceZones])
 
   const usageSummaryTiles: Array<{
     title: string
@@ -332,6 +365,87 @@ export default function DashboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">QA & hardening</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Release readiness console</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Helper-ready routers</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{hardeningSummary.helperReadyRouters}</div>
+              <div className="mt-1 text-sm text-slate-500">FreeRADIUS helper path healthy and ready for sync</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Auth mismatches</div>
+              <div className="mt-2 text-2xl font-semibold text-amber-600">{hardeningSummary.authMismatchRouters}</div>
+              <div className="mt-1 text-sm text-slate-500">Routers still showing source-IP trust drift</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Live integrations</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{hardeningSummary.activeIntegrations}</div>
+              <div className="mt-1 text-sm text-slate-500">{hardeningSummary.productionIntegrations} already switched to production mode</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active zones</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{hardeningSummary.activeZones}</div>
+              <div className="mt-1 text-sm text-slate-500">Serviceability-ready zones in active rollout</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Planned zones</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{hardeningSummary.plannedZones}</div>
+              <div className="mt-1 text-sm text-slate-500">Coverage records still pending full launch hardening</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Smoke-check surfaces</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">5</div>
+              <div className="mt-1 text-sm text-slate-500">Customer, billing, routers, integrations, and serviceability</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Smoke checklist</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">What to verify after each deploy</div>
+          <div className="mt-4 space-y-3">
+            <Link href="/customers" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
+              <div>
+                <div className="font-semibold text-slate-900">Customer journey</div>
+                <div className="mt-1 text-sm text-slate-500">Open customer list, customer detail, billing tab, and LAN/WAN/WiFi save actions.</div>
+              </div>
+              <Users className="mt-0.5 h-4 w-4 text-slate-400" />
+            </Link>
+            <Link href="/billing" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
+              <div>
+                <div className="font-semibold text-slate-900">Finance desk</div>
+                <div className="mt-1 text-sm text-slate-500">Check approvals, reconciliation queue, and collections command rail.</div>
+              </div>
+              <Wallet className="mt-0.5 h-4 w-4 text-slate-400" />
+            </Link>
+            <Link href="/routers" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
+              <div>
+                <div className="font-semibold text-slate-900">Router and FreeRADIUS</div>
+                <div className="mt-1 text-sm text-slate-500">Verify helper health, auth telemetry, and router test behavior.</div>
+              </div>
+              <ShieldCheck className="mt-0.5 h-4 w-4 text-slate-400" />
+            </Link>
+            <Link href="/apps" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
+              <div>
+                <div className="font-semibold text-slate-900">Integrations and providers</div>
+                <div className="mt-1 text-sm text-slate-500">Review default routes, testing providers, and launch checklist status.</div>
+              </div>
+              <Activity className="mt-0.5 h-4 w-4 text-slate-400" />
+            </Link>
+            <Link href="/serviceability" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
+              <div>
+                <div className="font-semibold text-slate-900">Zone and coverage</div>
+                <div className="mt-1 text-sm text-slate-500">Confirm active coverage zones and sub-zone launch readiness.</div>
+              </div>
+              <Gauge className="mt-0.5 h-4 w-4 text-slate-400" />
+            </Link>
           </div>
         </div>
       </section>
