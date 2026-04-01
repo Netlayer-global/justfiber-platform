@@ -393,6 +393,8 @@ export default function RoutersPage() {
 
   const activeCount = routers.filter((item) => item.status === 'active').length
   const coaEnabledCount = routers.filter((item) => item.useCoa !== false).length
+  const helperReadyCount = routers.filter((item) => item.freeradiusIntegrationHealth?.overallReady).length
+  const authMismatchCount = routers.filter((item) => item.lastRadiusAuthTelemetry?.mismatch).length
   const integrationHealth = selectedRouter?.freeradiusIntegrationHealth
 
   return (
@@ -419,7 +421,7 @@ export default function RoutersPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-5">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Total routers</div>
             <div className="mt-3 text-3xl font-semibold text-slate-900">{routers.length}</div>
@@ -435,6 +437,27 @@ export default function RoutersPage() {
             <div className="mt-3 text-3xl font-semibold text-[#5B6CFF]">{coaEnabledCount}</div>
             <div className="mt-2 text-sm text-slate-500">Nodes ready for live session disconnect and refresh</div>
           </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Integration ready</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-900">{helperReadyCount}</div>
+            <div className="mt-2 text-sm text-slate-500">Routers with healthy FreeRADIUS integration</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Auth mismatch</div>
+            <div className="mt-3 text-3xl font-semibold text-amber-600">{authMismatchCount}</div>
+            <div className="mt-2 text-sm text-slate-500">Routers with live source IP drift or trust mismatch</div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary" onClick={() => setQuery('active')}>
+            Focus active
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => setQuery('mikrotik')}>
+            MikroTik only
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => void loadRouters(selectedId || undefined)}>
+            Refresh NOC view
+          </button>
         </div>
       </section>
 

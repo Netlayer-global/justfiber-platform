@@ -194,6 +194,9 @@ export default function ProvisioningPage() {
   const issues = provisioningIssues(form)
   const readyCount = plans.filter((plan) => plan.provisioningReady !== false).length
   const needsCount = plans.filter((plan) => plan.provisioningReady === false).length
+  const homeCount = plans.filter((plan) => (plan.category || 'home') === 'home').length
+  const businessCount = plans.filter((plan) => (plan.category || 'home') === 'business').length
+  const enterpriseCount = plans.filter((plan) => (plan.category || 'home') === 'enterprise').length
 
   const bulkCandidatePlans = plans.filter((plan) => {
     if (plan.id === selectedPlan?.id) return false
@@ -393,6 +396,39 @@ export default function ProvisioningPage() {
               Refresh plans
             </button>
           </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Home plans</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{homeCount}</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Business plans</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{businessCount}</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Enterprise plans</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{enterpriseCount}</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Bulk targets</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{bulkTargetPlanIds.length}</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Current issues</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{issues.length}</div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary" onClick={() => applyPreset('home')}>
+            Home preset
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => applyPreset('business')}>
+            Business preset
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => applyPreset('enterprise')}>
+            Enterprise preset
+          </button>
         </div>
       </section>
 

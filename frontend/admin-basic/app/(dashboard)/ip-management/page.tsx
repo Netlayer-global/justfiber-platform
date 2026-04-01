@@ -226,6 +226,9 @@ export default function IpManagementPage() {
   }
 
   const totalRanges = ipPools.length
+  const radiusRanges = ipPools.filter((pool) => pool.useForRadius).length
+  const routerLinkedRanges = ipPools.filter((pool) => Boolean(pool.routerNodeCode)).length
+  const publicRanges = ipPools.filter((pool) => pool.type === 'public').length
 
   return (
     <div className="space-y-6">
@@ -251,7 +254,7 @@ export default function IpManagementPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="mt-6 grid gap-4 md:grid-cols-4 xl:grid-cols-6">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Active IPs percentage</div>
             <div className="mt-3 text-3xl font-semibold text-slate-900">{summary.activePercent}%</div>
@@ -272,6 +275,27 @@ export default function IpManagementPage() {
             <div className="mt-3 text-3xl font-semibold text-slate-900">{totalRanges}</div>
             <div className="mt-2 text-sm text-slate-500">Configured IP pools across routers and zones</div>
           </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Radius ranges</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-900">{radiusRanges}</div>
+            <div className="mt-2 text-sm text-slate-500">Pools currently marked for RADIUS usage</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Router linked</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-900">{routerLinkedRanges}</div>
+            <div className="mt-2 text-sm text-slate-500">{publicRanges} public ranges across linked routers</div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary" onClick={() => setQuery('public')}>
+            Public ranges
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => setQuery('private')}>
+            Private ranges
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => setQuery('')}>
+            Reset range view
+          </button>
         </div>
       </section>
 

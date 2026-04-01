@@ -104,6 +104,23 @@ export default function NatLogsPage() {
     [routers, filters.routerIp]
   )
 
+  function applyTimePreset(mode: 'last_hour' | 'last_day' | 'clear') {
+    if (mode === 'clear') {
+      setFilters((prev) => ({ ...prev, timeFrom: '', timeTo: '' }))
+      return
+    }
+    const now = new Date()
+    const from = new Date(now)
+    if (mode === 'last_hour') from.setHours(from.getHours() - 1)
+    if (mode === 'last_day') from.setDate(from.getDate() - 1)
+    const format = (value: Date) => {
+      const offset = value.getTimezoneOffset()
+      const local = new Date(value.getTime() - offset * 60000)
+      return local.toISOString().slice(0, 16)
+    }
+    setFilters((prev) => ({ ...prev, timeFrom: format(from), timeTo: format(now) }))
+  }
+
   async function loadInitial() {
     setIsLoading(true)
     try {
@@ -184,6 +201,39 @@ export default function NatLogsPage() {
               Search
             </button>
           </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Matched records</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-900">{total}</div>
+            <div className="mt-2 text-sm text-slate-500">Current result set from active search</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Loaded rows</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-900">{rows.length}</div>
+            <div className="mt-2 text-sm text-slate-500">Rows currently visible before export</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Router scope</div>
+            <div className="mt-3 text-lg font-semibold text-slate-900">{selectedRouter?.displayName || 'All routers'}</div>
+            <div className="mt-2 text-sm text-slate-500">{filters.routerIp || 'No router filter applied'}</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Username filter</div>
+            <div className="mt-3 text-lg font-semibold text-slate-900">{filters.pppoeUsername || '-'}</div>
+            <div className="mt-2 text-sm text-slate-500">Useful for customer-level NAT investigations</div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary" onClick={() => applyTimePreset('last_hour')}>
+            Last hour
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => applyTimePreset('last_day')}>
+            Last 24 hours
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => applyTimePreset('clear')}>
+            Clear time
+          </button>
         </div>
       </section>
 

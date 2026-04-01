@@ -423,6 +423,10 @@ export default function DevicesPage() {
   const mappedCount = devices.filter((device) => device.customerId && device.serviceId).length
   const actionCount = devices.filter((device) => buildAttentionItems(device).length > 0).length
   const suspendCount = devices.filter((device) => String(device.provisioningState || '').toUpperCase().includes('SUSPEND')).length
+  const activateCount = devices.filter((device) => {
+    const state = String(device.provisioningState || '').toUpperCase()
+    return state.includes('ACTIVATE') || state.includes('PREPARE')
+  }).length
   const opticalRiskCount = devices.filter((device) => summarizeOptical(device.opticalInfo) !== 'Healthy line').length
   const selectedClients = normalizeLanClients(selectedDevice?.lanInfo)
   const selectedAttention = selectedDevice ? buildAttentionItems(selectedDevice) : []
@@ -470,7 +474,7 @@ export default function DevicesPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void syncFleet()}
@@ -517,6 +521,57 @@ export default function DevicesPage() {
           <div className="ml-auto text-xs text-slate-400">
             {latestFleetSync ? `Last sync ${new Date(latestFleetSync).toLocaleString()}` : 'No sync timestamp'}
           </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Needs attention</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{actionCount}</div>
+            <div className="mt-1 text-xs text-slate-500">Device, mapping, or optical issues</div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Activation queue</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{activateCount}</div>
+            <div className="mt-1 text-xs text-slate-500">Prepare or activate provisioning states</div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Suspend queue</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{suspendCount}</div>
+            <div className="mt-1 text-xs text-slate-500">Provisioning states needing suspend review</div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Optical watch</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{opticalRiskCount}</div>
+            <div className="mt-1 text-xs text-slate-500">Devices with weak or missing optical signals</div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Last fleet sync</div>
+            <div className="mt-2 text-sm font-semibold text-slate-900">
+              {latestFleetSync ? new Date(latestFleetSync).toLocaleString() : '-'}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">Latest cached device refresh in admin</div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary" onClick={() => setOnlineFilter('online')}>
+            Online only
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => setProvisioningFilter('activate')}>
+            Activation queue
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => setProvisioningFilter('suspend')}>
+            Suspend queue
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setOnlineFilter('all')
+              setProvisioningFilter('all')
+              setQuery('')
+            }}
+          >
+            Reset device view
+          </button>
         </div>
       </section>
 
