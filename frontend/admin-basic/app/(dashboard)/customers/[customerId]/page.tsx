@@ -409,7 +409,7 @@ export default function CustomerDetailPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
               <div className="card p-5 space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-slate-900">Latest invoice</h2>
@@ -453,7 +453,7 @@ export default function CustomerDetailPage() {
                 {recentInvoices.length ? (
                   <div className="space-y-3">
                     {recentInvoices.map((invoice) => (
-                      <div key={invoice.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                      <div key={invoice.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
                         <div className="flex items-center justify-between gap-3">
                           <div className="font-semibold text-slate-900">{formatValue(invoice.invoiceNumber || invoice.invoiceId)}</div>
                           <div className="text-slate-500">{formatDate(invoice.issuedAt || invoice.createdAt || invoice.dueDate)}</div>
@@ -499,7 +499,7 @@ export default function CustomerDetailPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className="btn-primary" onClick={() => void handleSaveStaticIp()} disabled={busyKey === 'save-static-ip'}>
-                    Save
+                    {busyKey === 'save-static-ip' ? 'Saving...' : 'Save'}
                   </button>
                   <button type="button" className="btn-secondary" onClick={() => setStaticIpForm({ currentIpv4: '', ipv4Pool: '' })} disabled={busyKey === 'save-static-ip'}>
                     Clear
@@ -566,7 +566,7 @@ export default function CustomerDetailPage() {
                             NAT enabled
                           </label>
                           <button type="button" className="btn-primary" onClick={() => void handleDeviceWanUpdate(device)} disabled={busyKey === `wan-${device.deviceId}`}>
-                            Save WAN
+                            {busyKey === `wan-${device.deviceId}` ? 'Saving WAN...' : 'Save WAN'}
                           </button>
                         </div>
                       </div>
@@ -586,7 +586,7 @@ export default function CustomerDetailPage() {
                           <input className="input" placeholder="Password 2.4G" type="password" value={form.password24} onChange={(e) => updateDeviceForm(device.deviceId, { password24: e.target.value })} />
                           <input className="input" placeholder="Password 5G" type="password" value={form.password5} onChange={(e) => updateDeviceForm(device.deviceId, { password5: e.target.value })} />
                           <button type="button" className="btn-primary" onClick={() => void handleDeviceWifiUpdate(device)} disabled={busyKey === `wifi-${device.deviceId}`}>
-                            Save WiFi
+                            {busyKey === `wifi-${device.deviceId}` ? 'Saving WiFi...' : 'Save WiFi'}
                           </button>
                         </div>
                       </div>

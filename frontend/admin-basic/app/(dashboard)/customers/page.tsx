@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, Customer, Plan } from '@/lib/types'
 import { Eye, Loader, Plus, RefreshCw, Search } from 'lucide-react'
@@ -14,6 +15,7 @@ function formatDate(value?: string) {
 }
 
 function CustomersContent() {
+  const router = useRouter()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
   const [bngNodes, setBngNodes] = useState<BngNode[]>([])
@@ -216,38 +218,42 @@ function CustomersContent() {
                 <div>Actions</div>
               </div>
               {quickLookupResults.map((customer, index) => (
-                <div key={customer.id} className="grid grid-cols-[56px_minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_130px] items-center gap-3 border-b border-slate-100 px-4 py-2.5 text-sm transition hover:bg-slate-50 last:border-b-0">
-                <div className="text-slate-500">{index + 1}</div>
-                <div>
-                  <div className="font-semibold text-slate-900">{customer.name}</div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    {customer.customerId || customer.id}
-                    {' | '}
-                    {customer.plan?.name || 'Unassigned'}
+                <div
+                  key={customer.id}
+                  className="grid cursor-pointer grid-cols-[56px_minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_130px] items-center gap-3 border-b border-slate-100 px-4 py-2.5 text-sm transition hover:bg-slate-50 last:border-b-0"
+                  onClick={() => router.push(`/customers/${customer.id}`)}
+                >
+                  <div className="text-slate-500">{index + 1}</div>
+                  <div>
+                    <div className="font-semibold text-slate-900">{customer.name}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {customer.customerId || customer.id}
+                      {' | '}
+                      {customer.plan?.name || 'Unassigned'}
+                    </div>
                   </div>
-                </div>
-                <div className="text-slate-600">{customer.phone || '-'}</div>
-                <div className="text-slate-600">{customer.pppoeUsername || '-'}</div>
-                <div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                    customer.status === 'active'
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : customer.status === 'suspended'
-                        ? 'bg-amber-50 text-amber-700'
-                        : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {customer.status || 'unknown'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Link href={`/customers/${customer.id}`} className="inline-flex items-center gap-2 font-medium text-[#2d7dff]">
-                    <Eye className="h-4 w-4" />
-                    Open
-                  </Link>
-                  <Link href={`/all-users/${customer.id}/edit`} className="text-slate-500 hover:text-slate-900">
-                    Edit
-                  </Link>
-                </div>
+                  <div className="text-slate-600">{customer.phone || '-'}</div>
+                  <div className="text-slate-600">{customer.pppoeUsername || '-'}</div>
+                  <div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      customer.status === 'active'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : customer.status === 'suspended'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {customer.status || 'unknown'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/customers/${customer.id}`} className="inline-flex items-center gap-2 font-medium text-[#2d7dff]">
+                      <Eye className="h-4 w-4" />
+                      Open
+                    </Link>
+                    <Link href={`/all-users/${customer.id}/edit`} className="text-slate-500 hover:text-slate-900">
+                      Edit
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
