@@ -1650,7 +1650,7 @@ function CustomerDetailContent() {
                         label: 'User tickets',
                         body: (
                           <div className="space-y-2 text-sm text-slate-600">
-                            {(customer.tickets || []).length ? customer.tickets?.slice(0, 4).map((ticket) => (
+                            {(customer?.tickets || []).length ? customer?.tickets?.slice(0, 4).map((ticket) => (
                               <div key={ticket.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
                                 <div className="font-medium text-slate-900">{ticket.ticketNumber || ticket.id}</div>
                                 <div className="mt-1">{ticket.subject}</div>
@@ -1755,7 +1755,7 @@ function CustomerDetailContent() {
                       <div className="grid gap-3 md:grid-cols-3">
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Open tickets</p>
-                          <p className="mt-2 text-2xl font-semibold text-slate-900">{(customer.tickets || []).length}</p>
+                          <p className="mt-2 text-2xl font-semibold text-slate-900">{(customer?.tickets || []).length}</p>
                           <p className="mt-2 text-sm text-slate-500">Use More to raise, track, and close customer support cases.</p>
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -1983,9 +1983,9 @@ function CustomerDetailContent() {
                 </div>
                 <div className="card p-5 space-y-3">
                   <h2 className="text-lg font-semibold">Booking pipeline</h2>
-                  {(customer.bookings || []).length ? (
+                  {(customer?.bookings || []).length ? (
                     <div className="space-y-2">
-                      {customer.bookings?.map((booking) => (
+                      {customer?.bookings?.map((booking) => (
                         <div key={booking.id} className="rounded bg-[#0a0e27] px-3 py-3 text-sm">
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="space-y-1">
@@ -2774,9 +2774,9 @@ function CustomerDetailContent() {
                 </div>
                 <div className="card p-5 space-y-3">
                   <h2 className="text-lg font-semibold">Plan Change Requests</h2>
-                  {(customer.serviceRequests || []).length ? (
+                  {(customer?.serviceRequests || []).length ? (
                     <div className="space-y-2">
-                      {customer.serviceRequests?.map((request) => (
+                      {customer?.serviceRequests?.map((request) => (
                         <div key={request.id} className="rounded bg-[#0a0e27] px-3 py-2 text-sm">
                           {request.requestNumber} | {request.type} | {request.status} | {(request.payload?.planName || request.payload?.planCode || '-')}
                         </div>
@@ -3287,10 +3287,10 @@ function CustomerDetailContent() {
                     <div className="flex items-center justify-between gap-3">
                       <h2 className="text-lg font-semibold">Tickets</h2>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        {(customer.tickets || []).length} total
+                        {(customer?.tickets || []).length} total
                       </span>
                     </div>
-                    {(customer.tickets || []).length ? customer.tickets?.map((ticket) => (
+                    {(customer?.tickets || []).length ? customer?.tickets?.map((ticket) => (
                       <div key={ticket.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
