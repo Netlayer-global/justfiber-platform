@@ -74,6 +74,9 @@ type SubZoneDraft = {
   adminFullName: string
   adminEmail: string
   adminPhone: string
+  adminUsername: string
+  adminPassword: string
+  adminRole: string
   inheritBillingProfile: boolean
   inheritInvoiceTemplate: boolean
   inheritPlans: boolean
@@ -236,6 +239,9 @@ const initialSubZoneDraft: SubZoneDraft = {
   adminFullName: '',
   adminEmail: '',
   adminPhone: '',
+  adminUsername: '',
+  adminPassword: '',
+  adminRole: 'ops_admin',
   inheritBillingProfile: true,
   inheritInvoiceTemplate: true,
   inheritPlans: true,
@@ -744,7 +750,21 @@ export default function SettingsPage() {
           ? `${activeZoneCode}_admin@justfiber.local`
           : current.email,
     }))
+    setSubZoneDraft((current) => ({
+      ...current,
+      adminFullName: current.adminFullName || (activeZoneLabel ? `${activeZoneLabel} Admin` : ''),
+      adminRole: current.adminRole || 'ops_admin',
+    }))
   }, [activeZoneCode, activeZoneLabel])
+
+  useEffect(() => {
+    const code = subZoneDraft.subZoneName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
+    if (!code) return
+    setSubZoneDraft((current) => ({
+      ...current,
+      adminUsername: current.adminUsername || `${code}_admin`,
+    }))
+  }, [subZoneDraft.subZoneName])
 
   useEffect(() => {
     void loadCatalog()
@@ -963,6 +983,23 @@ export default function SettingsPage() {
       }
       if (metadata.adminAccounts.length) {
         await adminAPI.saveFranchiseAdminAccounts(franchiseCode, metadata.adminAccounts)
+      }
+      if (subZoneDraft.adminUsername.trim() && subZoneDraft.adminPassword.trim() && subZoneDraft.adminEmail.trim()) {
+        const adminRes = await adminAPI.createAdminUser({
+          username: subZoneDraft.adminUsername.trim(),
+          fullName: subZoneDraft.adminFullName.trim() || `${subZoneDraft.subZoneName.trim()} Admin`,
+          email: subZoneDraft.adminEmail.trim(),
+          phone: subZoneDraft.adminPhone.trim(),
+          password: subZoneDraft.adminPassword.trim(),
+          roles: [subZoneDraft.adminRole || 'ops_admin'],
+          zoneCode: franchiseCode,
+          zoneName: subZoneDraft.subZoneName.trim(),
+          canAccessAllZones: false,
+        })
+        if (!adminRes.success) {
+          toast.error(adminRes.error || 'Sub-zone created but login creation failed')
+          return
+        }
       }
       toast.success('Sub-zone created inside settings')
       setSubZoneDraft(initialSubZoneDraft)
@@ -1452,6 +1489,48 @@ export default function SettingsPage() {
                 value={subZoneDraft.area}
                 onChange={(event) => setSubZoneDraft((current) => ({ ...current, area: event.target.value }))}
               />
+              <input
+                className="input"
+                placeholder="Zone admin full name"
+                value={subZoneDraft.adminFullName}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminFullName: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Zone admin email"
+                value={subZoneDraft.adminEmail}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminEmail: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Zone admin phone"
+                value={subZoneDraft.adminPhone}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminPhone: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Zone admin username"
+                value={subZoneDraft.adminUsername}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminUsername: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Zone admin password"
+                type="text"
+                value={subZoneDraft.adminPassword}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminPassword: event.target.value }))}
+              />
+              <select
+                className="input"
+                value={subZoneDraft.adminRole}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminRole: event.target.value }))}
+              >
+                {(adminRoles.length ? adminRoles : [{ code: 'ops_admin', name: 'Operations Admin', id: 'ops_admin', permissions: [] }]).map((role) => (
+                  <option key={role.code} value={role.code}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm text-slate-600">
               {[

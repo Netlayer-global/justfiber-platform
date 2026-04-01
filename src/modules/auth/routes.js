@@ -93,6 +93,10 @@ authRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const grantedPermissions = await resolvePermissions(req.admin);
+    const canAccessAllZones =
+      Boolean(req.admin.canAccessAllZones) ||
+      !req.admin.zoneCode ||
+      Array.isArray(req.admin.roles) && req.admin.roles.includes("super_admin");
     return ok(res, {
       id: req.admin._id,
       username: req.admin.username,
@@ -100,7 +104,7 @@ authRouter.get(
       email: req.admin.email,
       zoneCode: req.admin.zoneCode || "",
       zoneName: req.admin.zoneName || "",
-      canAccessAllZones: Boolean(req.admin.canAccessAllZones),
+      canAccessAllZones,
       roles: req.admin.roles,
       permissions: grantedPermissions
     });
