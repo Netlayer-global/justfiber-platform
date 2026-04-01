@@ -343,15 +343,16 @@ export default function CustomerDetailPage() {
                 <div className="mt-1 text-sm text-slate-600">Only daily-use account details are shown here.</div>
               </div>
               <div className="card p-5 space-y-4">
-              <h2 className="text-lg font-semibold text-slate-900">Basic details</h2>
-              <div className="grid gap-3 md:grid-cols-2 text-sm">
-                {overviewCards.map((item) => (
-                  <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
-                    <div className="mt-2 font-semibold text-slate-900">{formatValue(item.value)}</div>
-                    <div className="mt-1 text-slate-500">{formatValue(item.sub)}</div>
-                  </div>
-                ))}
+                <h2 className="text-lg font-semibold text-slate-900">Basic details</h2>
+                <div className="grid gap-3 md:grid-cols-2 text-sm">
+                  {overviewCards.map((item) => (
+                    <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
+                      <div className="mt-2 font-semibold text-slate-900">{formatValue(item.value)}</div>
+                      <div className="mt-1 text-slate-500">{formatValue(item.sub)}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
