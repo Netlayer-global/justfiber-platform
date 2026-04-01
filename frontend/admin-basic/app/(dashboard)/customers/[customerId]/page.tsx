@@ -36,6 +36,11 @@ function formatAmount(value: unknown) {
   return `Rs ${Number(value || 0).toFixed(2)}`
 }
 
+function isLikelyIpv4(value: string) {
+  if (!value.trim()) return true
+  return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value.trim())
+}
+
 function normalizeCustomer(raw: Customer): Customer {
   return {
     ...raw,
@@ -67,6 +72,11 @@ export default function CustomerDetailPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [deviceForms, setDeviceForms] = useState<Record<string, DeviceForm>>({})
   const [staticIpForm, setStaticIpForm] = useState({ currentIpv4: '', ipv4Pool: '' })
+  const staticIpError = useMemo(() => {
+    if (staticIpForm.currentIpv4.trim() && !isLikelyIpv4(staticIpForm.currentIpv4)) return 'Enter a valid IPv4 address'
+    if (!staticIpForm.currentIpv4.trim() && staticIpForm.ipv4Pool.trim() && staticIpForm.ipv4Pool.trim().length < 2) return 'Pool name is too short'
+    return ''
+  }, [staticIpForm])
 
   useEffect(() => {
     if (!customerId) return
@@ -153,6 +163,10 @@ export default function CustomerDetailPage() {
 
   async function handleSaveStaticIp() {
     if (!customer) return
+    if (staticIpError) {
+      toast.error(staticIpError)
+      return
+    }
     const currentIpv4 = staticIpForm.currentIpv4.trim()
     const ipv4Pool = staticIpForm.ipv4Pool.trim()
     await runBusy('save-static-ip', async () => {
@@ -486,21 +500,22 @@ export default function CustomerDetailPage() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <input
-                    className="input"
+                    className={`input ${staticIpError ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`}
                     placeholder="Static IPv4"
                     value={staticIpForm.currentIpv4}
                     onChange={(e) => setStaticIpForm((prev) => ({ ...prev, currentIpv4: e.target.value }))}
                   />
                   <input
-                    className="input"
+                    className={`input ${staticIpError ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`}
                     placeholder="IPv4 Pool"
                     value={staticIpForm.ipv4Pool}
                     disabled={Boolean(staticIpForm.currentIpv4.trim())}
                     onChange={(e) => setStaticIpForm((prev) => ({ ...prev, ipv4Pool: e.target.value }))}
                   />
                 </div>
+                {staticIpError ? <p className="text-xs text-rose-600">{staticIpError}</p> : null}
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn-primary" onClick={() => void handleSaveStaticIp()} disabled={busyKey === 'save-static-ip'}>
+                  <button type="button" className="btn-primary" onClick={() => void handleSaveStaticIp()} disabled={busyKey === 'save-static-ip' || Boolean(staticIpError)}>
                     {busyKey === 'save-static-ip' ? 'Saving...' : 'Save'}
                   </button>
                   <button type="button" className="btn-secondary" onClick={() => setStaticIpForm({ currentIpv4: '', ipv4Pool: '' })} disabled={busyKey === 'save-static-ip'}>

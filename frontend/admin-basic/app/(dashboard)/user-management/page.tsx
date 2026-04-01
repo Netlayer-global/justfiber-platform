@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { adminAPI } from '@/lib/api'
 import type { Customer, Plan } from '@/lib/types'
@@ -42,6 +43,7 @@ function planLabel(customer: Customer) {
 }
 
 function UserManagementWorkspace() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const defaultGroup = searchParams.get('group') || ''
   const defaultView = searchParams.get('view') === 'users' ? 'users' : 'groups'
@@ -54,6 +56,7 @@ function UserManagementWorkspace() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [isBulkRunning, setIsBulkRunning] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     void loadData()
@@ -68,7 +71,11 @@ function UserManagementWorkspace() {
 
   async function loadData() {
     try {
-      setIsLoading(true)
+      if (!customers.length && !plans.length) {
+        setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
+      }
       const [plansRes, customersRes] = await Promise.all([
         adminAPI.getPlans(),
         adminAPI.getCustomers(1, 400),
@@ -84,6 +91,7 @@ function UserManagementWorkspace() {
       toast.error(error instanceof Error ? error.message : 'Failed to load user management workspace')
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }
 
@@ -171,6 +179,7 @@ function UserManagementWorkspace() {
   const selectedActiveCount = selectedUsers.filter((customer) => customer.status === 'active').length
   const selectedSuspendedCount = selectedUsers.filter((customer) => customer.status === 'suspended').length
   const allVisibleSelected = Boolean(filteredUsers.length) && filteredUsers.every((customer) => selectedUserIds.includes(customer.id))
+  const activeVisibleCount = filteredUsers.filter((customer) => customer.status === 'active').length
 
   function toggleUserSelection(customerId: string) {
     setSelectedUserIds((current) =>
@@ -270,9 +279,9 @@ function UserManagementWorkspace() {
               <Plus className="h-4 w-4" />
               Intake
             </Link>
-            <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => void loadData()}>
+            <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => void loadData()} disabled={isRefreshing}>
               <RefreshCw className="h-4 w-4" />
-              Refresh
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
@@ -319,10 +328,16 @@ function UserManagementWorkspace() {
                 <div className="mt-2 text-sm text-slate-600">
                   {selectedUsers.length ? `${selectedUsers.length} selected` : `${filteredUsers.length} visible users`}
                 </div>
+                <div className="mt-1 text-xs text-slate-400">
+                  {activeVisibleCount} active | {filteredUsers.length - activeVisibleCount} needs review
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="btn-secondary" onClick={clearFilters}>
                   Clear filters
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setSelectedUserIds([])} disabled={!selectedUsers.length}>
+                  Clear selection
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => void runBulkLifecycleAction('suspend')} disabled={isBulkRunning || !selectedUsers.length}>
                   Suspend selected
@@ -358,6 +373,13 @@ function UserManagementWorkspace() {
                     </tr>
                   </thead>
                   <tbody>
+                    {!filteredUsers.length ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-500">
+                          No users matched the current filters.
+                        </td>
+                      </tr>
+                    ) : null}
                     {filteredUsers.map((customer) => {
                       return (
                         <tr key={customer.id} className="border-b border-slate-100 hover:bg-slate-50">
@@ -372,7 +394,7 @@ function UserManagementWorkspace() {
                               <span className={`inline-block h-2.5 w-2.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-400' : 'bg-slate-300'}`} />
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-semibold text-[#2a8cff]">
+                          <td className="px-4 py-3 font-semibold text-[#2a8cff] cursor-pointer" onClick={() => router.push(`/customers/${customer.id}`)}>
                             <Link href={`/customers/${customer.id}`}>{customer.pppoeUsername || customer.customerId || customer.id}</Link>
                           </td>
                           <td className="px-4 py-3">
@@ -380,11 +402,11 @@ function UserManagementWorkspace() {
                               {customer.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 cursor-pointer" onClick={() => router.push(`/customers/${customer.id}`)}>
                             <div className="font-medium text-slate-900">{customer.name}</div>
                             <div className="mt-1 text-xs text-slate-500">{customer.phone || customer.customerId || customer.id}</div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 cursor-pointer" onClick={() => router.push(`/customers/${customer.id}`)}>
                             <div className="font-medium text-slate-900">{planLabel(customer)}</div>
                           </td>
                           <td className="px-4 py-3">
