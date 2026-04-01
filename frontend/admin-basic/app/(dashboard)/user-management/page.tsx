@@ -274,10 +274,10 @@ function UserManagementWorkspace() {
       <section className="card p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-sm font-semibold text-[#4aa7ff]">Users & Packages</div>
+            <div className="text-sm font-semibold text-[#4aa7ff]">Customer Ops</div>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">User Management</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              Single Jaze-style operator workspace for package groups and all users. Duplicate screens ko hata kar day-to-day workflow yahin surface kiya gaya hai.
+              Single operator desk for package groups and active users. Day-to-day lookup, billing jump, and lifecycle actions yahin se handle ho jayenge.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -287,7 +287,7 @@ function UserManagementWorkspace() {
               onClick={() => setWorkspaceView('groups')}
             >
               <Users className="h-4 w-4" />
-              Groups
+              Packages
             </button>
             <button
               type="button"
@@ -295,7 +295,7 @@ function UserManagementWorkspace() {
               onClick={() => setWorkspaceView('users')}
             >
               <Users className="h-4 w-4" />
-              All Users
+              Users
             </button>
             <Link href="/customers" className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -453,7 +453,7 @@ function UserManagementWorkspace() {
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
                               <Link href={`/customers/${customer.id}`} className="rounded-md bg-[#eef7ff] px-3 py-2 text-xs font-semibold text-[#2a8cff]">
-                                Open
+                                Customer
                               </Link>
                               <Link href={`/customers/${customer.id}?tab=billing`} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
                                 Billing

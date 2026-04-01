@@ -242,13 +242,13 @@ export default function EditUserPage() {
       <section className="card p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-slate-500">
-            <Link href="/user-management" className="font-semibold text-[#2a8cff]">User Management</Link>
+            <Link href="/user-management?view=users" className="font-semibold text-[#2a8cff]">User Management</Link>
             <span className="mx-2">/</span>
-            <Link href={`/all-users/${customer.id}`} className="font-semibold text-[#2a8cff]">{customer.pppoeUsername || customer.customerId}</Link>
+            <Link href={`/customers/${customer.id}`} className="font-semibold text-[#2a8cff]">{customer.pppoeUsername || customer.customerId}</Link>
           </div>
           <div className="flex gap-3">
-            <Link href={`/all-users/${customer.id}`} className="btn-secondary">View user</Link>
-            <Link href="/user-management?view=users" className="btn-secondary">View users</Link>
+            <Link href={`/customers/${customer.id}`} className="btn-secondary">Customer page</Link>
+            <Link href="/user-management?view=users" className="btn-secondary">Users list</Link>
           </div>
         </div>
       </section>
@@ -332,10 +332,10 @@ export default function EditUserPage() {
               <Copy className="h-4 w-4" />
               Copy username
             </button>
-            <Link href={`/customers/${customer.id}`} className="btn-secondary">Open customer</Link>
+            <Link href={`/customers/${customer.id}`} className="btn-secondary">Customer page</Link>
             <Link href={`/customers/${customer.id}?tab=billing`} className="btn-secondary">Open billing</Link>
             <Link href={natLogHref} className="btn-secondary">Open NAT Logs</Link>
-            <Link href="/user-management?view=users" className="btn-secondary">View users</Link>
+            <Link href="/user-management?view=users" className="btn-secondary">Users list</Link>
           </div>
         </section>
 
@@ -515,7 +515,7 @@ export default function EditUserPage() {
           <button type="button" className="btn-secondary" onClick={() => void handleResetForm()} disabled={isSaving}>
             Reset
           </button>
-          <Link href={`/all-users/${customer.id}`} className="btn-secondary">Cancel</Link>
+          <Link href={`/customers/${customer.id}`} className="btn-secondary">Cancel</Link>
           <button type="submit" className="btn-primary" disabled={isSaving || !canSave}>
             {isSaving ? 'Saving...' : 'Save Profile'}
           </button>
