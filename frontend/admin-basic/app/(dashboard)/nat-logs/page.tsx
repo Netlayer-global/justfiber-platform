@@ -89,6 +89,8 @@ function downloadCsv(rows: NatLogEntry[]) {
 
 export default function NatLogsPage() {
   const [routers, setRouters] = useState<BngNode[]>([])
+  const [activeZoneCode, setActiveZoneCode] = useState('default')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('Default Zone')
   const [filters, setFilters] = useState<NatLogFilters>(initialFilters)
   const [rows, setRows] = useState<NatLogEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -96,8 +98,24 @@ export default function NatLogsPage() {
   const [total, setTotal] = useState(0)
 
   useEffect(() => {
-    void loadInitial()
+    const syncZone = () => {
+      const nextCode = window.localStorage.getItem('justfiber-active-zone-key') || 'default'
+      const nextLabel = window.localStorage.getItem('justfiber-active-zone-label') || 'Default Zone'
+      setActiveZoneCode(nextCode)
+      setActiveZoneLabel(nextLabel)
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    window.addEventListener('justfiber-zone-change', syncZone as EventListener)
+    return () => {
+      window.removeEventListener('storage', syncZone)
+      window.removeEventListener('justfiber-zone-change', syncZone as EventListener)
+    }
   }, [])
+
+  useEffect(() => {
+    void loadInitial()
+  }, [activeZoneCode])
 
   const selectedRouter = useMemo(
     () => routers.find((router) => router.managementIp === filters.routerIp || router.radiusClientIp === filters.routerIp) || null,
@@ -124,7 +142,7 @@ export default function NatLogsPage() {
   async function loadInitial() {
     setIsLoading(true)
     try {
-      const routersRes = await adminAPI.getBngNodes()
+      const routersRes = await adminAPI.getBngNodes({ zoneCode: activeZoneCode })
       if (!routersRes.success) {
         throw new Error(routersRes.error || 'Failed to load routers')
       }
@@ -161,6 +179,7 @@ export default function NatLogsPage() {
         protocol: activeFilters.protocol || undefined,
         timeFrom: activeFilters.timeFrom ? new Date(activeFilters.timeFrom).toISOString() : undefined,
         timeTo: activeFilters.timeTo ? new Date(activeFilters.timeTo).toISOString() : undefined,
+        zoneCode: activeZoneCode,
       })
       if (!res.success) {
         throw new Error(res.error || 'Failed to search NAT logs')
@@ -202,7 +221,7 @@ export default function NatLogsPage() {
             </button>
           </div>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="mt-6 grid gap-4 md:grid-cols-5">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Matched records</div>
             <div className="mt-3 text-3xl font-semibold text-slate-900">{total}</div>
@@ -217,6 +236,11 @@ export default function NatLogsPage() {
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Router scope</div>
             <div className="mt-3 text-lg font-semibold text-slate-900">{selectedRouter?.displayName || 'All routers'}</div>
             <div className="mt-2 text-sm text-slate-500">{filters.routerIp || 'No router filter applied'}</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Active zone</div>
+            <div className="mt-3 text-lg font-semibold text-slate-900">{activeZoneLabel}</div>
+            <div className="mt-2 text-sm text-slate-500">{activeZoneCode === 'default' ? 'No zone scope applied' : 'Routers and logs scoped by selected zone'}</div>
           </div>
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Username filter</div>

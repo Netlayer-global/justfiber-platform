@@ -116,6 +116,9 @@ const bngNodeSchema = z.object({
   displayName: z.string().min(2),
   vendor: z.enum(["mikrotik", "juniper", "huawei", "other"]).default("mikrotik"),
   status: z.enum(["active", "planned", "disabled"]).default("active"),
+  zoneCode: z.string().optional(),
+  zoneName: z.string().optional(),
+  zoneStateCode: z.string().optional(),
   macAddress: z.string().optional(),
   groupName: z.string().optional(),
   nasIdentifier: z.string().optional(),
@@ -277,6 +280,19 @@ function computeIpPoolStats(pool, services = []) {
     activePercent: totalIps > 0 ? Math.round((activeIps / totalIps) * 100) : 0,
     excludedCount: excludedIps.length,
     radiusCount
+  };
+}
+
+function buildZoneScopedMatch(field, zoneCode) {
+  const normalized = String(zoneCode || "").trim();
+  if (!normalized) return {};
+  return {
+    $or: [
+      { [field]: normalized },
+      { [field]: { $exists: false } },
+      { [field]: null },
+      { [field]: "" }
+    ]
   };
 }
 
@@ -1105,8 +1121,9 @@ platformFoundationRouter.post(
 platformFoundationRouter.get(
   "/foundation/bng-nodes",
   requirePermission(permissions.configRead),
-  asyncHandler(async (_req, res) => {
-    const items = await BngNode.find({}).sort({ status: 1, nodeCode: 1 }).lean();
+  asyncHandler(async (req, res) => {
+    const zoneCode = String(req.query.zoneCode || "").trim();
+    const items = await BngNode.find(buildZoneScopedMatch("zoneCode", zoneCode)).sort({ status: 1, nodeCode: 1 }).lean();
     return ok(res, items.map(serializeBngNode));
   })
 );
@@ -1122,6 +1139,9 @@ platformFoundationRouter.post(
     ).filter((item) => item !== String(payload.radiusClientIp || "").trim());
     const nextPayload = {
       ...payload,
+      zoneCode: String(payload.zoneCode || "").trim() || undefined,
+      zoneName: String(payload.zoneName || "").trim() || undefined,
+      zoneStateCode: String(payload.zoneStateCode || "").trim() || undefined,
       additionalRadiusClientIps: normalizedAdditionalIps,
       coaSecret:
         String(payload.coaSecret || "").trim() ||
@@ -1301,11 +1321,12 @@ platformFoundationRouter.post(
 platformFoundationRouter.get(
   "/foundation/ip-pools",
   requirePermission(permissions.configRead),
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const zoneCode = String(req.query.zoneCode || "").trim();
     const [items, services, routers] = await Promise.all([
-      IpPoolRange.find({}).sort({ createdAt: -1 }).lean(),
+      IpPoolRange.find(buildZoneScopedMatch("zone", zoneCode)).sort({ createdAt: -1 }).lean(),
       SubscriberService.find({}).select({ currentIpv4: 1, ipv4Pool: 1 }).lean(),
-      BngNode.find({}).select({ nodeCode: 1, displayName: 1 }).lean()
+      BngNode.find(buildZoneScopedMatch("zoneCode", zoneCode)).select({ nodeCode: 1, displayName: 1 }).lean()
     ]);
     const routerNameMap = new Map(routers.map((router) => [String(router.nodeCode || "").trim(), router.displayName || router.nodeCode]));
     const enriched = items.map((item) => {
@@ -1501,6 +1522,7 @@ platformFoundationRouter.get(
     const translatedDestinationPort = Number(req.query.translatedDestinationPort || 0);
     const protocol = Number(req.query.protocol || 0);
     const routerIp = String(req.query.routerIp || "").trim();
+    const zoneCode = String(req.query.zoneCode || "").trim();
     const pppoeUsername = String(req.query.pppoeUsername || "").trim();
     const customerId = String(req.query.customerId || "").trim();
     const subscriberId = String(req.query.subscriberId || "").trim();
@@ -1531,6 +1553,25 @@ platformFoundationRouter.get(
       filter.loggedAt = { $gte: timeFrom };
     } else if (timeTo && !Number.isNaN(timeTo.getTime())) {
       filter.loggedAt = { $lte: timeTo };
+    }
+    if (zoneCode && !routerIp) {
+      const scopedRouters = await BngNode.find(buildZoneScopedMatch("zoneCode", zoneCode))
+        .select({ managementIp: 1, radiusClientIp: 1, additionalRadiusClientIps: 1 })
+        .lean();
+      const allowedRouterIps = Array.from(
+        new Set(
+          scopedRouters.flatMap((item) =>
+            [
+              String(item.managementIp || "").trim(),
+              String(item.radiusClientIp || "").trim(),
+              ...(Array.isArray(item.additionalRadiusClientIps)
+                ? item.additionalRadiusClientIps.map((value) => String(value || "").trim())
+                : [])
+            ].filter(Boolean)
+          )
+        )
+      );
+      filter.routerIp = allowedRouterIps.length ? { $in: allowedRouterIps } : "__zone_scope_without_router__";
     }
     const [items, total] = await Promise.all([
       NatLogEntry.find(filter).sort({ loggedAt: -1 }).skip(skip).limit(limit).lean(),

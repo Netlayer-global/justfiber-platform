@@ -102,6 +102,8 @@ function describeFreeradiusMode(mode?: string) {
 
 export default function RoutersPage() {
   const [routers, setRouters] = useState<BngNode[]>([])
+  const [activeZoneCode, setActiveZoneCode] = useState('default')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('Default Zone')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [form, setForm] = useState<RouterForm>(initialForm)
   const [query, setQuery] = useState('')
@@ -117,8 +119,24 @@ export default function RoutersPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   useEffect(() => {
-    void loadRouters()
+    const syncZone = () => {
+      const nextCode = window.localStorage.getItem('justfiber-active-zone-key') || 'default'
+      const nextLabel = window.localStorage.getItem('justfiber-active-zone-label') || 'Default Zone'
+      setActiveZoneCode(nextCode)
+      setActiveZoneLabel(nextLabel)
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    window.addEventListener('justfiber-zone-change', syncZone as EventListener)
+    return () => {
+      window.removeEventListener('storage', syncZone)
+      window.removeEventListener('justfiber-zone-change', syncZone as EventListener)
+    }
   }, [])
+
+  useEffect(() => {
+    void loadRouters()
+  }, [activeZoneCode])
 
   const filteredRouters = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -146,7 +164,7 @@ export default function RoutersPage() {
   async function loadRouters(preferId?: string) {
     setIsLoading(true)
     try {
-      const res = await adminAPI.getBngNodes()
+      const res = await adminAPI.getBngNodes({ zoneCode: activeZoneCode })
       if (!res.success) {
         throw new Error(res.error || 'Failed to load routers')
       }
@@ -191,6 +209,8 @@ export default function RoutersPage() {
         displayName: form.displayName.trim(),
         vendor: form.vendor,
         status: form.status,
+        zoneCode: selectedRouter?.zoneCode || (activeZoneCode !== 'default' ? activeZoneCode : undefined),
+        zoneName: selectedRouter?.zoneName || (activeZoneCode !== 'default' ? activeZoneLabel : undefined),
         macAddress: form.macAddress.trim(),
         groupName: form.groupName.trim(),
         nasIdentifier: form.nasIdentifier.trim(),
@@ -421,7 +441,7 @@ export default function RoutersPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-5">
+        <div className="mt-6 grid gap-4 md:grid-cols-6">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Total routers</div>
             <div className="mt-3 text-3xl font-semibold text-slate-900">{routers.length}</div>
@@ -441,6 +461,11 @@ export default function RoutersPage() {
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Integration ready</div>
             <div className="mt-3 text-3xl font-semibold text-slate-900">{helperReadyCount}</div>
             <div className="mt-2 text-sm text-slate-500">Routers with healthy FreeRADIUS integration</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Active zone</div>
+            <div className="mt-3 text-lg font-semibold text-slate-900">{activeZoneLabel}</div>
+            <div className="mt-2 text-sm text-slate-500">{activeZoneCode === 'default' ? 'Showing global router catalog' : 'Showing zone and shared routers'}</div>
           </div>
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Auth mismatch</div>

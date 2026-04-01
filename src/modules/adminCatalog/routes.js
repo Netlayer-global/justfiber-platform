@@ -26,6 +26,8 @@ const salesAgentSchema = z.object({
 const zoneSchema = z.object({
   zoneCode: z.string().min(2).optional(),
   zoneName: z.string().min(2),
+  parentZoneCode: z.string().optional(),
+  parentZoneName: z.string().optional(),
   city: z.string().optional(),
   area: z.string().optional(),
   pinCodes: z.array(z.string().min(4)).optional(),
@@ -262,8 +264,19 @@ adminCatalogRouter.post(
 adminCatalogRouter.get(
   "/serviceability/zones",
   requirePermission(permissions.configRead),
-  asyncHandler(async (_req, res) => {
-    const zones = await ServiceabilityZone.find().sort({ priority: 1, createdAt: -1 }).lean();
+  asyncHandler(async (req, res) => {
+    const parentZoneCode = normalizeZoneCode(req.query.parentZoneCode);
+    const filter = parentZoneCode
+      ? {
+          $or: [
+            { parentZoneCode },
+            { parentZoneCode: { $exists: false } },
+            { parentZoneCode: null },
+            { parentZoneCode: "" }
+          ]
+        }
+      : {};
+    const zones = await ServiceabilityZone.find(filter).sort({ priority: 1, createdAt: -1 }).lean();
     return ok(res, zones);
   })
 );
@@ -276,7 +289,14 @@ adminCatalogRouter.post(
     const zoneCode = payload.zoneCode || normalizeZoneCode(payload.zoneName);
     await ServiceabilityZone.updateOne(
       { zoneCode },
-      { $set: { ...payload, zoneCode, pinCodes: payload.pinCodes || [] } },
+      {
+        $set: {
+          ...payload,
+          zoneCode,
+          parentZoneCode: normalizeZoneCode(payload.parentZoneCode),
+          pinCodes: payload.pinCodes || []
+        }
+      },
       { upsert: true }
     );
     const zone = await ServiceabilityZone.findOne({ zoneCode }).lean();
@@ -297,6 +317,9 @@ adminCatalogRouter.patch(
     }
     if (payload.zoneName && !payload.zoneCode) {
       payload.zoneCode = normalizeZoneCode(payload.zoneName);
+    }
+    if (payload.parentZoneCode) {
+      payload.parentZoneCode = normalizeZoneCode(payload.parentZoneCode);
     }
     Object.assign(zone, payload);
     if (payload.pinCodes) {

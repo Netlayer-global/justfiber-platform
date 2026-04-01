@@ -255,6 +255,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('justfiber-active-zone-key', item.key)
       window.localStorage.setItem('justfiber-active-zone-label', item.label)
+      window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: item }))
     }
   }
 

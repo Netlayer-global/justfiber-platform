@@ -368,6 +368,9 @@ function mapBngNode(node: any): BngNode {
     displayName: node.displayName || node.nodeCode || 'Unnamed router',
     vendor: node.vendor || 'mikrotik',
     status: node.status || 'planned',
+    zoneCode: node.zoneCode || '',
+    zoneName: node.zoneName || '',
+    zoneStateCode: node.zoneStateCode || '',
     macAddress: node.macAddress || '',
     groupName: node.groupName || '',
     nasIdentifier: node.nasIdentifier || '',
@@ -807,6 +810,8 @@ function mapServiceZone(zone: any): ServiceZone {
   return {
     id: zone._id || zone.zoneCode || '',
     zoneCode: zone.zoneCode || zone._id || '',
+    parentZoneCode: zone.parentZoneCode || '',
+    parentZoneName: zone.parentZoneName || '',
     name: zone.zoneName || zone.zoneCode || 'Zone',
     city: zone.city || '',
     area: zone.area || '',
@@ -956,6 +961,12 @@ function getStoredActiveZoneCode() {
   return typeof window !== 'undefined'
     ? window.localStorage.getItem('justfiber-active-zone-key') || ''
     : ''
+}
+
+function getStoredActiveZoneLabel() {
+  return typeof window !== 'undefined'
+    ? window.localStorage.getItem('justfiber-active-zone-label') || 'Default Zone'
+    : 'Default Zone'
 }
 
 function mapBillingRun(run: any): BillingRun {
@@ -1546,15 +1557,31 @@ export const adminAPI = {
     }),
 
   // Routers / BNG
-  getBngNodes: async () => {
-    const res = await request<any[]>('/api/v1/admin/foundation/bng-nodes')
+  getBngNodes: async (filters?: { zoneCode?: string | null }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const explicitZoneCode = filters?.zoneCode && filters.zoneCode !== 'default' ? filters.zoneCode : ''
+    const query = new URLSearchParams({
+      ...(explicitZoneCode ? { zoneCode: explicitZoneCode } : {}),
+      ...(!explicitZoneCode && filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { zoneCode: activeZoneCode }
+        : {}),
+    }).toString()
+    const res = await request<any[]>(`/api/v1/admin/foundation/bng-nodes${query ? `?${query}` : ''}`)
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapBngNode) : [],
     }
   },
-  getIpPools: async () => {
-    const res = await request<any[]>('/api/v1/admin/foundation/ip-pools')
+  getIpPools: async (filters?: { zoneCode?: string | null }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const explicitZoneCode = filters?.zoneCode && filters.zoneCode !== 'default' ? filters.zoneCode : ''
+    const query = new URLSearchParams({
+      ...(explicitZoneCode ? { zoneCode: explicitZoneCode } : {}),
+      ...(!explicitZoneCode && filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { zoneCode: activeZoneCode }
+        : {}),
+    }).toString()
+    const res = await request<any[]>(`/api/v1/admin/foundation/ip-pools${query ? `?${query}` : ''}`)
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapIpPoolRange) : [],
@@ -1619,7 +1646,10 @@ export const adminAPI = {
     protocol?: number | string
     timeFrom?: string
     timeTo?: string
+    zoneCode?: string | null
   }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const explicitZoneCode = filters?.zoneCode && filters.zoneCode !== 'default' ? filters.zoneCode : ''
     const search = new URLSearchParams()
     search.set('page', String(filters?.page || 1))
     search.set('limit', String(filters?.limit || 100))
@@ -1636,6 +1666,8 @@ export const adminAPI = {
     if (filters?.protocol) search.set('protocol', String(filters.protocol))
     if (filters?.timeFrom) search.set('timeFrom', filters.timeFrom)
     if (filters?.timeTo) search.set('timeTo', filters.timeTo)
+    if (explicitZoneCode) search.set('zoneCode', explicitZoneCode)
+    else if (filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default') search.set('zoneCode', activeZoneCode)
     const res = await request<any[]>(`/api/v1/admin/foundation/nat-logs?${search.toString()}`)
     return {
       ...res,
@@ -1674,7 +1706,12 @@ export const adminAPI = {
   saveBngNode: async (data: Partial<BngNode> & { nodeCode: string; displayName: string }) => {
     const res = await request<any>('/api/v1/admin/foundation/bng-nodes', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        zoneCode: data.zoneCode,
+        zoneName: data.zoneName,
+        zoneStateCode: data.zoneStateCode,
+      }),
     })
     return {
       ...res,
@@ -1938,8 +1975,17 @@ export const adminAPI = {
   },
 
   // Serviceability
-  getServiceZones: async () => {
-    const res = await request<any[]>('/api/v1/admin/serviceability/zones')
+  getServiceZones: async (filters?: { parentZoneCode?: string | null }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const explicitParentZoneCode =
+      filters?.parentZoneCode && filters.parentZoneCode !== 'default' ? filters.parentZoneCode : ''
+    const query = new URLSearchParams({
+      ...(explicitParentZoneCode ? { parentZoneCode: explicitParentZoneCode } : {}),
+      ...(!explicitParentZoneCode && filters?.parentZoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { parentZoneCode: activeZoneCode }
+        : {}),
+    }).toString()
+    const res = await request<any[]>(`/api/v1/admin/serviceability/zones${query ? `?${query}` : ''}`)
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapServiceZone) : [],
@@ -1948,6 +1994,8 @@ export const adminAPI = {
   createServiceZone: async (data: {
     zoneCode?: string
     zoneName: string
+    parentZoneCode?: string
+    parentZoneName?: string
     city?: string
     area?: string
     pinCodes?: string[]
@@ -1960,13 +2008,19 @@ export const adminAPI = {
   }) =>
     request('/api/v1/admin/serviceability/zones', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        parentZoneCode: data.parentZoneCode || (getStoredActiveZoneCode() !== 'default' ? getStoredActiveZoneCode() : undefined),
+        parentZoneName: data.parentZoneName || getStoredActiveZoneLabel(),
+      }),
     }),
   updateServiceZone: async (
     zoneId: string,
     data: {
       zoneCode?: string
       zoneName?: string
+      parentZoneCode?: string
+      parentZoneName?: string
       city?: string
       area?: string
       pinCodes?: string[]

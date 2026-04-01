@@ -60,6 +60,8 @@ function toForm(pool?: IpPoolRange | null): PoolFormState {
 export default function IpManagementPage() {
   const [ipPools, setIpPools] = useState<IpPoolRange[]>([])
   const [routers, setRouters] = useState<BngNode[]>([])
+  const [activeZoneCode, setActiveZoneCode] = useState('default')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('Default Zone')
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -75,8 +77,24 @@ export default function IpManagementPage() {
   const [form, setForm] = useState<PoolFormState>(initialForm)
 
   useEffect(() => {
-    void loadData()
+    const syncZone = () => {
+      const nextCode = window.localStorage.getItem('justfiber-active-zone-key') || 'default'
+      const nextLabel = window.localStorage.getItem('justfiber-active-zone-label') || 'Default Zone'
+      setActiveZoneCode(nextCode)
+      setActiveZoneLabel(nextLabel)
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    window.addEventListener('justfiber-zone-change', syncZone as EventListener)
+    return () => {
+      window.removeEventListener('storage', syncZone)
+      window.removeEventListener('justfiber-zone-change', syncZone as EventListener)
+    }
   }, [])
+
+  useEffect(() => {
+    void loadData()
+  }, [activeZoneCode])
 
   const filteredPools = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -114,7 +132,10 @@ export default function IpManagementPage() {
   async function loadData(preferId?: string) {
     setIsLoading(true)
     try {
-      const [poolsRes, routersRes] = await Promise.all([adminAPI.getIpPools(), adminAPI.getBngNodes()])
+      const [poolsRes, routersRes] = await Promise.all([
+        adminAPI.getIpPools({ zoneCode: activeZoneCode }),
+        adminAPI.getBngNodes({ zoneCode: activeZoneCode }),
+      ])
       if (!poolsRes.success) {
         throw new Error(poolsRes.error || 'Failed to load IP pools')
       }
@@ -146,7 +167,7 @@ export default function IpManagementPage() {
 
   function beginCreate() {
     setSelectedId(null)
-    setForm(initialForm)
+    setForm({ ...initialForm, zone: activeZoneCode !== 'default' ? activeZoneLabel : '' })
     setIsDrawerOpen(true)
   }
 
@@ -175,7 +196,7 @@ export default function IpManagementPage() {
       const res = await adminAPI.saveIpPool({
         id: selectedId || undefined,
         name: form.name.trim(),
-        zone: form.zone.trim() || undefined,
+        zone: form.zone.trim() || (activeZoneCode !== 'default' ? activeZoneLabel : undefined),
         routerNodeCode: form.routerNodeCode.trim() || undefined,
         type: form.type,
         format: form.format,
@@ -279,6 +300,11 @@ export default function IpManagementPage() {
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Radius ranges</div>
             <div className="mt-3 text-3xl font-semibold text-slate-900">{radiusRanges}</div>
             <div className="mt-2 text-sm text-slate-500">Pools currently marked for RADIUS usage</div>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Active zone</div>
+            <div className="mt-3 text-lg font-semibold text-slate-900">{activeZoneLabel}</div>
+            <div className="mt-2 text-sm text-slate-500">{activeZoneCode === 'default' ? 'Showing all shared ranges' : 'Showing current zone and shared ranges'}</div>
           </div>
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Router linked</div>

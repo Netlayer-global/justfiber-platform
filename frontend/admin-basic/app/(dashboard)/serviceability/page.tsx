@@ -78,6 +78,8 @@ function buildPolygonGeoJson(points: Point[]) {
 
 export default function ServiceabilityPage() {
   const [zones, setZones] = useState<ServiceZone[]>([])
+  const [activeZoneCode, setActiveZoneCode] = useState('default')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('Default Zone')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null)
@@ -102,13 +104,29 @@ export default function ServiceabilityPage() {
   }, [zones])
 
   useEffect(() => {
-    void loadZones()
+    const syncZone = () => {
+      const nextCode = window.localStorage.getItem('justfiber-active-zone-key') || 'default'
+      const nextLabel = window.localStorage.getItem('justfiber-active-zone-label') || 'Default Zone'
+      setActiveZoneCode(nextCode)
+      setActiveZoneLabel(nextLabel)
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    window.addEventListener('justfiber-zone-change', syncZone as EventListener)
+    return () => {
+      window.removeEventListener('storage', syncZone)
+      window.removeEventListener('justfiber-zone-change', syncZone as EventListener)
+    }
   }, [])
+
+  useEffect(() => {
+    void loadZones()
+  }, [activeZoneCode])
 
   async function loadZones() {
     try {
       setIsLoading(true)
-      const response = await adminAPI.getServiceZones()
+      const response = await adminAPI.getServiceZones({ parentZoneCode: activeZoneCode })
       if (response.success && response.data) {
         setZones(response.data)
       } else {
@@ -174,6 +192,8 @@ export default function ServiceabilityPage() {
     const payload = {
       zoneCode: form.zoneCode.trim() || undefined,
       zoneName: form.zoneName.trim(),
+      parentZoneCode: activeZoneCode !== 'default' ? activeZoneCode : undefined,
+      parentZoneName: activeZoneCode !== 'default' ? activeZoneLabel : undefined,
       city: form.city.trim() || undefined,
       area: form.area.trim() || undefined,
       pinCodes: form.pinCodes.split(',').map((item) => item.trim()).filter(Boolean),
@@ -253,6 +273,13 @@ export default function ServiceabilityPage() {
                 </div>
               </div>
             ))}
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <MapPin className="h-4 w-4 text-[#5B6CFF]" />
+              <div>
+                <div className="font-semibold text-slate-900">{activeZoneLabel}</div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Active zone scope</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -399,13 +426,14 @@ export default function ServiceabilityPage() {
         <div className="card overflow-hidden">
           {zones.length ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px]">
+              <table className="w-full min-w-[1080px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] uppercase tracking-[0.18em] text-slate-400">
                     <th className="px-5 py-3 font-medium">Zone</th>
                     <th className="px-4 py-3 font-medium">Location</th>
                     <th className="px-4 py-3 font-medium">Pins</th>
                     <th className="px-4 py-3 font-medium">Coverage</th>
+                    <th className="px-4 py-3 font-medium">Parent zone</th>
                     <th className="px-4 py-3 font-medium">Type</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Actions</th>
@@ -426,6 +454,7 @@ export default function ServiceabilityPage() {
                       <td className="px-4 py-4">{[zone.area, zone.city].filter(Boolean).join(', ') || 'Location not set'}</td>
                       <td className="px-4 py-4">{zone.pinCodes?.length ? zone.pinCodes.join(', ') : '-'}</td>
                       <td className="px-4 py-4">{zone.polygon.length} points</td>
+                      <td className="px-4 py-4">{zone.parentZoneName || zone.parentZoneCode || 'Shared'}</td>
                       <td className="px-4 py-4">{zone.serviceType || 'fiber'}</td>
                       <td className="px-4 py-4">
                         <span className={`rounded-full px-3 py-1 text-xs font-medium ${

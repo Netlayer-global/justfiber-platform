@@ -4,6 +4,8 @@ const serviceabilityZoneSchema = new mongoose.Schema(
   {
     zoneCode: { type: String, unique: true, sparse: true, index: true },
     zoneName: { type: String, required: true },
+    parentZoneCode: { type: String, index: true },
+    parentZoneName: String,
     city: String,
     area: String,
     pinCodes: { type: [String], default: [] },

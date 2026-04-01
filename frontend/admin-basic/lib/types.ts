@@ -242,6 +242,9 @@ export interface BngNode {
   displayName: string
   vendor: 'mikrotik' | 'juniper' | 'huawei' | 'other'
   status: 'active' | 'planned' | 'disabled'
+  zoneCode?: string
+  zoneName?: string
+  zoneStateCode?: string
   macAddress?: string
   groupName?: string
   nasIdentifier?: string
@@ -637,6 +640,8 @@ export interface KycVerificationRequest {
 export interface ServiceZone {
   id: string
   zoneCode?: string
+  parentZoneCode?: string
+  parentZoneName?: string
   name: string
   city?: string
   area?: string

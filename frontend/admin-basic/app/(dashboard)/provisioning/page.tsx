@@ -160,6 +160,8 @@ function provisioningIssues(form: ProvisioningFormState) {
 
 export default function ProvisioningPage() {
   const [plans, setPlans] = useState<Plan[]>([])
+  const [activeZoneCode, setActiveZoneCode] = useState('default')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('Default Zone')
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [form, setForm] = useState<ProvisioningFormState>(initialForm)
   const [isLoading, setIsLoading] = useState(true)
@@ -172,8 +174,24 @@ export default function ProvisioningPage() {
   const [showAdvancedTools, setShowAdvancedTools] = useState(false)
 
   useEffect(() => {
-    void loadPlans()
+    const syncZone = () => {
+      const nextCode = window.localStorage.getItem('justfiber-active-zone-key') || 'default'
+      const nextLabel = window.localStorage.getItem('justfiber-active-zone-label') || 'Default Zone'
+      setActiveZoneCode(nextCode)
+      setActiveZoneLabel(nextLabel)
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    window.addEventListener('justfiber-zone-change', syncZone as EventListener)
+    return () => {
+      window.removeEventListener('storage', syncZone)
+      window.removeEventListener('justfiber-zone-change', syncZone as EventListener)
+    }
   }, [])
+
+  useEffect(() => {
+    void loadPlans()
+  }, [activeZoneCode])
 
   const filteredPlans = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -390,6 +408,9 @@ export default function ProvisioningPage() {
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
               <span className="font-medium text-slate-900">{selectedPlan ? selectedPlan.name : readyCount}</span> Active view
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-900">{activeZoneLabel}</span> Zone
             </div>
             <button type="button" onClick={() => void loadPlans()} className="btn-secondary">
               <RefreshCw className="h-4 w-4" />
