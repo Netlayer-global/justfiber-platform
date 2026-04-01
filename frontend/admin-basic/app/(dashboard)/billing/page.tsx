@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
-import { CreditCard, Loader, RefreshCw, Settings2, Wallet } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, CreditCard, FileClock, Loader, RefreshCw, Settings2, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 type BillingProfileForm = {
@@ -301,6 +301,24 @@ export default function BillingPage() {
   )
   const latestRecurringRuns = useMemo(() => billingRuns.slice(0, 6), [billingRuns])
   const collectionExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/collections.csv${collectionBucket ? `?bucket=${encodeURIComponent(collectionBucket)}` : ''}`
+  const financeCommandCenter = useMemo(
+    () => ({
+      dueAmount: Number(overview?.dueAmount || 0),
+      overdueInvoices: Number(overview?.overdueInvoices || 0),
+      pendingCollections: Number(collectionsWorkbench?.totals.accounts || visibleCollections.length || 0),
+      suspendReady: Number(collectionsWorkbench?.actionQueue.suspend || overview?.collectionStats?.suspendReady || 0),
+      promiseActive: Number(collectionsWorkbench?.actionQueue.promiseToPayActive || overview?.collectionStats?.promiseToPayActive || 0),
+      reconciliationOpen: Number(reconciliationSummary?.items?.length || 0),
+      reconciliationPendingAmount: Number(
+        (reconciliationSummary?.items || []).reduce((sum, item) => sum + Number(item.amount || 0), 0)
+      ),
+      waivers: Number(financeResolutions?.waivers?.length || 0),
+      writeoffs: Number(financeResolutions?.writeoffs?.length || 0),
+      latestRunStatus: latestRecurringRuns[0]?.status || 'not_run',
+      latestRunCycle: latestRecurringRuns[0]?.billCycle || latestRecurringRuns[0]?.runId || '-',
+    }),
+    [collectionsWorkbench, financeResolutions, latestRecurringRuns, overview, reconciliationSummary, visibleCollections.length]
+  )
   useEffect(() => {
     void loadBilling()
   }, [invoiceFilters, collectionBucket])
@@ -921,10 +939,10 @@ export default function BillingPage() {
     label: string
     hint: string
   }> = [
-    { key: 'invoices', label: 'Invoices', hint: 'Generate and manage invoices' },
-    { key: 'payments', label: 'Payments', hint: 'Reconcile and refund payments' },
-    { key: 'collections', label: 'Collections', hint: 'Work pending and overdue accounts' },
-    { key: 'settings', label: 'Settings', hint: 'GST, zones, templates, and exports' },
+    { key: 'invoices', label: 'Invoice Desk', hint: 'Generate and manage invoices' },
+    { key: 'payments', label: 'Payments & Recon', hint: 'Reconcile, receipts, and refunds' },
+    { key: 'collections', label: 'Collections Desk', hint: 'Work pending and overdue accounts' },
+    { key: 'settings', label: 'Finance Setup', hint: 'GST, zones, templates, and exports' },
   ]
 
   return (
@@ -934,7 +952,7 @@ export default function BillingPage() {
           <div>
             <div className="modernize-subtitle">Billing</div>
             <h1 className="mt-1 text-3xl font-semibold text-slate-900">
-              {billingSectionTab === 'invoices' ? 'Invoices' : billingSectionTab === 'payments' ? 'Payments' : billingSectionTab === 'collections' ? 'Collections' : 'Settings'}
+              {billingSectionTab === 'invoices' ? 'Invoice Desk' : billingSectionTab === 'payments' ? 'Payments & Reconciliation' : billingSectionTab === 'collections' ? 'Collections Desk' : 'Finance Setup'}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               {billingSectionTab === 'invoices'
@@ -986,6 +1004,75 @@ export default function BillingPage() {
               <Settings2 className="h-4 w-4 text-[#5d87ff]" />
             </div>
             <div className="mt-3 text-2xl font-semibold text-slate-900">{profiles.length}</div>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+          <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Finance command center</div>
+                <div className="mt-1 text-sm text-slate-600">Aaj ke core priorities: due exposure, reconciliation queue, waivers/writeoffs, and collections posture.</div>
+              </div>
+              <div className="rounded-full bg-white px-3 py-1 text-xs text-slate-500">
+                Latest cycle {financeCommandCenter.latestRunCycle}
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
+                  <span>Current due</span>
+                  <Wallet className="h-4 w-4 text-[#5d87ff]" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">Rs {financeCommandCenter.dueAmount.toFixed(2)}</div>
+                <div className="mt-1 text-xs text-slate-500">{financeCommandCenter.overdueInvoices} overdue invoice(s)</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
+                  <span>Collections</span>
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{financeCommandCenter.pendingCollections}</div>
+                <div className="mt-1 text-xs text-slate-500">{financeCommandCenter.suspendReady} suspend-ready, {financeCommandCenter.promiseActive} PTP active</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
+                  <span>Reconciliation</span>
+                  <ArrowRightLeft className="h-4 w-4 text-[#5d87ff]" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{financeCommandCenter.reconciliationOpen}</div>
+                <div className="mt-1 text-xs text-slate-500">Rs {financeCommandCenter.reconciliationPendingAmount.toFixed(2)} waiting to reconcile</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
+                  <span>Resolutions</span>
+                  <FileClock className="h-4 w-4 text-rose-500" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{financeCommandCenter.waivers + financeCommandCenter.writeoffs}</div>
+                <div className="mt-1 text-xs text-slate-500">{financeCommandCenter.waivers} waivers, {financeCommandCenter.writeoffs} write-offs</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-slate-200 bg-[#0f172a] p-5 text-white">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Operator focus</div>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="font-semibold">Invoice Desk</div>
+                <div className="mt-1 text-slate-300">Use for cycle runs, manual invoice generation, invoice PDF dispatch, and invoice aging review.</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="font-semibold">Payments & Reconciliation</div>
+                <div className="mt-1 text-slate-300">Use for transaction matching, retry reminders, receipt dispatch, refunds, and mismatch cleanup.</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="font-semibold">Collections Desk</div>
+                <div className="mt-1 text-slate-300">Use for reminders, follow-ups, promise-to-pay, suspend/resume, and owner assignment.</div>
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
+              Latest billing run status: <span className="font-semibold capitalize text-white">{financeCommandCenter.latestRunStatus.replaceAll('_', ' ')}</span>
+            </div>
           </div>
         </div>
       </section>
