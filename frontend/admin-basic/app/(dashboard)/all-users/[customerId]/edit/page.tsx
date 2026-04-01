@@ -218,6 +218,12 @@ export default function EditUserPage() {
     }
   }
 
+  async function handleResetForm() {
+    setSaveMessage(null)
+    await loadPage()
+    toast.success('Form reset to latest customer data')
+  }
+
   if (isLoading) {
     return (
       <div className="card p-10 text-center">
@@ -492,6 +498,9 @@ export default function EditUserPage() {
 
         <div className="flex justify-end gap-3">
           {saveMessage ? <div className="mr-auto self-center text-sm text-emerald-600">{saveMessage}</div> : null}
+          <button type="button" className="btn-secondary" onClick={() => void handleResetForm()} disabled={isSaving}>
+            Reset
+          </button>
           <Link href={`/all-users/${customer.id}`} className="btn-secondary">Cancel</Link>
           <button type="submit" className="btn-primary" disabled={isSaving || !canSave}>
             {isSaving ? 'Saving...' : 'Save Changes'}

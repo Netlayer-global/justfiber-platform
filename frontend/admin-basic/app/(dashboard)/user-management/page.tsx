@@ -247,6 +247,28 @@ function UserManagementWorkspace() {
     }
   }
 
+  async function runSingleLifecycleAction(customer: Customer, mode: 'suspend' | 'resume') {
+    try {
+      setIsBulkRunning(true)
+      const reason = mode === 'suspend' ? 'Quick suspend from user desk' : 'Quick resume from user desk'
+      const res =
+        mode === 'suspend'
+          ? await adminAPI.suspendCustomer(customer.id, reason)
+          : await adminAPI.resumeCustomer(customer.id, reason)
+      if (!res.success) {
+        toast.error(res.error || (mode === 'suspend' ? 'Suspend failed' : 'Resume failed'))
+        return
+      }
+      toast.success(`${customer.name} ${mode === 'suspend' ? 'suspended' : 'resumed'}`)
+      await loadData()
+    } catch (error) {
+      console.error('[user-management] Quick lifecycle action failed:', error)
+      toast.error(mode === 'suspend' ? 'Suspend failed' : 'Resume failed')
+    } finally {
+      setIsBulkRunning(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="card p-6">
@@ -436,6 +458,14 @@ function UserManagementWorkspace() {
                               <Link href={`/all-users/${customer.id}/edit`} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
                                 Edit
                               </Link>
+                              <button
+                                type="button"
+                                className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+                                disabled={isBulkRunning}
+                                onClick={() => void runSingleLifecycleAction(customer, customer.status === 'suspended' ? 'resume' : 'suspend')}
+                              >
+                                {customer.status === 'suspended' ? 'Resume' : 'Suspend'}
+                              </button>
                             </div>
                           </td>
                         </tr>

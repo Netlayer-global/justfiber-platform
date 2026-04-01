@@ -160,10 +160,11 @@ function CustomersContent() {
         return
       }
 
-      toast.success(`Created ${res.data.name}`)
+      toast.success(`Created ${res.data.name}. Opening customer...`)
       setIsCreateOpen(false)
       resetCreateForm()
       await loadWorkspace()
+      router.push(`/customers/${res.data.id}`)
     } catch (error) {
       console.error('[customers] Failed to create customer:', error)
       toast.error('Failed to create customer')
@@ -428,6 +429,7 @@ function CustomersContent() {
                   <div>Phone: {normalizePhone(createForm.phone) || '-'}</div>
                   <div>Plan: {plans.find((plan) => (plan.planCode || plan.id) === createForm.planCode)?.name || '-'}</div>
                 </div>
+                <div className="mt-3 text-xs text-slate-500">Successful create ke baad customer detail page auto open ho jayegi.</div>
               </div>
 
               <div className="flex items-center justify-end gap-3">
