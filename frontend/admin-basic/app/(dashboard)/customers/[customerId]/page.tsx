@@ -2533,7 +2533,7 @@ function CustomerDetailContent() {
                     </div>
                   ) : null}
                 </div>
-                {pendingPlanChange ? (
+                <div className="hidden">
                   <div className="card p-5 space-y-3">
                     <h2 className="text-lg font-semibold">Pending Plan Change</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -2548,8 +2548,8 @@ function CustomerDetailContent() {
                       Positive adjustment remains payable before switch. On successful payment, pending plan change should auto-apply.
                     </p>
                   </div>
-                )}
-                {usagePressureState !== 'normal' && recommendedUpgradePlan ? (
+                </div>
+                <div className="hidden">
                   <div className="card p-5 space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
@@ -2623,7 +2623,7 @@ function CustomerDetailContent() {
                       </button>
                     </div>
                   </div>
-                ) : null}
+                </div>
                 <div className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Billing Summary</h2>
                   <pre className="overflow-auto rounded bg-[#0a0e27] p-3 text-xs text-slate-300">{JSON.stringify(billingSummary, null, 2)}</pre>
