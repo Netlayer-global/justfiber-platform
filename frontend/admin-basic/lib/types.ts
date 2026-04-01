@@ -737,9 +737,15 @@ export interface BillingData {
   billingStateCode?: string
   billingStateName?: string
   billingZoneCode?: string
+  billingZoneName?: string
   taxMode?: string
   appliedTemplateKey?: string
   appliedTemplateName?: string
+  invoicePrefix?: string
+  invoiceSeriesCode?: string
+  invoiceSequenceNumber?: number
+  companyLegalName?: string
+  companyAddress?: string
   taxBreakdown?: Array<{
     label: string
     rate: number

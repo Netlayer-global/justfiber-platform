@@ -236,6 +236,17 @@ export default function BillingPage() {
       enabled: paymentGateway?.enabled !== false,
     }
   }, [activeZoneCode, externalIntegrationSettings])
+  const invoiceGenerationPreview = useMemo(
+    () => ({
+      legalName: effectiveZoneBillingIdentity.legalName || activeInvoiceTemplate?.templateName || 'Not configured',
+      gstNumber: effectiveZoneBillingIdentity.gstNumber || 'GST pending',
+      templateName: activeZoneMapping?.templateKey || activeInvoiceTemplate?.templateName || activeInvoiceTemplate?.key || 'Default template',
+      invoiceSeries: `${effectiveZoneBillingIdentity.invoicePrefix || 'JF'} / ${effectiveZoneBillingIdentity.invoiceSeriesCode || 'MAIN'}`,
+      taxRoute: effectiveTaxSplit,
+      collectionMode: effectivePaymentGatewayRoute.collectionMode,
+    }),
+    [activeInvoiceTemplate, activeZoneMapping?.templateKey, effectivePaymentGatewayRoute.collectionMode, effectiveTaxSplit, effectiveZoneBillingIdentity]
+  )
   const visibleInvoices = useMemo(() => {
     if (invoiceQuickView === 'pending') {
       return billing.filter((item) => (item.paymentStatus || item.status) === 'pending')
@@ -3046,6 +3057,32 @@ export default function BillingPage() {
                 {visibleInvoices.length} invoice{visibleInvoices.length === 1 ? '' : 's'}
               </div>
             </div>
+            <div className="grid gap-3 border-b border-slate-200 bg-slate-50 px-4 py-4 md:grid-cols-2 xl:grid-cols-6">
+              <div>
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Legal name</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{invoiceGenerationPreview.legalName}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">GSTIN</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{invoiceGenerationPreview.gstNumber}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Template</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{invoiceGenerationPreview.templateName}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Series</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{invoiceGenerationPreview.invoiceSeries}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Tax route</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{invoiceGenerationPreview.taxRoute}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Collection mode</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{invoiceGenerationPreview.collectionMode}</div>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3">
               {[
                 ['all', 'All'],
@@ -3085,6 +3122,10 @@ export default function BillingPage() {
                   <td className="table-cell">
                     <div className="font-mono text-sm">{item.invoiceNumber || item.invoiceId}</div>
                     <div className="mt-1 text-xs text-slate-500">{item.billCycle || '-'}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {(item.invoicePrefix || 'JF')} / {(item.invoiceSeriesCode || 'MAIN')}
+                      {item.invoiceSequenceNumber ? ` / #${item.invoiceSequenceNumber}` : ''}
+                    </div>
                   </td>
                   <td className="table-cell">
                     <div className="font-medium text-slate-900">{item.customerId}</div>
@@ -3095,7 +3136,11 @@ export default function BillingPage() {
                   </td>
                   <td className="table-cell">
                     <div className="mt-1 font-semibold text-slate-900">Total Rs {Number(item.totalAmount || item.amount || 0).toFixed(2)}</div>
-                    <div className="mt-1 text-xs text-slate-500">{item.billingZoneCode ? `Zone ${item.billingZoneCode}` : item.billingStateCode || '-'}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {item.billingZoneCode ? `Zone ${item.billingZoneCode}` : item.billingStateCode || '-'}
+                      {item.appliedTemplateName ? ` | ${item.appliedTemplateName}` : item.appliedTemplateKey ? ` | ${item.appliedTemplateKey}` : ''}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">{item.companyLegalName || item.companyAddress || ''}</div>
                   </td>
                   <td className="table-cell">
                     <div>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '-'}</div>

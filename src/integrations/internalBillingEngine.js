@@ -3,6 +3,7 @@ import { BillingLedgerEntry } from "../models/BillingLedgerEntry.js";
 import { BillingProfile } from "../models/BillingProfile.js";
 import { Customer } from "../models/Customer.js";
 import { SubscriberService } from "../models/SubscriberService.js";
+import { SystemConfig } from "../models/SystemConfig.js";
 import { deriveInvoiceLifecycle, syncInvoiceLifecycle } from "../common/billingAccounting.js";
 
 const ADVANCE_INVOICE_LEAD_DAYS = 7;
@@ -128,6 +129,47 @@ function normalizeSeriesCode(value, fallback = "MAIN") {
     .replace(/[^A-Z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return normalized || fallback;
+}
+
+async function getInvoiceTemplateSettings() {
+  const config = await SystemConfig.findOne({ key: "settings.invoice_template" }).lean();
+  return config?.value || {};
+}
+
+function normalizeInvoiceTemplates(baseSettings = {}) {
+  const templates = Array.isArray(baseSettings.templates) ? baseSettings.templates : [];
+  if (templates.length) return templates;
+  return [{
+    key: baseSettings.activeTemplate || "justfiber_standard",
+    templateName: baseSettings.templateName || "JustFiber Standard",
+    companyName: baseSettings.companyName || "JustFiber",
+    companyAddress: baseSettings.companyAddress || "",
+    gstNumber: baseSettings.gstNumber || "",
+    invoicePrefix: baseSettings.invoicePrefix || "JF",
+    footerNote: baseSettings.footerNote || "",
+    paymentInstructions: baseSettings.paymentInstructions || "",
+  }];
+}
+
+function selectInvoiceTemplateSettings(baseSettings = {}, customer, profile = null) {
+  const zoneCode = normalizeZoneCode(
+    customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || customer?.zoneCode,
+  );
+  const templates = normalizeInvoiceTemplates(baseSettings);
+  const profileZoneMappings = Array.isArray(profile?.zoneMappings) ? profile.zoneMappings : [];
+  const profileZoneMatch = profileZoneMappings.find((item) => normalizeZoneCode(item?.zoneCode) === zoneCode);
+  const mappings = Array.isArray(baseSettings.zoneTemplateMappings) ? baseSettings.zoneTemplateMappings : [];
+  const mappedTemplateKey = mappings.find((item) => normalizeZoneCode(item?.zoneCode) === zoneCode)?.templateKey;
+  const activeTemplateKey = profileZoneMatch?.templateKey || mappedTemplateKey || baseSettings.activeTemplate || templates[0]?.key;
+  const selectedTemplate = templates.find((item) => item.key === activeTemplateKey) || templates[0] || {};
+  return {
+    ...baseSettings,
+    ...selectedTemplate,
+    ...(profileZoneMatch || {}),
+    templateKey: activeTemplateKey || selectedTemplate.key || "justfiber_standard",
+    templateName: selectedTemplate.templateName || baseSettings.templateName || "JustFiber Standard",
+    billingZoneCode: zoneCode || undefined,
+  };
 }
 
 function resolveZoneMapping(billingProfile, customer) {
@@ -304,7 +346,12 @@ async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billC
   const invoiceRegex = new RegExp(`^${prefix}-${seriesCode}-${periodCode}-`);
   const existingCount = await BillingInvoice.countDocuments({ invoiceNumber: invoiceRegex });
   const sequence = String(existingCount + 1).padStart(padding, "0");
-  return `${prefix}-${seriesCode}-${periodCode}-${sequence}`;
+  return {
+    invoiceNumber: `${prefix}-${seriesCode}-${periodCode}-${sequence}`,
+    invoicePrefix: prefix,
+    invoiceSeriesCode: seriesCode,
+    invoiceSequenceNumber: existingCount + 1,
+  };
 }
 
 function resolveServiceDurationMonths(service) {
@@ -373,18 +420,25 @@ export class InternalBillingEngine {
     const dueDate = options.dueDate ? new Date(options.dueDate) : addDays(generatedAt, billingProfile?.dueDays ?? 0);
     const customer = await Customer.findOne({ customerId: service.customerId }).lean();
     const zoneMapping = resolveZoneMapping(billingProfile, customer);
+    const invoiceTemplateSettings = await getInvoiceTemplateSettings();
+    const selectedTemplate = selectInvoiceTemplateSettings(invoiceTemplateSettings, customer, billingProfile);
     const billMode = resolveBillMode(service, billingProfile, customer, zoneMapping);
     const amounts =
       billingProfile?.taxMode === "india_gst"
         ? buildGstAmounts(totalAmount, billingProfile, customer)
         : buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
     const lineItems = buildInvoiceLineItems(service, totalAmount, durationMonths, options.billCycleLabel || resolveBillCycleLabel(durationMonths));
-    const invoiceNumber = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle });
+    const numbering = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle });
+    const zoneCode = customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || zoneMapping?.zoneCode || "";
+    const zoneName = customer?.billingZoneName || customer?.billingSnapshot?.billingZoneName || zoneMapping?.zoneName || "";
+    const legalName = selectedTemplate.companyName || zoneMapping?.companyLegalName || billingProfile?.companyLegalName || "";
+    const companyAddress = selectedTemplate.companyAddress || zoneMapping?.companyAddress || billingProfile?.companyAddress || "";
+    const gstNumber = selectedTemplate.gstNumber || zoneMapping?.gstNumber || amounts.gstNumber || billingProfile?.gstNumber || "";
     const invoice = await BillingInvoice.create({
       invoiceId: `INV-${service.customerId}-${billCycle}`,
       customerId: service.customerId,
       serviceId: service.serviceId,
-      invoiceNumber,
+      invoiceNumber: numbering.invoiceNumber,
       billCycle,
       generatedAt,
       dueDate,
@@ -394,14 +448,23 @@ export class InternalBillingEngine {
       taxMode: amounts.taxMode || billingProfile?.taxMode || "india_gst",
       billingStateCode: amounts.billingStateCode,
       billingStateName: amounts.billingStateName,
+      billingZoneCode: zoneCode,
+      billingZoneName: zoneName,
       placeOfSupply: amounts.placeOfSupply,
-      gstNumber: amounts.gstNumber,
+      gstNumber,
       taxBreakdown: amounts.taxBreakdown || [],
       lineItems,
       currency: billingProfile?.currency || "INR",
       status: options.paymentStatus === "paid" ? "settled" : "generated",
       paymentStatus: options.paymentStatus || "pending",
       source: options.source || "internal_platform",
+      appliedTemplateKey: selectedTemplate.templateKey || "",
+      appliedTemplateName: selectedTemplate.templateName || "",
+      companyLegalName: legalName,
+      companyAddress,
+      invoicePrefix: numbering.invoicePrefix,
+      invoiceSeriesCode: numbering.invoiceSeriesCode,
+      invoiceSequenceNumber: numbering.invoiceSequenceNumber,
       metadata: {
         accessProfileCode: service.accessProfileCode,
         billingProfileCode: service.billingProfileCode,
@@ -409,8 +472,15 @@ export class InternalBillingEngine {
         durationMonths,
         billCycleLabel: options.billCycleLabel || resolveBillCycleLabel(durationMonths),
         billMode,
-        billingZoneCode: customer?.billingZoneCode || zoneMapping?.zoneCode || "",
-        billingZoneName: customer?.billingZoneName || zoneMapping?.zoneName || "",
+        billingZoneCode: zoneCode,
+        billingZoneName: zoneName,
+        appliedTemplateKey: selectedTemplate.templateKey || "",
+        appliedTemplateName: selectedTemplate.templateName || "",
+        companyLegalName: legalName,
+        companyAddress,
+        invoicePrefix: numbering.invoicePrefix,
+        invoiceSeriesCode: numbering.invoiceSeriesCode,
+        invoiceSequenceNumber: numbering.invoiceSequenceNumber,
         sourceEvent,
         activationJobId
       }
@@ -433,8 +503,8 @@ export class InternalBillingEngine {
       billMode,
       billingStateCode: amounts.billingStateCode,
       billingStateName: amounts.billingStateName,
-      billingZoneCode: customer?.billingZoneCode || zoneMapping?.zoneCode || "",
-      billingZoneName: customer?.billingZoneName || zoneMapping?.zoneName || ""
+      billingZoneCode: zoneCode,
+      billingZoneName: zoneName
     });
 
     if (options.advanceBillingSchedule) {

@@ -293,7 +293,17 @@ function pickBranding(profile, templateSettings = {}) {
   };
 }
 
+function resolveInvoiceBranding(branding, invoice) {
+  return {
+    ...branding,
+    companyName: invoice?.companyLegalName || branding.companyName,
+    companyAddress: invoice?.companyAddress || branding.companyAddress,
+    gstNumber: invoice?.gstNumber || branding.gstNumber,
+  };
+}
+
 function buildInvoiceHtml(invoice, customer, branding) {
+  const appliedBranding = resolveInvoiceBranding(branding, invoice);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
   const lineRows = (invoice.lineItems || [])
     .map(
@@ -312,9 +322,9 @@ function buildInvoiceHtml(invoice, customer, branding) {
   <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
-        <div style="font-size:28px;font-weight:700;color:${branding.accent}">${branding.companyName}</div>
-        <div style="margin-top:8px;white-space:pre-line;color:#555">${branding.companyAddress || ""}</div>
-        <div style="margin-top:4px;color:#555">${branding.website || ""} ${branding.phoneNumber ? `| ${branding.phoneNumber}` : ""}</div>
+        <div style="font-size:28px;font-weight:700;color:${appliedBranding.accent}">${appliedBranding.companyName}</div>
+        <div style="margin-top:8px;white-space:pre-line;color:#555">${appliedBranding.companyAddress || ""}</div>
+        <div style="margin-top:4px;color:#555">${appliedBranding.website || ""} ${appliedBranding.phoneNumber ? `| ${appliedBranding.phoneNumber}` : ""}</div>
       </div>
       <div style="text-align:right">
         <h1 style="margin:0">Invoice ${invoice.invoiceNumber}</h1>
@@ -323,6 +333,8 @@ function buildInvoiceHtml(invoice, customer, branding) {
     </div>
     <p>Customer: ${customer?.fullName || invoice.customerId}</p>
     <p>Bill Cycle: ${invoice.billCycle || "-"}</p>
+    <p>Template: ${invoice.appliedTemplateName || invoice.appliedTemplateKey || "-"}</p>
+    <p>Series: ${invoice.invoicePrefix || "-"} / ${invoice.invoiceSeriesCode || "-"}</p>
     <p>Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</p>
     <table style="border-collapse:collapse;width:420px;margin-top:16px">
       ${lineRows}
@@ -330,10 +342,10 @@ function buildInvoiceHtml(invoice, customer, branding) {
       ${taxRows}
       <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
     </table>
-    <div style="margin-top:24px;color:#555">${branding.paymentInstructions || ""}</div>
+    <div style="margin-top:24px;color:#555">${appliedBranding.paymentInstructions || ""}</div>
     <div style="margin-top:24px;border-top:1px solid #ddd;padding-top:12px;color:#666;font-size:12px">
-      ${branding.gstNumber ? `GSTIN: ${branding.gstNumber}` : ""} ${branding.panNumber ? `| PAN: ${branding.panNumber}` : ""}
-      <br/>${branding.footerNote || ""}
+      ${appliedBranding.gstNumber ? `GSTIN: ${appliedBranding.gstNumber}` : ""} ${appliedBranding.panNumber ? `| PAN: ${appliedBranding.panNumber}` : ""}
+      <br/>${appliedBranding.footerNote || ""}
     </div>
   </body></html>`;
 }
@@ -466,7 +478,7 @@ function drawPdfFooter(doc, branding, generatedText) {
 }
 
 function renderInvoicePdf(invoice, profile, customer, templateSettings) {
-  const branding = pickBranding(profile, templateSettings);
+  const branding = resolveInvoiceBranding(pickBranding(profile, templateSettings), invoice);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
@@ -474,6 +486,8 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     ["Customer", customer?.fullName || invoice.customerId],
     ["Customer ID", invoice.customerId],
     ["Bill Cycle", invoice.billCycle || "-"],
+    ["Template", invoice.appliedTemplateName || invoice.appliedTemplateKey || "-"],
+    ["Series", `${invoice.invoicePrefix || "-"} / ${invoice.invoiceSeriesCode || "-"}`],
     ["Due Date", invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"],
     ["Place of Supply", invoice.placeOfSupply || invoice.billingStateName || "-"],
     ["Status", invoice.paymentStatus || "-"]
@@ -2566,9 +2580,15 @@ adminOpsRouter.get(
                 : item.source || "Internal";
       return {
         ...item,
-        billingZoneCode: item?.metadata?.billingZoneCode || item?.billingZoneCode || selection.billingZoneCode || "",
-        appliedTemplateKey: selection.templateKey || "",
-        appliedTemplateName: selection.templateName || "",
+        billingZoneCode: item?.billingZoneCode || item?.metadata?.billingZoneCode || selection.billingZoneCode || "",
+        billingZoneName: item?.billingZoneName || item?.metadata?.billingZoneName || "",
+        appliedTemplateKey: item?.appliedTemplateKey || item?.metadata?.appliedTemplateKey || selection.templateKey || "",
+        appliedTemplateName: item?.appliedTemplateName || item?.metadata?.appliedTemplateName || selection.templateName || "",
+        invoicePrefix: item?.invoicePrefix || item?.metadata?.invoicePrefix || "",
+        invoiceSeriesCode: item?.invoiceSeriesCode || item?.metadata?.invoiceSeriesCode || "",
+        invoiceSequenceNumber: item?.invoiceSequenceNumber || item?.metadata?.invoiceSequenceNumber || 0,
+        companyLegalName: item?.companyLegalName || item?.metadata?.companyLegalName || "",
+        companyAddress: item?.companyAddress || item?.metadata?.companyAddress || "",
         sourceLabel,
       };
     });
