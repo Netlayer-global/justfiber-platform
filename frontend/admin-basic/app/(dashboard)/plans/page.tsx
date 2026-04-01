@@ -332,6 +332,25 @@ function PlansContent() {
     plans[0] ||
     null
 
+  const commercialSummary = useMemo(
+    () => ({
+      total: plans.length,
+      active: plans.filter((plan) => plan.status === 'active').length,
+      visible: plans.filter((plan) => plan.visibleInCustomerApp).length,
+      fup: plans.filter((plan) => plan.dataPolicy === 'fup').length,
+      addOnReady: plans.filter(
+        (plan) =>
+          Boolean(plan.addons?.staticIp?.enabled) ||
+          Boolean(plan.addons?.ott?.enabled) ||
+          Boolean(plan.addons?.voice?.enabled)
+      ).length,
+      provisioningBlocked: plans.filter((plan) => plan.provisioningReady === false).length,
+      featured: plans.filter((plan) => plan.merchandising?.featured).length,
+      recommended: plans.filter((plan) => plan.merchandising?.recommended).length,
+    }),
+    [plans]
+  )
+
   const composerOpen = composerMode !== null
   const preview = composerOpen ? form : toForm(selectedPlan)
 
@@ -621,16 +640,57 @@ function PlansContent() {
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Package objects</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{plans.length}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.total}</div>
           </div>
           <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{plans.filter((plan) => plan.status === 'active').length}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.active}</div>
           </div>
           <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Visible now</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{filteredPlans.length}</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.visible}</div>
           </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">FUP plans</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.fup}</div>
+            <div className="mt-1 text-xs text-slate-500">Packages with fair-usage shaping enabled</div>
+          </div>
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Add-on ready</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.addOnReady}</div>
+            <div className="mt-1 text-xs text-slate-500">Static IP, OTT, or voice bundles available</div>
+          </div>
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Provisioning blocked</div>
+            <div className="mt-2 text-2xl font-semibold text-amber-600">{commercialSummary.provisioningBlocked}</div>
+            <div className="mt-1 text-xs text-slate-500">Needs provisioning template or access mapping</div>
+          </div>
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Featured</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.featured}</div>
+            <div className="mt-1 text-xs text-slate-500">Highlighted package lane</div>
+          </div>
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Recommended</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.recommended}</div>
+            <div className="mt-1 text-xs text-slate-500">Operator-curated recommendation lane</div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary" onClick={() => { setWorkspaceView('library'); setStatusFilter('active') }}>
+            Active catalog
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => { setWorkspaceView('library'); setMerchFilter('featured') }}>
+            Featured lane
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => { setWorkspaceView('library'); setMerchFilter('recommended') }}>
+            Recommended lane
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => { setWorkspaceView('library'); setCategoryFilter('all'); setStatusFilter('all'); setMerchFilter('all'); setQuery('') }}>
+            Reset library view
+          </button>
         </div>
       </section>
 
@@ -906,6 +966,20 @@ function PlansContent() {
                 <div className="mt-2 text-sm text-slate-500">Low-frequency setup and deeper configuration remain in backend/settings so operator surface clean rahe.</div>
               </div>
             </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">Commercial rollouts</div>
+                <div className="mt-2 text-sm text-slate-500">Use featured and recommended lanes to decide what should go live first in customer-facing apps.</div>
+              </div>
+              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">FUP visibility</div>
+                <div className="mt-2 text-sm text-slate-500">Keep FUP and hard-cap packs easy to spot so support and sales don’t confuse usage behavior.</div>
+              </div>
+              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">Provisioning watch</div>
+                <div className="mt-2 text-sm text-slate-500">Packages blocked on provisioning should be fixed before launch or pushed into a live sales lane.</div>
+              </div>
+            </div>
           </div>
           )}
         </div>
@@ -948,6 +1022,44 @@ function PlansContent() {
                       {selectedPlan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
                     </div>
                     <div className="text-sm text-slate-500">{selectedPlan.latencyClass || 'standard'} latency</div>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Data policy</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">
+                      {selectedPlan.dataPolicy === 'fup' ? 'FUP controlled' : selectedPlan.dataPolicy === 'hard-cap' ? 'Hard cap' : 'Unlimited'}
+                    </div>
+                    <div className="text-sm text-slate-500">{selectedPlan.totalDataGb ? `${selectedPlan.totalDataGb} GB base quota` : 'No fixed quota published'}</div>
+                  </div>
+                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Validity</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">{selectedPlan.validityDays} days</div>
+                    <div className="text-sm text-slate-500">
+                      {selectedPlan.billingCycle === 'quarterly'
+                        ? 'Quarterly billing'
+                        : selectedPlan.billingCycle === 'semiannual'
+                          ? 'Semiannual billing'
+                          : selectedPlan.billingCycle === 'annual'
+                            ? 'Annual billing'
+                            : 'Monthly billing'}
+                    </div>
+                  </div>
+                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Add-ons</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">
+                      {[
+                        selectedPlan.addons?.staticIp?.enabled ? 'Static IP' : null,
+                        selectedPlan.addons?.ott?.enabled ? 'OTT' : null,
+                        selectedPlan.addons?.voice?.enabled ? 'Voice' : null,
+                      ].filter(Boolean).join(', ') || 'No add-ons'}
+                    </div>
+                    <div className="text-sm text-slate-500">{selectedPlan.bundleType || 'Standard retail bundle'}</div>
+                  </div>
+                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Provisioning</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">{selectedPlan.accessProfile || 'Access profile pending'}</div>
+                    <div className="text-sm text-slate-500">{selectedPlan.billingProfile || 'Billing profile pending'}</div>
                   </div>
                 </div>
               </div>
