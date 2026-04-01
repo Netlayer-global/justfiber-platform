@@ -53,6 +53,7 @@ type ZoneSwitchDetail = {
 }
 
 type RegressionChecklistState = Record<string, boolean>
+type ReleaseChecklistState = Record<string, boolean>
 
 function getStoredZoneCode() {
   if (typeof window === 'undefined') return 'default'
@@ -87,6 +88,7 @@ export default function DashboardPage() {
   const [auditOverview, setAuditOverview] = useState<AuditOverview | null>(null)
   const [recentAuditLogs, setRecentAuditLogs] = useState<any[]>([])
   const [regressionChecks, setRegressionChecks] = useState<RegressionChecklistState>({})
+  const [releaseChecks, setReleaseChecks] = useState<ReleaseChecklistState>({})
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<SettingsSection<InvoiceTemplateValue> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [otpLookup, setOtpLookup] = useState('')
@@ -135,6 +137,17 @@ export default function DashboardPage() {
     }
   }, [currentZoneCode])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const storageKey = `justfiber-release-${currentZoneCode || 'default'}`
+    try {
+      const raw = window.localStorage.getItem(storageKey)
+      setReleaseChecks(raw ? JSON.parse(raw) : {})
+    } catch {
+      setReleaseChecks({})
+    }
+  }, [currentZoneCode])
+
   function syncZoneFromStorage() {
     setCurrentZoneCode(getStoredZoneCode())
     setCurrentZoneLabel(getStoredZoneLabel())
@@ -148,6 +161,19 @@ export default function DashboardPage() {
       }
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(`justfiber-regression-${currentZoneCode || 'default'}`, JSON.stringify(next))
+      }
+      return next
+    })
+  }
+
+  function updateReleaseCheck(checkKey: string, checked: boolean) {
+    setReleaseChecks((current) => {
+      const next = {
+        ...current,
+        [checkKey]: checked,
+      }
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(`justfiber-release-${currentZoneCode || 'default'}`, JSON.stringify(next))
       }
       return next
     })
@@ -477,6 +503,73 @@ export default function DashboardPage() {
     const total = regressionRunbook.length
     return { completed, autoReady, total }
   }, [regressionChecks, regressionRunbook])
+
+  const releaseRunbook = useMemo(
+    () => [
+      {
+        key: 'backup_ready',
+        title: 'Backup and rollback ready',
+        description: 'Confirm DB backup, rollback commit, and service restart order are documented before cutover.',
+        href: '/dashboard',
+        autoReady: securityReadiness.blockers.length === 0,
+      },
+      {
+        key: 'billing_ready',
+        title: 'Billing output approved',
+        description: 'Sign off invoice template, GST breakup, numbering, and payment collection route for the active zone.',
+        href: '/billing',
+        autoReady: Boolean(currentBillingProfile && resolvedTemplate && zonePaymentRoute),
+      },
+      {
+        key: 'network_ready',
+        title: 'Network execution approved',
+        description: 'Confirm router trust, IP pools, NAT scope, and provisioning visibility for this zone.',
+        href: '/routers',
+        autoReady: routers.length > 0 && ipPools.length > 0 && readiness.authMismatchRouters === 0,
+      },
+      {
+        key: 'delegation_ready',
+        title: 'Zone delegation approved',
+        description: 'Confirm copied settings, delegated admins, and child-zone inheritance before operator handover.',
+        href: '/my-zone-details',
+        autoReady: Boolean(currentFranchise?.copiedSettings?.sectionCount && readiness.adminSeats > 0),
+      },
+      {
+        key: 'audit_ready',
+        title: 'Audit and security review approved',
+        description: 'Validate recent sensitive actions, active admins, MFA posture, and stale password cleanup.',
+        href: '/dashboard',
+        autoReady: securityReadiness.blockers.length === 0 && (auditOverview?.auditLogs || 0) > 0,
+      },
+      {
+        key: 'smoke_ready',
+        title: 'Post-deploy smoke run complete',
+        description: 'After deploy, verify dashboard, customers, billing, routers, apps, and OTP fetch on live services.',
+        href: '/dashboard',
+        autoReady: smokeChecks.every((item) => item.status),
+      },
+    ],
+    [
+      auditOverview?.auditLogs,
+      currentBillingProfile,
+      currentFranchise?.copiedSettings?.sectionCount,
+      ipPools.length,
+      readiness.adminSeats,
+      readiness.authMismatchRouters,
+      resolvedTemplate,
+      routers.length,
+      securityReadiness.blockers.length,
+      smokeChecks,
+      zonePaymentRoute,
+    ],
+  )
+
+  const releaseSummary = useMemo(() => {
+    const completed = releaseRunbook.filter((item) => releaseChecks[item.key]).length
+    const autoReady = releaseRunbook.filter((item) => item.autoReady).length
+    const total = releaseRunbook.length
+    return { completed, autoReady, total }
+  }, [releaseChecks, releaseRunbook])
 
   const releaseTiles = [
     {
@@ -908,7 +1001,7 @@ export default function DashboardPage() {
                         }`}
                         aria-label={`Toggle ${item.title}`}
                       >
-                        ✓
+                        v
                       </button>
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -947,6 +1040,90 @@ export default function DashboardPage() {
               'Check routers, IP pools, NAT logs, and provisioning for the same active zone.',
               'Create a child zone if needed, copy parent settings, and seed zone admins.',
               'Review security blockers, audit stream, and recent sensitive actions before sign-off.',
+            ].map((step) => (
+              <div key={step} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                {step}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="card p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Phase 14 release execution</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">Production cutover checklist</div>
+              <div className="mt-2 text-sm leading-6 text-slate-500">
+                Regression ke baad yahi final sign-off panel use karo. Yeh release readiness aur post-deploy smoke ko zone-wise track karta hai.
+              </div>
+            </div>
+            <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Release status</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">
+                {releaseSummary.completed}/{releaseSummary.total}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">{releaseSummary.autoReady} auto-ready gates</div>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {releaseRunbook.map((item, index) => {
+              const checked = Boolean(releaseChecks[item.key])
+              return (
+                <div key={item.key} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => updateReleaseCheck(item.key, !checked)}
+                        className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded border text-xs transition ${
+                          checked
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent'
+                        }`}
+                        aria-label={`Toggle ${item.title}`}
+                      >
+                        v
+                      </button>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-900">{index + 1}. {item.title}</span>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                              item.autoReady
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            {item.autoReady ? 'Gate ready' : 'Needs action'}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-sm leading-6 text-slate-500">{item.description}</div>
+                      </div>
+                    </div>
+                    <Link href={item.href} className="btn-secondary">
+                      Open
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Cutover order</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Execute this sequence on release day</div>
+          <div className="mt-6 space-y-3">
+            {[
+              'Freeze config changes for the target zone and confirm rollback commit plus latest backup.',
+              'Verify billing identity, invoice template, payment route, and plan scope one last time.',
+              'Restart backend and frontend in the approved order, then confirm dashboard health.',
+              'Run smoke checks: customers, billing, routers, apps, serviceability, and OTP fetch.',
+              'Check audit stream for zone-admin actions and any failed payment or auth events.',
+              'Only then hand over the zone to operators and mark the release gate complete.',
             ].map((step) => (
               <div key={step} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
                 {step}
