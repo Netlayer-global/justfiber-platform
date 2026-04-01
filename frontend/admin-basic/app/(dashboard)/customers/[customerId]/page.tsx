@@ -1484,14 +1484,14 @@ function CustomerDetailContent() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => { setActiveTab('billing'); window.setTimeout(() => document.getElementById('payment-renew-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80) }}>
+            <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => { setActiveTab('billing'); window.setTimeout(() => document.getElementById('payment-renew-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80) }}>
               <BadgeIndianRupee className="h-4 w-4" />
               Renewal Desk
             </button>
-            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void handleBillingPromiseReview()} disabled={isSaving}>
+            <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => void handleBillingPromiseReview()} disabled={isSaving}>
               Promise / Grace
             </button>
-            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void handleDisconnectSession()} disabled={isSaving}>
+            <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => void handleDisconnectSession()} disabled={isSaving}>
               <PlugZap className="h-4 w-4" />
               Disconnect
             </button>
@@ -1500,17 +1500,17 @@ function CustomerDetailContent() {
               Edit User
             </Link>
             {customer.status === 'suspended' ? (
-              <button className="btn-primary inline-flex items-center gap-2" onClick={() => void handleResume()} disabled={isSaving}>
+              <button type="button" className="btn-primary inline-flex items-center gap-2" onClick={() => void handleResume()} disabled={isSaving}>
                 <ShieldCheck className="h-4 w-4" />
                 Resume
               </button>
             ) : (
-              <button className="btn-secondary inline-flex items-center gap-2 border-rose-200 text-rose-700" onClick={() => void handleSuspend()} disabled={isSaving}>
+              <button type="button" className="btn-secondary inline-flex items-center gap-2 border-rose-200 text-rose-700" onClick={() => void handleSuspend()} disabled={isSaving}>
                 <Ban className="h-4 w-4" />
                 Block
               </button>
             )}
-            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('devices')}>
+            <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('devices')}>
               <FilePlus2 className="h-4 w-4" />
               Network
             </button>
@@ -1523,7 +1523,7 @@ function CustomerDetailContent() {
             <CircleDot className={`h-4 w-4 ${customerOnline ? 'text-emerald-600' : 'text-amber-600'}`} />
             <span>{customerOnline ? 'User is online' : 'Live session not confirmed'}</span>
           </div>
-          <button className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving || !customerOnline}>
+          <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving || !customerOnline}>
             Disconnect
           </button>
         </div>
@@ -1589,7 +1589,7 @@ function CustomerDetailContent() {
               <p className="mt-2 text-lg font-semibold text-slate-900">{billingCycleLabel}</p>
               <p className="mt-1 text-xs text-slate-400">{billingCycleCode || 'Live tenure summary'}</p>
             </div>
-            <button onClick={() => void loadCustomer()} className="btn-secondary inline-flex items-center gap-2">
+            <button type="button" onClick={() => void loadCustomer()} className="btn-secondary inline-flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Refresh subscriber
             </button>
@@ -1719,7 +1719,7 @@ function CustomerDetailContent() {
                     <div className="flex items-center justify-between gap-3">
                       <h2 className="text-lg font-semibold text-slate-900">Latest invoice</h2>
                       {latestInvoice ? (
-                        <button className="btn-secondary" onClick={() => void openInvoicePdf(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}>
+                        <button type="button" className="btn-secondary" onClick={() => void openInvoicePdf(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}>
                           Open PDF
                         </button>
                       ) : null}
@@ -1806,6 +1806,7 @@ function CustomerDetailContent() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
+                      type="button"
                       className="btn-primary"
                       onClick={() => primaryDevice && void handleProvisionCustomerPppoe(primaryDevice)}
                       disabled={isSaving || !primaryDevice}
@@ -1813,6 +1814,7 @@ function CustomerDetailContent() {
                       Create / Sync PPPoE
                     </button>
                     <button
+                      type="button"
                       className="btn-secondary"
                       onClick={() => void handleSuspendCustomerPppoe()}
                       disabled={isSaving}
@@ -1820,6 +1822,7 @@ function CustomerDetailContent() {
                       Suspend PPPoE
                     </button>
                     <button
+                      type="button"
                       className="btn-secondary"
                       onClick={() => void handleResumeCustomerPppoe()}
                       disabled={isSaving}
@@ -1827,6 +1830,7 @@ function CustomerDetailContent() {
                       Resume PPPoE
                     </button>
                     <button
+                      type="button"
                       className="btn-secondary"
                       onClick={() => void handleCopyPppoeUsername()}
                       disabled={!radiusService?.radiusUsername && !customer?.pppoeUsername}
@@ -1834,6 +1838,7 @@ function CustomerDetailContent() {
                       Copy PPPoE Username
                     </button>
                     <button
+                      type="button"
                       className="btn-secondary"
                       onClick={() => void handleCopyServiceId()}
                       disabled={!radiusService?.serviceId && !customer?.serviceId}
@@ -1841,18 +1846,21 @@ function CustomerDetailContent() {
                       Copy Service ID
                     </button>
                     <button
+                      type="button"
                       className="btn-secondary"
                       onClick={() => handleOpenRadiusAudit()}
                     >
                       Open RADIUS Audit
                     </button>
                     <button
+                      type="button"
                       className="btn-secondary"
                       onClick={() => handleOpenBillingRecords()}
                     >
                       Open Billing Records
                     </button>
                     <button
+                      type="button"
                       className="btn-secondary"
                       onClick={() => void loadCustomer()}
                       disabled={isSaving}
@@ -1860,6 +1868,7 @@ function CustomerDetailContent() {
                       Refresh Subscriber
                     </button>
                     <button
+                      type="button"
                       className="btn-secondary"
                       onClick={() => void handleRetryProvisioning()}
                       disabled={isSaving}
@@ -2090,7 +2099,7 @@ function CustomerDetailContent() {
                             <input className="input" placeholder="Password 2.4G" type="password" value={form?.password24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { password24: e.target.value })} />
                             <input className="input" placeholder="Password 5G" type="password" value={form?.password5 || ''} onChange={(e) => updateWifiForm(device.deviceId, { password5: e.target.value })} />
                           </div>
-                          <button className="btn-primary" onClick={() => void handleDeviceWifiUpdate(device)} disabled={isSaving}>Apply Wi-Fi Only</button>
+                          <button type="button" className="btn-primary" onClick={() => void handleDeviceWifiUpdate(device)} disabled={isSaving}>Apply Wi-Fi Only</button>
                         </div>
 
                           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
@@ -2109,7 +2118,7 @@ function CustomerDetailContent() {
                             <input type="checkbox" checked={form?.natEnabled ?? true} onChange={(e) => updateWifiForm(device.deviceId, { natEnabled: e.target.checked })} />
                             NAT Enabled
                           </label>
-                          <button className="btn-primary" onClick={() => void handleDeviceWanUpdate(device)} disabled={isSaving}>Apply WAN + FreeRADIUS</button>
+                          <button type="button" className="btn-primary" onClick={() => void handleDeviceWanUpdate(device)} disabled={isSaving}>Apply WAN + FreeRADIUS</button>
                         </div>
                       </div>
 
@@ -2154,10 +2163,11 @@ function CustomerDetailContent() {
                           Static IPv4 aur pool me se ek use karo. Static IPv4 filled hai to pool ignore hoga.
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          <button className="btn-primary" onClick={() => void handleSaveStaticIp()} disabled={isSaving}>
+                          <button type="button" className="btn-primary" onClick={() => void handleSaveStaticIp()} disabled={isSaving}>
                             Save Static IP
                           </button>
                           <button
+                            type="button"
                             className="btn-secondary"
                             onClick={() => setStaticIpForm({ currentIpv4: '', ipv4Pool: '' })}
                             disabled={isSaving}
@@ -2196,7 +2206,7 @@ function CustomerDetailContent() {
                             <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Radius pool presets</p>
                             <div className="flex flex-wrap gap-2">
                               {poolPresets.map((pool) => (
-                                <button key={pool.id} className="btn-secondary" onClick={() => applyPoolPreset(pool.name)} disabled={isSaving}>
+                                <button type="button" key={pool.id} className="btn-secondary" onClick={() => applyPoolPreset(pool.name)} disabled={isSaving}>
                                   {pool.name}
                                 </button>
                               ))}
@@ -2209,19 +2219,19 @@ function CustomerDetailContent() {
                         )}
                         <div className="flex flex-wrap gap-2">
                           <Link href={natLogHref} className="btn-secondary">Open NAT Logs</Link>
-                          <button className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving}>Disconnect Session</button>
-                          <button className="btn-secondary" onClick={() => void handleCopyPppoeUsername()}>Copy PPPoE</button>
+                          <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving}>Disconnect Session</button>
+                          <button type="button" className="btn-secondary" onClick={() => void handleCopyPppoeUsername()}>Copy PPPoE</button>
                         </div>
                       </div>
 
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
                           <h3 className="font-semibold">Device Actions</h3>
                         <div className="flex flex-wrap gap-2">
-                          <button className="btn-secondary" onClick={() => void handleDeviceReboot(device)} disabled={isSaving}>Reboot</button>
-                          <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_PREPARE')} disabled={isSaving}>Prepare</button>
-                          <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_ACTIVATE')} disabled={isSaving}>Activate</button>
-                          <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_SUSPEND')} disabled={isSaving}>Suspend Service</button>
-                          <button className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_RESUME')} disabled={isSaving}>Resume Service</button>
+                          <button type="button" className="btn-secondary" onClick={() => void handleDeviceReboot(device)} disabled={isSaving}>Reboot</button>
+                          <button type="button" className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_PREPARE')} disabled={isSaving}>Prepare</button>
+                          <button type="button" className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_ACTIVATE')} disabled={isSaving}>Activate</button>
+                          <button type="button" className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_SUSPEND')} disabled={isSaving}>Suspend Service</button>
+                          <button type="button" className="btn-secondary" onClick={() => void handleDevicePreset(device, 'SERVICE_RESUME')} disabled={isSaving}>Resume Service</button>
                         </div>
                         <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
                           <div>
@@ -2231,13 +2241,13 @@ function CustomerDetailContent() {
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <button className="btn-primary" onClick={() => void handleProvisionCustomerPppoe(device)} disabled={isSaving}>
+                            <button type="button" className="btn-primary" onClick={() => void handleProvisionCustomerPppoe(device)} disabled={isSaving}>
                               Create / Sync PPPoE
                             </button>
-                            <button className="btn-secondary" onClick={() => void handleSuspendCustomerPppoe()} disabled={isSaving}>
+                            <button type="button" className="btn-secondary" onClick={() => void handleSuspendCustomerPppoe()} disabled={isSaving}>
                               Suspend PPPoE
                             </button>
-                            <button className="btn-secondary" onClick={() => void handleResumeCustomerPppoe()} disabled={isSaving}>
+                            <button type="button" className="btn-secondary" onClick={() => void handleResumeCustomerPppoe()} disabled={isSaving}>
                               Resume PPPoE
                             </button>
                           </div>

@@ -149,8 +149,44 @@ export default function EditUserPage() {
         },
       })
       if (!res.success) throw new Error(res.error || 'Failed to save user')
+      setCustomer((current) => current ? ({
+        ...current,
+        name: form.fullName.trim() || current.name,
+        phone: form.phone,
+        email: form.email || '-',
+        status: form.operationalStatus,
+        plan: selectedPlan
+          ? {
+              id: selectedPlan.planCode || selectedPlan.id,
+              name: selectedPlan.name,
+            }
+          : current.plan,
+        billingSnapshot: {
+          ...(current.billingSnapshot || {}),
+          customerType: form.customerType,
+          serviceFlags: {
+            ...(current.billingSnapshot?.serviceFlags || {}),
+            iptv: form.createIptvBilling,
+            ott: form.createOttBilling,
+            voice: form.createVoiceBilling,
+          },
+        },
+        rawAddress: {
+          ...(current.rawAddress || {}),
+          line1: form.line1,
+          line2: form.line2,
+          area: form.area,
+          city: form.city,
+          state: form.state,
+          pinCode: form.pinCode,
+        },
+        radiusService: {
+          ...(current.radiusService || {}),
+          currentIpv4: form.currentIpv4 || null,
+          ipv4Pool: form.currentIpv4 ? null : form.ipv4Pool || null,
+        },
+      }) : current)
       toast.success('User profile updated')
-      await loadPage()
     } catch (error) {
       console.error('[edit-user] Failed to save user:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to save user')
