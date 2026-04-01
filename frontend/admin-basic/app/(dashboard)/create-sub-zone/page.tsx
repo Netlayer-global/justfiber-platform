@@ -69,6 +69,15 @@ export default function CreateSubZonePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [general, setGeneral] = useState<any>(null)
 
+  const validationErrors = [
+    !form.subZoneName.trim() ? 'Sub-zone name is required' : null,
+    !form.email.trim() ? 'Email is required' : null,
+    !form.phone.trim() ? 'Phone is required' : null,
+    !form.city.trim() ? 'City is required' : null,
+  ].filter(Boolean) as string[]
+
+  const generatedCode = form.subZoneName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
+
   useEffect(() => {
     void loadDefaults()
   }, [])
@@ -82,13 +91,13 @@ export default function CreateSubZonePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.subZoneName.trim()) {
-      toast.error('Sub-zone name is required')
+    if (validationErrors.length) {
+      toast.error(validationErrors[0])
       return
     }
     try {
       setIsSaving(true)
-      const franchiseCode = form.subZoneName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
+      const franchiseCode = generatedCode
       const metadata = {
         edition: form.edition,
         socialLinks: {
@@ -238,6 +247,54 @@ export default function CreateSubZonePage() {
         </div>
       </section>
 
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Launch Summary</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Sub-zone preview</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Zone name</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{form.subZoneName.trim() || 'Pending name'}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Generated code</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{generatedCode || 'pending_code'}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Edition</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{form.edition}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Router mode</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{form.useParentRouters ? 'Parent routers' : 'Dedicated routers'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Readiness Check</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">What to confirm before launch</h2>
+          <div className="mt-4 space-y-3">
+            {validationErrors.length ? (
+              validationErrors.map((item) => (
+                <div key={item} className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {item}
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  Identity and contact details are ready for creation.
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  Next, verify payment mapping and router exposure from the zone workspace tabs.
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
       <form onSubmit={handleSubmit} className="card p-6">
         <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
           <div className="space-y-3 text-sm font-medium text-slate-700">
@@ -293,7 +350,7 @@ export default function CreateSubZonePage() {
           </div>
         </div>
         <div className="mt-8 flex justify-end">
-          <button type="submit" className="btn-primary inline-flex items-center gap-2" disabled={isSaving}>
+          <button type="submit" className="btn-primary inline-flex items-center gap-2" disabled={isSaving || validationErrors.length > 0}>
             {isSaving ? <><Loader className="h-4 w-4 animate-spin" /> Creating...</> : 'Create Sub-Zone'}
           </button>
         </div>

@@ -85,6 +85,16 @@ export default function MyZoneDetailsPage() {
     }))
   }, [franchises, general])
 
+  const summary = useMemo(
+    () => ({
+      totalZones: rows.length,
+      withEmail: rows.filter((row) => Boolean(row.email)).length,
+      withPhone: rows.filter((row) => Boolean(row.phone)).length,
+      withAddress: rows.filter((row) => Boolean(row.streetAddress1 || row.city || row.state)).length,
+    }),
+    [rows]
+  )
+
   function exportRows() {
     const header = ['company_name', 'zone_name', 'api_token', 'email', 'phone', 'street_address1', 'street_address2', 'city', 'state', 'pincode']
     const csv = rows.map((row) => Object.values(row).map((value) => `"${String(value || '').replace(/"/g, '""')}"`).join(','))
@@ -152,6 +162,59 @@ export default function MyZoneDetailsPage() {
           </div>
           <div className="mt-3 text-lg font-semibold text-slate-900">Zone policy</div>
           <div className="mt-2 text-sm text-slate-500">Use Settings for prefixes, franchise policy, router visibility, and payment tagging.</div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone Coverage</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Identity health</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Total zones</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{summary.totalZones}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Email ready</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{summary.withEmail}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Phone ready</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{summary.withPhone}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Address ready</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">{summary.withAddress}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone Actions</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Recommended next moves</h2>
+          <div className="mt-4 space-y-3">
+            <Link href="/settings" className="flex items-start justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Open zone settings</div>
+                <div className="mt-1 text-sm text-slate-500">Review prefixes, franchise policy, and inheritance rules.</div>
+              </div>
+              <Settings2 className="mt-0.5 h-4 w-4 text-slate-400" />
+            </Link>
+            <Link href="/apps" className="flex items-start justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Map payment gateways</div>
+                <div className="mt-1 text-sm text-slate-500">Confirm how this zone should collect payments before go-live.</div>
+              </div>
+              <Download className="mt-0.5 h-4 w-4 text-slate-400" />
+            </Link>
+            <Link href="/create-sub-zone" className="flex items-start justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Create child zone</div>
+                <div className="mt-1 text-sm text-slate-500">Use the sub-zone wizard to launch the next franchise or child branch.</div>
+              </div>
+              <GitBranchPlus className="mt-0.5 h-4 w-4 text-slate-400" />
+            </Link>
+          </div>
         </div>
       </section>
 

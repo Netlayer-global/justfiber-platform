@@ -159,6 +159,21 @@ const ZONE_TABS = [
   { href: '/routers', label: 'Router Settings' },
 ]
 
+const ZONE_ADMIN_PLAYBOOK = [
+  {
+    title: 'Copy settings',
+    description: 'Review prefixes, billing rules, and router visibility before cloning them into a child zone.',
+  },
+  {
+    title: 'Admin accounts',
+    description: 'Decide who gets delegated access before the sub-zone goes live and starts collecting payments.',
+  },
+  {
+    title: 'Zone switch',
+    description: 'Keep active-zone verification as the last step after payments, routers, and inheritance are confirmed.',
+  },
+]
+
 function titleCase(value: string) {
   return value
     .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -485,6 +500,14 @@ export default function SettingsPage() {
 
   const activeMeta = getSectionMeta(activeSection)
   const activePlaybook = getSectionPlaybook(activeSection)
+  const zoneGroupSummary = useMemo(
+    () =>
+      GROUP_ORDER.map((group) => ({
+        group,
+        count: catalog.filter((item) => getSectionMeta(item.section).group === group).length,
+      })).filter((entry) => entry.count > 0),
+    [catalog]
+  )
 
   useEffect(() => {
     void loadCatalog()
@@ -598,6 +621,37 @@ export default function SettingsPage() {
               {item.label}
             </Link>
           ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone Command Center</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">What still needs operator attention</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {ZONE_ADMIN_PLAYBOOK.map((item) => (
+              <div key={item.title} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">{item.title}</div>
+                <div className="mt-2 text-sm text-slate-500">{item.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Section Coverage</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Zone governance map</h2>
+          <div className="mt-4 space-y-3">
+            {zoneGroupSummary.map((entry) => (
+              <div key={entry.group} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">{entry.group}</div>
+                  <div className="text-xs text-slate-500">{GROUP_DESCRIPTIONS[entry.group]}</div>
+                </div>
+                <div className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-700">{entry.count}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
