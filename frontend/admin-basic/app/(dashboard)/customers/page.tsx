@@ -21,13 +21,6 @@ function CustomersContent() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [lookup, setLookup] = useState('')
-  const [createdSummary, setCreatedSummary] = useState<{
-    name: string
-    customerId?: string
-    serviceId?: string
-    pppoeUsername?: string
-    pppoePassword?: string
-  } | null>(null)
   const [createForm, setCreateForm] = useState({
     fullName: '',
     phone: '',
@@ -114,13 +107,6 @@ function CustomersContent() {
         return
       }
 
-      setCreatedSummary({
-        name: res.data.name,
-        customerId: res.data.customerId || res.data.id,
-        serviceId: res.data.serviceId,
-        pppoeUsername: res.data.pppoeUsername || res.data.radiusService?.radiusUsername || '',
-        pppoePassword: createForm.radiusPassword.trim(),
-      })
       toast.success(`Created ${res.data.name}`)
       setIsCreateOpen(false)
       setCreateForm((current) => ({
@@ -198,36 +184,6 @@ function CustomersContent() {
         </div>
       </section>
 
-      {createdSummary ? (
-        <div className="rounded-[24px] border border-[#5B6CFF]/20 bg-[#eef1ff] px-5 py-5 text-slate-900">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Last created subscriber</div>
-              <div className="mt-3 text-2xl font-semibold tracking-[-0.03em]">{createdSummary.name}</div>
-            </div>
-            <Link href="/user-management?view=users" className="btn-secondary">Open user desk</Link>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Customer ID</div>
-              <div className="mt-2 font-semibold">{createdSummary.customerId || '-'}</div>
-            </div>
-            <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Service ID</div>
-              <div className="mt-2 font-semibold">{createdSummary.serviceId || '-'}</div>
-            </div>
-            <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">PPPoE Username</div>
-              <div className="mt-2 font-semibold">{createdSummary.pppoeUsername || '-'}</div>
-            </div>
-            <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">PPPoE Password</div>
-              <div className="mt-2 font-semibold">{createdSummary.pppoePassword || '-'}</div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <section className="card p-5 space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -254,25 +210,27 @@ function CustomersContent() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <div className="grid grid-cols-[70px_1.4fr_1fr_1fr_1fr_0.9fr_190px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="grid grid-cols-[60px_1.6fr_1fr_1fr_0.9fr_170px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               <div>S.No</div>
               <div>Customer</div>
               <div>Phone</div>
               <div>PPPoE</div>
-              <div>Plan</div>
               <div>Status</div>
               <div>Actions</div>
             </div>
             {quickLookupResults.map((customer, index) => (
-              <div key={customer.id} className="grid grid-cols-[70px_1.4fr_1fr_1fr_1fr_0.9fr_190px] gap-3 border-b border-slate-200 bg-white px-4 py-3 text-sm last:border-b-0">
+              <div key={customer.id} className="grid grid-cols-[60px_1.6fr_1fr_1fr_0.9fr_170px] gap-3 border-b border-slate-200 bg-white px-4 py-3 text-sm last:border-b-0">
                 <div className="text-slate-500">{index + 1}</div>
                 <div>
                   <div className="font-semibold text-slate-900">{customer.name}</div>
-                  <div className="mt-1 text-xs text-slate-500">{customer.customerId || customer.id}</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {customer.customerId || customer.id}
+                    {' | '}
+                    {customer.plan?.name || 'Unassigned'}
+                  </div>
                 </div>
                 <div className="text-slate-600">{customer.phone || '-'}</div>
                 <div className="text-slate-600">{customer.pppoeUsername || '-'}</div>
-                <div className="text-slate-600">{customer.plan?.name || 'Unassigned'}</div>
                 <div>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     customer.status === 'active'
