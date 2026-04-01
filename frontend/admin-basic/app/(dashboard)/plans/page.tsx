@@ -1034,15 +1034,16 @@ function PlansContent() {
                   </div>
                   <div className="rounded-[18px] border border-slate-200 bg-white p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Validity</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">{selectedPlan.validityDays} days</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">
+                      {[
+                        selectedPlan.validityOptions?.monthly ? 'Monthly' : null,
+                        selectedPlan.validityOptions?.quarterly ? 'Quarterly' : null,
+                        selectedPlan.validityOptions?.halfYearly ? 'Half yearly' : null,
+                        selectedPlan.validityOptions?.yearly ? 'Yearly' : null,
+                      ].filter(Boolean).join(', ') || 'Monthly'}
+                    </div>
                     <div className="text-sm text-slate-500">
-                      {selectedPlan.billingCycle === 'quarterly'
-                        ? 'Quarterly billing'
-                        : selectedPlan.billingCycle === 'semiannual'
-                          ? 'Semiannual billing'
-                          : selectedPlan.billingCycle === 'annual'
-                            ? 'Annual billing'
-                            : 'Monthly billing'}
+                      Choose from the enabled billing periods for this package
                     </div>
                   </div>
                   <div className="rounded-[18px] border border-slate-200 bg-white p-4">
@@ -1054,12 +1055,14 @@ function PlansContent() {
                         selectedPlan.addons?.voice?.enabled ? 'Voice' : null,
                       ].filter(Boolean).join(', ') || 'No add-ons'}
                     </div>
-                    <div className="text-sm text-slate-500">{selectedPlan.bundleType || 'Standard retail bundle'}</div>
+                    <div className="text-sm text-slate-500">{selectedPlan.tags?.join(', ') || 'Standard retail bundle'}</div>
                   </div>
                   <div className="rounded-[18px] border border-slate-200 bg-white p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Provisioning</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">{selectedPlan.accessProfile || 'Access profile pending'}</div>
-                    <div className="text-sm text-slate-500">{selectedPlan.billingProfile || 'Billing profile pending'}</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">{selectedPlan.provisioning?.accessProfileCode || 'Access profile pending'}</div>
+                    <div className="text-sm text-slate-500">
+                      {selectedPlan.provisioning?.vlanId ? `VLAN ${selectedPlan.provisioning.vlanId}` : 'VLAN mapping pending'}
+                    </div>
                   </div>
                 </div>
               </div>
