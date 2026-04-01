@@ -420,7 +420,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="mx-auto w-full max-w-[1200px] px-4 pt-5 md:px-6">
               <div className="mb-5 flex items-center justify-between rounded-[18px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Admin module</div>
                   <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{currentItem.label}</div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {SHELL_SHORTCUTS.map((item) => {
@@ -441,7 +440,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     })}
                   </div>
                 </div>
-                <div className="hidden text-sm text-slate-400 md:block">Modern operations workspace</div>
+                <div className="hidden text-sm text-slate-400 md:block">Operations</div>
               </div>
               <div className="min-h-[calc(100vh-170px)]">{children}</div>
             </div>
