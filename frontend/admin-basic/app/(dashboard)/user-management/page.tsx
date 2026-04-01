@@ -126,9 +126,6 @@ function UserManagementWorkspace() {
     })
   }, [customers, groupFilter, query, statusFilter])
 
-  const activeUsers = customers.filter((customer) => customer.status === 'active').length
-  const suspendedUsers = customers.filter((customer) => customer.status === 'suspended').length
-
   useEffect(() => {
     setSelectedUserIds((current) => current.filter((id) => filteredUsers.some((customer) => customer.id === id)))
   }, [customers, filteredUsers])
@@ -281,25 +278,6 @@ function UserManagementWorkspace() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Packages</div>
-          <div className="mt-2 text-3xl font-semibold text-slate-900">{groups.length}</div>
-        </div>
-        <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Total Users</div>
-          <div className="mt-2 text-3xl font-semibold text-slate-900">{customers.length}</div>
-        </div>
-        <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Active Users</div>
-          <div className="mt-2 text-3xl font-semibold text-emerald-600">{activeUsers}</div>
-        </div>
-        <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Needs Review</div>
-          <div className="mt-2 text-3xl font-semibold text-amber-600">{suspendedUsers}</div>
-        </div>
-      </section>
-
       {workspaceView === 'users' ? (
         <>
           <section className="card p-4">
@@ -339,9 +317,7 @@ function UserManagementWorkspace() {
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Desk actions</div>
                 <div className="mt-2 text-sm text-slate-600">
-                  {selectedUsers.length
-                    ? `${selectedUsers.length} selected • ${selectedActiveCount} active • ${selectedSuspendedCount} suspended`
-                    : `${filteredUsers.length} visible • select rows to suspend, resume, or export an exact working set.`}
+                  {selectedUsers.length ? `${selectedUsers.length} selected` : `${filteredUsers.length} visible users`}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -368,7 +344,7 @@ function UserManagementWorkspace() {
           ) : (
             <section className="card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="min-w-[1120px] w-full text-sm">
+                <table className="min-w-[840px] w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-[0.16em] text-slate-500">
                       <th className="px-4 py-4">
@@ -377,22 +353,12 @@ function UserManagementWorkspace() {
                       <th className="px-4 py-4">Username</th>
                       <th className="px-4 py-4">Status</th>
                       <th className="px-4 py-4">Customer</th>
-                      <th className="px-4 py-4">Phone</th>
                       <th className="px-4 py-4">Package</th>
-                      <th className="px-4 py-4">Service</th>
-                      <th className="px-4 py-4">IP / Session</th>
-                      <th className="px-4 py-4">Due</th>
                       <th className="px-4 py-4">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.map((customer) => {
-                      const device = customer.devices?.[0]
-                      const mac =
-                        device?.wanInfo?.macAddress ||
-                        device?.wanInfo?.mac ||
-                        device?.lanInfo?.macAddress ||
-                        ''
                       return (
                         <tr key={customer.id} className="border-b border-slate-100 hover:bg-slate-50">
                           <td className="px-4 py-3">
@@ -416,24 +382,10 @@ function UserManagementWorkspace() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-medium text-slate-900">{customer.name}</div>
-                            <div className="mt-1 text-xs text-slate-500">{customer.email === '-' ? customer.customerId || customer.id : customer.email}</div>
+                            <div className="mt-1 text-xs text-slate-500">{customer.phone || customer.customerId || customer.id}</div>
                           </td>
-                          <td className="px-4 py-3">{customer.phone}</td>
                           <td className="px-4 py-3">
                             <div className="font-medium text-slate-900">{planLabel(customer)}</div>
-                            <div className="mt-1 text-xs text-slate-500">{customer.plan?.id || '-'}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-slate-900">{serviceStateLabel(customer)}</div>
-                            <div className="mt-1 text-xs text-slate-500">{formatDate(customer.radiusService?.updatedAt || customer.installationDate || customer.createdAt)}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-slate-900">{customer.radiusService?.currentIpv4 || '(empty)'}</div>
-                            <div className="mt-1 text-xs text-slate-500">{mac || 'No MAC bound'}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-slate-900">{formatCurrency(customer.invoiceSummary?.dueAmount ?? customer.billingSnapshot?.dueAmount ?? 0)}</div>
-                            <div className="mt-1 text-xs text-slate-500">{customer.billingSnapshot?.zoneName || 'Default Zone'}</div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">

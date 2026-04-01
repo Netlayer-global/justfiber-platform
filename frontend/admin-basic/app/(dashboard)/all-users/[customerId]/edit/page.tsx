@@ -193,7 +193,7 @@ export default function EditUserPage() {
           <p className="mt-2 text-sm text-slate-500">Jaze-style operator edit flow, wired only to fields that backend actually saves today.</p>
         </div>
 
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Customer</div>
             <div className="mt-2 text-lg font-semibold text-slate-900">{customer.name}</div>
@@ -209,11 +209,6 @@ export default function EditUserPage() {
             <div className="mt-2 text-lg font-semibold text-slate-900">{customer.radiusService?.status || customer.status}</div>
             <div className="mt-1 text-sm text-slate-500">{customer.radiusService?.bngNodeCode || 'No BNG linked'}</div>
           </div>
-          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Due</div>
-            <div className="mt-2 text-lg font-semibold text-slate-900">Rs {Number(customer.invoiceSummary?.dueAmount || customer.billingSnapshot?.dueAmount || 0).toFixed(2)}</div>
-            <div className="mt-1 text-sm text-slate-500">{customer.status === 'active' ? 'Active account' : 'Needs operator review'}</div>
-          </div>
         </section>
 
         <section className="space-y-4">
@@ -224,18 +219,10 @@ export default function EditUserPage() {
             </div>
             <Link href={`/customers/${customer.id}`} className="btn-secondary">Open customer page</Link>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">User Name</div>
               <input className="input" value={username} disabled />
-            </label>
-            <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">Password</div>
-              <input className="input" value="Managed from PPPoE controls" disabled />
-            </label>
-            <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">Account Number</div>
-              <input className="input" value={customer.accountNumber || customer.customerId || ''} disabled />
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Radius Service</div>
@@ -262,7 +249,7 @@ export default function EditUserPage() {
 
         <section className="space-y-4">
           <h2 className="text-xl font-semibold text-slate-900">Customer</h2>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Full Name</div>
               <input className="input" value={form.fullName} onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))} />
@@ -285,30 +272,15 @@ export default function EditUserPage() {
                 ))}
               </select>
             </label>
-            <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">Customer Type</div>
-              <select className="input" value={form.customerType} onChange={(e) => setForm((prev) => ({ ...prev, customerType: e.target.value as FormState['customerType'] }))}>
-                <option value="home">Home</option>
-                <option value="business">Business</option>
-              </select>
-            </label>
           </div>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-900">Service & Billing</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Address</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 md:col-span-2">
               <div className="text-sm font-medium text-slate-600">Address Line 1</div>
               <input className="input" value={form.line1} onChange={(e) => setForm((prev) => ({ ...prev, line1: e.target.value }))} />
-            </label>
-            <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">Address Line 2</div>
-              <input className="input" value={form.line2} onChange={(e) => setForm((prev) => ({ ...prev, line2: e.target.value }))} />
-            </label>
-            <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">Area</div>
-              <input className="input" value={form.area} onChange={(e) => setForm((prev) => ({ ...prev, area: e.target.value }))} />
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">City</div>
@@ -321,20 +293,6 @@ export default function EditUserPage() {
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Pincode</div>
               <input className="input" value={form.pinCode} onChange={(e) => setForm((prev) => ({ ...prev, pinCode: e.target.value }))} />
-            </label>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <input type="checkbox" checked={form.createIptvBilling} onChange={(e) => setForm((prev) => ({ ...prev, createIptvBilling: e.target.checked }))} />
-              Create IPTV billing
-            </label>
-            <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <input type="checkbox" checked={form.createOttBilling} onChange={(e) => setForm((prev) => ({ ...prev, createOttBilling: e.target.checked }))} />
-              Create OTT billing
-            </label>
-            <label className="flex items-center gap-3 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <input type="checkbox" checked={form.createVoiceBilling} onChange={(e) => setForm((prev) => ({ ...prev, createVoiceBilling: e.target.checked }))} />
-              Create Voice billing
             </label>
           </div>
         </section>
@@ -364,14 +322,6 @@ export default function EditUserPage() {
               <input className="input" value={customer.radiusService?.bngNodeCode || ''} disabled />
             </label>
             <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">Access Profile</div>
-              <input className="input" value={customer.radiusService?.accessProfileCode || ''} disabled />
-            </label>
-            <label className="space-y-2">
-              <div className="text-sm font-medium text-slate-600">Billing Profile</div>
-              <input className="input" value={customer.radiusService?.billingProfileCode || ''} disabled />
-            </label>
-            <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Bound MAC</div>
               <input
                 className="input"
@@ -398,7 +348,7 @@ export default function EditUserPage() {
             ))}
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-            Proof uploads, Aadhaar link, installation report, and advanced session bind actions ko alag workflow me rakhenge. Is page par sirf daily operator edits rakhe gaye hain.
+            Extra billing, proof, and advanced router actions intentionally hide kiye gaye hain. Is page par sirf daily operator edits rakhe gaye hain.
           </div>
           <div className="flex flex-wrap gap-2">
             <button
