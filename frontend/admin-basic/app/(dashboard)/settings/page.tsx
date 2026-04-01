@@ -790,6 +790,10 @@ export default function SettingsPage() {
   }, [])
 
   useEffect(() => {
+    void syncCurrentAdminScope()
+  }, [])
+
+  useEffect(() => {
     if (!activeZoneCode || activeZoneCode === 'default') {
       setZoneLogins([])
       return
@@ -814,6 +818,34 @@ export default function SettingsPage() {
     }
     if (rolesRes.success) {
       setAdminRoles(rolesRes.data || [])
+    }
+  }
+
+  async function syncCurrentAdminScope() {
+    try {
+      if (typeof window === 'undefined') return
+      const meRes = await adminAPI.getCurrentAdmin()
+      if (!meRes.success || !meRes.data) return
+
+      if (meRes.data.canAccessAllZones) {
+        window.localStorage.setItem('justfiber-admin-can-access-all-zones', '1')
+        window.localStorage.setItem('justfiber-admin-zone-code', '')
+        window.localStorage.setItem('justfiber-admin-zone-label', '')
+        setActiveZoneCode(window.localStorage.getItem('justfiber-active-zone-key') || 'default')
+        setActiveZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || 'JustFiber HQ')
+      } else {
+        window.localStorage.setItem('justfiber-admin-can-access-all-zones', '0')
+        window.localStorage.setItem('justfiber-admin-zone-code', meRes.data.zoneCode || '')
+        window.localStorage.setItem('justfiber-admin-zone-label', meRes.data.zoneName || '')
+        if (meRes.data.zoneCode) {
+          window.localStorage.setItem('justfiber-active-zone-key', meRes.data.zoneCode)
+          window.localStorage.setItem('justfiber-active-zone-label', meRes.data.zoneName || meRes.data.zoneCode)
+          setActiveZoneCode(meRes.data.zoneCode)
+          setActiveZoneLabel(meRes.data.zoneName || meRes.data.zoneCode)
+        }
+      }
+    } catch (error) {
+      console.error('[settings] Failed to sync admin scope', error)
     }
   }
 
