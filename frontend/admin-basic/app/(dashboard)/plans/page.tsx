@@ -1030,7 +1030,7 @@ function PlansContent() {
                     <div className="mt-2 text-base font-semibold text-slate-900">
                       {selectedPlan.dataPolicy === 'fup' ? 'FUP controlled' : selectedPlan.dataPolicy === 'hard_cap' ? 'Hard cap' : 'Unlimited'}
                     </div>
-                    <div className="text-sm text-slate-500">{selectedPlan.fupHardLimitGb ? `${selectedPlan.fupHardLimitGb} GB base quota` : 'No fixed quota published'}</div>
+                    <div className="text-sm text-slate-500">{selectedPlan.dataPolicy === 'fup' ? 'Fair-usage threshold managed in profile' : selectedPlan.dataPolicy === 'hard_cap' ? 'Quota controlled package' : 'No fixed quota published'}</div>
                   </div>
                   <div className="rounded-[18px] border border-slate-200 bg-white p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Validity</div>
