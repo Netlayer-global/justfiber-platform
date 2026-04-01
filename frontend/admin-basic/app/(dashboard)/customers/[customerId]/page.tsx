@@ -259,6 +259,15 @@ export default function CustomerDetailPage() {
     })
   }
 
+  async function copyValue(value: string, label: string) {
+    if (!value.trim()) {
+      toast.error(`No ${label.toLowerCase()} available`)
+      return
+    }
+    await navigator.clipboard.writeText(value)
+    toast.success(`${label} copied`)
+  }
+
   const primaryDevice = useMemo(() => {
     if (!customer?.devices?.length) return null
     return customer.devices.find((device) => device.onlineStatus === 'online') || customer.devices[0]
@@ -386,6 +395,14 @@ export default function CustomerDetailPage() {
                   <div><span className="font-medium text-slate-900">Transaction ID:</span> {formatValue(latestPayment?.transactionId)}</div>
                   <div><span className="font-medium text-slate-900">Date:</span> {formatDate(latestPayment?.paidAt || latestPayment?.createdAt)}</div>
                 </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="btn-secondary" onClick={() => void copyValue(customer.pppoeUsername || '', 'PPPoE')}>
+                    Copy PPPoE
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={() => void copyValue(String(latestPayment?.transactionId || ''), 'Transaction ID')}>
+                    Copy Txn ID
+                  </button>
+                </div>
               </div>
 
               <div className="card p-5 space-y-3">
@@ -396,6 +413,11 @@ export default function CustomerDetailPage() {
                   <div><span className="font-medium text-slate-900">PPPoE:</span> {formatValue(customer.pppoeUsername)}</div>
                   <div><span className="font-medium text-slate-900">WAN MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac)}</div>
                   <div><span className="font-medium text-slate-900">BNG:</span> {formatValue(customer.radiusService?.bngNodeCode)}</div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="btn-secondary" onClick={() => void copyValue(String(customer.radiusService?.currentIpv4 || customer.radiusService?.ipv4Pool || ''), 'Network value')}>
+                    Copy IP / Pool
+                  </button>
                 </div>
               </div>
             </div>

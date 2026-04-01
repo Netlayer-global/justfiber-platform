@@ -18,6 +18,16 @@ function normalizePhone(value: string) {
   return value.replace(/[^\d]/g, '')
 }
 
+function suggestPppoeUsername(fullName: string, phone: string) {
+  const namePart = fullName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 10)
+  const phonePart = normalizePhone(phone).slice(-4)
+  const suggested = `${namePart}${phonePart}`.trim()
+  return suggested || ''
+}
+
 function CustomersContent() {
   const router = useRouter()
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -63,6 +73,7 @@ function CustomersContent() {
   }, [createForm])
 
   const canCreateCustomer = Object.keys(createErrors).length === 0
+  const suggestedUsername = useMemo(() => suggestPppoeUsername(createForm.fullName, createForm.phone), [createForm.fullName, createForm.phone])
 
   function resetCreateForm() {
     setCreateForm((current) => ({
@@ -383,6 +394,18 @@ function CustomersContent() {
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">PPPoE username</label>
                   <input className="input w-full" placeholder="Auto if blank" value={createForm.radiusUsername} onChange={(e) => setCreateForm((current) => ({ ...current, radiusUsername: e.target.value }))} />
+                  {!createForm.radiusUsername.trim() && suggestedUsername ? (
+                    <div className="mt-2 flex items-center justify-between gap-2 text-xs text-slate-500">
+                      <span>Suggested: {suggestedUsername}</span>
+                      <button
+                        type="button"
+                        className="font-semibold text-[#2a8cff]"
+                        onClick={() => setCreateForm((current) => ({ ...current, radiusUsername: suggestedUsername }))}
+                      >
+                        Use
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">PPPoE password</label>
@@ -441,7 +464,7 @@ function CustomersContent() {
                 </button>
                 <button type="submit" className="btn-primary inline-flex items-center gap-2" disabled={isCreating || !canCreateCustomer}>
                   {isCreating ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  Create Customer
+                  {isCreating ? 'Creating...' : 'Create Customer'}
                 </button>
               </div>
             </form>

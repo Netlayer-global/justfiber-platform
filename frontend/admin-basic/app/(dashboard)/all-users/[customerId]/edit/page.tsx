@@ -80,6 +80,7 @@ export default function EditUserPage() {
     return errors
   }, [form])
   const canSave = Object.keys(formErrors).length === 0
+  const formErrorList = Object.values(formErrors)
 
   useEffect(() => {
     if (!customerId) return
@@ -267,6 +268,18 @@ export default function EditUserPage() {
             <div>Status: {form.operationalStatus}</div>
           </div>
         </div>
+        {formErrorList.length ? (
+          <div className="rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+            <div className="font-medium text-rose-900">Please fix before saving</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {formErrorList.map((error) => (
+                <span key={error} className="rounded-full bg-white px-3 py-1 text-xs">
+                  {error}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
@@ -503,7 +516,7 @@ export default function EditUserPage() {
           </button>
           <Link href={`/all-users/${customer.id}`} className="btn-secondary">Cancel</Link>
           <button type="submit" className="btn-primary" disabled={isSaving || !canSave}>
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? 'Saving...' : 'Save Profile'}
           </button>
         </div>
       </form>
