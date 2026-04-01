@@ -83,7 +83,6 @@ const NAV_SECTIONS: NavSection[] = [
   {
     subheader: 'SYSTEM',
     items: [
-      { href: '/users-count', label: 'Users Count', icon: BarChart3 },
       { href: '/my-zone-details', label: 'My Zone Details', icon: MapPinned },
       { href: '/create-sub-zone', label: 'Create Sub-zone', icon: Plus },
       { href: '/settings', label: 'Settings', icon: Settings },

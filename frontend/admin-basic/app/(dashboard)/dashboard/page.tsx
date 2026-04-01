@@ -325,6 +325,21 @@ export default function DashboardPage() {
     return { watch, high, capReached }
   }, [customers])
 
+  const userCountSummary = useMemo(() => {
+    const onlineUsers = customers.filter((customer) => customer.devices?.some((device) => device.onlineStatus === 'online')).length
+    const activeUsers = customers.filter((customer) => customer.status === 'active').length
+    const suspendedUsers = customers.filter((customer) => customer.status === 'suspended').length
+    const blockedUsers = customers.filter((customer) => customer.status === 'inactive').length
+
+    return {
+      totalUsers: customers.length,
+      onlineUsers,
+      activeUsers,
+      suspendedUsers,
+      blockedUsers,
+    }
+  }, [customers])
+
   const readiness = useMemo(() => {
     const helperReadyRouters = routers.filter((router) => router.freeradiusIntegrationHealth?.overallReady).length
     const authMismatchRouters = routers.filter(
@@ -771,7 +786,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {false ? <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="card p-6">
           <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Billing identity</div>
           <div className="mt-2 text-xl font-semibold text-slate-900">
@@ -819,6 +834,21 @@ export default function DashboardPage() {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
+      </section> : null}
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {[
+          ['Total Users', userCountSummary.totalUsers],
+          ['Online Users', userCountSummary.onlineUsers],
+          ['Active Users', userCountSummary.activeUsers],
+          ['Suspended', userCountSummary.suspendedUsers],
+          ['Blocked', userCountSummary.blockedUsers],
+        ].map(([label, value]) => (
+          <div key={String(label)} className="card p-5">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-900">{value as number}</div>
+          </div>
+        ))}
       </section>
 
       {false ? <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -1169,8 +1199,8 @@ export default function DashboardPage() {
         </div>
 
         <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Launch shortcuts</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900">Run final checks faster</div>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Quick Links</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Open main pages</div>
           <div className="mt-6 grid gap-3 md:grid-cols-2">
             {[
               ['/customers', 'Customer desk', 'Open scoped customer roster and verify zone binding.'],
