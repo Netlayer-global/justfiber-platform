@@ -400,6 +400,17 @@ customersRouter.get(
     if (req.query.city) {
       filter["address.city"] = req.query.city;
     }
+    if (req.query.zoneCode) {
+      filter.$and = [
+        ...(Array.isArray(filter.$and) ? filter.$and : []),
+        {
+          $or: [
+            { zoneCode: req.query.zoneCode },
+            { billingZoneCode: req.query.zoneCode }
+          ]
+        }
+      ];
+    }
     const [items, total] = await Promise.all([
       Customer.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
       Customer.countDocuments(filter)
@@ -462,6 +473,10 @@ customersRouter.post(
         ? billingProfile?.defaultBusinessBillMode
         : billingProfile?.defaultHomeBillMode) ||
       (payload.customerType === "business" ? "postpaid" : "prepaid");
+    const resolvedZoneCode = String(payload.zoneCode || bngNode?.groupName || bngNode?.nodeCode || "").trim() || undefined;
+    const resolvedZoneName = String(payload.zoneName || bngNode?.displayName || resolvedZoneCode || "").trim() || undefined;
+    const resolvedZoneStateCode = String(payload.zoneStateCode || "").trim() || undefined;
+    const resolvedZoneStateName = String(payload.zoneStateName || payload.address.state || "").trim() || undefined;
 
     const customer = await Customer.findOneAndUpdate(
       { customerId },
@@ -476,11 +491,16 @@ customersRouter.post(
           planCode: plan.planCode,
           planName: plan.name,
           customerType: payload.customerType,
+          zoneCode: resolvedZoneCode,
+          zoneName: resolvedZoneName,
+          zoneStateCode: resolvedZoneStateCode,
+          zoneStateName: resolvedZoneStateName,
           jazeStatus: "manual_admin",
           operationalStatus: toCustomerStatus(payload.operationalStatus),
-          billingZoneCode: bngNode?.groupName || undefined,
-          billingZoneName: bngNode?.displayName || undefined,
-          billingStateName: payload.address.state || undefined,
+          billingZoneCode: resolvedZoneCode,
+          billingZoneName: resolvedZoneName,
+          billingStateCode: resolvedZoneStateCode,
+          billingStateName: resolvedZoneStateName,
           address: {
             line1: payload.address.line1,
             line2: payload.address.line2,
@@ -500,9 +520,14 @@ customersRouter.post(
             dataLimitGb: networkProfile.dataLimitGb || null,
             fupSpeedMbps: networkProfile.fupSpeedMbps || null,
             billMode,
-            billingZoneCode: bngNode?.groupName || undefined,
-            billingZoneName: bngNode?.displayName || undefined,
-            billingStateName: payload.address.state || undefined
+            zoneCode: resolvedZoneCode,
+            zoneName: resolvedZoneName,
+            zoneStateCode: resolvedZoneStateCode,
+            zoneStateName: resolvedZoneStateName,
+            billingZoneCode: resolvedZoneCode,
+            billingZoneName: resolvedZoneName,
+            billingStateCode: resolvedZoneStateCode,
+            billingStateName: resolvedZoneStateName
           },
           invoiceSummary: {
             billCycle: billingProfile?.cycle || "monthly",
@@ -774,14 +799,41 @@ customersRouter.patch(
   asyncHandler(async (req, res) => {
     const payload = updateCustomerSchema.parse(req.body || {});
     const { radiusService: radiusServicePayload, ...customerPayload } = payload;
-    const customer = await Customer.findOneAndUpdate(
-      { customerId: req.params.customerId },
-      { $set: customerPayload },
-      { new: true }
-    );
-    if (!customer) {
+    const existingCustomer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!existingCustomer) {
       throw new ApiError(404, "Customer not found");
     }
+    const zonePatch =
+      payload.zoneCode || payload.zoneName || payload.zoneStateCode || payload.zoneStateName
+        ? {
+            ...(payload.zoneCode !== undefined ? { zoneCode: payload.zoneCode, billingZoneCode: payload.zoneCode } : {}),
+            ...(payload.zoneName !== undefined ? { zoneName: payload.zoneName, billingZoneName: payload.zoneName } : {}),
+            ...(payload.zoneStateCode !== undefined ? { zoneStateCode: payload.zoneStateCode, billingStateCode: payload.zoneStateCode } : {}),
+            ...(payload.zoneStateName !== undefined ? { zoneStateName: payload.zoneStateName, billingStateName: payload.zoneStateName } : {})
+          }
+        : {};
+    const billingSnapshotPatch =
+      payload.billingSnapshot || Object.keys(zonePatch).length
+        ? {
+            ...(existingCustomer.billingSnapshot || {}),
+            ...(payload.billingSnapshot || {}),
+            ...(payload.zoneCode !== undefined ? { zoneCode: payload.zoneCode, billingZoneCode: payload.zoneCode } : {}),
+            ...(payload.zoneName !== undefined ? { zoneName: payload.zoneName, billingZoneName: payload.zoneName } : {}),
+            ...(payload.zoneStateCode !== undefined ? { zoneStateCode: payload.zoneStateCode, billingStateCode: payload.zoneStateCode } : {}),
+            ...(payload.zoneStateName !== undefined ? { zoneStateName: payload.zoneStateName, billingStateName: payload.zoneStateName } : {})
+          }
+        : undefined;
+    const customer = await Customer.findOneAndUpdate(
+      { customerId: req.params.customerId },
+      {
+        $set: {
+          ...customerPayload,
+          ...zonePatch,
+          ...(billingSnapshotPatch ? { billingSnapshot: billingSnapshotPatch } : {})
+        }
+      },
+      { new: true }
+    );
     let radiusSyncApplied = false;
     if (radiusServicePayload) {
       const subscriberService =

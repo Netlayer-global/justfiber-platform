@@ -323,7 +323,7 @@ export default function CustomerDetailPage() {
     { label: 'Customer', value: customer.name, sub: customer.phone || '-' },
     { label: 'PPPoE', value: customer.pppoeUsername || '-', sub: `Service ${formatValue(customer.serviceId)}` },
     { label: 'Plan', value: customer.plan?.name || '-', sub: customer.status || '-' },
-    { label: 'Address', value: customer.rawAddress?.city || customer.rawAddress?.area || '-', sub: customer.rawAddress?.line1 || customer.address || '-' },
+    { label: 'Zone', value: customer.zoneName || customer.zoneCode || '-', sub: customer.zoneStateName || customer.rawAddress?.state || '-' },
   ]
 
   return (
@@ -341,6 +341,7 @@ export default function CustomerDetailPage() {
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.phone || 'No phone'}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.plan?.name || 'No plan'}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.pppoeUsername || 'No PPPoE'}</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">{customer.zoneName || customer.zoneCode || 'No zone'}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -435,6 +436,7 @@ export default function CustomerDetailPage() {
                   <div><span className="font-medium text-slate-900">PPPoE:</span> {formatValue(customer.pppoeUsername)}</div>
                   <div><span className="font-medium text-slate-900">WAN MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac)}</div>
                   <div><span className="font-medium text-slate-900">BNG:</span> {formatValue(customer.radiusService?.bngNodeCode)}</div>
+                  <div><span className="font-medium text-slate-900">Zone:</span> {formatValue(customer.zoneName || customer.zoneCode)}</div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className="btn-secondary" onClick={() => void copyValue(String(customer.radiusService?.currentIpv4 || customer.radiusService?.ipv4Pool || ''), 'Network value')}>

@@ -38,6 +38,7 @@ function CustomersContent() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [lookup, setLookup] = useState('')
+  const [activeZone, setActiveZone] = useState({ key: 'default', label: 'JustFiber HQ' })
   const [createForm, setCreateForm] = useState({
     fullName: '',
     phone: '',
@@ -97,6 +98,12 @@ function CustomersContent() {
   }
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setActiveZone({
+        key: window.localStorage.getItem('justfiber-active-zone-key') || 'default',
+        label: window.localStorage.getItem('justfiber-active-zone-label') || 'JustFiber HQ',
+      })
+    }
     void loadWorkspace()
   }, [])
 
@@ -153,6 +160,9 @@ function CustomersContent() {
         planCode: createForm.planCode,
         operationalStatus: createForm.operationalStatus as 'active' | 'inactive' | 'suspended',
         customerType: 'home',
+        zoneCode: activeZone.key !== 'default' ? activeZone.key : undefined,
+        zoneName: activeZone.label !== 'JustFiber HQ' ? activeZone.label : undefined,
+        zoneStateName: createForm.state.trim() || undefined,
         address: {
           line1: createForm.line1.trim(),
           line2: createForm.line2.trim() || undefined,
@@ -212,8 +222,11 @@ function CustomersContent() {
             <div className="text-sm font-semibold text-[#4aa7ff]">Customer Ops</div>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Customers</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              Yahan full customer list dikhegi. Bas open, edit, ya new customer create karo.
+              Yahan full customer list dikhegi. Active zone ke hisaab se records scope honge. Bas open, edit, ya new customer create karo.
             </p>
+            <div className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              Zone: {activeZone.label}
+            </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
@@ -276,6 +289,7 @@ function CustomersContent() {
                       {customer.customerId || customer.id}
                       {' | '}
                       {customer.plan?.name || 'Unassigned'}
+                      {customer.zoneName ? ` | ${customer.zoneName}` : ''}
                     </div>
                   </div>
                   <div className="text-slate-600">{customer.phone || '-'}</div>
@@ -455,6 +469,7 @@ function CustomersContent() {
                   <div>Phone: {normalizePhone(createForm.phone) || '-'}</div>
                   <div>Plan: {plans.find((plan) => (plan.planCode || plan.id) === createForm.planCode)?.name || '-'}</div>
                 </div>
+                <div className="mt-2 text-xs text-slate-500">Zone scope: {activeZone.label}</div>
                 <div className="mt-3 text-xs text-slate-500">Successful create ke baad customer detail page auto open ho jayegi.</div>
               </div>
 

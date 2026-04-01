@@ -110,6 +110,7 @@ export default function CreateSubZonePage() {
     try {
       setIsSaving(true)
       const franchiseCode = generatedCode
+      const invoicePrefix = franchiseCode.slice(0, 3).toUpperCase() || 'ZN'
       const metadata = {
         edition: form.edition,
         socialLinks: {
@@ -126,6 +127,20 @@ export default function CreateSubZonePage() {
           street: form.street,
           building: form.building,
           house: form.house,
+        },
+        legalProfile: {
+          legalName: form.subZoneName.trim(),
+          gstNumber: form.gstNumber,
+          panNumber: form.panNumber,
+          billingAddress: [form.addressLine1, form.addressLine2, form.city, form.state, form.pincode].filter(Boolean).join(', '),
+          stateCode: form.state.trim().slice(0, 3).toUpperCase(),
+          stateName: form.state,
+        },
+        invoiceConfig: {
+          invoicePrefix,
+          invoiceSeriesCode: 'MAIN',
+          sequencePadding: 4,
+          templateKey: franchiseCode,
         },
         canCreateSubZone: form.canCreateSubZone,
         useParentRouters: form.useParentRouters,

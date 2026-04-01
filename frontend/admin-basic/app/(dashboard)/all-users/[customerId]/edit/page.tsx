@@ -26,6 +26,8 @@ type FormState = {
   currentIpv4: string
   ipv4Pool: string
   operationalStatus: 'active' | 'inactive' | 'suspended'
+  zoneCode: string
+  zoneName: string
 }
 
 const emptyForm: FormState = {
@@ -46,6 +48,8 @@ const emptyForm: FormState = {
   currentIpv4: '',
   ipv4Pool: '',
   operationalStatus: 'active',
+  zoneCode: '',
+  zoneName: '',
 }
 
 function isLikelyIpv4(value: string) {
@@ -116,6 +120,8 @@ export default function EditUserPage() {
         currentIpv4: customerRes.data.radiusService?.currentIpv4 || '',
         ipv4Pool: customerRes.data.radiusService?.ipv4Pool || '',
         operationalStatus: customerRes.data.status,
+        zoneCode: customerRes.data.zoneCode || '',
+        zoneName: customerRes.data.zoneName || '',
       })
     } catch (error) {
       console.error('[edit-user] Failed to load user:', error)
@@ -170,6 +176,9 @@ export default function EditUserPage() {
           currentIpv4: form.currentIpv4 || null,
           ipv4Pool: form.currentIpv4 ? null : form.ipv4Pool || null,
         },
+        zoneCode: form.zoneCode || undefined,
+        zoneName: form.zoneName || undefined,
+        zoneStateName: form.state || undefined,
       })
       if (!res.success) throw new Error(res.error || 'Failed to save user')
       setCustomer((current) => current ? ({
@@ -208,6 +217,9 @@ export default function EditUserPage() {
           currentIpv4: form.currentIpv4 || null,
           ipv4Pool: form.currentIpv4 ? null : form.ipv4Pool || null,
         },
+        zoneCode: form.zoneCode || current.zoneCode,
+        zoneName: form.zoneName || current.zoneName,
+        zoneStateName: form.state || current.zoneStateName,
       }) : current)
       setSaveMessage('Saved just now')
       toast.success('User profile updated')
@@ -266,6 +278,7 @@ export default function EditUserPage() {
             <div>Customer: {form.fullName.trim() || '-'}</div>
             <div>Package: {plans.find((plan) => (plan.planCode || plan.id) === form.planCode)?.name || '-'}</div>
             <div>Status: {form.operationalStatus}</div>
+            <div>Zone: {form.zoneName || form.zoneCode || '-'}</div>
           </div>
         </div>
         {formErrorList.length ? (
@@ -378,6 +391,20 @@ export default function EditUserPage() {
                 ))}
               </select>
               {formErrors.planCode ? <p className="text-xs text-rose-600">{formErrors.planCode}</p> : null}
+            </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Zone code</div>
+              <input className="input" value={form.zoneCode} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, zoneCode: e.target.value }))
+              }} />
+            </label>
+            <label className="space-y-2">
+              <div className="text-sm font-medium text-slate-600">Zone name</div>
+              <input className="input" value={form.zoneName} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, zoneName: e.target.value }))
+              }} />
             </label>
           </div>
         </section>

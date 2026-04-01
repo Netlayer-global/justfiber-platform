@@ -454,6 +454,10 @@ function mapCustomer(customer: any): Customer {
       customer.radiusService?.radiusUsername ||
       customer.devices?.[0]?.wanInfo?.pppoeUsernameMasked ||
       customer.devices?.[0]?.wanInfo?.pppoeUsername,
+    zoneCode: customer.zoneCode || customer.billingZoneCode || customer.billingSnapshot?.zoneCode || customer.billingSnapshot?.billingZoneCode,
+    zoneName: customer.zoneName || customer.billingZoneName || customer.billingSnapshot?.zoneName || customer.billingSnapshot?.billingZoneName,
+    zoneStateCode: customer.zoneStateCode || customer.billingStateCode || customer.billingSnapshot?.zoneStateCode || customer.billingSnapshot?.billingStateCode,
+    zoneStateName: customer.zoneStateName || customer.billingStateName || customer.billingSnapshot?.zoneStateName || customer.billingSnapshot?.billingStateName,
     billingSnapshot: customer.billingSnapshot || {},
     invoiceSummary: customer.invoiceSummary || {},
     devices: Array.isArray(customer.devices) ? customer.devices.map(mapCustomerDevice) : undefined,
@@ -804,6 +808,7 @@ function mapServiceZone(zone: any): ServiceZone {
 }
 
 function mapFranchiseProfile(item: any): FranchiseProfile {
+  const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {}
   return {
     id: item._id || item.franchiseCode || '',
     franchiseCode: item.franchiseCode || '',
@@ -816,7 +821,21 @@ function mapFranchiseProfile(item: any): FranchiseProfile {
     address: item.address || '',
     payoutMode: item.payoutMode || 'bank',
     commissionPercent: Number(item.commissionPercent || 0),
-    metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : {},
+    legalProfile: metadata.legalProfile && typeof metadata.legalProfile === 'object' ? metadata.legalProfile : {
+      legalName: item.name || item.franchiseCode || 'Zone',
+      gstNumber: metadata.gstNumber || '',
+      panNumber: metadata.panNumber || '',
+      billingAddress: item.address || '',
+      stateCode: metadata.stateCode || '',
+      stateName: metadata.stateName || '',
+    },
+    invoiceConfig: metadata.invoiceConfig && typeof metadata.invoiceConfig === 'object' ? metadata.invoiceConfig : {
+      invoicePrefix: metadata.invoicePrefix || String(item.zoneCode || item.franchiseCode || 'ZN').slice(0, 3).toUpperCase(),
+      invoiceSeriesCode: metadata.invoiceSeriesCode || 'MAIN',
+      sequencePadding: Number(metadata.sequencePadding || 4),
+      templateKey: metadata.templateKey || '',
+    },
+    metadata,
   }
 }
 
@@ -1274,8 +1293,12 @@ export const adminAPI = {
   getCustomers: async (
     page = 1,
     limit = 20,
-    filters?: { search?: string; status?: string; planCode?: string; city?: string }
+    filters?: { search?: string; status?: string; planCode?: string; city?: string; zoneCode?: string | null }
   ) => {
+    const activeZoneCode =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem('justfiber-active-zone-key') || ''
+        : ''
     const search = new URLSearchParams({
       page: String(page),
       limit: String(limit),
@@ -1284,6 +1307,8 @@ export const adminAPI = {
     if (filters?.status) search.set('status', filters.status)
     if (filters?.planCode) search.set('planCode', filters.planCode)
     if (filters?.city) search.set('city', filters.city)
+    if (filters?.zoneCode) search.set('zoneCode', filters.zoneCode)
+    else if (filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default') search.set('zoneCode', activeZoneCode)
     const res = await request<any[]>(`/api/v1/admin/customers?${search.toString()}`)
     return {
       ...res,
@@ -1341,6 +1366,10 @@ export const adminAPI = {
         email: data.email === '-' ? null : data.email,
         planCode: data.plan?.id,
         planName: data.plan?.name,
+        zoneCode: data.zoneCode,
+        zoneName: data.zoneName,
+        zoneStateCode: data.zoneStateCode,
+        zoneStateName: data.zoneStateName,
         operationalStatus:
           data.status === 'suspended'
             ? 'suspended'

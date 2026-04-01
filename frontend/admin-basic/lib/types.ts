@@ -117,6 +117,10 @@ export interface Customer {
   installationDate?: string
   expiryAt?: string
   pppoeUsername?: string
+  zoneCode?: string
+  zoneName?: string
+  zoneStateCode?: string
+  zoneStateName?: string
   billingSnapshot?: Record<string, any>
   invoiceSummary?: Record<string, any>
   devices?: CustomerDevice[]
@@ -162,6 +166,10 @@ export interface ManualCustomerCreatePayload {
   planCode: string
   operationalStatus?: 'active' | 'inactive' | 'suspended'
   customerType?: 'home' | 'business'
+  zoneCode?: string
+  zoneName?: string
+  zoneStateCode?: string
+  zoneStateName?: string
   address: {
     line1: string
     line2?: string
@@ -642,6 +650,20 @@ export interface FranchiseProfile {
   address?: string
   payoutMode?: 'bank' | 'wallet' | 'manual'
   commissionPercent?: number
+  legalProfile?: {
+    legalName?: string
+    gstNumber?: string
+    panNumber?: string
+    billingAddress?: string
+    stateCode?: string
+    stateName?: string
+  }
+  invoiceConfig?: {
+    invoicePrefix?: string
+    invoiceSeriesCode?: string
+    sequencePadding?: number
+    templateKey?: string
+  }
   metadata?: Record<string, any>
 }
 

@@ -33,6 +33,10 @@ export const updateCustomerSchema = z.object({
   planCode: z.string().min(2).optional(),
   planName: z.string().min(2).optional(),
   operationalStatus: z.string().min(2).optional(),
+  zoneCode: z.string().min(1).max(80).optional(),
+  zoneName: z.string().min(1).max(200).optional(),
+  zoneStateCode: z.string().max(20).optional(),
+  zoneStateName: z.string().max(120).optional(),
   address: z.object({
     line1: z.string().optional(),
     line2: z.string().optional(),
@@ -63,6 +67,10 @@ export const manualCreateCustomerSchema = z.object({
   planCode: z.string().min(2),
   operationalStatus: z.enum(["active", "inactive", "suspended"]).default("active"),
   customerType: z.enum(["home", "business"]).default("home"),
+  zoneCode: z.string().min(1).max(80).optional(),
+  zoneName: z.string().min(1).max(200).optional(),
+  zoneStateCode: z.string().max(20).optional(),
+  zoneStateName: z.string().max(120).optional(),
   address: z.object({
     line1: z.string().min(2).max(200),
     line2: z.string().max(200).optional(),
