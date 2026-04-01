@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, Customer, Plan } from '@/lib/types'
-import { ArrowRight, Eye, Loader, Plus, RefreshCw, Search, Wifi, UserRound, ShieldAlert } from 'lucide-react'
+import { Eye, Loader, Plus, RefreshCw, Search, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 
 function formatDate(value?: string) {
@@ -20,6 +20,7 @@ function CustomersContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [lookup, setLookup] = useState('')
   const [createdSummary, setCreatedSummary] = useState<{
     name: string
     customerId?: string
@@ -27,7 +28,6 @@ function CustomersContent() {
     pppoeUsername?: string
     pppoePassword?: string
   } | null>(null)
-  const [lookup, setLookup] = useState('')
   const [createForm, setCreateForm] = useState({
     fullName: '',
     phone: '',
@@ -66,8 +66,8 @@ function CustomersContent() {
 
       setCustomers(customersRes.data?.items || [])
       const activePlans = plansRes.data?.items?.filter((plan) => plan.status === 'active') || []
-      setPlans(activePlans)
       const activeNodes = (bngRes.data || []).filter((node) => node.status === 'active')
+      setPlans(activePlans)
       setBngNodes(activeNodes)
       setCreateForm((current) => ({
         ...current,
@@ -113,6 +113,7 @@ function CustomersContent() {
         toast.error(res.error || 'Failed to create customer')
         return
       }
+
       setCreatedSummary({
         name: res.data.name,
         customerId: res.data.customerId || res.data.id,
@@ -149,23 +150,10 @@ function CustomersContent() {
     }
   }
 
-  function usageRisk(customer: Customer) {
-    const snapshot = customer.billingSnapshot || {}
-    const policy = String(snapshot.dataPolicy || 'unlimited')
-    const used = Number(snapshot.usageGb || 0)
-    const cap = Number(snapshot.usageCapGb || snapshot.dataLimitGb || 0)
-    if (snapshot.usageCapReached) return 'cap'
-    if (policy === 'unlimited' || cap <= 0) return 'normal'
-    const ratio = used / cap
-    if (ratio >= 0.9) return 'high'
-    if (ratio >= 0.65) return 'watch'
-    return 'normal'
-  }
-
   const quickLookupResults = useMemo(() => {
     const needle = lookup.trim().toLowerCase()
-    const base = [...customers].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-    return base
+    return [...customers]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .filter((customer) => {
         if (!needle) return true
         return [
@@ -175,44 +163,19 @@ function CustomersContent() {
           customer.pppoeUsername,
           customer.customerId,
           customer.accountNumber,
-          customer.plan.name,
+          customer.plan?.name,
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(needle))
       })
-      .slice(0, 12)
+      .slice(0, 10)
   }, [customers, lookup])
 
-  const onboardingQueue = useMemo(() => {
-    return customers
-      .flatMap((customer) =>
-        (customer.bookings || []).map((booking) => ({
-          booking,
-          customer,
-        }))
-      )
-      .filter(({ booking }) => !['installed', 'completed', 'cancelled'].includes(String(booking.status || '').toLowerCase()))
-      .sort((left, right) => new Date(String(right.booking.createdAt || 0)).getTime() - new Date(String(left.booking.createdAt || 0)).getTime())
-      .slice(0, 8)
+  const recentCustomers = useMemo(() => {
+    return [...customers]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 5)
   }, [customers])
-
-  const serviceWatchlist = useMemo(() => {
-    return customers
-      .filter((customer) => customer.status === 'suspended' || usageRisk(customer) === 'watch' || usageRisk(customer) === 'high' || usageRisk(customer) === 'cap')
-      .sort((left, right) => {
-        const leftDue = Number(left.invoiceSummary?.dueAmount ?? left.billingSnapshot?.dueAmount ?? 0)
-        const rightDue = Number(right.invoiceSummary?.dueAmount ?? right.billingSnapshot?.dueAmount ?? 0)
-        return rightDue - leftDue
-      })
-      .slice(0, 8)
-  }, [customers])
-
-  const metrics = {
-    total: customers.length,
-    active: customers.filter((customer) => customer.status === 'active').length,
-    onboarding: onboardingQueue.length,
-    suspended: customers.filter((customer) => customer.status === 'suspended').length,
-  }
 
   return (
     <div className="space-y-6">
@@ -220,9 +183,9 @@ function CustomersContent() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="text-sm font-semibold text-[#4aa7ff]">Customer Ops</div>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Customers</h1>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Customer Intake</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              Yeh page ab onboarding, quick lookup, aur service-control work ke liye focused hai. Full browsing aur bulk filtering `User Management` me rahegi.
+              Yeh page simple rakha gaya hai. Bas new customer banao ya existing customer ko jaldi open karo. Full list `User Management` me hai.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -239,24 +202,6 @@ function CustomersContent() {
               Refresh
             </button>
           </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Lookup Base</div>
-          <div className="mt-2 text-3xl font-semibold text-slate-900">{metrics.total}</div>
-          <div className="mt-1 text-sm text-slate-500">Customers available for quick open.</div>
-        </div>
-        <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Onboarding Queue</div>
-          <div className="mt-2 text-3xl font-semibold text-[#5d87ff]">{metrics.onboarding}</div>
-          <div className="mt-1 text-sm text-slate-500">Pending installs and fresh activations.</div>
-        </div>
-        <div className="card p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Needs Follow-up</div>
-          <div className="mt-2 text-3xl font-semibold text-amber-600">{metrics.suspended}</div>
-          <div className="mt-1 text-sm text-slate-500">Suspended or risky service accounts.</div>
         </div>
       </section>
 
@@ -290,12 +235,12 @@ function CustomersContent() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="card p-5 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">Quick customer lookup</h2>
-              <p className="mt-1 text-sm text-slate-500">Search, open, and move on. Full browsing stays in User Management.</p>
+              <p className="mt-1 text-sm text-slate-500">Search and open. Bas.</p>
             </div>
             <Link href="/user-management?view=users" className="btn-secondary">Open full list</Link>
           </div>
@@ -320,21 +265,16 @@ function CustomersContent() {
                     <div>
                       <div className="font-semibold text-slate-900">{customer.name}</div>
                       <div className="mt-1 text-sm text-slate-500">
-                        {customer.pppoeUsername || customer.customerId || customer.id} • {customer.plan.name}
+                        {customer.pppoeUsername || customer.customerId || customer.id} | {customer.plan?.name || 'Unassigned'}
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
-                        {customer.phone} • {customer.billingSnapshot?.zoneName || 'Default Zone'}
+                        {customer.phone} | {customer.billingSnapshot?.zoneName || 'Default Zone'}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${customer.status === 'active' ? 'bg-emerald-50 text-emerald-700' : customer.status === 'suspended' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                        {customer.status}
-                      </span>
-                      <Link href={`/customers/${customer.id}`} className="btn-secondary inline-flex items-center gap-2">
-                        <Eye className="h-4 w-4" />
-                        Open
-                      </Link>
-                    </div>
+                    <Link href={`/customers/${customer.id}`} className="btn-secondary inline-flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Open
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -349,62 +289,53 @@ function CustomersContent() {
 
         <div className="space-y-4">
           <section className="card p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <Wifi className="h-4 w-4 text-slate-500" />
-              <h2 className="text-lg font-semibold text-slate-900">Onboarding queue</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Only 3 actions</h2>
+              <p className="mt-1 text-sm text-slate-500">Is page par sirf essentials rakhe gaye hain.</p>
             </div>
-            {onboardingQueue.length ? onboardingQueue.map(({ booking, customer }) => (
-              <div key={`${customer.id}-${booking.id}`} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-3">
+              <button type="button" onClick={() => setIsCreateOpen(true)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:bg-white">
+                <div>
+                  <div className="font-semibold text-slate-900">Create customer</div>
+                  <div className="mt-1 text-sm text-slate-500">New PPPoE / subscriber onboarding</div>
+                </div>
+                <Plus className="h-4 w-4 text-slate-400" />
+              </button>
+              <Link href="/user-management?view=users" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition hover:bg-white">
+                <div>
+                  <div className="font-semibold text-slate-900">Open user desk</div>
+                  <div className="mt-1 text-sm text-slate-500">Full list, filters, suspend/resume, export</div>
+                </div>
+                <UserRound className="h-4 w-4 text-slate-400" />
+              </Link>
+              <button type="button" onClick={() => void loadWorkspace()} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:bg-white">
+                <div>
+                  <div className="font-semibold text-slate-900">Refresh intake data</div>
+                  <div className="mt-1 text-sm text-slate-500">Reload plans, routers, and lookup data</div>
+                </div>
+                <RefreshCw className="h-4 w-4 text-slate-400" />
+              </button>
+            </div>
+          </section>
+
+          <section className="card p-5 space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Recent customers</h2>
+              <p className="mt-1 text-sm text-slate-500">Bas latest entries for quick open.</p>
+            </div>
+            {recentCustomers.length ? recentCustomers.map((customer) => (
+              <div key={customer.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="font-semibold text-slate-900">{customer.name}</div>
-                    <div className="mt-1 text-sm text-slate-500">{booking.bookingNumber} • {booking.planName || customer.plan.name}</div>
-                    <div className="mt-1 text-xs text-slate-500">{formatDate(booking.createdAt)} • {booking.address || customer.address}</div>
+                    <div className="mt-1 text-xs text-slate-500">{formatDate(customer.createdAt)}</div>
                   </div>
-                  <div className="text-right">
-                    <div className="rounded-full bg-[#eef1ff] px-3 py-1 text-xs font-medium text-[#5d87ff]">{booking.status}</div>
-                    <Link href={`/customers/${customer.id}`} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#2a8cff]">
-                      Open customer
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
+                  <Link href={`/customers/${customer.id}`} className="text-sm font-medium text-[#2a8cff]">Open</Link>
                 </div>
               </div>
             )) : (
               <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-sm text-slate-500">
-                No onboarding items waiting right now.
-              </div>
-            )}
-          </section>
-
-          <section className="card p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-slate-500" />
-              <h2 className="text-lg font-semibold text-slate-900">Service watchlist</h2>
-            </div>
-            {serviceWatchlist.length ? serviceWatchlist.map((customer) => {
-              const risk = usageRisk(customer)
-              const dueAmount = Number(customer.invoiceSummary?.dueAmount ?? customer.billingSnapshot?.dueAmount ?? 0)
-              return (
-                <div key={customer.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-slate-900">{customer.name}</div>
-                      <div className="mt-1 text-sm text-slate-500">{customer.pppoeUsername || customer.customerId || customer.id}</div>
-                      <div className="mt-1 text-xs text-slate-500">Due Rs {dueAmount.toFixed(2)} • {customer.plan.name}</div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${customer.status === 'suspended' ? 'bg-amber-50 text-amber-700' : risk === 'cap' ? 'bg-rose-50 text-rose-700' : risk === 'high' ? 'bg-orange-50 text-orange-700' : 'bg-[#eef1ff] text-[#5d87ff]'}`}>
-                        {customer.status === 'suspended' ? 'Suspended' : risk === 'cap' ? 'Cap reached' : risk === 'high' ? 'High usage' : 'Watch'}
-                      </span>
-                      <Link href={`/customers/${customer.id}`} className="text-sm font-medium text-[#2a8cff]">Open</Link>
-                    </div>
-                  </div>
-                </div>
-              )
-            }) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-sm text-slate-500">
-                No service watch items right now.
+                No customers yet.
               </div>
             )}
           </section>
@@ -425,7 +356,7 @@ function CustomersContent() {
                 onClick={() => setIsCreateOpen(false)}
               >
                 <span className="sr-only">Close</span>
-                ×
+                x
               </button>
             </div>
             <form onSubmit={handleCreateCustomer} className="space-y-6 px-6 py-6">

@@ -271,7 +271,7 @@ function UserManagementWorkspace() {
             </button>
             <Link href="/customers" className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              Add user
+              Intake
             </Link>
             <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => void loadData()}>
               <RefreshCw className="h-4 w-4" />
