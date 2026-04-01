@@ -319,6 +319,25 @@ export default function BillingPage() {
     }),
     [collectionsWorkbench, financeResolutions, latestRecurringRuns, overview, reconciliationSummary, visibleCollections.length]
   )
+  const paymentOpsSummary = useMemo(
+    () => ({
+      visible: visiblePayments.length,
+      unreconciled: visiblePayments.filter((payment) => payment.reconciliationStatus !== 'reconciled').length,
+      refunds: refundPayments.length,
+      totalVisibleAmount: visiblePayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+    }),
+    [refundPayments.length, visiblePayments]
+  )
+  const collectionsOpsSummary = useMemo(
+    () => ({
+      visible: visibleCollections.length,
+      assigned: visibleCollections.filter((item) => Boolean(item.assignedAdminName)).length,
+      suspendNow: visibleCollections.filter((item) => item.suspendEligible).length,
+      promiseActive: visibleCollections.filter((item) => item.promiseActive).length,
+      totalDue: visibleCollections.reduce((sum, item) => sum + Number(item.dueAmount || 0), 0),
+    }),
+    [visibleCollections]
+  )
   useEffect(() => {
     void loadBilling()
   }, [invoiceFilters, collectionBucket])
@@ -1423,6 +1442,48 @@ export default function BillingPage() {
 
       {billingSectionTab === 'collections' ? (
       <div className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+          <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Collections command center</div>
+            <div className="mt-1 text-sm text-slate-600">Focus on queue size, assigned ownership, suspend candidates, and promise-to-pay watchlist.</div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Queue</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.visible}</div>
+                <div className="mt-1 text-xs text-slate-500">Accounts in current desk view</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Assigned</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.assigned}</div>
+                <div className="mt-1 text-xs text-slate-500">Owned by collection agents</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Suspend now</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.suspendNow}</div>
+                <div className="mt-1 text-xs text-slate-500">Immediate action candidates</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Promise to pay</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.promiseActive}</div>
+                <div className="mt-1 text-xs text-slate-500">Need follow-up before promise date</div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[28px] border border-slate-200 bg-white p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Collections play</div>
+            <div className="mt-3 space-y-3 text-sm text-slate-600">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                Start with bucket filters, then select visible accounts for bulk reminder or assignment.
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                Use `Suspend` only after reminder/follow-up trail is present and due exposure is confirmed.
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                Current queue exposure: <span className="font-semibold text-slate-900">Rs {collectionsOpsSummary.totalDue.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
           <div className="card p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -2135,8 +2196,50 @@ export default function BillingPage() {
           </>
           ) : null}
 
-          {billingSectionTab === 'payments' ? (
+      {billingSectionTab === 'payments' ? (
           <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payments command center</div>
+              <div className="mt-1 text-sm text-slate-600">Track unreconciled payments, receipts, refund pressure, and the total value in current payment view.</div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Visible</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{paymentOpsSummary.visible}</div>
+                  <div className="mt-1 text-xs text-slate-500">Payments in current filtered view</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Unreconciled</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{paymentOpsSummary.unreconciled}</div>
+                  <div className="mt-1 text-xs text-slate-500">Need match or manual review</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Refunds</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{paymentOpsSummary.refunds}</div>
+                  <div className="mt-1 text-xs text-slate-500">Refund transactions in ledger</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Visible amount</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">Rs {paymentOpsSummary.totalVisibleAmount.toFixed(2)}</div>
+                  <div className="mt-1 text-xs text-slate-500">Across filtered payment list</div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-[28px] border border-slate-200 bg-white p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recon play</div>
+              <div className="mt-3 space-y-3 text-sm text-slate-600">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  Reconcile high-confidence rows first, then send retry reminders for old unmatched captures.
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  Use refund actions only after receipt dispatch and invoice linkage are verified.
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  Open reconciliation items right below to work the queue without leaving the desk.
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
             <div className="card p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
