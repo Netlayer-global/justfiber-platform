@@ -252,6 +252,16 @@ export default function EditUserPage() {
           <p className="mt-2 text-sm text-slate-500">Jaze-style operator edit flow, wired only to fields that backend actually saves today.</p>
         </div>
 
+        <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+          <div className="font-medium text-slate-900">Edit summary</div>
+          <div className="mt-2 grid gap-2 md:grid-cols-4">
+            <div>User: {username || '-'}</div>
+            <div>Customer: {form.fullName.trim() || '-'}</div>
+            <div>Package: {plans.find((plan) => (plan.planCode || plan.id) === form.planCode)?.name || '-'}</div>
+            <div>Status: {form.operationalStatus}</div>
+          </div>
+        </div>
+
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Customer</div>
@@ -287,6 +297,9 @@ export default function EditUserPage() {
               <div className="text-sm font-medium text-slate-600">Radius Service</div>
               <input className="input" value={customer.radiusService?.serviceId || customer.serviceId || ''} disabled />
             </label>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+            Username aur Radius Service read-only hain. Daily editable fields neeche grouped form me rakhe gaye hain.
           </div>
           <div className="flex flex-wrap gap-2">
             <button

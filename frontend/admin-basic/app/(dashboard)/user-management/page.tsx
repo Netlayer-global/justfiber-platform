@@ -289,7 +289,16 @@ function UserManagementWorkspace() {
 
       {workspaceView === 'users' ? (
         <>
-          <section className="card p-4">
+          <section className="card p-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium text-slate-900">User filters</div>
+                <div className="mt-1 text-xs text-slate-500">Search, package, and status in one simple strip.</div>
+              </div>
+              <div className="text-sm text-slate-500">
+                {filteredUsers.length} visible
+              </div>
+            </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.1fr_0.8fr_0.8fr_0.8fr]">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -319,6 +328,16 @@ function UserManagementWorkspace() {
                 Export
               </button>
             </div>
+            {(query || groupFilter || statusFilter !== 'all') ? (
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn-secondary" onClick={clearFilters}>
+                  Reset all filters
+                </button>
+                {query ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">Search: {query}</span> : null}
+                {groupFilter ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">Group filter active</span> : null}
+                {statusFilter !== 'all' ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">Status: {statusFilter}</span> : null}
+              </div>
+            ) : null}
           </section>
 
           <section className="card p-4">
@@ -427,7 +446,7 @@ function UserManagementWorkspace() {
               </div>
               <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm text-slate-500">
                 <div>
-                  1-{filteredUsers.length} of {filteredUsers.length} entries
+                  {filteredUsers.length ? `1-${filteredUsers.length} of ${filteredUsers.length} entries` : '0 entries'}
                 </div>
                 <div>Rows: 50</div>
               </div>
@@ -453,6 +472,13 @@ function UserManagementWorkspace() {
                 </tr>
               </thead>
               <tbody>
+                {!groups.length ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-500">
+                      No package groups available yet.
+                    </td>
+                  </tr>
+                ) : null}
                 {groups.map((group, index) => (
                   <tr key={group.id} className="border-b border-slate-100 text-sm text-slate-700 hover:bg-slate-50">
                     <td className="px-5 py-4">{index + 1}</td>
