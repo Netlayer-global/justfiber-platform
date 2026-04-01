@@ -936,6 +936,12 @@ function mapBillingProfile(profile: any): BillingProfile {
   }
 }
 
+function getStoredActiveZoneCode() {
+  return typeof window !== 'undefined'
+    ? window.localStorage.getItem('justfiber-active-zone-key') || ''
+    : ''
+}
+
 function mapBillingRun(run: any): BillingRun {
   return {
     id: run._id || run.runId || '',
@@ -1295,10 +1301,7 @@ export const adminAPI = {
     limit = 20,
     filters?: { search?: string; status?: string; planCode?: string; city?: string; zoneCode?: string | null }
   ) => {
-    const activeZoneCode =
-      typeof window !== 'undefined'
-        ? window.localStorage.getItem('justfiber-active-zone-key') || ''
-        : ''
+    const activeZoneCode = getStoredActiveZoneCode()
     const search = new URLSearchParams({
       page: String(page),
       limit: String(limit),
@@ -1999,8 +2002,11 @@ export const adminAPI = {
       search?: string
       fromDate?: string
       toDate?: string
+      zoneCode?: string | null
+      stateCode?: string
     },
   ) => {
+    const activeZoneCode = getStoredActiveZoneCode()
     const query = new URLSearchParams({
       page: String(page),
       limit: String(limit),
@@ -2010,6 +2016,11 @@ export const adminAPI = {
       ...(filters?.search ? { search: filters.search } : {}),
       ...(filters?.fromDate ? { fromDate: filters.fromDate } : {}),
       ...(filters?.toDate ? { toDate: filters.toDate } : {}),
+      ...(filters?.stateCode ? { stateCode: filters.stateCode } : {}),
+      ...(filters?.zoneCode ? { zoneCode: filters.zoneCode } : {}),
+      ...(!filters?.zoneCode && filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { zoneCode: activeZoneCode }
+        : {}),
     }).toString()
     const res = await request<any[]>(`/api/v1/admin/billing/invoices?${query}`)
     return {
@@ -2020,7 +2031,17 @@ export const adminAPI = {
       },
     }
   },
-  getBillingOverview: async () => request<BillingOverview>('/api/v1/admin/billing/overview'),
+  getBillingOverview: async (filters?: { zoneCode?: string | null; stateCode?: string }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const query = new URLSearchParams({
+      ...(filters?.stateCode ? { stateCode: filters.stateCode } : {}),
+      ...(filters?.zoneCode ? { zoneCode: filters.zoneCode } : {}),
+      ...(!filters?.zoneCode && filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { zoneCode: activeZoneCode }
+        : {}),
+    }).toString()
+    return request<BillingOverview>(`/api/v1/admin/billing/overview${query ? `?${query}` : ''}`)
+  },
   getBillingProfiles: async () => {
     const res = await request<any[]>('/api/v1/admin/billing/gst-profiles')
     return {
@@ -2084,8 +2105,19 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapBillingNote) : [],
     }
   },
-  getBillingPayments: async () => {
-    const res = await request<any[]>('/api/v1/admin/billing/payments')
+  getBillingPayments: async (filters?: { customerId?: string; status?: string; provider?: string; zoneCode?: string | null; stateCode?: string }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const query = new URLSearchParams({
+      ...(filters?.customerId ? { customerId: filters.customerId } : {}),
+      ...(filters?.status ? { status: filters.status } : {}),
+      ...(filters?.provider ? { provider: filters.provider } : {}),
+      ...(filters?.stateCode ? { stateCode: filters.stateCode } : {}),
+      ...(filters?.zoneCode ? { zoneCode: filters.zoneCode } : {}),
+      ...(!filters?.zoneCode && filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { zoneCode: activeZoneCode }
+        : {}),
+    }).toString()
+    const res = await request<any[]>(`/api/v1/admin/billing/payments${query ? `?${query}` : ''}`)
     return {
       ...res,
       data: {
@@ -2094,17 +2126,33 @@ export const adminAPI = {
       },
     }
   },
-  getBillingCollections: async (bucket?: string) => {
-    const query = bucket ? `?bucket=${encodeURIComponent(bucket)}` : ''
-    const res = await request<any[]>(`/api/v1/admin/billing/collections${query}`)
+  getBillingCollections: async (bucket?: string, filters?: { zoneCode?: string | null; stateCode?: string }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const query = new URLSearchParams({
+      ...(bucket ? { bucket } : {}),
+      ...(filters?.stateCode ? { stateCode: filters.stateCode } : {}),
+      ...(filters?.zoneCode ? { zoneCode: filters.zoneCode } : {}),
+      ...(!filters?.zoneCode && filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { zoneCode: activeZoneCode }
+        : {}),
+    }).toString()
+    const res = await request<any[]>(`/api/v1/admin/billing/collections${query ? `?${query}` : ''}`)
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapBillingCollectionItem) : [],
     }
   },
-  getBillingCollectionsWorkbench: async (bucket?: string) => {
-    const query = bucket ? `?bucket=${encodeURIComponent(bucket)}` : ''
-    const res = await request<any>(`/api/v1/admin/billing/collections/workbench${query}`)
+  getBillingCollectionsWorkbench: async (bucket?: string, filters?: { zoneCode?: string | null; stateCode?: string }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const query = new URLSearchParams({
+      ...(bucket ? { bucket } : {}),
+      ...(filters?.stateCode ? { stateCode: filters.stateCode } : {}),
+      ...(filters?.zoneCode ? { zoneCode: filters.zoneCode } : {}),
+      ...(!filters?.zoneCode && filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { zoneCode: activeZoneCode }
+        : {}),
+    }).toString()
+    const res = await request<any>(`/api/v1/admin/billing/collections/workbench${query ? `?${query}` : ''}`)
     return {
       ...res,
       data: res.data ? mapBillingCollectionsWorkbench(res.data) : undefined,
@@ -2129,11 +2177,24 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  getBillingReconciliationSummary: async () =>
-    request('/api/v1/admin/billing/reconciliation/summary'),
+  getBillingReconciliationSummary: async (filters?: { zoneCode?: string | null; stateCode?: string }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const query = new URLSearchParams({
+      ...(filters?.stateCode ? { stateCode: filters.stateCode } : {}),
+      ...(filters?.zoneCode ? { zoneCode: filters.zoneCode } : {}),
+      ...(!filters?.zoneCode && filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default'
+        ? { zoneCode: activeZoneCode }
+        : {}),
+    }).toString()
+    return request(`/api/v1/admin/billing/reconciliation/summary${query ? `?${query}` : ''}`)
+  },
   getBillingFinanceResolutions: async (limit?: number) => {
-    const query = limit ? `?limit=${encodeURIComponent(String(limit))}` : ''
-    return request(`/api/v1/admin/billing/finance/resolutions${query}`)
+    const activeZoneCode = getStoredActiveZoneCode()
+    const query = new URLSearchParams({
+      ...(limit ? { limit: String(limit) } : {}),
+      ...(activeZoneCode && activeZoneCode !== 'default' ? { zoneCode: activeZoneCode } : {}),
+    }).toString()
+    return request(`/api/v1/admin/billing/finance/resolutions${query ? `?${query}` : ''}`)
   },
   getBillingCollectionAgents: async () => {
     const res = await request<any[]>('/api/v1/admin/billing/collections/agents')

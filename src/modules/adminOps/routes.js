@@ -604,6 +604,7 @@ function normalizeFilterValue(value) {
 async function buildBillingExportFilters(query = {}) {
   const invoiceFilter = {};
   const paymentFilter = {};
+  const customerFilter = {};
 
   if (query.fromDate || query.toDate) {
     const generatedAt = {};
@@ -641,9 +642,8 @@ async function buildBillingExportFilters(query = {}) {
   }
 
   if (stateCode || zoneCode) {
-    const customerQuery = {};
     if (stateCode) {
-      customerQuery.$or = [
+      customerFilter.$or = [
         { billingStateCode: stateCode },
         { "billingSnapshot.billingStateCode": stateCode }
       ];
@@ -653,32 +653,47 @@ async function buildBillingExportFilters(query = {}) {
         { billingZoneCode: zoneCode },
         { "billingSnapshot.billingZoneCode": zoneCode }
       ];
-      if (customerQuery.$or) {
-        customerQuery.$and = [{ $or: customerQuery.$or }, { $or: zoneClause }];
-        delete customerQuery.$or;
+      if (customerFilter.$or) {
+        customerFilter.$and = [{ $or: customerFilter.$or }, { $or: zoneClause }];
+        delete customerFilter.$or;
       } else {
-        customerQuery.$or = zoneClause;
+        customerFilter.$or = zoneClause;
       }
     }
-    const customers = await Customer.find(customerQuery, { customerId: 1 }).lean();
+    const customers = await Customer.find(customerFilter, { customerId: 1 }).lean();
     paymentFilter.customerId = { $in: customers.map((customer) => customer.customerId) };
   }
 
-  return { invoiceFilter, paymentFilter };
+  return { invoiceFilter, paymentFilter, customerFilter, stateCode, zoneCode };
 }
 
-async function buildCollectionsQueueItems(bucketFilter = "") {
+async function buildCollectionsQueueItems(bucketFilter = "", scope = {}) {
+  const { invoiceFilter, customerFilter } = await buildBillingExportFilters(scope);
   const invoices = await BillingInvoice.find({
-    paymentStatus: { $in: ["pending", "overdue"] }
+    paymentStatus: { $in: ["pending", "overdue"] },
+    ...invoiceFilter
   }).sort({ dueDate: 1, generatedAt: 1 }).lean();
 
   const customerIds = [...new Set(invoices.map((invoice) => invoice.customerId).filter(Boolean))];
-  const customers = await Customer.find({
-    $or: [
-      { customerId: { $in: customerIds } },
-      { "billingSnapshot.pendingPlanChange": { $exists: true, $ne: null } }
-    ]
-  }).lean();
+  const customerScopeQuery = Object.keys(customerFilter || {}).length
+    ? {
+        $and: [
+          customerFilter,
+          {
+            $or: [
+              { customerId: { $in: customerIds } },
+              { "billingSnapshot.pendingPlanChange": { $exists: true, $ne: null } }
+            ]
+          }
+        ]
+      }
+    : {
+        $or: [
+          { customerId: { $in: customerIds } },
+          { "billingSnapshot.pendingPlanChange": { $exists: true, $ne: null } }
+        ]
+      };
+  const customers = await Customer.find(customerScopeQuery).lean();
 
   const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
   const now = Date.now();
@@ -1388,7 +1403,8 @@ async function settleLatestPendingInvoice({ customerId, serviceId, paymentId, am
 adminOpsRouter.get(
   "/billing/overview",
   requirePermission(permissions.billingRead),
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const { invoiceFilter, paymentFilter, customerFilter } = await buildBillingExportFilters(req.query || {});
     const [
       totalInvoices,
       overdueInvoices,
@@ -1403,21 +1419,23 @@ adminOpsRouter.get(
       writeOffStats,
       waiverStats
     ] = await Promise.all([
-      BillingInvoice.countDocuments(),
-      BillingInvoice.countDocuments({ paymentStatus: "overdue" }),
-      PaymentTransaction.countDocuments({ status: "success" }),
+      BillingInvoice.countDocuments(invoiceFilter),
+      BillingInvoice.countDocuments({ ...invoiceFilter, paymentStatus: "overdue" }),
+      PaymentTransaction.countDocuments({ ...paymentFilter, status: "success" }),
       BillingInvoice.aggregate([
-        { $match: { paymentStatus: { $in: ["pending", "overdue"] } } },
+        { $match: { ...invoiceFilter, paymentStatus: { $in: ["pending", "overdue"] } } },
         { $group: { _id: null, total: { $sum: "$totalAmount" } } }
       ]),
       PaymentTransaction.aggregate([
-        { $match: { status: "success" } },
+        { $match: { ...paymentFilter, status: "success" } },
         { $group: { _id: null, total: { $sum: "$amount" } } }
       ]),
       BillingInvoice.aggregate([
+        Object.keys(invoiceFilter).length ? { $match: invoiceFilter } : null,
         { $group: { _id: null, total: { $sum: "$taxAmount" } } }
-      ]),
+      ].filter(Boolean)),
       BillingInvoice.aggregate([
+        Object.keys(invoiceFilter).length ? { $match: invoiceFilter } : null,
         {
           $group: {
             _id: { stateCode: "$billingStateCode", stateName: "$billingStateName" },
@@ -1428,8 +1446,9 @@ adminOpsRouter.get(
           }
         },
         { $sort: { totalAmount: -1 } }
-      ]),
+      ].filter(Boolean)),
       BillingInvoice.find({
+        ...invoiceFilter,
         paymentStatus: { $in: ["pending", "overdue"] }
       }, {
         invoiceId: 1,
@@ -1437,13 +1456,14 @@ adminOpsRouter.get(
         dueDate: 1,
         totalAmount: 1
       }).lean(),
-      Customer.find({}, {
+      Customer.find(Object.keys(customerFilter).length ? customerFilter : {}, {
         customerId: 1,
         operationalStatus: 1,
         customerType: 1,
         billingSnapshot: 1
       }).lean(),
       PaymentTransaction.aggregate([
+        Object.keys(paymentFilter).length ? { $match: paymentFilter } : null,
         {
           $group: {
             _id: "$reconciliationStatus",
@@ -1452,7 +1472,7 @@ adminOpsRouter.get(
             unallocatedAmount: { $sum: "$unallocatedAmount" }
           }
         }
-      ]),
+      ].filter(Boolean)),
       BillingLedgerEntry.aggregate([
         { $match: { category: "writeoff" } },
         {
@@ -1695,7 +1715,7 @@ adminOpsRouter.get(
   "/billing/exports/collections.csv",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
-    const items = await buildCollectionsQueueItems(String(req.query.bucket || "").trim());
+    const items = await buildCollectionsQueueItems(String(req.query.bucket || "").trim(), req.query || {});
     const csv = buildCsv(items.map((item) => ({
       bucket: item.bucket,
       customerId: item.customerId,
@@ -1729,7 +1749,8 @@ adminOpsRouter.get(
   "/billing/exports/reconciliation.csv",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
-    const filter = {};
+    const { paymentFilter } = await buildBillingExportFilters(req.query || {});
+    const filter = { ...paymentFilter };
     const status = String(req.query.status || "").trim();
     if (status) {
       filter.reconciliationStatus = status;
@@ -1766,7 +1787,7 @@ adminOpsRouter.get(
   "/billing/collections",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
-    const filtered = await buildCollectionsQueueItems(String(req.query.bucket || "").trim());
+    const filtered = await buildCollectionsQueueItems(String(req.query.bucket || "").trim(), req.query || {});
     return ok(res, filtered);
   })
 );
@@ -1775,7 +1796,7 @@ adminOpsRouter.get(
   "/billing/collections/workbench",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
-    const items = await buildCollectionsQueueItems(String(req.query.bucket || "").trim());
+    const items = await buildCollectionsQueueItems(String(req.query.bucket || "").trim(), req.query || {});
     return ok(res, {
       ...buildCollectionsWorkbench(items),
       items
@@ -1795,7 +1816,7 @@ adminOpsRouter.post(
   "/billing/collections/bulk-preview",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
-    const items = await buildCollectionsQueueItems(String(req.body?.bucket || "").trim());
+    const items = await buildCollectionsQueueItems(String(req.body?.bucket || "").trim(), req.body || {});
     const preview = buildCollectionsBulkPreview(
       items,
       Array.isArray(req.body?.customerIds) ? req.body.customerIds : []
@@ -1813,7 +1834,7 @@ adminOpsRouter.post(
       throw new ApiError(400, "Bulk action is required");
     }
 
-    const items = await buildCollectionsQueueItems(String(req.body?.bucket || "").trim());
+    const items = await buildCollectionsQueueItems(String(req.body?.bucket || "").trim(), req.body || {});
     const selectedSet = new Set(
       (Array.isArray(req.body?.customerIds) ? req.body.customerIds : [])
         .map((value) => String(value || "").trim())
@@ -2000,9 +2021,29 @@ adminOpsRouter.post(
 adminOpsRouter.get(
   "/billing/reconciliation/summary",
   requirePermission(permissions.billingRead),
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const { paymentFilter, customerFilter } = await buildBillingExportFilters(req.query || {});
+    const recentItemFilter = Object.keys(paymentFilter).length
+      ? {
+          $and: [
+            paymentFilter,
+            {
+              $or: [
+                { reconciliationStatus: { $in: ["pending", "matched", "manual_review"] } },
+                { unallocatedAmount: { $gt: 0 } }
+              ]
+            }
+          ]
+        }
+      : {
+          $or: [
+            { reconciliationStatus: { $in: ["pending", "matched", "manual_review"] } },
+            { unallocatedAmount: { $gt: 0 } }
+          ]
+        };
     const [statusBuckets, recentItems] = await Promise.all([
       PaymentTransaction.aggregate([
+        Object.keys(paymentFilter).length ? { $match: paymentFilter } : null,
         {
           $group: {
             _id: "$reconciliationStatus",
@@ -2011,13 +2052,8 @@ adminOpsRouter.get(
             unallocatedAmount: { $sum: "$unallocatedAmount" }
           }
         }
-      ]),
-      PaymentTransaction.find({
-        $or: [
-          { reconciliationStatus: { $in: ["pending", "matched", "manual_review"] } },
-          { unallocatedAmount: { $gt: 0 } }
-        ]
-      })
+      ].filter(Boolean)),
+      PaymentTransaction.find(recentItemFilter)
         .sort({ paidAt: -1, createdAt: -1 })
         .limit(100)
         .lean()
@@ -2025,7 +2061,9 @@ adminOpsRouter.get(
 
     const customerIds = [...new Set(recentItems.map((item) => item.customerId).filter(Boolean))];
     const customers = await Customer.find(
-      { customerId: { $in: customerIds } },
+      Object.keys(customerFilter).length
+        ? { $and: [customerFilter, { customerId: { $in: customerIds } }] }
+        : { customerId: { $in: customerIds } },
       { customerId: 1, fullName: 1, phone: 1, operationalStatus: 1, billingSnapshot: 1 }
     ).lean();
     const customerMap = new Map(customers.map((customer) => [customer.customerId, customer]));
@@ -2067,16 +2105,23 @@ adminOpsRouter.get(
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
     const limit = Math.min(200, Math.max(1, Number(req.query.limit || 100)));
+    const { customerFilter } = await buildBillingExportFilters(req.query || {});
+    const scopedCustomerIds = Object.keys(customerFilter).length
+      ? (await Customer.find(customerFilter, { customerId: 1 }).lean()).map((item) => item.customerId)
+      : [];
+    const customerScopeClause = scopedCustomerIds.length ? { customerId: { $in: scopedCustomerIds } } : {};
     const [waivers, writeoffs] = await Promise.all([
       BillingNote.find({
         type: "credit",
-        "metadata.resolutionType": "waiver"
+        "metadata.resolutionType": "waiver",
+        ...customerScopeClause
       })
         .sort({ appliedAt: -1, createdAt: -1 })
         .limit(limit)
         .lean(),
       BillingLedgerEntry.find({
-        category: "writeoff"
+        category: "writeoff",
+        ...customerScopeClause
       })
         .sort({ postedAt: -1, createdAt: -1 })
         .limit(limit)
@@ -2462,7 +2507,8 @@ adminOpsRouter.get(
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = buildPagination(req.query);
-    const filter = {};
+    const { invoiceFilter } = await buildBillingExportFilters(req.query || {});
+    const filter = { ...invoiceFilter };
     if (req.query.customerId) {
       filter.customerId = req.query.customerId;
     }
@@ -2650,7 +2696,8 @@ adminOpsRouter.get(
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = buildPagination(req.query);
-    const filter = {};
+    const { paymentFilter } = await buildBillingExportFilters(req.query || {});
+    const filter = { ...paymentFilter };
     if (req.query.customerId) {
       filter.customerId = req.query.customerId;
     }

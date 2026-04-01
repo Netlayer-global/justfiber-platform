@@ -87,6 +87,8 @@ const emptyProfileForm: BillingProfileForm = {
 }
 
 export default function BillingPage() {
+  const [activeZoneCode, setActiveZoneCode] = useState('')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('')
   const [billing, setBilling] = useState<BillingData[]>([])
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
@@ -146,12 +148,19 @@ export default function BillingPage() {
   })
   const refundPayments = payments.filter((payment) => payment.method === 'refund' || (payment.provider || '').includes('refund'))
   const exportBaseUrl = getApiBaseUrl()
+  const effectiveExportFilters = useMemo(
+    () => ({
+      ...exportFilters,
+      zoneCode: exportFilters.zoneCode || (activeZoneCode && activeZoneCode !== 'default' ? activeZoneCode : ''),
+    }),
+    [activeZoneCode, exportFilters]
+  )
   const exportQuery = new URLSearchParams(
-    Object.entries(exportFilters).filter(([, value]) => value.trim() !== '')
+    Object.entries(effectiveExportFilters).filter(([, value]) => value.trim() !== '')
   ).toString()
   const invoiceExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/invoices.csv${exportQuery ? `?${exportQuery}` : ''}`
   const paymentExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/payments.csv${exportQuery ? `?${exportQuery}` : ''}`
-  const reconciliationExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/reconciliation.csv`
+  const reconciliationExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/reconciliation.csv${exportQuery ? `?${exportQuery}` : ''}`
   const gstExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/gst-summary?format=csv${exportQuery ? `&${exportQuery}` : ''}`
   const activeInvoiceTemplate = useMemo(() => {
     const templates = invoiceTemplateSettings?.templates || []
@@ -168,6 +177,37 @@ export default function BillingPage() {
     const mappedTemplateKey = mappings.find((item) => String(item.zoneCode || '').trim().toUpperCase() === draftZoneCode)?.templateKey
     return templates.find((item) => item.key === (mappedTemplateKey || invoiceTemplateSettings?.activeTemplate)) || activeInvoiceTemplate
   }, [activeInvoiceTemplate, draftZoneCode, invoiceTemplateSettings])
+  const activeZoneMapping = useMemo(
+    () =>
+      profileForm.zoneMappings.find(
+        (item) => String(item.zoneCode || '').trim().toUpperCase() === String(activeZoneCode || '').trim().toUpperCase()
+      ) || null,
+    [activeZoneCode, profileForm.zoneMappings]
+  )
+  const effectiveZoneBillingIdentity = useMemo(
+    () => ({
+      zoneCode: activeZoneCode || '',
+      zoneName: activeZoneLabel || activeZoneMapping?.zoneName || '',
+      legalName: activeZoneMapping?.companyLegalName || profileForm.companyLegalName || '',
+      gstNumber: activeZoneMapping?.gstNumber || profileForm.gstNumber || '',
+      stateCode: activeZoneMapping?.stateCode || profileForm.companyStateCode || '',
+      stateName: activeZoneMapping?.stateName || profileForm.companyStateName || '',
+      invoicePrefix: activeZoneMapping?.invoicePrefix || profileForm.invoicePrefix || '',
+      invoiceSeriesCode: activeZoneMapping?.invoiceSeriesCode || profileForm.invoiceSeriesCode || '',
+      templateKey: activeZoneMapping?.templateKey || invoiceTemplateSettings?.activeTemplate || '',
+      companyAddress: activeZoneMapping?.companyAddress || profileForm.companyAddress || '',
+      defaultBillMode: activeZoneMapping?.defaultBillMode || profileForm.defaultHomeBillMode || 'prepaid',
+    }),
+    [activeZoneCode, activeZoneLabel, activeZoneMapping, profileForm, invoiceTemplateSettings]
+  )
+  const effectiveTaxSplit = useMemo(() => {
+    if (!effectiveZoneBillingIdentity.stateCode || !profileForm.companyStateCode) {
+      return profileForm.taxMode === 'flat_tax' ? 'Flat tax' : 'GST profile'
+    }
+    return effectiveZoneBillingIdentity.stateCode === profileForm.companyStateCode
+      ? `CGST ${profileForm.intrastateCgstPercent || '0'}% + SGST ${profileForm.intrastateSgstPercent || '0'}%`
+      : `IGST ${profileForm.interstateIgstPercent || '0'}%`
+  }, [effectiveZoneBillingIdentity.stateCode, profileForm.companyStateCode, profileForm.intrastateCgstPercent, profileForm.intrastateSgstPercent, profileForm.interstateIgstPercent, profileForm.taxMode])
   const visibleInvoices = useMemo(() => {
     if (invoiceQuickView === 'pending') {
       return billing.filter((item) => (item.paymentStatus || item.status) === 'pending')
@@ -362,8 +402,24 @@ export default function BillingPage() {
     [visibleCollections]
   )
   useEffect(() => {
+    const syncZone = () => {
+      const zoneKey = window.localStorage.getItem('justfiber-active-zone-key') || ''
+      const zoneLabel = window.localStorage.getItem('justfiber-active-zone-label') || ''
+      setActiveZoneCode(zoneKey)
+      setActiveZoneLabel(zoneLabel)
+      setExportFilters((prev) => ({
+        ...prev,
+        zoneCode: prev.zoneCode || (zoneKey && zoneKey !== 'default' ? zoneKey : ''),
+      }))
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    return () => window.removeEventListener('storage', syncZone)
+  }, [])
+
+  useEffect(() => {
     void loadBilling()
-  }, [invoiceFilters, collectionBucket])
+  }, [invoiceFilters, collectionBucket, activeZoneCode])
 
   useEffect(() => {
     setBulkSelection([])
@@ -1103,6 +1159,63 @@ export default function BillingPage() {
               <Settings2 className="h-4 w-4 text-[#5d87ff]" />
             </div>
             <div className="mt-3 text-2xl font-semibold text-slate-900">{profiles.length}</div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Zone billing scope</div>
+                <div className="mt-1 text-sm text-slate-600">
+                  {activeZoneCode && activeZoneCode !== 'default'
+                    ? `Finance desk is scoped to ${effectiveZoneBillingIdentity.zoneName || activeZoneCode}. Invoices, payments, GST exports, and collections will follow this zone.`
+                    : 'No zone lock is active. Billing desk is showing the shared admin scope.'}
+                </div>
+              </div>
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
+                {activeZoneCode && activeZoneCode !== 'default' ? `Zone ${activeZoneCode}` : 'All-zone scope'}
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Legal profile</div>
+                <div className="mt-2 text-sm font-semibold text-slate-900">{effectiveZoneBillingIdentity.legalName || 'Not configured'}</div>
+                <div className="mt-1 text-xs text-slate-500">{effectiveZoneBillingIdentity.companyAddress || 'Billing address pending'}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">GST scope</div>
+                <div className="mt-2 text-sm font-semibold text-slate-900">{effectiveZoneBillingIdentity.gstNumber || 'GST pending'}</div>
+                <div className="mt-1 text-xs text-slate-500">{effectiveZoneBillingIdentity.stateName || profileForm.companyStateName || 'State not set'} {effectiveZoneBillingIdentity.stateCode ? `(${effectiveZoneBillingIdentity.stateCode})` : ''}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoice series</div>
+                <div className="mt-2 text-sm font-semibold text-slate-900">
+                  {effectiveZoneBillingIdentity.invoicePrefix || 'JF'} / {effectiveZoneBillingIdentity.invoiceSeriesCode || 'MAIN'}
+                </div>
+                <div className="mt-1 text-xs text-slate-500">{effectiveZoneBillingIdentity.templateKey || activeInvoiceTemplate?.templateName || 'Default template'}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Tax route</div>
+                <div className="mt-2 text-sm font-semibold text-slate-900">{effectiveTaxSplit}</div>
+                <div className="mt-1 text-xs text-slate-500">Default bill mode: {effectiveZoneBillingIdentity.defaultBillMode}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-slate-200 bg-[#0f172a] p-5 text-white">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Phase 2 checks</div>
+            <div className="mt-4 space-y-3 text-sm text-slate-300">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                1. Confirm zone legal name, GSTIN, state, and invoice prefix in Finance Setup.
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                2. Map the zone to the correct invoice template before cycle runs.
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                3. Use GST export in this same zone scope to validate CGST/SGST vs IGST output.
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2132,6 +2245,41 @@ export default function BillingPage() {
                   <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Pending approvals</div>
                   <div className="mt-3 text-2xl font-semibold text-slate-900">{financeCommandCenter.pendingApprovals}</div>
                   <div className="mt-1 text-xs text-slate-500">Waiver and write-off requests waiting for finance decision</div>
+                </div>
+              </div>
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Active zone billing identity</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">
+                      {effectiveZoneBillingIdentity.zoneName || effectiveZoneBillingIdentity.zoneCode || 'Shared billing profile'}
+                    </div>
+                  </div>
+                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                    {effectiveZoneBillingIdentity.zoneCode || 'GLOBAL'}
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm text-slate-600">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.14em] text-slate-400">GSTIN</div>
+                    <div className="mt-1 font-medium text-slate-900">{effectiveZoneBillingIdentity.gstNumber || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.14em] text-slate-400">State</div>
+                    <div className="mt-1 font-medium text-slate-900">
+                      {effectiveZoneBillingIdentity.stateName || '-'} {effectiveZoneBillingIdentity.stateCode ? `(${effectiveZoneBillingIdentity.stateCode})` : ''}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.14em] text-slate-400">Invoice series</div>
+                    <div className="mt-1 font-medium text-slate-900">
+                      {effectiveZoneBillingIdentity.invoicePrefix || 'JF'} / {effectiveZoneBillingIdentity.invoiceSeriesCode || 'MAIN'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.14em] text-slate-400">Tax route</div>
+                    <div className="mt-1 font-medium text-slate-900">{effectiveTaxSplit}</div>
+                  </div>
                 </div>
               </div>
             </div>
