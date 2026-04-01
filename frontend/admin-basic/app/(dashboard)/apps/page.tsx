@@ -316,20 +316,6 @@ export default function AppsPage() {
     )
   }, [categoryItems, query])
 
-  const categorySummary = useMemo(() => {
-    const defaultProvider = currentSettings.providerKey
-      ? categoryItems.find((item) => item.key === currentSettings.providerKey) || null
-      : null
-    return {
-      total: categoryItems.length,
-      active: categoryItems.filter((item) => item.status === 'active').length,
-      testing: categoryItems.filter((item) => item.status === 'testing').length,
-      production: categoryItems.filter((item) => item.mode === 'production').length,
-      withHealth: categoryItems.filter((item) => Boolean(item.health)).length,
-      defaultProvider,
-    }
-  }, [categoryItems, currentSettings.providerKey])
-
   const activeZoneGatewayMapping = useMemo(() => {
     if (activeCategory.key !== 'payment_gateway') return null
     const mappings = Array.isArray(currentSettings.zoneMappings) ? currentSettings.zoneMappings : []
@@ -345,20 +331,6 @@ export default function AppsPage() {
       settlementLabel: activeZoneGatewayMapping?.settlementLabel || '',
     })
   }, [activeCategory.key, activeZoneGatewayMapping, currentSettings.providerKey])
-
-  const stats = useMemo(() => {
-    const activeConnections = integrations.filter((item) => item.status === 'active').length
-    const liveCategories = CATEGORY_DEFINITIONS.filter((item) => {
-      const state = settings[item.settingsKey]
-      return Boolean(state?.enabled && state?.providerKey)
-    }).length
-    return {
-      totalConnections: integrations.length,
-      activeConnections,
-      liveCategories,
-      availableCategories: CATEGORY_DEFINITIONS.length,
-    }
-  }, [integrations, settings])
 
   async function loadData() {
     setIsLoading(true)
@@ -607,78 +579,6 @@ export default function AppsPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Total connections</div>
-            <div className="mt-3 text-3xl font-semibold text-slate-900">{stats.totalConnections}</div>
-            <div className="mt-2 text-sm text-slate-500">Stored provider records across all external systems</div>
-          </div>
-          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Active providers</div>
-            <div className="mt-3 text-3xl font-semibold text-emerald-600">{stats.activeConnections}</div>
-            <div className="mt-2 text-sm text-slate-500">Connections currently marked active for runtime usage</div>
-          </div>
-          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Live categories</div>
-            <div className="mt-3 text-3xl font-semibold text-[#5B6CFF]">{stats.liveCategories}</div>
-            <div className="mt-2 text-sm text-slate-500">Categories with enabled defaults in external integration settings</div>
-          </div>
-          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Available modules</div>
-            <div className="mt-3 text-3xl font-semibold text-slate-900">{stats.availableCategories}</div>
-            <div className="mt-2 text-sm text-slate-500">Apps surfaced in this integration workspace</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="card p-5">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Integration command center</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Provider launch and fallback view</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Selected module</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{activeCategory.label}</div>
-              <div className="mt-1 text-xs text-slate-500">{categorySummary.total} configured provider records</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active</div>
-              <div className="mt-2 text-2xl font-semibold text-emerald-600">{categorySummary.active}</div>
-              <div className="mt-1 text-xs text-slate-500">Providers marked ready for live routing</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Testing</div>
-              <div className="mt-2 text-2xl font-semibold text-amber-600">{categorySummary.testing}</div>
-              <div className="mt-1 text-xs text-slate-500">Providers still in test or migration mode</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Production mode</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">{categorySummary.production}</div>
-              <div className="mt-1 text-xs text-slate-500">Connections switched out of sandbox</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Default route</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{categorySummary.defaultProvider?.displayName || 'Pending'}</div>
-              <div className="mt-1 text-xs text-slate-500">{currentSettings.enabled ? 'Category enabled' : 'Category disabled'}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Operator playbook</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">What to confirm before going live</h2>
-          <div className="mt-4 space-y-3">
-            {[
-              'Keep one clear default provider per category before you enable live routing.',
-              'Leave migration or backup vendors in testing mode unless you intentionally want failover traffic there.',
-              'Map payment, ACS, and messaging providers after zone and router settings are already confirmed.',
-            ].map((item) => (
-              <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">

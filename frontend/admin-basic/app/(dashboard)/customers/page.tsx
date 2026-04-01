@@ -222,7 +222,7 @@ function CustomersContent() {
             <div className="text-sm font-semibold text-[#4aa7ff]">Customer Ops</div>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Customers</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              Yahan full customer list dikhegi. Active zone ke hisaab se records scope honge. Bas open, edit, ya new customer create karo.
+              Full customer list for the active zone. Open, edit, or create from one place.
             </p>
             <div className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
               Zone: {activeZone.label}
@@ -457,20 +457,6 @@ function CustomersContent() {
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Pin code</label>
                   <input className="input w-full" value={createForm.pinCode} onChange={(e) => setCreateForm((current) => ({ ...current, pinCode: e.target.value }))} />
                 </div>
-              </div>
-
-              <div className="rounded-[24px] border border-[#5B6CFF]/20 bg-[#eef1ff] px-4 py-4 text-sm text-slate-600">
-                Save ke saath customer record, subscriber service aur live PPPoE/RADIUS user create hoga. Full list management `User Management` me rahega.
-              </div>
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-                <div className="font-medium text-slate-900">Creation summary</div>
-                <div className="mt-2 grid gap-2 md:grid-cols-3">
-                  <div>Name: {createForm.fullName.trim() || '-'}</div>
-                  <div>Phone: {normalizePhone(createForm.phone) || '-'}</div>
-                  <div>Plan: {plans.find((plan) => (plan.planCode || plan.id) === createForm.planCode)?.name || '-'}</div>
-                </div>
-                <div className="mt-2 text-xs text-slate-500">Zone scope: {activeZone.label}</div>
-                <div className="mt-3 text-xs text-slate-500">Successful create ke baad customer detail page auto open ho jayegi.</div>
               </div>
 
               <div className="flex items-center justify-end gap-3">

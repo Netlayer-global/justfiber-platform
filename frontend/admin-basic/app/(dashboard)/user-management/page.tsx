@@ -276,9 +276,6 @@ function UserManagementWorkspace() {
           <div>
             <div className="text-sm font-semibold text-[#4aa7ff]">Customer Ops</div>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">User Management</h1>
-            <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              Single operator desk for package groups and active users. Day-to-day lookup, billing jump, and lifecycle actions yahin se handle ho jayenge.
-            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
@@ -314,8 +311,7 @@ function UserManagementWorkspace() {
           <section className="card p-4 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-medium text-slate-900">User filters</div>
-                <div className="mt-1 text-xs text-slate-500">Search, package, and status in one simple strip.</div>
+                <div className="text-sm font-medium text-slate-900">Filters</div>
               </div>
               <div className="text-sm text-slate-500">
                 {filteredUsers.length} visible
@@ -365,7 +361,6 @@ function UserManagementWorkspace() {
           <section className="card p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Desk actions</div>
                 <div className="mt-2 text-sm text-slate-600">
                   {selectedUsers.length ? `${selectedUsers.length} selected` : `${filteredUsers.length} visible users`}
                 </div>

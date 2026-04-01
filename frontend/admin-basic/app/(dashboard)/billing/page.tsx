@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
 import { ApprovalRequest, BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
-import { AlertTriangle, ArrowRightLeft, CheckCircle2, CreditCard, FileClock, Loader, RefreshCw, Settings2, Wallet, XCircle } from 'lucide-react'
+import { CheckCircle2, Loader, RefreshCw, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 type BillingProfileForm = {
@@ -1169,207 +1169,14 @@ export default function BillingPage() {
                 ? `${visiblePayments.length} visible payments`
                 : billingSectionTab === 'collections'
                   ? `${visibleCollections.filter((item) => item.suspendRecommended).length} suspend-ready`
-                  : `${profileForm.zoneMappings.length} zone mappings`}
+              : `${profileForm.zoneMappings.length} zone mappings`}
           </div>
         </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="modernize-stat-card text-sm text-slate-600">
-            <div className="flex items-center justify-between">
-              <span className="modernize-subtitle">Invoices</span>
-              <CreditCard className="h-4 w-4 text-[#5d87ff]" />
-            </div>
-            <div className="mt-3 text-2xl font-semibold text-slate-900">{billing.length}</div>
-          </div>
-          <div className="modernize-stat-card text-sm text-slate-600">
-            <div className="modernize-subtitle">Pending</div>
-            <div className="mt-3 text-2xl font-semibold text-slate-900">{invoiceQuickViewCounts.pending}</div>
-          </div>
-          <div className="modernize-stat-card text-sm text-slate-600">
-            <div className="flex items-center justify-between">
-              <span className="modernize-subtitle">Payments</span>
-              <Wallet className="h-4 w-4 text-[#5d87ff]" />
-            </div>
-            <div className="mt-3 text-2xl font-semibold text-slate-900">{payments.length}</div>
-          </div>
-          <div className="modernize-stat-card text-sm text-slate-600">
-            <div className="modernize-subtitle">Collections</div>
-            <div className="mt-3 text-2xl font-semibold text-slate-900">{visibleCollections.length}</div>
-          </div>
-          <div className="modernize-stat-card text-sm text-slate-600">
-            <div className="flex items-center justify-between">
-              <span className="modernize-subtitle">Profiles</span>
-              <Settings2 className="h-4 w-4 text-[#5d87ff]" />
-            </div>
-            <div className="mt-3 text-2xl font-semibold text-slate-900">{profiles.length}</div>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Zone billing scope</div>
-                <div className="mt-1 text-sm text-slate-600">
-                  {activeZoneCode && activeZoneCode !== 'default'
-                    ? `Finance desk is scoped to ${effectiveZoneBillingIdentity.zoneName || activeZoneCode}. Invoices, payments, GST exports, and collections will follow this zone.`
-                    : 'No zone lock is active. Billing desk is showing the shared admin scope.'}
-                </div>
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
-                {activeZoneCode && activeZoneCode !== 'default' ? `Zone ${activeZoneCode}` : 'All-zone scope'}
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Legal profile</div>
-                <div className="mt-2 text-sm font-semibold text-slate-900">{effectiveZoneBillingIdentity.legalName || 'Not configured'}</div>
-                <div className="mt-1 text-xs text-slate-500">{effectiveZoneBillingIdentity.companyAddress || 'Billing address pending'}</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">GST scope</div>
-                <div className="mt-2 text-sm font-semibold text-slate-900">{effectiveZoneBillingIdentity.gstNumber || 'GST pending'}</div>
-                <div className="mt-1 text-xs text-slate-500">{effectiveZoneBillingIdentity.stateName || profileForm.companyStateName || 'State not set'} {effectiveZoneBillingIdentity.stateCode ? `(${effectiveZoneBillingIdentity.stateCode})` : ''}</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoice series</div>
-                <div className="mt-2 text-sm font-semibold text-slate-900">
-                  {effectiveZoneBillingIdentity.invoicePrefix || 'JF'} / {effectiveZoneBillingIdentity.invoiceSeriesCode || 'MAIN'}
-                </div>
-                <div className="mt-1 text-xs text-slate-500">{effectiveZoneBillingIdentity.templateKey || activeInvoiceTemplate?.templateName || 'Default template'}</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Tax route</div>
-                <div className="mt-2 text-sm font-semibold text-slate-900">{effectiveTaxSplit}</div>
-                <div className="mt-1 text-xs text-slate-500">Default bill mode: {effectiveZoneBillingIdentity.defaultBillMode}</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Payment route</div>
-                <div className="mt-2 text-sm font-semibold text-slate-900">{effectivePaymentGatewayRoute.providerKey || 'Gateway pending'}</div>
-                <div className="mt-1 text-xs text-slate-500">
-                  {effectivePaymentGatewayRoute.enabled ? `${effectivePaymentGatewayRoute.collectionMode} collections` : 'Category disabled'}
-                  {effectivePaymentGatewayRoute.settlementLabel ? ` | ${effectivePaymentGatewayRoute.settlementLabel}` : ''}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-slate-200 bg-[#0f172a] p-5 text-white">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Phase 2 checks</div>
-            <div className="mt-4 space-y-3 text-sm text-slate-300">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                1. Confirm zone legal name, GSTIN, state, and invoice prefix in Finance Setup.
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                2. Map the zone to the correct invoice template before cycle runs.
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                3. Confirm payment gateway route and collection mode for the active zone before live collections.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-          <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Finance command center</div>
-                <div className="mt-1 text-sm text-slate-600">Aaj ke core priorities: due exposure, reconciliation queue, waivers/writeoffs, and collections posture.</div>
-              </div>
-              <div className="rounded-full bg-white px-3 py-1 text-xs text-slate-500">
-                Latest cycle {financeCommandCenter.latestRunCycle}
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
-                  <span>Current due</span>
-                  <Wallet className="h-4 w-4 text-[#5d87ff]" />
-                </div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">Rs {financeCommandCenter.dueAmount.toFixed(2)}</div>
-                <div className="mt-1 text-xs text-slate-500">{financeCommandCenter.overdueInvoices} overdue invoice(s)</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
-                  <span>Collections</span>
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                </div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{financeCommandCenter.pendingCollections}</div>
-                <div className="mt-1 text-xs text-slate-500">{financeCommandCenter.suspendReady} suspend-ready, {financeCommandCenter.promiseActive} PTP active</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
-                  <span>Reconciliation</span>
-                  <ArrowRightLeft className="h-4 w-4 text-[#5d87ff]" />
-                </div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{financeCommandCenter.reconciliationOpen}</div>
-                <div className="mt-1 text-xs text-slate-500">Rs {financeCommandCenter.reconciliationPendingAmount.toFixed(2)} waiting to reconcile</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
-                  <span>Resolutions</span>
-                  <FileClock className="h-4 w-4 text-rose-500" />
-                </div>
-                <div className="mt-3 text-2xl font-semibold text-slate-900">{financeCommandCenter.waivers + financeCommandCenter.writeoffs}</div>
-                <div className="mt-1 text-xs text-slate-500">{financeCommandCenter.waivers} waivers, {financeCommandCenter.writeoffs} write-offs</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-slate-200 bg-[#0f172a] p-5 text-white">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Operator focus</div>
-            <div className="mt-4 space-y-3 text-sm">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="font-semibold">Invoice Desk</div>
-                <div className="mt-1 text-slate-300">Use for cycle runs, manual invoice generation, invoice PDF dispatch, and invoice aging review.</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="font-semibold">Payments & Reconciliation</div>
-                <div className="mt-1 text-slate-300">Use for transaction matching, retry reminders, receipt dispatch, refunds, and mismatch cleanup.</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="font-semibold">Collections Desk</div>
-                <div className="mt-1 text-slate-300">Use for reminders, follow-ups, promise-to-pay, suspend/resume, and owner assignment.</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="font-semibold">Finance Setup</div>
-                <div className="mt-1 text-slate-300">Keep GST profile, zone mappings, invoice templates, and pending approvals aligned before cycle runs.</div>
-              </div>
-            </div>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
-              Latest billing run status: <span className="font-semibold capitalize text-white">{financeCommandCenter.latestRunStatus.replaceAll('_', ' ')}</span>
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 rounded-[28px] border border-[#d9e4ff] bg-[#f6f9ff] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4866ff]">Zone payment and collections route</div>
-              <div className="mt-1 text-sm text-slate-600">
-                Active zone {effectiveZoneBillingIdentity.zoneName || activeZoneCode || 'shared scope'} will currently use{' '}
-                <span className="font-semibold text-slate-900">{effectivePaymentGatewayRoute.providerKey || 'no mapped provider'}</span>
-                {' '}for checkout, receipt tagging, and collection follow-up references.
-              </div>
-            </div>
-            <Link href="/apps" className="btn-secondary">
-              Open payment gateway
-            </Link>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Gateway provider</div>
-              <div className="mt-2 text-base font-semibold text-slate-900">{effectivePaymentGatewayRoute.providerKey || 'Pending mapping'}</div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Collections mode</div>
-              <div className="mt-2 text-base font-semibold text-slate-900">{effectivePaymentGatewayRoute.collectionMode}</div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Settlement tag</div>
-              <div className="mt-2 text-base font-semibold text-slate-900">{effectivePaymentGatewayRoute.settlementLabel || 'Shared settlement bucket'}</div>
-            </div>
-          </div>
+        <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          Zone: <span className="font-semibold text-slate-900">{effectiveZoneBillingIdentity.zoneName || activeZoneCode || 'Shared scope'}</span>
+          {' | '}GST: <span className="font-semibold text-slate-900">{effectiveZoneBillingIdentity.gstNumber || 'Pending'}</span>
+          {' | '}Series: <span className="font-semibold text-slate-900">{effectiveZoneBillingIdentity.invoicePrefix || 'JF'} / {effectiveZoneBillingIdentity.invoiceSeriesCode || 'MAIN'}</span>
+          {' | '}Gateway: <span className="font-semibold text-slate-900">{effectivePaymentGatewayRoute.providerKey || 'Pending'}</span>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <button className={`btn-secondary ${billingSectionTab === 'invoices' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('invoices')}>
