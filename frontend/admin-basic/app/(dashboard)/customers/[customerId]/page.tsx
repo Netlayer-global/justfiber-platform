@@ -1511,9 +1511,9 @@ function CustomerDetailContent() {
                 Block
               </button>
             )}
-            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('tickets')}>
+            <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('devices')}>
               <FilePlus2 className="h-4 w-4" />
-              More
+              Network
             </button>
           </div>
         </div>
@@ -1747,9 +1747,9 @@ function CustomerDetailContent() {
                           <h2 className="text-lg font-semibold text-slate-900">Support workspace</h2>
                           <p className="mt-1 text-sm text-slate-500">Ticketing, KYC, and install-proof follow-up are grouped under More so the overview stays focused on live service and billing state.</p>
                         </div>
-                        <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('tickets')}>
+                        <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('devices')}>
                           <FilePlus2 className="h-4 w-4" />
-                          Open More
+                          Open network
                         </button>
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
