@@ -2154,7 +2154,7 @@ function CustomerDetailContent() {
                   </div>
                 </div>
 
-                {false ? (
+                {false && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="metric-tile p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-black/40">Billing mode</p>
@@ -2492,7 +2492,7 @@ function CustomerDetailContent() {
                       </div>
                     </div>
                   </div>
-                ) : null}
+                )}
                 <div className="card p-5 space-y-4">
                   <h2 className="text-lg font-semibold">Usage & FUP State</h2>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -2548,7 +2548,7 @@ function CustomerDetailContent() {
                       Positive adjustment remains payable before switch. On successful payment, pending plan change should auto-apply.
                     </p>
                   </div>
-                ) : null}
+                )}
                 {usagePressureState !== 'normal' && recommendedUpgradePlan ? (
                   <div className="card p-5 space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2871,7 +2871,7 @@ function CustomerDetailContent() {
                     </div>
                   ) : <p className="text-slate-500 text-sm">No plan/service requests found</p>}
                 </div>
-                ) : null}
+                )}
               </>
             ) : null}
 
