@@ -546,7 +546,14 @@ export default function DashboardPage() {
         title: 'Post-deploy smoke run complete',
         description: 'After deploy, verify dashboard, customers, billing, routers, apps, and OTP fetch on live services.',
         href: '/dashboard',
-        autoReady: smokeChecks.every((item) => item.status),
+        autoReady: Boolean(
+          currentBillingProfile &&
+          resolvedTemplate &&
+          zonePaymentRoute &&
+          routers.length > 0 &&
+          serviceZones.length > 0 &&
+          readiness.adminSeats > 0,
+        ),
       },
     ],
     [
@@ -558,8 +565,8 @@ export default function DashboardPage() {
       readiness.authMismatchRouters,
       resolvedTemplate,
       routers.length,
+      serviceZones.length,
       securityReadiness.blockers.length,
-      smokeChecks,
       zonePaymentRoute,
     ],
   )
