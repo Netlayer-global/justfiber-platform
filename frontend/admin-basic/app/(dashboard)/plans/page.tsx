@@ -1028,7 +1028,7 @@ function PlansContent() {
                   <div className="rounded-[18px] border border-slate-200 bg-white p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Data policy</div>
                     <div className="mt-2 text-base font-semibold text-slate-900">
-                      {selectedPlan.dataPolicy === 'fup' ? 'FUP controlled' : selectedPlan.dataPolicy === 'hard-cap' ? 'Hard cap' : 'Unlimited'}
+                      {selectedPlan.dataPolicy === 'fup' ? 'FUP controlled' : selectedPlan.dataPolicy === 'hard_cap' ? 'Hard cap' : 'Unlimited'}
                     </div>
                     <div className="text-sm text-slate-500">{selectedPlan.totalDataGb ? `${selectedPlan.totalDataGb} GB base quota` : 'No fixed quota published'}</div>
                   </div>
