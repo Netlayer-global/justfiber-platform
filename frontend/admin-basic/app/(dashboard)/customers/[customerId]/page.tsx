@@ -3391,7 +3391,7 @@ function CustomerDetailContent() {
                               <div><span className="font-medium text-slate-900">Completion OTP:</span> {formatDateTime(latestInstallJob?.completionOtpVerifiedAt)}</div>
                               <div><span className="font-medium text-slate-900">Latest event:</span> {formatValue(latestInstallJob?.latestEventNote || latestInstallJob?.latestEventCode)}</div>
                               {latestInstallJob?.installerName ? (
-                                <div><span className="font-medium text-slate-900">Installer:</span> {latestInstallJob.installerName}</div>
+                                <div><span className="font-medium text-slate-900">Installer:</span> {latestInstallJob?.installerName}</div>
                               ) : null}
                             </div>
                           ) : (
