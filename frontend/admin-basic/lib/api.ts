@@ -1316,7 +1316,7 @@ export const adminAPI = {
   createAdminUser: async (data: {
     username: string
     fullName: string
-    email: string
+    email?: string
     password: string
     roles: string[]
     phone?: string

@@ -105,8 +105,8 @@ authRouter.get(
       username: req.admin.username,
       fullName: req.admin.fullName,
       email: req.admin.email,
-      zoneCode: req.admin.zoneCode || "",
-      zoneName: req.admin.zoneName || "",
+      zoneCode: canAccessAllZones ? "" : req.admin.zoneCode || "",
+      zoneName: canAccessAllZones ? "" : req.admin.zoneName || "",
       canAccessAllZones,
       roles: req.admin.roles,
       permissions: grantedPermissions

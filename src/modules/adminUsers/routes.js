@@ -13,7 +13,7 @@ import { auditFromRequest } from "../../common/audit.js";
 const createUserSchema = z.object({
   username: z.string().min(3),
   fullName: z.string().min(2),
-  email: z.string().email(),
+  email: z.string().email().optional(),
   password: z.string().min(8),
   roles: z.array(z.string()).min(1),
   phone: z.string().optional(),
@@ -54,11 +54,17 @@ adminUsersRouter.post(
   requirePermission(permissions.adminUserManage),
   asyncHandler(async (req, res) => {
     const payload = createUserSchema.parse(req.body);
+    const normalizedUsername = payload.username.trim().toLowerCase();
+    const fallbackZone = String(payload.zoneCode || "hq")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-") || "hq";
+    const normalizedEmail = (payload.email?.trim().toLowerCase()) || `${normalizedUsername}@${fallbackZone}.justfiber.local`;
     const passwordHash = await argon2.hash(payload.password);
     const user = await AdminUser.create({
       username: payload.username,
       fullName: payload.fullName,
-      email: payload.email,
+      email: normalizedEmail,
       phone: payload.phone,
       passwordHash,
       roles: payload.roles,

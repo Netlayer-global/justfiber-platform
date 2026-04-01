@@ -934,10 +934,10 @@ export default function SettingsPage() {
           canCreateSubZone: subZoneDraft.canCreateSubZone,
           useParentRouters: subZoneDraft.useParentRouters,
         },
-        adminAccounts: subZoneDraft.adminEmail.trim()
+        adminAccounts: (subZoneDraft.adminEmail.trim() || subZoneDraft.adminUsername.trim())
           ? [{
               fullName: subZoneDraft.adminFullName.trim() || `${subZoneDraft.subZoneName.trim()} Admin`,
-              email: subZoneDraft.adminEmail.trim(),
+              email: subZoneDraft.adminEmail.trim() || `${subZoneDraft.adminUsername.trim().toLowerCase()}@${franchiseCode}.justfiber.local`,
               phone: subZoneDraft.adminPhone.trim(),
               role: 'zone_admin',
             }]
@@ -984,14 +984,14 @@ export default function SettingsPage() {
       if (metadata.adminAccounts.length) {
         await adminAPI.saveFranchiseAdminAccounts(franchiseCode, metadata.adminAccounts)
       }
-      if (subZoneDraft.adminUsername.trim() && subZoneDraft.adminPassword.trim() && subZoneDraft.adminEmail.trim()) {
+      if (subZoneDraft.adminUsername.trim() && subZoneDraft.adminPassword.trim()) {
         const currentAdminRes = await adminAPI.getCurrentAdmin()
         const currentAdmin = currentAdminRes.success ? currentAdminRes.data : undefined
         if (
           currentAdmin &&
           (
             currentAdmin.username.trim().toLowerCase() === subZoneDraft.adminUsername.trim().toLowerCase() ||
-            currentAdmin.email.trim().toLowerCase() === subZoneDraft.adminEmail.trim().toLowerCase()
+            (subZoneDraft.adminEmail.trim() && currentAdmin.email.trim().toLowerCase() === subZoneDraft.adminEmail.trim().toLowerCase())
           )
         ) {
           toast.error('Main admin ko sub-zone login me reuse mat karo. Alag username aur email do.')
@@ -1029,8 +1029,8 @@ export default function SettingsPage() {
       toast.error('Select a sub-zone first')
       return
     }
-    if (!zoneLoginDraft.username.trim() || !zoneLoginDraft.email.trim() || !zoneLoginDraft.password.trim()) {
-      toast.error('Username, email, and password are required')
+    if (!zoneLoginDraft.username.trim() || !zoneLoginDraft.password.trim()) {
+      toast.error('Username and password are required')
       return
     }
     try {
@@ -1041,7 +1041,7 @@ export default function SettingsPage() {
         currentAdmin &&
         (
           currentAdmin.username.trim().toLowerCase() === zoneLoginDraft.username.trim().toLowerCase() ||
-          currentAdmin.email.trim().toLowerCase() === zoneLoginDraft.email.trim().toLowerCase()
+          (zoneLoginDraft.email.trim() && currentAdmin.email.trim().toLowerCase() === zoneLoginDraft.email.trim().toLowerCase())
         )
       ) {
         toast.error('Current main admin ko zone login me reuse mat karo. Alag username aur email do.')

@@ -204,7 +204,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (typeof window === 'undefined') return
     const storedLabel = window.localStorage.getItem('justfiber-active-zone-label')
     const storedKey = window.localStorage.getItem('justfiber-active-zone-key')
-    setCanAccessAllZones(window.localStorage.getItem('justfiber-admin-can-access-all-zones') !== '0')
+    const nextCanAccessAllZones = window.localStorage.getItem('justfiber-admin-can-access-all-zones') !== '0'
+    setCanAccessAllZones(nextCanAccessAllZones)
+    if (nextCanAccessAllZones) {
+      window.localStorage.setItem('justfiber-admin-zone-code', '')
+      window.localStorage.setItem('justfiber-admin-zone-label', '')
+    }
     if (storedLabel) {
       setCurrentZone({
         key: storedKey || storedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
@@ -253,6 +258,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           if (!deduped.length) {
             deduped = [{ key: adminZoneCode, label: adminZoneLabel || adminZoneCode }]
           }
+        }
+        if (nextCanAccessAllZones) {
+          window.localStorage.setItem('justfiber-admin-zone-code', '')
+          window.localStorage.setItem('justfiber-admin-zone-label', '')
         }
       }
       setZoneOptions(deduped)
