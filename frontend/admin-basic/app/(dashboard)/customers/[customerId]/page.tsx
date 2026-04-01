@@ -84,31 +84,33 @@ export default function CustomerDetailPage() {
 
   async function loadCustomer() {
     try {
-      setIsLoading(true)
-      const res = await adminAPI.getCustomer(customerId)
-      if (!res.success || !res.data) {
-        toast.error(res.error || 'Failed to load customer')
-        return
-      }
-      const nextCustomer = normalizeCustomer(res.data)
-      setCustomer(nextCustomer)
-      setStaticIpForm({
-        currentIpv4: String(nextCustomer.radiusService?.currentIpv4 || ''),
-        ipv4Pool: String(nextCustomer.radiusService?.ipv4Pool || ''),
-      })
-      const nextDeviceForms: Record<string, DeviceForm> = {}
-      ;(nextCustomer.devices || []).forEach((device) => {
-        nextDeviceForms[device.deviceId] = {
-          ssid24: String(device.wifiInfo?.ssid24Masked || device.wifiInfo?.ssid24 || ''),
-          ssid5: String(device.wifiInfo?.ssid5Masked || device.wifiInfo?.ssid5 || ''),
-          password24: '',
-          password5: '',
-          pppoeUsername: String(device.wanInfo?.pppoeUsernameMasked || device.wanInfo?.pppoeUsername || nextCustomer.pppoeUsername || ''),
-          pppoePassword: '',
-          natEnabled: device.wanInfo?.natEnabled !== false && device.wifiInfo?.natEnabled !== false,
+      await runBusy('refresh', async () => {
+        setIsLoading(true)
+        const res = await adminAPI.getCustomer(customerId)
+        if (!res.success || !res.data) {
+          toast.error(res.error || 'Failed to load customer')
+          return
         }
+        const nextCustomer = normalizeCustomer(res.data)
+        setCustomer(nextCustomer)
+        setStaticIpForm({
+          currentIpv4: String(nextCustomer.radiusService?.currentIpv4 || ''),
+          ipv4Pool: String(nextCustomer.radiusService?.ipv4Pool || ''),
+        })
+        const nextDeviceForms: Record<string, DeviceForm> = {}
+        ;(nextCustomer.devices || []).forEach((device) => {
+          nextDeviceForms[device.deviceId] = {
+            ssid24: String(device.wifiInfo?.ssid24Masked || device.wifiInfo?.ssid24 || ''),
+            ssid5: String(device.wifiInfo?.ssid5Masked || device.wifiInfo?.ssid5 || ''),
+            password24: '',
+            password5: '',
+            pppoeUsername: String(device.wanInfo?.pppoeUsernameMasked || device.wanInfo?.pppoeUsername || nextCustomer.pppoeUsername || ''),
+            pppoePassword: '',
+            natEnabled: device.wanInfo?.natEnabled !== false && device.wifiInfo?.natEnabled !== false,
+          }
+        })
+        setDeviceForms(nextDeviceForms)
       })
-      setDeviceForms(nextDeviceForms)
     } catch (error) {
       console.error('[customer-detail] Failed to load customer:', error)
       toast.error('Failed to load customer')
@@ -300,7 +302,7 @@ export default function CustomerDetailPage() {
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-secondary" onClick={() => void loadCustomer()} disabled={busyKey === 'refresh'}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
+              {busyKey === 'refresh' ? 'Refreshing...' : 'Refresh'}
             </button>
             <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit</Link>
             <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={busyKey === 'disconnect-session'}>

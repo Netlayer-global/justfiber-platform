@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Customer, Plan } from '@/lib/types'
 import { Copy, Loader } from 'lucide-react'
@@ -48,6 +48,11 @@ const emptyForm: FormState = {
   operationalStatus: 'active',
 }
 
+function isLikelyIpv4(value: string) {
+  if (!value.trim()) return true
+  return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value.trim())
+}
+
 export default function EditUserPage() {
   const params = useParams<{ customerId: string }>()
   const customerId = params.customerId
@@ -56,6 +61,7 @@ export default function EditUserPage() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const username = customer?.pppoeUsername || customer?.customerId || ''
   const boundMac =
     customer?.devices?.[0]?.wanInfo?.macAddress ||
@@ -63,6 +69,17 @@ export default function EditUserPage() {
     customer?.devices?.[0]?.lanInfo?.macAddress ||
     ''
   const natLogHref = `/nat-logs?username=${encodeURIComponent(username)}&sourceIp=${encodeURIComponent(form.currentIpv4 || '')}`
+  const formErrors = useMemo(() => {
+    const errors: Partial<Record<'fullName' | 'phone' | 'planCode' | 'currentIpv4' | 'ipv4Pool', string>> = {}
+    if (!form.fullName.trim()) errors.fullName = 'Full name is required'
+    if (!form.phone.trim()) errors.phone = 'Phone is required'
+    else if (form.phone.replace(/[^\d]/g, '').length < 10) errors.phone = 'Phone should have at least 10 digits'
+    if (!form.planCode) errors.planCode = 'Select a package'
+    if (form.currentIpv4.trim() && !isLikelyIpv4(form.currentIpv4)) errors.currentIpv4 = 'Enter a valid IPv4 address'
+    if (!form.currentIpv4.trim() && form.ipv4Pool.trim() && form.ipv4Pool.trim().length < 2) errors.ipv4Pool = 'Pool name is too short'
+    return errors
+  }, [form])
+  const canSave = Object.keys(formErrors).length === 0
 
   useEffect(() => {
     if (!customerId) return
@@ -110,9 +127,14 @@ export default function EditUserPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!customer) return
+    if (!canSave) {
+      toast.error('Please fix the highlighted fields before saving')
+      return
+    }
     const selectedPlan = plans.find((item) => item.id === form.planCode || item.planCode === form.planCode)
     try {
       setIsSaving(true)
+      setSaveMessage(null)
       const res = await adminAPI.updateCustomer(customer.id, {
         name: form.fullName.trim(),
         phone: form.phone,
@@ -186,6 +208,7 @@ export default function EditUserPage() {
           ipv4Pool: form.currentIpv4 ? null : form.ipv4Pool || null,
         },
       }) : current)
+      setSaveMessage('Saved just now')
       toast.success('User profile updated')
     } catch (error) {
       console.error('[edit-user] Failed to save user:', error)
@@ -288,25 +311,40 @@ export default function EditUserPage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Full Name</div>
-              <input className="input" value={form.fullName} onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))} />
+              <input className={`input ${formErrors.fullName ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} value={form.fullName} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, fullName: e.target.value }))
+              }} />
+              {formErrors.fullName ? <p className="text-xs text-rose-600">{formErrors.fullName}</p> : null}
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Mobile Number</div>
-              <input className="input" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
+              <input className={`input ${formErrors.phone ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} value={form.phone} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, phone: e.target.value }))
+              }} />
+              {formErrors.phone ? <p className="text-xs text-rose-600">{formErrors.phone}</p> : null}
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Email</div>
-              <input className="input" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
+              <input className="input" value={form.email} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, email: e.target.value }))
+              }} />
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Package</div>
-              <select className="input" value={form.planCode} onChange={(e) => setForm((prev) => ({ ...prev, planCode: e.target.value }))}>
+              <select className={`input ${formErrors.planCode ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} value={form.planCode} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, planCode: e.target.value }))
+              }}>
                 {plans.map((plan) => (
                   <option key={plan.id} value={plan.planCode || plan.id}>
                     {plan.name}
                   </option>
                 ))}
               </select>
+              {formErrors.planCode ? <p className="text-xs text-rose-600">{formErrors.planCode}</p> : null}
             </label>
           </div>
         </section>
@@ -316,19 +354,31 @@ export default function EditUserPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 md:col-span-2">
               <div className="text-sm font-medium text-slate-600">Address Line 1</div>
-              <input className="input" value={form.line1} onChange={(e) => setForm((prev) => ({ ...prev, line1: e.target.value }))} />
+              <input className="input" value={form.line1} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, line1: e.target.value }))
+              }} />
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">City</div>
-              <input className="input" value={form.city} onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))} />
+              <input className="input" value={form.city} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, city: e.target.value }))
+              }} />
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">State</div>
-              <input className="input" value={form.state} onChange={(e) => setForm((prev) => ({ ...prev, state: e.target.value }))} />
+              <input className="input" value={form.state} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, state: e.target.value }))
+              }} />
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Pincode</div>
-              <input className="input" value={form.pinCode} onChange={(e) => setForm((prev) => ({ ...prev, pinCode: e.target.value }))} />
+              <input className="input" value={form.pinCode} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, pinCode: e.target.value }))
+              }} />
             </label>
           </div>
         </section>
@@ -347,11 +397,19 @@ export default function EditUserPage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Static IP allocation</div>
-              <input className="input" placeholder="IP address" value={form.currentIpv4} onChange={(e) => setForm((prev) => ({ ...prev, currentIpv4: e.target.value }))} />
+              <input className={`input ${formErrors.currentIpv4 ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} placeholder="IP address" value={form.currentIpv4} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, currentIpv4: e.target.value }))
+              }} />
+              {formErrors.currentIpv4 ? <p className="text-xs text-rose-600">{formErrors.currentIpv4}</p> : null}
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">IPv4 Pool</div>
-              <input className="input" placeholder="Pool name" value={form.ipv4Pool} disabled={Boolean(form.currentIpv4)} onChange={(e) => setForm((prev) => ({ ...prev, ipv4Pool: e.target.value }))} />
+              <input className={`input ${formErrors.ipv4Pool ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} placeholder="Pool name" value={form.ipv4Pool} disabled={Boolean(form.currentIpv4)} onChange={(e) => {
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, ipv4Pool: e.target.value }))
+              }} />
+              {formErrors.ipv4Pool ? <p className="text-xs text-rose-600">{formErrors.ipv4Pool}</p> : null}
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">BNG</div>
@@ -420,8 +478,9 @@ export default function EditUserPage() {
         </section>
 
         <div className="flex justify-end gap-3">
+          {saveMessage ? <div className="mr-auto self-center text-sm text-emerald-600">{saveMessage}</div> : null}
           <Link href={`/all-users/${customer.id}`} className="btn-secondary">Cancel</Link>
-          <button type="submit" className="btn-primary" disabled={isSaving}>
+          <button type="submit" className="btn-primary" disabled={isSaving || !canSave}>
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>

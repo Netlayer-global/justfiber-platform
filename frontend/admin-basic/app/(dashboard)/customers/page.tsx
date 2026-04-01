@@ -14,6 +14,10 @@ function formatDate(value?: string) {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString()
 }
 
+function normalizePhone(value: string) {
+  return value.replace(/[^\d]/g, '')
+}
+
 function CustomersContent() {
   const router = useRouter()
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -42,6 +46,43 @@ function CustomersContent() {
     bngNodeCode: '',
     operationalStatus: 'active',
   })
+
+  const createErrors = useMemo(() => {
+    const errors: Partial<Record<'fullName' | 'phone' | 'planCode' | 'line1' | 'radiusPassword', string>> = {}
+    if (!createForm.fullName.trim()) errors.fullName = 'Customer name is required'
+    if (!normalizePhone(createForm.phone).trim()) {
+      errors.phone = 'Phone is required'
+    } else if (normalizePhone(createForm.phone).length < 10) {
+      errors.phone = 'Phone should have at least 10 digits'
+    }
+    if (!createForm.planCode) errors.planCode = 'Select a plan'
+    if (!createForm.line1.trim()) errors.line1 = 'Address line 1 is required'
+    if (!createForm.radiusPassword.trim()) errors.radiusPassword = 'PPPoE password is required'
+    return errors
+  }, [createForm])
+
+  const canCreateCustomer = Object.keys(createErrors).length === 0
+
+  function resetCreateForm() {
+    setCreateForm((current) => ({
+      ...current,
+      fullName: '',
+      phone: '',
+      email: '',
+      line1: '',
+      line2: '',
+      area: '',
+      city: '',
+      state: '',
+      pinCode: '',
+      customerId: '',
+      accountNumber: '',
+      serviceId: '',
+      radiusUsername: '',
+      radiusPassword: '123456',
+      operationalStatus: 'active',
+    }))
+  }
 
   useEffect(() => {
     void loadWorkspace()
@@ -79,6 +120,10 @@ function CustomersContent() {
 
   async function handleCreateCustomer(e: React.FormEvent) {
     e.preventDefault()
+    if (!canCreateCustomer) {
+      toast.error('Please fix required customer fields before saving')
+      return
+    }
     try {
       setIsCreating(true)
       const res = await adminAPI.createCustomer({
@@ -86,7 +131,7 @@ function CustomersContent() {
         accountNumber: createForm.accountNumber.trim() || undefined,
         serviceId: createForm.serviceId.trim() || undefined,
         fullName: createForm.fullName.trim(),
-        phone: createForm.phone.trim(),
+        phone: normalizePhone(createForm.phone),
         email: createForm.email.trim() || undefined,
         planCode: createForm.planCode,
         operationalStatus: createForm.operationalStatus as 'active' | 'inactive' | 'suspended',
@@ -111,24 +156,7 @@ function CustomersContent() {
 
       toast.success(`Created ${res.data.name}`)
       setIsCreateOpen(false)
-      setCreateForm((current) => ({
-        ...current,
-        fullName: '',
-        phone: '',
-        email: '',
-        line1: '',
-        line2: '',
-        area: '',
-        city: '',
-        state: '',
-        pinCode: '',
-        customerId: '',
-        accountNumber: '',
-        serviceId: '',
-        radiusUsername: '',
-        radiusPassword: '123456',
-        operationalStatus: 'active',
-      }))
+      resetCreateForm()
       await loadWorkspace()
     } catch (error) {
       console.error('[customers] Failed to create customer:', error)
@@ -277,7 +305,10 @@ function CustomersContent() {
               <button
                 type="button"
                 className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
-                onClick={() => setIsCreateOpen(false)}
+                onClick={() => {
+                  setIsCreateOpen(false)
+                  resetCreateForm()
+                }}
               >
                 <span className="sr-only">Close</span>
                 x
@@ -287,11 +318,13 @@ function CustomersContent() {
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="xl:col-span-2">
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Customer name</label>
-                  <input className="input w-full" required value={createForm.fullName} onChange={(e) => setCreateForm((current) => ({ ...current, fullName: e.target.value }))} />
+                  <input className={`input w-full ${createErrors.fullName ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} required value={createForm.fullName} onChange={(e) => setCreateForm((current) => ({ ...current, fullName: e.target.value }))} />
+                  {createErrors.fullName ? <p className="mt-2 text-xs text-rose-600">{createErrors.fullName}</p> : null}
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Phone</label>
-                  <input className="input w-full" required value={createForm.phone} onChange={(e) => setCreateForm((current) => ({ ...current, phone: e.target.value }))} />
+                  <input className={`input w-full ${createErrors.phone ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} required value={createForm.phone} onChange={(e) => setCreateForm((current) => ({ ...current, phone: e.target.value }))} />
+                  {createErrors.phone ? <p className="mt-2 text-xs text-rose-600">{createErrors.phone}</p> : null}
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Email</label>
@@ -299,7 +332,7 @@ function CustomersContent() {
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Plan</label>
-                  <select className="input w-full" required value={createForm.planCode} onChange={(e) => setCreateForm((current) => ({ ...current, planCode: e.target.value }))}>
+                  <select className={`input w-full ${createErrors.planCode ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} required value={createForm.planCode} onChange={(e) => setCreateForm((current) => ({ ...current, planCode: e.target.value }))}>
                     <option value="">Select plan</option>
                     {plans.map((plan) => (
                       <option key={plan.id} value={plan.planCode || plan.id}>
@@ -307,6 +340,7 @@ function CustomersContent() {
                       </option>
                     ))}
                   </select>
+                  {createErrors.planCode ? <p className="mt-2 text-xs text-rose-600">{createErrors.planCode}</p> : null}
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">BNG</label>
@@ -345,14 +379,16 @@ function CustomersContent() {
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">PPPoE password</label>
-                  <input className="input w-full" required value={createForm.radiusPassword} onChange={(e) => setCreateForm((current) => ({ ...current, radiusPassword: e.target.value }))} />
+                  <input className={`input w-full ${createErrors.radiusPassword ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} required value={createForm.radiusPassword} onChange={(e) => setCreateForm((current) => ({ ...current, radiusPassword: e.target.value }))} />
+                  {createErrors.radiusPassword ? <p className="mt-2 text-xs text-rose-600">{createErrors.radiusPassword}</p> : null}
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="xl:col-span-2">
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Address line 1</label>
-                  <input className="input w-full" required value={createForm.line1} onChange={(e) => setCreateForm((current) => ({ ...current, line1: e.target.value }))} />
+                  <input className={`input w-full ${createErrors.line1 ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-100' : ''}`} required value={createForm.line1} onChange={(e) => setCreateForm((current) => ({ ...current, line1: e.target.value }))} />
+                  {createErrors.line1 ? <p className="mt-2 text-xs text-rose-600">{createErrors.line1}</p> : null}
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Address line 2</label>
@@ -381,10 +417,13 @@ function CustomersContent() {
               </div>
 
               <div className="flex items-center justify-end gap-3">
-                <button type="button" className="btn-secondary" onClick={() => setIsCreateOpen(false)}>
+                <button type="button" className="btn-secondary" onClick={() => {
+                  setIsCreateOpen(false)
+                  resetCreateForm()
+                }}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary inline-flex items-center gap-2" disabled={isCreating}>
+                <button type="submit" className="btn-primary inline-flex items-center gap-2" disabled={isCreating || !canCreateCustomer}>
                   {isCreating ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   Create Customer
                 </button>
