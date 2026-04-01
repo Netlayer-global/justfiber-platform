@@ -916,7 +916,7 @@ function PlansContent() {
               </div>
             </div>
           </div>
-          )}
+          ) : null}
         </div>
         </div>
       </section>
