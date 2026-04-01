@@ -629,7 +629,6 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSectionLoading, setIsSectionLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
   const [activeZoneCode, setActiveZoneCode] = useState('')
   const [activeZoneLabel, setActiveZoneLabel] = useState('')
   const [isCopyingLaunchPack, setIsCopyingLaunchPack] = useState(false)
@@ -1272,9 +1271,9 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Settings</div>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Jaze-style Admin Settings</h1>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Settings</h1>
             <div className="mt-2 max-w-3xl text-sm text-slate-500">
-              Low-frequency configuration yahin rakhi gayi hai, so day-to-day operator screens clean rahen. Main workflow pages sirf useful actions dikhayengi.
+              Keep only low-frequency controls here. Daily operator work should stay on the main pages.
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -1436,9 +1435,9 @@ export default function SettingsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Delegated admin seats</div>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Zone admin account seed</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Zone admin contact</h2>
               <div className="mt-2 text-sm text-slate-500">
-                Child zone ke liye ek initial admin contact seed yahin se maintain karo. Yeh rollout ke baad bhi update kiya ja sakta hai.
+                Keep one admin contact for this zone.
               </div>
             </div>
             <button
@@ -1481,9 +1480,9 @@ export default function SettingsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Sub-zone and login manager</div>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Create sub-zone and zone login</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Sub-Zones and Logins</h2>
               <div className="mt-2 text-sm text-slate-500">
-                Ab sub-zone create aur zone login dono yahin settings ke andar manage honge.
+                Create sub-zones and zone logins here.
               </div>
             </div>
           </div>
@@ -1491,7 +1490,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Create sub-zone</div>
-                <div className="mt-1 text-sm text-slate-500">Parent zone ke andar new child zone launch karo.</div>
+                <div className="mt-1 text-sm text-slate-500">Create a new child zone under the current zone.</div>
               </div>
               <button
                 type="button"
@@ -1613,7 +1612,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Create zone login</div>
-                <div className="mt-1 text-sm text-slate-500">Current active zone ke liye username/password login banao.</div>
+                <div className="mt-1 text-sm text-slate-500">Create a username and password for the active zone.</div>
               </div>
               <button
                 type="button"
@@ -1734,7 +1733,7 @@ export default function SettingsPage() {
               <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone Admin Flow</div>
               <h2 className="mt-2 text-2xl font-semibold text-slate-900">Settings, zone, and sub-zone workspace</h2>
               <div className="mt-2 text-sm text-slate-500">
-                Yeh area Phase 2 ka control room hai. Day-to-day screens ko clean rakhne ke liye low-frequency zone, franchise, and inheritance controls yahin grouped rahenge.
+                Use these links only for zone setup, inheritance, and low-frequency admin tasks.
               </div>
             </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
@@ -1785,7 +1784,7 @@ export default function SettingsPage() {
       {isLoading ? (
         <div className="card p-8 text-center">
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
-          <div className="mt-3 text-sm text-slate-500">Loading settings workspace...</div>
+          <div className="mt-3 text-sm text-slate-500">Loading settings...</div>
         </div>
       ) : (
         <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -1900,13 +1899,13 @@ export default function SettingsPage() {
                               <div className="mt-2 text-sm font-semibold text-slate-900">{selectedInvoiceTemplate?.templateName || 'Not set'}</div>
                             </div>
                             <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Active zone preview</div>
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Active zone</div>
                               <div className="mt-2 text-sm font-semibold text-slate-900">{activeZoneResolvedTemplate?.templateName || 'Fallback template'}</div>
                             </div>
                           </div>
                         </div>
                         <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Resolved preview</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Resolved zone</div>
                           <div className="mt-3 space-y-3 text-sm text-slate-600">
                             <div>
                               <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Zone</div>
@@ -2157,22 +2156,6 @@ export default function SettingsPage() {
                   </section>
                 )}
 
-                <section className="card p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Raw Preview</div>
-                      <div className="mt-1 text-sm text-slate-500">Backend snapshot for advanced validation and debugging.</div>
-                    </div>
-                    <button type="button" className="btn-secondary" onClick={() => setShowPreview((value) => !value)}>
-                      {showPreview ? 'Hide preview' : 'Show preview'}
-                    </button>
-                  </div>
-                  {showPreview ? (
-                    <pre className="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-4 text-xs leading-6 text-slate-200">
-                      {JSON.stringify(sectionValue, null, 2)}
-                    </pre>
-                  ) : null}
-                </section>
               </>
             )}
           </div>

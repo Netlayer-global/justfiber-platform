@@ -821,7 +821,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+      {false ? <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="card p-6">
           <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Data truth validation</div>
           <div className="mt-2 text-2xl font-semibold text-slate-900">Cross-check active zone data</div>
@@ -867,9 +867,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+      {false ? <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="card p-6">
           <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Smoke checklist</div>
           <div className="mt-2 text-2xl font-semibold text-slate-900">Verify this zone before rollout</div>
@@ -914,9 +914,9 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+      {false ? <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="card p-6">
           <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Security readiness</div>
           <div className="mt-2 text-2xl font-semibold text-slate-900">Permission matrix and account posture</div>
@@ -970,7 +970,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> : null}
 
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="card p-6">
@@ -1196,7 +1196,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {false ? <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           {
             title: 'Invoice templates',
@@ -1232,7 +1232,7 @@ export default function DashboardPage() {
             <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
           </div>
         ))}
-      </section>
+      </section> : null}
     </div>
   )
 }

@@ -632,11 +632,9 @@ function PlansContent() {
       <section className="card p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Commercial workspace</div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Plans & package library</h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Hamare system me plan, usage package, pricing ladder, and provisioning metadata ek hi catalog object me rehte hain. Isliye package library bhi isi workspace me merge ki gayi hai.
-            </p>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plans</div>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Plans</h1>
+            <p className="mt-2 text-sm text-slate-500">Keep this page limited to plan list, plan form, and status changes.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
@@ -644,7 +642,7 @@ function PlansContent() {
               onClick={() => setWorkspaceView('library')}
               className={workspaceView === 'library' ? 'btn-primary inline-flex items-center gap-2' : 'btn-secondary inline-flex items-center gap-2'}
             >
-              Package library
+              Library
             </button>
             <button
               type="button"
@@ -654,7 +652,7 @@ function PlansContent() {
               }}
               className={workspaceView === 'composer' ? 'btn-primary inline-flex items-center gap-2' : 'btn-secondary inline-flex items-center gap-2'}
             >
-              Composer
+              Plan Form
             </button>
             <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -662,7 +660,7 @@ function PlansContent() {
             </button>
             <button type="button" onClick={exportLibrary} className="btn-secondary inline-flex items-center gap-2">
               <Copy className="h-4 w-4" />
-              Export library
+              Export
             </button>
             <button type="button" onClick={() => void loadPlans()} className="btn-secondary inline-flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
@@ -717,10 +715,10 @@ function PlansContent() {
           </div>
         </div>
         <div className="mt-4 rounded-[22px] border border-[#d9e5ff] bg-[#f6f9ff] p-4">
-          <div className="text-xs uppercase tracking-[0.18em] text-[#5b6cff]">Active zone catalog</div>
+          <div className="text-xs uppercase tracking-[0.18em] text-[#5b6cff]">Active Zone</div>
           <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneLabel}</div>
           <div className="mt-1 text-sm text-slate-500">
-            Global plans har zone me visible rahenge. Zone-scoped plans sirf current active zone ki sales, billing, and customer assignment journeys me dikhenge.
+            New plans are created for all zones unless you bind them to the current zone only.
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -743,11 +741,9 @@ function PlansContent() {
         <div className="space-y-6">
         {workspaceView === 'library' ? (
           <div className="card p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Unified package flow</div>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">Usage packages now live inside plans</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Operator ko alag `Usage Packages` screen dikhane ki zarurat nahi hai. Yahin se package list, edit, duplicate, pricing, visibility, and provisioning mapping manage honge.
-            </p>
+            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plan List</div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">Simple plan list</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Open a plan, edit it, duplicate it, or change status.</p>
           </div>
         ) : null}
         {workspaceView === 'composer' && composerOpen ? (
@@ -846,7 +842,7 @@ function PlansContent() {
             <div>
               <div className="text-sm font-semibold text-slate-900">Invoice breakup</div>
               <div className="mt-1 text-sm text-slate-500">
-                Jio-style split ke liye total plan price me se platform fee alag dikhegi, baaki amount internet service charge me jayega.
+                Use invoice split only if you need separate platform and internet lines.
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -865,17 +861,17 @@ function PlansContent() {
             <div>
               <div className="text-sm font-semibold text-slate-900">Zone scope</div>
               <div className="mt-1 text-sm text-slate-500">
-                Current active zone: {activeZoneLabel}. Zone-scoped plans sirf isi zone ke customers, billing desk, and assignments me available honge.
+                Current zone: {activeZoneLabel}. Use zone scope only when the plan must stay inside this zone.
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
                 <input type="radio" checked={form.planScope === 'global'} onChange={() => setForm({ ...form, planScope: 'global' })} />
-                Global catalog plan
+                All zones
               </label>
               <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
                 <input type="radio" checked={form.planScope === 'zone'} onChange={() => setForm({ ...form, planScope: 'zone' })} />
-                Bind only to {activeZoneLabel}
+                Current zone only
               </label>
             </div>
           </div>
@@ -1031,7 +1027,7 @@ function PlansContent() {
               </div>
               <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
                 <div className="text-sm font-semibold text-slate-900">What stays hidden</div>
-                <div className="mt-2 text-sm text-slate-500">Low-frequency setup and deeper configuration remain in backend/settings so operator surface clean rahe.</div>
+                <div className="mt-2 text-sm text-slate-500">Low-frequency setup and deeper configuration stay in settings and backend tools.</div>
               </div>
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
