@@ -11,6 +11,7 @@ import { AdminSession } from "../../models/AdminSession.js";
 import { signAccessToken, signRefreshToken, requireAuth, resolvePermissions } from "../../common/auth.js";
 import { env } from "../../config/env.js";
 import { auditFromRequest } from "../../common/audit.js";
+import { permissions } from "../../config/permissions.js";
 
 export const authRouter = Router();
 
@@ -96,7 +97,9 @@ authRouter.get(
     const canAccessAllZones =
       Boolean(req.admin.canAccessAllZones) ||
       !req.admin.zoneCode ||
-      Array.isArray(req.admin.roles) && req.admin.roles.includes("super_admin");
+      Array.isArray(req.admin.roles) && req.admin.roles.includes("super_admin") ||
+      grantedPermissions.includes(permissions.adminUserManage) ||
+      grantedPermissions.includes(permissions.adminRoleManage);
     return ok(res, {
       id: req.admin._id,
       username: req.admin.username,

@@ -985,6 +985,18 @@ export default function SettingsPage() {
         await adminAPI.saveFranchiseAdminAccounts(franchiseCode, metadata.adminAccounts)
       }
       if (subZoneDraft.adminUsername.trim() && subZoneDraft.adminPassword.trim() && subZoneDraft.adminEmail.trim()) {
+        const currentAdminRes = await adminAPI.getCurrentAdmin()
+        const currentAdmin = currentAdminRes.success ? currentAdminRes.data : undefined
+        if (
+          currentAdmin &&
+          (
+            currentAdmin.username.trim().toLowerCase() === subZoneDraft.adminUsername.trim().toLowerCase() ||
+            currentAdmin.email.trim().toLowerCase() === subZoneDraft.adminEmail.trim().toLowerCase()
+          )
+        ) {
+          toast.error('Main admin ko sub-zone login me reuse mat karo. Alag username aur email do.')
+          return
+        }
         const adminRes = await adminAPI.createAdminUser({
           username: subZoneDraft.adminUsername.trim(),
           fullName: subZoneDraft.adminFullName.trim() || `${subZoneDraft.subZoneName.trim()} Admin`,
@@ -1023,6 +1035,18 @@ export default function SettingsPage() {
     }
     try {
       setIsCreatingZoneLogin(true)
+      const currentAdminRes = await adminAPI.getCurrentAdmin()
+      const currentAdmin = currentAdminRes.success ? currentAdminRes.data : undefined
+      if (
+        currentAdmin &&
+        (
+          currentAdmin.username.trim().toLowerCase() === zoneLoginDraft.username.trim().toLowerCase() ||
+          currentAdmin.email.trim().toLowerCase() === zoneLoginDraft.email.trim().toLowerCase()
+        )
+      ) {
+        toast.error('Current main admin ko zone login me reuse mat karo. Alag username aur email do.')
+        return
+      }
       const response = await adminAPI.createAdminUser({
         username: zoneLoginDraft.username.trim(),
         fullName: zoneLoginDraft.fullName.trim() || `${activeZoneLabel} Admin`,

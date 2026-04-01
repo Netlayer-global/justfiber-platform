@@ -32,9 +32,14 @@ export default function LoginPage() {
         setAuthSession(res.data.accessToken, res.data.refreshToken)
         const meRes = await adminAPI.getCurrentAdmin()
         if (meRes.success && meRes.data && typeof window !== 'undefined') {
-          window.localStorage.setItem('justfiber-admin-zone-code', meRes.data.zoneCode || '')
-          window.localStorage.setItem('justfiber-admin-zone-label', meRes.data.zoneName || '')
           window.localStorage.setItem('justfiber-admin-can-access-all-zones', meRes.data.canAccessAllZones ? '1' : '0')
+          if (meRes.data.canAccessAllZones) {
+            window.localStorage.setItem('justfiber-admin-zone-code', '')
+            window.localStorage.setItem('justfiber-admin-zone-label', '')
+          } else {
+            window.localStorage.setItem('justfiber-admin-zone-code', meRes.data.zoneCode || '')
+            window.localStorage.setItem('justfiber-admin-zone-label', meRes.data.zoneName || '')
+          }
           if (meRes.data.zoneCode && !meRes.data.canAccessAllZones) {
             window.localStorage.setItem('justfiber-active-zone-key', meRes.data.zoneCode)
             window.localStorage.setItem('justfiber-active-zone-label', meRes.data.zoneName || meRes.data.zoneCode)
