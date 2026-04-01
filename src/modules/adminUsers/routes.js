@@ -22,6 +22,14 @@ const createUserSchema = z.object({
   canAccessAllZones: z.boolean().optional()
 });
 
+const updateUserStatusSchema = z.object({
+  status: z.enum(["active", "disabled", "locked"])
+});
+
+const resetUserPasswordSchema = z.object({
+  password: z.string().min(8)
+});
+
 export const adminUsersRouter = Router();
 
 adminUsersRouter.use(requireAuth);
@@ -74,6 +82,56 @@ adminUsersRouter.post(
       }
     });
     return ok(res, user, { created: true });
+  })
+);
+
+adminUsersRouter.patch(
+  "/users/:userId/status",
+  requirePermission(permissions.adminUserManage),
+  asyncHandler(async (req, res) => {
+    const payload = updateUserStatusSchema.parse(req.body || {});
+    const user = await AdminUser.findById(req.params.userId);
+    if (!user) {
+      return ok(res, null, { found: false });
+    }
+    user.status = payload.status;
+    await user.save();
+    await auditFromRequest(req, {
+      action: "admin.user.status_updated",
+      entityType: "admin_user",
+      entityId: user._id.toString(),
+      after: {
+        status: user.status,
+        zoneCode: user.zoneCode,
+        zoneName: user.zoneName
+      }
+    });
+    return ok(res, user);
+  })
+);
+
+adminUsersRouter.post(
+  "/users/:userId/reset-password",
+  requirePermission(permissions.adminUserManage),
+  asyncHandler(async (req, res) => {
+    const payload = resetUserPasswordSchema.parse(req.body || {});
+    const user = await AdminUser.findById(req.params.userId);
+    if (!user) {
+      return ok(res, null, { found: false });
+    }
+    user.passwordHash = await argon2.hash(payload.password);
+    user.passwordChangedAt = new Date();
+    await user.save();
+    await auditFromRequest(req, {
+      action: "admin.user.password_reset",
+      entityType: "admin_user",
+      entityId: user._id.toString(),
+      metadata: {
+        zoneCode: user.zoneCode,
+        zoneName: user.zoneName
+      }
+    });
+    return ok(res, { reset: true, userId: user._id.toString() });
   })
 );
 

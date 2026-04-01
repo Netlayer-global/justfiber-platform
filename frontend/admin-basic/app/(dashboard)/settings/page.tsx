@@ -589,6 +589,7 @@ export default function SettingsPage() {
   const [isCopyingLaunchPack, setIsCopyingLaunchPack] = useState(false)
   const [isSavingZoneAdmins, setIsSavingZoneAdmins] = useState(false)
   const [isCreatingZoneLogin, setIsCreatingZoneLogin] = useState(false)
+  const [busyZoneLoginId, setBusyZoneLoginId] = useState('')
   const [zoneLogins, setZoneLogins] = useState<AdminUserSummary[]>([])
   const [adminRoles, setAdminRoles] = useState<AdminRoleSummary[]>([])
   const [zoneAdminDraft, setZoneAdminDraft] = useState({
@@ -604,6 +605,7 @@ export default function SettingsPage() {
     password: '',
     role: 'ops_admin',
   })
+  const [passwordResetDraft, setPasswordResetDraft] = useState<Record<string, string>>({})
 
   const visibleCatalog = useMemo(() => {
     return catalog
@@ -865,6 +867,48 @@ export default function SettingsPage() {
       toast.error('Failed to create zone login')
     } finally {
       setIsCreatingZoneLogin(false)
+    }
+  }
+
+  async function handleZoneLoginStatus(userId: string, status: 'active' | 'disabled') {
+    try {
+      setBusyZoneLoginId(userId)
+      const response = await adminAPI.updateAdminUserStatus(userId, status)
+      if (!response.success) {
+        toast.error(response.error || 'Failed to update zone login')
+        return
+      }
+      toast.success(`Zone login ${status === 'active' ? 'enabled' : 'disabled'}`)
+      if (activeZoneCode) await loadZoneLogins(activeZoneCode)
+    } catch (error) {
+      console.error('[settings] Failed to update zone login status', error)
+      toast.error('Failed to update zone login')
+    } finally {
+      setBusyZoneLoginId('')
+    }
+  }
+
+  async function handleZoneLoginPasswordReset(userId: string) {
+    const nextPassword = passwordResetDraft[userId]?.trim()
+    if (!nextPassword) {
+      toast.error('Enter a new password first')
+      return
+    }
+    try {
+      setBusyZoneLoginId(userId)
+      const response = await adminAPI.resetAdminUserPassword(userId, nextPassword)
+      if (!response.success) {
+        toast.error(response.error || 'Failed to reset password')
+        return
+      }
+      toast.success('Password reset complete')
+      setPasswordResetDraft((current) => ({ ...current, [userId]: '' }))
+      if (activeZoneCode) await loadZoneLogins(activeZoneCode)
+    } catch (error) {
+      console.error('[settings] Failed to reset zone login password', error)
+      toast.error('Failed to reset password')
+    } finally {
+      setBusyZoneLoginId('')
     }
   }
 
@@ -1282,6 +1326,31 @@ export default function SettingsPage() {
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
                   Status: {user.status} {user.lastLoginAt ? `• Last login ${new Date(user.lastLoginAt).toLocaleString()}` : '• Never logged in'}
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-[1fr_auto_auto]">
+                  <input
+                    className="input"
+                    placeholder="New password"
+                    type="text"
+                    value={passwordResetDraft[user.id] || ''}
+                    onChange={(event) => setPasswordResetDraft((current) => ({ ...current, [user.id]: event.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => handleZoneLoginPasswordReset(user.id)}
+                    disabled={busyZoneLoginId === user.id}
+                  >
+                    {busyZoneLoginId === user.id ? 'Working...' : 'Reset password'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => handleZoneLoginStatus(user.id, user.status === 'active' ? 'disabled' : 'active')}
+                    disabled={busyZoneLoginId === user.id}
+                  >
+                    {busyZoneLoginId === user.id ? 'Working...' : user.status === 'active' ? 'Disable' : 'Enable'}
+                  </button>
                 </div>
               </div>
             )) : (

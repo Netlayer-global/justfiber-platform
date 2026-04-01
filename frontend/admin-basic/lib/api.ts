@@ -1333,6 +1333,21 @@ export const adminAPI = {
       data: res.data ? mapAdminUser(res.data) : undefined,
     }
   },
+  updateAdminUserStatus: async (userId: string, status: 'active' | 'disabled' | 'locked') => {
+    const res = await request<any>(`/api/v1/admin/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
+    return {
+      ...res,
+      data: res.data ? mapAdminUser(res.data) : undefined,
+    }
+  },
+  resetAdminUserPassword: async (userId: string, password: string) =>
+    request<any>(`/api/v1/admin/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
   getAuditOverview: async () => request<AuditOverview>('/api/v1/admin/foundation/logs/overview'),
   getAuditLogs: async (page = 1, limit = 25, filters?: { action?: string; entityType?: string }) => {
     const query = new URLSearchParams({
