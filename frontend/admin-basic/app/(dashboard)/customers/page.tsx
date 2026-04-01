@@ -229,75 +229,79 @@ function CustomersContent() {
       ) : null}
 
       <section className="card p-5 space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">All customers</h2>
-            <p className="mt-1 text-sm text-slate-500">Simple list. Kisi bhi customer ko direct open ya edit karo.</p>
+            <h2 className="text-lg font-semibold text-slate-900">Customer list</h2>
+            <p className="mt-1 text-sm text-slate-500">Simple table. Open ya edit directly from here.</p>
           </div>
-          <div className="text-sm text-slate-500">{quickLookupResults.length} customer</div>
+          <div className="flex items-center gap-3 text-sm text-slate-500">
+            <span>{quickLookupResults.length} records</span>
+            <button onClick={() => setLookup('')} className="btn-secondary">Clear</button>
+          </div>
         </div>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              className="input w-full pl-10"
-              placeholder="Search by name, phone, PPPoE, plan, customer ID"
-              value={lookup}
-              onChange={(e) => setLookup(e.target.value)}
-            />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            className="input w-full pl-10"
+            placeholder="Search by name, phone, PPPoE, plan, customer ID"
+            value={lookup}
+            onChange={(e) => setLookup(e.target.value)}
+          />
+        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader className="h-6 w-6 animate-spin text-[#5d87ff]" />
           </div>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader className="h-6 w-6 animate-spin text-[#5d87ff]" />
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <div className="grid grid-cols-[70px_1.4fr_1fr_1fr_1fr_0.9fr_190px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <div>S.No</div>
+              <div>Customer</div>
+              <div>Phone</div>
+              <div>PPPoE</div>
+              <div>Plan</div>
+              <div>Status</div>
+              <div>Actions</div>
             </div>
-          ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-200">
-              <div className="grid grid-cols-[1.2fr_0.8fr_1fr_0.9fr_150px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                <div>Customer</div>
-                <div>Status</div>
-                <div>PPPoE / Phone</div>
-                <div>Plan</div>
-                <div>Action</div>
+            {quickLookupResults.map((customer, index) => (
+              <div key={customer.id} className="grid grid-cols-[70px_1.4fr_1fr_1fr_1fr_0.9fr_190px] gap-3 border-b border-slate-200 bg-white px-4 py-3 text-sm last:border-b-0">
+                <div className="text-slate-500">{index + 1}</div>
+                <div>
+                  <div className="font-semibold text-slate-900">{customer.name}</div>
+                  <div className="mt-1 text-xs text-slate-500">{customer.customerId || customer.id}</div>
+                </div>
+                <div className="text-slate-600">{customer.phone || '-'}</div>
+                <div className="text-slate-600">{customer.pppoeUsername || '-'}</div>
+                <div className="text-slate-600">{customer.plan?.name || 'Unassigned'}</div>
+                <div>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    customer.status === 'active'
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : customer.status === 'suspended'
+                        ? 'bg-amber-50 text-amber-700'
+                        : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {customer.status || 'unknown'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/customers/${customer.id}`} className="btn-secondary inline-flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Open
+                  </Link>
+                  <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">
+                    Edit
+                  </Link>
+                </div>
               </div>
-              {quickLookupResults.map((customer) => (
-                <div key={customer.id} className="grid grid-cols-[1.2fr_0.8fr_1fr_0.9fr_150px] gap-3 border-b border-slate-200 bg-white px-4 py-4 text-sm last:border-b-0">
-                  <div>
-                    <div className="font-semibold text-slate-900">{customer.name}</div>
-                    <div className="mt-1 text-xs text-slate-500">{customer.customerId || customer.id}</div>
-                  </div>
-                  <div className="flex items-center">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      customer.status === 'active'
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : customer.status === 'suspended'
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {customer.status || 'unknown'}
-                    </span>
-                  </div>
-                  <div className="text-slate-600">
-                    <div>{customer.pppoeUsername || '-'}</div>
-                    <div className="mt-1 text-xs text-slate-500">{customer.phone || '-'}</div>
-                  </div>
-                  <div className="text-slate-600">{customer.plan?.name || 'Unassigned'}</div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link href={`/customers/${customer.id}`} className="btn-secondary inline-flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      Open
-                    </Link>
-                    <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">
-                      Edit
-                    </Link>
-                  </div>
-                </div>
-              ))}
-              {quickLookupResults.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
-                  No customer matched this lookup.
-                </div>
-              ) : null}
-            </div>
-          )}
+            ))}
+            {quickLookupResults.length === 0 ? (
+              <div className="px-4 py-10 text-center text-sm text-slate-500">
+                No customer matched this lookup.
+              </div>
+            ) : null}
+          </div>
+        )}
       </section>
 
       {isCreateOpen ? (
