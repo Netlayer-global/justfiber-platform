@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { SettingsCatalogItem } from '@/lib/types'
+import type { FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
 import { ArrowRight, Building2, GitBranchPlus, Loader2, Router, Save, Search, Settings2, ShieldCheck, WalletCards } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -573,6 +573,7 @@ function FieldEditor({ label, value, path, depth = 0, onChange, onRemove }: Fiel
 
 export default function SettingsPage() {
   const [catalog, setCatalog] = useState<SettingsCatalogItem[]>([])
+  const [franchises, setFranchises] = useState<FranchiseProfile[]>([])
   const [activeSection, setActiveSection] = useState('general')
   const [sectionValue, setSectionValue] = useState<SectionValue>({})
   const [sectionVersion, setSectionVersion] = useState<number | null>(null)
@@ -657,6 +658,10 @@ export default function SettingsPage() {
       })).filter((entry) => entry.count > 0),
     [catalog]
   )
+  const activeZoneFranchise = useMemo(
+    () => franchises.find((item) => (item.zoneCode || item.franchiseCode) === activeZoneCode) || null,
+    [franchises, activeZoneCode]
+  )
 
   useEffect(() => {
     void loadCatalog()
@@ -674,18 +679,26 @@ export default function SettingsPage() {
     }
     syncZone()
     window.addEventListener('storage', syncZone)
-    return () => window.removeEventListener('storage', syncZone)
+    window.addEventListener('justfiber-zone-change', syncZone as EventListener)
+    return () => {
+      window.removeEventListener('storage', syncZone)
+      window.removeEventListener('justfiber-zone-change', syncZone as EventListener)
+    }
   }, [])
 
   async function loadCatalog() {
     try {
       setIsLoading(true)
       const response = await adminAPI.getSettingsCatalog()
+      const franchiseRes = await adminAPI.getFranchises()
       if (!response.success || !response.data) {
         toast.error(response.error || 'Failed to load settings catalog')
         return
       }
       setCatalog(response.data)
+      if (franchiseRes.success) {
+        setFranchises(franchiseRes.data || [])
+      }
       const defaultSection = response.data.find((item) => item.section === 'general')?.section || response.data[0]?.section
       if (defaultSection) setActiveSection(defaultSection)
     } catch (error) {
@@ -882,6 +895,56 @@ export default function SettingsPage() {
                   <div className="text-xs text-slate-500">{GROUP_DESCRIPTIONS[entry.group]}</div>
                 </div>
                 <div className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-700">{entry.count}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Sub-zone inheritance</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Current zone launch pack</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active zone</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneLabel || 'Default Zone'}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Template</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneFranchise?.invoiceConfig?.templateKey || activeZoneResolvedTemplate?.templateName || 'Fallback'}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Admin seats</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneFranchise?.adminAccounts?.length || 0}</div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Inheritance</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">
+                {activeZoneFranchise?.inheritanceProfile
+                  ? `${[
+                      activeZoneFranchise.inheritanceProfile.inheritBillingProfile,
+                      activeZoneFranchise.inheritanceProfile.inheritInvoiceTemplate,
+                      activeZoneFranchise.inheritanceProfile.inheritPlans,
+                      activeZoneFranchise.inheritanceProfile.inheritPaymentGateway,
+                      activeZoneFranchise.inheritanceProfile.inheritRouterVisibility,
+                    ].filter(Boolean).length}/5`
+                  : 'Default'}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="card p-5">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Franchise rollout guide</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Complete child-zone setup</h2>
+          <div className="mt-4 space-y-3">
+            {[
+              'Create the sub-zone with inheritance profile and at least one zone admin contact.',
+              'Confirm invoice template, payment route, and router exposure before switching operators to the new zone.',
+              'Use My Zone Details as the final validation screen before launch.',
+            ].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                {item}
               </div>
             ))}
           </div>

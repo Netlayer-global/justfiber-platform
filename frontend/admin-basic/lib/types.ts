@@ -681,6 +681,21 @@ export interface FranchiseProfile {
     sequencePadding?: number
     templateKey?: string
   }
+  inheritanceProfile?: {
+    inheritBillingProfile?: boolean
+    inheritInvoiceTemplate?: boolean
+    inheritPlans?: boolean
+    inheritPaymentGateway?: boolean
+    inheritRouterVisibility?: boolean
+    useParentRouters?: boolean
+    canCreateSubZone?: boolean
+  }
+  adminAccounts?: Array<{
+    fullName?: string
+    email?: string
+    phone?: string
+    role?: string
+  }>
   metadata?: Record<string, any>
 }
 

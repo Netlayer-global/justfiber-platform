@@ -856,6 +856,16 @@ function mapFranchiseProfile(item: any): FranchiseProfile {
       sequencePadding: Number(metadata.sequencePadding || 4),
       templateKey: metadata.templateKey || '',
     },
+    inheritanceProfile: metadata.inheritanceProfile && typeof metadata.inheritanceProfile === 'object' ? metadata.inheritanceProfile : {
+      inheritBillingProfile: Boolean(metadata.inheritBillingProfile),
+      inheritInvoiceTemplate: Boolean(metadata.inheritInvoiceTemplate),
+      inheritPlans: Boolean(metadata.inheritPlans),
+      inheritPaymentGateway: Boolean(metadata.inheritPaymentGateway),
+      inheritRouterVisibility: Boolean(metadata.inheritRouterVisibility),
+      useParentRouters: Boolean(metadata.useParentRouters),
+      canCreateSubZone: Boolean(metadata.canCreateSubZone),
+    },
+    adminAccounts: Array.isArray(metadata.adminAccounts) ? metadata.adminAccounts : [],
     metadata,
   }
 }

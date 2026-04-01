@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 type ZoneRow = {
   companyName: string
   zoneName: string
+  parentZone: string
   apiToken: string
   email: string
   phone: string
@@ -18,6 +19,9 @@ type ZoneRow = {
   city: string
   state: string
   pincode: string
+  inheritanceLabel: string
+  adminSeats: number
+  templateKey: string
 }
 
 const ZONE_TABS = [
@@ -43,9 +47,18 @@ export default function MyZoneDetailsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const storedKey = window.localStorage.getItem('justfiber-active-zone-key')
-    if (storedKey) {
-      setActiveZoneKey(storedKey)
+    const syncZone = () => {
+      const storedKey = window.localStorage.getItem('justfiber-active-zone-key')
+      if (storedKey) {
+        setActiveZoneKey(storedKey)
+      }
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    window.addEventListener('justfiber-zone-change', syncZone as EventListener)
+    return () => {
+      window.removeEventListener('storage', syncZone)
+      window.removeEventListener('justfiber-zone-change', syncZone as EventListener)
     }
   }, [])
 
@@ -73,6 +86,7 @@ export default function MyZoneDetailsPage() {
     const fallbackRow: ZoneRow = {
       companyName: general?.organizationName || 'JustFiber',
       zoneName: general?.zoneName || 'default',
+      parentZone: '-',
       apiToken: general?.zoneName || 'default',
       email: general?.email || '',
       phone: general?.phone || '',
@@ -81,11 +95,15 @@ export default function MyZoneDetailsPage() {
       city: '',
       state: '',
       pincode: '',
+      inheritanceLabel: 'Default controls',
+      adminSeats: 0,
+      templateKey: 'justfiber_standard',
     }
     if (!franchises.length) return [fallbackRow]
     return franchises.map((item) => ({
       companyName: item.name,
       zoneName: item.zoneCode || item.franchiseCode,
+      parentZone: item.metadata?.parentZoneName || item.metadata?.parentZoneCode || '-',
       apiToken: item.franchiseCode,
       email: item.email || general?.email || '',
       phone: item.phone || general?.phone || '',
@@ -94,6 +112,16 @@ export default function MyZoneDetailsPage() {
       city: addressParts[2] || '',
       state: addressParts[3] || '',
       pincode: addressParts[4] || '',
+      inheritanceLabel: item.inheritanceProfile
+        ? `${[
+            item.inheritanceProfile.inheritBillingProfile ? 'Billing' : '',
+            item.inheritanceProfile.inheritInvoiceTemplate ? 'Template' : '',
+            item.inheritanceProfile.inheritPlans ? 'Plans' : '',
+            item.inheritanceProfile.useParentRouters ? 'Routers' : '',
+          ].filter(Boolean).length || 0} inherited`
+        : 'Manual setup',
+      adminSeats: Array.isArray(item.adminAccounts) ? item.adminAccounts.length : 0,
+      templateKey: item.invoiceConfig?.templateKey || 'default',
     }))
   }, [franchises, general])
 
@@ -125,6 +153,7 @@ export default function MyZoneDetailsPage() {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('justfiber-active-zone-key', zoneKey)
       window.localStorage.setItem('justfiber-active-zone-label', row.companyName || zoneKey)
+      window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: { key: zoneKey, label: row.companyName || zoneKey } }))
     }
     toast.success(`Switched to ${row.companyName || zoneKey}`)
   }
@@ -247,20 +276,23 @@ export default function MyZoneDetailsPage() {
       ) : (
         <section className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
-                  <th className="px-4 py-4">S.No</th>
-                  <th className="px-4 py-4">Company Name</th>
-                  <th className="px-4 py-4">Zone Name</th>
-                  <th className="px-4 py-4">API Token</th>
-                  <th className="px-4 py-4">Email</th>
-                  <th className="px-4 py-4">Phone</th>
-                  <th className="px-4 py-4">Street Address1</th>
-                  <th className="px-4 py-4">Street Address2</th>
-                  <th className="px-4 py-4">City</th>
-                  <th className="px-4 py-4">State</th>
-                  <th className="px-4 py-4">Pincode</th>
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <th className="px-4 py-4">S.No</th>
+                    <th className="px-4 py-4">Company Name</th>
+                    <th className="px-4 py-4">Zone Name</th>
+                    <th className="px-4 py-4">Parent Zone</th>
+                    <th className="px-4 py-4">API Token</th>
+                    <th className="px-4 py-4">Email</th>
+                    <th className="px-4 py-4">Phone</th>
+                    <th className="px-4 py-4">Inheritance</th>
+                    <th className="px-4 py-4">Admin Seats</th>
+                    <th className="px-4 py-4">Template</th>
+                    <th className="px-4 py-4">Street Address1</th>
+                    <th className="px-4 py-4">City</th>
+                    <th className="px-4 py-4">State</th>
+                    <th className="px-4 py-4">Pincode</th>
                   <th className="px-4 py-4">Action</th>
                 </tr>
               </thead>
@@ -275,11 +307,14 @@ export default function MyZoneDetailsPage() {
                     <td className="px-4 py-3">{index + 1}</td>
                     <td className="px-4 py-3 font-semibold text-[#2a8cff]">{row.companyName}</td>
                     <td className="px-4 py-3">{row.zoneName}</td>
+                    <td className="px-4 py-3">{row.parentZone}</td>
                     <td className="px-4 py-3">{row.apiToken}</td>
                     <td className="px-4 py-3">{row.email}</td>
                     <td className="px-4 py-3">{row.phone}</td>
+                    <td className="px-4 py-3">{row.inheritanceLabel}</td>
+                    <td className="px-4 py-3">{row.adminSeats}</td>
+                    <td className="px-4 py-3">{row.templateKey}</td>
                     <td className="px-4 py-3">{row.streetAddress1}</td>
-                    <td className="px-4 py-3">{row.streetAddress2}</td>
                     <td className="px-4 py-3">{row.city}</td>
                     <td className="px-4 py-3">{row.state}</td>
                     <td className="px-4 py-3">{row.pincode}</td>

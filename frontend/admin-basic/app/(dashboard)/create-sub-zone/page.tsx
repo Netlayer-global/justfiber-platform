@@ -29,6 +29,14 @@ type FormState = {
   house: string
   canCreateSubZone: boolean
   useParentRouters: boolean
+  inheritBillingProfile: boolean
+  inheritInvoiceTemplate: boolean
+  inheritPlans: boolean
+  inheritPaymentGateway: boolean
+  inheritRouterVisibility: boolean
+  adminFullName: string
+  adminEmail: string
+  adminPhone: string
 }
 
 const initialForm: FormState = {
@@ -54,6 +62,14 @@ const initialForm: FormState = {
   house: '',
   canCreateSubZone: false,
   useParentRouters: false,
+  inheritBillingProfile: true,
+  inheritInvoiceTemplate: true,
+  inheritPlans: true,
+  inheritPaymentGateway: true,
+  inheritRouterVisibility: true,
+  adminFullName: '',
+  adminEmail: '',
+  adminPhone: '',
 }
 
 const ZONE_TABS = [
@@ -81,6 +97,8 @@ export default function CreateSubZonePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [general, setGeneral] = useState<any>(null)
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<any>(null)
+  const [activeZoneCode, setActiveZoneCode] = useState('default')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('Default Zone')
 
   const validationErrors = [
     !form.subZoneName.trim() ? 'Sub-zone name is required' : null,
@@ -92,8 +110,24 @@ export default function CreateSubZonePage() {
   const generatedCode = form.subZoneName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
 
   useEffect(() => {
-    void loadDefaults()
+    const syncZone = () => {
+      const nextCode = window.localStorage.getItem('justfiber-active-zone-key') || 'default'
+      const nextLabel = window.localStorage.getItem('justfiber-active-zone-label') || 'Default Zone'
+      setActiveZoneCode(nextCode)
+      setActiveZoneLabel(nextLabel)
+    }
+    syncZone()
+    window.addEventListener('storage', syncZone)
+    window.addEventListener('justfiber-zone-change', syncZone as EventListener)
+    return () => {
+      window.removeEventListener('storage', syncZone)
+      window.removeEventListener('justfiber-zone-change', syncZone as EventListener)
+    }
   }, [])
+
+  useEffect(() => {
+    void loadDefaults()
+  }, [activeZoneCode])
 
   async function loadDefaults() {
     try {
@@ -147,8 +181,30 @@ export default function CreateSubZonePage() {
           sequencePadding: 4,
           templateKey: invoiceTemplateSettings?.activeTemplate || 'justfiber_standard',
         },
-        canCreateSubZone: form.canCreateSubZone,
-        useParentRouters: form.useParentRouters,
+        inheritanceProfile: {
+          inheritBillingProfile: form.inheritBillingProfile,
+          inheritInvoiceTemplate: form.inheritInvoiceTemplate,
+          inheritPlans: form.inheritPlans,
+          inheritPaymentGateway: form.inheritPaymentGateway,
+          inheritRouterVisibility: form.inheritRouterVisibility,
+          canCreateSubZone: form.canCreateSubZone,
+          useParentRouters: form.useParentRouters,
+        },
+        adminAccounts: form.adminEmail.trim()
+          ? [
+              {
+                fullName: form.adminFullName.trim() || `${form.subZoneName.trim()} Admin`,
+                email: form.adminEmail.trim(),
+                phone: form.adminPhone.trim(),
+                role: 'zone_admin',
+              },
+            ]
+          : [],
+        launchChecklist: {
+          paymentGatewayPending: !form.inheritPaymentGateway,
+          routerInheritancePending: !form.useParentRouters,
+          adminSeatReady: Boolean(form.adminEmail.trim()),
+        },
       }
 
       const [franchiseRes, zoneRes, settingsRes] = await Promise.all([
@@ -167,6 +223,8 @@ export default function CreateSubZonePage() {
         adminAPI.createServiceZone({
           zoneCode: franchiseCode,
           zoneName: form.subZoneName.trim(),
+          parentZoneCode: activeZoneCode !== 'default' ? activeZoneCode : undefined,
+          parentZoneName: activeZoneLabel,
           city: form.city,
           area: form.area,
           pinCodes: form.pincode ? [form.pincode] : [],
@@ -192,6 +250,7 @@ export default function CreateSubZonePage() {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('justfiber-active-zone-key', franchiseCode)
         window.localStorage.setItem('justfiber-active-zone-label', form.subZoneName.trim())
+        window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: { key: franchiseCode, label: form.subZoneName.trim() } }))
       }
       toast.success('Sub-zone created')
       setForm(initialForm)
@@ -249,7 +308,7 @@ export default function CreateSubZonePage() {
                 Parent Zone
               </div>
               <div className="mt-3 text-lg font-semibold text-slate-900">{general?.organizationName || 'JustFiber'}</div>
-              <div className="mt-1 text-sm text-slate-500">{general?.zoneName || 'default'}</div>
+              <div className="mt-1 text-sm text-slate-500">{activeZoneLabel} · {activeZoneCode}</div>
             </div>
             <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
@@ -304,6 +363,12 @@ export default function CreateSubZonePage() {
               <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Router mode</div>
               <div className="mt-2 text-lg font-semibold text-slate-900">{form.useParentRouters ? 'Parent routers' : 'Dedicated routers'}</div>
             </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Inheritance pack</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">
+                {[form.inheritBillingProfile, form.inheritInvoiceTemplate, form.inheritPlans, form.inheritPaymentGateway, form.inheritRouterVisibility].filter(Boolean).length}/5 inherited
+              </div>
+            </div>
           </div>
         </div>
 
@@ -356,6 +421,14 @@ export default function CreateSubZonePage() {
             <div>House</div>
             <div>Can create sub zone</div>
             <div>Use parent routers</div>
+            <div>Inherit billing profile</div>
+            <div>Inherit invoice template</div>
+            <div>Inherit plans</div>
+            <div>Inherit payment gateway</div>
+            <div>Inherit router visibility</div>
+            <div>Admin full name</div>
+            <div>Admin email</div>
+            <div>Admin phone</div>
           </div>
           <div className="space-y-3">
             <input className="input" placeholder="Sub Zone name" value={form.subZoneName} onChange={(e) => setForm((prev) => ({ ...prev, subZoneName: e.target.value }))} />
@@ -383,6 +456,14 @@ export default function CreateSubZonePage() {
             <input className="input" placeholder="House" value={form.house} onChange={(e) => setForm((prev) => ({ ...prev, house: e.target.value }))} />
             <label className="flex items-center gap-3 text-sm text-slate-700"><input type="radio" checked={!form.canCreateSubZone} onChange={() => setForm((prev) => ({ ...prev, canCreateSubZone: false }))} /> No <input type="radio" checked={form.canCreateSubZone} onChange={() => setForm((prev) => ({ ...prev, canCreateSubZone: true }))} /> Yes</label>
             <label className="flex items-center gap-3 text-sm text-slate-700"><input type="radio" checked={!form.useParentRouters} onChange={() => setForm((prev) => ({ ...prev, useParentRouters: false }))} /> No <input type="radio" checked={form.useParentRouters} onChange={() => setForm((prev) => ({ ...prev, useParentRouters: true }))} /> Yes</label>
+            <label className="flex items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={form.inheritBillingProfile} onChange={(e) => setForm((prev) => ({ ...prev, inheritBillingProfile: e.target.checked }))} /> Inherit billing profile</label>
+            <label className="flex items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={form.inheritInvoiceTemplate} onChange={(e) => setForm((prev) => ({ ...prev, inheritInvoiceTemplate: e.target.checked }))} /> Inherit invoice template</label>
+            <label className="flex items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={form.inheritPlans} onChange={(e) => setForm((prev) => ({ ...prev, inheritPlans: e.target.checked }))} /> Inherit plans</label>
+            <label className="flex items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={form.inheritPaymentGateway} onChange={(e) => setForm((prev) => ({ ...prev, inheritPaymentGateway: e.target.checked }))} /> Inherit payment gateway</label>
+            <label className="flex items-center gap-3 text-sm text-slate-700"><input type="checkbox" checked={form.inheritRouterVisibility} onChange={(e) => setForm((prev) => ({ ...prev, inheritRouterVisibility: e.target.checked }))} /> Inherit router visibility</label>
+            <input className="input" placeholder="Zone admin full name" value={form.adminFullName} onChange={(e) => setForm((prev) => ({ ...prev, adminFullName: e.target.value }))} />
+            <input className="input" placeholder="Zone admin email" value={form.adminEmail} onChange={(e) => setForm((prev) => ({ ...prev, adminEmail: e.target.value }))} />
+            <input className="input" placeholder="Zone admin phone" value={form.adminPhone} onChange={(e) => setForm((prev) => ({ ...prev, adminPhone: e.target.value }))} />
           </div>
         </div>
         <div className="mt-8 flex justify-end">
