@@ -2294,24 +2294,6 @@ function CustomerDetailContent() {
               </div>
             </div>
 
-            <div className="card p-5 space-y-4">
-              <h2 className="text-lg font-semibold">Quick actions</h2>
-              <p className="text-sm text-slate-500">
-                Sirf daily-use actions.
-              </p>
-              <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary block w-full text-center">
-                Edit user
-              </Link>
-              <button className="btn-primary w-full" onClick={() => setActiveTab('billing')}>
-                Open billing
-              </button>
-              <button className="btn-secondary w-full" onClick={() => setActiveTab('devices')}>
-                Open network
-              </button>
-              <button className="btn-secondary w-full" onClick={() => void handleDisconnectSession()} disabled={isSaving}>
-                Disconnect session
-              </button>
-            </div>
           </div>
         </div>
       </div>
