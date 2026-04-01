@@ -345,6 +345,7 @@ export default function BillingPage() {
     () => ({
       visible: visibleCollections.length,
       assigned: visibleCollections.filter((item) => Boolean(item.assignedAdminName)).length,
+      unassigned: visibleCollections.filter((item) => !item.assignedAdminName).length,
       suspendNow: visibleCollections.filter((item) => item.suspendEligible).length,
       promiseActive: visibleCollections.filter((item) => item.promiseActive).length,
       totalDue: visibleCollections.reduce((sum, item) => sum + Number(item.dueAmount || 0), 0),
@@ -803,6 +804,28 @@ export default function BillingPage() {
       console.error('[v0] Failed to resume service from collections:', error)
       toast.error('Failed to resume service')
     }
+  }
+
+  function applyCollectionsPreset(
+    preset: 'unassigned' | 'assigned_followup' | 'suspend_ready' | 'ptp_watch'
+  ) {
+    if (preset === 'unassigned') {
+      setCollectionBucket('')
+      setCollectionFilters({ search: '', ownership: 'unassigned', posture: '' })
+      return
+    }
+    if (preset === 'assigned_followup') {
+      setCollectionBucket('')
+      setCollectionFilters({ search: '', ownership: 'assigned', posture: 'monitor' })
+      return
+    }
+    if (preset === 'suspend_ready') {
+      setCollectionBucket('suspend_ready')
+      setCollectionFilters({ search: '', ownership: '', posture: 'suspend' })
+      return
+    }
+    setCollectionBucket('')
+    setCollectionFilters({ search: '', ownership: '', posture: 'ptp' })
   }
 
   function toggleBulkSelection(customerId: string) {
@@ -1494,7 +1517,7 @@ export default function BillingPage() {
           <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Collections command center</div>
             <div className="mt-1 text-sm text-slate-600">Focus on queue size, assigned ownership, suspend candidates, and promise-to-pay watchlist.</div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Queue</div>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.visible}</div>
@@ -1515,6 +1538,11 @@ export default function BillingPage() {
                 <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.promiseActive}</div>
                 <div className="mt-1 text-xs text-slate-500">Need follow-up before promise date</div>
               </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Unassigned</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{collectionsOpsSummary.unassigned}</div>
+                <div className="mt-1 text-xs text-slate-500">Need owner before outbound work</div>
+              </div>
             </div>
           </div>
           <div className="rounded-[28px] border border-slate-200 bg-white p-5">
@@ -1529,6 +1557,20 @@ export default function BillingPage() {
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 Current queue exposure: <span className="font-semibold text-slate-900">Rs {collectionsOpsSummary.totalDue.toFixed(2)}</span>
               </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button className="btn-secondary" onClick={() => applyCollectionsPreset('unassigned')}>
+                Unassigned queue
+              </button>
+              <button className="btn-secondary" onClick={() => applyCollectionsPreset('assigned_followup')}>
+                Assigned follow-up
+              </button>
+              <button className="btn-secondary" onClick={() => applyCollectionsPreset('suspend_ready')}>
+                Suspend-ready
+              </button>
+              <button className="btn-secondary" onClick={() => applyCollectionsPreset('ptp_watch')}>
+                PTP watch
+              </button>
             </div>
           </div>
         </div>
@@ -1625,6 +1667,20 @@ export default function BillingPage() {
                 {!(collectionsWorkbench?.byAssignee || []).length ? (
                   <div className="text-sm text-slate-500">No collection ownership assigned yet.</div>
                 ) : null}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  className="btn-secondary"
+                  onClick={() => setCollectionFilters((prev) => ({ ...prev, ownership: 'assigned' }))}
+                >
+                  Show assigned
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setCollectionFilters((prev) => ({ ...prev, ownership: 'unassigned' }))}
+                >
+                  Show unassigned
+                </button>
               </div>
             </div>
             <div className="mt-4 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
@@ -1949,6 +2005,12 @@ export default function BillingPage() {
                   </td>
                   <td className="table-cell text-right">
                     <div className="flex flex-wrap justify-end gap-2">
+                      <Link href={`/customers/${encodeURIComponent(item.customerId)}`} className="btn-secondary">
+                        Customer
+                      </Link>
+                      <Link href={`/customers/${encodeURIComponent(item.customerId)}?tab=devices`} className="btn-secondary">
+                        Network
+                      </Link>
                       <button className="btn-secondary" onClick={() => void sendCollectionReminder(item.customerId, item.invoiceId)}>
                         Remind
                       </button>
