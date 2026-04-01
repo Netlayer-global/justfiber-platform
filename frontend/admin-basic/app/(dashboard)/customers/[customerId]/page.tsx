@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import { Loader, RefreshCw, Wifi, Router, Network, PlugZap } from 'lucide-react'
 import { toast } from 'sonner'
 import { adminAPI, openProtectedDocument } from '@/lib/api'
@@ -64,6 +64,8 @@ function normalizeCustomer(raw: Customer): Customer {
 
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>()
+  const router = useRouter()
+  const pathname = usePathname()
   const customerId = params.customerId
 
   const [customer, setCustomer] = useState<Customer | null>(null)
@@ -90,6 +92,12 @@ export default function CustomerDetailPage() {
       setActiveTab(tab)
     }
   }, [customerId])
+
+  function selectTab(tab: TabKey) {
+    setActiveTab(tab)
+    const query = tab === 'overview' ? '' : `?tab=${tab}`
+    router.replace(`${pathname}${query}`)
+  }
 
   async function runBusy<T>(key: string, work: () => Promise<T>) {
     try {
@@ -340,6 +348,12 @@ export default function CustomerDetailPage() {
               <RefreshCw className="mr-2 h-4 w-4" />
               {busyKey === 'refresh' ? 'Refreshing...' : 'Refresh'}
             </button>
+            <button type="button" className="btn-secondary" onClick={() => selectTab('billing')}>
+              Billing
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => selectTab('devices')}>
+              Network
+            </button>
             <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit</Link>
             <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={busyKey === 'disconnect-session'}>
               <PlugZap className="mr-2 h-4 w-4" />
@@ -367,9 +381,9 @@ export default function CustomerDetailPage() {
       <section className="card p-4 md:p-5 space-y-5">
         <div className="sticky top-0 z-10 -mx-4 -mt-4 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur md:-mx-5 md:-mt-5 md:px-5">
           <div className="flex flex-wrap gap-2">
-          <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('overview')}>Overview</button>
-          <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('billing')}>Billing</button>
-          <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('devices')}>LAN / WAN / WiFi</button>
+          <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => selectTab('overview')}>Overview</button>
+          <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => selectTab('billing')}>Billing</button>
+          <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => selectTab('devices')}>LAN / WAN / WiFi</button>
         </div>
         </div>
 

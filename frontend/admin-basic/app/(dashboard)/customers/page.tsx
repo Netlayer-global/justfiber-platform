@@ -161,7 +161,7 @@ function CustomersContent() {
           state: createForm.state.trim() || undefined,
           pinCode: createForm.pinCode.trim() || undefined,
         },
-        radiusUsername: createForm.radiusUsername.trim() || undefined,
+        radiusUsername: createForm.radiusUsername.trim() || suggestedUsername || undefined,
         radiusPassword: createForm.radiusPassword.trim() || undefined,
         bngNodeCode: createForm.bngNodeCode || undefined,
         createRadius: true,
@@ -295,6 +295,9 @@ function CustomersContent() {
                     <Link href={`/customers/${customer.id}`} className="inline-flex items-center gap-2 font-medium text-[#2d7dff]">
                       <Eye className="h-4 w-4" />
                       Open
+                    </Link>
+                    <Link href={`/customers/${customer.id}?tab=billing`} className="text-slate-500 hover:text-slate-900">
+                      Billing
                     </Link>
                     <Link href={`/all-users/${customer.id}/edit`} className="text-slate-500 hover:text-slate-900">
                       Edit

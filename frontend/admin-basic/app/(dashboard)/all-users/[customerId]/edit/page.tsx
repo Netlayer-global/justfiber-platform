@@ -333,6 +333,7 @@ export default function EditUserPage() {
               Copy username
             </button>
             <Link href={`/customers/${customer.id}`} className="btn-secondary">Open customer</Link>
+            <Link href={`/customers/${customer.id}?tab=billing`} className="btn-secondary">Open billing</Link>
             <Link href={natLogHref} className="btn-secondary">Open NAT Logs</Link>
             <Link href="/user-management?view=users" className="btn-secondary">View users</Link>
           </div>

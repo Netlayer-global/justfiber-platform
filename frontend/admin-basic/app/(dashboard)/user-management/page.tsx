@@ -455,6 +455,9 @@ function UserManagementWorkspace() {
                               <Link href={`/customers/${customer.id}`} className="rounded-md bg-[#eef7ff] px-3 py-2 text-xs font-semibold text-[#2a8cff]">
                                 Open
                               </Link>
+                              <Link href={`/customers/${customer.id}?tab=billing`} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
+                                Billing
+                              </Link>
                               <Link href={`/all-users/${customer.id}/edit`} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
                                 Edit
                               </Link>
