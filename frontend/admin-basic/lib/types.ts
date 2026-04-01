@@ -15,6 +15,35 @@ export interface LoginResponse {
   refreshToken?: string
 }
 
+export interface AdminUserSummary {
+  id: string
+  username: string
+  fullName: string
+  email: string
+  status: 'active' | 'disabled' | 'locked'
+  roles: string[]
+  mfaEnabled?: boolean
+  lastLoginAt?: string
+  passwordChangedAt?: string
+}
+
+export interface AdminRoleSummary {
+  id: string
+  code: string
+  name: string
+  permissions: string[]
+  isSystem?: boolean
+}
+
+export interface AuditOverview {
+  auditLogs: number
+  natLogs: number
+  paymentLogs: number
+  customerNotifications: number
+  installerNotifications: number
+  ticketsOpen: number
+}
+
 export interface Plan {
   id: string
   planCode?: string

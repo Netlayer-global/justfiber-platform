@@ -40,6 +40,7 @@ import { buildPagination } from "../../common/pagination.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { mikrotikBngManager } from "../../integrations/mikrotikBngManager.js";
 import { env } from "../../config/env.js";
+import { auditFromRequest } from "../../common/audit.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -1884,6 +1885,20 @@ platformFoundationRouter.post(
 
     franchise.metadata = metadata;
     await franchise.save();
+    await auditFromRequest(req, {
+      action: "franchise.settings_copied",
+      entityType: "franchise",
+      entityId: franchise.franchiseCode,
+      after: {
+        sourceZoneCode,
+        inheritedSections,
+        sectionCount: inheritedSections.length
+      },
+      metadata: {
+        zoneCode: franchise.zoneCode,
+        parentZoneCode: metadata.parentZoneCode || null
+      }
+    });
 
     return ok(res, metadata.copiedSettings, { copied: true });
   })
@@ -1907,6 +1922,18 @@ platformFoundationRouter.post(
 
     franchise.metadata = metadata;
     await franchise.save();
+    await auditFromRequest(req, {
+      action: "franchise.admin_accounts_saved",
+      entityType: "franchise",
+      entityId: franchise.franchiseCode,
+      after: {
+        adminSeatCount: metadata.adminAccounts.length,
+        adminAccounts: metadata.adminAccounts
+      },
+      metadata: {
+        zoneCode: franchise.zoneCode
+      }
+    });
 
     return ok(res, {
       adminAccounts: metadata.adminAccounts,

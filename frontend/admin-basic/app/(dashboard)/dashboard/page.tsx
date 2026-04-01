@@ -17,6 +17,9 @@ import {
 } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
 import type {
+  AdminRoleSummary,
+  AdminUserSummary,
+  AuditOverview,
   BillingProfile,
   BngNode,
   Customer,
@@ -77,6 +80,10 @@ export default function DashboardPage() {
   const [billingProfiles, setBillingProfiles] = useState<BillingProfile[]>([])
   const [ipPools, setIpPools] = useState<IpPoolRange[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
+  const [adminUsers, setAdminUsers] = useState<AdminUserSummary[]>([])
+  const [adminRoles, setAdminRoles] = useState<AdminRoleSummary[]>([])
+  const [auditOverview, setAuditOverview] = useState<AuditOverview | null>(null)
+  const [recentAuditLogs, setRecentAuditLogs] = useState<any[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<SettingsSection<InvoiceTemplateValue> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [otpLookup, setOtpLookup] = useState('')
@@ -133,7 +140,11 @@ export default function DashboardPage() {
         ipPoolsRes,
         plansRes,
         invoiceTemplateRes,
-      ] = await Promise.all([
+        adminUsersRes,
+        adminRolesRes,
+        auditOverviewRes,
+        auditLogsRes,
+      ] = await Promise.allSettled([
         adminAPI.getDashboardStats(),
         adminAPI.getCustomers(1, 100),
         adminAPI.getBngNodes(),
@@ -144,18 +155,26 @@ export default function DashboardPage() {
         adminAPI.getIpPools(),
         adminAPI.getPlans(),
         adminAPI.getSettingsSection<InvoiceTemplateValue>('invoice_template'),
+        adminAPI.getAdminUsers(1, 100),
+        adminAPI.getAdminRoles(),
+        adminAPI.getAuditOverview(),
+        adminAPI.getAuditLogs(1, 20),
       ])
 
-      if (statsRes.success && statsRes.data) setStats(statsRes.data)
-      if (customersRes.success && customersRes.data?.items) setCustomers(customersRes.data.items)
-      if (routersRes.success && routersRes.data) setRouters(routersRes.data)
-      if (integrationsRes.success && integrationsRes.data) setIntegrations(integrationsRes.data)
-      if (serviceZonesRes.success && serviceZonesRes.data) setServiceZones(serviceZonesRes.data)
-      if (franchisesRes.success && franchisesRes.data) setFranchises(franchisesRes.data)
-      if (billingProfilesRes.success && billingProfilesRes.data) setBillingProfiles(billingProfilesRes.data)
-      if (ipPoolsRes.success && ipPoolsRes.data) setIpPools(ipPoolsRes.data)
-      if (plansRes.success && plansRes.data?.items) setPlans(plansRes.data.items)
-      if (invoiceTemplateRes.success && invoiceTemplateRes.data) setInvoiceTemplateSettings(invoiceTemplateRes.data)
+      if (statsRes.status === 'fulfilled' && statsRes.value.success && statsRes.value.data) setStats(statsRes.value.data)
+      if (customersRes.status === 'fulfilled' && customersRes.value.success && customersRes.value.data?.items) setCustomers(customersRes.value.data.items)
+      if (routersRes.status === 'fulfilled' && routersRes.value.success && routersRes.value.data) setRouters(routersRes.value.data)
+      if (integrationsRes.status === 'fulfilled' && integrationsRes.value.success && integrationsRes.value.data) setIntegrations(integrationsRes.value.data)
+      if (serviceZonesRes.status === 'fulfilled' && serviceZonesRes.value.success && serviceZonesRes.value.data) setServiceZones(serviceZonesRes.value.data)
+      if (franchisesRes.status === 'fulfilled' && franchisesRes.value.success && franchisesRes.value.data) setFranchises(franchisesRes.value.data)
+      if (billingProfilesRes.status === 'fulfilled' && billingProfilesRes.value.success && billingProfilesRes.value.data) setBillingProfiles(billingProfilesRes.value.data)
+      if (ipPoolsRes.status === 'fulfilled' && ipPoolsRes.value.success && ipPoolsRes.value.data) setIpPools(ipPoolsRes.value.data)
+      if (plansRes.status === 'fulfilled' && plansRes.value.success && plansRes.value.data?.items) setPlans(plansRes.value.data.items)
+      if (invoiceTemplateRes.status === 'fulfilled' && invoiceTemplateRes.value.success && invoiceTemplateRes.value.data) setInvoiceTemplateSettings(invoiceTemplateRes.value.data)
+      if (adminUsersRes.status === 'fulfilled' && adminUsersRes.value.success && adminUsersRes.value.data?.items) setAdminUsers(adminUsersRes.value.data.items)
+      if (adminRolesRes.status === 'fulfilled' && adminRolesRes.value.success && adminRolesRes.value.data) setAdminRoles(adminRolesRes.value.data)
+      if (auditOverviewRes.status === 'fulfilled' && auditOverviewRes.value.success && auditOverviewRes.value.data) setAuditOverview(auditOverviewRes.value.data)
+      if (auditLogsRes.status === 'fulfilled' && auditLogsRes.value.success && Array.isArray(auditLogsRes.value.data)) setRecentAuditLogs(auditLogsRes.value.data)
     } catch (error) {
       console.log('[dashboard] Error loading release readiness data:', error)
     } finally {
@@ -326,6 +345,42 @@ export default function DashboardPage() {
       issues,
     }
   }, [currentZoneCode, customers, integrations, plans, routers])
+
+  const securityReadiness = useMemo(() => {
+    const activeAdmins = adminUsers.filter((user) => user.status === 'active').length
+    const disabledAdmins = adminUsers.filter((user) => user.status !== 'active').length
+    const mfaEnabled = adminUsers.filter((user) => user.mfaEnabled).length
+    const stalePasswords = adminUsers.filter((user) => {
+      if (!user.passwordChangedAt) return true
+      const ageMs = Date.now() - new Date(user.passwordChangedAt).getTime()
+      return Number.isFinite(ageMs) && ageMs > 1000 * 60 * 60 * 24 * 90
+    }).length
+    const privilegedRoles = adminRoles.filter((role) =>
+      role.permissions.includes('config.update') ||
+      role.permissions.includes('approval.decide') ||
+      role.permissions.includes('admin.user.manage'),
+    ).length
+    const recentSensitiveAudit = recentAuditLogs.filter((item) =>
+      ['franchise.settings_copied', 'franchise.admin_accounts_saved', 'billing.writeoff.created', 'billing.waiver.created'].includes(String(item.action || '')),
+    ).length
+    const blockers = [
+      activeAdmins === 0 ? 'No active admin users available' : null,
+      adminRoles.length === 0 ? 'Role matrix not loaded for review' : null,
+      mfaEnabled === 0 ? 'No admin account has MFA enabled' : null,
+      stalePasswords > 0 ? `${stalePasswords} admin accounts need password rotation` : null,
+      !auditOverview?.auditLogs ? 'Audit log stream is empty or unavailable' : null,
+    ].filter(Boolean) as string[]
+
+    return {
+      activeAdmins,
+      disabledAdmins,
+      mfaEnabled,
+      stalePasswords,
+      privilegedRoles,
+      recentSensitiveAudit,
+      blockers,
+    }
+  }, [adminRoles, adminUsers, auditOverview?.auditLogs, recentAuditLogs])
 
   const releaseTiles = [
     {
@@ -661,6 +716,62 @@ export default function DashboardPage() {
                 <div className="mt-1 text-sm leading-6 text-slate-500">{desc}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Security readiness</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Permission matrix and account posture</div>
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {[
+              ['Active admins', String(securityReadiness.activeAdmins), 'Admins currently able to operate'],
+              ['Privileged roles', String(securityReadiness.privilegedRoles), 'Roles with config, approval, or user-management rights'],
+              ['MFA enabled', String(securityReadiness.mfaEnabled), 'Admin accounts protected by MFA'],
+              ['Stale passwords', String(securityReadiness.stalePasswords), 'Accounts needing password rotation'],
+              ['Audit events', String(auditOverview?.auditLogs || 0), 'Audit stream available for production review'],
+              ['Sensitive actions', String(securityReadiness.recentSensitiveAudit), 'Recent high-sensitivity actions captured in audit'],
+            ].map(([title, value, desc]) => (
+              <div key={title} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</div>
+                <div className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900">{value}</div>
+                <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Security blockers</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Close these before production sign-off</div>
+          <div className="mt-6 space-y-3">
+            {securityReadiness.blockers.length ? (
+              securityReadiness.blockers.map((item) => (
+                <div key={item} className="flex gap-3 rounded-[20px] border border-amber-200 bg-amber-50 p-4">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="text-sm leading-6 text-amber-900">{item}</div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+                Permission coverage, audit visibility, and admin account posture look ready for rollout review.
+              </div>
+            )}
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                <div className="font-semibold text-slate-900">Disabled admins</div>
+                <div className="mt-1 text-sm leading-6 text-slate-500">
+                  {securityReadiness.disabledAdmins} disabled or locked admin accounts need lifecycle review.
+                </div>
+              </div>
+              <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                <div className="font-semibold text-slate-900">Audit queue</div>
+                <div className="mt-1 text-sm leading-6 text-slate-500">
+                  {auditOverview?.ticketsOpen || 0} open tickets and {auditOverview?.paymentLogs || 0} payment events are available for validation trace.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

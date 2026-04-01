@@ -1,5 +1,8 @@
 import type {
   ApiResponse,
+  AdminRoleSummary,
+  AdminUserSummary,
+  AuditOverview,
   LoginResponse,
   Plan,
   Customer,
@@ -828,6 +831,30 @@ function mapServiceZone(zone: any): ServiceZone {
   }
 }
 
+function mapAdminUser(item: any): AdminUserSummary {
+  return {
+    id: item._id || item.id || '',
+    username: item.username || '',
+    fullName: item.fullName || item.username || '',
+    email: item.email || '',
+    status: item.status || 'active',
+    roles: Array.isArray(item.roles) ? item.roles : [],
+    mfaEnabled: Boolean(item.mfaEnabled),
+    lastLoginAt: item.lastLoginAt || '',
+    passwordChangedAt: item.passwordChangedAt || '',
+  }
+}
+
+function mapAdminRole(item: any): AdminRoleSummary {
+  return {
+    id: item._id || item.id || item.code || '',
+    code: item.code || '',
+    name: item.name || item.code || '',
+    permissions: Array.isArray(item.permissions) ? item.permissions : [],
+    isSystem: Boolean(item.isSystem),
+  }
+}
+
 function mapFranchiseProfile(item: any): FranchiseProfile {
   const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {}
   return {
@@ -1254,6 +1281,33 @@ export const adminAPI = {
       return request<CustomerOtpLookup>(`/api/v1/admin/ops/customer-auth/demo-otp?mobile=${encoded}`)
     }
     return primary
+  },
+  getAdminUsers: async (page = 1, limit = 100) => {
+    const res = await request<any[]>(`/api/v1/admin/users?page=${page}&limit=${limit}`)
+    return {
+      ...res,
+      data: {
+        items: Array.isArray(res.data) ? res.data.map(mapAdminUser) : [],
+        total: res.meta?.total || (Array.isArray(res.data) ? res.data.length : 0),
+      },
+    }
+  },
+  getAdminRoles: async () => {
+    const res = await request<any[]>('/api/v1/admin/roles')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapAdminRole) : [],
+    }
+  },
+  getAuditOverview: async () => request<AuditOverview>('/api/v1/admin/foundation/logs/overview'),
+  getAuditLogs: async (page = 1, limit = 25, filters?: { action?: string; entityType?: string }) => {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(filters?.action ? { action: filters.action } : {}),
+      ...(filters?.entityType ? { entityType: filters.entityType } : {}),
+    }).toString()
+    return request<any[]>(`/api/v1/admin/foundation/logs/audit?${query}`)
   },
   // Plans
   getPlans: async (filters?: { zoneCode?: string | null }) => {
