@@ -24,7 +24,19 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-type ExternalIntegrationsSettings = Record<string, { enabled?: boolean; providerKey?: string }>
+type ExternalIntegrationsSettings = Record<
+  string,
+  {
+    enabled?: boolean
+    providerKey?: string
+    zoneMappings?: Array<{
+      zoneCode?: string
+      providerKey?: string
+      collectionMode?: 'centralized' | 'local'
+      settlementLabel?: string
+    }>
+  }
+>
 
 type IntegrationCategoryKey =
   | 'sms'
@@ -73,6 +85,12 @@ type FormState = {
   capabilities: string
   setAsDefault: boolean
   config: Record<string, string>
+}
+
+type ZoneRoutingFormState = {
+  providerKey: string
+  collectionMode: 'centralized' | 'local'
+  settlementLabel: string
 }
 
 const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
@@ -254,6 +272,13 @@ export default function AppsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(buildInitialForm(CATEGORY_DEFINITIONS[4]))
+  const [zoneRoutingForm, setZoneRoutingForm] = useState<ZoneRoutingFormState>({
+    providerKey: '',
+    collectionMode: 'centralized',
+    settlementLabel: '',
+  })
+  const [activeZoneCode, setActiveZoneCode] = useState('')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('JustFiber HQ')
 
   const activeCategory = CATEGORY_DEFINITIONS.find((item) => item.key === selectedCategory) || CATEGORY_DEFINITIONS[0]
   const ActiveCategoryIcon = activeCategory.icon
@@ -262,6 +287,17 @@ export default function AppsPage() {
 
   useEffect(() => {
     void loadData()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const refreshZoneContext = () => {
+      setActiveZoneCode(window.localStorage.getItem('justfiber-active-zone-key') || '')
+      setActiveZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || 'JustFiber HQ')
+    }
+    refreshZoneContext()
+    window.addEventListener('focus', refreshZoneContext)
+    return () => window.removeEventListener('focus', refreshZoneContext)
   }, [])
 
   const categoryItems = useMemo(
@@ -293,6 +329,22 @@ export default function AppsPage() {
       defaultProvider,
     }
   }, [categoryItems, currentSettings.providerKey])
+
+  const activeZoneGatewayMapping = useMemo(() => {
+    if (activeCategory.key !== 'payment_gateway') return null
+    const mappings = Array.isArray(currentSettings.zoneMappings) ? currentSettings.zoneMappings : []
+    const zoneKey = String(activeZoneCode || '').trim().toUpperCase()
+    return mappings.find((item) => String(item.zoneCode || '').trim().toUpperCase() === zoneKey) || null
+  }, [activeCategory.key, activeZoneCode, currentSettings.zoneMappings])
+
+  useEffect(() => {
+    if (activeCategory.key !== 'payment_gateway') return
+    setZoneRoutingForm({
+      providerKey: activeZoneGatewayMapping?.providerKey || currentSettings.providerKey || '',
+      collectionMode: activeZoneGatewayMapping?.collectionMode || 'centralized',
+      settlementLabel: activeZoneGatewayMapping?.settlementLabel || '',
+    })
+  }, [activeCategory.key, activeZoneGatewayMapping, currentSettings.providerKey])
 
   const stats = useMemo(() => {
     const activeConnections = integrations.filter((item) => item.status === 'active').length
@@ -489,6 +541,48 @@ export default function AppsPage() {
     }))
   }
 
+  async function assignProviderToActiveZone(providerKey: string, options?: Partial<ZoneRoutingFormState>) {
+    if (!activeZoneCode || activeZoneCode === 'default') {
+      toast.error('Switch to a zone first, then assign a provider to that zone')
+      return
+    }
+    try {
+      setIsSaving(true)
+      const categorySettings = settings[activeCategory.settingsKey] || {}
+      const zoneMappings = Array.isArray(categorySettings.zoneMappings) ? [...categorySettings.zoneMappings] : []
+      const currentIndex = zoneMappings.findIndex(
+        (item) => String(item.zoneCode || '').trim().toUpperCase() === String(activeZoneCode || '').trim().toUpperCase()
+      )
+      const nextRow = {
+        zoneCode: activeZoneCode,
+        providerKey,
+        collectionMode: options?.collectionMode || (currentIndex >= 0 ? zoneMappings[currentIndex]?.collectionMode || 'centralized' : 'centralized'),
+        settlementLabel: options?.settlementLabel ?? (currentIndex >= 0 ? zoneMappings[currentIndex]?.settlementLabel || '' : ''),
+      }
+      if (currentIndex >= 0) zoneMappings[currentIndex] = nextRow
+      else zoneMappings.push(nextRow)
+
+      const nextSettings = {
+        ...settings,
+        [activeCategory.settingsKey]: {
+          ...categorySettings,
+          zoneMappings,
+        },
+      }
+      const res = await adminAPI.updateSettingsSection('external_integrations', nextSettings)
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to assign provider to zone')
+      }
+      setSettings(nextSettings)
+      toast.success(`${providerKey} mapped to ${activeZoneLabel}`)
+    } catch (error) {
+      console.error('[apps] Failed to assign provider to zone:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to assign provider to zone')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="card p-6">
@@ -677,7 +771,76 @@ export default function AppsPage() {
               <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                 Connections: <span className="font-semibold text-slate-900">{categoryItems.length}</span>
               </div>
+              {activeCategory.key === 'payment_gateway' ? (
+                <div className="rounded-full border border-[#d9e4ff] bg-[#ecf2ff] px-3 py-2 text-xs text-slate-600">
+                  {activeZoneCode && activeZoneCode !== 'default'
+                    ? `Zone ${activeZoneLabel}: ${activeZoneGatewayMapping?.providerKey || currentSettings.providerKey || 'Pending gateway'}`
+                    : 'Switch to a zone to assign gateway routes'}
+                </div>
+              ) : null}
             </div>
+            {activeCategory.key === 'payment_gateway' ? (
+              <div className="mt-4 rounded-[22px] border border-[#d9e4ff] bg-[#f6f9ff] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-[#4866ff]">Zone payment route</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">
+                  {activeZoneCode && activeZoneCode !== 'default' ? activeZoneLabel : 'Shared payment scope'}
+                </div>
+                <div className="mt-1 text-sm text-slate-500">
+                  {activeZoneCode && activeZoneCode !== 'default'
+                    ? `Current zone will use ${activeZoneGatewayMapping?.providerKey || currentSettings.providerKey || 'no mapped provider'} for portal checkout and collections receipts.`
+                    : 'Without a zone switch, the shared/default payment provider remains active.'}
+                </div>
+                {activeZoneCode && activeZoneCode !== 'default' ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <select
+                      className="input"
+                      value={zoneRoutingForm.providerKey}
+                      onChange={(event) => setZoneRoutingForm((prev) => ({ ...prev, providerKey: event.target.value }))}
+                    >
+                      <option value="">Select provider</option>
+                      {categoryItems.map((item) => (
+                        <option key={item.key} value={item.key}>
+                          {item.displayName}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="input"
+                      value={zoneRoutingForm.collectionMode}
+                      onChange={(event) =>
+                        setZoneRoutingForm((prev) => ({ ...prev, collectionMode: event.target.value as 'centralized' | 'local' }))
+                      }
+                    >
+                      <option value="centralized">Centralized collections</option>
+                      <option value="local">Local collections</option>
+                    </select>
+                    <input
+                      className="input"
+                      placeholder="Settlement label"
+                      value={zoneRoutingForm.settlementLabel}
+                      onChange={(event) => setZoneRoutingForm((prev) => ({ ...prev, settlementLabel: event.target.value }))}
+                    />
+                  </div>
+                ) : null}
+                {activeZoneCode && activeZoneCode !== 'default' ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      disabled={isSaving || !zoneRoutingForm.providerKey}
+                      onClick={() =>
+                        void assignProviderToActiveZone(zoneRoutingForm.providerKey, {
+                          collectionMode: zoneRoutingForm.collectionMode,
+                          settlementLabel: zoneRoutingForm.settlementLabel,
+                        })
+                      }
+                    >
+                      Save current zone route
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
               <button type="button" className="btn-secondary" onClick={() => setQuery('')}>
                 All providers
@@ -776,6 +939,28 @@ export default function AppsPage() {
                             <div className="mt-2 text-sm font-medium text-slate-700">{item.health ? 'Health metadata present' : 'No health metadata yet'}</div>
                           </div>
                         </div>
+                        {activeCategory.key === 'payment_gateway' ? (
+                          <div className="mt-4 rounded-2xl border border-[#d9e4ff] bg-[#f6f9ff] px-4 py-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <div className="text-[11px] uppercase tracking-[0.16em] text-[#4866ff]">Zone rollout</div>
+                                <div className="mt-1 text-sm font-medium text-slate-700">
+                                  {activeZoneCode && activeZoneCode !== 'default'
+                                    ? `Assign ${item.displayName} to ${activeZoneLabel}`
+                                    : 'Switch to a zone to assign this payment route'}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                disabled={isSaving || !activeZoneCode || activeZoneCode === 'default'}
+                                onClick={() => void assignProviderToActiveZone(item.key)}
+                              >
+                                Use for current zone
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="flex flex-wrap gap-2 xl:justify-end">

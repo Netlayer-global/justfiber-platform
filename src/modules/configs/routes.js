@@ -226,7 +226,11 @@ const settingsSectionDefaults = {
     email: { enabled: false, providerKey: "" },
     whatsapp: { enabled: false, providerKey: "" },
     acsGateway: { enabled: true, providerKey: "genieacs" },
-    paymentGateway: { enabled: true, providerKey: "razorpay" },
+    paymentGateway: {
+      enabled: true,
+      providerKey: "razorpay",
+      zoneMappings: []
+    },
     ftp: { enabled: false, providerKey: "" },
     googleDrive: { enabled: false, providerKey: "" },
     s3: { enabled: false, providerKey: "" },

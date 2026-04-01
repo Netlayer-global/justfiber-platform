@@ -59,6 +59,19 @@ type InvoiceTemplateSettingsSummary = {
   zoneTemplateMappings?: Array<{ zoneCode?: string; templateKey?: string }>
 }
 
+type ExternalIntegrationsSettingsSummary = {
+  paymentGateway?: {
+    enabled?: boolean
+    providerKey?: string
+    zoneMappings?: Array<{
+      zoneCode?: string
+      providerKey?: string
+      collectionMode?: 'centralized' | 'local'
+      settlementLabel?: string
+    }>
+  }
+}
+
 const emptyProfileForm: BillingProfileForm = {
   code: 'DEFAULT',
   name: 'Default Billing Profile',
@@ -106,6 +119,7 @@ export default function BillingPage() {
   const [billingRuns, setBillingRuns] = useState<BillingRun[]>([])
   const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
+  const [externalIntegrationSettings, setExternalIntegrationSettings] = useState<ExternalIntegrationsSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
   const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections' | 'settings'>('invoices')
@@ -208,6 +222,20 @@ export default function BillingPage() {
       ? `CGST ${profileForm.intrastateCgstPercent || '0'}% + SGST ${profileForm.intrastateSgstPercent || '0'}%`
       : `IGST ${profileForm.interstateIgstPercent || '0'}%`
   }, [effectiveZoneBillingIdentity.stateCode, profileForm.companyStateCode, profileForm.intrastateCgstPercent, profileForm.intrastateSgstPercent, profileForm.interstateIgstPercent, profileForm.taxMode])
+  const effectivePaymentGatewayRoute = useMemo(() => {
+    const paymentGateway = externalIntegrationSettings?.paymentGateway
+    const mappings = Array.isArray(paymentGateway?.zoneMappings) ? paymentGateway?.zoneMappings : []
+    const activeMapping =
+      mappings.find(
+        (item) => String(item.zoneCode || '').trim().toUpperCase() === String(activeZoneCode || '').trim().toUpperCase()
+      ) || null
+    return {
+      providerKey: activeMapping?.providerKey || paymentGateway?.providerKey || '',
+      collectionMode: activeMapping?.collectionMode || 'centralized',
+      settlementLabel: activeMapping?.settlementLabel || '',
+      enabled: paymentGateway?.enabled !== false,
+    }
+  }, [activeZoneCode, externalIntegrationSettings])
   const visibleInvoices = useMemo(() => {
     if (invoiceQuickView === 'pending') {
       return billing.filter((item) => (item.paymentStatus || item.status) === 'pending')
@@ -456,7 +484,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionPlaybooksRes, collectionAgentRes, billingRunRes, invoiceTemplateRes, approvalsRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionPlaybooksRes, collectionAgentRes, billingRunRes, invoiceTemplateRes, approvalsRes, externalIntegrationsRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -470,6 +498,7 @@ export default function BillingPage() {
         adminAPI.getBillingRuns(),
         adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
         adminAPI.getApprovalRequests(1, 20),
+        adminAPI.getSettingsSection<ExternalIntegrationsSettingsSummary>('external_integrations'),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -558,6 +587,9 @@ export default function BillingPage() {
       }
       if (invoiceTemplateRes.success && invoiceTemplateRes.data) {
         setInvoiceTemplateSettings(invoiceTemplateRes.data.value || null)
+      }
+      if (externalIntegrationsRes.success && externalIntegrationsRes.data) {
+        setExternalIntegrationSettings(externalIntegrationsRes.data.value || null)
       }
       if (approvalsRes.success && approvalsRes.data) {
         setApprovalRequests(
@@ -1177,7 +1209,7 @@ export default function BillingPage() {
                 {activeZoneCode && activeZoneCode !== 'default' ? `Zone ${activeZoneCode}` : 'All-zone scope'}
               </div>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Legal profile</div>
                 <div className="mt-2 text-sm font-semibold text-slate-900">{effectiveZoneBillingIdentity.legalName || 'Not configured'}</div>
@@ -1200,6 +1232,14 @@ export default function BillingPage() {
                 <div className="mt-2 text-sm font-semibold text-slate-900">{effectiveTaxSplit}</div>
                 <div className="mt-1 text-xs text-slate-500">Default bill mode: {effectiveZoneBillingIdentity.defaultBillMode}</div>
               </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Payment route</div>
+                <div className="mt-2 text-sm font-semibold text-slate-900">{effectivePaymentGatewayRoute.providerKey || 'Gateway pending'}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {effectivePaymentGatewayRoute.enabled ? `${effectivePaymentGatewayRoute.collectionMode} collections` : 'Category disabled'}
+                  {effectivePaymentGatewayRoute.settlementLabel ? ` | ${effectivePaymentGatewayRoute.settlementLabel}` : ''}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1213,7 +1253,7 @@ export default function BillingPage() {
                 2. Map the zone to the correct invoice template before cycle runs.
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                3. Use GST export in this same zone scope to validate CGST/SGST vs IGST output.
+                3. Confirm payment gateway route and collection mode for the active zone before live collections.
               </div>
             </div>
           </div>
@@ -1288,6 +1328,35 @@ export default function BillingPage() {
             </div>
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
               Latest billing run status: <span className="font-semibold capitalize text-white">{financeCommandCenter.latestRunStatus.replaceAll('_', ' ')}</span>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 rounded-[28px] border border-[#d9e4ff] bg-[#f6f9ff] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4866ff]">Zone payment and collections route</div>
+              <div className="mt-1 text-sm text-slate-600">
+                Active zone {effectiveZoneBillingIdentity.zoneName || activeZoneCode || 'shared scope'} will currently use{' '}
+                <span className="font-semibold text-slate-900">{effectivePaymentGatewayRoute.providerKey || 'no mapped provider'}</span>
+                {' '}for checkout, receipt tagging, and collection follow-up references.
+              </div>
+            </div>
+            <Link href="/apps" className="btn-secondary">
+              Open payment gateway
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Gateway provider</div>
+              <div className="mt-2 text-base font-semibold text-slate-900">{effectivePaymentGatewayRoute.providerKey || 'Pending mapping'}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Collections mode</div>
+              <div className="mt-2 text-base font-semibold text-slate-900">{effectivePaymentGatewayRoute.collectionMode}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Settlement tag</div>
+              <div className="mt-2 text-base font-semibold text-slate-900">{effectivePaymentGatewayRoute.settlementLabel || 'Shared settlement bucket'}</div>
             </div>
           </div>
         </div>
