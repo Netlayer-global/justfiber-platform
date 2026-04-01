@@ -1923,6 +1923,9 @@ export default function BillingPage() {
                           Resume
                         </button>
                       ) : null}
+                      <Link href={`/customers/${encodeURIComponent(item.customerId)}?tab=billing`} className="btn-secondary">
+                        Billing
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -1948,6 +1951,48 @@ export default function BillingPage() {
         <>
           {billingSectionTab === 'settings' ? (
           <>
+          <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
+            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Finance setup command center</div>
+              <div className="mt-1 text-sm text-slate-600">Keep GST profile, invoice numbering, state tax overrides, and zone mappings in one controlled workspace.</div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Profiles</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{profiles.length}</div>
+                  <div className="mt-1 text-xs text-slate-500">Billing profiles available</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Zone mappings</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{profileForm.zoneMappings.length}</div>
+                  <div className="mt-1 text-xs text-slate-500">Mapped billing zones</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">State overrides</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{profileForm.stateOverrides.length}</div>
+                  <div className="mt-1 text-xs text-slate-500">Tax exceptions configured</div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Templates</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{invoiceTemplateSettings?.templates?.length || 1}</div>
+                  <div className="mt-1 text-xs text-slate-500">Invoice templates available</div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-[28px] border border-slate-200 bg-white p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Setup play</div>
+              <div className="mt-3 space-y-3 text-sm text-slate-600">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  Start with billing profile defaults, then set GST, then map zones to prefixes and templates.
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  Use state overrides only where tax behavior actually differs from the base profile.
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  Export GST CSV after any major tax or zone change for a quick audit pass.
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="card overflow-hidden">
               <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">GST Summary</div>
@@ -2445,16 +2490,21 @@ export default function BillingPage() {
                       <div className="text-xs text-slate-500 mt-1">{payment.status || '-'}</div>
                     </td>
                     <td className="table-cell text-right">
-                      {payment.reconciliationStatus !== 'reconciled' ? (
-                        <>
-                          <button className="btn-secondary" onClick={() => void reconcilePayment(payment.transactionId, payment.invoiceId)}>
-                            Reconcile
-                          </button>
-                          <button className="btn-secondary mt-2" onClick={() => void sendPaymentRetryReminder(payment.transactionId)}>
-                            Retry reminder
-                          </button>
-                        </>
-                      ) : null}
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {payment.reconciliationStatus !== 'reconciled' ? (
+                          <>
+                            <button className="btn-secondary" onClick={() => void reconcilePayment(payment.transactionId, payment.invoiceId)}>
+                              Reconcile
+                            </button>
+                            <button className="btn-secondary" onClick={() => void sendPaymentRetryReminder(payment.transactionId)}>
+                              Retry reminder
+                            </button>
+                          </>
+                        ) : null}
+                        <Link href={`/customers/${encodeURIComponent(payment.customerId)}?tab=billing`} className="btn-secondary">
+                          Billing
+                        </Link>
+                      </div>
                       {(payment.provider === 'razorpay' && (payment.status === 'captured' || payment.status === 'success')) ? (
                         <button
                           className="btn-secondary mt-2"
