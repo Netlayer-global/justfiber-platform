@@ -168,11 +168,11 @@ function CustomersContent() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
+            <button type="button" onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New Customer
             </button>
-            <button onClick={() => void loadWorkspace()} className="btn-secondary inline-flex items-center gap-2">
+            <button type="button" onClick={() => void loadWorkspace()} className="btn-secondary inline-flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Refresh
             </button>
@@ -188,7 +188,7 @@ function CustomersContent() {
           </div>
           <div className="flex items-center gap-3 text-sm text-slate-500">
             <span>{quickLookupResults.length} records</span>
-            <button onClick={() => setLookup('')} className="btn-secondary">Clear</button>
+            <button type="button" onClick={() => setLookup('')} className="btn-secondary">Clear</button>
           </div>
         </div>
         <div className="relative">
@@ -205,17 +205,18 @@ function CustomersContent() {
             <Loader className="h-6 w-6 animate-spin text-[#5d87ff]" />
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <div className="grid grid-cols-[56px_1.8fr_1fr_1fr_0.9fr_140px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              <div>S.No</div>
-              <div>Customer</div>
-              <div>Phone</div>
-              <div>PPPoE</div>
-              <div>Status</div>
-              <div>Actions</div>
-            </div>
-            {quickLookupResults.map((customer, index) => (
-              <div key={customer.id} className="grid grid-cols-[56px_1.8fr_1fr_1fr_0.9fr_140px] gap-3 border-b border-slate-200 bg-white px-4 py-3 text-sm last:border-b-0">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="max-h-[68vh] overflow-auto">
+              <div className="sticky top-0 z-10 grid grid-cols-[56px_minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_130px] gap-3 border-b border-slate-200 bg-slate-50/95 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 backdrop-blur">
+                <div>S.No</div>
+                <div>Customer</div>
+                <div>Phone</div>
+                <div>PPPoE</div>
+                <div>Status</div>
+                <div>Actions</div>
+              </div>
+              {quickLookupResults.map((customer, index) => (
+                <div key={customer.id} className="grid grid-cols-[56px_minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_130px] items-center gap-3 border-b border-slate-100 px-4 py-2.5 text-sm transition hover:bg-slate-50 last:border-b-0">
                 <div className="text-slate-500">{index + 1}</div>
                 <div>
                   <div className="font-semibold text-slate-900">{customer.name}</div>
@@ -247,8 +248,9 @@ function CustomersContent() {
                     Edit
                   </Link>
                 </div>
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
             {quickLookupResults.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-slate-500">
                 No customer matched this lookup.

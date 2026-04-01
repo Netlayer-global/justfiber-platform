@@ -287,7 +287,7 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="space-y-6">
-      <section className="card p-6 space-y-4">
+      <section className="card p-5 md:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-sm text-slate-500">
@@ -310,16 +310,16 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
             <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Status</div>
             <div className="mt-2 text-lg font-semibold text-slate-900">{formatValue(customer.status)}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
             <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Current due</div>
             <div className="mt-2 text-lg font-semibold text-slate-900">{formatAmount(customer.billingSnapshot?.dueAmount)}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
             <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Devices</div>
             <div className="mt-2 text-lg font-semibold text-slate-900">{String(customer.devices?.length || 0)}</div>
           </div>
@@ -327,15 +327,22 @@ export default function CustomerDetailPage() {
       </section>
 
       <section className="card p-4 md:p-5 space-y-5">
-        <div className="flex flex-wrap gap-2">
+        <div className="sticky top-0 z-10 -mx-4 -mt-4 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur md:-mx-5 md:-mt-5 md:px-5">
+          <div className="flex flex-wrap gap-2">
           <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('overview')}>Overview</button>
           <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('billing')}>Billing</button>
           <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('devices')}>LAN / WAN / WiFi</button>
         </div>
+        </div>
 
         {activeTab === 'overview' ? (
           <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
-            <div className="card p-5 space-y-4">
+            <div className="space-y-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Overview</div>
+                <div className="mt-1 text-sm text-slate-600">Only daily-use account details are shown here.</div>
+              </div>
+              <div className="card p-5 space-y-4">
               <h2 className="text-lg font-semibold text-slate-900">Basic details</h2>
               <div className="grid gap-3 md:grid-cols-2 text-sm">
                 {overviewCards.map((item) => (
@@ -374,6 +381,10 @@ export default function CustomerDetailPage() {
 
         {activeTab === 'billing' ? (
           <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing</div>
+              <div className="mt-1 text-sm text-slate-600">Latest invoice, last invoices, payment status, transaction ID, and current dates only.</div>
+            </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="card p-5">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Latest invoice</div>
@@ -460,6 +471,10 @@ export default function CustomerDetailPage() {
 
         {activeTab === 'devices' ? (
           <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Network</div>
+              <div className="mt-1 text-sm text-slate-600">Separated into Static IP, Session, WAN, WiFi, and LAN for faster daily use.</div>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="card p-5 space-y-4">
                 <div className="flex items-center gap-2">
@@ -531,7 +546,7 @@ export default function CustomerDetailPage() {
                     </div>
 
                     <div className="grid gap-4 xl:grid-cols-3">
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                      <div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-4 space-y-3">
                         <div className="flex items-center gap-2">
                           <Router className="h-4 w-4 text-slate-400" />
                           <h3 className="font-semibold text-slate-900">WAN</h3>
@@ -555,7 +570,7 @@ export default function CustomerDetailPage() {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                      <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 space-y-3">
                         <div className="flex items-center gap-2">
                           <Wifi className="h-4 w-4 text-slate-400" />
                           <h3 className="font-semibold text-slate-900">WiFi</h3>
@@ -575,7 +590,7 @@ export default function CustomerDetailPage() {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-3">
                         <div className="flex items-center gap-2">
                           <Network className="h-4 w-4 text-slate-400" />
                           <h3 className="font-semibold text-slate-900">LAN</h3>
