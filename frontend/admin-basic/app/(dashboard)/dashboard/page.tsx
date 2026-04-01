@@ -24,6 +24,7 @@ import type {
   FranchiseProfile,
   IntegrationSummary,
   IpPoolRange,
+  Plan,
   ServiceZone,
   SettingsSection,
 } from '@/lib/types'
@@ -75,6 +76,7 @@ export default function DashboardPage() {
   const [franchises, setFranchises] = useState<FranchiseProfile[]>([])
   const [billingProfiles, setBillingProfiles] = useState<BillingProfile[]>([])
   const [ipPools, setIpPools] = useState<IpPoolRange[]>([])
+  const [plans, setPlans] = useState<Plan[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<SettingsSection<InvoiceTemplateValue> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [otpLookup, setOtpLookup] = useState('')
@@ -129,6 +131,7 @@ export default function DashboardPage() {
         franchisesRes,
         billingProfilesRes,
         ipPoolsRes,
+        plansRes,
         invoiceTemplateRes,
       ] = await Promise.all([
         adminAPI.getDashboardStats(),
@@ -139,6 +142,7 @@ export default function DashboardPage() {
         adminAPI.getFranchises(),
         adminAPI.getBillingProfiles(),
         adminAPI.getIpPools(),
+        adminAPI.getPlans(),
         adminAPI.getSettingsSection<InvoiceTemplateValue>('invoice_template'),
       ])
 
@@ -150,6 +154,7 @@ export default function DashboardPage() {
       if (franchisesRes.success && franchisesRes.data) setFranchises(franchisesRes.data)
       if (billingProfilesRes.success && billingProfilesRes.data) setBillingProfiles(billingProfilesRes.data)
       if (ipPoolsRes.success && ipPoolsRes.data) setIpPools(ipPoolsRes.data)
+      if (plansRes.success && plansRes.data?.items) setPlans(plansRes.data.items)
       if (invoiceTemplateRes.success && invoiceTemplateRes.data) setInvoiceTemplateSettings(invoiceTemplateRes.data)
     } catch (error) {
       console.log('[dashboard] Error loading release readiness data:', error)
@@ -280,6 +285,48 @@ export default function DashboardPage() {
     }
   }, [currentBillingProfile, currentFranchise, customers, ipPools, resolvedTemplate, routers, serviceZones, zonePaymentRoute])
 
+  const dataTruth = useMemo(() => {
+    const scopedPlanCodes = new Set(
+      plans.flatMap((plan) => [plan.id, plan.planCode, plan.name].filter(Boolean) as string[]),
+    )
+    const customersMissingZone = customers.filter((customer) => !customer.zoneCode && !customer.zoneName).length
+    const customersOutsideZone = customers.filter(
+      (customer) =>
+        currentZoneCode !== 'default' &&
+        customer.zoneCode &&
+        customer.zoneCode !== currentZoneCode,
+    ).length
+    const customersMissingPlan = customers.filter((customer) => !customer.plan?.id && !customer.plan?.name).length
+    const customerPlanDrift = customers.filter((customer) => {
+      const candidate = customer.plan?.id || customer.plan?.name
+      if (!candidate) return false
+      return !scopedPlanCodes.has(candidate)
+    }).length
+    const zoneMappedRouters = routers.filter((router) => router.zoneCode || router.zoneName).length
+    const unmappedRouters = routers.length - zoneMappedRouters
+    const inactiveIntegrations = integrations.filter((item) => item.status !== 'active').length
+
+    const issues = [
+      customersMissingZone ? `${customersMissingZone} customers are missing zone binding` : null,
+      customersOutsideZone ? `${customersOutsideZone} customers do not match the active zone scope` : null,
+      customersMissingPlan ? `${customersMissingPlan} customers do not have a mapped plan` : null,
+      customerPlanDrift ? `${customerPlanDrift} customers reference plans outside the scoped catalog` : null,
+      unmappedRouters ? `${unmappedRouters} routers are still unassigned to any zone` : null,
+      inactiveIntegrations ? `${inactiveIntegrations} integrations are not active and should be reviewed` : null,
+    ].filter(Boolean) as string[]
+
+    return {
+      scopedPlans: plans.length,
+      customersMissingZone,
+      customersOutsideZone,
+      customersMissingPlan,
+      customerPlanDrift,
+      unmappedRouters,
+      inactiveIntegrations,
+      issues,
+    }
+  }, [currentZoneCode, customers, integrations, plans, routers])
+
   const releaseTiles = [
     {
       label: 'Active customers',
@@ -351,6 +398,15 @@ export default function DashboardPage() {
         ? `${readiness.adminSeats} admin seats • ${readiness.inheritanceCount} inherited controls`
         : 'No admin delegation configured',
       href: '/my-zone-details',
+    },
+    {
+      label: 'Catalog and data truth',
+      status: dataTruth.issues.length === 0,
+      detail:
+        dataTruth.issues.length === 0
+          ? `${dataTruth.scopedPlans} plans mapped and no customer drift detected`
+          : `${dataTruth.issues.length} catalog or customer mismatches need cleanup`,
+      href: '/plans',
     },
   ]
 
@@ -511,6 +567,54 @@ export default function DashboardPage() {
             Open apps workspace
             <ArrowRight className="h-4 w-4" />
           </Link>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Data truth validation</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Cross-check active zone data</div>
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {[
+              ['Scoped plans', String(dataTruth.scopedPlans), 'Plans available in current zone scope'],
+              ['Missing zone', String(dataTruth.customersMissingZone), 'Customers without zone binding'],
+              ['Plan drift', String(dataTruth.customerPlanDrift), 'Customers pointing outside scoped catalog'],
+              ['Missing plan', String(dataTruth.customersMissingPlan), 'Customers without mapped plan'],
+              ['Router drift', String(dataTruth.unmappedRouters), 'Routers not assigned to any zone'],
+              ['Inactive apps', String(dataTruth.inactiveIntegrations), 'Integrations needing recheck'],
+            ].map(([title, value, desc]) => (
+              <div key={title} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</div>
+                <div className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900">{value}</div>
+                <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Validation queue</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Fix these before production sign-off</div>
+          <div className="mt-6 space-y-3">
+            {dataTruth.issues.length ? (
+              dataTruth.issues.map((issue) => (
+                <div key={issue} className="flex gap-3 rounded-[20px] border border-amber-200 bg-amber-50 p-4">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="text-sm leading-6 text-amber-900">{issue}</div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+                Customer, plan, router, and integration records look aligned with the current zone scope.
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Link href="/customers" className="btn-secondary">Customer data</Link>
+              <Link href="/plans" className="btn-secondary">Plan catalog</Link>
+              <Link href="/routers" className="btn-secondary">Router scope</Link>
+              <Link href="/apps" className="btn-secondary">App status</Link>
+            </div>
+          </div>
         </div>
       </section>
 
