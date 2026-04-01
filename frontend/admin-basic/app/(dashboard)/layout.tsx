@@ -184,6 +184,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [zoneMenuOpen, setZoneMenuOpen] = useState(false)
   const [zoneOptions, setZoneOptions] = useState<Array<{ key: string; label: string }>>([])
+  const [canAccessAllZones, setCanAccessAllZones] = useState(true)
   const [currentZone, setCurrentZone] = useState<{ key: string; label: string }>({
     key: 'default',
     label: 'JustFiber HQ',
@@ -203,6 +204,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (typeof window === 'undefined') return
     const storedLabel = window.localStorage.getItem('justfiber-active-zone-label')
     const storedKey = window.localStorage.getItem('justfiber-active-zone-key')
+    setCanAccessAllZones(window.localStorage.getItem('justfiber-admin-can-access-all-zones') !== '0')
     if (storedLabel) {
       setCurrentZone({
         key: storedKey || storedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
@@ -244,8 +246,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (typeof window !== 'undefined') {
         const adminZoneCode = window.localStorage.getItem('justfiber-admin-zone-code') || ''
         const adminZoneLabel = window.localStorage.getItem('justfiber-admin-zone-label') || ''
-        const canAccessAllZones = window.localStorage.getItem('justfiber-admin-can-access-all-zones') === '1'
-        if (adminZoneCode && !canAccessAllZones) {
+        const nextCanAccessAllZones = window.localStorage.getItem('justfiber-admin-can-access-all-zones') === '1'
+        setCanAccessAllZones(nextCanAccessAllZones)
+        if (adminZoneCode && !nextCanAccessAllZones) {
           deduped = deduped.filter((item) => item.key === adminZoneCode)
           if (!deduped.length) {
             deduped = [{ key: adminZoneCode, label: adminZoneLabel || adminZoneCode }]
@@ -261,6 +264,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   function handleSwitchZone(item: { key: string; label: string }) {
+    if (!canAccessAllZones) {
+      setZoneMenuOpen(false)
+      return
+    }
     setCurrentZone(item)
     setZoneMenuOpen(false)
     if (typeof window !== 'undefined') {
@@ -323,16 +330,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="relative hidden md:block">
                   <button
                     type="button"
-                    onClick={() => setZoneMenuOpen((value) => !value)}
+                    onClick={() => canAccessAllZones && setZoneMenuOpen((value) => !value)}
                     className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-2 text-left transition hover:bg-slate-50"
                   >
                     <div>
-                      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">Zone</div>
+                      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+                        {canAccessAllZones ? 'Zone' : 'Locked zone'}
+                      </div>
                       <div className="text-sm font-semibold text-slate-900">{currentZone.label}</div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                    {canAccessAllZones ? <ChevronDown className="h-4 w-4 text-slate-400" /> : null}
                   </button>
-                  {zoneMenuOpen ? (
+                  {zoneMenuOpen && canAccessAllZones ? (
                     <div className="absolute right-0 z-30 mt-2 w-72 rounded-[18px] border border-slate-200 bg-white p-2 shadow-lg">
                       <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone Switch</div>
                       <div className="space-y-1">

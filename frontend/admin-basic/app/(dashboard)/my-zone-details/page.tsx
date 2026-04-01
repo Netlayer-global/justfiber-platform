@@ -40,6 +40,7 @@ export default function MyZoneDetailsPage() {
   const [general, setGeneral] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeZoneKey, setActiveZoneKey] = useState('default')
+  const [canAccessAllZones, setCanAccessAllZones] = useState(true)
 
   useEffect(() => {
     void loadData()
@@ -49,6 +50,7 @@ export default function MyZoneDetailsPage() {
     if (typeof window === 'undefined') return
     const syncZone = () => {
       const storedKey = window.localStorage.getItem('justfiber-active-zone-key')
+      setCanAccessAllZones(window.localStorage.getItem('justfiber-admin-can-access-all-zones') !== '0')
       if (storedKey) {
         setActiveZoneKey(storedKey)
       }
@@ -148,6 +150,10 @@ export default function MyZoneDetailsPage() {
   }
 
   function switchZone(row: ZoneRow) {
+    if (!canAccessAllZones) {
+      toast.error('Zone switching is locked for this login')
+      return
+    }
     const zoneKey = row.zoneName || row.apiToken || 'default'
     setActiveZoneKey(zoneKey)
     if (typeof window !== 'undefined') {
@@ -319,13 +325,19 @@ export default function MyZoneDetailsPage() {
                     <td className="px-4 py-3">{row.state}</td>
                     <td className="px-4 py-3">{row.pincode}</td>
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => switchZone(row)}
-                        className={activeZoneKey === (row.zoneName || row.apiToken) ? 'btn-primary' : 'btn-secondary'}
-                      >
-                        {activeZoneKey === (row.zoneName || row.apiToken) ? 'Current zone' : 'Switch zone'}
-                      </button>
+                      {canAccessAllZones ? (
+                        <button
+                          type="button"
+                          onClick={() => switchZone(row)}
+                          className={activeZoneKey === (row.zoneName || row.apiToken) ? 'btn-primary' : 'btn-secondary'}
+                        >
+                          {activeZoneKey === (row.zoneName || row.apiToken) ? 'Current zone' : 'Switch zone'}
+                        </button>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
+                          {activeZoneKey === (row.zoneName || row.apiToken) ? 'Assigned zone' : 'Locked'}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
