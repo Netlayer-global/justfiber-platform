@@ -424,6 +424,8 @@ export interface CustomerInvoice {
   invoiceNumber?: string
   amount: number
   paymentStatus?: string
+  createdAt?: string
+  issuedAt?: string
   generatedAt?: string
   dueDate?: string
 }
