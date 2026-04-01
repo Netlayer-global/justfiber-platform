@@ -391,10 +391,6 @@ export default function CustomerDetailPage() {
         {activeTab === 'overview' ? (
           <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
             <div className="space-y-3">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Overview</div>
-                <div className="mt-1 text-sm text-slate-600">Only daily-use account details are shown here.</div>
-              </div>
               <div className="card p-5 space-y-4">
                 <h2 className="text-lg font-semibold text-slate-900">Basic details</h2>
                 <div className="grid gap-3 md:grid-cols-2 text-sm">
@@ -450,10 +446,6 @@ export default function CustomerDetailPage() {
 
         {activeTab === 'billing' ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing</div>
-              <div className="mt-1 text-sm text-slate-600">Latest invoice, last invoices, payment status, transaction ID, and current dates only.</div>
-            </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="card p-5">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Latest invoice</div>
@@ -540,10 +532,6 @@ export default function CustomerDetailPage() {
 
         {activeTab === 'devices' ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Network</div>
-              <div className="mt-1 text-sm text-slate-600">Separated into Static IP, Session, WAN, WiFi, and LAN for faster daily use.</div>
-            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="card p-5 space-y-4">
                 <div className="flex items-center gap-2">

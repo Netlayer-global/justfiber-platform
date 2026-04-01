@@ -220,14 +220,6 @@ const ZONE_WORKSPACE_LINKS = [
   },
 ]
 
-const ZONE_TABS = [
-  { href: '/settings', label: 'Settings' },
-  { href: '/my-zone-details', label: 'My Zone Details' },
-  { href: '/settings', label: 'Sub-Zone & Logins' },
-  { href: '/apps', label: 'Add Payment Gateway' },
-  { href: '/routers', label: 'Router Settings' },
-]
-
 const initialSubZoneDraft: SubZoneDraft = {
   subZoneName: '',
   email: '',
@@ -250,21 +242,6 @@ const initialSubZoneDraft: SubZoneDraft = {
   useParentRouters: false,
   canCreateSubZone: false,
 }
-
-const ZONE_ADMIN_PLAYBOOK = [
-  {
-    title: 'Copy settings',
-    description: 'Review prefixes, billing rules, and router visibility before cloning them into a child zone.',
-  },
-  {
-    title: 'Admin accounts',
-    description: 'Decide who gets delegated access before the sub-zone goes live and starts collecting payments.',
-  },
-  {
-    title: 'Zone switch',
-    description: 'Keep active-zone verification as the last step after payments, routers, and inheritance are confirmed.',
-  },
-]
 
 function titleCase(value: string) {
   return value
@@ -622,7 +599,6 @@ export default function SettingsPage() {
   const [franchises, setFranchises] = useState<FranchiseProfile[]>([])
   const [activeSection, setActiveSection] = useState('general')
   const [sectionValue, setSectionValue] = useState<SectionValue>({})
-  const [sectionVersion, setSectionVersion] = useState<number | null>(null)
   const [sectionUpdatedAt, setSectionUpdatedAt] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -716,14 +692,6 @@ export default function SettingsPage() {
       invoiceTemplateSection.templates.find((item) => item.key === activeZoneTemplateKey) ||
       selectedInvoiceTemplate,
     [activeZoneTemplateKey, invoiceTemplateSection.templates, selectedInvoiceTemplate]
-  )
-  const zoneGroupSummary = useMemo(
-    () =>
-      GROUP_ORDER.map((group) => ({
-        group,
-        count: catalog.filter((item) => getSectionMeta(item.section).group === group).length,
-      })).filter((entry) => entry.count > 0),
-    [catalog]
   )
   const activeZoneFranchise = useMemo(
     () => franchises.find((item) => (item.zoneCode || item.franchiseCode) === activeZoneCode) || null,
@@ -1155,7 +1123,6 @@ export default function SettingsPage() {
         return
       }
       setSectionValue(response.data.value || {})
-      setSectionVersion(response.data.version || null)
       setSectionUpdatedAt(response.data.updatedAt || null)
     } catch (error) {
       console.error('[settings] Failed to load section', error)
@@ -1268,72 +1235,11 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <section className="card p-5">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Settings</div>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Settings</h1>
-            <div className="mt-2 max-w-3xl text-sm text-slate-500">
-              Keep only low-frequency controls here. Daily operator work should stay on the main pages.
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Visible Sections</div>
-              <div className="mt-2 text-2xl font-bold text-slate-900">{visibleCatalog.length}</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Active Section</div>
-              <div className="mt-2 text-sm font-semibold text-slate-900">{activeMeta.title}</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Version</div>
-              <div className="mt-2 text-2xl font-bold text-slate-900">{sectionVersion ?? '-'}</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="card p-3">
-        <div className="flex flex-wrap gap-2">
-          {ZONE_TABS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={item.href === '/settings' ? 'btn-primary' : 'btn-secondary'}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="card p-5">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone Command Center</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">What still needs operator attention</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {ZONE_ADMIN_PLAYBOOK.map((item) => (
-              <div key={item.title} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                <div className="text-sm font-semibold text-slate-900">{item.title}</div>
-                <div className="mt-2 text-sm text-slate-500">{item.description}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Section Coverage</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Zone governance map</h2>
-          <div className="mt-4 space-y-3">
-            {zoneGroupSummary.map((entry) => (
-              <div key={entry.group} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div>
-                  <div className="text-sm font-semibold text-slate-900">{entry.group}</div>
-                  <div className="text-xs text-slate-500">{GROUP_DESCRIPTIONS[entry.group]}</div>
-                </div>
-                <div className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-700">{entry.count}</div>
-              </div>
-            ))}
+        <div>
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Settings</div>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Settings</h1>
+          <div className="mt-2 max-w-3xl text-sm text-slate-500">
+            Keep only low-frequency controls here. Daily operator work should stay on the main pages.
           </div>
         </div>
       </section>
@@ -1395,7 +1301,7 @@ export default function SettingsPage() {
               <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Operational copy settings</div>
               <h2 className="mt-2 text-2xl font-semibold text-slate-900">Parent launch pack sync</h2>
               <div className="mt-2 text-sm text-slate-500">
-                Billing, prefixes, template, router visibility, and payment policy ka current inherited snapshot yahan se refresh hota hai.
+                Refresh billing, prefixes, template, router visibility, and payment policy from the parent zone.
               </div>
             </div>
             <button

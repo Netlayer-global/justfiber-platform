@@ -352,26 +352,6 @@ function PlansContent() {
     plans[0] ||
     null
 
-  const commercialSummary = useMemo(
-    () => ({
-      total: plans.length,
-      active: plans.filter((plan) => plan.status === 'active').length,
-      visible: plans.filter((plan) => plan.visibleInCustomerApp).length,
-      fup: plans.filter((plan) => plan.dataPolicy === 'fup').length,
-      addOnReady: plans.filter(
-        (plan) =>
-          Boolean(plan.addons?.staticIp?.enabled) ||
-          Boolean(plan.addons?.ott?.enabled) ||
-          Boolean(plan.addons?.voice?.enabled)
-      ).length,
-      provisioningBlocked: plans.filter((plan) => plan.provisioningReady === false).length,
-      featured: plans.filter((plan) => plan.merchandising?.featured).length,
-      recommended: plans.filter((plan) => plan.merchandising?.recommended).length,
-      zoneScoped: plans.filter((plan) => plan.planScope === 'zone').length,
-    }),
-    [plans]
-  )
-
   const composerOpen = composerMode !== null
   const preview = composerOpen ? form : toForm(selectedPlan)
 
@@ -668,52 +648,6 @@ function PlansContent() {
             </button>
           </div>
         </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Package objects</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.total}</div>
-          </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.active}</div>
-          </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Visible now</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.visible}</div>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">FUP plans</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.fup}</div>
-            <div className="mt-1 text-xs text-slate-500">Packages with fair-usage shaping enabled</div>
-          </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Add-on ready</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.addOnReady}</div>
-            <div className="mt-1 text-xs text-slate-500">Static IP, OTT, or voice bundles available</div>
-          </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Provisioning blocked</div>
-            <div className="mt-2 text-2xl font-semibold text-amber-600">{commercialSummary.provisioningBlocked}</div>
-            <div className="mt-1 text-xs text-slate-500">Needs provisioning template or access mapping</div>
-          </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Featured</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.featured}</div>
-            <div className="mt-1 text-xs text-slate-500">Highlighted package lane</div>
-          </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Recommended</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.recommended}</div>
-            <div className="mt-1 text-xs text-slate-500">Operator-curated recommendation lane</div>
-          </div>
-          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Zone scoped</div>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.zoneScoped}</div>
-            <div className="mt-1 text-xs text-slate-500">Plans bound to the current operating zone</div>
-          </div>
-        </div>
         <div className="mt-4 rounded-[22px] border border-[#d9e5ff] bg-[#f6f9ff] p-4">
           <div className="text-xs uppercase tracking-[0.18em] text-[#5b6cff]">Active Zone</div>
           <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneLabel}</div>
@@ -739,13 +673,6 @@ function PlansContent() {
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
-        {workspaceView === 'library' ? (
-          <div className="card p-6">
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plan List</div>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">Simple plan list</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Open a plan, edit it, duplicate it, or change status.</p>
-          </div>
-        ) : null}
         {workspaceView === 'composer' && composerOpen ? (
         <form onSubmit={handleSavePlan} className="card space-y-6 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
