@@ -1624,447 +1624,71 @@ function CustomerDetailContent() {
           <div className="space-y-4">
             {activeTab === 'overview' ? (
               <>
-                <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
                   <div className="card p-5 space-y-4">
                     <div>
-                      <h2 className="text-xl font-semibold text-slate-900">{customer.pppoeUsername || customer.name}</h2>
-                      <p className="mt-1 text-sm text-slate-500">{customerPlanName} • {customer.billingSnapshot?.zoneName || 'Default zone'}</p>
+                      <h2 className="text-xl font-semibold text-slate-900">Basic details</h2>
+                      <p className="mt-1 text-sm text-slate-500">Only the daily-use customer details are shown here.</p>
                     </div>
 
-                    {[
-                      {
-                        key: 'lastPayment',
-                        label: 'Last payment',
-                        body: (
-                          <div className="grid gap-2 text-sm text-slate-600">
-                            <div><span className="font-medium text-slate-900">Amount:</span> Rs {Number(lastPayment?.amount || 0).toFixed(2)}</div>
-                            <div><span className="font-medium text-slate-900">Status:</span> {formatValue(lastPayment?.status, '-')}</div>
-                            <div><span className="font-medium text-slate-900">Paid at:</span> {formatDateTime(lastPayment?.paidAt)}</div>
-                            <div><span className="font-medium text-slate-900">Reference:</span> {formatValue(lastPayment?.transactionId, '-')}</div>
-                          </div>
-                        ),
-                      },
-                      {
-                        key: 'userTickets',
-                        label: 'User tickets',
-                        body: (
-                          <div className="space-y-2 text-sm text-slate-600">
-                            {(customer?.tickets || []).length ? customer?.tickets?.slice(0, 4).map((ticket) => (
-                              <div key={ticket.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                                <div className="font-medium text-slate-900">{ticket.ticketNumber || ticket.id}</div>
-                                <div className="mt-1">{ticket.subject}</div>
-                                <div className="mt-1 text-xs text-slate-500">{ticket.status} • {ticket.priority}</div>
-                              </div>
-                            )) : <div className="text-slate-500">No tickets yet</div>}
-                          </div>
-                        ),
-                      },
-                      {
-                        key: 'installationAddress',
-                        label: 'Installation address',
-                        body: (
-                          <div className="text-sm text-slate-600">
-                            {formatValue(customer.address, 'No installation address')}
-                          </div>
-                        ),
-                      },
-                      {
-                        key: 'billingInformation',
-                        label: 'Billing information',
-                        body: (
-                          <div className="grid gap-2 text-sm text-slate-600">
-                            <div><span className="font-medium text-slate-900">Balance:</span> Rs {Number(billingSummary.balance || 0).toFixed(2)}</div>
-                            <div><span className="font-medium text-slate-900">Due:</span> Rs {Number(billingSummary.dueAmount || 0).toFixed(2)}</div>
-                            <div><span className="font-medium text-slate-900">Bill mode:</span> {formatValue(billingSummary.billMode, '-')}</div>
-                            <div><span className="font-medium text-slate-900">Expiry:</span> {formatDateTime(customer.expiryAt)}</div>
-                          </div>
-                        ),
-                      },
-                      {
-                        key: 'networkInformation',
-                        label: 'Network information',
-                        body: (
-                          <div className="grid gap-2 text-sm text-slate-600">
-                            <div><span className="font-medium text-slate-900">Static IP:</span> {formatValue(radiusStaticIpv4 || radiusIpv4Pool, '(empty)')}</div>
-                            <div><span className="font-medium text-slate-900">MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac || primaryDevice?.lanInfo?.macAddress, '-')}</div>
-                            <div><span className="font-medium text-slate-900">Last session update:</span> {formatDateTime(billingControlCenter?.lastSessionHint?.latestUpdateAt)}</div>
-                            <div><span className="font-medium text-slate-900">Auth:</span> {radiusRejectState ? 'IP / MAC / PPPoE suspended' : 'IP / MAC / PPPoE / Hotspot ok'}</div>
-                          </div>
-                        ),
-                      },
-                    ].map((section) => {
-                      const open = detailSections[section.key as keyof typeof detailSections]
-                      return (
-                        <div key={section.key} className="rounded-2xl border border-slate-200">
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between px-4 py-3 text-left"
-                            onClick={() => toggleDetailSection(section.key as keyof typeof detailSections)}
-                          >
-                            <span className="text-sm font-semibold text-slate-900">{section.label}</span>
-                            {open ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
-                          </button>
-                          {open ? <div className="border-t border-slate-200 px-4 py-4">{section.body}</div> : null}
-                        </div>
-                      )
-                    })}
+                    <div className="grid gap-3 md:grid-cols-2 text-sm">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Customer</div>
+                        <div className="mt-2 font-semibold text-slate-900">{customer.name}</div>
+                        <div className="mt-1 text-slate-500">{customer.phone || '-'}</div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">PPPoE</div>
+                        <div className="mt-2 font-semibold text-slate-900">{customer.pppoeUsername || '-'}</div>
+                        <div className="mt-1 text-slate-500">Service {customer.serviceId || '-'}</div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Plan</div>
+                        <div className="mt-2 font-semibold text-slate-900">{customerPlanName}</div>
+                        <div className="mt-1 text-slate-500">Status {customer.status || '-'}</div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Address</div>
+                        <div className="mt-2 font-semibold text-slate-900">{formatValue(customer.rawAddress?.city || customer.rawAddress?.area, 'Not set')}</div>
+                        <div className="mt-1 text-slate-500">{formatValue(customer.rawAddress?.line1 || customer.address, '-')}</div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="card p-5">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <h2 className="text-lg font-semibold text-slate-900">Usage & service health</h2>
-                          <p className="mt-1 text-sm text-slate-500">Jaze-style quick summary for active line, data, and billing position.</p>
-                        </div>
-                        <button className="btn-secondary" onClick={() => setActiveTab('devices')}>Sessions</button>
-                      </div>
-                      <div className="mt-5 grid gap-4 md:grid-cols-4">
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
-                          <div className="text-2xl font-semibold text-slate-900">{usagePercent}%</div>
-                          <div className="mt-1 text-sm text-slate-500">Data used</div>
-                          <div className="mt-2 text-xs text-slate-400">{usageGb.toFixed(2)} GB</div>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
-                          <div className="text-2xl font-semibold text-slate-900">{usageCapGb > 0 ? `${Math.max(0, usageCapGb - usageGb).toFixed(2)} GB` : '∞'}</div>
-                          <div className="mt-1 text-sm text-slate-500">Data remaining</div>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
-                          <div className="text-2xl font-semibold text-slate-900">{usageCapGb > 0 ? `${usageCapGb.toFixed(0)} GB` : 'Unlimited'}</div>
-                          <div className="mt-1 text-sm text-slate-500">Total data</div>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
-                          <div className="text-2xl font-semibold text-slate-900">{Number(billingSummary.additionalFupGb || 0).toFixed(0)} GB</div>
-                          <div className="mt-1 text-sm text-slate-500">Additional FUP</div>
-                        </div>
+                    <div className="card p-5 space-y-3">
+                      <h2 className="text-lg font-semibold">Last payment</h2>
+                      <div className="grid gap-2 text-sm text-slate-600">
+                        <div><span className="font-medium text-slate-900">Amount:</span> Rs {Number(lastPayment?.amount || 0).toFixed(2)}</div>
+                        <div><span className="font-medium text-slate-900">Status:</span> {formatValue(lastPayment?.status, '-')}</div>
+                        <div><span className="font-medium text-slate-900">Paid at:</span> {formatDateTime(lastPayment?.paidAt)}</div>
+                        <div><span className="font-medium text-slate-900">Reference:</span> {formatValue(lastPayment?.transactionId, '-')}</div>
                       </div>
                     </div>
 
-                    <div className="card p-5 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h2 className="text-lg font-semibold text-slate-900">Support workspace</h2>
-                          <p className="mt-1 text-sm text-slate-500">Ticketing, KYC, and install-proof follow-up are grouped under More so the overview stays focused on live service and billing state.</p>
-                        </div>
-                        <button className="btn-secondary inline-flex items-center gap-2" onClick={() => setActiveTab('devices')}>
-                          <FilePlus2 className="h-4 w-4" />
-                          Open network
-                        </button>
-                      </div>
-                      <div className="grid gap-3 md:grid-cols-3">
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Open tickets</p>
-                          <p className="mt-2 text-2xl font-semibold text-slate-900">{(customer?.tickets || []).length}</p>
-                          <p className="mt-2 text-sm text-slate-500">Use More to raise, track, and close customer support cases.</p>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">KYC state</p>
-                          <p className="mt-2 text-2xl font-semibold text-slate-900">{latestKycRequest ? String(latestKycRequest.status).toUpperCase() : 'NONE'}</p>
-                          <p className="mt-2 text-sm text-slate-500">Latest verification queue status for this customer.</p>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Install proof</p>
-                          <p className="mt-2 text-2xl font-semibold text-slate-900">{proofState === 'proof_ready' ? 'READY' : proofState === 'awaiting_proof' ? 'PENDING' : 'NONE'}</p>
-                          <p className="mt-2 text-sm text-slate-500">Document follow-up has been moved into More for support handling.</p>
-                        </div>
+                    <div className="card p-5 space-y-3">
+                      <h2 className="text-lg font-semibold">Billing info</h2>
+                      <div className="grid gap-2 text-sm text-slate-600">
+                        <div><span className="font-medium text-slate-900">Due:</span> Rs {Number(billingSummary.dueAmount || 0).toFixed(2)}</div>
+                        <div><span className="font-medium text-slate-900">Balance:</span> Rs {Number(billingSummary.balance || 0).toFixed(2)}</div>
+                        <div><span className="font-medium text-slate-900">Bill mode:</span> {formatValue(billingSummary.billMode, '-')}</div>
+                        <div><span className="font-medium text-slate-900">Expiry:</span> {formatDateTime(customer.expiryAt)}</div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div id="radius-audit-panel" className="card p-5 space-y-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-semibold">Customer summary</h2>
-                      <p className="mt-1 text-sm text-slate-500">Only the daily-use subscriber details are shown here. Full edits stay in Edit User.</p>
-                    </div>
-                    <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Open edit form</Link>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Customer</div>
-                      <div className="mt-2 font-semibold text-slate-900">{customer.name}</div>
-                      <div className="mt-1 text-slate-500">{customer.phone || '-'}</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Address</div>
-                      <div className="mt-2 font-semibold text-slate-900">{formatValue(customer.rawAddress?.city || customer.rawAddress?.area, 'Not set')}</div>
-                      <div className="mt-1 text-slate-500">{formatValue(customer.rawAddress?.line1, 'No line 1')}</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">PPPoE / Service</div>
-                      <div className="mt-2 font-semibold text-slate-900">{customer.pppoeUsername || '-'}</div>
-                      <div className="mt-1 text-slate-500">{customer.serviceId || '-'}</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Current IP / Pool</div>
-                      <div className="mt-2 font-semibold text-slate-900">{formatValue(radiusStaticIpv4 || radiusIpv4Pool, '(empty)')}</div>
-                      <div className="mt-1 text-slate-500">{formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac || primaryDevice?.lanInfo?.macAddress, 'No MAC')}</div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving}>Disconnect</button>
-                    <button className="btn-secondary" onClick={() => void handleRetryProvisioning()} disabled={isSaving}>Re-sync PPPoE</button>
-                    <button className="btn-secondary" onClick={() => setActiveTab('devices')}>Open network</button>
-                    <button className="btn-secondary" onClick={() => setActiveTab('billing')}>Open billing</button>
-                  </div>
-                </div>
-                <div id="payment-renew-card" className="card p-5 space-y-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-semibold">Tenure & Billing Cycle</h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Current commercial tenure, expiry window, and recurring invoice baseline.
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
-                      {billingCycleLabel}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Recurring invoice</p>
-                      <p className="mt-2 text-base font-semibold text-slate-900">Rs {recurringInvoiceAmount.toFixed(2)}</p>
-                      <p className="mt-1 text-xs text-slate-500">Current tenure-linked billing amount</p>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Remaining days</p>
-                      <p className="mt-2 text-base font-semibold text-slate-900">{remainingDays || '-'}</p>
-                      <p className="mt-1 text-xs text-slate-500">Derived from expiry and live billing snapshot</p>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Cycle code</p>
-                      <p className="mt-2 text-base font-semibold text-slate-900">{billingCycleCode || '-'}</p>
-                      <p className="mt-1 text-xs text-slate-500">Machine cycle reference used in invoice records</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card p-5 space-y-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-semibold">PPPoE / FreeRADIUS</h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Subscriber access state and latest RADIUS sync snapshot.
-                      </p>
-                    </div>
-                    <span
-                      className={
-                        radiusService?.status === 'active'
-                          ? 'rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700'
-                          : radiusService?.status === 'suspended'
-                            ? 'rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700'
-                            : 'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600'
-                      }
-                    >
-                      {radiusService?.status || 'not synced'}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className={radiusRejectState ? 'rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700' : 'rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700'}>
-                      {radiusRejectState ? 'Reject auth active' : 'Auth open'}
-                    </span>
-                    <span className={radiusPasswordPresent ? 'rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700' : 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'}>
-                      {radiusPasswordPresent ? 'Password present' : 'No password attr'}
-                    </span>
-                    <span className={radiusRateLimit ? 'rounded-full bg-violet-50 px-3 py-1 font-medium text-violet-700' : 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'}>
-                      {radiusRateLimit || 'No rate-limit attr'}
-                    </span>
-                  </div>
-                  {radiusHealthState === 'active_ok' ? (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                      Active state verified. Cleartext password exists and auth is open for this subscriber.
-                    </div>
-                  ) : null}
-                  {radiusHealthState === 'suspended_ok' ? (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                      Suspended state verified. Auth-Type Reject is active in radcheck.
-                    </div>
-                  ) : null}
-                  {radiusHealthState === 'active_mismatch' ? (
-                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                      Service status is active but Cleartext-Password is missing in radcheck. Run Create / Sync PPPoE again.
-                    </div>
-                  ) : null}
-                  {radiusHealthState === 'suspended_mismatch' ? (
-                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                      Service status is suspended but Auth-Type Reject was not found. Run Suspend PPPoE again to enforce radius lock.
-                    </div>
-                  ) : null}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Radius username</p>
-                      <p className="mt-2 text-base font-semibold text-slate-900">{radiusService?.radiusUsername || customer.pppoeUsername || '-'}</p>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Service ID</p>
-                      <p className="mt-2 text-base font-semibold text-slate-900">{radiusService?.serviceId || customer.serviceId || '-'}</p>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Access profile</p>
-                      <p className="mt-2 text-base font-semibold text-slate-900">{radiusService?.accessProfileCode || '-'}</p>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Last sync</p>
-                      <p className="mt-2 text-base font-semibold text-slate-900">
-                        {radiusService?.updatedAt ? new Date(radiusService.updatedAt).toLocaleString() : '-'}
-                      </p>
-                    </div>
-                  </div>
-                  {(radiusRadcheck.length || radiusRadreply.length) ? (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 text-sm">
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">radcheck</p>
-                          <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">
-                            {radiusRadcheck.length} attrs
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {radiusRadcheck.map((row, index) => (
-                            <div key={`check-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
-                              <span className="text-slate-500">{row.attribute || '-'}</span>
-                              <span className="font-medium text-slate-900">{row.value || '-'}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">radreply</p>
-                          <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">
-                            {radiusRadreply.length} attrs
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {radiusRadreply.map((row, index) => (
-                            <div key={`reply-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
-                              <span className="text-slate-500">{row.attribute || '-'}</span>
-                              <span className="font-medium text-slate-900">{row.value || '-'}</span>
-                            </div>
-                          ))}
-                        </div>
+                    <div className="card p-5 space-y-3">
+                      <h2 className="text-lg font-semibold">Network info</h2>
+                      <div className="grid gap-2 text-sm text-slate-600">
+                        <div><span className="font-medium text-slate-900">Static IP / Pool:</span> {formatValue(radiusStaticIpv4 || radiusIpv4Pool, '(empty)')}</div>
+                        <div><span className="font-medium text-slate-900">MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac || primaryDevice?.lanInfo?.macAddress, '-')}</div>
+                        <div><span className="font-medium text-slate-900">Last session update:</span> {formatDateTime(billingControlCenter?.lastSessionHint?.latestUpdateAt)}</div>
+                        <div><span className="font-medium text-slate-900">Auth:</span> {radiusRejectState ? 'Suspended' : 'Active'}</div>
                       </div>
                     </div>
-                  ) : null}
-                  {radiusTimeline.length ? (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">RADIUS audit timeline</p>
-                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600">
-                          {radiusTimeline.length} events
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {radiusTimeline.map((event) => (
-                          <div key={`${event.label}-${event.at}`} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
-                            <span
-                              className={
-                                event.tone === 'emerald'
-                                  ? 'rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700'
-                                  : event.tone === 'amber'
-                                    ? 'rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700'
-                                    : 'rounded-full bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700'
-                              }
-                            >
-                              {event.label}
-                            </span>
-                            <span className="text-sm font-medium text-slate-900">{new Date(event.at).toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                  {radiusService?.suspendedAt ? (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                      PPPoE access suspended on {new Date(radiusService.suspendedAt).toLocaleString()}.
-                    </div>
-                  ) : null}
-                </div>
-                <div className="card p-5 space-y-3">
-                  <h2 className="text-lg font-semibold">Booking pipeline</h2>
-                  {(customer?.bookings || []).length ? (
-                    <div className="space-y-2">
-                      {customer?.bookings?.map((booking) => (
-                        <div key={booking.id} className="rounded bg-[#0a0e27] px-3 py-3 text-sm">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="space-y-1">
-                              <div className="font-medium">
-                                {booking.bookingNumber} | {booking.planName || 'Booking'}
-                              </div>
-                              <div className="text-slate-400">{booking.address || '-'}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium">Rs {booking.amount.toFixed(2)}</div>
-                              <div className="text-slate-400">{booking.status}</div>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
-                            <span className="rounded-full border border-white/10 px-2 py-1">Payment {booking.paymentStatus || '-'}</span>
-                            {booking.preferredSlotLabel ? (
-                              <span className="rounded-full border border-white/10 px-2 py-1">
-                                Slot {booking.preferredSlotLabel}{booking.preferredDate ? ` | ${booking.preferredDate}` : ''}
-                              </span>
-                            ) : null}
-                            {booking.assignedInstallerName ? (
-                              <span className="rounded-full border border-white/10 px-2 py-1">
-                                Installer {booking.assignedInstallerName}{booking.assignedInstallerPhone ? ` | ${booking.assignedInstallerPhone}` : ''}
-                              </span>
-                            ) : null}
-                            <select
-                              className="rounded-full border border-white/10 bg-black px-2 py-1 text-xs text-white outline-none"
-                              value={bookingInstallerSelections[booking.id] ?? booking.assignedInstallerId ?? ''}
-                              disabled={bookingBusyId === booking.id}
-                              onChange={(e) =>
-                                setBookingInstallerSelections((current) => ({
-                                  ...current,
-                                  [booking.id]: e.target.value,
-                                }))
-                              }
-                            >
-                              <option value="">Select installer</option>
-                              {availableInstallers.map((installer) => (
-                                <option key={installer.id} value={installer.id}>
-                                  {installer.name} [{installer.availabilityStatus || 'available'}]
-                                  {installer.assignedCity ? ` | ${installer.assignedCity}` : ''}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              className="rounded-full border border-[#8224E3]/40 bg-[#8224E3]/10 px-3 py-1 text-xs font-semibold text-[#8224E3] transition hover:bg-[#8224E3]/20"
-                              disabled={bookingBusyId === booking.id}
-                              onClick={() => void handleAssignBookingInstaller(booking.id)}
-                            >
-                              {bookingBusyId === booking.id ? 'Assigning...' : booking.assignedInstallerName ? 'Reassign Installer' : 'Assign Installer'}
-                            </button>
-                            <select
-                              className="rounded-full border border-white/10 bg-black px-2 py-1 text-xs text-white outline-none"
-                              defaultValue=""
-                              disabled={bookingBusyId === booking.id}
-                              onChange={(e) => {
-                                const value = e.target.value
-                                if (!value) return
-                                void handleBookingStatusUpdate(booking.id, value)
-                                e.currentTarget.value = ''
-                              }}
-                            >
-                              <option value="">Update booking</option>
-                              <option value="payment_pending">Payment pending</option>
-                              <option value="paid">Paid</option>
-                              <option value="awaiting_assignment">Awaiting assignment</option>
-                              <option value="assigned">Assigned</option>
-                              <option value="in_progress">In progress</option>
-                              <option value="installed">Installed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : <p className="text-slate-500 text-sm">No bookings found for this customer identity</p>}
+                  </div>
                 </div>
               </>
             ) : null}
-
             {activeTab === 'billing' ? (
               <>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -2149,11 +1773,11 @@ function CustomerDetailContent() {
             {activeTab === 'devices' ? (
               <div className="space-y-4">
                 <div className="card p-4 md:p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Network control</p>
-                      <h2 className="mt-2 text-lg font-semibold">LAN / WAN / WiFi management</h2>
-                    </div>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Network control</p>
+                          <h2 className="mt-2 text-lg font-semibold">LAN / WAN / WiFi</h2>
+                        </div>
                     <div className="flex flex-wrap gap-2 text-xs">
                       <span className={radiusService?.status === 'active' ? 'rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700' : radiusService?.status === 'suspended' ? 'rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700' : 'rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600'}>
                         {radiusService?.status || 'not synced'}
@@ -2455,22 +2079,28 @@ function CustomerDetailContent() {
                       </div>
 
                       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-                          <h3 className="font-semibold">Wi-Fi Management</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input className="input" placeholder="SSID 2.4G" value={form?.ssid24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid24: e.target.value })} />
-                            <input className="input" placeholder="SSID 5G" value={form?.ssid5 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid5: e.target.value })} />
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                            <div>
+                              <h3 className="font-semibold text-slate-900">Wi-Fi</h3>
+                              <p className="mt-1 text-sm text-slate-500">SSID aur password update.</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <input className="input" placeholder="SSID 2.4G" value={form?.ssid24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid24: e.target.value })} />
+                              <input className="input" placeholder="SSID 5G" value={form?.ssid5 || ''} onChange={(e) => updateWifiForm(device.deviceId, { ssid5: e.target.value })} />
                             <input className="input" placeholder="Password 2.4G" type="password" value={form?.password24 || ''} onChange={(e) => updateWifiForm(device.deviceId, { password24: e.target.value })} />
                             <input className="input" placeholder="Password 5G" type="password" value={form?.password5 || ''} onChange={(e) => updateWifiForm(device.deviceId, { password5: e.target.value })} />
                           </div>
                           <button className="btn-primary" onClick={() => void handleDeviceWifiUpdate(device)} disabled={isSaving}>Apply Wi-Fi Only</button>
                         </div>
 
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-                          <h3 className="font-semibold">WAN Management</h3>
-                          <p className="text-sm text-slate-500">
-                            PPPoE update ke saath FreeRADIUS subscriber access bhi sync hoga.
-                          </p>
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                            <div>
+                              <h3 className="font-semibold text-slate-900">WAN</h3>
+                              <p className="mt-1 text-sm text-slate-500">PPPoE aur NAT controls.</p>
+                            </div>
+                            <p className="text-sm text-slate-500">
+                              PPPoE update ke saath FreeRADIUS subscriber access bhi sync hoga.
+                            </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input className="input" placeholder="PPPoE Username" value={form?.pppoeUsername || ''} onChange={(e) => updateWifiForm(device.deviceId, { pppoeUsername: e.target.value })} />
                             <input className="input" placeholder="PPPoE Password" type="password" value={form?.pppoePassword || ''} onChange={(e) => updateWifiForm(device.deviceId, { pppoePassword: e.target.value })} />
@@ -2537,15 +2167,15 @@ function CustomerDetailContent() {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-semibold text-slate-900">Network quick actions</h3>
-                            <p className="mt-1 text-sm text-slate-500">
-                              Pool presets, NAT lookup jump, and session-side shortcuts for support team.
-                            </p>
-                          </div>
-                          <Network className="h-5 w-5 text-slate-400" />
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h3 className="font-semibold text-slate-900">Quick actions</h3>
+                              <p className="mt-1 text-sm text-slate-500">
+                                Pool presets, NAT lookup, aur session shortcuts.
+                              </p>
+                            </div>
+                            <Network className="h-5 w-5 text-slate-400" />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                           <div className="rounded-lg bg-white px-3 py-3">
