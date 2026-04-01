@@ -181,6 +181,8 @@ export default function CreateSubZonePage() {
           sequencePadding: 4,
           templateKey: invoiceTemplateSettings?.activeTemplate || 'justfiber_standard',
         },
+        parentZoneCode: activeZoneCode !== 'default' ? activeZoneCode : '',
+        parentZoneName: activeZoneLabel || '',
         inheritanceProfile: {
           inheritBillingProfile: form.inheritBillingProfile,
           inheritInvoiceTemplate: form.inheritInvoiceTemplate,
@@ -247,12 +249,29 @@ export default function CreateSubZonePage() {
       if (!zoneRes.success) throw new Error(zoneRes.error || 'Failed to create service zone')
       if (!settingsRes.success) throw new Error(settingsRes.error || 'Failed to update zone settings')
 
+      const followUps = []
+      if (activeZoneCode && activeZoneCode !== 'default') {
+        followUps.push(
+          adminAPI.copyFranchiseSettings(franchiseCode, {
+            sourceZoneCode: activeZoneCode,
+          })
+        )
+      }
+      if (Array.isArray(metadata.adminAccounts) && metadata.adminAccounts.length) {
+        followUps.push(adminAPI.saveFranchiseAdminAccounts(franchiseCode, metadata.adminAccounts))
+      }
+      const followUpResults = await Promise.all(followUps)
+      const failedFollowUp = followUpResults.find((item) => !item?.success)
+      if (failedFollowUp) {
+        throw new Error(failedFollowUp.error || 'Failed to complete zone launch setup')
+      }
+
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('justfiber-active-zone-key', franchiseCode)
         window.localStorage.setItem('justfiber-active-zone-label', form.subZoneName.trim())
         window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: { key: franchiseCode, label: form.subZoneName.trim() } }))
       }
-      toast.success('Sub-zone created')
+      toast.success('Sub-zone created and launch pack applied')
       setForm(initialForm)
       await loadDefaults()
     } catch (error) {

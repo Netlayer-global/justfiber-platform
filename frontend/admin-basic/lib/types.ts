@@ -696,6 +696,14 @@ export interface FranchiseProfile {
     phone?: string
     role?: string
   }>
+  copiedSettings?: {
+    sourceZoneCode?: string
+    copiedAt?: string
+    inheritedSections?: string[]
+    overrideSections?: string[]
+    sectionCount?: number
+  }
+  adminAccountsUpdatedAt?: string
   metadata?: Record<string, any>
 }
 

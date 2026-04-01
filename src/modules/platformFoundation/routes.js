@@ -35,6 +35,7 @@ import { SupportTicket } from "../../models/SupportTicket.js";
 import { SystemAnnouncement } from "../../models/SystemAnnouncement.js";
 import { VendorProfile } from "../../models/VendorProfile.js";
 import { AddonCatalog } from "../../models/AddonCatalog.js";
+import { SystemConfig } from "../../models/SystemConfig.js";
 import { buildPagination } from "../../common/pagination.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { mikrotikBngManager } from "../../integrations/mikrotikBngManager.js";
@@ -252,6 +253,51 @@ function normalizeIpPoolPayload(payload) {
   };
 }
 
+const ZONE_COPYABLE_SETTING_SECTIONS = [
+  "general",
+  "billing",
+  "billing_address",
+  "prefix_settings",
+  "invoice_template",
+  "external_integrations",
+  "tag_payment_gateway",
+  "router_visibility",
+  "franchise_configuration",
+  "api_settings"
+];
+
+function settingsSectionKey(section) {
+  return `settings.${section}`;
+}
+
+function normalizeAdminAccountSeed(item = {}) {
+  return {
+    fullName: String(item.fullName || "").trim(),
+    email: String(item.email || "").trim().toLowerCase(),
+    phone: String(item.phone || "").trim(),
+    role: String(item.role || "zone_admin").trim() || "zone_admin"
+  };
+}
+
+function buildInheritedSections(inheritanceProfile = {}) {
+  const inherited = new Set(["general", "franchise_configuration", "prefix_settings"]);
+  if (inheritanceProfile.inheritBillingProfile) {
+    inherited.add("billing");
+    inherited.add("billing_address");
+  }
+  if (inheritanceProfile.inheritInvoiceTemplate) {
+    inherited.add("invoice_template");
+  }
+  if (inheritanceProfile.inheritPaymentGateway) {
+    inherited.add("tag_payment_gateway");
+    inherited.add("external_integrations");
+  }
+  if (inheritanceProfile.inheritRouterVisibility || inheritanceProfile.useParentRouters) {
+    inherited.add("router_visibility");
+  }
+  return Array.from(inherited).filter((section) => ZONE_COPYABLE_SETTING_SECTIONS.includes(section));
+}
+
 function isIpv4WithinRange(ip, ipFrom, ipTo) {
   const value = ipv4ToLong(ip);
   const start = ipv4ToLong(ipFrom);
@@ -462,6 +508,19 @@ const franchiseSchema = z.object({
   payoutMode: z.enum(["bank", "wallet", "manual"]).optional(),
   commissionPercent: z.number().min(0).max(100).optional(),
   metadata: z.record(z.any()).optional()
+});
+
+const franchiseCopySettingsSchema = z.object({
+  sourceZoneCode: z.string().optional()
+});
+
+const franchiseAdminAccountsSchema = z.object({
+  adminAccounts: z.array(z.object({
+    fullName: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    role: z.string().optional()
+  })).default([])
 });
 
 const collectionRequestSchema = z.object({
@@ -1772,6 +1831,87 @@ platformFoundationRouter.post(
     await FranchiseProfile.updateOne({ franchiseCode: payload.franchiseCode }, { $set: payload }, { upsert: true });
     const item = await FranchiseProfile.findOne({ franchiseCode: payload.franchiseCode }).lean();
     return ok(res, item, { created: true });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/franchises/:franchiseCode/copy-settings",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = franchiseCopySettingsSchema.parse(req.body || {});
+    const franchise = await FranchiseProfile.findOne({ franchiseCode: req.params.franchiseCode });
+    if (!franchise) {
+      return ok(res, null, { found: false });
+    }
+
+    const metadata = franchise.metadata && typeof franchise.metadata === "object" ? { ...franchise.metadata } : {};
+    const inheritanceProfile = metadata.inheritanceProfile && typeof metadata.inheritanceProfile === "object"
+      ? metadata.inheritanceProfile
+      : {};
+    const inheritedSections = buildInheritedSections(inheritanceProfile);
+    const sourceZoneCode = String(
+      payload.sourceZoneCode ||
+      metadata.parentZoneCode ||
+      metadata.parentZoneName ||
+      "default"
+    ).trim() || "default";
+
+    const configs = await SystemConfig.find({
+      key: { $in: inheritedSections.map(settingsSectionKey) }
+    }).lean();
+
+    const snapshotBySection = inheritedSections.reduce((acc, section) => {
+      const item = configs.find((entry) => entry.key === settingsSectionKey(section));
+      acc[section] = {
+        key: settingsSectionKey(section),
+        category: item?.category || "settings",
+        version: Number(item?.version || 1),
+        value: item?.value ?? null
+      };
+      return acc;
+    }, {});
+
+    metadata.copiedSettings = {
+      sourceZoneCode,
+      copiedAt: new Date().toISOString(),
+      inheritedSections,
+      overrideSections: Array.isArray(metadata.copiedSettings?.overrideSections)
+        ? metadata.copiedSettings.overrideSections
+        : [],
+      sectionCount: inheritedSections.length,
+      snapshots: snapshotBySection
+    };
+
+    franchise.metadata = metadata;
+    await franchise.save();
+
+    return ok(res, metadata.copiedSettings, { copied: true });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/franchises/:franchiseCode/admin-accounts",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = franchiseAdminAccountsSchema.parse(req.body || {});
+    const franchise = await FranchiseProfile.findOne({ franchiseCode: req.params.franchiseCode });
+    if (!franchise) {
+      return ok(res, null, { found: false });
+    }
+
+    const metadata = franchise.metadata && typeof franchise.metadata === "object" ? { ...franchise.metadata } : {};
+    metadata.adminAccounts = payload.adminAccounts
+      .map((item) => normalizeAdminAccountSeed(item))
+      .filter((item) => item.email || item.fullName || item.phone);
+    metadata.adminAccountsUpdatedAt = new Date().toISOString();
+
+    franchise.metadata = metadata;
+    await franchise.save();
+
+    return ok(res, {
+      adminAccounts: metadata.adminAccounts,
+      updatedAt: metadata.adminAccountsUpdatedAt
+    }, { saved: true });
   })
 );
 

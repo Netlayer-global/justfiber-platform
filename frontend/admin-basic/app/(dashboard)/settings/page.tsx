@@ -586,6 +586,13 @@ export default function SettingsPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [activeZoneCode, setActiveZoneCode] = useState('')
   const [activeZoneLabel, setActiveZoneLabel] = useState('')
+  const [isCopyingLaunchPack, setIsCopyingLaunchPack] = useState(false)
+  const [isSavingZoneAdmins, setIsSavingZoneAdmins] = useState(false)
+  const [zoneAdminDraft, setZoneAdminDraft] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+  })
 
   const visibleCatalog = useMemo(() => {
     return catalog
@@ -664,6 +671,15 @@ export default function SettingsPage() {
   )
 
   useEffect(() => {
+    const firstAdmin = activeZoneFranchise?.adminAccounts?.[0]
+    setZoneAdminDraft({
+      fullName: firstAdmin?.fullName || '',
+      email: firstAdmin?.email || '',
+      phone: firstAdmin?.phone || '',
+    })
+  }, [activeZoneFranchise])
+
+  useEffect(() => {
     void loadCatalog()
   }, [])
 
@@ -686,6 +702,13 @@ export default function SettingsPage() {
     }
   }, [])
 
+  async function refreshFranchises() {
+    const franchiseRes = await adminAPI.getFranchises()
+    if (franchiseRes.success) {
+      setFranchises(franchiseRes.data || [])
+    }
+  }
+
   async function loadCatalog() {
     try {
       setIsLoading(true)
@@ -706,6 +729,61 @@ export default function SettingsPage() {
       toast.error('Failed to load settings catalog')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleCopyLaunchPack() {
+    if (!activeZoneFranchise) {
+      toast.error('Create or select a sub-zone first')
+      return
+    }
+    try {
+      setIsCopyingLaunchPack(true)
+      const sourceZoneCode = String(activeZoneFranchise.metadata?.parentZoneCode || '').trim() || undefined
+      const response = await adminAPI.copyFranchiseSettings(activeZoneFranchise.franchiseCode, {
+        sourceZoneCode,
+      })
+      if (!response.success) {
+        toast.error(response.error || 'Failed to copy parent settings')
+        return
+      }
+      toast.success('Parent settings copied into launch pack')
+      await refreshFranchises()
+    } catch (error) {
+      console.error('[settings] Failed to copy launch pack', error)
+      toast.error('Failed to copy parent settings')
+    } finally {
+      setIsCopyingLaunchPack(false)
+    }
+  }
+
+  async function handleSaveZoneAdmins() {
+    if (!activeZoneFranchise) {
+      toast.error('Create or select a sub-zone first')
+      return
+    }
+    const nextAccounts = zoneAdminDraft.email.trim()
+      ? [{
+          fullName: zoneAdminDraft.fullName.trim() || `${activeZoneLabel || activeZoneFranchise.name} Admin`,
+          email: zoneAdminDraft.email.trim(),
+          phone: zoneAdminDraft.phone.trim(),
+          role: 'zone_admin',
+        }]
+      : []
+    try {
+      setIsSavingZoneAdmins(true)
+      const response = await adminAPI.saveFranchiseAdminAccounts(activeZoneFranchise.franchiseCode, nextAccounts)
+      if (!response.success) {
+        toast.error(response.error || 'Failed to save zone admins')
+        return
+      }
+      toast.success('Zone admin seats saved')
+      await refreshFranchises()
+    } catch (error) {
+      console.error('[settings] Failed to save zone admins', error)
+      toast.error('Failed to save zone admins')
+    } finally {
+      setIsSavingZoneAdmins(false)
     }
   }
 
@@ -947,6 +1025,93 @@ export default function SettingsPage() {
                 {item}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Operational copy settings</div>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Parent launch pack sync</h2>
+              <div className="mt-2 text-sm text-slate-500">
+                Billing, prefixes, template, router visibility, and payment policy ka current inherited snapshot yahan se refresh hota hai.
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleCopyLaunchPack}
+              disabled={!activeZoneFranchise || isCopyingLaunchPack}
+            >
+              {isCopyingLaunchPack ? 'Copying...' : 'Copy parent settings now'}
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Source zone</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">
+                {activeZoneFranchise?.copiedSettings?.sourceZoneCode || activeZoneFranchise?.metadata?.parentZoneCode || 'Parent not set'}
+              </div>
+              <div className="mt-1 text-sm text-slate-500">
+                Last copied: {activeZoneFranchise?.copiedSettings?.copiedAt ? new Date(activeZoneFranchise.copiedSettings.copiedAt).toLocaleString() : 'Not copied yet'}
+              </div>
+            </div>
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Inherited sections</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">
+                {activeZoneFranchise?.copiedSettings?.sectionCount || activeZoneFranchise?.copiedSettings?.inheritedSections?.length || 0}
+              </div>
+              <div className="mt-1 text-sm text-slate-500">
+                {activeZoneFranchise?.copiedSettings?.inheritedSections?.length
+                  ? activeZoneFranchise.copiedSettings.inheritedSections.join(', ')
+                  : 'No inherited sections captured yet'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Delegated admin seats</div>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Zone admin account seed</h2>
+              <div className="mt-2 text-sm text-slate-500">
+                Child zone ke liye ek initial admin contact seed yahin se maintain karo. Yeh rollout ke baad bhi update kiya ja sakta hai.
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleSaveZoneAdmins}
+              disabled={!activeZoneFranchise || isSavingZoneAdmins}
+            >
+              {isSavingZoneAdmins ? 'Saving...' : 'Save admin seats'}
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3">
+            <input
+              className="input"
+              placeholder="Admin full name"
+              value={zoneAdminDraft.fullName}
+              onChange={(event) => setZoneAdminDraft((current) => ({ ...current, fullName: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Admin email"
+              value={zoneAdminDraft.email}
+              onChange={(event) => setZoneAdminDraft((current) => ({ ...current, email: event.target.value }))}
+            />
+            <input
+              className="input"
+              placeholder="Admin phone"
+              value={zoneAdminDraft.phone}
+              onChange={(event) => setZoneAdminDraft((current) => ({ ...current, phone: event.target.value }))}
+            />
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              Last updated: {activeZoneFranchise?.adminAccountsUpdatedAt ? new Date(activeZoneFranchise.adminAccountsUpdatedAt).toLocaleString() : 'Not saved yet'}
+            </div>
           </div>
         </div>
       </section>

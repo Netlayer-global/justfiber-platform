@@ -866,6 +866,16 @@ function mapFranchiseProfile(item: any): FranchiseProfile {
       canCreateSubZone: Boolean(metadata.canCreateSubZone),
     },
     adminAccounts: Array.isArray(metadata.adminAccounts) ? metadata.adminAccounts : [],
+    copiedSettings: metadata.copiedSettings && typeof metadata.copiedSettings === 'object'
+      ? {
+          sourceZoneCode: metadata.copiedSettings.sourceZoneCode || '',
+          copiedAt: metadata.copiedSettings.copiedAt || '',
+          inheritedSections: Array.isArray(metadata.copiedSettings.inheritedSections) ? metadata.copiedSettings.inheritedSections : [],
+          overrideSections: Array.isArray(metadata.copiedSettings.overrideSections) ? metadata.copiedSettings.overrideSections : [],
+          sectionCount: Number(metadata.copiedSettings.sectionCount || 0),
+        }
+      : undefined,
+    adminAccountsUpdatedAt: metadata.adminAccountsUpdatedAt || '',
     metadata,
   }
 }
@@ -2088,6 +2098,23 @@ export const adminAPI = {
       ...res,
       data: res.data ? mapFranchiseProfile(res.data) : undefined,
     }
+  },
+  copyFranchiseSettings: async (franchiseCode: string, data?: { sourceZoneCode?: string }) => {
+    const res = await request<any>(`/api/v1/admin/foundation/franchises/${franchiseCode}/copy-settings`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    })
+    return res
+  },
+  saveFranchiseAdminAccounts: async (
+    franchiseCode: string,
+    adminAccounts: Array<{ fullName?: string; email?: string; phone?: string; role?: string }>
+  ) => {
+    const res = await request<any>(`/api/v1/admin/foundation/franchises/${franchiseCode}/admin-accounts`, {
+      method: 'POST',
+      body: JSON.stringify({ adminAccounts }),
+    })
+    return res
   },
 
   // Billing
