@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
-import { AlertTriangle, ArrowRightLeft, CreditCard, FileClock, Loader, RefreshCw, Settings2, Wallet } from 'lucide-react'
+import { ApprovalRequest, BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsPlaybook, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
+import { AlertTriangle, ArrowRightLeft, CheckCircle2, CreditCard, FileClock, Loader, RefreshCw, Settings2, Wallet, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 type BillingProfileForm = {
@@ -102,6 +102,7 @@ export default function BillingPage() {
   const [lastBulkExecution, setLastBulkExecution] = useState<BillingCollectionsBulkExecuteResult | null>(null)
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [billingRuns, setBillingRuns] = useState<BillingRun[]>([])
+  const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([])
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
@@ -314,10 +315,22 @@ export default function BillingPage() {
       ),
       waivers: Number(financeResolutions?.waivers?.length || 0),
       writeoffs: Number(financeResolutions?.writeoffs?.length || 0),
+      pendingApprovals: Number(
+        approvalRequests.filter((item) => ['billing_waiver', 'billing_writeoff'].includes(item.actionType) && !['approved', 'rejected'].includes(item.status)).length
+      ),
       latestRunStatus: latestRecurringRuns[0]?.status || 'not_run',
       latestRunCycle: latestRecurringRuns[0]?.billCycle || latestRecurringRuns[0]?.runId || '-',
     }),
-    [collectionsWorkbench, financeResolutions, latestRecurringRuns, overview, reconciliationSummary, visibleCollections.length]
+    [approvalRequests, collectionsWorkbench, financeResolutions, latestRecurringRuns, overview, reconciliationSummary, visibleCollections.length]
+  )
+  const pendingFinanceApprovals = useMemo(
+    () =>
+      approvalRequests.filter(
+        (item) =>
+          ['billing_waiver', 'billing_writeoff'].includes(item.actionType) &&
+          !['approved', 'rejected'].includes(item.status)
+      ),
+    [approvalRequests]
   )
   const paymentOpsSummary = useMemo(
     () => ({
@@ -377,7 +390,7 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionPlaybooksRes, collectionAgentRes, billingRunRes, invoiceTemplateRes] = await Promise.all([
+      const [invoiceRes, overviewRes, profileRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionPlaybooksRes, collectionAgentRes, billingRunRes, invoiceTemplateRes, approvalsRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
         adminAPI.getBillingProfiles(),
@@ -390,6 +403,7 @@ export default function BillingPage() {
         adminAPI.getBillingCollectionAgents(),
         adminAPI.getBillingRuns(),
         adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
+        adminAPI.getApprovalRequests(1, 20),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
@@ -479,10 +493,44 @@ export default function BillingPage() {
       if (invoiceTemplateRes.success && invoiceTemplateRes.data) {
         setInvoiceTemplateSettings(invoiceTemplateRes.data.value || null)
       }
+      if (approvalsRes.success && approvalsRes.data) {
+        setApprovalRequests(
+          approvalsRes.data.map((item: any) => ({
+            id: item._id || item.id || '',
+            actionType: item.actionType || '',
+            status: item.status || '',
+            createdAt: item.createdAt,
+            requestedByAdminUserId: item.requestedByAdminUserId || '',
+            requestedBy: item.requestedBy || item.requestedByAdminUserId || '',
+            payload: item.payload || {},
+            approvers: Array.isArray(item.approvers) ? item.approvers : [],
+          }))
+        )
+      }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function decideApprovalRequest(requestId: string, mode: 'approve' | 'reject') {
+    const note = window.prompt(mode === 'approve' ? 'Approval note' : 'Rejection note', '')
+    if (note === null) return
+    try {
+      const res =
+        mode === 'approve'
+          ? await adminAPI.approveApprovalRequest(requestId, note.trim() || undefined)
+          : await adminAPI.rejectApprovalRequest(requestId, note.trim() || undefined)
+      if (!res.success) {
+        toast.error(res.error || `Failed to ${mode} request`)
+        return
+      }
+      toast.success(`Request ${mode === 'approve' ? 'approved' : 'rejected'}`)
+      await loadBilling()
+    } catch (error) {
+      console.error(`[v0] Failed to ${mode} approval request:`, error)
+      toast.error(`Failed to ${mode} request`)
     }
   }
 
@@ -1976,6 +2024,11 @@ export default function BillingPage() {
                   <div className="mt-3 text-2xl font-semibold text-slate-900">{invoiceTemplateSettings?.templates?.length || 1}</div>
                   <div className="mt-1 text-xs text-slate-500">Invoice templates available</div>
                 </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 md:col-span-2 xl:col-span-4">
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Pending approvals</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{financeCommandCenter.pendingApprovals}</div>
+                  <div className="mt-1 text-xs text-slate-500">Waiver and write-off requests waiting for finance decision</div>
+                </div>
               </div>
             </div>
             <div className="rounded-[28px] border border-slate-200 bg-white p-5">
@@ -2019,6 +2072,49 @@ export default function BillingPage() {
             </div>
 
             <div className="space-y-4">
+              <div className="card p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold">Pending finance approvals</div>
+                    <div className="mt-1 text-sm text-slate-400">Approve or reject waivers and write-offs from the same billing desk.</div>
+                  </div>
+                  <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+                    {pendingFinanceApprovals.length} pending
+                  </div>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {pendingFinanceApprovals.slice(0, 6).map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="font-medium text-white">{item.actionType.replaceAll('_', ' ')}</div>
+                          <div className="mt-1 text-xs text-slate-400">
+                            {item.payload?.customerId || '-'} | Rs {Number(item.payload?.amount || 0).toFixed(2)} | {item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {item.payload?.reasonCode || item.payload?.reference || item.payload?.note || 'No note'}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void decideApprovalRequest(item.id, 'approve')}>
+                            <CheckCircle2 className="h-4 w-4" />
+                            Approve
+                          </button>
+                          <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void decideApprovalRequest(item.id, 'reject')}>
+                            <XCircle className="h-4 w-4" />
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {!pendingFinanceApprovals.length ? (
+                    <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a0e27] p-4 text-sm text-slate-500">
+                      No finance approvals pending right now.
+                    </div>
+                  ) : null}
+                </div>
+              </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 {profileForm.zoneMappings.slice(0, 6).map((item) => (
                   <div key={item.zoneCode || item.zoneName} className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">

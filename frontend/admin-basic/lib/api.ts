@@ -2360,4 +2360,16 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  getApprovalRequests: async (page = 1, limit = 20) =>
+    request<any[]>(`/api/v1/admin/approvals/requests?page=${page}&limit=${limit}`),
+  approveApprovalRequest: async (id: string, note?: string) =>
+    request(`/api/v1/admin/approvals/requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }),
+  rejectApprovalRequest: async (id: string, note?: string) =>
+    request(`/api/v1/admin/approvals/requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }),
 }

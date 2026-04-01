@@ -1076,6 +1076,21 @@ export interface BillingFinanceResolutions {
   writeoffs: BillingFinanceResolutionItem[]
 }
 
+export interface ApprovalRequest {
+  id: string
+  actionType: string
+  status: string
+  createdAt?: string
+  requestedByAdminUserId?: string
+  requestedBy?: string
+  payload?: Record<string, any>
+  approvers?: Array<{
+    adminUserId?: string
+    decision?: string
+    note?: string
+  }>
+}
+
 export interface BillingControlCenter {
   customerId: string
   customerName: string
