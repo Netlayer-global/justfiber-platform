@@ -2144,6 +2144,7 @@ function CustomerDetailContent() {
                   </div>
                 </div>
 
+                {/* Legacy advanced billing workspace removed from the simplified customer view.
                 <div className="hidden">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="metric-tile p-4">
@@ -2865,6 +2866,7 @@ function CustomerDetailContent() {
               </>
             ) : null}
 
+                */}
             {activeTab === 'devices' ? (
               <div className="space-y-4">
                 <div className="card p-4 md:p-5">
