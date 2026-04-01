@@ -52,6 +52,8 @@ type ZoneSwitchDetail = {
   label?: string
 }
 
+type RegressionChecklistState = Record<string, boolean>
+
 function getStoredZoneCode() {
   if (typeof window === 'undefined') return 'default'
   return window.localStorage.getItem('justfiber-active-zone') || 'default'
@@ -84,6 +86,7 @@ export default function DashboardPage() {
   const [adminRoles, setAdminRoles] = useState<AdminRoleSummary[]>([])
   const [auditOverview, setAuditOverview] = useState<AuditOverview | null>(null)
   const [recentAuditLogs, setRecentAuditLogs] = useState<any[]>([])
+  const [regressionChecks, setRegressionChecks] = useState<RegressionChecklistState>({})
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<SettingsSection<InvoiceTemplateValue> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [otpLookup, setOtpLookup] = useState('')
@@ -121,9 +124,33 @@ export default function DashboardPage() {
     void loadDashboard()
   }, [currentZoneCode])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const storageKey = `justfiber-regression-${currentZoneCode || 'default'}`
+    try {
+      const raw = window.localStorage.getItem(storageKey)
+      setRegressionChecks(raw ? JSON.parse(raw) : {})
+    } catch {
+      setRegressionChecks({})
+    }
+  }, [currentZoneCode])
+
   function syncZoneFromStorage() {
     setCurrentZoneCode(getStoredZoneCode())
     setCurrentZoneLabel(getStoredZoneLabel())
+  }
+
+  function updateRegressionCheck(checkKey: string, checked: boolean) {
+    setRegressionChecks((current) => {
+      const next = {
+        ...current,
+        [checkKey]: checked,
+      }
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(`justfiber-regression-${currentZoneCode || 'default'}`, JSON.stringify(next))
+      }
+      return next
+    })
   }
 
   async function loadDashboard() {
@@ -381,6 +408,75 @@ export default function DashboardPage() {
       blockers,
     }
   }, [adminRoles, adminUsers, auditOverview?.auditLogs, recentAuditLogs])
+
+  const regressionRunbook = useMemo(
+    () => [
+      {
+        key: 'customer_scope',
+        title: 'Customer scope validation',
+        description: 'Create/open/edit a customer in the active zone and confirm only same-zone records are visible.',
+        href: '/customers',
+        autoReady: customers.length > 0 && dataTruth.customersOutsideZone === 0,
+      },
+      {
+        key: 'billing_gst',
+        title: 'Billing and GST validation',
+        description: 'Generate or inspect an invoice and verify legal name, GST, template, prefix, and payment route.',
+        href: '/billing',
+        autoReady: Boolean(currentBillingProfile && resolvedTemplate && zonePaymentRoute),
+      },
+      {
+        key: 'plan_catalog',
+        title: 'Zone plan catalog validation',
+        description: 'Confirm global and zone plans render correctly and customers only see active scoped plans.',
+        href: '/plans',
+        autoReady: plans.length > 0 && dataTruth.customerPlanDrift === 0,
+      },
+      {
+        key: 'network_scope',
+        title: 'Network scope validation',
+        description: 'Verify routers, IP pools, NAT logs, and provisioning all follow the active zone context.',
+        href: '/routers',
+        autoReady: routers.length > 0 && ipPools.length > 0 && dataTruth.unmappedRouters === 0,
+      },
+      {
+        key: 'subzone_inheritance',
+        title: 'Sub-zone inheritance validation',
+        description: 'Create a child zone, copy parent settings, save admin seats, and confirm template/router inheritance.',
+        href: '/my-zone-details',
+        autoReady: Boolean(currentFranchise?.copiedSettings?.sectionCount || readiness.adminSeats > 0),
+      },
+      {
+        key: 'security_release',
+        title: 'Security and release review',
+        description: 'Check audit stream, MFA posture, stale passwords, and privileged role coverage before sign-off.',
+        href: '/dashboard',
+        autoReady: securityReadiness.blockers.length === 0,
+      },
+    ],
+    [
+      currentBillingProfile,
+      currentFranchise?.copiedSettings?.sectionCount,
+      customers.length,
+      dataTruth.customerPlanDrift,
+      dataTruth.customersOutsideZone,
+      dataTruth.unmappedRouters,
+      ipPools.length,
+      plans.length,
+      readiness.adminSeats,
+      resolvedTemplate,
+      routers.length,
+      securityReadiness.blockers.length,
+      zonePaymentRoute,
+    ],
+  )
+
+  const regressionSummary = useMemo(() => {
+    const completed = regressionRunbook.filter((item) => regressionChecks[item.key]).length
+    const autoReady = regressionRunbook.filter((item) => item.autoReady).length
+    const total = regressionRunbook.length
+    return { completed, autoReady, total }
+  }, [regressionChecks, regressionRunbook])
 
   const releaseTiles = [
     {
@@ -772,6 +868,90 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="card p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Phase 13 regression</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">Zone go-live checklist</div>
+              <div className="mt-2 text-sm leading-6 text-slate-500">
+                Manual UAT aur automated readiness dono ko ek saath track karo. Har active zone ka checklist state alag save hota hai.
+              </div>
+            </div>
+            <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Completed</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">
+                {regressionSummary.completed}/{regressionSummary.total}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">{regressionSummary.autoReady} auto-ready checks</div>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {regressionRunbook.map((item, index) => {
+              const checked = Boolean(regressionChecks[item.key])
+              return (
+                <div key={item.key} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => updateRegressionCheck(item.key, !checked)}
+                        className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded border text-xs transition ${
+                          checked
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent'
+                        }`}
+                        aria-label={`Toggle ${item.title}`}
+                      >
+                        ✓
+                      </button>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-900">{index + 1}. {item.title}</span>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                              item.autoReady
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            {item.autoReady ? 'Auto-ready' : 'Needs verification'}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-sm leading-6 text-slate-500">{item.description}</div>
+                      </div>
+                    </div>
+                    <Link href={item.href} className="btn-secondary">
+                      Open
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Validation sequence</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Run this order before release</div>
+          <div className="mt-6 space-y-3">
+            {[
+              'Switch to the target zone and confirm dashboard blockers are understood.',
+              'Create or open a customer and verify zone scope, plan scope, and billing identity.',
+              'Generate or inspect invoices and confirm GST, template, prefix, and payment route.',
+              'Check routers, IP pools, NAT logs, and provisioning for the same active zone.',
+              'Create a child zone if needed, copy parent settings, and seed zone admins.',
+              'Review security blockers, audit stream, and recent sensitive actions before sign-off.',
+            ].map((step) => (
+              <div key={step} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                {step}
+              </div>
+            ))}
           </div>
         </div>
       </section>
