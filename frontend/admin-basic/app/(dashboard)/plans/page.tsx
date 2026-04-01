@@ -78,6 +78,7 @@ type PlanFormState = {
   featured: boolean
   recommended: boolean
   spotlightLabel: string
+  planScope: 'global' | 'zone'
   sortOrder: string
 }
 
@@ -141,6 +142,7 @@ const initialForm: PlanFormState = {
   featured: false,
   recommended: false,
   spotlightLabel: '',
+  planScope: 'global',
   sortOrder: '1',
 }
 
@@ -241,6 +243,7 @@ function toForm(plan?: Plan | null): PlanFormState {
     featured: Boolean(plan.merchandising?.featured),
     recommended: Boolean(plan.merchandising?.recommended),
     spotlightLabel: plan.merchandising?.spotlightLabel || '',
+    planScope: plan.planScope || 'global',
     sortOrder: String(plan.sortOrder || 1),
   }
 }
@@ -260,10 +263,27 @@ function PlansContent() {
   const [merchFilter, setMerchFilter] = useState<'all' | 'featured' | 'recommended'>('all')
   const [form, setForm] = useState<PlanFormState>(initialForm)
   const [workspaceView, setWorkspaceView] = useState<'library' | 'composer'>(requestedView)
+  const [activeZoneCode, setActiveZoneCode] = useState('')
+  const [activeZoneLabel, setActiveZoneLabel] = useState('JustFiber HQ')
 
   useEffect(() => {
     void loadPlans()
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const refreshZoneContext = () => {
+      setActiveZoneCode(window.localStorage.getItem('justfiber-active-zone-key') || '')
+      setActiveZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || 'JustFiber HQ')
+    }
+    refreshZoneContext()
+    window.addEventListener('focus', refreshZoneContext)
+    return () => window.removeEventListener('focus', refreshZoneContext)
+  }, [])
+
+  useEffect(() => {
+    void loadPlans()
+  }, [activeZoneCode])
 
   useEffect(() => {
     if (!plans.length) return
@@ -287,7 +307,7 @@ function PlansContent() {
   async function loadPlans() {
     try {
       setIsLoading(true)
-      const res = await adminAPI.getPlans()
+      const res = await adminAPI.getPlans({ zoneCode: activeZoneCode || undefined })
       if (res.success && res.data?.items) {
         setPlans(res.data.items)
         setSelectedPlanId((current) => current || res.data.items[0]?.id || null)
@@ -347,6 +367,7 @@ function PlansContent() {
       provisioningBlocked: plans.filter((plan) => plan.provisioningReady === false).length,
       featured: plans.filter((plan) => plan.merchandising?.featured).length,
       recommended: plans.filter((plan) => plan.merchandising?.recommended).length,
+      zoneScoped: plans.filter((plan) => plan.planScope === 'zone').length,
     }),
     [plans]
   )
@@ -356,7 +377,11 @@ function PlansContent() {
 
   function beginCreate() {
     setEditingPlanId(null)
-    setForm({ ...initialForm, status: 'inactive' })
+    setForm({
+      ...initialForm,
+      status: 'inactive',
+      planScope: activeZoneCode && activeZoneCode !== 'default' ? 'zone' : 'global',
+    })
     setComposerMode('create')
     setWorkspaceView('composer')
   }
@@ -450,6 +475,14 @@ function PlansContent() {
         recommended: form.recommended,
         spotlightLabel: form.spotlightLabel.trim(),
       },
+      planScope: form.planScope,
+      zoneContext:
+        form.planScope === 'zone'
+          ? {
+              zoneCode: activeZoneCode || 'default',
+              zoneName: activeZoneLabel,
+            }
+          : undefined,
       sortOrder: Number(form.sortOrder || 1),
     }
 
@@ -651,7 +684,7 @@ function PlansContent() {
             <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.visible}</div>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-slate-400">FUP plans</div>
             <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.fup}</div>
@@ -676,6 +709,18 @@ function PlansContent() {
             <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Recommended</div>
             <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.recommended}</div>
             <div className="mt-1 text-xs text-slate-500">Operator-curated recommendation lane</div>
+          </div>
+          <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Zone scoped</div>
+            <div className="mt-2 text-2xl font-semibold text-slate-900">{commercialSummary.zoneScoped}</div>
+            <div className="mt-1 text-xs text-slate-500">Plans bound to the current operating zone</div>
+          </div>
+        </div>
+        <div className="mt-4 rounded-[22px] border border-[#d9e5ff] bg-[#f6f9ff] p-4">
+          <div className="text-xs uppercase tracking-[0.18em] text-[#5b6cff]">Active zone catalog</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneLabel}</div>
+          <div className="mt-1 text-sm text-slate-500">
+            Global plans har zone me visible rahenge. Zone-scoped plans sirf current active zone ki sales, billing, and customer assignment journeys me dikhenge.
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -816,6 +861,25 @@ function PlansContent() {
 
           <input className="input" placeholder="Spotlight label (Best Seller, Gamer Pick, OTT Plus)" value={form.spotlightLabel} onChange={(e) => setForm({ ...form, spotlightLabel: e.target.value })} />
 
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 space-y-4">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Zone scope</div>
+              <div className="mt-1 text-sm text-slate-500">
+                Current active zone: {activeZoneLabel}. Zone-scoped plans sirf isi zone ke customers, billing desk, and assignments me available honge.
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                <input type="radio" checked={form.planScope === 'global'} onChange={() => setForm({ ...form, planScope: 'global' })} />
+                Global catalog plan
+              </label>
+              <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                <input type="radio" checked={form.planScope === 'zone'} onChange={() => setForm({ ...form, planScope: 'zone' })} />
+                Bind only to {activeZoneLabel}
+              </label>
+            </div>
+          </div>
+
           <div className="grid gap-4 xl:grid-cols-3">
             <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-900">Validity ladder</div>
@@ -888,7 +952,7 @@ function PlansContent() {
           </div>
 
           <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="rounded-[18px] border border-slate-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Preview name</div>
                 <div className="mt-2 text-lg font-semibold text-slate-900">{preview.name || 'New plan'}</div>
@@ -900,6 +964,10 @@ function PlansContent() {
               <div className="rounded-[18px] border border-slate-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Monthly price</div>
                 <div className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(Number(preview.price || 0))}</div>
+              </div>
+              <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Scope</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">{preview.planScope === 'zone' ? activeZoneLabel : 'All zones'}</div>
               </div>
             </div>
           </div>
@@ -1026,6 +1094,19 @@ function PlansContent() {
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-[18px] border border-slate-200 bg-white p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Zone scope</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">
+                      {selectedPlan.planScope === 'zone'
+                        ? selectedPlan.zoneContext?.zoneName || selectedPlan.zoneContext?.zoneCode || 'Zone bound'
+                        : 'All zones'}
+                    </div>
+                    <div className="text-sm text-slate-500">
+                      {selectedPlan.planScope === 'zone'
+                        ? 'This package is limited to one operating zone.'
+                        : 'Available across the shared plan catalog.'}
+                    </div>
+                  </div>
+                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Data policy</div>
                     <div className="mt-2 text-base font-semibold text-slate-900">
                       {selectedPlan.dataPolicy === 'fup' ? 'FUP controlled' : selectedPlan.dataPolicy === 'hard_cap' ? 'Hard cap' : 'Unlimited'}
@@ -1104,6 +1185,11 @@ function PlansContent() {
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{renderCategoryLabel(plan.category)}</div>
                   <div className="mt-2 truncate text-xl font-semibold text-slate-900">{plan.name}</div>
                   <div className="mt-1 text-sm text-slate-500">{plan.planCode || plan.id}</div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    {plan.planScope === 'zone'
+                      ? `Zone: ${plan.zoneContext?.zoneName || plan.zoneContext?.zoneCode || 'Bound zone'}`
+                      : 'Scope: All zones'}
+                  </div>
                 </div>
                 <div className={`rounded-full px-3 py-1 text-xs font-semibold ${plan.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                   {plan.status === 'active' ? 'Active' : 'Inactive'}

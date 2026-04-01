@@ -91,6 +91,18 @@ export interface Plan {
     recommended?: boolean
     spotlightLabel?: string
   }
+  planScope?: 'global' | 'zone'
+  zoneContext?: {
+    zoneCode?: string
+    zoneName?: string
+    stateCode?: string
+  }
+  resolvedZoneScope?: {
+    zoneCode?: string
+    zoneName?: string
+    stateCode?: string
+    matchesActiveZone?: boolean
+  }
   provisioningReady?: boolean
   provisioningIssues?: string[]
   visibleInCustomerApp?: boolean

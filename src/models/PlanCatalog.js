@@ -76,6 +76,12 @@ const planCatalogSchema = new mongoose.Schema(
       recommended: { type: Boolean, default: false },
       spotlightLabel: String
     },
+    planScope: { type: String, enum: ["global", "zone"], default: "global" },
+    zoneContext: {
+      zoneCode: String,
+      zoneName: String,
+      stateCode: String
+    },
     active: { type: Boolean, default: true },
     archivedAt: Date,
     sortOrder: { type: Number, default: 1 }

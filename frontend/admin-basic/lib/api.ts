@@ -289,6 +289,22 @@ function mapPlan(plan: any): Plan {
       recommended: Boolean(plan.merchandising?.recommended),
       spotlightLabel: plan.merchandising?.spotlightLabel || '',
     },
+    planScope: plan.planScope || 'global',
+    zoneContext: plan.zoneContext
+      ? {
+          zoneCode: plan.zoneContext.zoneCode || '',
+          zoneName: plan.zoneContext.zoneName || '',
+          stateCode: plan.zoneContext.stateCode || '',
+        }
+      : undefined,
+    resolvedZoneScope: plan.resolvedZoneScope
+      ? {
+          zoneCode: plan.resolvedZoneScope.zoneCode || '',
+          zoneName: plan.resolvedZoneScope.zoneName || '',
+          stateCode: plan.resolvedZoneScope.stateCode || '',
+          matchesActiveZone: plan.resolvedZoneScope.matchesActiveZone !== false,
+        }
+      : undefined,
     provisioningReady: plan.provisioningReady !== false,
     provisioningIssues: Array.isArray(plan.provisioningIssues) ? plan.provisioningIssues : [],
     visibleInCustomerApp: plan.visibleInCustomerApp !== false,
@@ -1199,8 +1215,13 @@ export const adminAPI = {
     return primary
   },
   // Plans
-  getPlans: async () => {
-    const res = await request<any[]>('/api/v1/admin/catalog/plans')
+  getPlans: async (filters?: { zoneCode?: string | null }) => {
+    const activeZoneCode = getStoredActiveZoneCode()
+    const search = new URLSearchParams()
+    if (filters?.zoneCode) search.set('zoneCode', filters.zoneCode)
+    else if (filters?.zoneCode !== null && activeZoneCode && activeZoneCode !== 'default') search.set('zoneCode', activeZoneCode)
+    const query = search.toString()
+    const res = await request<any[]>(`/api/v1/admin/catalog/plans${query ? `?${query}` : ''}`)
     return {
       ...res,
       data: {
@@ -1247,6 +1268,8 @@ export const adminAPI = {
         addons: data.addons,
         provisioning: data.provisioning,
         merchandising: data.merchandising,
+        planScope: data.planScope,
+        zoneContext: data.zoneContext,
         active: data.status !== 'inactive',
         sortOrder: data.sortOrder,
       }),
@@ -1288,6 +1311,8 @@ export const adminAPI = {
         addons: data.addons,
         provisioning: data.provisioning,
         merchandising: data.merchandising,
+        planScope: data.planScope,
+        zoneContext: data.zoneContext,
         active: data.status ? data.status !== 'inactive' : undefined,
         sortOrder: data.sortOrder,
       }),

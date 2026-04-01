@@ -115,6 +115,12 @@ const planSchema = z.object({
     recommended: z.boolean().optional(),
     spotlightLabel: z.string().optional()
   }).optional(),
+  planScope: z.enum(["global", "zone"]).optional(),
+  zoneContext: z.object({
+    zoneCode: z.string().min(2).optional(),
+    zoneName: z.string().min(2).optional(),
+    stateCode: z.string().min(2).optional()
+  }).optional(),
   active: z.boolean().optional(),
   sortOrder: z.number().optional()
 });
@@ -150,17 +156,32 @@ function ensureActivePlanProvisioning(payload) {
   }
 }
 
-function decoratePlanCatalogItem(plan) {
+function decoratePlanCatalogItem(plan, activeZoneCode = "") {
   const provisioningIssues = getPlanProvisioningIssues(plan);
   const provisioningReady = isPlanProvisioningReady(plan);
   const liveInApps = plan.active !== false && provisioningReady;
+  const resolvedZoneScope =
+    plan.planScope === "zone"
+      ? {
+          zoneCode: plan.zoneContext?.zoneCode || "",
+          zoneName: plan.zoneContext?.zoneName || "",
+          stateCode: plan.zoneContext?.stateCode || "",
+          matchesActiveZone: Boolean(activeZoneCode) && plan.zoneContext?.zoneCode === activeZoneCode
+        }
+      : {
+          zoneCode: "",
+          zoneName: "All zones",
+          stateCode: "",
+          matchesActiveZone: true
+        };
   return {
     ...plan,
     provisioningIssues,
     provisioningReady,
     visibleInCustomerApp: liveInApps,
     visibleInSalesApp: liveInApps,
-    visibleInProvisioning: liveInApps
+    visibleInProvisioning: liveInApps,
+    resolvedZoneScope
   };
 }
 
@@ -303,9 +324,20 @@ adminCatalogRouter.delete(
 adminCatalogRouter.get(
   "/catalog/plans",
   requirePermission(permissions.configRead),
-  asyncHandler(async (_req, res) => {
-    const plans = await PlanCatalog.find({ archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean();
-    return ok(res, plans.map(decoratePlanCatalogItem));
+  asyncHandler(async (req, res) => {
+    const activeZoneCode = normalizeZoneCode(req.query.zoneCode);
+    const filter = activeZoneCode
+      ? {
+          archivedAt: { $exists: false },
+          $or: [
+            { planScope: { $exists: false } },
+            { planScope: "global" },
+            { planScope: "zone", "zoneContext.zoneCode": activeZoneCode }
+          ]
+        }
+      : { archivedAt: { $exists: false } };
+    const plans = await PlanCatalog.find(filter).sort({ sortOrder: 1 }).lean();
+    return ok(res, plans.map((plan) => decoratePlanCatalogItem(plan, activeZoneCode)));
   })
 );
 
@@ -315,11 +347,21 @@ adminCatalogRouter.post(
   asyncHandler(async (req, res) => {
     const payload = planSchema.parse(req.body);
     payload.planCode = normalizePlanCode(payload.planCode);
+    payload.planScope = payload.planScope || "global";
+    if (payload.planScope === "zone") {
+      payload.zoneContext = {
+        zoneCode: normalizeZoneCode(payload.zoneContext?.zoneCode),
+        zoneName: payload.zoneContext?.zoneName,
+        stateCode: payload.zoneContext?.stateCode
+      };
+    } else {
+      payload.zoneContext = undefined;
+    }
     ensureActivePlanProvisioning(payload);
     payload.archivedAt = undefined;
     await PlanCatalog.updateOne({ planCode: payload.planCode }, { $set: payload }, { upsert: true });
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode }).lean();
-    return ok(res, decoratePlanCatalogItem(plan), { created: true });
+    return ok(res, decoratePlanCatalogItem(plan, payload.zoneContext?.zoneCode), { created: true });
   })
 );
 
@@ -343,16 +385,29 @@ adminCatalogRouter.patch(
     if (payload.planCode) {
       merged.planCode = normalizePlanCode(payload.planCode);
     }
+    if (payload.planScope === "zone") {
+      merged.zoneContext = {
+        ...(existing.zoneContext || {}),
+        ...(payload.zoneContext || {}),
+        zoneCode: normalizeZoneCode(payload.zoneContext?.zoneCode || existing.zoneContext?.zoneCode)
+      };
+    } else if (payload.planScope === "global") {
+      merged.zoneContext = undefined;
+    }
     ensureActivePlanProvisioning(merged);
     const plan = await PlanCatalog.findOneAndUpdate(
       { planCode: req.params.planCode, archivedAt: { $exists: false } },
-      { $set: payload.planCode ? { ...payload, planCode: merged.planCode } : payload },
+      {
+        $set: payload.planCode
+          ? { ...payload, planCode: merged.planCode, zoneContext: merged.zoneContext, planScope: merged.planScope }
+          : { ...payload, zoneContext: merged.zoneContext, planScope: merged.planScope }
+      },
       { new: true }
     ).lean();
     if (!plan) {
       throw new ApiError(404, "Plan not found");
     }
-    return ok(res, decoratePlanCatalogItem(plan));
+    return ok(res, decoratePlanCatalogItem(plan, merged.zoneContext?.zoneCode));
   })
 );
 
