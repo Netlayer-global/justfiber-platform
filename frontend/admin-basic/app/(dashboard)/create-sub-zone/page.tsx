@@ -57,11 +57,23 @@ const initialForm: FormState = {
 }
 
 const ZONE_TABS = [
-  { href: '/settings', label: 'Settings' },
-  { href: '/my-zone-details', label: 'My Zone Details' },
   { href: '/create-sub-zone', label: 'Create Sub-Zone' },
+  { href: '/settings', label: 'Copy Settings' },
+  { href: '/settings', label: 'Franchise Configuration' },
   { href: '/apps', label: 'Add Payment Gateway' },
+  { href: '/settings', label: 'Prefix Settings' },
   { href: '/routers', label: 'Router Settings' },
+  { href: '/settings', label: 'Add Admin Accounts' },
+]
+
+const SUBZONE_FLOW = [
+  'Create sub-zone',
+  'Copy settings',
+  'Franchise configuration',
+  'Add payment gateway',
+  'Prefix settings',
+  'Router settings',
+  'Add admin accounts',
 ]
 
 export default function CreateSubZonePage() {
@@ -190,9 +202,9 @@ export default function CreateSubZonePage() {
         <div className="flex flex-wrap gap-2">
           {ZONE_TABS.map((item) => (
             <Link
-              key={item.href}
+              key={`${item.href}-${item.label}`}
               href={item.href}
-              className={item.href === '/create-sub-zone' ? 'btn-primary' : 'btn-secondary'}
+              className={item.label === 'Create Sub-Zone' ? 'btn-primary' : 'btn-secondary'}
             >
               {item.label}
             </Link>
@@ -230,17 +242,13 @@ export default function CreateSubZonePage() {
           </div>
         </div>
         <div className="card p-5">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Phase 2 Flow</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Recommended order</h2>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Sub-zone workflow</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Jaze-style setup order</h2>
           <div className="mt-4 space-y-3">
-            {[
-              'Create the sub-zone identity and contact details here.',
-              'Open Zone Settings to review prefixes, billing, and franchise policy.',
-              'Open Routers and Payment / Integrations after creation if this zone needs dedicated infrastructure.',
-            ].map((item) => (
+            {SUBZONE_FLOW.map((item, index) => (
               <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 <ArrowRight className="mt-0.5 h-4 w-4 text-[#5B6CFF]" />
-                <div>{item}</div>
+                <div>{index + 1}. {item}</div>
               </div>
             ))}
           </div>

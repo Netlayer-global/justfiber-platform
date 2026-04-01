@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { Customer } from '@/lib/types'
+import Link from 'next/link'
 import { Loader } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -71,25 +72,25 @@ export default function UsersCountPage() {
 
   const items = [
     ['Active Users', metrics.activeUsers, '#35c759'],
+    ['Online Users', metrics.onlineUsers, '#5d87ff'],
     ['Scheduled Renewals', metrics.scheduledRenewals, '#b5db37'],
     ['Suspended Users', metrics.suspendedUsers, '#ffd60a'],
-    ['Total Users', metrics.totalUsers, '#f59e0b'],
-    ['Frozen Users', metrics.frozenUsers, '#ef4444'],
     ['Expiring in a week', metrics.expiringSoon, '#a855f7'],
-    ['New User in last week', metrics.newLastWeek, '#5d87ff'],
-    ['Churned Users', metrics.churnedUsers, '#1d4ed8'],
-    ['Expired Users', metrics.expiredUsers, '#0ea5e9'],
-    ['Pending Users', metrics.pendingUsers, '#8fd3ff'],
     ['Blocked Users', metrics.blockedUsers, '#15803d'],
-    ['Other Users', metrics.otherUsers, '#b5db37'],
   ]
 
   return (
     <div className="space-y-6">
       <section className="card p-6">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-4xl font-semibold tracking-tight text-slate-900">Users Count</h1>
-          <div className="text-sm text-slate-500">Today</div>
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight text-slate-900">Users Count</h1>
+            <div className="mt-2 text-sm text-slate-500">Simple Jaze-style subscriber count board</div>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/user-management" className="btn-secondary">User Management</Link>
+            <div className="text-sm text-slate-500 self-center">Today</div>
+          </div>
         </div>
       </section>
 
@@ -118,6 +119,21 @@ export default function UsersCountPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['Total Users', metrics.totalUsers, 'Full subscriber base'],
+          ['New Last Week', metrics.newLastWeek, 'Fresh connections added recently'],
+          ['Expired Users', metrics.expiredUsers, 'Accounts already past expiry'],
+          ['Other Users', metrics.otherUsers, 'Remaining uncategorized states'],
+        ].map(([label, value, desc]) => (
+          <div key={String(label)} className="card p-5">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-900">{value as number}</div>
+            <div className="mt-2 text-sm text-slate-500">{desc as string}</div>
+          </div>
+        ))}
       </section>
     </div>
   )

@@ -26,8 +26,10 @@ import {
   UserSquare2,
   Wrench,
   X,
+  ChevronDown,
 } from 'lucide-react'
-import { clearAuthToken, getAuthToken } from '@/lib/api'
+import { adminAPI, clearAuthToken, getAuthToken } from '@/lib/api'
+import type { FranchiseProfile } from '@/lib/types'
 
 type NavItem = {
   href: string
@@ -180,6 +182,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const pathname = usePathname()
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [zoneMenuOpen, setZoneMenuOpen] = useState(false)
+  const [zoneOptions, setZoneOptions] = useState<Array<{ key: string; label: string }>>([])
+  const [currentZone, setCurrentZone] = useState('JustFiber HQ')
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -187,11 +192,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [router])
 
+  useEffect(() => {
+    void loadZoneOptions()
+  }, [])
+
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('justfiber-active-zone') : null
+    if (stored) {
+      setCurrentZone(stored)
+    }
+  }, [])
+
   const currentItem = useMemo(() => FLAT_NAV.find((item) => pathname === item.href) || FLAT_NAV[0], [pathname])
 
   function handleLogout() {
     clearAuthToken()
     router.push('/auth/login')
+  }
+
+  async function loadZoneOptions() {
+    try {
+      const [generalRes, franchiseRes] = await Promise.all([
+        adminAPI.getSettingsSection<any>('general'),
+        adminAPI.getFranchises(),
+      ])
+      const options: Array<{ key: string; label: string }> = []
+      const general = generalRes.success ? generalRes.data?.value || null : null
+      const franchises = franchiseRes.success ? franchiseRes.data || [] : []
+
+      if (general?.zoneName || general?.organizationName) {
+        options.push({
+          key: general?.zoneName || 'default',
+          label: general?.organizationName || general?.zoneName || 'JustFiber HQ',
+        })
+      }
+      franchises.forEach((item: FranchiseProfile) => {
+        options.push({
+          key: item.zoneCode || item.franchiseCode,
+          label: item.name || item.zoneCode || item.franchiseCode,
+        })
+      })
+      const deduped = options.filter((item, index, list) => list.findIndex((entry) => entry.key === item.key) === index)
+      setZoneOptions(deduped)
+      if (!window.localStorage.getItem('justfiber-active-zone') && deduped[0]) {
+        setCurrentZone(deduped[0].label)
+      }
+    } catch {}
+  }
+
+  function handleSwitchZone(label: string) {
+    setCurrentZone(label)
+    setZoneMenuOpen(false)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('justfiber-active-zone', label)
+    }
   }
 
   return (
@@ -244,9 +298,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <button className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
                   <Bell className="h-5 w-5" />
                 </button>
-                <div className="hidden rounded-lg border border-slate-200 px-4 py-2 md:block">
-                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">Workspace</div>
-                  <div className="text-sm font-semibold text-slate-900">JustFiber HQ</div>
+                <div className="relative hidden md:block">
+                  <button
+                    type="button"
+                    onClick={() => setZoneMenuOpen((value) => !value)}
+                    className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-2 text-left transition hover:bg-slate-50"
+                  >
+                    <div>
+                      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">Zone</div>
+                      <div className="text-sm font-semibold text-slate-900">{currentZone}</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                  </button>
+                  {zoneMenuOpen ? (
+                    <div className="absolute right-0 z-30 mt-2 w-72 rounded-[18px] border border-slate-200 bg-white p-2 shadow-lg">
+                      <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone Switch</div>
+                      <div className="space-y-1">
+                        {zoneOptions.map((item) => (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => handleSwitchZone(item.label)}
+                            className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                              currentZone === item.label
+                                ? 'bg-[#eef1ff] font-semibold text-[#5d87ff]'
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                        <div className="border-t border-slate-200 pt-2">
+                          <Link href="/my-zone-details" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                            My Zone Details
+                          </Link>
+                          <Link href="/create-sub-zone" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                            Create Sub-zone
+                          </Link>
+                          <Link href="/settings" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                            Zone Settings
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#5d87ff] text-sm font-semibold text-white">
                   J

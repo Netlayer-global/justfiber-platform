@@ -2,49 +2,9 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, AlertTriangle, Gauge, Loader, ShieldCheck, Users, Wallet } from 'lucide-react'
+import { Activity, Gauge, Loader, ShieldCheck, Users, Wallet } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, Customer, DashboardStats, IntegrationSummary, ServiceZone } from '@/lib/types'
-
-function MiniBarChart() {
-  const bars = [62, 44, 88, 56, 74, 24, 18]
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-  return (
-    <div className="card p-6 md:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Executive analytics</div>
-          <div className="mt-2 text-3xl font-semibold text-slate-900">$124,426</div>
-          <div className="mt-1 text-sm text-slate-500">20 Jan to 26 Jan</div>
-        </div>
-        <div className="rounded-full border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-semibold text-[#5B6CFF]">
-          <div className="grid grid-cols-3 gap-1">
-            <span className="rounded-full bg-[#5B6CFF] px-3 py-1 text-white">Week</span>
-            <span className="px-3 py-1 text-slate-500">Month</span>
-            <span className="px-3 py-1 text-slate-500">Year</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 grid grid-cols-7 items-end gap-3">
-        {bars.map((height, index) => (
-          <div key={days[index]} className="text-center">
-            <div
-              className={`mx-auto flex w-full max-w-[56px] items-start justify-center rounded-[18px] pt-3 text-xs font-semibold ${
-                index === 2 ? 'bg-[#5B6CFF] text-white' : 'bg-slate-100 text-slate-500'
-              }`}
-              style={{ height: `${height * 2.2}px` }}
-            >
-              ${Math.round(height * 4.8)}
-            </div>
-            <div className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{days[index]}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -174,7 +134,7 @@ export default function DashboardPage() {
     Icon: typeof Gauge
   }> = [
     { title: 'Usage watch', value: String(usageMetrics.watch), desc: 'Customers approaching cap threshold', Icon: Gauge },
-    { title: 'High usage', value: String(usageMetrics.high), desc: 'Customers above 90% of plan cap', Icon: AlertTriangle },
+    { title: 'High usage', value: String(usageMetrics.high), desc: 'Customers above 90% of plan cap', Icon: Gauge },
     { title: 'Cap reached', value: String(usageMetrics.capReached), desc: 'Customers already throttled or capped', Icon: ShieldCheck },
     { title: 'Unlimited base', value: String(usageMetrics.unlimited), desc: 'Subscribers on unlimited policy', Icon: Users },
   ]
@@ -240,31 +200,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <MiniBarChart />
-
-        <div className="card flex flex-col justify-between p-6 md:p-8">
-          <div>
-            <div className="modernize-subtitle">Operations</div>
-            <h2 className="mt-3 text-2xl font-semibold text-slate-900">Daily operating summary</h2>
-            <p className="mt-3 max-w-lg text-sm leading-7 text-slate-500">
-              Watch revenue, active sessions, and provisioning health without the old heavy dashboard hero.
-            </p>
-          </div>
-
-          <div className="mt-8 grid grid-cols-2 gap-3">
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Revenue growth</div>
-              <div className="mt-3 text-3xl font-semibold text-slate-900">+18.4%</div>
-            </div>
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Pending actions</div>
-              <div className="mt-3 text-3xl font-semibold text-slate-900">32</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {usageSummaryTiles.map(({ title, value, desc, Icon }) => (
           <div key={title} className="modernize-stat-card min-h-[168px]">
@@ -278,45 +213,23 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Focus board</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">Today's priorities</div>
-            </div>
-            <div className="rounded-full border border-[#5B6CFF]/20 bg-[#eef1ff] px-3 py-1 text-xs font-semibold text-[#5B6CFF]">
-              Live
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-3">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Quick access</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Go directly to key desks</div>
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
             {[
-              ['Installer dispatch', '12 jobs assigned, 3 awaiting confirmation'],
-              ['Billing collection', `${usageMetrics.high + usageMetrics.capReached} accounts need plan or usage follow-up`],
-              ['Network incidents', '2 low-signal clusters flagged in serviceability zones'],
-            ].map(([title, desc]) => (
-              <div key={title} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              ['/customers', 'Customers', 'Open subscriber list and customer detail'],
+              ['/billing', 'Billing', 'Open finance and collections desk'],
+              ['/routers', 'Routers', 'Open BNG and FreeRADIUS controls'],
+              ['/serviceability', 'Serviceability', 'Open zone and coverage desk'],
+            ].map(([href, title, desc]) => (
+              <Link key={title} href={String(href)} className="rounded-[22px] border border-slate-200 bg-slate-50 p-5 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
                 <div className="font-semibold text-slate-900">{title}</div>
-                <div className="mt-1 text-sm text-slate-500">{desc}</div>
-              </div>
+                <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
+              </Link>
             ))}
           </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          {[
-            ['Collection score', '92.4%', 'Healthy month-to-date collections'],
-            ['Installer SLA', '87%', 'Average same-day completion quality'],
-            ['Usage pressure', `${usageMetrics.watch + usageMetrics.high}`, 'Subscribers nearing usage policy action'],
-            ['Cap enforcement', `${usageMetrics.capReached}`, 'Subscribers already in capped or FUP state'],
-          ].map(([title, value, desc]) => (
-            <div key={title} className="card p-6">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{title}</div>
-              <div className="mt-6 text-4xl font-semibold tracking-[-0.04em] text-slate-900">{value}</div>
-              <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -367,117 +280,19 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">QA & hardening</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900">Release readiness console</div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Helper-ready routers</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">{hardeningSummary.helperReadyRouters}</div>
-              <div className="mt-1 text-sm text-slate-500">FreeRADIUS helper path healthy and ready for sync</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Auth mismatches</div>
-              <div className="mt-2 text-2xl font-semibold text-amber-600">{hardeningSummary.authMismatchRouters}</div>
-              <div className="mt-1 text-sm text-slate-500">Routers still showing source-IP trust drift</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Live integrations</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">{hardeningSummary.activeIntegrations}</div>
-              <div className="mt-1 text-sm text-slate-500">{hardeningSummary.productionIntegrations} already switched to production mode</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active zones</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">{hardeningSummary.activeZones}</div>
-              <div className="mt-1 text-sm text-slate-500">Serviceability-ready zones in active rollout</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Planned zones</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">{hardeningSummary.plannedZones}</div>
-              <div className="mt-1 text-sm text-slate-500">Coverage records still pending full launch hardening</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Smoke-check surfaces</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">5</div>
-              <div className="mt-1 text-sm text-slate-500">Customer, billing, routers, integrations, and serviceability</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Smoke checklist</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900">What to verify after each deploy</div>
-          <div className="mt-4 space-y-3">
-            <Link href="/customers" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
-              <div>
-                <div className="font-semibold text-slate-900">Customer journey</div>
-                <div className="mt-1 text-sm text-slate-500">Open customer list, customer detail, billing tab, and LAN/WAN/WiFi save actions.</div>
-              </div>
-              <Users className="mt-0.5 h-4 w-4 text-slate-400" />
-            </Link>
-            <Link href="/billing" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
-              <div>
-                <div className="font-semibold text-slate-900">Finance desk</div>
-                <div className="mt-1 text-sm text-slate-500">Check approvals, reconciliation queue, and collections command rail.</div>
-              </div>
-              <Wallet className="mt-0.5 h-4 w-4 text-slate-400" />
-            </Link>
-            <Link href="/routers" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
-              <div>
-                <div className="font-semibold text-slate-900">Router and FreeRADIUS</div>
-                <div className="mt-1 text-sm text-slate-500">Verify helper health, auth telemetry, and router test behavior.</div>
-              </div>
-              <ShieldCheck className="mt-0.5 h-4 w-4 text-slate-400" />
-            </Link>
-            <Link href="/apps" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
-              <div>
-                <div className="font-semibold text-slate-900">Integrations and providers</div>
-                <div className="mt-1 text-sm text-slate-500">Review default routes, testing providers, and launch checklist status.</div>
-              </div>
-              <Activity className="mt-0.5 h-4 w-4 text-slate-400" />
-            </Link>
-            <Link href="/serviceability" className="flex items-start justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]">
-              <div>
-                <div className="font-semibold text-slate-900">Zone and coverage</div>
-                <div className="mt-1 text-sm text-slate-500">Confirm active coverage zones and sub-zone launch readiness.</div>
-              </div>
-              <Gauge className="mt-0.5 h-4 w-4 text-slate-400" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Launch checklist</div>
-          <div className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">Customer app alignment</div>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Workspace health</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Simple live checks</div>
           <div className="mt-4 space-y-3">
             {[
-              'Customer app now follows the same live backend flows used by admin and installer operations.',
-              'Customer auth now follows normal OTP entry flow without admin-side OTP exposure.',
-              'Booking, support, billing, and alerts are wired into the same backend flow.',
-            ].map((item) => (
-              <div key={item} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Release hardening</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900">Production cleanup status</div>
-          <div className="mt-4 space-y-3">
-            {[
-              'Installer app no longer ships with prefilled demo credentials.',
-              'Customer login screen no longer opens with a seeded mobile number.',
-              'Demo OTP responses are hidden by default unless EXPOSE_DEMO_OTP=true is enabled for local testing.',
-            ].map((item) => (
-              <div key={item} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                {item}
+              ['Helper-ready routers', String(hardeningSummary.helperReadyRouters)],
+              ['Auth mismatches', String(hardeningSummary.authMismatchRouters)],
+              ['Live integrations', String(hardeningSummary.activeIntegrations)],
+              ['Active zones', String(hardeningSummary.activeZones)],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                <div className="font-semibold text-slate-900">{label}</div>
+                <div className="text-lg font-semibold text-slate-900">{value}</div>
               </div>
             ))}
           </div>

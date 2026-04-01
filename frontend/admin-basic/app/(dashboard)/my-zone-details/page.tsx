@@ -21,11 +21,14 @@ type ZoneRow = {
 }
 
 const ZONE_TABS = [
-  { href: '/settings', label: 'Settings' },
   { href: '/my-zone-details', label: 'My Zone Details' },
   { href: '/create-sub-zone', label: 'Create Sub-Zone' },
+  { href: '/settings', label: 'Copy Settings' },
+  { href: '/settings', label: 'Franchise Configuration' },
   { href: '/apps', label: 'Add Payment Gateway' },
+  { href: '/settings', label: 'Prefix Settings' },
   { href: '/routers', label: 'Router Settings' },
+  { href: '/settings', label: 'Add Admin Accounts' },
 ]
 
 export default function MyZoneDetailsPage() {
@@ -128,9 +131,9 @@ export default function MyZoneDetailsPage() {
         <div className="flex flex-wrap gap-2">
           {ZONE_TABS.map((item) => (
             <Link
-              key={item.href}
+              key={`${item.href}-${item.label}`}
               href={item.href}
-              className={item.href === '/my-zone-details' ? 'btn-primary' : 'btn-secondary'}
+              className={item.label === 'My Zone Details' ? 'btn-primary' : 'btn-secondary'}
             >
               {item.label}
             </Link>
