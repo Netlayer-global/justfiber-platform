@@ -24,6 +24,7 @@ function CustomersContent() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [bngNodes, setBngNodes] = useState<BngNode[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [lookup, setLookup] = useState('')
@@ -90,7 +91,11 @@ function CustomersContent() {
 
   async function loadWorkspace() {
     try {
-      setIsLoading(true)
+      if (!customers.length) {
+        setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
+      }
       const [customersRes, plansRes, bngRes] = await Promise.all([
         adminAPI.getCustomers(1, 120),
         adminAPI.getPlans(),
@@ -115,6 +120,7 @@ function CustomersContent() {
       toast.error(error instanceof Error ? error.message : 'Failed to load customers workspace')
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }
 
@@ -202,9 +208,9 @@ function CustomersContent() {
               <Plus className="h-4 w-4" />
               New Customer
             </button>
-            <button type="button" onClick={() => void loadWorkspace()} className="btn-secondary inline-flex items-center gap-2">
+            <button type="button" onClick={() => void loadWorkspace()} className="btn-secondary inline-flex items-center gap-2" disabled={isRefreshing}>
               <RefreshCw className="h-4 w-4" />
-              Refresh
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
@@ -287,7 +293,7 @@ function CustomersContent() {
             </div>
             {quickLookupResults.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-slate-500">
-                No customer matched this lookup.
+                No customer matched this lookup. Try a different search or create a new customer.
               </div>
             ) : null}
           </div>
@@ -414,6 +420,14 @@ function CustomersContent() {
 
               <div className="rounded-[24px] border border-[#5B6CFF]/20 bg-[#eef1ff] px-4 py-4 text-sm text-slate-600">
                 Save ke saath customer record, subscriber service aur live PPPoE/RADIUS user create hoga. Full list management `User Management` me rahega.
+              </div>
+              <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <div className="font-medium text-slate-900">Creation summary</div>
+                <div className="mt-2 grid gap-2 md:grid-cols-3">
+                  <div>Name: {createForm.fullName.trim() || '-'}</div>
+                  <div>Phone: {normalizePhone(createForm.phone) || '-'}</div>
+                  <div>Plan: {plans.find((plan) => (plan.planCode || plan.id) === createForm.planCode)?.name || '-'}</div>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3">

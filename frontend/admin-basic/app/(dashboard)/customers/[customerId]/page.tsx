@@ -312,6 +312,11 @@ export default function CustomerDetailPage() {
               <span>{customer.pppoeUsername || customer.customerId || customer.id}</span>
             </div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{customer.name}</h1>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span className="rounded-full bg-slate-100 px-3 py-1">{customer.phone || 'No phone'}</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">{customer.plan?.name || 'No plan'}</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">{customer.pppoeUsername || 'No PPPoE'}</span>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-secondary" onClick={() => void loadCustomer()} disabled={busyKey === 'refresh'}>
@@ -390,6 +395,7 @@ export default function CustomerDetailPage() {
                   <div><span className="font-medium text-slate-900">Pool:</span> {formatValue(customer.radiusService?.ipv4Pool)}</div>
                   <div><span className="font-medium text-slate-900">PPPoE:</span> {formatValue(customer.pppoeUsername)}</div>
                   <div><span className="font-medium text-slate-900">WAN MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac)}</div>
+                  <div><span className="font-medium text-slate-900">BNG:</span> {formatValue(customer.radiusService?.bngNodeCode)}</div>
                 </div>
               </div>
             </div>
