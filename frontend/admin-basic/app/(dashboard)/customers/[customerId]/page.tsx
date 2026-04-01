@@ -3350,7 +3350,7 @@ function CustomerDetailContent() {
                         <button className="btn-secondary" onClick={() => void handleCopyPppoeUsername()}>
                           Copy PPPoE
                         </button>
-                        <Link href={customer ? `/all-users/${customer.id}/edit` : '/user-management?view=users'} className="btn-secondary">
+                        <Link href={`/all-users/${customer?.id || customerId}/edit`} className="btn-secondary">
                           Edit user
                         </Link>
                       </div>
