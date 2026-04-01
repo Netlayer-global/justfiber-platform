@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, Customer, Plan } from '@/lib/types'
-import { Eye, Loader, Plus, RefreshCw, Search, UserRound } from 'lucide-react'
+import { Eye, Loader, Plus, RefreshCw, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 function formatDate(value?: string) {
@@ -168,10 +168,6 @@ function CustomersContent() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/user-management?view=users" className="btn-secondary inline-flex items-center gap-2">
-              <UserRound className="h-4 w-4" />
-              User Management
-            </Link>
             <button onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New Customer
@@ -210,7 +206,7 @@ function CustomersContent() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <div className="grid grid-cols-[60px_1.6fr_1fr_1fr_0.9fr_170px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="grid grid-cols-[56px_1.8fr_1fr_1fr_0.9fr_140px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               <div>S.No</div>
               <div>Customer</div>
               <div>Phone</div>
@@ -219,7 +215,7 @@ function CustomersContent() {
               <div>Actions</div>
             </div>
             {quickLookupResults.map((customer, index) => (
-              <div key={customer.id} className="grid grid-cols-[60px_1.6fr_1fr_1fr_0.9fr_170px] gap-3 border-b border-slate-200 bg-white px-4 py-3 text-sm last:border-b-0">
+              <div key={customer.id} className="grid grid-cols-[56px_1.8fr_1fr_1fr_0.9fr_140px] gap-3 border-b border-slate-200 bg-white px-4 py-3 text-sm last:border-b-0">
                 <div className="text-slate-500">{index + 1}</div>
                 <div>
                   <div className="font-semibold text-slate-900">{customer.name}</div>
@@ -242,12 +238,12 @@ function CustomersContent() {
                     {customer.status || 'unknown'}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/customers/${customer.id}`} className="btn-secondary inline-flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <Link href={`/customers/${customer.id}`} className="inline-flex items-center gap-2 font-medium text-[#2d7dff]">
                     <Eye className="h-4 w-4" />
                     Open
                   </Link>
-                  <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">
+                  <Link href={`/all-users/${customer.id}/edit`} className="text-slate-500 hover:text-slate-900">
                     Edit
                   </Link>
                 </div>
