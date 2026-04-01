@@ -63,6 +63,26 @@ type InvoiceTemplateSection = {
   stampDataUrl: string
 }
 
+type SubZoneDraft = {
+  subZoneName: string
+  email: string
+  phone: string
+  city: string
+  state: string
+  pincode: string
+  area: string
+  adminFullName: string
+  adminEmail: string
+  adminPhone: string
+  inheritBillingProfile: boolean
+  inheritInvoiceTemplate: boolean
+  inheritPlans: boolean
+  inheritPaymentGateway: boolean
+  inheritRouterVisibility: boolean
+  useParentRouters: boolean
+  canCreateSubZone: boolean
+}
+
 const SECTION_META: Record<string, SectionMeta> = {
   general: {
     title: 'General Configuration',
@@ -200,10 +220,30 @@ const ZONE_WORKSPACE_LINKS = [
 const ZONE_TABS = [
   { href: '/settings', label: 'Settings' },
   { href: '/my-zone-details', label: 'My Zone Details' },
-  { href: '/create-sub-zone', label: 'Create Sub-Zone' },
+  { href: '/settings', label: 'Sub-Zone & Logins' },
   { href: '/apps', label: 'Add Payment Gateway' },
   { href: '/routers', label: 'Router Settings' },
 ]
+
+const initialSubZoneDraft: SubZoneDraft = {
+  subZoneName: '',
+  email: '',
+  phone: '',
+  city: '',
+  state: '',
+  pincode: '',
+  area: '',
+  adminFullName: '',
+  adminEmail: '',
+  adminPhone: '',
+  inheritBillingProfile: true,
+  inheritInvoiceTemplate: true,
+  inheritPlans: true,
+  inheritPaymentGateway: true,
+  inheritRouterVisibility: true,
+  useParentRouters: false,
+  canCreateSubZone: false,
+}
 
 const ZONE_ADMIN_PLAYBOOK = [
   {
@@ -589,9 +629,11 @@ export default function SettingsPage() {
   const [isCopyingLaunchPack, setIsCopyingLaunchPack] = useState(false)
   const [isSavingZoneAdmins, setIsSavingZoneAdmins] = useState(false)
   const [isCreatingZoneLogin, setIsCreatingZoneLogin] = useState(false)
+  const [isCreatingSubZone, setIsCreatingSubZone] = useState(false)
   const [busyZoneLoginId, setBusyZoneLoginId] = useState('')
   const [zoneLogins, setZoneLogins] = useState<AdminUserSummary[]>([])
   const [adminRoles, setAdminRoles] = useState<AdminRoleSummary[]>([])
+  const [subZoneDraft, setSubZoneDraft] = useState<SubZoneDraft>(initialSubZoneDraft)
   const [zoneAdminDraft, setZoneAdminDraft] = useState({
     fullName: '',
     email: '',
@@ -830,6 +872,106 @@ export default function SettingsPage() {
       toast.error('Failed to save zone admins')
     } finally {
       setIsSavingZoneAdmins(false)
+    }
+  }
+
+  async function handleCreateSubZoneFromSettings() {
+    if (!subZoneDraft.subZoneName.trim() || !subZoneDraft.email.trim() || !subZoneDraft.phone.trim() || !subZoneDraft.city.trim()) {
+      toast.error('Sub-zone name, email, phone, and city are required')
+      return
+    }
+    try {
+      setIsCreatingSubZone(true)
+      const franchiseCode = subZoneDraft.subZoneName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
+      const invoiceTemplateRes = await adminAPI.getSettingsSection<any>('invoice_template')
+      const templateKey = invoiceTemplateRes.success ? invoiceTemplateRes.data?.value?.activeTemplate || 'justfiber_standard' : 'justfiber_standard'
+      const metadata = {
+        legalProfile: {
+          legalName: subZoneDraft.subZoneName.trim(),
+          gstNumber: '',
+          panNumber: '',
+          billingAddress: [subZoneDraft.city, subZoneDraft.state, subZoneDraft.pincode].filter(Boolean).join(', '),
+          stateCode: subZoneDraft.state.trim().slice(0, 3).toUpperCase(),
+          stateName: subZoneDraft.state.trim(),
+        },
+        invoiceConfig: {
+          invoicePrefix: franchiseCode.slice(0, 3).toUpperCase() || 'ZN',
+          invoiceSeriesCode: 'MAIN',
+          sequencePadding: 4,
+          templateKey,
+        },
+        parentZoneCode: activeZoneCode !== 'default' ? activeZoneCode : '',
+        parentZoneName: activeZoneLabel || '',
+        location: {
+          area: subZoneDraft.area.trim(),
+        },
+        inheritanceProfile: {
+          inheritBillingProfile: subZoneDraft.inheritBillingProfile,
+          inheritInvoiceTemplate: subZoneDraft.inheritInvoiceTemplate,
+          inheritPlans: subZoneDraft.inheritPlans,
+          inheritPaymentGateway: subZoneDraft.inheritPaymentGateway,
+          inheritRouterVisibility: subZoneDraft.inheritRouterVisibility,
+          canCreateSubZone: subZoneDraft.canCreateSubZone,
+          useParentRouters: subZoneDraft.useParentRouters,
+        },
+        adminAccounts: subZoneDraft.adminEmail.trim()
+          ? [{
+              fullName: subZoneDraft.adminFullName.trim() || `${subZoneDraft.subZoneName.trim()} Admin`,
+              email: subZoneDraft.adminEmail.trim(),
+              phone: subZoneDraft.adminPhone.trim(),
+              role: 'zone_admin',
+            }]
+          : [],
+      }
+
+      const [franchiseRes, zoneRes] = await Promise.all([
+        adminAPI.saveFranchise({
+          franchiseCode,
+          name: subZoneDraft.subZoneName.trim(),
+          zoneCode: franchiseCode,
+          status: 'active',
+          contactName: subZoneDraft.subZoneName.trim(),
+          phone: subZoneDraft.phone.trim(),
+          email: subZoneDraft.email.trim(),
+          address: [subZoneDraft.city, subZoneDraft.state, subZoneDraft.pincode].filter(Boolean).join(', '),
+          payoutMode: 'manual',
+          metadata,
+        }),
+        adminAPI.createServiceZone({
+          zoneCode: franchiseCode,
+          zoneName: subZoneDraft.subZoneName.trim(),
+          parentZoneCode: activeZoneCode !== 'default' ? activeZoneCode : undefined,
+          parentZoneName: activeZoneLabel,
+          city: subZoneDraft.city.trim(),
+          area: subZoneDraft.area.trim(),
+          pinCodes: subZoneDraft.pincode.trim() ? [subZoneDraft.pincode.trim()] : [],
+          status: 'active',
+          serviceType: 'fiber',
+          notes: 'Created from settings zone workspace',
+        }),
+      ])
+      if (!franchiseRes.success) {
+        toast.error(franchiseRes.error || 'Failed to create sub-zone franchise')
+        return
+      }
+      if (!zoneRes.success) {
+        toast.error(zoneRes.error || 'Failed to create sub-zone service area')
+        return
+      }
+      if (activeZoneCode && activeZoneCode !== 'default') {
+        await adminAPI.copyFranchiseSettings(franchiseCode, { sourceZoneCode: activeZoneCode })
+      }
+      if (metadata.adminAccounts.length) {
+        await adminAPI.saveFranchiseAdminAccounts(franchiseCode, metadata.adminAccounts)
+      }
+      toast.success('Sub-zone created inside settings')
+      setSubZoneDraft(initialSubZoneDraft)
+      await refreshFranchises()
+    } catch (error) {
+      console.error('[settings] Failed to create sub-zone', error)
+      toast.error('Failed to create sub-zone')
+    } finally {
+      setIsCreatingSubZone(false)
     }
   }
 
@@ -1245,22 +1387,109 @@ export default function SettingsPage() {
         <div className="card p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone login manager</div>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Create sub-zone login</h2>
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Sub-zone and login manager</div>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Create sub-zone and zone login</h2>
               <div className="mt-2 text-sm text-slate-500">
-                Main admin yahan se current active zone ke liye username aur password based login bana sakta hai.
+                Ab sub-zone create aur zone login dono yahin settings ke andar manage honge.
               </div>
             </div>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleCreateZoneLogin}
-              disabled={!activeZoneCode || activeZoneCode === 'default' || isCreatingZoneLogin}
-            >
-              {isCreatingZoneLogin ? 'Creating...' : 'Create zone login'}
-            </button>
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Create sub-zone</div>
+                <div className="mt-1 text-sm text-slate-500">Parent zone ke andar new child zone launch karo.</div>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleCreateSubZoneFromSettings}
+                disabled={isCreatingSubZone}
+              >
+                {isCreatingSubZone ? 'Creating...' : 'Create sub-zone'}
+              </button>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <input
+                className="input"
+                placeholder="Sub-zone name"
+                value={subZoneDraft.subZoneName}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, subZoneName: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Contact email"
+                value={subZoneDraft.email}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, email: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Contact phone"
+                value={subZoneDraft.phone}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, phone: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="City"
+                value={subZoneDraft.city}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, city: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="State"
+                value={subZoneDraft.state}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, state: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Pincode"
+                value={subZoneDraft.pincode}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, pincode: event.target.value }))}
+              />
+              <input
+                className="input md:col-span-2"
+                placeholder="Area"
+                value={subZoneDraft.area}
+                onChange={(event) => setSubZoneDraft((current) => ({ ...current, area: event.target.value }))}
+              />
+            </div>
+            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm text-slate-600">
+              {[
+                ['Billing profile', 'inheritBillingProfile'],
+                ['Invoice template', 'inheritInvoiceTemplate'],
+                ['Plans', 'inheritPlans'],
+                ['Payment gateway', 'inheritPaymentGateway'],
+                ['Router visibility', 'inheritRouterVisibility'],
+                ['Use parent routers', 'useParentRouters'],
+              ].map(([label, key]) => (
+                <label key={key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(subZoneDraft[key as keyof SubZoneDraft])}
+                    onChange={(event) => setSubZoneDraft((current) => ({ ...current, [key]: event.target.checked }))}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Create zone login</div>
+                <div className="mt-1 text-sm text-slate-500">Current active zone ke liye username/password login banao.</div>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleCreateZoneLogin}
+                disabled={!activeZoneCode || activeZoneCode === 'default' || isCreatingZoneLogin}
+              >
+                {isCreatingZoneLogin ? 'Creating...' : 'Create zone login'}
+              </button>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
             <input
               className="input"
               placeholder="Full name"
@@ -1303,9 +1532,10 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            Login scope: {activeZoneLabel || 'No zone selected'} ({activeZoneCode || 'default'})
+            </div>
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+              Login scope: {activeZoneLabel || 'No zone selected'} ({activeZoneCode || 'default'})
+            </div>
           </div>
         </div>
 
