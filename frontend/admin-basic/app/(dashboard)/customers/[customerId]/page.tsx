@@ -9,8 +9,8 @@ import type { AdminPlanChangePreview, Customer, CustomerBillingControlResponse, 
 import { CreditCard, Loader, RefreshCw, ChevronDown, ChevronUp, CircleDot, Ban, ShieldCheck, PlugZap, Pencil, BadgeIndianRupee, FilePlus2, Fingerprint, HardDriveDownload, Network } from 'lucide-react'
 import { toast } from 'sonner'
 
-type TabKey = 'overview' | 'billing' | 'devices' | 'tickets' | 'actions'
-const validTabs: TabKey[] = ['overview', 'billing', 'devices', 'tickets', 'actions']
+type TabKey = 'overview' | 'billing' | 'devices'
+const validTabs: TabKey[] = ['overview', 'billing', 'devices']
 
 function formatValue(value: unknown, fallback = '-') {
   if (value === null || value === undefined) return fallback
@@ -1614,11 +1614,10 @@ function CustomerDetailContent() {
             <button type="button" className={activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('overview')}>Overview</button>
             <button type="button" className={activeTab === 'billing' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('billing')}>Billing</button>
             <button type="button" className={activeTab === 'devices' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('devices')}>Network</button>
-            <button type="button" className={activeTab === 'tickets' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('tickets')}>Support</button>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit user</Link>
-            <button type="button" className="btn-secondary" onClick={() => setActiveTab('actions')}>Logs</button>
+            <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={isSaving}>Disconnect</button>
           </div>
         </div>
 
@@ -3508,10 +3507,6 @@ function CustomerDetailContent() {
                     <p className="font-medium">{customer.customerId || customer.id}</p>
                 </div>
                 <div>
-                  <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Account No.</p>
-                  <p className="font-medium">{customer.accountNumber || '-'}</p>
-                </div>
-                <div>
                   <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Service ID</p>
                   <p className="font-medium">{customer.serviceId || '-'}</p>
                 </div>
@@ -3523,17 +3518,13 @@ function CustomerDetailContent() {
                   <p className="text-black/40 text-xs uppercase tracking-[0.2em]">PPPoE</p>
                   <p className="font-medium">{customer.pppoeUsername || '-'}</p>
                 </div>
-                <div>
-                  <p className="text-black/40 text-xs uppercase tracking-[0.2em]">Invoices</p>
-                  <p className="font-medium">{customer.invoices?.length || 0}</p>
-                </div>
               </div>
             </div>
 
             <div className="card p-5 space-y-4">
               <h2 className="text-lg font-semibold">Quick actions</h2>
               <p className="text-sm text-slate-500">
-                Keep only the actions operators use most often from this page.
+                Sirf daily-use actions.
               </p>
               <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary block w-full text-center">
                 Edit user
@@ -3544,8 +3535,8 @@ function CustomerDetailContent() {
               <button className="btn-secondary w-full" onClick={() => setActiveTab('devices')}>
                 Open network
               </button>
-              <button className="btn-secondary w-full" onClick={() => setActiveTab('tickets')}>
-                Open support
+              <button className="btn-secondary w-full" onClick={() => void handleDisconnectSession()} disabled={isSaving}>
+                Disconnect session
               </button>
             </div>
           </div>
