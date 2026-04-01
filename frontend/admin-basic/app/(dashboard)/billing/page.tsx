@@ -332,6 +332,15 @@ export default function BillingPage() {
       ),
     [approvalRequests]
   )
+  const financeSetupSummary = useMemo(
+    () => ({
+      profiles: profiles.length,
+      templates: invoiceTemplateSettings?.templates?.length || 0,
+      zoneMappings: profileForm.zoneMappings.length,
+      approvals: pendingFinanceApprovals.length,
+    }),
+    [invoiceTemplateSettings, pendingFinanceApprovals.length, profileForm.zoneMappings.length, profiles.length]
+  )
   const paymentOpsSummary = useMemo(
     () => ({
       visible: visiblePayments.length,
@@ -1159,11 +1168,34 @@ export default function BillingPage() {
                 <div className="font-semibold">Collections Desk</div>
                 <div className="mt-1 text-slate-300">Use for reminders, follow-ups, promise-to-pay, suspend/resume, and owner assignment.</div>
               </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="font-semibold">Finance Setup</div>
+                <div className="mt-1 text-slate-300">Keep GST profile, zone mappings, invoice templates, and pending approvals aligned before cycle runs.</div>
+              </div>
             </div>
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
               Latest billing run status: <span className="font-semibold capitalize text-white">{financeCommandCenter.latestRunStatus.replaceAll('_', ' ')}</span>
             </div>
           </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className={`btn-secondary ${billingSectionTab === 'invoices' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('invoices')}>
+            Invoice queue
+          </button>
+          <button className={`btn-secondary ${billingSectionTab === 'payments' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('payments')}>
+            Payments queue
+          </button>
+          <button className={`btn-secondary ${billingSectionTab === 'collections' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('collections')}>
+            Collections queue
+          </button>
+          <button className={`btn-secondary ${billingSectionTab === 'settings' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('settings')}>
+            Finance setup
+          </button>
+          {pendingFinanceApprovals.length ? (
+            <button className="btn-secondary" onClick={() => setBillingSectionTab('settings')}>
+              {pendingFinanceApprovals.length} approvals pending
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -1571,6 +1603,16 @@ export default function BillingPage() {
               <button className="btn-secondary" onClick={() => applyCollectionsPreset('ptp_watch')}>
                 PTP watch
               </button>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Owner triage</div>
+                <div className="mt-2 text-sm text-slate-600">Start with unassigned accounts, then move to assigned follow-up to clear stale queues.</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Service posture</div>
+                <div className="mt-2 text-sm text-slate-600">Suspend-ready and PTP watch are the highest-risk slices to clear before end of day.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -2506,10 +2548,10 @@ export default function BillingPage() {
                 </div>
               </div>
             </div>
-            <div className="card p-5">
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Finance resolutions</div>
-              <div className="mt-1 text-sm text-slate-500">Latest waivers and write-offs for commercial review.</div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+          <div className="card p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Finance resolutions</div>
+            <div className="mt-1 text-sm text-slate-500">Latest waivers and write-offs for commercial review.</div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-1">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Recent waivers</div>
                   <div className="mt-3 space-y-2">
@@ -2538,6 +2580,30 @@ export default function BillingPage() {
                     {!recentWriteoffs.length ? <div className="text-sm text-slate-500">No recent write-offs.</div> : null}
                   </div>
                 </div>
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Pending approvals</div>
+                  <div className="mt-1 text-sm text-slate-600">Finance decisions waiting on waiver and write-off requests.</div>
+                </div>
+                <button className="btn-secondary" onClick={() => setBillingSectionTab('settings')}>
+                  Open approvals
+                </button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {pendingFinanceApprovals.slice(0, 3).map((item) => (
+                  <div key={item.id} className="rounded-xl bg-white px-3 py-2">
+                    <div className="font-medium text-slate-900">{item.actionType.replaceAll('_', ' ')}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {item.payload?.customerId || '-'} | Rs {Number(item.payload?.amount || 0).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+                {!pendingFinanceApprovals.length ? (
+                  <div className="text-sm text-slate-500">No finance approvals pending.</div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -2595,6 +2661,20 @@ export default function BillingPage() {
                   Clear filters
                 </button>
               ) : null}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button className="btn-secondary" onClick={() => setPaymentFilters({ search: '', status: 'pending', provider: '' })}>
+                Pending only
+              </button>
+              <button className="btn-secondary" onClick={() => setPaymentFilters({ search: '', status: 'reconciled', provider: '' })}>
+                Reconciled
+              </button>
+              <button className="btn-secondary" onClick={() => setPaymentFilters({ search: '', status: '', provider: 'razorpay' })}>
+                Razorpay
+              </button>
+              <button className="btn-secondary" onClick={() => setPaymentFilters({ search: '', status: '', provider: '' })}>
+                Reset payment view
+              </button>
             </div>
           </div>
           <div className="card overflow-hidden">
