@@ -176,15 +176,15 @@ function CustomersContent() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="text-sm font-semibold text-[#4aa7ff]">Customer Ops</div>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Customer Intake</h1>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Customers</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              Yeh page simple rakha gaya hai. Bas new customer banao ya existing customer ko jaldi open karo. Full list `User Management` me hai.
+              Yahan full customer list dikhegi. Bas open, edit, ya new customer create karo.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/user-management?view=users" className="btn-secondary inline-flex items-center gap-2">
               <UserRound className="h-4 w-4" />
-              Open User Management
+              User Management
             </Link>
             <button onClick={() => setIsCreateOpen(true)} className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -232,7 +232,7 @@ function CustomersContent() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">All customers</h2>
-            <p className="mt-1 text-sm text-slate-500">Yahin full customer list dikhegi. Kisi bhi customer ko direct open karo.</p>
+            <p className="mt-1 text-sm text-slate-500">Simple list. Kisi bhi customer ko direct open ya edit karo.</p>
           </div>
           <div className="text-sm text-slate-500">{quickLookupResults.length} customer</div>
         </div>
@@ -251,27 +251,42 @@ function CustomersContent() {
             </div>
           ) : (
             <div className="overflow-hidden rounded-2xl border border-slate-200">
-              <div className="grid grid-cols-[1.4fr_1fr_1fr_120px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <div className="grid grid-cols-[1.2fr_0.8fr_1fr_0.9fr_150px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 <div>Customer</div>
+                <div>Status</div>
                 <div>PPPoE / Phone</div>
                 <div>Plan</div>
                 <div>Action</div>
               </div>
               {quickLookupResults.map((customer) => (
-                <div key={customer.id} className="grid grid-cols-[1.4fr_1fr_1fr_120px] gap-3 border-b border-slate-200 bg-white px-4 py-4 text-sm last:border-b-0">
+                <div key={customer.id} className="grid grid-cols-[1.2fr_0.8fr_1fr_0.9fr_150px] gap-3 border-b border-slate-200 bg-white px-4 py-4 text-sm last:border-b-0">
                   <div>
                     <div className="font-semibold text-slate-900">{customer.name}</div>
                     <div className="mt-1 text-xs text-slate-500">{customer.customerId || customer.id}</div>
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      customer.status === 'active'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : customer.status === 'suspended'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {customer.status || 'unknown'}
+                    </span>
                   </div>
                   <div className="text-slate-600">
                     <div>{customer.pppoeUsername || '-'}</div>
                     <div className="mt-1 text-xs text-slate-500">{customer.phone || '-'}</div>
                   </div>
                   <div className="text-slate-600">{customer.plan?.name || 'Unassigned'}</div>
-                  <div>
+                  <div className="flex flex-wrap gap-2">
                     <Link href={`/customers/${customer.id}`} className="btn-secondary inline-flex items-center gap-2">
                       <Eye className="h-4 w-4" />
                       Open
+                    </Link>
+                    <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">
+                      Edit
                     </Link>
                   </div>
                 </div>

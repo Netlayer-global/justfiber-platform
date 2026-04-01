@@ -1379,7 +1379,7 @@ function CustomerDetailContent() {
   const customerPlanId = formatValue(customer.plan?.id, '-')
   const topStats = [
     {
-      label: 'Lifecycle status',
+      label: 'Status',
       value: customer.status,
       hint:
         ('serviceStatus' in customer && typeof customer.serviceStatus === 'string'
@@ -1392,19 +1392,9 @@ function CustomerDetailContent() {
       hint: billingSummary.billMode || 'prepaid',
     },
     {
-      label: 'Linked devices',
+      label: 'Devices',
       value: String(customer.devices?.length || 0),
       hint: `${customer.devices?.filter((device) => device.onlineStatus === 'online').length || 0} online`,
-    },
-    {
-      label: 'Support load',
-      value: String((customer.tickets?.length || 0) + (customer.serviceRequests?.length || 0) + (customer.bookings?.length || 0)),
-      hint: `${customer.tickets?.length || 0} tickets / ${customer.serviceRequests?.length || 0} requests / ${customer.bookings?.length || 0} bookings`,
-    },
-    {
-      label: 'Usage policy',
-      value: String(billingSummary.dataPolicy || 'unlimited').toUpperCase(),
-      hint: usageCapGb > 0 ? `${usageGb.toFixed(2)} GB / ${usageCapGb.toFixed(0)} GB` : 'No capped policy',
     },
   ]
   const customerOnline =
@@ -1607,7 +1597,7 @@ function CustomerDetailContent() {
         </section>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         {topStats.map((item) => (
           <div key={item.label} className="card p-5">
             <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{item.label}</p>
