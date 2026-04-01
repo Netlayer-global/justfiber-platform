@@ -1229,7 +1229,7 @@ function CustomerDetailContent() {
         subject: '',
         description: '',
       })
-      setActiveTab('tickets')
+      setActiveTab('overview')
       await loadCustomer()
     } catch (error) {
       console.error('[customer-detail] Failed to create ticket:', error)
@@ -3280,7 +3280,7 @@ function CustomerDetailContent() {
               </div>
             ) : null}
 
-            {activeTab === 'tickets' ? (
+            {false ? (
               <div className="space-y-4">
                 <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
                   <div className="card p-5 space-y-4">
@@ -3469,7 +3469,7 @@ function CustomerDetailContent() {
               </div>
             ) : null}
 
-            {activeTab === 'actions' ? (
+            {false ? (
               <div className="space-y-4">
                 <div className="card p-5 space-y-4">
                   <div className="flex items-center justify-between gap-3">
