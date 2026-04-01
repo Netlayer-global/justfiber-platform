@@ -3380,17 +3380,17 @@ function CustomerDetailContent() {
                           </div>
                           {latestInstallJob ? (
                             <div className="space-y-3 text-sm text-slate-600">
-                              <div><span className="font-medium text-slate-900">Job:</span> {formatValue(latestInstallJob.jobNumber || latestInstallJob.id)}</div>
-                              <div><span className="font-medium text-slate-900">Status:</span> {formatValue(latestInstallJob.rawStatus || latestInstallJob.status)}</div>
-                              <div><span className="font-medium text-slate-900">Proof uploaded:</span> {formatDateTime(latestInstallJob.proofUploadedAt)}</div>
+                              <div><span className="font-medium text-slate-900">Job:</span> {formatValue(latestInstallJob?.jobNumber || latestInstallJob?.id)}</div>
+                              <div><span className="font-medium text-slate-900">Status:</span> {formatValue(latestInstallJob?.rawStatus || latestInstallJob?.status)}</div>
+                              <div><span className="font-medium text-slate-900">Proof uploaded:</span> {formatDateTime(latestInstallJob?.proofUploadedAt)}</div>
                               <div className="grid gap-2 md:grid-cols-3">
-                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob.routerPhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Router photo {latestInstallJob.routerPhotoUploaded ? 'yes' : 'no'}</div>
-                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob.cablePhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Cable photo {latestInstallJob.cablePhotoUploaded ? 'yes' : 'no'}</div>
-                                <div className="rounded-xl bg-white px-3 py-3 text-center text-slate-600">Extra photos {Number(latestInstallJob.extraPhotoCount || 0)}</div>
+                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob?.routerPhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Router photo {latestInstallJob?.routerPhotoUploaded ? 'yes' : 'no'}</div>
+                                <div className={`rounded-xl px-3 py-3 text-center ${latestInstallJob?.cablePhotoUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-slate-500'}`}>Cable photo {latestInstallJob?.cablePhotoUploaded ? 'yes' : 'no'}</div>
+                                <div className="rounded-xl bg-white px-3 py-3 text-center text-slate-600">Extra photos {Number(latestInstallJob?.extraPhotoCount || 0)}</div>
                               </div>
-                              <div><span className="font-medium text-slate-900">Completion OTP:</span> {formatDateTime(latestInstallJob.completionOtpVerifiedAt)}</div>
-                              <div><span className="font-medium text-slate-900">Latest event:</span> {formatValue(latestInstallJob.latestEventNote || latestInstallJob.latestEventCode)}</div>
-                              {latestInstallJob.installerName ? (
+                              <div><span className="font-medium text-slate-900">Completion OTP:</span> {formatDateTime(latestInstallJob?.completionOtpVerifiedAt)}</div>
+                              <div><span className="font-medium text-slate-900">Latest event:</span> {formatValue(latestInstallJob?.latestEventNote || latestInstallJob?.latestEventCode)}</div>
+                              {latestInstallJob?.installerName ? (
                                 <div><span className="font-medium text-slate-900">Installer:</span> {latestInstallJob.installerName}</div>
                               ) : null}
                             </div>
