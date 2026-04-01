@@ -17,9 +17,18 @@ export default function DashboardPage() {
   const [otpValue, setOtpValue] = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError] = useState('')
+  const [currentZoneLabel, setCurrentZoneLabel] = useState('JustFiber HQ')
 
   useEffect(() => {
     void loadStats()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const storedLabel = window.localStorage.getItem('justfiber-active-zone-label')
+    if (storedLabel) {
+      setCurrentZoneLabel(storedLabel)
+    }
   }, [])
 
   async function loadStats() {
@@ -229,6 +238,20 @@ export default function DashboardPage() {
                 <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
               </Link>
             ))}
+          </div>
+        </div>
+        <div className="card p-6">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Zone context</div>
+          <div className="mt-2 text-2xl font-semibold text-slate-900">Current operating zone</div>
+          <div className="mt-6 rounded-[22px] border border-slate-200 bg-slate-50 p-5">
+            <div className="font-semibold text-slate-900">{currentZoneLabel}</div>
+            <div className="mt-2 text-sm leading-6 text-slate-500">
+              Dashboard metrics and navigation are currently anchored around this zone selection.
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/my-zone-details" className="btn-secondary">View zones</Link>
+              <Link href="/create-sub-zone" className="btn-secondary">Create sub-zone</Link>
+            </div>
           </div>
         </div>
       </section>

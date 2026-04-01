@@ -184,7 +184,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [zoneMenuOpen, setZoneMenuOpen] = useState(false)
   const [zoneOptions, setZoneOptions] = useState<Array<{ key: string; label: string }>>([])
-  const [currentZone, setCurrentZone] = useState('JustFiber HQ')
+  const [currentZone, setCurrentZone] = useState<{ key: string; label: string }>({
+    key: 'default',
+    label: 'JustFiber HQ',
+  })
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -197,9 +200,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('justfiber-active-zone') : null
-    if (stored) {
-      setCurrentZone(stored)
+    if (typeof window === 'undefined') return
+    const storedLabel = window.localStorage.getItem('justfiber-active-zone-label')
+    const storedKey = window.localStorage.getItem('justfiber-active-zone-key')
+    if (storedLabel) {
+      setCurrentZone({
+        key: storedKey || storedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+        label: storedLabel,
+      })
     }
   }, [])
 
@@ -234,17 +242,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })
       const deduped = options.filter((item, index, list) => list.findIndex((entry) => entry.key === item.key) === index)
       setZoneOptions(deduped)
-      if (!window.localStorage.getItem('justfiber-active-zone') && deduped[0]) {
-        setCurrentZone(deduped[0].label)
+      const storedKey = typeof window !== 'undefined' ? window.localStorage.getItem('justfiber-active-zone-key') : null
+      if (!storedKey && deduped[0]) {
+        setCurrentZone(deduped[0])
       }
     } catch {}
   }
 
-  function handleSwitchZone(label: string) {
-    setCurrentZone(label)
+  function handleSwitchZone(item: { key: string; label: string }) {
+    setCurrentZone(item)
     setZoneMenuOpen(false)
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('justfiber-active-zone', label)
+      window.localStorage.setItem('justfiber-active-zone-key', item.key)
+      window.localStorage.setItem('justfiber-active-zone-label', item.label)
     }
   }
 
@@ -306,7 +316,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   >
                     <div>
                       <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">Zone</div>
-                      <div className="text-sm font-semibold text-slate-900">{currentZone}</div>
+                      <div className="text-sm font-semibold text-slate-900">{currentZone.label}</div>
                     </div>
                     <ChevronDown className="h-4 w-4 text-slate-400" />
                   </button>
@@ -318,9 +328,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <button
                             key={item.key}
                             type="button"
-                            onClick={() => handleSwitchZone(item.label)}
+                            onClick={() => handleSwitchZone(item)}
                             className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
-                              currentZone === item.label
+                              currentZone.key === item.key
                                 ? 'bg-[#eef1ff] font-semibold text-[#5d87ff]'
                                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                             }`}

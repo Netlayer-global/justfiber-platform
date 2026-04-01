@@ -35,9 +35,18 @@ export default function MyZoneDetailsPage() {
   const [franchises, setFranchises] = useState<FranchiseProfile[]>([])
   const [general, setGeneral] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [activeZoneKey, setActiveZoneKey] = useState('default')
 
   useEffect(() => {
     void loadData()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const storedKey = window.localStorage.getItem('justfiber-active-zone-key')
+    if (storedKey) {
+      setActiveZoneKey(storedKey)
+    }
   }, [])
 
   async function loadData() {
@@ -108,6 +117,16 @@ export default function MyZoneDetailsPage() {
     anchor.download = 'my-zone-details.csv'
     anchor.click()
     URL.revokeObjectURL(url)
+  }
+
+  function switchZone(row: ZoneRow) {
+    const zoneKey = row.zoneName || row.apiToken || 'default'
+    setActiveZoneKey(zoneKey)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('justfiber-active-zone-key', zoneKey)
+      window.localStorage.setItem('justfiber-active-zone-label', row.companyName || zoneKey)
+    }
+    toast.success(`Switched to ${row.companyName || zoneKey}`)
   }
 
   return (
@@ -242,11 +261,17 @@ export default function MyZoneDetailsPage() {
                   <th className="px-4 py-4">City</th>
                   <th className="px-4 py-4">State</th>
                   <th className="px-4 py-4">Pincode</th>
+                  <th className="px-4 py-4">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row, index) => (
-                  <tr key={`${row.companyName}-${row.zoneName}-${index}`} className="border-b border-slate-100 hover:bg-slate-50">
+                  <tr
+                    key={`${row.companyName}-${row.zoneName}-${index}`}
+                    className={`border-b border-slate-100 hover:bg-slate-50 ${
+                      activeZoneKey === (row.zoneName || row.apiToken) ? 'bg-[#eef1ff]' : ''
+                    }`}
+                  >
                     <td className="px-4 py-3">{index + 1}</td>
                     <td className="px-4 py-3 font-semibold text-[#2a8cff]">{row.companyName}</td>
                     <td className="px-4 py-3">{row.zoneName}</td>
@@ -258,6 +283,15 @@ export default function MyZoneDetailsPage() {
                     <td className="px-4 py-3">{row.city}</td>
                     <td className="px-4 py-3">{row.state}</td>
                     <td className="px-4 py-3">{row.pincode}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => switchZone(row)}
+                        className={activeZoneKey === (row.zoneName || row.apiToken) ? 'btn-primary' : 'btn-secondary'}
+                      >
+                        {activeZoneKey === (row.zoneName || row.apiToken) ? 'Current zone' : 'Switch zone'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

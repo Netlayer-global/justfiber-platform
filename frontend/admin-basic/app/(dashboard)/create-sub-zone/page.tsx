@@ -169,6 +169,10 @@ export default function CreateSubZonePage() {
       if (!zoneRes.success) throw new Error(zoneRes.error || 'Failed to create service zone')
       if (!settingsRes.success) throw new Error(settingsRes.error || 'Failed to update zone settings')
 
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('justfiber-active-zone-key', franchiseCode)
+        window.localStorage.setItem('justfiber-active-zone-label', form.subZoneName.trim())
+      }
       toast.success('Sub-zone created')
       setForm(initialForm)
       await loadDefaults()
