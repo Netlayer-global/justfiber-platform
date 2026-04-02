@@ -1695,33 +1695,400 @@ export default function SettingsPage() {
                       <div className="mt-4 grid gap-4 xl:grid-cols-3">
                         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
                           <div className="mb-4 text-sm font-semibold text-slate-900">Billing address</div>
-                          <FieldEditor
-                            label="billingAddressSettings"
-                            value={invoiceTemplateSection.billingAddressSettings}
-                            path={['billingAddressSettings']}
-                            onChange={handleValueChange}
-                            onRemove={handleValueRemove}
-                          />
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <label className="space-y-2 md:col-span-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Address line 1</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.address1 || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      address1: event.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2 md:col-span-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Address line 2</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.address2 || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      address2: event.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">City</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.city || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      city: event.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Pin code</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.pinCode || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      pinCode: event.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">State</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.state || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      state: event.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Country</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.country || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      country: event.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.phone || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      phone: event.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Email</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.email || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      email: event.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GST number</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.gstNumber || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      gstNumber: event.target.value.toUpperCase(),
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">PAN number</div>
+                              <input
+                                className="input"
+                                value={invoiceTemplateSection.billingAddressSettings.panNumber || ''}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      panNumber: event.target.value.toUpperCase(),
+                                    },
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                              <div>
+                                <div className="text-sm font-semibold text-slate-900">GST imposed zone</div>
+                                <div className="text-xs text-slate-500">Enable GST for this billing address.</div>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(invoiceTemplateSection.billingAddressSettings.gstImposedZone)}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      gstImposedZone: event.target.checked,
+                                    },
+                                  })
+                                }
+                                className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
+                              />
+                            </label>
+                            <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                              <div>
+                                <div className="text-sm font-semibold text-slate-900">Auto tax selection</div>
+                                <div className="text-xs text-slate-500">Auto-pick tax mode during invoice generation.</div>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(invoiceTemplateSection.billingAddressSettings.autoTaxSelection)}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingAddressSettings: {
+                                      ...invoiceTemplateSection.billingAddressSettings,
+                                      autoTaxSelection: event.target.checked,
+                                    },
+                                  })
+                                }
+                                className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
+                              />
+                            </label>
+                          </div>
                         </div>
                         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                          <div className="mb-4 text-sm font-semibold text-slate-900">Billing period</div>
-                          <FieldEditor
-                            label="billingPeriodSettings"
-                            value={invoiceTemplateSection.billingPeriodSettings}
-                            path={['billingPeriodSettings']}
-                            onChange={handleValueChange}
-                            onRemove={handleValueRemove}
-                          />
+                          <div className="mb-4 flex items-center justify-between gap-3">
+                            <div className="text-sm font-semibold text-slate-900">Billing period</div>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() =>
+                                replaceInvoiceTemplateSection({
+                                  ...invoiceTemplateSection,
+                                  billingPeriodSettings: {
+                                    ...invoiceTemplateSection.billingPeriodSettings,
+                                    units: [
+                                      ...(Array.isArray(invoiceTemplateSection.billingPeriodSettings.units) ? invoiceTemplateSection.billingPeriodSettings.units : []),
+                                      { value: 1, unit: 'month' },
+                                    ],
+                                  },
+                                })
+                              }
+                            >
+                              Add unit
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            {(Array.isArray(invoiceTemplateSection.billingPeriodSettings.units)
+                              ? invoiceTemplateSection.billingPeriodSettings.units
+                              : []
+                            ).map((item: any, index: number) => (
+                              <div key={`period-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <div className="mb-3 flex items-center justify-between gap-3">
+                                  <div className="text-sm font-semibold text-slate-900">Unit #{index + 1}</div>
+                                  <button
+                                    type="button"
+                                    className="text-xs font-semibold text-rose-500"
+                                    onClick={() =>
+                                      replaceInvoiceTemplateSection({
+                                        ...invoiceTemplateSection,
+                                        billingPeriodSettings: {
+                                          ...invoiceTemplateSection.billingPeriodSettings,
+                                          units: (invoiceTemplateSection.billingPeriodSettings.units || []).filter((_: unknown, idx: number) => idx !== index),
+                                        },
+                                      })
+                                    }
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                                <div className="grid gap-3 grid-cols-2">
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Value</div>
+                                    <input
+                                      type="number"
+                                      className="input"
+                                      value={Number(item?.value || 0)}
+                                      onChange={(event) =>
+                                        replaceInvoiceTemplateSection({
+                                          ...invoiceTemplateSection,
+                                          billingPeriodSettings: {
+                                            ...invoiceTemplateSection.billingPeriodSettings,
+                                            units: (invoiceTemplateSection.billingPeriodSettings.units || []).map((unit: any, idx: number) =>
+                                              idx === index ? { ...unit, value: Number(event.target.value) } : unit
+                                            ),
+                                          },
+                                        })
+                                      }
+                                    />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Unit</div>
+                                    <input
+                                      className="input"
+                                      value={item?.unit || ''}
+                                      onChange={(event) =>
+                                        replaceInvoiceTemplateSection({
+                                          ...invoiceTemplateSection,
+                                          billingPeriodSettings: {
+                                            ...invoiceTemplateSection.billingPeriodSettings,
+                                            units: (invoiceTemplateSection.billingPeriodSettings.units || []).map((unit: any, idx: number) =>
+                                              idx === index ? { ...unit, unit: event.target.value } : unit
+                                            ),
+                                          },
+                                        })
+                                      }
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
                           <div className="mb-4 text-sm font-semibold text-slate-900">Billing rules</div>
-                          <FieldEditor
-                            label="billingRuleSettings"
-                            value={invoiceTemplateSection.billingRuleSettings}
-                            path={['billingRuleSettings']}
-                            onChange={handleValueChange}
-                            onRemove={handleValueRemove}
-                          />
+                          <div className="grid gap-3">
+                            {[
+                              ['invoiceTotalRoundOff', 'Invoice total round off'],
+                              ['useBalanceWhilePlanChange', 'Use balance while plan change'],
+                              ['updateBillingCycleByCreatedDate', 'Update billing cycle by created date'],
+                              ['rechargeDeactivatedPackage', 'Recharge deactivated package'],
+                              ['customerPortalPaymentAllowed', 'Customer portal payment allowed'],
+                              ['allowCashPaymentsProcess', 'Allow cash payments process'],
+                              ['calculateCarryForwardData', 'Calculate carry forward data'],
+                              ['considerFinancialYear', 'Consider financial year'],
+                            ].map(([key, label]) => (
+                              <label key={key} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                <div className="text-sm font-semibold text-slate-900">{label}</div>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(invoiceTemplateSection.billingRuleSettings[key])}
+                                  onChange={(event) =>
+                                    replaceInvoiceTemplateSection({
+                                      ...invoiceTemplateSection,
+                                      billingRuleSettings: {
+                                        ...invoiceTemplateSection.billingRuleSettings,
+                                        [key]: event.target.checked,
+                                      },
+                                    })
+                                  }
+                                  className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
+                                />
+                              </label>
+                            ))}
+                            <label className="space-y-2">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mandatory fields for payment</div>
+                              <textarea
+                                className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+                                value={(invoiceTemplateSection.billingRuleSettings.mandatoryFieldsForPayment || []).join('\n')}
+                                onChange={(event) =>
+                                  replaceInvoiceTemplateSection({
+                                    ...invoiceTemplateSection,
+                                    billingRuleSettings: {
+                                      ...invoiceTemplateSection.billingRuleSettings,
+                                      mandatoryFieldsForPayment: event.target.value
+                                        .split('\n')
+                                        .map((item) => item.trim())
+                                        .filter(Boolean),
+                                    },
+                                  })
+                                }
+                                placeholder="One entry per line"
+                              />
+                            </label>
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Lock invoices</div>
+                                <input
+                                  className="input"
+                                  value={invoiceTemplateSection.billingRuleSettings.lockInvoices || ''}
+                                  onChange={(event) =>
+                                    replaceInvoiceTemplateSection({
+                                      ...invoiceTemplateSection,
+                                      billingRuleSettings: {
+                                        ...invoiceTemplateSection.billingRuleSettings,
+                                        lockInvoices: event.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Restrict change group</div>
+                                <input
+                                  className="input"
+                                  value={invoiceTemplateSection.billingRuleSettings.restrictChangeGroup || ''}
+                                  onChange={(event) =>
+                                    replaceInvoiceTemplateSection({
+                                      ...invoiceTemplateSection,
+                                      billingRuleSettings: {
+                                        ...invoiceTemplateSection.billingRuleSettings,
+                                        restrictChangeGroup: event.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label className="space-y-2 md:col-span-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Restrict change connection type</div>
+                                <input
+                                  className="input"
+                                  value={invoiceTemplateSection.billingRuleSettings.restrictChangeConnectionType || ''}
+                                  onChange={(event) =>
+                                    replaceInvoiceTemplateSection({
+                                      ...invoiceTemplateSection,
+                                      billingRuleSettings: {
+                                        ...invoiceTemplateSection.billingRuleSettings,
+                                        restrictChangeConnectionType: event.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              </label>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </section>
