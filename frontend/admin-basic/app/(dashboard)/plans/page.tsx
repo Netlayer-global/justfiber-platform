@@ -175,12 +175,6 @@ function renderCategoryLabel(category?: Plan['category']) {
   }
 }
 
-function planLaneLabel(plan: Plan) {
-  if (plan.merchandising?.featured) return 'Featured lane'
-  if (plan.merchandising?.recommended) return 'Recommended lane'
-  return 'Standard lane'
-}
-
 function toForm(plan?: Plan | null): PlanFormState {
   if (!plan) return initialForm
   return {
@@ -377,6 +371,7 @@ function PlansContent() {
     setEditingPlanId(null)
     setForm(initialForm)
     setComposerMode(null)
+    setWorkspaceView('library')
   }
 
   async function handleSavePlan(e: React.FormEvent) {
@@ -613,26 +608,9 @@ function PlansContent() {
           <div>
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Plans</div>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Plans</h1>
-            <p className="mt-2 text-sm text-slate-500">Keep this page limited to plan list, plan form, and status changes.</p>
+            <p className="mt-2 text-sm text-slate-500">Simple plan list, create form, and direct status actions.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setWorkspaceView('library')}
-              className={workspaceView === 'library' ? 'btn-primary inline-flex items-center gap-2' : 'btn-secondary inline-flex items-center gap-2'}
-            >
-              Library
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!composerMode) setComposerMode('create')
-                setWorkspaceView('composer')
-              }}
-              className={workspaceView === 'composer' ? 'btn-primary inline-flex items-center gap-2' : 'btn-secondary inline-flex items-center gap-2'}
-            >
-              Plan Form
-            </button>
             <button type="button" onClick={beginCreate} className="btn-primary inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New plan
@@ -646,27 +624,6 @@ function PlansContent() {
               Refresh
             </button>
           </div>
-        </div>
-        <div className="mt-4 rounded-[22px] border border-[#d9e5ff] bg-[#f6f9ff] p-4">
-          <div className="text-xs uppercase tracking-[0.18em] text-[#5b6cff]">Active Zone</div>
-          <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneLabel}</div>
-          <div className="mt-1 text-sm text-slate-500">
-            New plans are created for all zones unless you bind them to the current zone only.
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" className="btn-secondary" onClick={() => { setWorkspaceView('library'); setStatusFilter('active') }}>
-            Active catalog
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => { setWorkspaceView('library'); setMerchFilter('featured') }}>
-            Featured lane
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => { setWorkspaceView('library'); setMerchFilter('recommended') }}>
-            Recommended lane
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => { setWorkspaceView('library'); setCategoryFilter('all'); setStatusFilter('all'); setMerchFilter('all'); setQuery('') }}>
-            Reset library view
-          </button>
         </div>
       </section>
 
@@ -922,118 +879,6 @@ function PlansContent() {
         </div>
       ) : (
         <section className="space-y-4">
-          {selectedPlan ? (
-            <div className="card grid gap-5 p-5 xl:grid-cols-[1.2fr_0.8fr]">
-              <div>
-                <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Selected plan</div>
-                <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <div className="text-2xl font-semibold text-slate-900">{selectedPlan.name}</div>
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
-                    {planLaneLabel(selectedPlan)}
-                  </span>
-                </div>
-                <div className="mt-2 text-sm text-slate-500">
-                  {selectedPlan.planCode} • {renderCategoryLabel(selectedPlan.category)} • {selectedPlan.visibleInCustomerApp ? 'Visible in apps' : 'Hidden from apps'}
-                </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Commercial</div>
-                    <div className="mt-2 text-lg font-semibold text-slate-900">{formatCurrency(selectedPlan.price)}</div>
-                    <div className="text-sm text-slate-500">{selectedPlan.speed} / {selectedPlan.uploadSpeed || 0} Mbps</div>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Visibility</div>
-                    <div className="mt-2 text-lg font-semibold text-slate-900">{selectedPlan.visibleInCustomerApp ? 'Customer live' : 'Hidden'}</div>
-                    <div className="text-sm text-slate-500">{selectedPlan.visibleInSalesApp ? 'Sales visible' : 'Sales hidden'}</div>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Readiness</div>
-                    <div className={`mt-2 text-lg font-semibold ${selectedPlan.provisioningReady === false ? 'text-amber-600' : 'text-emerald-600'}`}>
-                      {selectedPlan.provisioningReady === false ? 'Provisioning blocked' : 'Live ready'}
-                    </div>
-                    <div className="text-sm text-slate-500">{selectedPlan.latencyClass || 'standard'} latency</div>
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Zone scope</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">
-                      {selectedPlan.planScope === 'zone'
-                        ? selectedPlan.zoneContext?.zoneName || selectedPlan.zoneContext?.zoneCode || 'Zone bound'
-                        : 'All zones'}
-                    </div>
-                    <div className="text-sm text-slate-500">
-                      {selectedPlan.planScope === 'zone'
-                        ? 'This package is limited to one operating zone.'
-                        : 'Available across the shared plan catalog.'}
-                    </div>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Data policy</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">
-                      {selectedPlan.dataPolicy === 'fup' ? 'FUP controlled' : selectedPlan.dataPolicy === 'hard_cap' ? 'Hard cap' : 'Unlimited'}
-                    </div>
-                    <div className="text-sm text-slate-500">{selectedPlan.dataPolicy === 'fup' ? 'Fair-usage threshold managed in profile' : selectedPlan.dataPolicy === 'hard_cap' ? 'Quota controlled package' : 'No fixed quota published'}</div>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Validity</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">
-                      {[
-                        selectedPlan.validityOptions?.monthly ? 'Monthly' : null,
-                        selectedPlan.validityOptions?.quarterly ? 'Quarterly' : null,
-                        selectedPlan.validityOptions?.halfYearly ? 'Half yearly' : null,
-                        selectedPlan.validityOptions?.yearly ? 'Yearly' : null,
-                      ].filter(Boolean).join(', ') || 'Monthly'}
-                    </div>
-                    <div className="text-sm text-slate-500">
-                      Choose from the enabled billing periods for this package
-                    </div>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Add-ons</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">
-                      {[
-                        selectedPlan.addons?.staticIp?.enabled ? 'Static IP' : null,
-                        selectedPlan.addons?.ott?.enabled ? 'OTT' : null,
-                        selectedPlan.addons?.voice?.enabled ? 'Voice' : null,
-                      ].filter(Boolean).join(', ') || 'No add-ons'}
-                    </div>
-                    <div className="text-sm text-slate-500">{selectedPlan.tags?.join(', ') || 'Standard retail bundle'}</div>
-                  </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Provisioning</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">{selectedPlan.provisioning?.accessProfileCode || 'Access profile pending'}</div>
-                    <div className="text-sm text-slate-500">
-                      {selectedPlan.provisioning?.vlanId ? `VLAN ${selectedPlan.provisioning.vlanId}` : 'VLAN mapping pending'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-wrap content-start gap-2 xl:justify-end">
-                <button type="button" onClick={() => beginEdit(selectedPlan)} className="btn-secondary inline-flex items-center gap-2">
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                </button>
-                <button type="button" onClick={() => clonePlan(selectedPlan)} className="btn-secondary inline-flex items-center gap-2">
-                  <Copy className="h-4 w-4" />
-                  Copy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void togglePlanStatus(selectedPlan)}
-                  className={`btn-secondary inline-flex items-center gap-2 ${selectedPlan.status === 'active' ? 'border-red-500/20 text-red-600' : 'border-[#5B6CFF]/20 text-[#5B6CFF]'}`}
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  {selectedPlan.status === 'active' ? 'Deactivate' : 'Activate'}
-                </button>
-                <button type="button" onClick={() => void removePlan(selectedPlan)} className="btn-secondary inline-flex items-center gap-2 border-red-500/20 text-red-600">
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            </div>
-          ) : null}
-
           <div className="grid gap-4 lg:grid-cols-2">
           {filteredPlans.map((plan) => (
             <article
