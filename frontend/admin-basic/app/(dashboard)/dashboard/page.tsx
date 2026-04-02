@@ -513,43 +513,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {false ? <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          {
-            title: 'Invoice templates',
-            value: String(invoiceTemplateSettings?.value?.templates?.length || 0),
-            desc: 'Templates currently available in settings',
-            Icon: FileText,
-          },
-          {
-            title: 'Payment integrations',
-            value: String(integrations.filter((item) => item.category === 'payment_gateway').length),
-            desc: 'Configured collection routes',
-            Icon: Wallet,
-          },
-          {
-            title: 'Provisioning routers',
-            value: String(routers.length),
-            desc: 'Scoped routers visible to this zone',
-            Icon: Router,
-          },
-          {
-            title: 'Coverage zones',
-            value: String(serviceZones.length),
-            desc: 'Serviceability records in scope',
-            Icon: Building2,
-          },
-        ].map(({ title, value, desc, Icon }) => (
-          <div key={title} className="modernize-stat-card min-h-[168px]">
-            <div className="flex items-center justify-between">
-              <div className="modernize-subtitle">{title}</div>
-              <Icon className="h-5 w-5 text-[#5d87ff]" />
-            </div>
-            <div className="mt-6 text-4xl font-semibold tracking-[-0.04em] text-slate-900">{value}</div>
-            <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
-          </div>
-        ))}
-      </section> : null}
     </div>
   )
 }
