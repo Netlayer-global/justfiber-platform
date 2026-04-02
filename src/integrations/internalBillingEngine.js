@@ -2,6 +2,7 @@ import { BillingInvoice } from "../models/BillingInvoice.js";
 import { BillingLedgerEntry } from "../models/BillingLedgerEntry.js";
 import { BillingProfile } from "../models/BillingProfile.js";
 import { Customer } from "../models/Customer.js";
+import { PlanCatalog } from "../models/PlanCatalog.js";
 import { SubscriberService } from "../models/SubscriberService.js";
 import { SystemConfig } from "../models/SystemConfig.js";
 import { deriveInvoiceLifecycle, syncInvoiceLifecycle } from "../common/billingAccounting.js";
@@ -35,13 +36,13 @@ function addMonths(date, months) {
   return next;
 }
 
-function deriveAmount(service) {
+function deriveAmount(service, plan = null) {
   const durationMonths = resolveDurationMonths(service?.metadata);
   const recurringAmount = Number(service?.metadata?.recurringAmount || 0);
-  const yearlyPrice = Number(service?.metadata?.yearlyPrice || 0);
-  const halfYearlyPrice = Number(service?.metadata?.halfYearlyPrice || 0);
-  const quarterlyPrice = Number(service?.metadata?.quarterlyPrice || 0);
-  const monthlyPrice = Number(service?.metadata?.monthlyPrice || service?.metadata?.planAmount || 0);
+  const yearlyPrice = Number(service?.metadata?.yearlyPrice || plan?.yearlyPrice || 0);
+  const halfYearlyPrice = Number(service?.metadata?.halfYearlyPrice || plan?.halfYearlyPrice || 0);
+  const quarterlyPrice = Number(service?.metadata?.quarterlyPrice || plan?.quarterlyPrice || 0);
+  const monthlyPrice = Number(service?.metadata?.monthlyPrice || service?.metadata?.planAmount || plan?.monthlyPrice || 0);
   const resolved =
     durationMonths >= 12
       ? yearlyPrice || recurringAmount || monthlyPrice * 12
@@ -53,8 +54,8 @@ function deriveAmount(service) {
   return Number.isFinite(resolved) && resolved > 0 ? resolved : 0;
 }
 
-function resolvePlatformFeeForDuration(source = {}, durationMonths = 1) {
-  const breakup = source?.billingBreakup || source?.metadata?.billingBreakup || {};
+function resolvePlatformFeeForDuration(service = {}, durationMonths = 1, plan = null) {
+  const breakup = service?.billingBreakup || service?.metadata?.billingBreakup || plan?.billingBreakup || {};
   const monthly = Number(breakup?.monthlyPlatformFee || 0);
   const quarterly = Number(breakup?.quarterlyPlatformFee || 0);
   const halfYearly = Number(breakup?.halfYearlyPlatformFee || 0);
@@ -70,15 +71,18 @@ function resolvePlatformFeeForDuration(source = {}, durationMonths = 1) {
   return Number.isFinite(resolved) && resolved > 0 ? resolved : 0;
 }
 
-function buildInvoiceLineItems(service, totalAmount, durationMonths, billCycleLabel = "") {
+function buildInvoiceLineItems(service, plan, totalAmount, durationMonths, billCycleLabel = "") {
   const safeTotal = Number(totalAmount || 0);
   if (!Number.isFinite(safeTotal) || safeTotal <= 0) {
     return [];
   }
-  const breakup = service?.billingBreakup || service?.metadata?.billingBreakup || {};
-  const internetLabel = String(breakup?.internetLabel || "Internet service charge").trim() || "Internet service charge";
+  const breakup = service?.billingBreakup || service?.metadata?.billingBreakup || plan?.billingBreakup || {};
+  const planName =
+    String(service?.metadata?.planName || plan?.name || service?.metadata?.planCode || plan?.planCode || "Broadband plan").trim() ||
+    "Broadband plan";
+  const internetLabel = String(breakup?.internetLabel || planName).trim() || planName;
   const platformLabel = String(breakup?.platformLabel || "Platform fee").trim() || "Platform fee";
-  const platformFee = Math.min(safeTotal, resolvePlatformFeeForDuration(service, durationMonths));
+  const platformFee = Math.min(safeTotal, resolvePlatformFeeForDuration(service, durationMonths, plan));
   const internetCharge = Number((safeTotal - platformFee).toFixed(2));
   const items = [];
   if (internetCharge > 0) {
@@ -109,6 +113,12 @@ function buildInvoiceLineItems(service, totalAmount, durationMonths, billCycleLa
     });
   }
   return items;
+}
+
+async function resolveBillingPlan(service = {}) {
+  const planCode = String(service?.metadata?.planCode || "").trim();
+  if (!planCode) return null;
+  return await PlanCatalog.findOne({ planCode, archivedAt: { $exists: false } }).lean();
 }
 
 function normalizeStateCode(value) {
@@ -405,10 +415,11 @@ export class InternalBillingEngine {
     const billingProfile = service.billingProfileCode
       ? await BillingProfile.findOne({ code: service.billingProfileCode, active: true }).lean()
       : await BillingProfile.findOne({ active: true }).sort({ createdAt: 1 }).lean();
+    const plan = await resolveBillingPlan(service);
     const durationMonths = resolveDurationMonths(options.durationMonths ? { durationMonths: options.durationMonths } : {
       durationMonths: resolveServiceDurationMonths(service)
     });
-    const totalAmount = Number(options.totalAmount ?? deriveAmount(service));
+    const totalAmount = Number(options.totalAmount ?? deriveAmount(service, plan));
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
       return { skipped: true, reason: "missing_amount", serviceId: service.serviceId };
     }
@@ -432,7 +443,7 @@ export class InternalBillingEngine {
       billingProfile?.taxMode === "india_gst"
         ? buildGstAmounts(totalAmount, billingProfile, customer)
         : buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
-    const lineItems = buildInvoiceLineItems(service, totalAmount, durationMonths, options.billCycleLabel || resolveBillCycleLabel(durationMonths));
+    const lineItems = buildInvoiceLineItems(service, plan, totalAmount, durationMonths, options.billCycleLabel || resolveBillCycleLabel(durationMonths));
     const numbering = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle });
     const zoneCode = customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || zoneMapping?.zoneCode || "";
     const zoneName = customer?.billingZoneName || customer?.billingSnapshot?.billingZoneName || zoneMapping?.zoneName || "";
@@ -487,7 +498,9 @@ export class InternalBillingEngine {
         invoiceSeriesCode: numbering.invoiceSeriesCode,
         invoiceSequenceNumber: numbering.invoiceSequenceNumber,
         sourceEvent,
-        activationJobId
+        activationJobId,
+        planCode: service?.metadata?.planCode || plan?.planCode || "",
+        planName: service?.metadata?.planName || plan?.name || ""
       }
     });
 
