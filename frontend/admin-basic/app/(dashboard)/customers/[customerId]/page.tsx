@@ -363,20 +363,6 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Status</div>
-            <div className="mt-2 text-lg font-semibold text-slate-900">{formatValue(customer.status)}</div>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Current due</div>
-            <div className="mt-2 text-lg font-semibold text-slate-900">{formatAmount(customer.billingSnapshot?.dueAmount)}</div>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Devices</div>
-            <div className="mt-2 text-lg font-semibold text-slate-900">{String(customer.devices?.length || 0)}</div>
-          </div>
-        </div>
       </section>
 
       <section className="card p-4 md:p-5 space-y-5">
@@ -446,29 +432,6 @@ export default function CustomerDetailPage() {
 
         {activeTab === 'billing' ? (
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="card p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Latest invoice</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{formatValue(latestInvoice?.invoiceNumber || latestInvoice?.invoiceId)}</div>
-                <div className="mt-1 text-sm text-slate-500">{formatDate(latestInvoice?.issuedAt || latestInvoice?.createdAt || latestInvoice?.dueDate)}</div>
-              </div>
-              <div className="card p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Payment status</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{formatValue(latestInvoice?.paymentStatus || latestPayment?.status)}</div>
-                <div className="mt-1 text-sm text-slate-500">{formatAmount(latestInvoice?.amount)}</div>
-              </div>
-              <div className="card p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Transaction ID</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{formatValue(latestPayment?.transactionId)}</div>
-                <div className="mt-1 text-sm text-slate-500">{formatDate(latestPayment?.paidAt || latestPayment?.createdAt)}</div>
-              </div>
-              <div className="card p-5">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Current / Last date</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{formatDate(latestInvoice?.issuedAt || latestInvoice?.createdAt || latestInvoice?.dueDate)}</div>
-                <div className="mt-1 text-sm text-slate-500">{formatDate(customer.expiryAt)}</div>
-              </div>
-            </div>
-
             <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
               <div className="card p-5 space-y-4">
                 <div className="flex items-center justify-between gap-3">

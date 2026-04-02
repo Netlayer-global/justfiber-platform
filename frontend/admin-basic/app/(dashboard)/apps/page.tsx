@@ -560,13 +560,8 @@ export default function AppsPage() {
       <section className="card p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.28em] text-slate-400">Apps workspace</div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">External Integrations</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-              Jaze-style control surface for every external connector. Keep provider records, choose defaults, and edit payment gateway tokens from one clean workspace.
-            </p>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Apps</h1>
           </div>
-
           <div className="flex flex-wrap gap-3">
             <button type="button" className="btn-secondary" onClick={() => void loadData()}>
               <RefreshCw className="mr-2 h-4 w-4" />
@@ -584,8 +579,7 @@ export default function AppsPage() {
       <section className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
         <div className="card overflow-hidden">
           <div className="border-b border-slate-200 px-5 py-4">
-            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">External integration catalog</div>
-            <div className="mt-2 text-xl font-semibold text-slate-900">Apps</div>
+            <div className="text-xl font-semibold text-slate-900">Apps</div>
           </div>
           <div className="max-h-[720px] overflow-y-auto p-3">
             <div className="space-y-2">
@@ -642,9 +636,7 @@ export default function AppsPage() {
           <div className="border-b border-slate-200 px-5 py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Selected module</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{activeCategory.label}</div>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{activeCategory.description}</p>
+                <div className="text-2xl font-semibold text-slate-900">{activeCategory.label}</div>
               </div>
 
               <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -661,34 +653,10 @@ export default function AppsPage() {
               </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                Status: <span className="font-semibold text-slate-900">{currentSettings.enabled ? 'Enabled' : 'Disabled'}</span>
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                Default provider: <span className="font-semibold text-slate-900">{currentSettings.providerKey || '-'}</span>
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                Connections: <span className="font-semibold text-slate-900">{categoryItems.length}</span>
-              </div>
-              {activeCategory.key === 'payment_gateway' ? (
-                <div className="rounded-full border border-[#d9e4ff] bg-[#ecf2ff] px-3 py-2 text-xs text-slate-600">
-                  {activeZoneCode && activeZoneCode !== 'default'
-                    ? `Zone ${activeZoneLabel}: ${activeZoneGatewayMapping?.providerKey || currentSettings.providerKey || 'Pending gateway'}`
-                    : 'Switch to a zone to assign gateway routes'}
-                </div>
-              ) : null}
-            </div>
             {activeCategory.key === 'payment_gateway' ? (
               <div className="mt-4 rounded-[22px] border border-[#d9e4ff] bg-[#f6f9ff] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-[#4866ff]">Zone payment route</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">
+                <div className="text-sm font-semibold text-slate-900">
                   {activeZoneCode && activeZoneCode !== 'default' ? activeZoneLabel : 'Shared payment scope'}
-                </div>
-                <div className="mt-1 text-sm text-slate-500">
-                  {activeZoneCode && activeZoneCode !== 'default'
-                    ? `Current zone will use ${activeZoneGatewayMapping?.providerKey || currentSettings.providerKey || 'no mapped provider'} for portal checkout and collections receipts.`
-                    : 'Without a zone switch, the shared/default payment provider remains active.'}
                 </div>
                 {activeZoneCode && activeZoneCode !== 'default' ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -741,22 +709,6 @@ export default function AppsPage() {
                 ) : null}
               </div>
             ) : null}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" className="btn-secondary" onClick={() => setQuery('')}>
-                All providers
-              </button>
-              <button type="button" className="btn-secondary" onClick={() => setQuery('active')}>
-                Active view
-              </button>
-              <button type="button" className="btn-secondary" onClick={() => setQuery('testing')}>
-                Testing view
-              </button>
-              {currentSettings.providerKey ? (
-                <button type="button" className="btn-secondary" onClick={() => setQuery(currentSettings.providerKey || '')}>
-                  Default route
-                </button>
-              ) : null}
-            </div>
           </div>
           {isLoading ? (
             <div className="flex items-center justify-center gap-3 px-6 py-24 text-slate-500">
