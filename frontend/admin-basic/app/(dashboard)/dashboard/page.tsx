@@ -4,9 +4,6 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
-  ArrowRight,
-  Building2,
-  FileText,
   Loader,
   Network,
   Router,
@@ -52,9 +49,6 @@ type ZoneSwitchDetail = {
   label?: string
 }
 
-type RegressionChecklistState = Record<string, boolean>
-type ReleaseChecklistState = Record<string, boolean>
-
 function getStoredZoneCode() {
   if (typeof window === 'undefined') return 'default'
   return window.localStorage.getItem('justfiber-active-zone') || 'default'
@@ -87,8 +81,6 @@ export default function DashboardPage() {
   const [adminRoles, setAdminRoles] = useState<AdminRoleSummary[]>([])
   const [auditOverview, setAuditOverview] = useState<AuditOverview | null>(null)
   const [recentAuditLogs, setRecentAuditLogs] = useState<any[]>([])
-  const [regressionChecks, setRegressionChecks] = useState<RegressionChecklistState>({})
-  const [releaseChecks, setReleaseChecks] = useState<ReleaseChecklistState>({})
   const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<SettingsSection<InvoiceTemplateValue> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [otpLookup, setOtpLookup] = useState('')
@@ -126,57 +118,9 @@ export default function DashboardPage() {
     void loadDashboard()
   }, [currentZoneCode])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const storageKey = `justfiber-regression-${currentZoneCode || 'default'}`
-    try {
-      const raw = window.localStorage.getItem(storageKey)
-      setRegressionChecks(raw ? JSON.parse(raw) : {})
-    } catch {
-      setRegressionChecks({})
-    }
-  }, [currentZoneCode])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const storageKey = `justfiber-release-${currentZoneCode || 'default'}`
-    try {
-      const raw = window.localStorage.getItem(storageKey)
-      setReleaseChecks(raw ? JSON.parse(raw) : {})
-    } catch {
-      setReleaseChecks({})
-    }
-  }, [currentZoneCode])
-
   function syncZoneFromStorage() {
     setCurrentZoneCode(getStoredZoneCode())
     setCurrentZoneLabel(getStoredZoneLabel())
-  }
-
-  function updateRegressionCheck(checkKey: string, checked: boolean) {
-    setRegressionChecks((current) => {
-      const next = {
-        ...current,
-        [checkKey]: checked,
-      }
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(`justfiber-regression-${currentZoneCode || 'default'}`, JSON.stringify(next))
-      }
-      return next
-    })
-  }
-
-  function updateReleaseCheck(checkKey: string, checked: boolean) {
-    setReleaseChecks((current) => {
-      const next = {
-        ...current,
-        [checkKey]: checked,
-      }
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(`justfiber-release-${currentZoneCode || 'default'}`, JSON.stringify(next))
-      }
-      return next
-    })
   }
 
   async function loadDashboard() {
@@ -737,7 +681,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      {false ? <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="card p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -784,7 +728,7 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-      </section>
+      </section> : null}
 
       {false ? <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="card p-6">
@@ -1002,7 +946,7 @@ export default function DashboardPage() {
         </div>
       </section> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+      {false ? <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="card p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -1084,9 +1028,9 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+      {false ? <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="card p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -1168,10 +1112,10 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="card p-6">
+      <section className="card p-6">
+        <div>
           <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Customer OTP</div>
           <div className="mt-2 text-2xl font-semibold text-slate-900">Fetch current OTP</div>
           <div className="mt-4 flex flex-col gap-3 md:flex-row">
@@ -1196,33 +1140,6 @@ export default function DashboardPage() {
               {otpError}
             </div>
           ) : null}
-        </div>
-
-        <div className="card p-6">
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Quick Links</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900">Open main pages</div>
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            {[
-              ['/customers', 'Customer desk', 'Open scoped customer roster and verify zone binding.'],
-              ['/billing', 'Finance desk', 'Verify GST, invoices, collections, and payment route.'],
-              ['/routers', 'Router desk', 'Check zone router trust, helper readiness, and auth state.'],
-              ['/apps', 'Apps desk', 'Confirm payment and integration routes for this zone.'],
-              ['/serviceability', 'Coverage desk', 'Review zone coverage before opening bookings.'],
-              ['/my-zone-details', 'Zone admin', 'Review sub-zone inheritance and delegated admins.'],
-            ].map(([href, title, desc]) => (
-              <Link
-                key={title}
-                href={String(href)}
-                className="rounded-[22px] border border-slate-200 bg-slate-50 p-5 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold text-slate-900">{title}</div>
-                  <ArrowRight className="h-4 w-4 text-slate-400" />
-                </div>
-                <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
-              </Link>
-            ))}
-          </div>
         </div>
       </section>
 
