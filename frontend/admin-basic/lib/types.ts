@@ -229,6 +229,13 @@ export interface Customer {
         replyMessage?: string | null
       }
     } | null
+    usageSummary?: {
+      totalInputOctets?: number
+      totalOutputOctets?: number
+      totalOctets?: number
+      latestSessionStart?: string | null
+      latestUpdateAt?: string | null
+    } | null
     radcheck?: Array<{ username?: string; attribute?: string; op?: string; value?: string }>
     radreply?: Array<{ username?: string; attribute?: string; op?: string; value?: string }>
   } | null

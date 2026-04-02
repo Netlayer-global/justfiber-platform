@@ -36,6 +36,15 @@ function formatAmount(value: unknown) {
   return `Rs ${Number(value || 0).toFixed(2)}`
 }
 
+function formatDataUsage(totalOctets: unknown) {
+  const value = Number(totalOctets || 0)
+  if (!value || value <= 0) return '-'
+  const gb = value / (1024 * 1024 * 1024)
+  if (gb >= 1) return `${gb.toFixed(2)} GB`
+  const mb = value / (1024 * 1024)
+  return `${mb.toFixed(0)} MB`
+}
+
 function isLikelyIpv4(value: string) {
   if (!value.trim()) return true
   return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value.trim())
@@ -255,6 +264,48 @@ export default function CustomerDetailPage() {
     })
   }
 
+  async function handleProvisionPppoe() {
+    if (!customer) return
+    await runBusy('provision-pppoe', async () => {
+      const res = await adminAPI.provisionCustomerPppoe(customer.id)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to provision PPPoE')
+        return
+      }
+      const verified = res.data?.radiusVerification?.matchesExpectedState !== false
+      toast.success(verified ? 'PPPoE provisioned and verified' : 'PPPoE provisioned with verification warning')
+      await loadCustomer()
+    })
+  }
+
+  async function handleSuspendPppoe() {
+    if (!customer) return
+    await runBusy('suspend-pppoe', async () => {
+      const res = await adminAPI.suspendCustomerPppoe(customer.id, 'Suspended from customer detail')
+      if (!res.success) {
+        toast.error(res.error || 'Failed to suspend PPPoE')
+        return
+      }
+      const verified = res.data?.radiusVerification?.matchesExpectedState !== false
+      toast.success(verified ? 'PPPoE suspended' : 'PPPoE suspended with verification warning')
+      await loadCustomer()
+    })
+  }
+
+  async function handleResumePppoe() {
+    if (!customer) return
+    await runBusy('resume-pppoe', async () => {
+      const res = await adminAPI.resumeCustomerPppoe(customer.id)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to resume PPPoE')
+        return
+      }
+      const verified = res.data?.radiusVerification?.matchesExpectedState !== false
+      toast.success(verified ? 'PPPoE resumed' : 'PPPoE resumed with verification warning')
+      await loadCustomer()
+    })
+  }
+
   async function handleSaveStaticIp() {
     if (!customer) return
     if (staticIpError) {
@@ -442,6 +493,15 @@ export default function CustomerDetailPage() {
               <PlugZap className="mr-2 h-4 w-4" />
               {busyKey === 'reconnect-session' ? 'Reconnecting...' : 'Reconnect PPPoE'}
             </button>
+            <button type="button" className="btn-secondary" onClick={() => void handleProvisionPppoe()} disabled={busyKey === 'provision-pppoe'}>
+              {busyKey === 'provision-pppoe' ? 'Provisioning...' : 'Provision PPPoE'}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => void handleResumePppoe()} disabled={busyKey === 'resume-pppoe'}>
+              {busyKey === 'resume-pppoe' ? 'Resuming...' : 'Resume PPPoE'}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => void handleSuspendPppoe()} disabled={busyKey === 'suspend-pppoe'}>
+              {busyKey === 'suspend-pppoe' ? 'Suspending...' : 'Suspend PPPoE'}
+            </button>
             <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={busyKey === 'disconnect-session'}>
               <PlugZap className="mr-2 h-4 w-4" />
               Disconnect
@@ -505,6 +565,9 @@ export default function CustomerDetailPage() {
                   <div><span className="font-medium text-slate-900">Live status:</span> {pppoeLiveStatus.label}</div>
                   <div><span className="font-medium text-slate-900">Radius state:</span> {radiusVerificationStatus.label}</div>
                   <div><span className="font-medium text-slate-900">Last control:</span> {formatValue(customer.radiusService?.lastServiceControlAction)}</div>
+                  <div><span className="font-medium text-slate-900">Last session start:</span> {formatDate(customer.radiusService?.usageSummary?.latestSessionStart)}</div>
+                  <div><span className="font-medium text-slate-900">Last session update:</span> {formatDate(customer.radiusService?.usageSummary?.latestUpdateAt)}</div>
+                  <div><span className="font-medium text-slate-900">Recent usage:</span> {formatDataUsage(customer.radiusService?.usageSummary?.totalOctets)}</div>
                   <div><span className="font-medium text-slate-900">WAN MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac)}</div>
                   <div><span className="font-medium text-slate-900">BNG:</span> {formatValue(customer.radiusService?.bngNodeCode)}</div>
                   <div><span className="font-medium text-slate-900">Zone:</span> {formatValue(customer.zoneName || customer.zoneCode)}</div>

@@ -538,6 +538,15 @@ function mapCustomer(customer: any): Customer {
                   : undefined,
               }
             : null,
+          usageSummary: customer.radiusService.usageSummary
+            ? {
+                totalInputOctets: Number(customer.radiusService.usageSummary.totalInputOctets || 0),
+                totalOutputOctets: Number(customer.radiusService.usageSummary.totalOutputOctets || 0),
+                totalOctets: Number(customer.radiusService.usageSummary.totalOctets || 0),
+                latestSessionStart: customer.radiusService.usageSummary.latestSessionStart || null,
+                latestUpdateAt: customer.radiusService.usageSummary.latestUpdateAt || null,
+              }
+            : null,
           radcheck: Array.isArray(customer.radiusService.radcheck) ? customer.radiusService.radcheck : [],
           radreply: Array.isArray(customer.radiusService.radreply) ? customer.radiusService.radreply : [],
         }

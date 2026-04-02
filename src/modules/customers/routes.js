@@ -325,6 +325,13 @@ async function buildCustomerResponse(customer) {
           radiusUsername: subscriberService.radiusUsername
         }).catch(() => null)
       : null;
+  const radiusUsageSummary =
+    subscriberService?.radiusUsername
+      ? await radiusServiceManager.getSubscriberUsageSummary({
+          serviceId: subscriberService.serviceId,
+          radiusUsername: subscriberService.radiusUsername
+        }).catch(() => null)
+      : null;
 
   return {
     ...customer,
@@ -348,6 +355,15 @@ async function buildCustomerResponse(customer) {
           lastServiceControlAt: subscriberService.metadata?.lastServiceControlAt || null,
           lastServiceControlReason: subscriberService.metadata?.lastServiceControlReason || null,
           lastRadiusVerification: subscriberService.metadata?.lastRadiusVerification || null,
+          usageSummary: radiusUsageSummary
+            ? {
+                totalInputOctets: Number(radiusUsageSummary.totalInputOctets || 0),
+                totalOutputOctets: Number(radiusUsageSummary.totalOutputOctets || 0),
+                totalOctets: Number(radiusUsageSummary.totalOctets || 0),
+                latestSessionStart: radiusUsageSummary.latestSessionStart || null,
+                latestUpdateAt: radiusUsageSummary.latestUpdateAt || null
+              }
+            : null,
           radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
           radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
         }
@@ -770,6 +786,13 @@ customersRouter.get(
             radiusUsername: subscriberService.radiusUsername
           }).catch(() => null)
         : null;
+    const radiusUsageSummary =
+      subscriberService?.radiusUsername
+        ? await radiusServiceManager.getSubscriberUsageSummary({
+            serviceId: subscriberService.serviceId,
+            radiusUsername: subscriberService.radiusUsername
+          }).catch(() => null)
+        : null;
     return ok(res, {
       ...customer,
       devices,
@@ -797,6 +820,15 @@ customersRouter.get(
             lastServiceControlAt: subscriberService.metadata?.lastServiceControlAt || null,
             lastServiceControlReason: subscriberService.metadata?.lastServiceControlReason || null,
             lastRadiusVerification: subscriberService.metadata?.lastRadiusVerification || null,
+            usageSummary: radiusUsageSummary
+              ? {
+                  totalInputOctets: Number(radiusUsageSummary.totalInputOctets || 0),
+                  totalOutputOctets: Number(radiusUsageSummary.totalOutputOctets || 0),
+                  totalOctets: Number(radiusUsageSummary.totalOctets || 0),
+                  latestSessionStart: radiusUsageSummary.latestSessionStart || null,
+                  latestUpdateAt: radiusUsageSummary.latestUpdateAt || null
+                }
+              : null,
             radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
             radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
           }
