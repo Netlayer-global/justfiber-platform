@@ -283,13 +283,32 @@ export class MikrotikBngManager {
       return { attempted: false, status: "skipped", reason: "unsupported_vendor", vendor: bngNode.vendor };
     }
 
+    const primaryRouterApiDisconnect = await forceDisconnectActivePppSessions(bngNode, username);
+    if (primaryRouterApiDisconnect?.status === "removed") {
+      return {
+        attempted: true,
+        status: "sent",
+        action: reason,
+        bngNodeCode: bngNode.nodeCode,
+        target: normalizeRouterApiBaseUrl(bngNode) || bngNode.nodeCode,
+        payloadMode: "router_api_primary",
+        exitCode: 0,
+        stdout: "",
+        stderr: "",
+        acknowledged: false,
+        routerApiDisconnect: primaryRouterApiDisconnect,
+        sessionHint
+      };
+    }
+
     const { host, port, secret } = resolveCoaConfig(bngNode);
     if (!host || !secret) {
       return {
-        attempted: false,
-        status: "skipped",
+        attempted: primaryRouterApiDisconnect?.attempted || false,
+        status: primaryRouterApiDisconnect?.status === "failed" ? "failed" : "skipped",
         reason: !host ? "missing_coa_host" : "missing_coa_secret",
         bngNodeCode: bngNode.nodeCode,
+        routerApiDisconnect: primaryRouterApiDisconnect,
         sessionHint
       };
     }
@@ -297,7 +316,10 @@ export class MikrotikBngManager {
     const payload = buildDisconnectPayload({ radiusUsername: username, service, bngNode, mode: "full" });
     try {
       const result = await runDisconnect({ host, port, secret, payload });
-      const routerApiDisconnect = await forceDisconnectActivePppSessions(bngNode, username);
+      const routerApiDisconnect =
+        primaryRouterApiDisconnect?.status === "failed"
+          ? await forceDisconnectActivePppSessions(bngNode, username)
+          : primaryRouterApiDisconnect;
       return {
         attempted: true,
         status: "sent",
@@ -321,7 +343,10 @@ export class MikrotikBngManager {
       });
       try {
         const fallback = await runDisconnect({ host, port, secret, payload: minimalPayload });
-        const routerApiDisconnect = await forceDisconnectActivePppSessions(bngNode, username);
+        const routerApiDisconnect =
+          primaryRouterApiDisconnect?.status === "failed"
+            ? await forceDisconnectActivePppSessions(bngNode, username)
+            : primaryRouterApiDisconnect;
         return {
           attempted: true,
           status: "sent",
@@ -338,7 +363,10 @@ export class MikrotikBngManager {
           sessionHint
         };
       } catch (fallbackError) {
-      const routerApiDisconnect = await forceDisconnectActivePppSessions(bngNode, username);
+      const routerApiDisconnect =
+        primaryRouterApiDisconnect?.status === "failed"
+          ? await forceDisconnectActivePppSessions(bngNode, username)
+          : primaryRouterApiDisconnect;
       if (routerApiDisconnect?.status === "removed") {
         return {
           attempted: true,
