@@ -304,8 +304,23 @@ function resolveInvoiceBranding(branding, invoice) {
   };
 }
 
+function resolveInvoicePlanSummary(invoice = {}) {
+  const metadata = invoice?.metadata || {};
+  const planName = String(metadata.planName || metadata.planCode || "").trim();
+  const durationMonths = Number(metadata.durationMonths || 0);
+  const cycleLabel = String(metadata.billCycleLabel || "").trim();
+  return {
+    planName: planName || "Broadband plan",
+    durationLabel:
+      cycleLabel ||
+      (durationMonths > 0 ? `${durationMonths} month${durationMonths > 1 ? "s" : ""}` : invoice.billCycle || "-"),
+    taxModeLabel: String(invoice.taxMode || "").trim() === "flat_tax" ? "Flat tax" : "India GST",
+  };
+}
+
 function buildInvoiceHtml(invoice, customer, branding) {
   const appliedBranding = resolveInvoiceBranding(branding, invoice);
+  const planSummary = resolveInvoicePlanSummary(invoice);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
   const lineRows = (invoice.lineItems || [])
     .map(
@@ -346,6 +361,8 @@ function buildInvoiceHtml(invoice, customer, branding) {
             <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Bill to</div>
             <div style="margin-top:10px;font-size:18px;font-weight:700;color:#0f172a">${customer?.fullName || invoice.customerId}</div>
             <div style="margin-top:6px;color:#475569">Customer ID: ${invoice.customerId}</div>
+            <div style="margin-top:6px;color:#475569">Plan: ${planSummary.planName}</div>
+            <div style="margin-top:6px;color:#475569">Duration: ${planSummary.durationLabel}</div>
             <div style="margin-top:6px;color:#475569">Bill Cycle: ${invoice.billCycle || "-"}</div>
             <div style="margin-top:6px;color:#475569">Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</div>
           </div>
@@ -354,6 +371,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
             <div style="margin-top:10px;color:#0f172a">Template: ${invoice.appliedTemplateName || invoice.appliedTemplateKey || "-"}</div>
             <div style="margin-top:6px;color:#0f172a">Series: ${invoice.invoicePrefix || "-"} / ${invoice.invoiceSeriesCode || "-"}</div>
             <div style="margin-top:6px;color:#0f172a">Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</div>
+            <div style="margin-top:6px;color:#0f172a">Tax Mode: ${planSummary.taxModeLabel}</div>
             <div style="margin-top:6px;color:#0f172a">GSTIN: ${appliedBranding.gstNumber || "-"}</div>
           </div>
         </div>
@@ -530,17 +548,21 @@ function drawPdfFooter(doc, branding, generatedText) {
 
 function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   const branding = resolveInvoiceBranding(pickBranding(profile, templateSettings), invoice);
+  const planSummary = resolveInvoicePlanSummary(invoice);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
   let y = drawKeyValueGrid(doc, 152, [
     ["Customer", customer?.fullName || invoice.customerId],
     ["Customer ID", invoice.customerId],
+    ["Plan", planSummary.planName],
+    ["Duration", planSummary.durationLabel],
     ["Bill Cycle", invoice.billCycle || "-"],
     ["Template", invoice.appliedTemplateName || invoice.appliedTemplateKey || "-"],
     ["Series", `${invoice.invoicePrefix || "-"} / ${invoice.invoiceSeriesCode || "-"}`],
     ["Due Date", invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"],
     ["Place of Supply", invoice.placeOfSupply || invoice.billingStateName || "-"],
+    ["Tax Mode", planSummary.taxModeLabel],
     ["Status", invoice.paymentStatus || "-"]
   ]);
   y += 18;
