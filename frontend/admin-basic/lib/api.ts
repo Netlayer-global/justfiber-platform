@@ -1324,9 +1324,18 @@ export const adminAPI = {
     zoneName?: string
     canAccessAllZones?: boolean
   }) => {
+    const payload = {
+      ...data,
+      username: data.username.trim(),
+      fullName: data.fullName.trim(),
+      email: data.email?.trim() || undefined,
+      phone: data.phone?.trim() || undefined,
+      zoneCode: data.zoneCode?.trim() || undefined,
+      zoneName: data.zoneName?.trim() || undefined,
+    }
     const res = await request<any>('/api/v1/admin/users', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     })
     return {
       ...res,

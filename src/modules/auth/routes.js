@@ -25,6 +25,9 @@ authRouter.post(
     if (!admin || !(await argon2.verify(admin.passwordHash, payload.password))) {
       throw new ApiError(401, "Invalid username/email or password");
     }
+    if (admin.status !== "active") {
+      throw new ApiError(403, admin.status === "locked" ? "Admin account is locked" : "Admin account is disabled");
+    }
 
     const accessToken = signAccessToken(admin);
     const refreshToken = signRefreshToken(admin);
