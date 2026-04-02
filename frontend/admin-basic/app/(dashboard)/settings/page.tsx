@@ -46,6 +46,9 @@ type InvoiceTemplateSection = {
   templateName: string
   templates: InvoiceTemplateEntry[]
   zoneTemplateMappings: Array<{ zoneCode: string; templateKey: string }>
+  billingAddressSettings: Record<string, any>
+  billingPeriodSettings: Record<string, any>
+  billingRuleSettings: Record<string, any>
   companyName: string
   companyAddress: string
   gstNumber: string
@@ -336,6 +339,18 @@ function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTem
           templateKey: String(item?.templateKey || '').trim(),
         }))
       : [],
+    billingAddressSettings:
+      value?.billingAddressSettings && typeof value.billingAddressSettings === 'object'
+        ? cloneValue(value.billingAddressSettings)
+        : {},
+    billingPeriodSettings:
+      value?.billingPeriodSettings && typeof value.billingPeriodSettings === 'object'
+        ? cloneValue(value.billingPeriodSettings)
+        : {},
+    billingRuleSettings:
+      value?.billingRuleSettings && typeof value.billingRuleSettings === 'object'
+        ? cloneValue(value.billingRuleSettings)
+        : {},
     companyName: String(value?.companyName || '').trim(),
     companyAddress: String(value?.companyAddress || '').trim(),
     gstNumber: String(value?.gstNumber || '').trim(),
@@ -615,13 +630,6 @@ export default function SettingsPage() {
   const invoiceTemplateSection = useMemo(
     () => normalizeInvoiceTemplateSection(sectionValue),
     [sectionValue]
-  )
-  const activeZoneTemplateKey = useMemo(
-    () =>
-      invoiceTemplateSection.zoneTemplateMappings.find(
-        (item) => item.zoneCode === String(activeZoneCode || '').trim().toUpperCase()
-      )?.templateKey || '',
-    [activeZoneCode, invoiceTemplateSection.zoneTemplateMappings]
   )
   const activeZoneFranchise = useMemo(
     () => franchises.find((item) => (item.zoneCode || item.franchiseCode) === activeZoneCode) || null,
@@ -1056,6 +1064,26 @@ export default function SettingsPage() {
   async function loadSection(section: string) {
     try {
       setIsSectionLoading(true)
+      if (section === 'invoice_template') {
+        const [templateRes, billingAddressRes, billingPeriodRes, billingRuleRes] = await Promise.all([
+          adminAPI.getSettingsSection<SectionValue>('invoice_template'),
+          adminAPI.getSettingsSection<SectionValue>('billing_address'),
+          adminAPI.getSettingsSection<SectionValue>('billing_period'),
+          adminAPI.getSettingsSection<SectionValue>('billing'),
+        ])
+        if (!templateRes.success || !templateRes.data) {
+          toast.error(templateRes.error || 'Failed to load invoice template')
+          return
+        }
+        setSectionValue({
+          ...(templateRes.data.value || {}),
+          billingAddressSettings: billingAddressRes.success ? billingAddressRes.data?.value || {} : {},
+          billingPeriodSettings: billingPeriodRes.success ? billingPeriodRes.data?.value || {} : {},
+          billingRuleSettings: billingRuleRes.success ? billingRuleRes.data?.value || {} : {},
+        })
+        setSectionUpdatedAt(templateRes.data.updatedAt || null)
+        return
+      }
       const response = await adminAPI.getSettingsSection<SectionValue>(section)
       if (!response.success || !response.data) {
         toast.error(response.error || `Failed to load ${section}`)
@@ -1074,6 +1102,34 @@ export default function SettingsPage() {
   async function saveSection() {
     try {
       setIsSaving(true)
+      if (activeSection === 'invoice_template') {
+        const mergedSection = normalizeInvoiceTemplateSection(sectionValue)
+        const invoiceTemplatePayload = cloneValue(sectionValue)
+        delete invoiceTemplatePayload.billingAddressSettings
+        delete invoiceTemplatePayload.billingPeriodSettings
+        delete invoiceTemplatePayload.billingRuleSettings
+
+        const [templateRes, billingAddressRes, billingPeriodRes, billingRuleRes] = await Promise.all([
+          adminAPI.updateSettingsSection('invoice_template', invoiceTemplatePayload),
+          adminAPI.updateSettingsSection('billing_address', mergedSection.billingAddressSettings || {}),
+          adminAPI.updateSettingsSection('billing_period', mergedSection.billingPeriodSettings || {}),
+          adminAPI.updateSettingsSection('billing', mergedSection.billingRuleSettings || {}),
+        ])
+
+        if (!templateRes.success || !billingAddressRes.success || !billingPeriodRes.success || !billingRuleRes.success) {
+          toast.error(
+            templateRes.error ||
+            billingAddressRes.error ||
+            billingPeriodRes.error ||
+            billingRuleRes.error ||
+            'Failed to save invoice configuration'
+          )
+          return
+        }
+        toast.success('Invoice configuration saved')
+        await loadSection(activeSection)
+        return
+      }
       const response = await adminAPI.updateSettingsSection(activeSection, sectionValue)
       if (!response.success) {
         toast.error(response.error || 'Failed to save settings')
@@ -1607,6 +1663,49 @@ export default function SettingsPage() {
               <>
                 {activeSection === 'invoice_template' ? (
                   <section className="space-y-4">
+                    <section className="card p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice generation setup</div>
+                          <div className="mt-1 text-sm text-slate-500">
+                            Billing address, billing period, and billing rules now save from this same invoice tab.
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                          <div className="mb-4 text-sm font-semibold text-slate-900">Billing address</div>
+                          <FieldEditor
+                            label="billingAddressSettings"
+                            value={invoiceTemplateSection.billingAddressSettings}
+                            path={['billingAddressSettings']}
+                            onChange={handleValueChange}
+                            onRemove={handleValueRemove}
+                          />
+                        </div>
+                        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                          <div className="mb-4 text-sm font-semibold text-slate-900">Billing period</div>
+                          <FieldEditor
+                            label="billingPeriodSettings"
+                            value={invoiceTemplateSection.billingPeriodSettings}
+                            path={['billingPeriodSettings']}
+                            onChange={handleValueChange}
+                            onRemove={handleValueRemove}
+                          />
+                        </div>
+                        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                          <div className="mb-4 text-sm font-semibold text-slate-900">Billing rules</div>
+                          <FieldEditor
+                            label="billingRuleSettings"
+                            value={invoiceTemplateSection.billingRuleSettings}
+                            path={['billingRuleSettings']}
+                            onChange={handleValueChange}
+                            onRemove={handleValueRemove}
+                          />
+                        </div>
+                      </div>
+                    </section>
+
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
