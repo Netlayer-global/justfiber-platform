@@ -509,6 +509,35 @@ function mapCustomer(customer: any): Customer {
           activatedAt: customer.radiusService.activatedAt,
           suspendedAt: customer.radiusService.suspendedAt,
           updatedAt: customer.radiusService.updatedAt,
+          lastRadiusState: customer.radiusService.lastRadiusState || null,
+          lastRadiusDerivedState: customer.radiusService.lastRadiusDerivedState || null,
+          lastServiceControlAction: customer.radiusService.lastServiceControlAction || null,
+          lastServiceControlAt: customer.radiusService.lastServiceControlAt || null,
+          lastServiceControlReason: customer.radiusService.lastServiceControlReason || null,
+          lastRadiusVerification: customer.radiusService.lastRadiusVerification
+            ? {
+                attempted: Boolean(customer.radiusService.lastRadiusVerification.attempted),
+                derivedState: customer.radiusService.lastRadiusVerification.derivedState || null,
+                matchesExpectedState: customer.radiusService.lastRadiusVerification.matchesExpectedState !== false,
+                matchesExpectedReplyMessage:
+                  customer.radiusService.lastRadiusVerification.matchesExpectedReplyMessage !== false,
+                error: customer.radiusService.lastRadiusVerification.error || null,
+                checks: customer.radiusService.lastRadiusVerification.checks
+                  ? {
+                      hasCleartextPassword: Boolean(
+                        customer.radiusService.lastRadiusVerification.checks.hasCleartextPassword
+                      ),
+                      hasAuthTypeReject: Boolean(
+                        customer.radiusService.lastRadiusVerification.checks.hasAuthTypeReject
+                      ),
+                      hasReplyMessage: Boolean(
+                        customer.radiusService.lastRadiusVerification.checks.hasReplyMessage
+                      ),
+                      replyMessage: customer.radiusService.lastRadiusVerification.checks.replyMessage || null,
+                    }
+                  : undefined,
+              }
+            : null,
           radcheck: Array.isArray(customer.radiusService.radcheck) ? customer.radiusService.radcheck : [],
           radreply: Array.isArray(customer.radiusService.radreply) ? customer.radiusService.radreply : [],
         }

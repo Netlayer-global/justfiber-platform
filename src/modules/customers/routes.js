@@ -342,6 +342,12 @@ async function buildCustomerResponse(customer) {
           activatedAt: subscriberService.activatedAt,
           suspendedAt: subscriberService.suspendedAt,
           updatedAt: subscriberService.updatedAt,
+          lastRadiusState: subscriberService.metadata?.lastRadiusState || null,
+          lastRadiusDerivedState: subscriberService.metadata?.lastRadiusDerivedState || null,
+          lastServiceControlAction: subscriberService.metadata?.lastServiceControlAction || null,
+          lastServiceControlAt: subscriberService.metadata?.lastServiceControlAt || null,
+          lastServiceControlReason: subscriberService.metadata?.lastServiceControlReason || null,
+          lastRadiusVerification: subscriberService.metadata?.lastRadiusVerification || null,
           radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
           radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
         }
@@ -785,6 +791,12 @@ customersRouter.get(
             activatedAt: subscriberService.activatedAt,
             suspendedAt: subscriberService.suspendedAt,
             updatedAt: subscriberService.updatedAt,
+            lastRadiusState: subscriberService.metadata?.lastRadiusState || null,
+            lastRadiusDerivedState: subscriberService.metadata?.lastRadiusDerivedState || null,
+            lastServiceControlAction: subscriberService.metadata?.lastServiceControlAction || null,
+            lastServiceControlAt: subscriberService.metadata?.lastServiceControlAt || null,
+            lastServiceControlReason: subscriberService.metadata?.lastServiceControlReason || null,
+            lastRadiusVerification: subscriberService.metadata?.lastRadiusVerification || null,
             radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
             radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
           }

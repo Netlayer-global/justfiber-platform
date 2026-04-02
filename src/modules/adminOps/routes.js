@@ -3392,7 +3392,10 @@ adminOpsRouter.post(
       currentIpv4: result.currentIpv4 || null,
       ipv4Pool: result.ipv4Pool || null,
       status: result.status,
-      updated: true
+      updated: true,
+      radiusState: result.radiusState || null,
+      radiusVerification: result.radiusVerification || null,
+      serviceControl: result.serviceControl || result.bngSession || null
     });
   })
 );
@@ -3418,6 +3421,7 @@ adminOpsRouter.post(
       status: result.status,
       updated: true,
       radiusState: result.radiusState || null,
+      radiusVerification: result.radiusVerification || null,
       serviceControl: result.serviceControl || result.bngSession || null
     });
   })
@@ -3443,6 +3447,7 @@ adminOpsRouter.post(
       status: result.status,
       updated: true,
       radiusState: result.radiusState || null,
+      radiusVerification: result.radiusVerification || null,
       serviceControl: result.serviceControl || result.bngSession || null
     });
   })

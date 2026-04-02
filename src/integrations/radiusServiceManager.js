@@ -27,12 +27,46 @@ function summarizeSessionHint(sessionHint = {}) {
   };
 }
 
-function buildServiceControlMetadata(action, { bngSession, radiusState, reason = null } = {}) {
+function summarizeRadiusVerification(verification = {}) {
+  if (!verification || typeof verification !== "object") {
+    return {
+      attempted: false,
+      derivedState: "unknown",
+      matchesExpectedState: false,
+      matchesExpectedReplyMessage: true,
+      error: null,
+      checks: {
+        hasCleartextPassword: false,
+        hasAuthTypeReject: false,
+        hasReplyMessage: false,
+        replyMessage: null
+      }
+    };
+  }
+  return {
+    attempted: true,
+    derivedState: String(verification?.derivedState || "unknown"),
+    matchesExpectedState: Boolean(verification?.matchesExpectedState),
+    matchesExpectedReplyMessage: Boolean(verification?.matchesExpectedReplyMessage),
+    error: verification?.error || null,
+    checks: {
+      hasCleartextPassword: Boolean(verification?.checks?.hasCleartextPassword),
+      hasAuthTypeReject: Boolean(verification?.checks?.hasAuthTypeReject),
+      hasReplyMessage: Boolean(verification?.checks?.hasReplyMessage),
+      replyMessage: verification?.checks?.replyMessage || null
+    }
+  };
+}
+
+function buildServiceControlMetadata(action, { bngSession, radiusState, reason = null, verification = null } = {}) {
   const now = new Date();
+  const verificationSummary = summarizeRadiusVerification(verification);
   return {
     lastServiceControlAction: action,
     lastServiceControlAt: now,
     lastRadiusState: radiusState,
+    lastRadiusDerivedState: verificationSummary.derivedState,
+    lastRadiusVerification: verificationSummary,
     lastServiceControlReason: reason,
     lastBngDisconnect: summarizeBngSession(bngSession),
     lastSessionHint: summarizeSessionHint(bngSession?.sessionHint),
@@ -205,6 +239,61 @@ export class RadiusServiceManager {
     }
   }
 
+  async finalizeServiceControl(
+    service,
+    { action, expectedState, expectedReplyMessage, reason = null, bngSession = null, usageSummary = null } = {}
+  ) {
+    let verification;
+    try {
+      verification = await this.verifySubscriberAccessState({
+        serviceId: service.serviceId,
+        radiusUsername: service.radiusUsername,
+        expectedState,
+        expectedReplyMessage
+      });
+    } catch (error) {
+      verification = {
+        derivedState: "unknown",
+        matchesExpectedState: false,
+        matchesExpectedReplyMessage: expectedReplyMessage === undefined,
+        error: error instanceof Error ? error.message : "Radius verification failed",
+        checks: {
+          hasCleartextPassword: false,
+          hasAuthTypeReject: false,
+          hasReplyMessage: false,
+          replyMessage: null
+        }
+      };
+    }
+
+    const verificationSummary = summarizeRadiusVerification(verification);
+    service.metadata = {
+      ...(service.metadata || {}),
+      ...buildServiceControlMetadata(action, {
+        bngSession,
+        radiusState: expectedState,
+        reason,
+        verification
+      })
+    };
+    await service.save();
+
+    return {
+      verification,
+      verificationSummary,
+      serviceControl: {
+        ...summarizeBngSession(bngSession),
+        radiusState: expectedState,
+        derivedRadiusState: verificationSummary.derivedState,
+        radiusVerified: verificationSummary.matchesExpectedState,
+        replyMessageVerified: verificationSummary.matchesExpectedReplyMessage,
+        verificationError: verificationSummary.error,
+        checks: verificationSummary.checks,
+        sessionHint: summarizeSessionHint(usageSummary || bngSession?.sessionHint)
+      }
+    };
+  }
+
   async createSubscriberAccess({
     serviceId,
     customerId,
@@ -303,23 +392,19 @@ export class RadiusServiceManager {
       reason: "provision_refresh",
       sessionHint: usageSummary
     });
-    nextService.metadata = {
-      ...(nextService.metadata || {}),
-      ...buildServiceControlMetadata("provision", {
+    const finalized = await this.finalizeServiceControl(nextService, {
+      action: "provision",
+      expectedState: "active",
       bngSession,
-      radiusState: "active"
-    })
-    };
-    await nextService.save();
+      usageSummary
+    });
 
     return {
       ...nextService.toObject(),
       bngSession,
-      radiusState: "active",
-      serviceControl: {
-        ...summarizeBngSession(bngSession),
-        sessionHint: summarizeSessionHint(usageSummary || bngSession?.sessionHint)
-      }
+      radiusState: finalized.verificationSummary.derivedState || "active",
+      radiusVerification: finalized.verificationSummary,
+      serviceControl: finalized.serviceControl
     };
   }
 
@@ -357,23 +442,20 @@ export class RadiusServiceManager {
       reason: "suspend_disconnect",
       sessionHint: usageSummary
     });
-    service.metadata = {
-      ...(service.metadata || {}),
-      ...buildServiceControlMetadata("suspend", {
+    const finalized = await this.finalizeServiceControl(service, {
+      action: "suspend",
+      expectedState: "suspended",
+      expectedReplyMessage: reason || env.RADIUS_REJECT_MESSAGE,
+      reason: reason || env.RADIUS_REJECT_MESSAGE,
       bngSession,
-      radiusState: "suspended",
-      reason: reason || env.RADIUS_REJECT_MESSAGE
-    })
-    };
-    await service.save();
+      usageSummary
+    });
     return {
       ...service.toObject(),
       bngSession,
-      radiusState: "suspended",
-      serviceControl: {
-        ...summarizeBngSession(bngSession),
-        sessionHint: summarizeSessionHint(usageSummary || bngSession?.sessionHint)
-      }
+      radiusState: finalized.verificationSummary.derivedState || "suspended",
+      radiusVerification: finalized.verificationSummary,
+      serviceControl: finalized.serviceControl
     };
   }
 

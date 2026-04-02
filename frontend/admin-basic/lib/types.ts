@@ -211,6 +211,24 @@ export interface Customer {
     activatedAt?: string
     suspendedAt?: string
     updatedAt?: string
+    lastRadiusState?: string | null
+    lastRadiusDerivedState?: string | null
+    lastServiceControlAction?: string | null
+    lastServiceControlAt?: string | null
+    lastServiceControlReason?: string | null
+    lastRadiusVerification?: {
+      attempted?: boolean
+      derivedState?: string | null
+      matchesExpectedState?: boolean
+      matchesExpectedReplyMessage?: boolean
+      error?: string | null
+      checks?: {
+        hasCleartextPassword?: boolean
+        hasAuthTypeReject?: boolean
+        hasReplyMessage?: boolean
+        replyMessage?: string | null
+      }
+    } | null
     radcheck?: Array<{ username?: string; attribute?: string; op?: string; value?: string }>
     radreply?: Array<{ username?: string; attribute?: string; op?: string; value?: string }>
   } | null
