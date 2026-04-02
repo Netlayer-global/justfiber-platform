@@ -588,6 +588,7 @@ export default function SettingsPage() {
     role: 'ops_admin',
   })
   const [passwordResetDraft, setPasswordResetDraft] = useState<Record<string, string>>({})
+  const [invoiceEditorTemplateKey, setInvoiceEditorTemplateKey] = useState('')
 
   const visibleCatalog = useMemo(() => {
     return catalog
@@ -631,6 +632,14 @@ export default function SettingsPage() {
     () => normalizeInvoiceTemplateSection(sectionValue),
     [sectionValue]
   )
+  const selectedInvoiceEditorTemplate = useMemo(
+    () =>
+      invoiceTemplateSection.templates.find((item) => item.key === invoiceEditorTemplateKey) ||
+      invoiceTemplateSection.templates.find((item) => item.key === invoiceTemplateSection.activeTemplate) ||
+      invoiceTemplateSection.templates[0] ||
+      null,
+    [invoiceEditorTemplateKey, invoiceTemplateSection]
+  )
   const activeZoneFranchise = useMemo(
     () => franchises.find((item) => (item.zoneCode || item.franchiseCode) === activeZoneCode) || null,
     [franchises, activeZoneCode]
@@ -661,6 +670,17 @@ export default function SettingsPage() {
       adminRole: current.adminRole || 'ops_admin',
     }))
   }, [activeZoneCode, activeZoneLabel])
+
+  useEffect(() => {
+    if (!invoiceTemplateSection.templates.length) {
+      setInvoiceEditorTemplateKey('')
+      return
+    }
+    const exists = invoiceTemplateSection.templates.some((item) => item.key === invoiceEditorTemplateKey)
+    if (!exists) {
+      setInvoiceEditorTemplateKey(invoiceTemplateSection.activeTemplate || invoiceTemplateSection.templates[0]?.key || '')
+    }
+  }, [invoiceEditorTemplateKey, invoiceTemplateSection.activeTemplate, invoiceTemplateSection.templates])
 
   useEffect(() => {
     const code = subZoneDraft.subZoneName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
@@ -1710,13 +1730,13 @@ export default function SettingsPage() {
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice templates</div>
-                          <div className="mt-1 text-sm text-slate-500">Create templates and choose the default one.</div>
+                          <div className="mt-1 text-sm text-slate-500">Choose the default template and edit one template at a time.</div>
                         </div>
                         <button type="button" className="btn-secondary" onClick={addInvoiceTemplate}>
                           Add template
                         </button>
                       </div>
-                      <div className="grid gap-4 lg:grid-cols-2">
+                      <div className="grid gap-4 lg:grid-cols-3">
                         <label className="space-y-2">
                           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Active default template</div>
                           <select
@@ -1752,18 +1772,48 @@ export default function SettingsPage() {
                             }
                           />
                         </label>
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Selected editor template</div>
+                          <select
+                            className="input"
+                            value={selectedInvoiceEditorTemplate?.key || ''}
+                            onChange={(event) => setInvoiceEditorTemplateKey(event.target.value)}
+                          >
+                            {invoiceTemplateSection.templates.map((item) => (
+                              <option key={item.key} value={item.key}>
+                                {item.templateName || item.key}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </section>
 
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template catalog</div>
-                          <div className="mt-1 text-sm text-slate-500">Build exact branding blocks for each state, city, or franchise zone.</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template editor</div>
+                          <div className="mt-1 text-sm text-slate-500">Edit the selected template only.</div>
                         </div>
                       </div>
-                      <div className="space-y-4">
+                      <div className="flex flex-wrap gap-2">
                         {invoiceTemplateSection.templates.map((template) => (
+                          <button
+                            key={template.key}
+                            type="button"
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                              selectedInvoiceEditorTemplate?.key === template.key
+                                ? 'border-[#5B6CFF]/25 bg-[#eef1ff] text-[#2946ff]'
+                                : 'border-slate-200 bg-white text-slate-600'
+                            }`}
+                            onClick={() => setInvoiceEditorTemplateKey(template.key)}
+                          >
+                            {template.templateName || template.key}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="space-y-4">
+                        {(selectedInvoiceEditorTemplate ? [selectedInvoiceEditorTemplate] : []).map((template) => (
                           <div key={template.key} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
                             <div className="mb-4 flex items-start justify-between gap-3">
                               <div>
@@ -1903,68 +1953,26 @@ export default function SettingsPage() {
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payment instructions</div>
                                 <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.paymentInstructions} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, paymentInstructions: event.target.value }))} />
                               </label>
-                              <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white overflow-hidden">
-                                <div
-                                  className="p-5"
-                                  style={{
-                                    background:
-                                      template.layoutStyle === 'modern'
-                                        ? `linear-gradient(135deg, ${template.accentColor || '#8224E3'} 0%, #0f172a 100%)`
-                                        : '#f8fafc',
-                                    color: template.layoutStyle === 'modern' ? '#ffffff' : '#0f172a',
-                                  }}
-                                >
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="flex items-center gap-4">
-                                      {template.logoDataUrl ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={template.logoDataUrl} alt="Logo" className="h-14 w-14 rounded-2xl bg-white/90 p-2 object-contain" />
-                                      ) : null}
-                                      <div>
-                                        <div className="text-lg font-semibold">{template.companyName || 'Company name'}</div>
-                                        <div className="mt-1 text-sm opacity-80">{template.companyAddress || 'Billing address preview'}</div>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-xs uppercase tracking-[0.18em] opacity-80">Invoice preview</div>
-                                      <div className="mt-1 text-sm font-semibold">{template.invoicePrefix || 'INV'} / MAIN / #0001</div>
-                                    </div>
+                              <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white p-4">
+                                <div className="text-sm font-semibold text-slate-900">Template summary</div>
+                                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm">
+                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Layout</div>
+                                    <div className="mt-1 font-semibold text-slate-900">{template.layoutStyle}</div>
                                   </div>
-                                </div>
-                                <div className="grid gap-4 p-5 md:grid-cols-[1.2fr_0.8fr]">
-                                  <div className="space-y-3">
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Customer</div>
-                                      <div className="mt-2 text-sm font-semibold text-slate-900">Customer name</div>
-                                      <div className="mt-1 text-sm text-slate-500">Place of supply and service details</div>
-                                    </div>
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                                      <div className="flex items-center justify-between text-sm">
-                                        <span className="text-slate-500">Broadband plan</span>
-                                        <span className="font-semibold text-slate-900">Rs 999.00</span>
-                                      </div>
-                                      <div className="mt-2 flex items-center justify-between text-sm">
-                                        <span className="text-slate-500">Tax</span>
-                                        <span className="font-semibold text-slate-900">Rs 152.39</span>
-                                      </div>
-                                      <div className="mt-3 border-t border-slate-200 pt-3 flex items-center justify-between">
-                                        <span className="text-sm font-semibold text-slate-900">Grand total</span>
-                                        <span className="text-lg font-bold text-slate-900">Rs 1,151.39</span>
-                                      </div>
-                                    </div>
+                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoice series</div>
+                                    <div className="mt-1 font-semibold text-slate-900">{template.invoicePrefix || 'INV'} / MAIN</div>
                                   </div>
-                                  <div className="space-y-3">
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">GST / PAN</div>
-                                      <div className="mt-2 text-sm text-slate-900">{template.gstNumber || 'GSTIN not set'}</div>
-                                      <div className="mt-1 text-sm text-slate-500">{template.panNumber || 'PAN not set'}</div>
-                                    </div>
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Payment block</div>
-                                      <div className="mt-2 text-sm text-slate-900">{template.bankName || 'Bank name'}</div>
-                                      <div className="mt-1 text-sm text-slate-500">{template.bankAccountNumber || 'Account number'} {template.bankIfscCode ? `| ${template.bankIfscCode}` : ''}</div>
-                                      <div className="mt-2 text-sm text-slate-500">{template.paymentInstructions || 'Payment instructions preview'}</div>
-                                    </div>
+                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">GST / PAN</div>
+                                    <div className="mt-1 font-semibold text-slate-900">{template.gstNumber || '-'}</div>
+                                    <div className="mt-1 text-slate-500">{template.panNumber || '-'}</div>
+                                  </div>
+                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Bank</div>
+                                    <div className="mt-1 font-semibold text-slate-900">{template.bankName || '-'}</div>
+                                    <div className="mt-1 text-slate-500">{template.bankIfscCode || '-'}</div>
                                   </div>
                                 </div>
                               </div>
