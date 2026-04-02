@@ -45,9 +45,9 @@ function inferDurationMonthsFromCustomer(customer = {}) {
 }
 
 function buildSyntheticServiceFromCustomer(customer = {}) {
-  if (!customer?.customerId || !customer?.serviceId) return null;
+  if (!customer?.customerId) return null;
   return {
-    serviceId: customer.serviceId,
+    serviceId: customer.serviceId || `CUST-${customer.customerId}`,
     customerId: customer.customerId,
     status: customer.operationalStatus === "suspended" ? "suspended" : "active",
     billingProfileCode: customer?.billingSnapshot?.billingProfileCode || "",

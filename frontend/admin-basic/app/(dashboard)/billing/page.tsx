@@ -1594,14 +1594,12 @@ export default function BillingPage() {
                           Mark Paid
                         </button>
                       ) : null}
-                      {(item.paymentStatus || item.status) !== 'paid' ? (
-                        <button
-                          className="text-xs text-rose-600"
-                          onClick={() => void deleteInvoice(item.invoiceId)}
-                        >
-                          Delete
-                        </button>
-                      ) : null}
+                      <button
+                        className="text-xs text-rose-600"
+                        onClick={() => void deleteInvoice(item.invoiceId)}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>

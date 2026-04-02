@@ -678,16 +678,14 @@ export default function CustomerDetailPage() {
                       >
                         Open PDF
                       </button>
-                      {latestInvoice.paymentStatus !== 'paid' ? (
-                        <button
-                          type="button"
-                          className="btn-secondary text-rose-600"
-                          onClick={() => void deleteInvoice(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}
-                          disabled={busyKey === `delete-invoice-${latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id}`}
-                        >
-                          Delete
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="btn-secondary text-rose-600"
+                        onClick={() => void deleteInvoice(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}
+                        disabled={busyKey === `delete-invoice-${latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id}`}
+                      >
+                        Delete
+                      </button>
                     </div>
                   ) : null}
                 </div>
@@ -725,16 +723,14 @@ export default function CustomerDetailPage() {
                           <div className="font-semibold text-slate-900">{formatValue(invoice.invoiceNumber || invoice.invoiceId)}</div>
                           <div className="flex items-center gap-3">
                             <div className="text-slate-500">{formatDate(invoice.issuedAt || invoice.createdAt || invoice.dueDate)}</div>
-                            {invoice.paymentStatus !== 'paid' ? (
-                              <button
-                                type="button"
-                                className="text-xs font-semibold text-rose-600"
-                                onClick={() => void deleteInvoice(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}
-                                disabled={busyKey === `delete-invoice-${invoice.invoiceId || invoice.invoiceNumber || invoice.id}`}
-                              >
-                                Delete
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-rose-600"
+                              onClick={() => void deleteInvoice(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}
+                              disabled={busyKey === `delete-invoice-${invoice.invoiceId || invoice.invoiceNumber || invoice.id}`}
+                            >
+                              Delete
+                            </button>
                           </div>
                         </div>
                         <div className="mt-2 text-slate-600">{formatAmount(invoice.amount)} · {formatValue(invoice.paymentStatus)}</div>

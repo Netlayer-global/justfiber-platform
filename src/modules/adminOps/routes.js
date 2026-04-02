@@ -3618,7 +3618,7 @@ adminOpsRouter.post(
         advanceBillingSchedule: false
       });
       if (explicitScope && Number(result.processed || 0) === 0) {
-        throw new ApiError(404, "No active billing service found for this customer or service");
+        throw new ApiError(404, "No billing source found for this customer or service");
       }
       if (explicitScope && Number(result.created || 0) === 0) {
         const firstReason = result.results?.find((item) => item?.skipped)?.reason || "invoice_not_created";
