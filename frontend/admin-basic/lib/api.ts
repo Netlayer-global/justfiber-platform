@@ -2597,6 +2597,10 @@ export const adminAPI = {
     request(`/api/v1/admin/billing/invoices/${invoiceId}/dispatch`, {
       method: 'POST',
     }),
+  deleteInvoice: async (invoiceId: string) =>
+    request(`/api/v1/admin/billing/invoices/${invoiceId}`, {
+      method: 'DELETE',
+    }),
   markInvoicePaid: async (invoiceId: string) =>
     request(`/api/v1/admin/billing/invoices/${invoiceId}/mark-paid`, {
       method: 'POST',

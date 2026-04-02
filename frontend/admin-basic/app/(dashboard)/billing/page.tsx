@@ -631,6 +631,21 @@ export default function BillingPage() {
     }
   }
 
+  async function deleteInvoice(invoiceId: string) {
+    try {
+      const res = await adminAPI.deleteInvoice(invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete invoice')
+        return
+      }
+      toast.success('Invoice deleted')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to delete invoice:', error)
+      toast.error('Failed to delete invoice')
+    }
+  }
+
   async function openInvoicePdf(invoiceId: string) {
     try {
       await openProtectedDocument(`/api/v1/admin/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`)
@@ -1577,6 +1592,14 @@ export default function BillingPage() {
                           onClick={() => void markInvoicePaid(item.invoiceId)}
                         >
                           Mark Paid
+                        </button>
+                      ) : null}
+                      {(item.paymentStatus || item.status) !== 'paid' ? (
+                        <button
+                          className="text-xs text-rose-600"
+                          onClick={() => void deleteInvoice(item.invoiceId)}
+                        >
+                          Delete
                         </button>
                       ) : null}
                     </div>

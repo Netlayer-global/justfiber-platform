@@ -538,22 +538,31 @@ export class InternalBillingEngine {
   }
 
   async runBillingCycle(options = {}) {
-    const filter = {
-      status: { $in: ["active", "suspended"] }
-    };
-    if (options.customerId) {
-      filter.customerId = options.customerId;
-    }
+    const explicitScope = Boolean(options.customerId || options.serviceId);
+    let services = [];
     if (options.serviceId) {
-      filter.serviceId = options.serviceId;
+      const service = await SubscriberService.findOne({
+        serviceId: options.serviceId,
+        status: { $in: ["draft", "active", "suspended", "expired", "pending_installation"] }
+      }).lean();
+      services = service ? [service] : [];
+    } else if (options.customerId) {
+      const service = await SubscriberService.findOne({
+        customerId: options.customerId,
+        status: { $in: ["draft", "active", "suspended", "expired", "pending_installation"] }
+      })
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .lean();
+      services = service ? [service] : [];
+    } else {
+      services = await SubscriberService.find({
+        status: { $in: ["active", "suspended"] }
+      }).lean();
     }
-
-    const services = await SubscriberService.find(filter).lean();
     const referenceDate = options.referenceDate ? new Date(options.referenceDate) : new Date();
     const results = [];
     for (const service of services) {
       const nextBillingDate = resolveServiceNextBillingDate(service);
-      const explicitScope = Boolean(options.customerId || options.serviceId);
       const invoiceWindowStart = nextBillingDate ? addDays(nextBillingDate, -ADVANCE_INVOICE_LEAD_DAYS) : null;
       const shouldProcess =
         explicitScope ||

@@ -3756,6 +3756,50 @@ adminOpsRouter.post(
   })
 );
 
+adminOpsRouter.delete(
+  "/billing/invoices/:invoiceId",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const invoice = await BillingInvoice.findOne({
+      $or: [{ invoiceId: req.params.invoiceId }, { invoiceNumber: req.params.invoiceId }]
+    });
+    if (!invoice) {
+      throw new ApiError(404, "Invoice not found");
+    }
+    if (String(invoice.paymentStatus || "").toLowerCase() === "paid" || String(invoice.status || "").toLowerCase() === "settled") {
+      throw new ApiError(400, "Paid invoices cannot be deleted");
+    }
+
+    const deletedInvoiceId = invoice.invoiceId;
+    const deletedInvoiceNumber = invoice.invoiceNumber;
+    const customerId = invoice.customerId;
+
+    await BillingLedgerEntry.deleteMany({ invoiceId: invoice.invoiceId, category: "invoice" });
+    await invoice.deleteOne();
+
+    const customer = await Customer.findOne({ customerId });
+    if (customer) {
+      await syncCustomerBillingState(customer.customerId, customer);
+    }
+
+    await auditFromRequest(req, {
+      action: "billing.invoice.deleted",
+      entityType: "billing_invoice",
+      entityId: deletedInvoiceId,
+      metadata: {
+        invoiceNumber: deletedInvoiceNumber,
+        customerId
+      }
+    });
+
+    return ok(res, {
+      deleted: true,
+      invoiceId: deletedInvoiceId,
+      invoiceNumber: deletedInvoiceNumber
+    });
+  })
+);
+
 adminOpsRouter.post(
   "/billing/notes/:noteNumber/dispatch",
   requirePermission(permissions.billingRead),
