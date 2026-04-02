@@ -36,6 +36,10 @@ function addMonths(date, months) {
   return next;
 }
 
+function escapeRegex(value = "") {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function inferDurationMonthsFromCustomer(customer = {}) {
   const snapshotCycle = String(customer?.billingSnapshot?.billCycle || customer?.invoiceSummary?.billCycle || "").toLowerCase();
   if (snapshotCycle.includes("year")) return 12;
@@ -59,6 +63,39 @@ function buildSyntheticServiceFromCustomer(customer = {}) {
       recurringAmount: Number(customer?.billingSnapshot?.lastInvoiceAmount || 0) || undefined
     }
   };
+}
+
+async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
+  const customerToken = String(rawValue || "").trim();
+  const serviceToken = String(serviceId || "").trim();
+  const exactCustomerRegex = customerToken ? new RegExp(`^${escapeRegex(customerToken)}$`, "i") : null;
+  const exactServiceRegex = serviceToken ? new RegExp(`^${escapeRegex(serviceToken)}$`, "i") : null;
+
+  if (exactCustomerRegex) {
+    const customer = await Customer.findOne({
+      $or: [
+        { customerId: exactCustomerRegex },
+        { accountNumber: exactCustomerRegex },
+        { phone: exactCustomerRegex },
+        { mobile: exactCustomerRegex },
+        { serviceId: exactCustomerRegex }
+      ]
+    }).lean();
+    if (customer) return customer;
+  }
+
+  if (exactServiceRegex) {
+    const customer = await Customer.findOne({
+      $or: [
+        { serviceId: exactServiceRegex },
+        { customerId: exactServiceRegex },
+        { accountNumber: exactServiceRegex }
+      ]
+    }).lean();
+    if (customer) return customer;
+  }
+
+  return null;
 }
 
 function deriveAmount(service, plan = null) {
@@ -570,7 +607,13 @@ export class InternalBillingEngine {
         serviceId: options.serviceId,
         status: { $in: ["draft", "active", "suspended", "expired", "pending_installation"] }
       }).lean();
-      services = service ? [service] : [];
+      if (service) {
+        services = [service];
+      } else {
+        const customer = await resolveCustomerFromBillingInput("", options.serviceId);
+        const synthetic = buildSyntheticServiceFromCustomer(customer || {});
+        services = synthetic ? [synthetic] : [];
+      }
     } else if (options.customerId) {
       let service = await SubscriberService.findOne({
         customerId: options.customerId,
@@ -579,7 +622,7 @@ export class InternalBillingEngine {
         .sort({ updatedAt: -1, createdAt: -1 })
         .lean();
       if (!service) {
-        const customer = await Customer.findOne({ customerId: options.customerId }).lean();
+        const customer = await resolveCustomerFromBillingInput(options.customerId, "");
         service = buildSyntheticServiceFromCustomer(customer || {});
       }
       services = service ? [service] : [];
