@@ -1831,7 +1831,7 @@ export default function SettingsPage() {
                                 ) : null}
                               </div>
                             </div>
-                            <div className="grid gap-4 lg:grid-cols-2">
+                            <div className="grid gap-4">
                               <label className="space-y-2">
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template key</div>
                                 <input className="input" value={template.key} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, key: event.target.value.trim().toLowerCase().replace(/\s+/g, '_') }))} />
@@ -1856,27 +1856,74 @@ export default function SettingsPage() {
                                   <option value="classic">Classic</option>
                                 </select>
                               </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Company name</div>
-                                <input className="input" value={template.companyName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, companyName: event.target.value }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GSTIN</div>
-                                <input className="input" value={template.gstNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, gstNumber: event.target.value.toUpperCase() }))} />
-                              </label>
-                              <label className="space-y-2 lg:col-span-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing address</div>
-                                <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.companyAddress} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, companyAddress: event.target.value }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice prefix</div>
-                                <input className="input" value={template.invoicePrefix} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Accent color</div>
-                                <input className="input" value={template.accentColor} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, accentColor: event.target.value }))} />
-                              </label>
-                              <div className="space-y-2 lg:col-span-2">
+                              <div className="rounded-[22px] border border-slate-200 bg-white p-4">
+                                <div className="mb-4 text-sm font-semibold text-slate-900">Company</div>
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Company name</div>
+                                    <input className="input" value={template.companyName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, companyName: event.target.value }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice prefix</div>
+                                    <input className="input" value={template.invoicePrefix} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</div>
+                                    <input className="input" value={template.phoneNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, phoneNumber: event.target.value }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Support email</div>
+                                    <input className="input" value={template.supportEmail} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, supportEmail: event.target.value }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Website</div>
+                                    <input className="input" value={template.website} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, website: event.target.value }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Accent color</div>
+                                    <input className="input" value={template.accentColor} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, accentColor: event.target.value }))} />
+                                  </label>
+                                  <label className="space-y-2 lg:col-span-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing address</div>
+                                    <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.companyAddress} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, companyAddress: event.target.value }))} />
+                                  </label>
+                                </div>
+                              </div>
+                              <div className="rounded-[22px] border border-slate-200 bg-white p-4">
+                                <div className="mb-4 text-sm font-semibold text-slate-900">Banking and tax</div>
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GSTIN</div>
+                                    <input className="input" value={template.gstNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, gstNumber: event.target.value.toUpperCase() }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">PAN</div>
+                                    <input className="input" value={template.panNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, panNumber: event.target.value.toUpperCase() }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Bank name</div>
+                                    <input className="input" value={template.bankName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankName: event.target.value }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Bank account</div>
+                                    <input className="input" value={template.bankAccountNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankAccountNumber: event.target.value }))} />
+                                  </label>
+                                  <label className="space-y-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">IFSC</div>
+                                    <input className="input" value={template.bankIfscCode} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankIfscCode: event.target.value.toUpperCase() }))} />
+                                  </label>
+                                  <label className="space-y-2 lg:col-span-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payment instructions</div>
+                                    <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.paymentInstructions} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, paymentInstructions: event.target.value }))} />
+                                  </label>
+                                  <label className="space-y-2 lg:col-span-2">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Footer note</div>
+                                    <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.footerNote} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, footerNote: event.target.value }))} />
+                                  </label>
+                                </div>
+                              </div>
+                              <div className="space-y-2 rounded-[22px] border border-slate-200 bg-white p-4">
+                                <div className="mb-4 text-sm font-semibold text-slate-900">Branding assets</div>
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template assets</div>
                                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                                   {[
@@ -1917,42 +1964,6 @@ export default function SettingsPage() {
                                   })}
                                 </div>
                               </div>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Website</div>
-                                <input className="input" value={template.website} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, website: event.target.value }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Support email</div>
-                                <input className="input" value={template.supportEmail} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, supportEmail: event.target.value }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</div>
-                                <input className="input" value={template.phoneNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, phoneNumber: event.target.value }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">PAN</div>
-                                <input className="input" value={template.panNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, panNumber: event.target.value.toUpperCase() }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Bank name</div>
-                                <input className="input" value={template.bankName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankName: event.target.value }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Bank account</div>
-                                <input className="input" value={template.bankAccountNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankAccountNumber: event.target.value }))} />
-                              </label>
-                              <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">IFSC</div>
-                                <input className="input" value={template.bankIfscCode} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, bankIfscCode: event.target.value.toUpperCase() }))} />
-                              </label>
-                              <label className="space-y-2 lg:col-span-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Footer note</div>
-                                <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.footerNote} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, footerNote: event.target.value }))} />
-                              </label>
-                              <label className="space-y-2 lg:col-span-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payment instructions</div>
-                                <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.paymentInstructions} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, paymentInstructions: event.target.value }))} />
-                              </label>
                               <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white p-4">
                                 <div className="text-sm font-semibold text-slate-900">Template summary</div>
                                 <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm">
