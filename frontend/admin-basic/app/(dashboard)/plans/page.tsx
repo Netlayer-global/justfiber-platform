@@ -847,11 +847,6 @@ function PlansContent() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {composerMode === 'create' ? (
-              <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                New plans start inactive. Activate only after pricing and invoice breakup are reviewed.
-              </div>
-            ) : null}
             <button type="submit" disabled={isSaving} className="btn-primary">
               {isSaving ? 'Saving...' : editingPlanId ? 'Update plan' : composerMode === 'clone' ? 'Create cloned plan' : 'Create plan'}
             </button>

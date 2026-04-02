@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { AdminRoleSummary, AdminUserSummary, FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
-import { ArrowRight, Building2, GitBranchPlus, Loader2, Router, Save, Search, Settings2, ShieldCheck, WalletCards } from 'lucide-react'
+import { Loader2, Save, Search, Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 type SectionValue = Record<string, any>
@@ -193,33 +193,6 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   Advanced: 'Low-frequency operational switches that should stay out of day-to-day screens.',
 }
 
-const ZONE_WORKSPACE_LINKS = [
-  {
-    href: '/my-zone-details',
-    title: 'My Zone Details',
-    description: 'See company, zone, and contact records exactly how operators view them.',
-    icon: Building2,
-  },
-  {
-    href: '/create-sub-zone',
-    title: 'Create Sub-Zone',
-    description: 'Launch a new sub-zone with franchise and parent-router inheritance controls.',
-    icon: GitBranchPlus,
-  },
-  {
-    href: '/routers',
-    title: 'Router Settings',
-    description: 'Review BNG, RADIUS, and zone-side router exposure before changing access workflows.',
-    icon: Router,
-  },
-  {
-    href: '/apps',
-    title: 'Payment / Integrations',
-    description: 'Open payment gateways and external integrations mapped to this admin environment.',
-    icon: WalletCards,
-  },
-]
-
 const initialSubZoneDraft: SubZoneDraft = {
   subZoneName: '',
   email: '',
@@ -297,52 +270,6 @@ function getSectionMeta(section: string): SectionMeta {
       advanced: true,
     }
   )
-}
-
-function getSectionPlaybook(section: string) {
-  switch (section) {
-    case 'general':
-      return {
-        title: 'Zone identity workflow',
-        bullets: [
-          'Update organization, zone, contact, and timezone details here before creating new sub-zones.',
-          'Use My Zone Details to verify what downstream operators will actually see.',
-        ],
-      }
-    case 'franchise_configuration':
-      return {
-        title: 'Franchise workflow',
-        bullets: [
-          'Use this section for inheritance and approval behavior; use Create Sub-Zone for new zone provisioning.',
-          'Keep franchise payout and router inheritance decisions together to avoid partial setup.',
-        ],
-      }
-    case 'router_visibility':
-      return {
-        title: 'Router governance workflow',
-        bullets: [
-          'Use Router Visibility for exposure policy; use Routers for actual BNG and FreeRADIUS execution.',
-          'Hide low-frequency router surfaces here instead of cluttering user or customer pages.',
-        ],
-      }
-    case 'tag_payment_gateway':
-    case 'external_integrations':
-      return {
-        title: 'Integration workflow',
-        bullets: [
-          'Use Apps for provider records and tokens; keep only environment-wide policy in Settings.',
-          'Map payment or messaging behavior here when the same rule should apply across the whole zone.',
-        ],
-      }
-    default:
-      return {
-        title: 'Operator note',
-        bullets: [
-          'Keep this section for policy and defaults, not high-frequency day-to-day actions.',
-          'If a setting directly affects operator flow, verify the related screen after saving changes.',
-        ],
-      }
-  }
 }
 
 function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTemplateSection {
@@ -668,7 +595,6 @@ export default function SettingsPage() {
   }, [visibleCatalog])
 
   const activeMeta = getSectionMeta(activeSection)
-  const activePlaybook = getSectionPlaybook(activeSection)
   const invoiceTemplateSection = useMemo(
     () => normalizeInvoiceTemplateSection(sectionValue),
     [sectionValue]
@@ -1253,56 +1179,6 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="card p-5">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Sub-zone inheritance</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Current zone launch pack</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Active zone</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneLabel || 'Default Zone'}</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Template</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneFranchise?.invoiceConfig?.templateKey || activeZoneResolvedTemplate?.templateName || 'Fallback'}</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Admin seats</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{activeZoneFranchise?.adminAccounts?.length || 0}</div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Inheritance</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">
-                {activeZoneFranchise?.inheritanceProfile
-                  ? `${[
-                      activeZoneFranchise.inheritanceProfile.inheritBillingProfile,
-                      activeZoneFranchise.inheritanceProfile.inheritInvoiceTemplate,
-                      activeZoneFranchise.inheritanceProfile.inheritPlans,
-                      activeZoneFranchise.inheritanceProfile.inheritPaymentGateway,
-                      activeZoneFranchise.inheritanceProfile.inheritRouterVisibility,
-                    ].filter(Boolean).length}/5`
-                  : 'Default'}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card p-5">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Franchise rollout guide</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Complete child-zone setup</h2>
-          <div className="mt-4 space-y-3">
-            {[
-              'Create the sub-zone with inheritance profile and at least one zone admin contact.',
-              'Confirm invoice template, payment route, and router exposure before switching operators to the new zone.',
-              'Use My Zone Details as the final validation screen before launch.',
-            ].map((item) => (
-              <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="card p-5">
           <div className="flex items-start justify-between gap-3">
@@ -1637,61 +1513,6 @@ export default function SettingsPage() {
                 No zone-specific logins found for the current active zone.
               </div>
             )}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="card p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone Admin Flow</div>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Settings, zone, and sub-zone workspace</h2>
-              <div className="mt-2 text-sm text-slate-500">
-                Use these links only for zone setup, inheritance, and low-frequency admin tasks.
-              </div>
-            </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-              Curated admin
-            </span>
-          </div>
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {ZONE_WORKSPACE_LINKS.map((item) => {
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 transition hover:border-[#5B6CFF]/20 hover:bg-[#eef1ff]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-2xl bg-white p-2 text-[#5B6CFF]">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-slate-900">{item.title}</div>
-                        <div className="mt-1 text-sm text-slate-500">{item.description}</div>
-                      </div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-slate-400" />
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Current Section</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">{activePlaybook.title}</h2>
-          <div className="mt-4 space-y-3">
-            {activePlaybook.bullets.map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-600" />
-                <div className="text-sm text-slate-600">{item}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
