@@ -1862,216 +1862,28 @@ export default function SettingsPage() {
                     <section className="card p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice generation setup</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice automation</div>
                           <div className="mt-1 text-sm text-slate-500">
-                            Billing address, billing period, and billing rules now save from this same invoice tab.
+                            Plan amount and duration come from plan management and the customer booking. Configure cadence and automation rules here.
                           </div>
                         </div>
                       </div>
-                      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                      <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr_1fr]">
                         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                          <div className="mb-4 text-sm font-semibold text-slate-900">Billing address</div>
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <label className="space-y-2 md:col-span-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Address line 1</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.address1 || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      address1: event.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2 md:col-span-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Address line 2</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.address2 || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      address2: event.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">City</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.city || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      city: event.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Pin code</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.pinCode || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      pinCode: event.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">State</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.state || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      state: event.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Country</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.country || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      country: event.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.phone || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      phone: event.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Email</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.email || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      email: event.target.value,
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GST number</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.gstNumber || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      gstNumber: event.target.value.toUpperCase(),
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="space-y-2">
-                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">PAN number</div>
-                              <input
-                                className="input"
-                                value={invoiceTemplateSection.billingAddressSettings.panNumber || ''}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      panNumber: event.target.value.toUpperCase(),
-                                    },
-                                  })
-                                }
-                              />
-                            </label>
-                            <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                              <div>
-                                <div className="text-sm font-semibold text-slate-900">GST imposed zone</div>
-                                <div className="text-xs text-slate-500">Enable GST for this billing address.</div>
-                              </div>
-                              <input
-                                type="checkbox"
-                                checked={Boolean(invoiceTemplateSection.billingAddressSettings.gstImposedZone)}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      gstImposedZone: event.target.checked,
-                                    },
-                                  })
-                                }
-                                className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
-                              />
-                            </label>
-                            <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                              <div>
-                                <div className="text-sm font-semibold text-slate-900">Auto tax selection</div>
-                                <div className="text-xs text-slate-500">Auto-pick tax mode during invoice generation.</div>
-                              </div>
-                              <input
-                                type="checkbox"
-                                checked={Boolean(invoiceTemplateSection.billingAddressSettings.autoTaxSelection)}
-                                onChange={(event) =>
-                                  replaceInvoiceTemplateSection({
-                                    ...invoiceTemplateSection,
-                                    billingAddressSettings: {
-                                      ...invoiceTemplateSection.billingAddressSettings,
-                                      autoTaxSelection: event.target.checked,
-                                    },
-                                  })
-                                }
-                                className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
-                              />
-                            </label>
+                          <div className="mb-4 text-sm font-semibold text-slate-900">Plan billing source</div>
+                          <div className="space-y-3 rounded-[20px] border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                            <div>
+                              <div className="font-semibold text-slate-900">Amount source</div>
+                              <div className="mt-1">Invoice amount comes from the selected plan in plan management.</div>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-slate-900">Duration source</div>
+                              <div className="mt-1">Billing duration comes from the duration selected while booking the customer.</div>
+                            </div>
+                            <div>
+                              <div className="font-semibold text-slate-900">Tax source</div>
+                              <div className="mt-1">GST percentage comes from the invoice organization for the active zone.</div>
+                            </div>
                           </div>
                         </div>
                         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
@@ -2272,8 +2084,8 @@ export default function SettingsPage() {
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice templates</div>
-                          <div className="mt-1 text-sm text-slate-500">Choose the default template and edit one template at a time.</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice template</div>
+                          <div className="mt-1 text-sm text-slate-500">Choose the default template and the template you want to use for the final invoice design.</div>
                         </div>
                         <button type="button" className="btn-secondary" onClick={addInvoiceTemplate}>
                           Add template
@@ -2303,7 +2115,7 @@ export default function SettingsPage() {
                           </select>
                         </label>
                         <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Fallback invoice prefix</div>
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template fallback prefix</div>
                           <input
                             className="input"
                             value={invoiceTemplateSection.invoicePrefix}
@@ -2316,7 +2128,7 @@ export default function SettingsPage() {
                           />
                         </label>
                         <div className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Selected editor template</div>
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Edit template</div>
                           <select
                             className="input"
                             value={selectedInvoiceEditorTemplate?.key || ''}
@@ -2335,8 +2147,8 @@ export default function SettingsPage() {
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template editor</div>
-                          <div className="mt-1 text-sm text-slate-500">Edit the selected template only.</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Modern template editor</div>
+                          <div className="mt-1 text-sm text-slate-500">Keep only the branding and payment details you want on the customer invoice.</div>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -2532,8 +2344,8 @@ export default function SettingsPage() {
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone assignments</div>
-                          <div className="mt-1 text-sm text-slate-500">Map each zone to the template it should use.</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template mapping</div>
+                          <div className="mt-1 text-sm text-slate-500">Choose which zone should use which invoice template.</div>
                         </div>
                         <button type="button" className="btn-secondary" onClick={addZoneTemplateMapping}>
                           Add zone mapping
