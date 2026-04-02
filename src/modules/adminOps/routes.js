@@ -322,6 +322,12 @@ function buildInvoiceHtml(invoice, customer, branding) {
   const appliedBranding = resolveInvoiceBranding(branding, invoice);
   const planSummary = resolveInvoicePlanSummary(invoice);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
+  const seriesLabel = [invoice.invoicePrefix, invoice.invoiceSeriesCode].filter(Boolean).join(" / ") || "-";
+  const organizationMeta = [
+    appliedBranding.gstNumber ? `GSTIN: ${appliedBranding.gstNumber}` : "",
+    appliedBranding.panNumber ? `PAN: ${appliedBranding.panNumber}` : "",
+    appliedBranding.companyState ? `State: ${appliedBranding.companyState}` : ""
+  ].filter(Boolean).join(" | ");
   const lineRows = (invoice.lineItems || [])
     .map(
       (item) =>
@@ -358,21 +364,33 @@ function buildInvoiceHtml(invoice, customer, branding) {
       <div style="padding:24px">
         <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:16px">
           <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#f8fafc">
+            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Invoice organization</div>
+            <div style="margin-top:10px;font-size:18px;font-weight:700;color:#0f172a">${appliedBranding.companyName}</div>
+            <div style="margin-top:6px;color:#475569;white-space:pre-line">${appliedBranding.companyAddress || "-"}</div>
+            <div style="margin-top:8px;color:#475569">${organizationMeta || "-"}</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#ffffff">
+            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Invoice details</div>
+            <div style="margin-top:10px;color:#0f172a">Series: ${seriesLabel}</div>
+            <div style="margin-top:6px;color:#0f172a">Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</div>
+            <div style="margin-top:6px;color:#0f172a">Tax Mode: ${planSummary.taxModeLabel}</div>
+            <div style="margin-top:6px;color:#0f172a">Status: ${invoice.paymentStatus || "-"}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px">
+          <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#f8fafc">
             <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Bill to</div>
             <div style="margin-top:10px;font-size:18px;font-weight:700;color:#0f172a">${customer?.fullName || invoice.customerId}</div>
             <div style="margin-top:6px;color:#475569">Customer ID: ${invoice.customerId}</div>
             <div style="margin-top:6px;color:#475569">Plan: ${planSummary.planName}</div>
             <div style="margin-top:6px;color:#475569">Duration: ${planSummary.durationLabel}</div>
-            <div style="margin-top:6px;color:#475569">Bill Cycle: ${invoice.billCycle || "-"}</div>
             <div style="margin-top:6px;color:#475569">Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</div>
           </div>
           <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#ffffff">
-            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Invoice details</div>
-            <div style="margin-top:10px;color:#0f172a">Template: ${invoice.appliedTemplateName || invoice.appliedTemplateKey || "-"}</div>
-            <div style="margin-top:6px;color:#0f172a">Series: ${invoice.invoicePrefix || "-"} / ${invoice.invoiceSeriesCode || "-"}</div>
-            <div style="margin-top:6px;color:#0f172a">Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</div>
-            <div style="margin-top:6px;color:#0f172a">Tax Mode: ${planSummary.taxModeLabel}</div>
-            <div style="margin-top:6px;color:#0f172a">GSTIN: ${appliedBranding.gstNumber || "-"}</div>
+            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Payment details</div>
+            <div style="margin-top:10px;color:#475569">${appliedBranding.paymentInstructions || "Use the listed account or gateway for payment."}</div>
+            <div style="margin-top:10px;color:#0f172a">${appliedBranding.bankName || "-"}</div>
+            <div style="margin-top:6px;color:#475569">${appliedBranding.bankAccountNumber ? `A/C ${appliedBranding.bankAccountNumber}` : ""} ${appliedBranding.bankIfscCode ? `| IFSC ${appliedBranding.bankIfscCode}` : ""}</div>
           </div>
         </div>
         <table style="border-collapse:collapse;width:100%;margin-top:18px">
@@ -390,15 +408,16 @@ function buildInvoiceHtml(invoice, customer, branding) {
           </tbody>
         </table>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
-          <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#f8fafc;color:#475569">
-            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Payment instructions</div>
-            <div style="margin-top:10px">${appliedBranding.paymentInstructions || "-"}</div>
-            <div style="margin-top:10px">${appliedBranding.bankName || ""} ${appliedBranding.bankAccountNumber ? `| ${appliedBranding.bankAccountNumber}` : ""} ${appliedBranding.bankIfscCode ? `| ${appliedBranding.bankIfscCode}` : ""}</div>
-          </div>
           <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#ffffff;color:#475569">
             <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Compliance</div>
             <div style="margin-top:10px">${appliedBranding.gstNumber ? `GSTIN: ${appliedBranding.gstNumber}` : ""} ${appliedBranding.panNumber ? `<br/>PAN: ${appliedBranding.panNumber}` : ""}</div>
             <div style="margin-top:10px">${appliedBranding.footerNote || ""}</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#f8fafc;color:#475569">
+            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Support</div>
+            <div style="margin-top:10px">${appliedBranding.phoneNumber || "-"}</div>
+            <div style="margin-top:6px">${appliedBranding.supportEmail || appliedBranding.emailAddress || "-"}</div>
+            <div style="margin-top:10px">${appliedBranding.website || ""}</div>
           </div>
         </div>
       </div>
@@ -550,17 +569,18 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   const branding = resolveInvoiceBranding(pickBranding(profile, templateSettings), invoice);
   const planSummary = resolveInvoicePlanSummary(invoice);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
+  const seriesLabel = [invoice.invoicePrefix, invoice.invoiceSeriesCode].filter(Boolean).join(" / ") || "-";
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
   let y = drawKeyValueGrid(doc, 152, [
+    ["Organization", branding.companyName || "-"],
+    ["GSTIN", branding.gstNumber || "-"],
+    ["Series", seriesLabel],
+    ["Due Date", invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"],
     ["Customer", customer?.fullName || invoice.customerId],
     ["Customer ID", invoice.customerId],
     ["Plan", planSummary.planName],
     ["Duration", planSummary.durationLabel],
-    ["Bill Cycle", invoice.billCycle || "-"],
-    ["Template", invoice.appliedTemplateName || invoice.appliedTemplateKey || "-"],
-    ["Series", `${invoice.invoicePrefix || "-"} / ${invoice.invoiceSeriesCode || "-"}`],
-    ["Due Date", invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"],
     ["Place of Supply", invoice.placeOfSupply || invoice.billingStateName || "-"],
     ["Tax Mode", planSummary.taxModeLabel],
     ["Status", invoice.paymentStatus || "-"]
