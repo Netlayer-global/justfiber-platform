@@ -999,16 +999,14 @@ export default function BillingPage() {
           <div>
             <div className="modernize-subtitle">Billing</div>
             <h1 className="mt-1 text-3xl font-semibold text-slate-900">
-              {billingSectionTab === 'invoices' ? 'Invoice Desk' : billingSectionTab === 'payments' ? 'Payments & Reconciliation' : billingSectionTab === 'collections' ? 'Collections Desk' : 'Finance Setup'}
+              {billingSectionTab === 'invoices' ? 'Invoice Desk' : billingSectionTab === 'payments' ? 'Payments & Reconciliation' : 'Collections Desk'}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               {billingSectionTab === 'invoices'
                 ? `${visibleInvoices.length} invoices in current view`
                 : billingSectionTab === 'payments'
                   ? `${payments.length} payments and ${refundPayments.length} refunds`
-              : billingSectionTab === 'collections'
-                  ? `${visibleCollections.length} accounts in collection queue`
-                  : `${profiles.length} billing profiles and ${invoiceTemplateSettings?.templates?.length || 1} templates`}
+                  : `${visibleCollections.length} accounts in collection queue`}
             </p>
           </div>
           <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
@@ -1016,9 +1014,7 @@ export default function BillingPage() {
               ? `Pending Rs ${invoicePulse.pendingAmount.toFixed(2)}`
               : billingSectionTab === 'payments'
                 ? `${visiblePayments.length} visible payments`
-                : billingSectionTab === 'collections'
-                  ? `${visibleCollections.filter((item) => item.suspendRecommended).length} suspend-ready`
-              : `${profileForm.zoneMappings.length} zone mappings`}
+                  : `${visibleCollections.filter((item) => item.suspendRecommended).length} suspend-ready`}
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -1091,21 +1087,6 @@ export default function BillingPage() {
             >
               Export Collections CSV
             </a>
-          ) : null}
-          {billingSectionTab === 'settings' ? (
-            <a
-              className="btn-secondary"
-              href={gstExportUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Export GST CSV
-            </a>
-          ) : null}
-          {billingSectionTab === 'settings' ? (
-            <Link href="/settings" className="btn-secondary">
-              Open Template Settings
-            </Link>
           ) : null}
           <button onClick={() => void loadBilling()} className="btn-secondary inline-flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
