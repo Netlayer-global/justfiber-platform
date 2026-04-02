@@ -332,6 +332,14 @@ async function buildCustomerResponse(customer) {
           radiusUsername: subscriberService.radiusUsername
         }).catch(() => null)
       : null;
+  const radiusSessionHistory =
+    subscriberService?.radiusUsername
+      ? await radiusServiceManager.getSubscriberSessionHistory({
+          serviceId: subscriberService.serviceId,
+          radiusUsername: subscriberService.radiusUsername,
+          limit: 5
+        }).catch(() => [])
+      : [];
 
   return {
     ...customer,
@@ -364,6 +372,7 @@ async function buildCustomerResponse(customer) {
                 latestUpdateAt: radiusUsageSummary.latestUpdateAt || null
               }
             : null,
+          sessionHistory: Array.isArray(radiusSessionHistory) ? radiusSessionHistory : [],
           radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
           radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
         }
@@ -793,6 +802,14 @@ customersRouter.get(
             radiusUsername: subscriberService.radiusUsername
           }).catch(() => null)
         : null;
+    const radiusSessionHistory =
+      subscriberService?.radiusUsername
+        ? await radiusServiceManager.getSubscriberSessionHistory({
+            serviceId: subscriberService.serviceId,
+            radiusUsername: subscriberService.radiusUsername,
+            limit: 5
+          }).catch(() => [])
+        : [];
     return ok(res, {
       ...customer,
       devices,
@@ -829,6 +846,7 @@ customersRouter.get(
                   latestUpdateAt: radiusUsageSummary.latestUpdateAt || null
                 }
               : null,
+            sessionHistory: Array.isArray(radiusSessionHistory) ? radiusSessionHistory : [],
             radcheck: Array.isArray(radiusSnapshot?.radcheck) ? radiusSnapshot.radcheck : [],
             radreply: Array.isArray(radiusSnapshot?.radreply) ? radiusSnapshot.radreply : []
           }

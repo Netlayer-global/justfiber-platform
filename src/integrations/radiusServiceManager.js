@@ -239,6 +239,54 @@ export class RadiusServiceManager {
     }
   }
 
+  async getSubscriberSessionHistory({ serviceId, radiusUsername, limit = 5 } = {}) {
+    const service =
+      (serviceId && (await SubscriberService.findOne({ serviceId }))) ||
+      (radiusUsername && (await SubscriberService.findOne({ radiusUsername })));
+    const username = radiusUsername || service?.radiusUsername;
+    if (!username) {
+      throw new Error("Radius username is required for session history");
+    }
+    const safeLimit = Math.max(1, Math.min(Number(limit || 5), 20));
+    const connection = await getPool().getConnection();
+    try {
+      const [rows] = await connection.execute(
+        `SELECT
+          radacctid,
+          acctstarttime,
+          acctstoptime,
+          acctupdatetime,
+          framedipaddress,
+          callingstationid,
+          acctsessiontime,
+          (COALESCE(acctinputgigawords, 0) * 4294967296) + COALESCE(acctinputoctets, 0) AS inputOctets,
+          (COALESCE(acctoutputgigawords, 0) * 4294967296) + COALESCE(acctoutputoctets, 0) AS outputOctets
+        FROM radacct
+        WHERE username = ?
+        ORDER BY acctstarttime DESC, radacctid DESC
+        LIMIT ${safeLimit}`,
+        [username]
+      );
+      return Array.isArray(rows)
+        ? rows.map((row) => ({
+            sessionId: String(row.radacctid || ""),
+            startedAt: row.acctstarttime || null,
+            stoppedAt: row.acctstoptime || null,
+            updatedAt: row.acctupdatetime || null,
+            ipAddress: row.framedipaddress || null,
+            macAddress: row.callingstationid || null,
+            sessionSeconds: Number(row.acctsessiontime || 0),
+            inputOctets: Number(row.inputOctets || 0),
+            outputOctets: Number(row.outputOctets || 0),
+            totalOctets: Number(row.inputOctets || 0) + Number(row.outputOctets || 0),
+            live: !row.acctstoptime
+          }))
+        : [];
+    } finally {
+      connection.release();
+    }
+  }
+
   async finalizeServiceControl(
     service,
     { action, expectedState, expectedReplyMessage, reason = null, bngSession = null, usageSummary = null } = {}

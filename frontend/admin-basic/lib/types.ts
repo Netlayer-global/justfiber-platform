@@ -236,6 +236,19 @@ export interface Customer {
       latestSessionStart?: string | null
       latestUpdateAt?: string | null
     } | null
+    sessionHistory?: Array<{
+      sessionId?: string
+      startedAt?: string | null
+      stoppedAt?: string | null
+      updatedAt?: string | null
+      ipAddress?: string | null
+      macAddress?: string | null
+      sessionSeconds?: number
+      inputOctets?: number
+      outputOctets?: number
+      totalOctets?: number
+      live?: boolean
+    }>
     radcheck?: Array<{ username?: string; attribute?: string; op?: string; value?: string }>
     radreply?: Array<{ username?: string; attribute?: string; op?: string; value?: string }>
   } | null

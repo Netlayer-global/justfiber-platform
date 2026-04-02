@@ -547,6 +547,21 @@ function mapCustomer(customer: any): Customer {
                 latestUpdateAt: customer.radiusService.usageSummary.latestUpdateAt || null,
               }
             : null,
+          sessionHistory: Array.isArray(customer.radiusService.sessionHistory)
+            ? customer.radiusService.sessionHistory.map((item: any) => ({
+                sessionId: item.sessionId || '',
+                startedAt: item.startedAt || null,
+                stoppedAt: item.stoppedAt || null,
+                updatedAt: item.updatedAt || null,
+                ipAddress: item.ipAddress || null,
+                macAddress: item.macAddress || null,
+                sessionSeconds: Number(item.sessionSeconds || 0),
+                inputOctets: Number(item.inputOctets || 0),
+                outputOctets: Number(item.outputOctets || 0),
+                totalOctets: Number(item.totalOctets || 0),
+                live: item.live === true,
+              }))
+            : [],
           radcheck: Array.isArray(customer.radiusService.radcheck) ? customer.radiusService.radcheck : [],
           radreply: Array.isArray(customer.radiusService.radreply) ? customer.radiusService.radreply : [],
         }

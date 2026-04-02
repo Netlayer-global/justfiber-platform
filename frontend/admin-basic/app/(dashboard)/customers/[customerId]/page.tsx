@@ -45,6 +45,15 @@ function formatDataUsage(totalOctets: unknown) {
   return `${mb.toFixed(0)} MB`
 }
 
+function formatDuration(seconds: unknown) {
+  const total = Number(seconds || 0)
+  if (!total || total <= 0) return '-'
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
 function isLikelyIpv4(value: string) {
   if (!value.trim()) return true
   return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value.trim())
@@ -278,6 +287,20 @@ export default function CustomerDetailPage() {
     })
   }
 
+  async function handleRepairRadius() {
+    if (!customer) return
+    await runBusy('repair-radius', async () => {
+      const res = await adminAPI.provisionCustomerPppoe(customer.id)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to repair RADIUS')
+        return
+      }
+      const verified = res.data?.radiusVerification?.matchesExpectedState !== false
+      toast.success(verified ? 'RADIUS repaired and verified' : 'RADIUS repair completed with warning')
+      await loadCustomer()
+    })
+  }
+
   async function handleSuspendPppoe() {
     if (!customer) return
     await runBusy('suspend-pppoe', async () => {
@@ -496,6 +519,9 @@ export default function CustomerDetailPage() {
             <button type="button" className="btn-secondary" onClick={() => void handleProvisionPppoe()} disabled={busyKey === 'provision-pppoe'}>
               {busyKey === 'provision-pppoe' ? 'Provisioning...' : 'Provision PPPoE'}
             </button>
+            <button type="button" className="btn-secondary" onClick={() => void handleRepairRadius()} disabled={busyKey === 'repair-radius'}>
+              {busyKey === 'repair-radius' ? 'Repairing...' : 'Repair Radius'}
+            </button>
             <button type="button" className="btn-secondary" onClick={() => void handleResumePppoe()} disabled={busyKey === 'resume-pppoe'}>
               {busyKey === 'resume-pppoe' ? 'Resuming...' : 'Resume PPPoE'}
             </button>
@@ -577,6 +603,34 @@ export default function CustomerDetailPage() {
                     Copy IP / Pool
                   </button>
                 </div>
+              </div>
+
+              <div className="card p-5 space-y-3">
+                <h2 className="text-lg font-semibold text-slate-900">Recent PPPoE sessions</h2>
+                {customer.radiusService?.sessionHistory?.length ? (
+                  <div className="space-y-2">
+                    {customer.radiusService.sessionHistory.map((session) => (
+                      <div key={session.sessionId || `${session.startedAt}-${session.ipAddress}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="font-medium text-slate-900">{session.live ? 'Live session' : 'Closed session'}</div>
+                          <div className={`rounded-full px-2 py-1 text-xs ${session.live ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {session.live ? 'Live' : 'Closed'}
+                          </div>
+                        </div>
+                        <div className="mt-2 grid gap-1 md:grid-cols-2">
+                          <div>Started: {formatDate(session.startedAt)}</div>
+                          <div>Updated: {formatDate(session.updatedAt)}</div>
+                          <div>Stopped: {formatDate(session.stoppedAt)}</div>
+                          <div>Duration: {formatDuration(session.sessionSeconds)}</div>
+                          <div>IP: {formatValue(session.ipAddress)}</div>
+                          <div>Usage: {formatDataUsage(session.totalOctets)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">No recent PPPoE session history found.</div>
+                )}
               </div>
             </div>
           </div>
