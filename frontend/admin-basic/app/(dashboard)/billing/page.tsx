@@ -321,17 +321,6 @@ export default function BillingPage() {
     }),
     [refundPayments.length, visiblePayments]
   )
-  const collectionsOpsSummary = useMemo(
-    () => ({
-      visible: visibleCollections.length,
-      assigned: visibleCollections.filter((item) => Boolean(item.assignedAdminName)).length,
-      unassigned: visibleCollections.filter((item) => !item.assignedAdminName).length,
-      suspendNow: visibleCollections.filter((item) => item.suspendEligible).length,
-      promiseActive: visibleCollections.filter((item) => item.promiseActive).length,
-      totalDue: visibleCollections.reduce((sum, item) => sum + Number(item.dueAmount || 0), 0),
-    }),
-    [visibleCollections]
-  )
   useEffect(() => {
     const syncZone = () => {
       const zoneKey = window.localStorage.getItem('justfiber-active-zone-key') || ''
@@ -796,28 +785,6 @@ export default function BillingPage() {
     }
   }
 
-  function applyCollectionsPreset(
-    preset: 'unassigned' | 'assigned_followup' | 'suspend_ready' | 'ptp_watch'
-  ) {
-    if (preset === 'unassigned') {
-      setCollectionBucket('')
-      setCollectionFilters({ search: '', ownership: 'unassigned', posture: '' })
-      return
-    }
-    if (preset === 'assigned_followup') {
-      setCollectionBucket('')
-      setCollectionFilters({ search: '', ownership: 'assigned', posture: 'monitor' })
-      return
-    }
-    if (preset === 'suspend_ready') {
-      setCollectionBucket('suspend_ready')
-      setCollectionFilters({ search: '', ownership: '', posture: 'suspend' })
-      return
-    }
-    setCollectionBucket('')
-    setCollectionFilters({ search: '', ownership: '', posture: 'ptp' })
-  }
-
   function toggleBulkSelection(customerId: string) {
     setBulkSelection((current) =>
       current.includes(customerId)
@@ -1015,18 +982,18 @@ export default function BillingPage() {
     return 'bg-white/5 text-slate-300'
   }
   const billingSectionTabs: Array<{
-    key: 'invoices' | 'payments' | 'collections' | 'settings'
+    key: 'invoices' | 'payments' | 'collections'
     label: string
     hint: string
   }> = [
     { key: 'invoices', label: 'Invoice Desk', hint: 'Generate and manage invoices' },
     { key: 'payments', label: 'Payments & Recon', hint: 'Reconcile, receipts, and refunds' },
     { key: 'collections', label: 'Collections Desk', hint: 'Work pending and overdue accounts' },
-    { key: 'settings', label: 'Finance Setup', hint: 'GST, zones, templates, and exports' },
   ]
 
   return (
     <div className="space-y-6">
+      {billingSectionTab !== 'collections' ? (
       <section className="modernize-page-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1064,16 +1031,9 @@ export default function BillingPage() {
           <button className={`btn-secondary ${billingSectionTab === 'collections' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('collections')}>
             Collections queue
           </button>
-          <button className={`btn-secondary ${billingSectionTab === 'settings' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('settings')}>
-            Finance setup
-          </button>
-          {pendingFinanceApprovals.length ? (
-            <button className="btn-secondary" onClick={() => setBillingSectionTab('settings')}>
-              {pendingFinanceApprovals.length} approvals pending
-            </button>
-          ) : null}
         </div>
       </section>
+      ) : null}
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-wrap gap-2">
@@ -1418,43 +1378,6 @@ export default function BillingPage() {
 
       {billingSectionTab === 'collections' ? (
       <div className="space-y-4">
-        <div className="card p-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Collections filters</div>
-              <div className="mt-1 text-sm text-slate-400">Queue, ownership, and follow-up presets.</div>
-            </div>
-            <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-              Rs {collectionsOpsSummary.totalDue.toFixed(2)} due
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button className="btn-secondary" onClick={() => applyCollectionsPreset('unassigned')}>
-              Unassigned
-            </button>
-            <button className="btn-secondary" onClick={() => applyCollectionsPreset('assigned_followup')}>
-              Assigned follow-up
-            </button>
-            <button className="btn-secondary" onClick={() => applyCollectionsPreset('suspend_ready')}>
-              Suspend ready
-            </button>
-            <button className="btn-secondary" onClick={() => applyCollectionsPreset('ptp_watch')}>
-              Promise to pay
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={() => setCollectionFilters((prev) => ({ ...prev, ownership: 'assigned' }))}
-            >
-              Assigned
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={() => setCollectionFilters((prev) => ({ ...prev, ownership: 'unassigned' }))}
-            >
-              Unassigned
-            </button>
-          </div>
-        </div>
         <div className="card p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
