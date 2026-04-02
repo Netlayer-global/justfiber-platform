@@ -67,6 +67,18 @@ function toCurrency(value: number) {
   }).format(value || 0)
 }
 
+function hasLivePppoeSession(customer: Customer) {
+  return Boolean(
+    customer.devices?.some((device) => {
+      const online = String(device.onlineStatus || '').toLowerCase() === 'online'
+      const sessionUp = String(device.wanInfo?.sessionStatus || '').toLowerCase() === 'up'
+      const hasIpv4 = Boolean(String(device.wanInfo?.ipv4Address || device.wanInfo?.ipAddress || '').trim())
+      return online || sessionUp || hasIpv4
+    }) ||
+    String(customer.radiusService?.status || '').toLowerCase() === 'active'
+  )
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -270,7 +282,7 @@ export default function DashboardPage() {
   }, [customers])
 
   const userCountSummary = useMemo(() => {
-    const onlineUsers = customers.filter((customer) => customer.devices?.some((device) => device.onlineStatus === 'online')).length
+    const onlineUsers = customers.filter((customer) => hasLivePppoeSession(customer)).length
     const activeUsers = customers.filter((customer) => customer.status === 'active').length
     const suspendedUsers = customers.filter((customer) => customer.status === 'suspended').length
     const blockedUsers = customers.filter((customer) => customer.status === 'inactive').length

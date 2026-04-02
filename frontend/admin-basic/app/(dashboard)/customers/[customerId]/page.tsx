@@ -41,6 +41,20 @@ function isLikelyIpv4(value: string) {
   return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value.trim())
 }
 
+function getPppoeLiveStatus(customer: Customer | null, device?: CustomerDevice | null) {
+  if (!customer) return { label: 'Unknown', tone: 'bg-slate-100 text-slate-600' }
+  const online = String(device?.onlineStatus || '').toLowerCase() === 'online'
+  const sessionUp = String(device?.wanInfo?.sessionStatus || '').toLowerCase() === 'up'
+  const hasIpv4 = Boolean(String(device?.wanInfo?.ipv4Address || device?.wanInfo?.ipAddress || '').trim())
+  if (online || sessionUp || hasIpv4) {
+    return { label: 'PPPoE Live', tone: 'bg-emerald-100 text-emerald-700' }
+  }
+  if (String(customer.radiusService?.status || '').toLowerCase() === 'active') {
+    return { label: 'Ready', tone: 'bg-amber-100 text-amber-700' }
+  }
+  return { label: 'Offline', tone: 'bg-slate-100 text-slate-600' }
+}
+
 function normalizeCustomer(raw: Customer): Customer {
   return {
     ...raw,
@@ -173,6 +187,28 @@ export default function CustomerDetailPage() {
         return
       }
       toast.success('Disconnect request sent')
+      await loadCustomer()
+    })
+  }
+
+  async function handleReconnectSession() {
+    if (!customer) return
+    const nodeCode = customer.radiusService?.bngNodeCode
+    const username = customer.radiusService?.radiusUsername || customer.pppoeUsername
+    if (!nodeCode || !username) {
+      toast.error('Missing BNG node or PPPoE username')
+      return
+    }
+    await runBusy('reconnect-session', async () => {
+      const res = await adminAPI.sendBngNodeCoaDisconnect(nodeCode, {
+        radiusUsername: username,
+        reason: 'Customer detail PPPoE reconnect',
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to reconnect PPPoE')
+        return
+      }
+      toast.success('PPPoE reconnect sent')
       await loadCustomer()
     })
   }
@@ -319,6 +355,7 @@ export default function CustomerDetailPage() {
     return <div className="card p-10 text-center text-slate-500">Customer not found.</div>
   }
 
+  const pppoeLiveStatus = getPppoeLiveStatus(customer, primaryDevice)
   const overviewCards = [
     { label: 'Customer', value: customer.name, sub: customer.phone || '-' },
     { label: 'PPPoE', value: customer.pppoeUsername || '-', sub: `Service ${formatValue(customer.serviceId)}` },
@@ -341,6 +378,7 @@ export default function CustomerDetailPage() {
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.phone || 'No phone'}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.plan?.name || 'No plan'}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.pppoeUsername || 'No PPPoE'}</span>
+              <span className={`rounded-full px-3 py-1 ${pppoeLiveStatus.tone}`}>{pppoeLiveStatus.label}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.zoneName || customer.zoneCode || 'No zone'}</span>
             </div>
           </div>
@@ -356,6 +394,10 @@ export default function CustomerDetailPage() {
               Network
             </button>
             <Link href={`/all-users/${customer.id}/edit`} className="btn-secondary">Edit</Link>
+            <button type="button" className="btn-secondary" onClick={() => void handleReconnectSession()} disabled={busyKey === 'reconnect-session'}>
+              <PlugZap className="mr-2 h-4 w-4" />
+              {busyKey === 'reconnect-session' ? 'Reconnecting...' : 'Reconnect PPPoE'}
+            </button>
             <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={busyKey === 'disconnect-session'}>
               <PlugZap className="mr-2 h-4 w-4" />
               Disconnect
@@ -416,6 +458,7 @@ export default function CustomerDetailPage() {
                   <div><span className="font-medium text-slate-900">Static IP:</span> {formatValue(customer.radiusService?.currentIpv4)}</div>
                   <div><span className="font-medium text-slate-900">Pool:</span> {formatValue(customer.radiusService?.ipv4Pool)}</div>
                   <div><span className="font-medium text-slate-900">PPPoE:</span> {formatValue(customer.pppoeUsername)}</div>
+                  <div><span className="font-medium text-slate-900">Live status:</span> {pppoeLiveStatus.label}</div>
                   <div><span className="font-medium text-slate-900">WAN MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac)}</div>
                   <div><span className="font-medium text-slate-900">BNG:</span> {formatValue(customer.radiusService?.bngNodeCode)}</div>
                   <div><span className="font-medium text-slate-900">Zone:</span> {formatValue(customer.zoneName || customer.zoneCode)}</div>
