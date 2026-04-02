@@ -331,7 +331,23 @@ export default function BillingPage() {
         toast.error(res.error || 'Failed to generate invoice')
         return
       }
-      toast.success('Invoice generated')
+      const created = Number((res.data as any)?.created || 0)
+      const firstInvoice = Array.isArray((res.data as any)?.results)
+        ? (res.data as any).results.find((item: any) => !item?.skipped && item?.invoice)
+        : null
+      if (created <= 0) {
+        const skippedReason = Array.isArray((res.data as any)?.results)
+          ? (res.data as any).results.find((item: any) => item?.skipped)?.reason
+          : ''
+        const reasonMessageMap: Record<string, string> = {
+          invoice_exists: 'Invoice already exists for this billing cycle',
+          missing_amount: 'Plan amount is missing for this service',
+          not_due_yet: 'Service is not due for billing yet',
+        }
+        toast.error(reasonMessageMap[skippedReason] || 'Invoice was not generated')
+        return
+      }
+      toast.success(firstInvoice?.invoice?.invoiceNumber ? `Invoice generated: ${firstInvoice.invoice.invoiceNumber}` : 'Invoice generated')
       await loadBilling()
     } catch (error) {
       console.error('[v0] Failed to generate invoice:', error)

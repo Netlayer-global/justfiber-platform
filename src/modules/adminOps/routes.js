@@ -3593,6 +3593,7 @@ adminOpsRouter.post(
   "/billing/run-cycle",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
+    const explicitScope = Boolean(req.body?.customerId || req.body?.serviceId);
     const run = await BillingRun.create({
       runId: `BR-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
       triggerMode: "manual",
@@ -3616,6 +3617,19 @@ adminOpsRouter.post(
         referenceDate: req.body?.referenceDate ? new Date(req.body.referenceDate) : new Date(),
         advanceBillingSchedule: false
       });
+      if (explicitScope && Number(result.processed || 0) === 0) {
+        throw new ApiError(404, "No active billing service found for this customer or service");
+      }
+      if (explicitScope && Number(result.created || 0) === 0) {
+        const firstReason = result.results?.find((item) => item?.skipped)?.reason || "invoice_not_created";
+        const reasonMessageMap = {
+          invoice_exists: "Invoice already exists for this billing cycle",
+          missing_amount: "Plan amount is missing for the selected service",
+          not_due_yet: "Service is not due for billing yet",
+          invoice_not_created: "Invoice was not created"
+        };
+        throw new ApiError(400, reasonMessageMap[firstReason] || "Invoice was not created");
+      }
       run.status = "completed";
       run.completedAt = new Date();
       run.totals = {
