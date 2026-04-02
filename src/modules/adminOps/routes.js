@@ -937,6 +937,26 @@ function buildCollectionsWorkbench(items = []) {
   };
 }
 
+function buildInvoiceValidationIssues(invoice = {}) {
+  const issues = [];
+  const taxBreakdown = Array.isArray(invoice.taxBreakdown) ? invoice.taxBreakdown : [];
+  const taxMode = String(invoice.taxMode || "").trim();
+
+  if (!invoice.billingZoneCode) issues.push("Missing billing zone");
+  if (!invoice.appliedTemplateKey && !invoice.appliedTemplateName) issues.push("Missing invoice template");
+  if (!invoice.companyLegalName) issues.push("Missing legal name");
+  if (!invoice.invoicePrefix) issues.push("Missing invoice prefix");
+  if (!invoice.invoiceSeriesCode) issues.push("Missing invoice series");
+  if (!Number(invoice.invoiceSequenceNumber || 0)) issues.push("Missing invoice sequence");
+
+  if (taxMode === "india_gst") {
+    if (!invoice.gstNumber) issues.push("Missing GST number");
+    if (!taxBreakdown.length) issues.push("Missing tax breakdown");
+  }
+
+  return issues;
+}
+
 function buildCustomerBillingActions({ customer, service, controlCenter }) {
   const actions = [];
   const dueAmount = Number(controlCenter?.dueAmount || 0);
@@ -2578,7 +2598,7 @@ adminOpsRouter.get(
               : item.source === "post_payment_activation"
                 ? "Post-payment activation"
                 : item.source || "Internal";
-      return {
+      const decoratedItem = {
         ...item,
         billingZoneCode: item?.billingZoneCode || item?.metadata?.billingZoneCode || selection.billingZoneCode || "",
         billingZoneName: item?.billingZoneName || item?.metadata?.billingZoneName || "",
@@ -2590,6 +2610,12 @@ adminOpsRouter.get(
         companyLegalName: item?.companyLegalName || item?.metadata?.companyLegalName || "",
         companyAddress: item?.companyAddress || item?.metadata?.companyAddress || "",
         sourceLabel,
+      };
+      const validationIssues = buildInvoiceValidationIssues(decoratedItem);
+      return {
+        ...decoratedItem,
+        validationIssues,
+        billingReady: validationIssues.length === 0,
       };
     });
     return ok(res, decoratedItems, { page, limit, total });

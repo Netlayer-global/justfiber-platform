@@ -1020,6 +1020,8 @@ function mapBillingItem(invoice: any): BillingData {
     companyLegalName: invoice.companyLegalName,
     companyAddress: invoice.companyAddress,
     taxBreakdown: Array.isArray(invoice.taxBreakdown) ? invoice.taxBreakdown : [],
+    validationIssues: Array.isArray(invoice.validationIssues) ? invoice.validationIssues : [],
+    billingReady: invoice.billingReady !== false,
   }
 }
 

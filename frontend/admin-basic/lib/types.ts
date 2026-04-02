@@ -890,6 +890,8 @@ export interface BillingData {
     rate: number
     amount: number
   }>
+  validationIssues?: string[]
+  billingReady?: boolean
 }
 
 export interface IntegrationSummary {

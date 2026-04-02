@@ -2423,6 +2423,11 @@ export default function BillingPage() {
                       {(item.invoicePrefix || 'JF')} / {(item.invoiceSeriesCode || 'MAIN')}
                       {item.invoiceSequenceNumber ? ` / #${item.invoiceSequenceNumber}` : ''}
                     </div>
+                    {item.billingReady === false ? (
+                      <div className="mt-2 text-xs font-medium text-amber-600">
+                        Needs review: {item.validationIssues?.[0] || 'Billing setup incomplete'}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="table-cell">
                     <div className="font-medium text-slate-900">{item.customerId}</div>
@@ -2447,6 +2452,11 @@ export default function BillingPage() {
                     <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${invoiceStatusTone(item.paymentStatus || item.status)}`}>
                       {item.paymentStatus || item.status}
                     </span>
+                    {item.billingReady === false && item.validationIssues && item.validationIssues.length > 1 ? (
+                      <div className="mt-2 text-xs text-amber-600">
+                        +{item.validationIssues.length - 1} more issue{item.validationIssues.length > 2 ? 's' : ''}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="table-cell text-right">
                     <div className="flex flex-wrap justify-end gap-3">
