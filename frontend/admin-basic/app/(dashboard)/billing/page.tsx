@@ -3,94 +3,14 @@
 import Link from 'next/link'
 import { useMemo, useState, useEffect } from 'react'
 import { adminAPI, getApiBaseUrl, openProtectedDocument } from '@/lib/api'
-import { ApprovalRequest, BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingProfile, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
-import { CheckCircle2, Loader, RefreshCw, XCircle } from 'lucide-react'
+import { BillingCollectionAgent, BillingCollectionItem, BillingCollectionsBulkExecuteResult, BillingCollectionsBulkPreview, BillingCollectionsWorkbench, BillingData, BillingFinanceResolutions, BillingOverview, BillingPayment, BillingReconciliationSummary, BillingRun, Customer } from '@/lib/types'
+import { Loader, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
-
-type BillingProfileForm = {
-  code: string
-  name: string
-  defaultHomeBillMode: 'prepaid' | 'postpaid'
-  defaultBusinessBillMode: 'prepaid' | 'postpaid'
-  dueDays: string
-  graceDays: string
-  companyLegalName: string
-  companyAddress: string
-  supportPhone: string
-  supportEmail: string
-  invoicePrefix: string
-  invoiceSeriesCode: string
-  invoiceSequencePadding: string
-  activationInvoiceTiming: 'before_payment' | 'after_payment'
-  companyStateCode: string
-  companyStateName: string
-  gstNumber: string
-  taxMode: 'india_gst' | 'flat_tax'
-  taxPercent: string
-  interstateIgstPercent: string
-  intrastateCgstPercent: string
-  intrastateSgstPercent: string
-  stateOverrides: Array<{
-    stateCode: string
-    stateName: string
-    igstPercent: string
-    cgstPercent: string
-    sgstPercent: string
-    unionTerritory: boolean
-  }>
-  zoneMappings: Array<{
-    zoneCode: string
-    zoneName: string
-    stateCode: string
-    stateName: string
-    invoicePrefix: string
-    invoiceSeriesCode: string
-    templateKey: string
-    companyLegalName: string
-    companyAddress: string
-    gstNumber: string
-    defaultBillMode: 'prepaid' | 'postpaid'
-  }>
-}
-
-type InvoiceTemplateSettingsSummary = {
-  activeTemplate?: string
-  templates?: Array<{ key: string; templateName?: string }>
-  zoneTemplateMappings?: Array<{ zoneCode?: string; templateKey?: string }>
-}
-
-const emptyProfileForm: BillingProfileForm = {
-  code: 'DEFAULT',
-  name: 'Default Billing Profile',
-  defaultHomeBillMode: 'prepaid',
-  defaultBusinessBillMode: 'postpaid',
-  dueDays: '0',
-  graceDays: '0',
-  companyLegalName: 'JustFiber Networks Private Limited',
-  companyAddress: '',
-  supportPhone: '',
-  supportEmail: '',
-  invoicePrefix: 'JF',
-  invoiceSeriesCode: 'MAIN',
-  invoiceSequencePadding: '4',
-  activationInvoiceTiming: 'before_payment',
-  companyStateCode: 'UP',
-  companyStateName: 'Uttar Pradesh',
-  gstNumber: '',
-  taxMode: 'india_gst',
-  taxPercent: '18',
-  interstateIgstPercent: '18',
-  intrastateCgstPercent: '9',
-  intrastateSgstPercent: '9',
-  stateOverrides: [],
-  zoneMappings: [],
-}
 
 export default function BillingPage() {
   const [activeZoneCode, setActiveZoneCode] = useState('')
   const [billing, setBilling] = useState<BillingData[]>([])
   const [overview, setOverview] = useState<BillingOverview | null>(null)
-  const [profiles, setProfiles] = useState<BillingProfile[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
   const [, setReconciliationSummary] = useState<BillingReconciliationSummary | null>(null)
   const [, setFinanceResolutions] = useState<BillingFinanceResolutions | null>(null)
@@ -102,11 +22,9 @@ export default function BillingPage() {
   const [lastBulkExecution, setLastBulkExecution] = useState<BillingCollectionsBulkExecuteResult | null>(null)
   const [collectionAgents, setCollectionAgents] = useState<BillingCollectionAgent[]>([])
   const [billingRuns, setBillingRuns] = useState<BillingRun[]>([])
-  const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([])
-  const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<InvoiceTemplateSettingsSummary | null>(null)
   const [draftCustomer, setDraftCustomer] = useState<Customer | null>(null)
   const [isResolvingDraftCustomer, setIsResolvingDraftCustomer] = useState(false)
-  const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections' | 'settings'>('invoices')
+  const [billingSectionTab, setBillingSectionTab] = useState<'invoices' | 'payments' | 'collections'>('invoices')
   const [collectionBucket, setCollectionBucket] = useState<'' | 'pending_due' | 'overdue' | 'pending_plan_change' | 'suspend_ready'>('')
   const [collectionFilters, setCollectionFilters] = useState({
     search: '',
@@ -129,10 +47,8 @@ export default function BillingPage() {
     zoneCode: '',
   })
   const [isLoading, setIsLoading] = useState(true)
-  const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isRunningCycle, setIsRunningCycle] = useState(false)
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false)
-  const [profileForm, setProfileForm] = useState<BillingProfileForm>(emptyProfileForm)
   const [invoiceDraft, setInvoiceDraft] = useState({
     customerId: '',
     serviceId: '',
@@ -159,7 +75,6 @@ export default function BillingPage() {
   const invoiceExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/invoices.csv${exportQuery ? `?${exportQuery}` : ''}`
   const paymentExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/payments.csv${exportQuery ? `?${exportQuery}` : ''}`
   const reconciliationExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/reconciliation.csv${exportQuery ? `?${exportQuery}` : ''}`
-  const gstExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/gst-summary?format=csv${exportQuery ? `&${exportQuery}` : ''}`
   const visibleInvoices = useMemo(() => {
     if (invoiceQuickView === 'pending') {
       return billing.filter((item) => (item.paymentStatus || item.status) === 'pending')
@@ -281,24 +196,6 @@ export default function BillingPage() {
   )
   const latestRecurringRuns = useMemo(() => billingRuns.slice(0, 6), [billingRuns])
   const collectionExportUrl = `${exportBaseUrl}/api/v1/admin/billing/exports/collections.csv${collectionBucket ? `?bucket=${encodeURIComponent(collectionBucket)}` : ''}`
-  const pendingFinanceApprovals = useMemo(
-    () =>
-      approvalRequests.filter(
-        (item) =>
-          ['billing_waiver', 'billing_writeoff'].includes(item.actionType) &&
-          !['approved', 'rejected'].includes(item.status)
-      ),
-    [approvalRequests]
-  )
-  const financeSetupSummary = useMemo(
-    () => ({
-      profiles: profiles.length,
-      templates: invoiceTemplateSettings?.templates?.length || 0,
-      zoneMappings: profileForm.zoneMappings.length,
-      approvals: pendingFinanceApprovals.length,
-    }),
-    [invoiceTemplateSettings, pendingFinanceApprovals.length, profileForm.zoneMappings.length, profiles.length]
-  )
   useEffect(() => {
     const syncZone = () => {
       const zoneKey = window.localStorage.getItem('justfiber-active-zone-key') || ''
@@ -352,10 +249,9 @@ export default function BillingPage() {
   async function loadBilling() {
     try {
       setIsLoading(true)
-      const [invoiceRes, overviewRes, profileRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionAgentRes, billingRunRes, invoiceTemplateRes, approvalsRes] = await Promise.all([
+      const [invoiceRes, overviewRes, paymentRes, reconciliationRes, financeResolutionRes, collectionRes, collectionWorkbenchRes, collectionAgentRes, billingRunRes] = await Promise.all([
         adminAPI.getBillingData(1, 50, invoiceFilters),
         adminAPI.getBillingOverview(),
-        adminAPI.getBillingProfiles(),
         adminAPI.getBillingPayments(),
         adminAPI.getBillingReconciliationSummary(),
         adminAPI.getBillingFinanceResolutions(20),
@@ -363,69 +259,12 @@ export default function BillingPage() {
         adminAPI.getBillingCollectionsWorkbench(collectionBucket || undefined),
         adminAPI.getBillingCollectionAgents(),
         adminAPI.getBillingRuns(),
-        adminAPI.getSettingsSection<InvoiceTemplateSettingsSummary>('invoice_template'),
-        adminAPI.getApprovalRequests(1, 20),
       ])
       if (invoiceRes.success && invoiceRes.data) {
         setBilling(invoiceRes.data.items)
       }
       if (overviewRes.success && overviewRes.data) {
         setOverview(overviewRes.data)
-      }
-      if (profileRes.success && profileRes.data) {
-        setProfiles(profileRes.data)
-        const activeProfile = profileRes.data[0]
-        if (activeProfile) {
-          setProfileForm({
-            code: activeProfile.code,
-            name: activeProfile.name,
-            defaultHomeBillMode: activeProfile.defaultHomeBillMode || 'prepaid',
-            defaultBusinessBillMode: activeProfile.defaultBusinessBillMode || 'postpaid',
-            dueDays: String(activeProfile.dueDays || 0),
-            graceDays: String(activeProfile.graceDays || 0),
-            companyLegalName: activeProfile.companyLegalName || 'JustFiber Networks Private Limited',
-            companyAddress: activeProfile.companyAddress || '',
-            supportPhone: activeProfile.supportPhone || '',
-            supportEmail: activeProfile.supportEmail || '',
-            invoicePrefix: activeProfile.invoicePrefix || 'JF',
-            invoiceSeriesCode: activeProfile.invoiceSeriesCode || 'MAIN',
-            invoiceSequencePadding: String(activeProfile.invoiceSequencePadding || 4),
-            activationInvoiceTiming: activeProfile.activationInvoiceTiming || 'before_payment',
-            companyStateCode: activeProfile.companyStateCode || 'UP',
-            companyStateName: activeProfile.companyStateName || 'Uttar Pradesh',
-            gstNumber: activeProfile.gstNumber || '',
-            taxMode: activeProfile.taxMode || 'india_gst',
-            taxPercent: String(activeProfile.taxPercent || 18),
-            interstateIgstPercent: String(activeProfile.interstateIgstPercent || 18),
-            intrastateCgstPercent: String(activeProfile.intrastateCgstPercent || 9),
-            intrastateSgstPercent: String(activeProfile.intrastateSgstPercent || 9),
-            stateOverrides: Array.isArray(activeProfile.stateOverrides)
-              ? activeProfile.stateOverrides.map((item) => ({
-                  stateCode: item.stateCode || '',
-                  stateName: item.stateName || '',
-                  igstPercent: String(item.igstPercent ?? ''),
-                  cgstPercent: String(item.cgstPercent ?? ''),
-                  sgstPercent: String(item.sgstPercent ?? ''),
-                  unionTerritory: item.unionTerritory === true,
-                }))
-              : [],
-            zoneMappings: Array.isArray(activeProfile.zoneMappings)
-              ? activeProfile.zoneMappings.map((item) => ({
-                  zoneCode: item.zoneCode || '',
-                  zoneName: item.zoneName || '',
-                  stateCode: item.stateCode || '',
-                  stateName: item.stateName || '',
-                  invoicePrefix: item.invoicePrefix || '',
-                  invoiceSeriesCode: item.invoiceSeriesCode || '',
-                  templateKey: item.templateKey || '',
-                  companyLegalName: item.companyLegalName || '',
-                  companyAddress: item.companyAddress || '',
-                  gstNumber: item.gstNumber || '',
-                  defaultBillMode: item.defaultBillMode || 'prepaid',
-                }))
-              : [],
-          })
-        }
       }
       if (paymentRes.success && paymentRes.data) {
         setPayments(paymentRes.data.items)
@@ -448,117 +287,10 @@ export default function BillingPage() {
       if (billingRunRes.success && billingRunRes.data) {
         setBillingRuns(billingRunRes.data)
       }
-      if (invoiceTemplateRes.success && invoiceTemplateRes.data) {
-        setInvoiceTemplateSettings(invoiceTemplateRes.data.value || null)
-      }
-      if (approvalsRes.success && approvalsRes.data) {
-        setApprovalRequests(
-          approvalsRes.data.map((item: any) => ({
-            id: item._id || item.id || '',
-            actionType: item.actionType || '',
-            status: item.status || '',
-            createdAt: item.createdAt,
-            requestedByAdminUserId: item.requestedByAdminUserId || '',
-            requestedBy: item.requestedBy || item.requestedByAdminUserId || '',
-            payload: item.payload || {},
-            approvers: Array.isArray(item.approvers) ? item.approvers : [],
-          }))
-        )
-      }
     } catch (error) {
       console.error('[v0] Failed to load billing:', error)
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  async function decideApprovalRequest(requestId: string, mode: 'approve' | 'reject') {
-    const note = window.prompt(mode === 'approve' ? 'Approval note' : 'Rejection note', '')
-    if (note === null) return
-    try {
-      const res =
-        mode === 'approve'
-          ? await adminAPI.approveApprovalRequest(requestId, note.trim() || undefined)
-          : await adminAPI.rejectApprovalRequest(requestId, note.trim() || undefined)
-      if (!res.success) {
-        toast.error(res.error || `Failed to ${mode} request`)
-        return
-      }
-      toast.success(`Request ${mode === 'approve' ? 'approved' : 'rejected'}`)
-      await loadBilling()
-    } catch (error) {
-      console.error(`[v0] Failed to ${mode} approval request:`, error)
-      toast.error(`Failed to ${mode} request`)
-    }
-  }
-
-  async function saveProfile(e: React.FormEvent) {
-    e.preventDefault()
-    try {
-      setIsSavingProfile(true)
-      const stateOverrides = profileForm.stateOverrides
-        .map((item) => ({
-          stateCode: item.stateCode.trim().toUpperCase(),
-          stateName: item.stateName.trim(),
-          igstPercent: item.igstPercent === '' ? undefined : Number(item.igstPercent),
-          cgstPercent: item.cgstPercent === '' ? undefined : Number(item.cgstPercent),
-          sgstPercent: item.sgstPercent === '' ? undefined : Number(item.sgstPercent),
-          unionTerritory: item.unionTerritory,
-        }))
-        .filter((item) => item.stateCode)
-      const zoneMappings = profileForm.zoneMappings
-        .map((item) => ({
-          zoneCode: item.zoneCode.trim().toUpperCase(),
-          zoneName: item.zoneName.trim(),
-          stateCode: item.stateCode.trim().toUpperCase(),
-          stateName: item.stateName.trim(),
-          invoicePrefix: item.invoicePrefix.trim().toUpperCase() || undefined,
-          invoiceSeriesCode: item.invoiceSeriesCode.trim().toUpperCase() || undefined,
-          templateKey: item.templateKey || undefined,
-          companyLegalName: item.companyLegalName.trim() || undefined,
-          companyAddress: item.companyAddress.trim() || undefined,
-          gstNumber: item.gstNumber.trim() || undefined,
-          defaultBillMode: item.defaultBillMode,
-        }))
-        .filter((item) => item.zoneCode)
-      const res = await adminAPI.saveBillingProfile({
-        code: profileForm.code.trim(),
-        name: profileForm.name.trim(),
-        defaultHomeBillMode: profileForm.defaultHomeBillMode,
-        defaultBusinessBillMode: profileForm.defaultBusinessBillMode,
-        dueDays: Number(profileForm.dueDays || 0),
-        graceDays: Number(profileForm.graceDays || 0),
-        companyLegalName: profileForm.companyLegalName.trim(),
-        companyAddress: profileForm.companyAddress.trim(),
-        supportPhone: profileForm.supportPhone.trim(),
-        supportEmail: profileForm.supportEmail.trim() || undefined,
-        invoicePrefix: profileForm.invoicePrefix.trim().toUpperCase(),
-        invoiceSeriesCode: profileForm.invoiceSeriesCode.trim().toUpperCase(),
-        invoiceSequencePadding: Number(profileForm.invoiceSequencePadding || 4),
-        activationInvoiceTiming: profileForm.activationInvoiceTiming,
-        companyStateCode: profileForm.companyStateCode.trim().toUpperCase(),
-        companyStateName: profileForm.companyStateName.trim(),
-        gstNumber: profileForm.gstNumber.trim(),
-        taxMode: profileForm.taxMode,
-        taxPercent: Number(profileForm.taxPercent || 0),
-        interstateIgstPercent: Number(profileForm.interstateIgstPercent || 0),
-        intrastateCgstPercent: Number(profileForm.intrastateCgstPercent || 0),
-        intrastateSgstPercent: Number(profileForm.intrastateSgstPercent || 0),
-        stateOverrides,
-        zoneMappings,
-        active: true,
-      })
-      if (!res.success) {
-        toast.error(res.error || 'Failed to save billing GST profile')
-        return
-      }
-      toast.success('Billing GST profile saved')
-      await loadBilling()
-    } catch (error) {
-      console.error('[v0] Failed to save billing profile:', error)
-      toast.error('Invalid billing profile data')
-    } finally {
-      setIsSavingProfile(false)
     }
   }
 
@@ -1072,38 +804,6 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {billingSectionTab === 'settings' ? (
-      <div className="card p-5">
-        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Export filters</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          <input
-            className="input"
-            type="date"
-            value={exportFilters.fromDate}
-            onChange={(e) => setExportFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
-          />
-          <input
-            className="input"
-            type="date"
-            value={exportFilters.toDate}
-            onChange={(e) => setExportFilters((prev) => ({ ...prev, toDate: e.target.value }))}
-          />
-          <input
-            className="input"
-            placeholder="State code (UP, MH)"
-            value={exportFilters.stateCode}
-            onChange={(e) => setExportFilters((prev) => ({ ...prev, stateCode: e.target.value.toUpperCase() }))}
-          />
-          <input
-            className="input"
-            placeholder="Zone code (NCR, LKO)"
-            value={exportFilters.zoneCode}
-            onChange={(e) => setExportFilters((prev) => ({ ...prev, zoneCode: e.target.value.toUpperCase() }))}
-          />
-        </div>
-      </div>
-      ) : null}
-
       {billingSectionTab === 'invoices' ? (
       <section>
         <form onSubmit={generateInvoice} className="card p-5 space-y-3">
@@ -1575,299 +1275,6 @@ export default function BillingPage() {
         </div>
       ) : (
         <>
-          {billingSectionTab === 'settings' ? (
-          <>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="card overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2a2f4a] font-semibold">GST Summary</div>
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#0a0e27]">
-                    <th className="table-header">State</th>
-                    <th className="table-header">Invoices</th>
-                    <th className="table-header">Taxable</th>
-                    <th className="table-header">GST</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(overview?.stateWiseGst || []).map((row) => (
-                    <tr key={`${row.stateCode}-${row.stateName}`} className="border-t border-[#2a2f4a]">
-                      <td className="table-cell">{row.stateName} {row.stateCode ? `(${row.stateCode})` : ''}</td>
-                      <td className="table-cell">{row.invoiceCount}</td>
-                      <td className="table-cell">Rs {row.taxableAmount.toFixed(2)}</td>
-                      <td className="table-cell">Rs {row.taxAmount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="space-y-4">
-              <div className="card p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold">Pending finance approvals</div>
-                    <div className="mt-1 text-sm text-slate-400">Approve or reject waivers and write-offs from the same billing desk.</div>
-                  </div>
-                  <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-                    {pendingFinanceApprovals.length} pending
-                  </div>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {pendingFinanceApprovals.slice(0, 6).map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="font-medium text-white">{item.actionType.replaceAll('_', ' ')}</div>
-                          <div className="mt-1 text-xs text-slate-400">
-                            {item.payload?.customerId || '-'} | Rs {Number(item.payload?.amount || 0).toFixed(2)} | {item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">
-                            {item.payload?.reasonCode || item.payload?.reference || item.payload?.note || 'No note'}
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void decideApprovalRequest(item.id, 'approve')}>
-                            <CheckCircle2 className="h-4 w-4" />
-                            Approve
-                          </button>
-                          <button className="btn-secondary inline-flex items-center gap-2" onClick={() => void decideApprovalRequest(item.id, 'reject')}>
-                            <XCircle className="h-4 w-4" />
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {!pendingFinanceApprovals.length ? (
-                    <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a0e27] p-4 text-sm text-slate-500">
-                      No finance approvals pending right now.
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                {profileForm.zoneMappings.slice(0, 6).map((item) => (
-                  <div key={item.zoneCode || item.zoneName} className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{item.zoneCode || 'ZONE'}</div>
-                    <div className="mt-2 font-semibold text-white">{item.zoneName || item.companyLegalName || 'Unnamed zone'}</div>
-                    <div className="mt-1 text-xs text-slate-400">{item.stateName || item.stateCode || 'No state'}</div>
-                    <div className="mt-2 text-xs text-slate-500">
-                      {item.invoicePrefix || 'Default prefix'} {item.templateKey ? `| ${item.templateKey}` : ''}
-                    </div>
-                  </div>
-                ))}
-                {!profileForm.zoneMappings.length ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a0e27] p-4 text-sm text-slate-500 md:col-span-3">
-                    No zone mappings configured yet.
-                  </div>
-                ) : null}
-              </div>
-
-              <form onSubmit={saveProfile} className="card p-5 space-y-3">
-                <div className="font-semibold">Billing Profile</div>
-                <div className="text-sm text-slate-400">Main billing, GST, and zone routing settings.</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input className="input" placeholder="Profile code" value={profileForm.code} onChange={(e) => setProfileForm({ ...profileForm, code: e.target.value.toUpperCase() })} />
-                  <input className="input" placeholder="Profile name" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
-                  <select className="input" value={profileForm.defaultHomeBillMode} onChange={(e) => setProfileForm({ ...profileForm, defaultHomeBillMode: e.target.value as BillingProfileForm['defaultHomeBillMode'] })}>
-                    <option value="prepaid">Home users: Prepaid</option>
-                    <option value="postpaid">Home users: Postpaid</option>
-                  </select>
-                  <select className="input" value={profileForm.defaultBusinessBillMode} onChange={(e) => setProfileForm({ ...profileForm, defaultBusinessBillMode: e.target.value as BillingProfileForm['defaultBusinessBillMode'] })}>
-                    <option value="postpaid">Business users: Postpaid</option>
-                    <option value="prepaid">Business users: Prepaid</option>
-                  </select>
-                  <input className="input" placeholder="Company legal name" value={profileForm.companyLegalName} onChange={(e) => setProfileForm({ ...profileForm, companyLegalName: e.target.value })} />
-                  <input className="input" placeholder="Invoice prefix" value={profileForm.invoicePrefix} onChange={(e) => setProfileForm({ ...profileForm, invoicePrefix: e.target.value.toUpperCase() })} />
-                  <input className="input" placeholder="Invoice series code" value={profileForm.invoiceSeriesCode} onChange={(e) => setProfileForm({ ...profileForm, invoiceSeriesCode: e.target.value.toUpperCase() })} />
-                  <input className="input" placeholder="Sequence padding" type="number" value={profileForm.invoiceSequencePadding} onChange={(e) => setProfileForm({ ...profileForm, invoiceSequencePadding: e.target.value })} />
-                  <input className="input" placeholder="Support phone" value={profileForm.supportPhone} onChange={(e) => setProfileForm({ ...profileForm, supportPhone: e.target.value })} />
-                  <input className="input" placeholder="Support email" value={profileForm.supportEmail} onChange={(e) => setProfileForm({ ...profileForm, supportEmail: e.target.value })} />
-                  <input className="input" placeholder="Due days" type="number" value={profileForm.dueDays} onChange={(e) => setProfileForm({ ...profileForm, dueDays: e.target.value })} />
-                  <input className="input" placeholder="Grace days" type="number" value={profileForm.graceDays} onChange={(e) => setProfileForm({ ...profileForm, graceDays: e.target.value })} />
-                  <select className="input" value={profileForm.activationInvoiceTiming} onChange={(e) => setProfileForm({ ...profileForm, activationInvoiceTiming: e.target.value as BillingProfileForm['activationInvoiceTiming'] })}>
-                    <option value="before_payment">Activation invoice before payment</option>
-                    <option value="after_payment">Activation invoice after payment</option>
-                  </select>
-                  <input className="input" placeholder="Company state code" value={profileForm.companyStateCode} onChange={(e) => setProfileForm({ ...profileForm, companyStateCode: e.target.value.toUpperCase() })} />
-                  <input className="input" placeholder="Company state name" value={profileForm.companyStateName} onChange={(e) => setProfileForm({ ...profileForm, companyStateName: e.target.value })} />
-                  <input className="input" placeholder="GST Number" value={profileForm.gstNumber} onChange={(e) => setProfileForm({ ...profileForm, gstNumber: e.target.value })} />
-                  <select className="input" value={profileForm.taxMode} onChange={(e) => setProfileForm({ ...profileForm, taxMode: e.target.value as BillingProfileForm['taxMode'] })}>
-                    <option value="india_gst">India GST</option>
-                    <option value="flat_tax">Flat Tax</option>
-                  </select>
-                  <input className="input" placeholder="IGST %" type="number" value={profileForm.interstateIgstPercent} onChange={(e) => setProfileForm({ ...profileForm, interstateIgstPercent: e.target.value })} />
-                  <input className="input" placeholder="CGST %" type="number" value={profileForm.intrastateCgstPercent} onChange={(e) => setProfileForm({ ...profileForm, intrastateCgstPercent: e.target.value })} />
-                  <input className="input" placeholder="SGST %" type="number" value={profileForm.intrastateSgstPercent} onChange={(e) => setProfileForm({ ...profileForm, intrastateSgstPercent: e.target.value })} />
-                  <input className="input" placeholder="Flat tax %" type="number" value={profileForm.taxPercent} onChange={(e) => setProfileForm({ ...profileForm, taxPercent: e.target.value })} />
-                </div>
-                <textarea className="input min-h-24" placeholder="Company billing address" value={profileForm.companyAddress} onChange={(e) => setProfileForm({ ...profileForm, companyAddress: e.target.value })} />
-
-                <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-white">State tax overrides</div>
-                      <div className="text-xs text-slate-500">Per-state GST override rows without JSON editing.</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => setProfileForm((prev) => ({
-                        ...prev,
-                        stateOverrides: [
-                          ...prev.stateOverrides,
-                          { stateCode: '', stateName: '', igstPercent: '', cgstPercent: '', sgstPercent: '', unionTerritory: false },
-                        ],
-                      }))}
-                    >
-                      Add state
-                    </button>
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {profileForm.stateOverrides.map((item, index) => (
-                      <div key={`state-${index}`} className="grid gap-3 md:grid-cols-6">
-                        <input className="input" placeholder="State code" value={item.stateCode} onChange={(e) => setProfileForm((prev) => ({ ...prev, stateOverrides: prev.stateOverrides.map((row, idx) => idx === index ? { ...row, stateCode: e.target.value.toUpperCase() } : row) }))} />
-                        <input className="input" placeholder="State name" value={item.stateName} onChange={(e) => setProfileForm((prev) => ({ ...prev, stateOverrides: prev.stateOverrides.map((row, idx) => idx === index ? { ...row, stateName: e.target.value } : row) }))} />
-                        <input className="input" placeholder="IGST %" type="number" value={item.igstPercent} onChange={(e) => setProfileForm((prev) => ({ ...prev, stateOverrides: prev.stateOverrides.map((row, idx) => idx === index ? { ...row, igstPercent: e.target.value } : row) }))} />
-                        <input className="input" placeholder="CGST %" type="number" value={item.cgstPercent} onChange={(e) => setProfileForm((prev) => ({ ...prev, stateOverrides: prev.stateOverrides.map((row, idx) => idx === index ? { ...row, cgstPercent: e.target.value } : row) }))} />
-                        <input className="input" placeholder="SGST %" type="number" value={item.sgstPercent} onChange={(e) => setProfileForm((prev) => ({ ...prev, stateOverrides: prev.stateOverrides.map((row, idx) => idx === index ? { ...row, sgstPercent: e.target.value } : row) }))} />
-                        <div className="flex items-center gap-3">
-                          <label className="flex items-center gap-2 text-xs text-slate-300">
-                            <input type="checkbox" checked={item.unionTerritory} onChange={(e) => setProfileForm((prev) => ({ ...prev, stateOverrides: prev.stateOverrides.map((row, idx) => idx === index ? { ...row, unionTerritory: e.target.checked } : row) }))} />
-                            UT
-                          </label>
-                          <button
-                            type="button"
-                            className="text-xs text-rose-300"
-                            onClick={() => setProfileForm((prev) => ({ ...prev, stateOverrides: prev.stateOverrides.filter((_, idx) => idx !== index) }))}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    {!profileForm.stateOverrides.length ? (
-                      <div className="text-xs text-slate-500">No state overrides configured. Default GST rules will apply.</div>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="rounded-[22px] border border-white/10 bg-[#0a0e27] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-white">Zone mappings</div>
-                      <div className="text-xs text-slate-500">Map billing zones to state and invoice numbering rules.</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => setProfileForm((prev) => ({
-                        ...prev,
-                        zoneMappings: [
-                          ...prev.zoneMappings,
-                          {
-                            zoneCode: '',
-                            zoneName: '',
-                            stateCode: '',
-                            stateName: '',
-                            invoicePrefix: '',
-                            invoiceSeriesCode: '',
-                            templateKey: invoiceTemplateSettings?.activeTemplate || '',
-                            companyLegalName: '',
-                            companyAddress: '',
-                            gstNumber: '',
-                            defaultBillMode: 'prepaid',
-                          },
-                        ],
-                      }))}
-                    >
-                      Add zone
-                    </button>
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {profileForm.zoneMappings.map((item, index) => (
-                      <div key={`zone-${index}`} className="grid gap-3 md:grid-cols-8">
-                        <input className="input" placeholder="Zone code" value={item.zoneCode} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, zoneCode: e.target.value.toUpperCase() } : row) }))} />
-                        <input className="input" placeholder="Zone name" value={item.zoneName} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, zoneName: e.target.value } : row) }))} />
-                        <input className="input" placeholder="State code" value={item.stateCode} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, stateCode: e.target.value.toUpperCase() } : row) }))} />
-                        <input className="input" placeholder="State name" value={item.stateName} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, stateName: e.target.value } : row) }))} />
-                        <input className="input" placeholder="Invoice prefix" value={item.invoicePrefix} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, invoicePrefix: e.target.value.toUpperCase() } : row) }))} />
-                        <input className="input" placeholder="Series code" value={item.invoiceSeriesCode} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, invoiceSeriesCode: e.target.value.toUpperCase() } : row) }))} />
-                        <select className="input" value={item.templateKey} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, templateKey: e.target.value } : row) }))}>
-                          <option value="">Use default template</option>
-                          {(invoiceTemplateSettings?.templates || []).map((template) => (
-                            <option key={template.key} value={template.key}>
-                              {template.templateName || template.key}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="flex items-center gap-3">
-                          <select className="input" value={item.defaultBillMode} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, defaultBillMode: e.target.value as 'prepaid' | 'postpaid' } : row) }))}>
-                            <option value="prepaid">Prepaid</option>
-                            <option value="postpaid">Postpaid</option>
-                          </select>
-                          <button
-                            type="button"
-                            className="text-xs text-rose-300"
-                            onClick={() => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.filter((_, idx) => idx !== index) }))}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <input className="input md:col-span-3" placeholder="Zone company legal name" value={item.companyLegalName} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, companyLegalName: e.target.value } : row) }))} />
-                        <input className="input md:col-span-3" placeholder="Zone GST number" value={item.gstNumber} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, gstNumber: e.target.value.toUpperCase() } : row) }))} />
-                        <input className="input md:col-span-2" placeholder="Zone billing address" value={item.companyAddress} onChange={(e) => setProfileForm((prev) => ({ ...prev, zoneMappings: prev.zoneMappings.map((row, idx) => idx === index ? { ...row, companyAddress: e.target.value } : row) }))} />
-                      </div>
-                    ))}
-                    {!profileForm.zoneMappings.length ? (
-                      <div className="text-xs text-slate-500">No zone mappings configured. Billing profile defaults will be used.</div>
-                    ) : null}
-                  </div>
-                </div>
-                <button type="submit" disabled={isSavingProfile} className="btn-primary">
-                  {isSavingProfile ? 'Saving...' : 'Save GST Profile'}
-                </button>
-              </form>
-
-              {(profiles || []).map((profile) => (
-                <div key={profile.id} className="card p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">{profile.name}</div>
-                      <div className="text-xs text-slate-500">{profile.code}</div>
-                    </div>
-                    <span className={`px-2 py-1 rounded text-xs ${profile.active ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'}`}>
-                      {profile.taxMode === 'india_gst' ? 'India GST' : 'Flat Tax'}
-                    </span>
-                  </div>
-                  <div className="text-sm text-slate-300">
-                    Company state: {profile.companyStateName || '-'} {profile.companyStateCode ? `(${profile.companyStateCode})` : ''}
-                  </div>
-                  <div className="text-sm text-slate-300">Home: {profile.defaultHomeBillMode || 'prepaid'} | Business: {profile.defaultBusinessBillMode || 'postpaid'}</div>
-                  <div className="text-sm text-slate-300">GSTIN: {profile.gstNumber || '-'}</div>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="rounded bg-[#0a0e27] px-3 py-2">IGST {Number(profile.interstateIgstPercent || 0)}%</div>
-                    <div className="rounded bg-[#0a0e27] px-3 py-2">CGST {Number(profile.intrastateCgstPercent || 0)}%</div>
-                    <div className="rounded bg-[#0a0e27] px-3 py-2">SGST {Number(profile.intrastateSgstPercent || 0)}%</div>
-                  </div>
-                  {(profile.stateOverrides || []).length ? (
-                    <div className="text-xs text-slate-400">
-                      Overrides: {(profile.stateOverrides || []).map((item) => `${item.stateCode}:${item.igstPercent ?? `${item.cgstPercent || 0}+${item.sgstPercent || 0}`}%`).join(' | ')}
-                    </div>
-                  ) : null}
-                  {(profile.zoneMappings || []).length ? (
-                    <div className="text-xs text-slate-400">
-                      Zones: {(profile.zoneMappings || []).map((item) => `${item.zoneCode}->${item.stateCode}${item.defaultBillMode ? ` (${item.defaultBillMode})` : ''}${item.templateKey ? ` [${item.templateKey}]` : ''}${item.companyLegalName ? ` ${item.companyLegalName}` : ''}`).join(' | ')}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-          </>
-          ) : null}
-
       {billingSectionTab === 'payments' ? (
           <div className="space-y-4">
           <div className="card p-5">
