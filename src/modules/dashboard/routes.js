@@ -23,11 +23,6 @@ async function fetchLatestSnapshot(snapshotType) {
 dashboardRouter.get(
   "/executive",
   asyncHandler(async (_req, res) => {
-    const snapshot = await fetchLatestSnapshot("executive");
-    if (snapshot) {
-      return ok(res, snapshot);
-    }
-
     const liveCustomerIdsPromise = DeviceOperationalCache.distinct("customerId", {
       customerId: { $nin: [null, ""] },
       $or: [
@@ -38,7 +33,8 @@ dashboardRouter.get(
       ]
     });
 
-    const [customers, suspended, inactive, devicesOffline, openCriticalTickets, liveCustomerIds] = await Promise.all([
+    const [snapshot, customers, suspended, inactive, devicesOffline, openCriticalTickets, liveCustomerIds] = await Promise.all([
+      fetchLatestSnapshot("executive"),
       Customer.countDocuments(),
       Customer.countDocuments({ operationalStatus: "suspended" }),
       Customer.countDocuments({ operationalStatus: "inactive" }),
@@ -47,10 +43,14 @@ dashboardRouter.get(
       liveCustomerIdsPromise
     ]);
 
+    const liveOnlineUsers = Array.isArray(liveCustomerIds) ? liveCustomerIds.length : 0;
+    const activeUsers = Math.max(customers - suspended - inactive, 0);
+
     return ok(res, {
+      ...(snapshot || {}),
       totalCustomers: customers,
-      onlineUsers: Array.isArray(liveCustomerIds) ? liveCustomerIds.length : 0,
-      activeUsers: Math.max(customers - suspended - inactive, 0),
+      onlineUsers: liveOnlineUsers,
+      activeUsers,
       suspendedCustomers: suspended,
       inactiveCustomers: inactive,
       offlineDevices: devicesOffline,
