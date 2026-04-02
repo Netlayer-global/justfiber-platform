@@ -1305,7 +1305,9 @@ export const adminAPI = {
             suspendedCustomers: Number(res.data.suspendedCustomers || 0),
             inactiveCustomers: Number(res.data.inactiveCustomers || 0),
             activeConnections: Number(
-              (res.data.totalCustomers || 0) - (res.data.suspendedCustomers || 0)
+              res.data.activeConnections ||
+              res.data.onlineUsers ||
+              ((res.data.totalCustomers || 0) - (res.data.suspendedCustomers || 0))
             ),
             monthlyRevenue: Number(res.data.collectedAmount || 0),
             systemHealth: 100,

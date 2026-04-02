@@ -1,6 +1,8 @@
 import { Router } from "express";
+import mysql from "mysql2/promise";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
+import { env } from "../../config/env.js";
 import { DashboardSnapshot } from "../../models/DashboardSnapshot.js";
 import { permissions } from "../../config/permissions.js";
 import { requireAuth, requirePermission } from "../../common/auth.js";
@@ -15,9 +17,44 @@ export const dashboardRouter = Router();
 
 dashboardRouter.use(requireAuth, requirePermission(permissions.dashboardRead));
 
+let radiusPool;
+
 async function fetchLatestSnapshot(snapshotType) {
   const snapshot = await DashboardSnapshot.findOne({ snapshotType }).sort({ generatedAt: -1 }).lean();
   return snapshot?.metrics || null;
+}
+
+function getRadiusPool() {
+  if (!radiusPool) {
+    radiusPool = mysql.createPool({
+      host: env.RADIUS_SQL_HOST,
+      port: env.RADIUS_SQL_PORT,
+      user: env.RADIUS_SQL_USER,
+      password: env.RADIUS_SQL_PASSWORD,
+      database: env.RADIUS_SQL_DATABASE,
+      waitForConnections: true,
+      connectionLimit: 5
+    });
+  }
+  return radiusPool;
+}
+
+async function getLiveRadiusUsernames() {
+  const connection = await getRadiusPool().getConnection();
+  try {
+    const [rows] = await connection.execute(
+      `SELECT DISTINCT username
+       FROM radacct
+       WHERE username IS NOT NULL
+         AND username <> ''
+         AND acctstoptime IS NULL`
+    );
+    return Array.isArray(rows)
+      ? rows.map((row) => String(row.username || "").trim()).filter(Boolean)
+      : [];
+  } finally {
+    connection.release();
+  }
 }
 
 dashboardRouter.get(
@@ -33,18 +70,21 @@ dashboardRouter.get(
       ]
     });
 
-    const [snapshot, customers, suspended, inactive, devicesOffline, openCriticalTickets, liveCustomerIds] = await Promise.all([
+    const [snapshot, customers, suspended, inactive, activeUsers, devicesOffline, openCriticalTickets, liveCustomerIds, liveRadiusUsernames] = await Promise.all([
       fetchLatestSnapshot("executive"),
       Customer.countDocuments(),
       Customer.countDocuments({ operationalStatus: "suspended" }),
       Customer.countDocuments({ operationalStatus: "inactive" }),
+      Customer.countDocuments({ operationalStatus: { $nin: ["suspended", "inactive"] } }),
       DeviceOperationalCache.countDocuments({ onlineStatus: "offline" }),
       SupportTicket.countDocuments({ status: { $in: ["open", "assigned", "in_progress"] }, priority: "critical" }),
-      liveCustomerIdsPromise
+      liveCustomerIdsPromise,
+      getLiveRadiusUsernames().catch(() => [])
     ]);
 
-    const liveOnlineUsers = Array.isArray(liveCustomerIds) ? liveCustomerIds.length : 0;
-    const activeUsers = Math.max(customers - suspended - inactive, 0);
+    const liveDeviceUsers = Array.isArray(liveCustomerIds) ? liveCustomerIds.length : 0;
+    const liveRadiusUsers = Array.isArray(liveRadiusUsernames) ? liveRadiusUsernames.length : 0;
+    const liveOnlineUsers = Math.max(liveDeviceUsers, liveRadiusUsers);
 
     return ok(res, {
       ...(snapshot || {}),
