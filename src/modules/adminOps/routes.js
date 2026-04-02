@@ -3482,33 +3482,44 @@ adminOpsRouter.post(
       startedAt: new Date(),
       createdByAdminId: req.admin?._id
     });
-    const result = await internalBillingEngine.runBillingCycle({
-      customerId: req.body?.customerId,
-      serviceId: req.body?.serviceId,
-      totalAmount: req.body?.totalAmount,
-      paymentStatus: req.body?.paymentStatus,
-      referenceDate: new Date(),
-      advanceBillingSchedule: false
-    });
-    run.status = "completed";
-    run.completedAt = new Date();
-    run.totals = {
-      processed: result.processed || 0,
-      created: result.created || 0,
-      skipped: result.skipped || 0,
-      failed: result.results?.filter((item) => item?.error).length || 0,
-      billedAmount: result.results?.filter((item) => !item.skipped).reduce((sum, item) => sum + Number(item.invoice?.totalAmount || 0), 0) || 0,
-      taxAmount: result.results?.filter((item) => !item.skipped).reduce((sum, item) => sum + Number(item.invoice?.taxAmount || 0), 0) || 0
-    };
-    run.results = result.results || [];
-    await run.save();
-    await auditFromRequest(req, {
-      action: "billing.cycle.run",
-      entityType: "billing_cycle",
-      entityId: req.body?.customerId || req.body?.serviceId || "all",
-      metadata: { processed: result.processed, created: result.created, skipped: result.skipped }
-    });
-    return ok(res, { ...result, runId: run.runId });
+    try {
+      const result = await internalBillingEngine.runBillingCycle({
+        customerId: req.body?.customerId,
+        serviceId: req.body?.serviceId,
+        totalAmount: req.body?.totalAmount,
+        paymentStatus: req.body?.paymentStatus,
+        billCycle: req.body?.billCycle,
+        referenceDate: req.body?.referenceDate ? new Date(req.body.referenceDate) : new Date(),
+        advanceBillingSchedule: false
+      });
+      run.status = "completed";
+      run.completedAt = new Date();
+      run.totals = {
+        processed: result.processed || 0,
+        created: result.created || 0,
+        skipped: result.skipped || 0,
+        failed: result.results?.filter((item) => item?.error).length || 0,
+        billedAmount: result.results?.filter((item) => !item.skipped).reduce((sum, item) => sum + Number(item.invoice?.totalAmount || 0), 0) || 0,
+        taxAmount: result.results?.filter((item) => !item.skipped).reduce((sum, item) => sum + Number(item.invoice?.taxAmount || 0), 0) || 0
+      };
+      run.results = result.results || [];
+      await run.save();
+      await auditFromRequest(req, {
+        action: "billing.cycle.run",
+        entityType: "billing_cycle",
+        entityId: req.body?.customerId || req.body?.serviceId || "all",
+        metadata: { processed: result.processed, created: result.created, skipped: result.skipped }
+      });
+      return ok(res, { ...result, runId: run.runId });
+    } catch (error) {
+      run.status = "failed";
+      run.completedAt = new Date();
+      run.results = [{
+        error: error instanceof Error ? error.message : "Billing cycle failed"
+      }];
+      await run.save();
+      throw error;
+    }
   })
 );
 

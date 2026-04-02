@@ -44,6 +44,25 @@ export const adminUsersRouter = Router();
 
 adminUsersRouter.use(requireAuth);
 
+const adminUserSafeSelect = {
+  username: 1,
+  fullName: 1,
+  email: 1,
+  phone: 1,
+  status: 1,
+  roles: 1,
+  mfaEnabled: 1,
+  lastLoginAt: 1,
+  lastLoginIp: 1,
+  passwordChangedAt: 1,
+  zoneCode: 1,
+  zoneName: 1,
+  canAccessAllZones: 1,
+  createdBy: 1,
+  createdAt: 1,
+  updatedAt: 1,
+};
+
 adminUsersRouter.get(
   "/users",
   requirePermission(permissions.adminUserManage),
@@ -52,7 +71,7 @@ adminUsersRouter.get(
     const filter = {};
     if (req.query.zoneCode) filter.zoneCode = req.query.zoneCode;
     const [items, total] = await Promise.all([
-      AdminUser.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      AdminUser.find(filter).select(adminUserSafeSelect).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       AdminUser.countDocuments(filter)
     ]);
     return ok(res, items, { page, limit, total });
@@ -107,7 +126,8 @@ adminUsersRouter.post(
         canAccessAllZones: user.canAccessAllZones
       }
     });
-    return ok(res, user, { created: true });
+    const safeUser = await AdminUser.findById(user._id).select(adminUserSafeSelect).lean();
+    return ok(res, safeUser, { created: true });
   })
 );
 
@@ -138,7 +158,8 @@ adminUsersRouter.patch(
         zoneName: user.zoneName
       }
     });
-    return ok(res, user);
+    const safeUser = await AdminUser.findById(user._id).select(adminUserSafeSelect).lean();
+    return ok(res, safeUser);
   })
 );
 

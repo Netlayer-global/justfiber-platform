@@ -19,8 +19,10 @@ authRouter.post(
   "/login",
   asyncHandler(async (req, res) => {
     const payload = loginSchema.parse(req.body);
+    const loginValue = String(payload.login || "").trim();
+    const normalizedLogin = loginValue.toLowerCase();
     const admin = await AdminUser.findOne({
-      $or: [{ email: payload.login }, { username: payload.login }]
+      $or: [{ email: normalizedLogin }, { username: normalizedLogin }, { email: loginValue }, { username: loginValue }]
     });
     if (!admin || !(await argon2.verify(admin.passwordHash, payload.password))) {
       throw new ApiError(401, "Invalid username/email or password");
