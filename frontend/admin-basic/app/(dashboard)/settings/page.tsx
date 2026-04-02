@@ -2331,27 +2331,20 @@ export default function SettingsPage() {
                                   })}
                                 </div>
                               </div>
-                              <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white p-4">
-                                <div className="text-sm font-semibold text-slate-900">Template summary</div>
-                                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm">
-                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Layout</div>
-                                    <div className="mt-1 font-semibold text-slate-900">{template.layoutStyle}</div>
-                                  </div>
-                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Invoice series</div>
-                                    <div className="mt-1 font-semibold text-slate-900">{template.invoicePrefix || 'INV'} / MAIN</div>
-                                  </div>
-                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">GST / PAN</div>
-                                    <div className="mt-1 font-semibold text-slate-900">{template.gstNumber || '-'}</div>
-                                    <div className="mt-1 text-slate-500">{template.panNumber || '-'}</div>
-                                  </div>
-                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Bank</div>
-                                    <div className="mt-1 font-semibold text-slate-900">{template.bankName || '-'}</div>
-                                    <div className="mt-1 text-slate-500">{template.bankIfscCode || '-'}</div>
-                                  </div>
+                              <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white px-4 py-3">
+                                <div className="flex flex-wrap gap-2 text-sm">
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
+                                    Layout: <span className="font-semibold text-slate-900">{template.layoutStyle}</span>
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
+                                    Series: <span className="font-semibold text-slate-900">{template.invoicePrefix || 'INV'} / MAIN</span>
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
+                                    GST: <span className="font-semibold text-slate-900">{template.gstNumber || '-'}</span>
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
+                                    Bank: <span className="font-semibold text-slate-900">{template.bankName || '-'}</span>
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -2364,15 +2357,22 @@ export default function SettingsPage() {
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone assignments</div>
-                          <div className="mt-1 text-sm text-slate-500">Map a zone code to the exact invoice template it should render.</div>
+                          <div className="mt-1 text-sm text-slate-500">Map each zone to the template it should use.</div>
                         </div>
                         <button type="button" className="btn-secondary" onClick={addZoneTemplateMapping}>
                           Add zone mapping
                         </button>
                       </div>
                       <div className="space-y-3">
+                        {invoiceTemplateSection.zoneTemplateMappings.length ? (
+                          <div className="grid gap-3 px-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 md:grid-cols-[180px_minmax(0,1fr)_auto]">
+                            <div>Zone code</div>
+                            <div>Template</div>
+                            <div>Action</div>
+                          </div>
+                        ) : null}
                         {invoiceTemplateSection.zoneTemplateMappings.map((mapping, index) => (
-                          <div key={`${mapping.zoneCode || 'zone'}-${index}`} className="grid gap-3 rounded-[22px] border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_1fr_auto]">
+                          <div key={`${mapping.zoneCode || 'zone'}-${index}`} className="grid gap-3 rounded-[18px] border border-slate-200 bg-white p-3 md:grid-cols-[180px_minmax(0,1fr)_auto]">
                             <input
                               className="input"
                               placeholder="Zone code"
@@ -2421,7 +2421,7 @@ export default function SettingsPage() {
                         ))}
                         {!invoiceTemplateSection.zoneTemplateMappings.length ? (
                           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-                            No zone mappings yet. Default template fallback will be used.
+                            No zone mappings yet.
                           </div>
                         ) : null}
                       </div>
