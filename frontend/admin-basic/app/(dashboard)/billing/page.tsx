@@ -999,9 +999,6 @@ export default function BillingPage() {
           <button className={`btn-secondary ${billingSectionTab === 'invoices' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('invoices')}>
             Invoice queue
           </button>
-          <button className={`btn-secondary ${billingSectionTab === 'payments' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('payments')}>
-            Payments queue
-          </button>
         </div>
       </section>
       ) : null}
