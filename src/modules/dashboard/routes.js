@@ -33,7 +33,7 @@ dashboardRouter.get(
       ]
     });
 
-    const [snapshot, customers, suspended, inactive, activeUsers, devicesOffline, openCriticalTickets, liveCustomerIds] = await Promise.all([
+    const [snapshot, customers, suspended, inactive, activeUsers, devicesOffline, openCriticalTickets, liveCustomerIds, activeCustomerIds] = await Promise.all([
       fetchLatestSnapshot("executive"),
       Customer.countDocuments(),
       Customer.countDocuments({ operationalStatus: "suspended" }),
@@ -41,11 +41,17 @@ dashboardRouter.get(
       Customer.countDocuments({ operationalStatus: { $nin: ["suspended", "inactive"] } }),
       DeviceOperationalCache.countDocuments({ onlineStatus: "offline" }),
       SupportTicket.countDocuments({ status: { $in: ["open", "assigned", "in_progress"] }, priority: "critical" }),
-      liveCustomerIdsPromise
+      liveCustomerIdsPromise,
+      Customer.distinct("customerId", { operationalStatus: { $nin: ["suspended", "inactive"] } })
     ]);
 
+    const activeCustomerIdSet = new Set(
+      (Array.isArray(activeCustomerIds) ? activeCustomerIds : []).map((item) => String(item || "").trim()).filter(Boolean)
+    );
     const linkedDeviceCustomerIds = new Set(
-      (Array.isArray(liveCustomerIds) ? liveCustomerIds : []).map((item) => String(item || "").trim()).filter(Boolean)
+      (Array.isArray(liveCustomerIds) ? liveCustomerIds : [])
+        .map((item) => String(item || "").trim())
+        .filter((item) => item && activeCustomerIdSet.has(item))
     );
     const liveOnlineUsers = linkedDeviceCustomerIds.size;
 
