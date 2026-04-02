@@ -36,6 +36,31 @@ function addMonths(date, months) {
   return next;
 }
 
+function inferDurationMonthsFromCustomer(customer = {}) {
+  const snapshotCycle = String(customer?.billingSnapshot?.billCycle || customer?.invoiceSummary?.billCycle || "").toLowerCase();
+  if (snapshotCycle.includes("year")) return 12;
+  if (snapshotCycle.includes("half")) return 6;
+  if (snapshotCycle.includes("quarter")) return 3;
+  return 1;
+}
+
+function buildSyntheticServiceFromCustomer(customer = {}) {
+  if (!customer?.customerId || !customer?.serviceId) return null;
+  return {
+    serviceId: customer.serviceId,
+    customerId: customer.customerId,
+    status: customer.operationalStatus === "suspended" ? "suspended" : "active",
+    billingProfileCode: customer?.billingSnapshot?.billingProfileCode || "",
+    billingPeriodMonths: inferDurationMonthsFromCustomer(customer),
+    metadata: {
+      planCode: customer.planCode || "",
+      planName: customer.planName || "",
+      durationMonths: inferDurationMonthsFromCustomer(customer),
+      recurringAmount: Number(customer?.billingSnapshot?.lastInvoiceAmount || 0) || undefined
+    }
+  };
+}
+
 function deriveAmount(service, plan = null) {
   const durationMonths = resolveDurationMonths(service?.metadata);
   const recurringAmount = Number(service?.metadata?.recurringAmount || 0);
@@ -547,12 +572,16 @@ export class InternalBillingEngine {
       }).lean();
       services = service ? [service] : [];
     } else if (options.customerId) {
-      const service = await SubscriberService.findOne({
+      let service = await SubscriberService.findOne({
         customerId: options.customerId,
         status: { $in: ["draft", "active", "suspended", "expired", "pending_installation"] }
       })
         .sort({ updatedAt: -1, createdAt: -1 })
         .lean();
+      if (!service) {
+        const customer = await Customer.findOne({ customerId: options.customerId }).lean();
+        service = buildSyntheticServiceFromCustomer(customer || {});
+      }
       services = service ? [service] : [];
     } else {
       services = await SubscriberService.find({

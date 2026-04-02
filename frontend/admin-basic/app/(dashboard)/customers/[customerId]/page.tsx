@@ -427,6 +427,18 @@ export default function CustomerDetailPage() {
     })
   }
 
+  async function deleteInvoice(invoiceId: string) {
+    await runBusy(`delete-invoice-${invoiceId}`, async () => {
+      const res = await adminAPI.deleteInvoice(invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete invoice')
+        return
+      }
+      toast.success('Invoice deleted')
+      await loadCustomer()
+    })
+  }
+
   async function copyValue(value: string, label: string) {
     if (!value.trim()) {
       toast.error(`No ${label.toLowerCase()} available`)
@@ -657,14 +669,26 @@ export default function CustomerDetailPage() {
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-slate-900">Latest invoice</h2>
                   {latestInvoice ? (
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => void openInvoicePdf(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}
-                      disabled={busyKey === `invoice-${latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id}`}
-                    >
-                      Open PDF
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => void openInvoicePdf(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}
+                        disabled={busyKey === `invoice-${latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id}`}
+                      >
+                        Open PDF
+                      </button>
+                      {latestInvoice.paymentStatus !== 'paid' ? (
+                        <button
+                          type="button"
+                          className="btn-secondary text-rose-600"
+                          onClick={() => void deleteInvoice(latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id)}
+                          disabled={busyKey === `delete-invoice-${latestInvoice.invoiceId || latestInvoice.invoiceNumber || latestInvoice.id}`}
+                        >
+                          Delete
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
                 {latestInvoice ? (
@@ -699,7 +723,19 @@ export default function CustomerDetailPage() {
                       <div key={invoice.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
                         <div className="flex items-center justify-between gap-3">
                           <div className="font-semibold text-slate-900">{formatValue(invoice.invoiceNumber || invoice.invoiceId)}</div>
-                          <div className="text-slate-500">{formatDate(invoice.issuedAt || invoice.createdAt || invoice.dueDate)}</div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-slate-500">{formatDate(invoice.issuedAt || invoice.createdAt || invoice.dueDate)}</div>
+                            {invoice.paymentStatus !== 'paid' ? (
+                              <button
+                                type="button"
+                                className="text-xs font-semibold text-rose-600"
+                                onClick={() => void deleteInvoice(invoice.invoiceId || invoice.invoiceNumber || invoice.id)}
+                                disabled={busyKey === `delete-invoice-${invoice.invoiceId || invoice.invoiceNumber || invoice.id}`}
+                              >
+                                Delete
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                         <div className="mt-2 text-slate-600">{formatAmount(invoice.amount)} · {formatValue(invoice.paymentStatus)}</div>
                       </div>
