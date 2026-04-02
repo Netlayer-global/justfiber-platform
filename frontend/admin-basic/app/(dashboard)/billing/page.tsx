@@ -92,8 +92,8 @@ export default function BillingPage() {
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [profiles, setProfiles] = useState<BillingProfile[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
-  const [reconciliationSummary, setReconciliationSummary] = useState<BillingReconciliationSummary | null>(null)
-  const [financeResolutions, setFinanceResolutions] = useState<BillingFinanceResolutions | null>(null)
+  const [, setReconciliationSummary] = useState<BillingReconciliationSummary | null>(null)
+  const [, setFinanceResolutions] = useState<BillingFinanceResolutions | null>(null)
   const [collections, setCollections] = useState<BillingCollectionItem[]>([])
   const [collectionsWorkbench, setCollectionsWorkbench] = useState<BillingCollectionsWorkbench | null>(null)
   const [bulkSelection, setBulkSelection] = useState<string[]>([])
@@ -236,19 +236,6 @@ export default function BillingPage() {
       }),
     [paymentFilters, payments]
   )
-  const activePaymentFilterTokens = useMemo(
-    () =>
-      [
-        paymentFilters.search ? { key: 'search', label: `Search ${paymentFilters.search}` } : null,
-        paymentFilters.status ? { key: 'status', label: `Status ${paymentFilters.status}` } : null,
-        paymentFilters.provider ? { key: 'provider', label: `Provider ${paymentFilters.provider}` } : null,
-      ].filter(Boolean) as Array<{ key: string; label: string }>,
-    [paymentFilters]
-  )
-  const reconciliationBuckets = useMemo(() => reconciliationSummary?.statusBuckets || [], [reconciliationSummary])
-  const openReconciliationItems = useMemo(() => (reconciliationSummary?.items || []).slice(0, 6), [reconciliationSummary])
-  const recentWaivers = useMemo(() => (financeResolutions?.waivers || []).slice(0, 5), [financeResolutions])
-  const recentWriteoffs = useMemo(() => (financeResolutions?.writeoffs || []).slice(0, 5), [financeResolutions])
   const paymentProviders = useMemo(
     () => Array.from(new Set(payments.map((payment) => payment.provider).filter((provider): provider is string => Boolean(provider)))).sort(),
     [payments]
@@ -311,15 +298,6 @@ export default function BillingPage() {
       approvals: pendingFinanceApprovals.length,
     }),
     [invoiceTemplateSettings, pendingFinanceApprovals.length, profileForm.zoneMappings.length, profiles.length]
-  )
-  const paymentOpsSummary = useMemo(
-    () => ({
-      visible: visiblePayments.length,
-      unreconciled: visiblePayments.filter((payment) => payment.reconciliationStatus !== 'reconciled').length,
-      refunds: refundPayments.length,
-      totalVisibleAmount: visiblePayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
-    }),
-    [refundPayments.length, visiblePayments]
   )
   useEffect(() => {
     const syncZone = () => {
@@ -993,7 +971,7 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      {billingSectionTab !== 'collections' ? (
+      {billingSectionTab === 'invoices' ? (
       <section className="modernize-page-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1895,170 +1873,6 @@ export default function BillingPage() {
 
       {billingSectionTab === 'payments' ? (
           <div className="space-y-4">
-          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payments command center</div>
-              <div className="mt-1 text-sm text-slate-600">Track unreconciled payments, receipts, refund pressure, and the total value in current payment view.</div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Visible</div>
-                  <div className="mt-3 text-2xl font-semibold text-slate-900">{paymentOpsSummary.visible}</div>
-                  <div className="mt-1 text-xs text-slate-500">Payments in current filtered view</div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Unreconciled</div>
-                  <div className="mt-3 text-2xl font-semibold text-slate-900">{paymentOpsSummary.unreconciled}</div>
-                  <div className="mt-1 text-xs text-slate-500">Need match or manual review</div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Refunds</div>
-                  <div className="mt-3 text-2xl font-semibold text-slate-900">{paymentOpsSummary.refunds}</div>
-                  <div className="mt-1 text-xs text-slate-500">Refund transactions in ledger</div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Visible amount</div>
-                  <div className="mt-3 text-2xl font-semibold text-slate-900">Rs {paymentOpsSummary.totalVisibleAmount.toFixed(2)}</div>
-                  <div className="mt-1 text-xs text-slate-500">Across filtered payment list</div>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-[28px] border border-slate-200 bg-white p-5">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recon play</div>
-              <div className="mt-3 space-y-3 text-sm text-slate-600">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  Reconcile high-confidence rows first, then send retry reminders for old unmatched captures.
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  Use refund actions only after receipt dispatch and invoice linkage are verified.
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  Open reconciliation items right below to work the queue without leaving the desk.
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-            <div className="card p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Reconciliation summary</div>
-                  <div className="mt-1 text-sm text-slate-500">Open payment matching and allocation health.</div>
-                </div>
-                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                  {reconciliationBuckets.reduce((sum, item) => sum + Number(item.count || 0), 0)} tracked
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {reconciliationBuckets.slice(0, 4).map((bucket) => (
-                  <div key={bucket.status} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{bucket.status}</div>
-                    <div className="mt-2 text-2xl font-semibold text-slate-900">{bucket.count}</div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      Rs {Number(bucket.totalAmount || 0).toFixed(2)} | Unallocated Rs {Number(bucket.unallocatedAmount || 0).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-                {!reconciliationBuckets.length ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 md:col-span-2 xl:col-span-4">
-                    No reconciliation summary available yet.
-                  </div>
-                ) : null}
-              </div>
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Recent unresolved items</div>
-                <div className="mt-3 space-y-3">
-                  {openReconciliationItems.map((item) => (
-                    <div key={item.transactionId} className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="font-medium text-slate-900">{item.customerName || item.customerId}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {item.transactionId} | {item.reconciliationStatus} | {item.provider || '-'}
-                        </div>
-                      </div>
-                      <div className="text-right text-sm">
-                        <div className="font-semibold text-slate-900">Rs {Number(item.amount || 0).toFixed(2)}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          Unallocated Rs {Number(item.unallocatedAmount || 0).toFixed(2)}
-                        </div>
-                        <div className="mt-2 flex flex-wrap justify-end gap-2">
-                          <button className="btn-secondary" onClick={() => void reconcilePayment(item.transactionId, item.invoiceId)}>
-                            Reconcile
-                          </button>
-                          <button className="btn-secondary" onClick={() => void sendPaymentRetryReminder(item.transactionId)}>
-                            Retry reminder
-                          </button>
-                          <Link href={`/customers/${encodeURIComponent(item.customerId)}`} className="btn-secondary">
-                            Open customer
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {!openReconciliationItems.length ? (
-                    <div className="text-sm text-slate-500">No unresolved payment items right now.</div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          <div className="card p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Finance resolutions</div>
-            <div className="mt-1 text-sm text-slate-500">Latest waivers and write-offs for commercial review.</div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-1">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Recent waivers</div>
-                  <div className="mt-3 space-y-2">
-                    {recentWaivers.map((item) => (
-                      <div key={item.noteNumber || `${item.customerId}-${item.appliedAt}`} className="rounded-xl bg-white px-3 py-2">
-                        <div className="font-medium text-slate-900">{item.customerName || item.customerId}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {item.reasonCode || 'waiver'} | Rs {Number(item.totalAmount || 0).toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-                    {!recentWaivers.length ? <div className="text-sm text-slate-500">No recent waivers.</div> : null}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Recent write-offs</div>
-                  <div className="mt-3 space-y-2">
-                    {recentWriteoffs.map((item) => (
-                      <div key={item.entryId || `${item.customerId}-${item.postedAt}`} className="rounded-xl bg-white px-3 py-2">
-                        <div className="font-medium text-slate-900">{item.customerName || item.customerId}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {item.reference || 'writeoff'} | Rs {Number(item.amount || 0).toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-                    {!recentWriteoffs.length ? <div className="text-sm text-slate-500">No recent write-offs.</div> : null}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Pending approvals</div>
-                  <div className="mt-1 text-sm text-slate-600">Finance decisions waiting on waiver and write-off requests.</div>
-                </div>
-                <button className="btn-secondary" onClick={() => setBillingSectionTab('settings')}>
-                  Open approvals
-                </button>
-              </div>
-              <div className="mt-3 space-y-2">
-                {pendingFinanceApprovals.slice(0, 3).map((item) => (
-                  <div key={item.id} className="rounded-xl bg-white px-3 py-2">
-                    <div className="font-medium text-slate-900">{item.actionType.replaceAll('_', ' ')}</div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {item.payload?.customerId || '-'} | Rs {Number(item.payload?.amount || 0).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-                {!pendingFinanceApprovals.length ? (
-                  <div className="text-sm text-slate-500">No finance approvals pending.</div>
-                ) : null}
-              </div>
-            </div>
-          </div>
           <div className="card p-5">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <input
@@ -2091,42 +1905,6 @@ export default function BillingPage() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2">
-                {activePaymentFilterTokens.map((token) => (
-                  <div key={token.key} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
-                    {token.label}
-                  </div>
-                ))}
-                {!activePaymentFilterTokens.length ? (
-                  <div className="rounded-full border border-dashed border-slate-200 px-3 py-1 text-xs text-slate-500">
-                    No payment filters applied
-                  </div>
-                ) : null}
-              </div>
-              {activePaymentFilterTokens.length ? (
-                <button
-                  className="btn-secondary"
-                  onClick={() => setPaymentFilters({ search: '', status: '', provider: '' })}
-                >
-                  Clear filters
-                </button>
-              ) : null}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button className="btn-secondary" onClick={() => setPaymentFilters({ search: '', status: 'pending', provider: '' })}>
-                Pending only
-              </button>
-              <button className="btn-secondary" onClick={() => setPaymentFilters({ search: '', status: 'reconciled', provider: '' })}>
-                Reconciled
-              </button>
-              <button className="btn-secondary" onClick={() => setPaymentFilters({ search: '', status: '', provider: 'razorpay' })}>
-                Razorpay
-              </button>
-              <button className="btn-secondary" onClick={() => setPaymentFilters({ search: '', status: '', provider: '' })}>
-                Reset payment view
-              </button>
             </div>
           </div>
           <div className="card overflow-hidden">
