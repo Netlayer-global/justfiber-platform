@@ -1,8 +1,6 @@
 import { Router } from "express";
-import mysql from "mysql2/promise";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
-import { env } from "../../config/env.js";
 import { DashboardSnapshot } from "../../models/DashboardSnapshot.js";
 import { permissions } from "../../config/permissions.js";
 import { requireAuth, requirePermission } from "../../common/auth.js";
@@ -11,51 +9,15 @@ import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
-import { SubscriberService } from "../../models/SubscriberService.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 
 export const dashboardRouter = Router();
 
 dashboardRouter.use(requireAuth, requirePermission(permissions.dashboardRead));
 
-let radiusPool;
-
 async function fetchLatestSnapshot(snapshotType) {
   const snapshot = await DashboardSnapshot.findOne({ snapshotType }).sort({ generatedAt: -1 }).lean();
   return snapshot?.metrics || null;
-}
-
-function getRadiusPool() {
-  if (!radiusPool) {
-    radiusPool = mysql.createPool({
-      host: env.RADIUS_SQL_HOST,
-      port: env.RADIUS_SQL_PORT,
-      user: env.RADIUS_SQL_USER,
-      password: env.RADIUS_SQL_PASSWORD,
-      database: env.RADIUS_SQL_DATABASE,
-      waitForConnections: true,
-      connectionLimit: 5
-    });
-  }
-  return radiusPool;
-}
-
-async function getLiveRadiusUsernames() {
-  const connection = await getRadiusPool().getConnection();
-  try {
-    const [rows] = await connection.execute(
-      `SELECT DISTINCT username
-       FROM radacct
-       WHERE username IS NOT NULL
-         AND username <> ''
-         AND acctstoptime IS NULL`
-    );
-    return Array.isArray(rows)
-      ? rows.map((row) => String(row.username || "").trim()).filter(Boolean)
-      : [];
-  } finally {
-    connection.release();
-  }
 }
 
 dashboardRouter.get(
@@ -71,7 +33,7 @@ dashboardRouter.get(
       ]
     });
 
-    const [snapshot, customers, suspended, inactive, activeUsers, devicesOffline, openCriticalTickets, liveCustomerIds, liveRadiusUsernames] = await Promise.all([
+    const [snapshot, customers, suspended, inactive, activeUsers, devicesOffline, openCriticalTickets, liveCustomerIds] = await Promise.all([
       fetchLatestSnapshot("executive"),
       Customer.countDocuments(),
       Customer.countDocuments({ operationalStatus: "suspended" }),
@@ -79,27 +41,13 @@ dashboardRouter.get(
       Customer.countDocuments({ operationalStatus: { $nin: ["suspended", "inactive"] } }),
       DeviceOperationalCache.countDocuments({ onlineStatus: "offline" }),
       SupportTicket.countDocuments({ status: { $in: ["open", "assigned", "in_progress"] }, priority: "critical" }),
-      liveCustomerIdsPromise,
-      getLiveRadiusUsernames().catch(() => [])
+      liveCustomerIdsPromise
     ]);
 
-    const linkedLiveServices = Array.isArray(liveRadiusUsernames) && liveRadiusUsernames.length
-      ? await SubscriberService.find({
-          radiusUsername: { $in: liveRadiusUsernames },
-          customerId: { $nin: [null, ""] },
-          status: { $in: ["active", "suspended", "expired"] }
-        })
-          .select({ customerId: 1 })
-          .lean()
-      : [];
-
-    const linkedRadiusCustomerIds = new Set(
-      linkedLiveServices.map((service) => String(service.customerId || "").trim()).filter(Boolean)
-    );
     const linkedDeviceCustomerIds = new Set(
       (Array.isArray(liveCustomerIds) ? liveCustomerIds : []).map((item) => String(item || "").trim()).filter(Boolean)
     );
-    const liveOnlineUsers = new Set([...linkedRadiusCustomerIds, ...linkedDeviceCustomerIds]).size;
+    const liveOnlineUsers = linkedDeviceCustomerIds.size;
 
     return ok(res, {
       ...(snapshot || {}),
