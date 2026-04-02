@@ -182,11 +182,16 @@ export default function CustomerDetailPage() {
         radiusUsername: username,
         reason: 'Customer detail disconnect',
       })
-      if (!res.success) {
+      if (!res.success || !res.data) {
         toast.error(res.error || 'Failed to disconnect session')
         return
       }
-      toast.success('Disconnect request sent')
+      if (res.data.result?.status !== 'sent') {
+        toast.error(res.data.result?.error || res.data.result?.reason || 'Failed to disconnect session')
+        return
+      }
+      const removedCount = Number(res.data.result?.routerApiDisconnect?.removedCount || 0)
+      toast.success(removedCount > 0 ? `Disconnected live session (${removedCount})` : 'Disconnect request sent')
       await loadCustomer()
     })
   }
@@ -204,11 +209,16 @@ export default function CustomerDetailPage() {
         radiusUsername: username,
         reason: 'Customer detail PPPoE reconnect',
       })
-      if (!res.success) {
+      if (!res.success || !res.data) {
         toast.error(res.error || 'Failed to reconnect PPPoE')
         return
       }
-      toast.success('PPPoE reconnect sent')
+      if (res.data.result?.status !== 'sent') {
+        toast.error(res.data.result?.error || res.data.result?.reason || 'Failed to reconnect PPPoE')
+        return
+      }
+      const removedCount = Number(res.data.result?.routerApiDisconnect?.removedCount || 0)
+      toast.success(removedCount > 0 ? `PPPoE reconnected (${removedCount} live session cut)` : 'PPPoE reconnect sent')
       await loadCustomer()
     })
   }

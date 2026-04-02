@@ -426,6 +426,13 @@ export interface BngNodeCoaDispatchResult {
     stderr?: string
     error?: string
     reason?: string
+    routerApiDisconnect?: {
+      attempted?: boolean
+      status?: string
+      removedCount?: number
+      sessionIds?: string[]
+      error?: string
+    }
   }
 }
 

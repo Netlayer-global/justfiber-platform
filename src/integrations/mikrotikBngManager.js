@@ -155,6 +155,53 @@ async function findRouterPoolByName(bngNode, poolName) {
   return Array.isArray(list) ? list.find((item) => String(item?.name || "").trim() === poolName) || null : null;
 }
 
+async function findActivePppSessions(bngNode, radiusUsername) {
+  const list = await mikrotikRestRequest(
+    bngNode,
+    "GET",
+    `/ppp/active?.proplist=.id,name,address,service&name=${encodeURIComponent(radiusUsername)}`
+  );
+  if (!Array.isArray(list)) return [];
+  return list.filter((item) => String(item?.name || "").trim() === String(radiusUsername || "").trim());
+}
+
+async function forceDisconnectActivePppSessions(bngNode, radiusUsername) {
+  try {
+    const sessions = await findActivePppSessions(bngNode, radiusUsername);
+    if (!sessions.length) {
+      return {
+        attempted: true,
+        status: "not_found",
+        removedCount: 0,
+        sessionIds: []
+      };
+    }
+
+    const sessionIds = [];
+    for (const session of sessions) {
+      const sessionId = String(session?.[".id"] || "").trim();
+      if (!sessionId) continue;
+      await mikrotikRestRequest(bngNode, "DELETE", `/ppp/active/${encodeURIComponent(sessionId)}`);
+      sessionIds.push(sessionId);
+    }
+
+    return {
+      attempted: true,
+      status: sessionIds.length ? "removed" : "not_found",
+      removedCount: sessionIds.length,
+      sessionIds
+    };
+  } catch (error) {
+    return {
+      attempted: true,
+      status: "failed",
+      removedCount: 0,
+      sessionIds: [],
+      error: error instanceof Error ? error.message : "Router API disconnect failed"
+    };
+  }
+}
+
 function buildDisconnectPayload({ radiusUsername, service, bngNode, mode = "full" }) {
   const lines = [`User-Name = "${radiusUsername}"`];
   if (mode === "minimal") {
@@ -250,6 +297,7 @@ export class MikrotikBngManager {
     const payload = buildDisconnectPayload({ radiusUsername: username, service, bngNode, mode: "full" });
     try {
       const result = await runDisconnect({ host, port, secret, payload });
+      const routerApiDisconnect = await forceDisconnectActivePppSessions(bngNode, username);
       return {
         attempted: true,
         status: "sent",
@@ -261,6 +309,7 @@ export class MikrotikBngManager {
         acknowledged: Boolean(result.acknowledged),
         stdout: result.stdout,
         stderr: result.stderr,
+        routerApiDisconnect,
         sessionHint
       };
     } catch (error) {
@@ -272,6 +321,7 @@ export class MikrotikBngManager {
       });
       try {
         const fallback = await runDisconnect({ host, port, secret, payload: minimalPayload });
+        const routerApiDisconnect = await forceDisconnectActivePppSessions(bngNode, username);
         return {
           attempted: true,
           status: "sent",
@@ -284,9 +334,29 @@ export class MikrotikBngManager {
           stdout: fallback.stdout,
           stderr: fallback.stderr,
           initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed",
+          routerApiDisconnect,
           sessionHint
         };
       } catch (fallbackError) {
+      const routerApiDisconnect = await forceDisconnectActivePppSessions(bngNode, username);
+      if (routerApiDisconnect?.status === "removed") {
+        return {
+          attempted: true,
+          status: "sent",
+          action: reason,
+          bngNodeCode: bngNode.nodeCode,
+          target: `${host}:${port}`,
+          payloadMode: "router_api_fallback",
+          exitCode: 0,
+          stdout: "",
+          stderr: "",
+          acknowledged: false,
+          initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed",
+          error: null,
+          routerApiDisconnect,
+          sessionHint
+        };
+      }
       return {
         attempted: true,
         status: "failed",
@@ -299,6 +369,7 @@ export class MikrotikBngManager {
         stderr: String(fallbackError?.stderr || error?.stderr || "").trim(),
         error: fallbackError instanceof Error ? fallbackError.message : "COA disconnect failed",
         initialFailure: error instanceof Error ? error.message : "Initial COA disconnect failed",
+        routerApiDisconnect,
         sessionHint
       };
       }
