@@ -11,6 +11,7 @@ import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
+import { SubscriberService } from "../../models/SubscriberService.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
 
 export const dashboardRouter = Router();
@@ -82,14 +83,29 @@ dashboardRouter.get(
       getLiveRadiusUsernames().catch(() => [])
     ]);
 
-    const liveDeviceUsers = Array.isArray(liveCustomerIds) ? liveCustomerIds.length : 0;
-    const liveRadiusUsers = Array.isArray(liveRadiusUsernames) ? liveRadiusUsernames.length : 0;
-    const liveOnlineUsers = Math.max(liveDeviceUsers, liveRadiusUsers);
+    const linkedLiveServices = Array.isArray(liveRadiusUsernames) && liveRadiusUsernames.length
+      ? await SubscriberService.find({
+          radiusUsername: { $in: liveRadiusUsernames },
+          customerId: { $nin: [null, ""] },
+          status: { $in: ["active", "suspended", "expired"] }
+        })
+          .select({ customerId: 1 })
+          .lean()
+      : [];
+
+    const linkedRadiusCustomerIds = new Set(
+      linkedLiveServices.map((service) => String(service.customerId || "").trim()).filter(Boolean)
+    );
+    const linkedDeviceCustomerIds = new Set(
+      (Array.isArray(liveCustomerIds) ? liveCustomerIds : []).map((item) => String(item || "").trim()).filter(Boolean)
+    );
+    const liveOnlineUsers = new Set([...linkedRadiusCustomerIds, ...linkedDeviceCustomerIds]).size;
 
     return ok(res, {
       ...(snapshot || {}),
       totalCustomers: customers,
       onlineUsers: liveOnlineUsers,
+      activeConnections: liveOnlineUsers,
       activeUsers,
       suspendedCustomers: suspended,
       inactiveCustomers: inactive,
