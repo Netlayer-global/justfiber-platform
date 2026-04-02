@@ -40,6 +40,10 @@ function escapeRegex(value = "") {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizeDigits(value = "") {
+  return String(value || "").replace(/\D+/g, "");
+}
+
 function inferDurationMonthsFromCustomer(customer = {}) {
   const snapshotCycle = String(customer?.billingSnapshot?.billCycle || customer?.invoiceSummary?.billCycle || "").toLowerCase();
   if (snapshotCycle.includes("year")) return 12;
@@ -70,6 +74,9 @@ async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
   const serviceToken = String(serviceId || "").trim();
   const exactCustomerRegex = customerToken ? new RegExp(`^${escapeRegex(customerToken)}$`, "i") : null;
   const exactServiceRegex = serviceToken ? new RegExp(`^${escapeRegex(serviceToken)}$`, "i") : null;
+  const containsCustomerRegex = customerToken ? new RegExp(escapeRegex(customerToken), "i") : null;
+  const customerDigits = normalizeDigits(customerToken);
+  const serviceDigits = normalizeDigits(serviceToken);
 
   if (exactCustomerRegex) {
     const customer = await Customer.findOne({
@@ -78,9 +85,13 @@ async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
         { accountNumber: exactCustomerRegex },
         { phone: exactCustomerRegex },
         { mobile: exactCustomerRegex },
-        { serviceId: exactCustomerRegex }
+        { serviceId: exactCustomerRegex },
+        { fullName: exactCustomerRegex },
+        { email: exactCustomerRegex }
       ]
-    }).lean();
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean();
     if (customer) return customer;
   }
 
@@ -91,7 +102,48 @@ async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
         { customerId: exactServiceRegex },
         { accountNumber: exactServiceRegex }
       ]
-    }).lean();
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean();
+    if (customer) return customer;
+  }
+
+  if (containsCustomerRegex) {
+    const customer = await Customer.findOne({
+      $or: [
+        { customerId: containsCustomerRegex },
+        { serviceId: containsCustomerRegex },
+        { accountNumber: containsCustomerRegex },
+        { fullName: containsCustomerRegex },
+        { email: containsCustomerRegex }
+      ]
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean();
+    if (customer) return customer;
+  }
+
+  if (customerDigits) {
+    const customer = await Customer.findOne({
+      $or: [
+        { phone: new RegExp(`${escapeRegex(customerDigits)}$`) },
+        { mobile: new RegExp(`${escapeRegex(customerDigits)}$`) }
+      ]
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean();
+    if (customer) return customer;
+  }
+
+  if (serviceDigits) {
+    const customer = await Customer.findOne({
+      $or: [
+        { phone: new RegExp(`${escapeRegex(serviceDigits)}$`) },
+        { mobile: new RegExp(`${escapeRegex(serviceDigits)}$`) }
+      ]
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .lean();
     if (customer) return customer;
   }
 
