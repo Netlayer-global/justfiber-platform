@@ -2188,10 +2188,6 @@ export default function SettingsPage() {
                             </div>
                             <div className="grid gap-4">
                               <label className="space-y-2">
-                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template key</div>
-                                <input className="input" value={template.key} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, key: event.target.value.trim().toLowerCase().replace(/\s+/g, '_') }))} />
-                              </label>
-                              <label className="space-y-2">
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template name</div>
                                 <input className="input" value={template.templateName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, templateName: event.target.value }))} />
                               </label>
@@ -2219,24 +2215,12 @@ export default function SettingsPage() {
                                     <input className="input" value={template.companyName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, companyName: event.target.value }))} />
                                   </label>
                                   <label className="space-y-2">
-                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice prefix</div>
-                                    <input className="input" value={template.invoicePrefix} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))} />
-                                  </label>
-                                  <label className="space-y-2">
                                     <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</div>
                                     <input className="input" value={template.phoneNumber} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, phoneNumber: event.target.value }))} />
                                   </label>
                                   <label className="space-y-2">
                                     <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Support email</div>
                                     <input className="input" value={template.supportEmail} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, supportEmail: event.target.value }))} />
-                                  </label>
-                                  <label className="space-y-2">
-                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Website</div>
-                                    <input className="input" value={template.website} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, website: event.target.value }))} />
-                                  </label>
-                                  <label className="space-y-2">
-                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Accent color</div>
-                                    <input className="input" value={template.accentColor} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, accentColor: event.target.value }))} />
                                   </label>
                                   <label className="space-y-2 lg:col-span-2">
                                     <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing address</div>
@@ -2317,22 +2301,6 @@ export default function SettingsPage() {
                                       </div>
                                     )
                                   })}
-                                </div>
-                              </div>
-                              <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white px-4 py-3">
-                                <div className="flex flex-wrap gap-2 text-sm">
-                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
-                                    Layout: <span className="font-semibold text-slate-900">{template.layoutStyle}</span>
-                                  </span>
-                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
-                                    Series: <span className="font-semibold text-slate-900">{template.invoicePrefix || 'INV'} / MAIN</span>
-                                  </span>
-                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
-                                    GST: <span className="font-semibold text-slate-900">{template.gstNumber || '-'}</span>
-                                  </span>
-                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">
-                                    Bank: <span className="font-semibold text-slate-900">{template.bankName || '-'}</span>
-                                  </span>
                                 </div>
                               </div>
                             </div>
