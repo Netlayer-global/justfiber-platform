@@ -616,25 +616,12 @@ export default function SettingsPage() {
     () => normalizeInvoiceTemplateSection(sectionValue),
     [sectionValue]
   )
-  const selectedInvoiceTemplate = useMemo(
-    () =>
-      invoiceTemplateSection.templates.find((item) => item.key === invoiceTemplateSection.activeTemplate) ||
-      invoiceTemplateSection.templates[0] ||
-      null,
-    [invoiceTemplateSection]
-  )
   const activeZoneTemplateKey = useMemo(
     () =>
       invoiceTemplateSection.zoneTemplateMappings.find(
         (item) => item.zoneCode === String(activeZoneCode || '').trim().toUpperCase()
       )?.templateKey || '',
     [activeZoneCode, invoiceTemplateSection.zoneTemplateMappings]
-  )
-  const activeZoneResolvedTemplate = useMemo(
-    () =>
-      invoiceTemplateSection.templates.find((item) => item.key === activeZoneTemplateKey) ||
-      selectedInvoiceTemplate,
-    [activeZoneTemplateKey, invoiceTemplateSection.templates, selectedInvoiceTemplate]
   )
   const activeZoneFranchise = useMemo(
     () => franchises.find((item) => (item.zoneCode || item.franchiseCode) === activeZoneCode) || null,
@@ -1217,64 +1204,19 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="card p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h1 className="text-3xl font-semibold text-slate-900">Settings</h1>
-            </div>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={handleCopyLaunchPack}
-              disabled={!activeZoneFranchise || isCopyingLaunchPack}
-            >
-              {isCopyingLaunchPack ? 'Copying...' : 'Copy parent settings now'}
-            </button>
+      <section className="card p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900">Settings</h1>
           </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Delegated admin seats</div>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Zone admin contact</h2>
-              <div className="mt-2 text-sm text-slate-500">
-                Keep one admin contact for this zone.
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleSaveZoneAdmins}
-              disabled={!activeZoneFranchise || isSavingZoneAdmins}
-            >
-              {isSavingZoneAdmins ? 'Saving...' : 'Save admin seats'}
-            </button>
-          </div>
-          <div className="mt-4 grid gap-3">
-            <input
-              className="input"
-              placeholder="Admin full name"
-              value={zoneAdminDraft.fullName}
-              onChange={(event) => setZoneAdminDraft((current) => ({ ...current, fullName: event.target.value }))}
-            />
-            <input
-              className="input"
-              placeholder="Admin email"
-              value={zoneAdminDraft.email}
-              onChange={(event) => setZoneAdminDraft((current) => ({ ...current, email: event.target.value }))}
-            />
-            <input
-              className="input"
-              placeholder="Admin phone"
-              value={zoneAdminDraft.phone}
-              onChange={(event) => setZoneAdminDraft((current) => ({ ...current, phone: event.target.value }))}
-            />
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              Last updated: {activeZoneFranchise?.adminAccountsUpdatedAt ? new Date(activeZoneFranchise.adminAccountsUpdatedAt).toLocaleString() : 'Not saved yet'}
-            </div>
-          </div>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={handleCopyLaunchPack}
+            disabled={!activeZoneFranchise || isCopyingLaunchPack}
+          >
+            {isCopyingLaunchPack ? 'Copying...' : 'Copy parent settings now'}
+          </button>
         </div>
       </section>
 
@@ -1474,6 +1416,46 @@ export default function SettingsPage() {
               Login scope: {activeZoneLabel || 'No zone selected'} ({activeZoneCode || 'default'})
             </div>
           </div>
+
+          <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Zone admin contact</div>
+                <div className="mt-1 text-sm text-slate-500">Keep one admin contact for this zone.</div>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSaveZoneAdmins}
+                disabled={!activeZoneFranchise || isSavingZoneAdmins}
+              >
+                {isSavingZoneAdmins ? 'Saving...' : 'Save admin seats'}
+              </button>
+            </div>
+            <div className="mt-4 grid gap-3">
+              <input
+                className="input"
+                placeholder="Admin full name"
+                value={zoneAdminDraft.fullName}
+                onChange={(event) => setZoneAdminDraft((current) => ({ ...current, fullName: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Admin email"
+                value={zoneAdminDraft.email}
+                onChange={(event) => setZoneAdminDraft((current) => ({ ...current, email: event.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Admin phone"
+                value={zoneAdminDraft.phone}
+                onChange={(event) => setZoneAdminDraft((current) => ({ ...current, phone: event.target.value }))}
+              />
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                Last updated: {activeZoneFranchise?.adminAccountsUpdatedAt ? new Date(activeZoneFranchise.adminAccountsUpdatedAt).toLocaleString() : 'Not saved yet'}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="card p-5">
@@ -1625,62 +1607,11 @@ export default function SettingsPage() {
               <>
                 {activeSection === 'invoice_template' ? (
                   <section className="space-y-4">
-                    <section className="card p-5">
-                      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                        <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone-wise invoice templates</div>
-                          <h3 className="mt-2 text-2xl font-semibold text-slate-900">Template assignment and fallback</h3>
-                          <div className="mt-2 text-sm text-slate-500">
-                            Assign an exact template to each zone. If no mapping exists, the active default template is used automatically.
-                          </div>
-                          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Templates</div>
-                              <div className="mt-2 text-2xl font-bold text-slate-900">{invoiceTemplateSection.templates.length}</div>
-                            </div>
-                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone mappings</div>
-                              <div className="mt-2 text-2xl font-bold text-slate-900">{invoiceTemplateSection.zoneTemplateMappings.filter((item) => item.zoneCode && item.templateKey).length}</div>
-                            </div>
-                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Default template</div>
-                              <div className="mt-2 text-sm font-semibold text-slate-900">{selectedInvoiceTemplate?.templateName || 'Not set'}</div>
-                            </div>
-                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Active zone</div>
-                              <div className="mt-2 text-sm font-semibold text-slate-900">{activeZoneResolvedTemplate?.templateName || 'Fallback template'}</div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-4">
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Resolved zone</div>
-                          <div className="mt-3 space-y-3 text-sm text-slate-600">
-                            <div>
-                              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Zone</div>
-                              <div className="mt-1 font-semibold text-slate-900">{activeZoneLabel || activeZoneCode || 'Shared scope'}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Template</div>
-                              <div className="mt-1 font-semibold text-slate-900">{activeZoneResolvedTemplate?.templateName || selectedInvoiceTemplate?.templateName || 'Default fallback'}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Invoice prefix</div>
-                              <div className="mt-1 font-semibold text-slate-900">{activeZoneResolvedTemplate?.invoicePrefix || invoiceTemplateSection.invoicePrefix || 'JF'}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">GSTIN</div>
-                              <div className="mt-1 font-semibold text-slate-900">{activeZoneResolvedTemplate?.gstNumber || invoiceTemplateSection.gstNumber || '-'}</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Default fallback</div>
-                          <div className="mt-1 text-sm text-slate-500">Used when a zone-specific mapping is not configured.</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice templates</div>
+                          <div className="mt-1 text-sm text-slate-500">Create templates and choose the default one.</div>
                         </div>
                         <button type="button" className="btn-secondary" onClick={addInvoiceTemplate}>
                           Add template
