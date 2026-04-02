@@ -901,6 +901,27 @@ export default function SettingsPage() {
     }
     try {
       setIsCreatingSubZone(true)
+      if (subZoneDraft.adminUsername.trim() && !subZoneDraft.adminPassword.trim()) {
+        toast.error('Enter a password for the sub-zone login or leave login fields empty')
+        return
+      }
+      if (subZoneDraft.adminPassword.trim() && !subZoneDraft.adminUsername.trim()) {
+        toast.error('Enter a username for the sub-zone login or leave login fields empty')
+        return
+      }
+      const currentAdminRes = await adminAPI.getCurrentAdmin()
+      const currentAdmin = currentAdminRes.success ? currentAdminRes.data : undefined
+      if (
+        currentAdmin &&
+        subZoneDraft.adminUsername.trim() &&
+        (
+          currentAdmin.username.trim().toLowerCase() === subZoneDraft.adminUsername.trim().toLowerCase() ||
+          (subZoneDraft.adminEmail.trim() && currentAdmin.email.trim().toLowerCase() === subZoneDraft.adminEmail.trim().toLowerCase())
+        )
+      ) {
+        toast.error('Use a different username or email for the sub-zone login')
+        return
+      }
       const franchiseCode = subZoneDraft.subZoneName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
       const invoiceTemplateRes = await adminAPI.getSettingsSection<any>('invoice_template')
       const templateKey = invoiceTemplateRes.success ? invoiceTemplateRes.data?.value?.activeTemplate || 'justfiber_standard' : 'justfiber_standard'
@@ -984,18 +1005,6 @@ export default function SettingsPage() {
         await adminAPI.saveFranchiseAdminAccounts(franchiseCode, metadata.adminAccounts)
       }
       if (subZoneDraft.adminUsername.trim() && subZoneDraft.adminPassword.trim()) {
-        const currentAdminRes = await adminAPI.getCurrentAdmin()
-        const currentAdmin = currentAdminRes.success ? currentAdminRes.data : undefined
-        if (
-          currentAdmin &&
-          (
-            currentAdmin.username.trim().toLowerCase() === subZoneDraft.adminUsername.trim().toLowerCase() ||
-            (subZoneDraft.adminEmail.trim() && currentAdmin.email.trim().toLowerCase() === subZoneDraft.adminEmail.trim().toLowerCase())
-          )
-        ) {
-          toast.error('Main admin ko sub-zone login me reuse mat karo. Alag username aur email do.')
-          return
-        }
         const adminRes = await adminAPI.createAdminUser({
           username: subZoneDraft.adminUsername.trim(),
           fullName: subZoneDraft.adminFullName.trim() || `${subZoneDraft.subZoneName.trim()} Admin`,

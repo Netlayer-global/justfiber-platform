@@ -23,6 +23,7 @@ import { BillingLedgerEntry } from "../../models/BillingLedgerEntry.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { BillingNote } from "../../models/BillingNote.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
+import { SystemConfig } from "../../models/SystemConfig.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
 import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
@@ -84,6 +85,29 @@ import {
 
 export const customerPortalRouter = Router();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function normalizeZoneCode(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-");
+}
+
+async function resolvePaymentGatewayForCustomer(customer) {
+  const config = await SystemConfig.findOne({ key: "settings.external_integrations" }).lean();
+  const paymentGateway = config?.value?.paymentGateway || {};
+  const zoneCode = normalizeZoneCode(
+    customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || customer?.zoneCode
+  );
+  const zoneMappings = Array.isArray(paymentGateway?.zoneMappings) ? paymentGateway.zoneMappings : [];
+  const zoneMatch = zoneMappings.find((item) => normalizeZoneCode(item?.zoneCode) === zoneCode) || null;
+  return {
+    enabled: paymentGateway?.enabled !== false,
+    providerKey: String(zoneMatch?.providerKey || paymentGateway?.providerKey || "").trim().toLowerCase(),
+    collectionMode: String(zoneMatch?.collectionMode || "centralized").trim().toLowerCase(),
+    settlementLabel: String(zoneMatch?.settlementLabel || "").trim(),
+  };
+}
 
 function buildInvoiceHtml(invoice) {
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
@@ -1975,6 +1999,13 @@ customerPortalRouter.post(
     if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
       throw new ApiError(400, "No payable bill amount found");
     }
+    const paymentRoute = await resolvePaymentGatewayForCustomer(customer);
+    if (!paymentRoute.enabled) {
+      throw new ApiError(503, "Online payment is disabled for this zone");
+    }
+    if (paymentRoute.providerKey && paymentRoute.providerKey !== "razorpay") {
+      throw new ApiError(503, `Configured payment gateway '${paymentRoute.providerKey}' is not supported yet`);
+    }
 
     const order = await razorpayClient.createOrder({
       amount,
@@ -2000,7 +2031,9 @@ customerPortalRouter.post(
           metadata: {
             orderId: order.id,
             source: "customer_billing_order",
-            notes: order.notes
+            notes: order.notes,
+            collectionMode: paymentRoute.collectionMode,
+            settlementLabel: paymentRoute.settlementLabel
           }
         }
       },
