@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { AdminRoleSummary, AdminUserSummary, FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
+import type { AdminRoleSummary, AdminUserSummary, BillingProfile, FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
 import { Loader2, Save, Search, Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -589,6 +589,20 @@ export default function SettingsPage() {
   })
   const [passwordResetDraft, setPasswordResetDraft] = useState<Record<string, string>>({})
   const [invoiceEditorTemplateKey, setInvoiceEditorTemplateKey] = useState('')
+  const [invoiceOrganizationProfile, setInvoiceOrganizationProfile] = useState<Partial<BillingProfile>>({
+    code: 'primary',
+    name: 'Primary Billing Profile',
+    companyLegalName: '',
+    companyAddress: '',
+    gstNumber: '',
+    taxPercent: 18,
+    taxMode: 'india_gst',
+    invoicePrefix: 'JF',
+    invoiceSeriesCode: 'MAIN',
+    dueDays: 0,
+    companyStateCode: '',
+    companyStateName: '',
+  })
 
   const visibleCatalog = useMemo(() => {
     return catalog
@@ -1085,11 +1099,12 @@ export default function SettingsPage() {
     try {
       setIsSectionLoading(true)
       if (section === 'invoice_template') {
-        const [templateRes, billingAddressRes, billingPeriodRes, billingRuleRes] = await Promise.all([
+        const [templateRes, billingAddressRes, billingPeriodRes, billingRuleRes, billingProfilesRes] = await Promise.all([
           adminAPI.getSettingsSection<SectionValue>('invoice_template'),
           adminAPI.getSettingsSection<SectionValue>('billing_address'),
           adminAPI.getSettingsSection<SectionValue>('billing_period'),
           adminAPI.getSettingsSection<SectionValue>('billing'),
+          adminAPI.getBillingProfiles(),
         ])
         if (!templateRes.success || !templateRes.data) {
           toast.error(templateRes.error || 'Failed to load invoice template')
@@ -1102,6 +1117,26 @@ export default function SettingsPage() {
           billingRuleSettings: billingRuleRes.success ? billingRuleRes.data?.value || {} : {},
         })
         setSectionUpdatedAt(templateRes.data.updatedAt || null)
+        const activeProfile = billingProfilesRes.success
+          ? (billingProfilesRes.data || []).find((item) => item.active) || billingProfilesRes.data?.[0]
+          : null
+        if (activeProfile) {
+          setInvoiceOrganizationProfile({
+            code: activeProfile.code || 'primary',
+            name: activeProfile.name || 'Primary Billing Profile',
+            companyLegalName: activeProfile.companyLegalName || '',
+            companyAddress: activeProfile.companyAddress || '',
+            gstNumber: activeProfile.gstNumber || '',
+            taxPercent: activeProfile.taxPercent ?? 18,
+            taxMode: activeProfile.taxMode || 'india_gst',
+            invoicePrefix: activeProfile.invoicePrefix || 'JF',
+            invoiceSeriesCode: activeProfile.invoiceSeriesCode || 'MAIN',
+            dueDays: activeProfile.dueDays ?? 0,
+            companyStateCode: activeProfile.companyStateCode || '',
+            companyStateName: activeProfile.companyStateName || '',
+            active: activeProfile.active !== false,
+          })
+        }
         return
       }
       const response = await adminAPI.getSettingsSection<SectionValue>(section)
@@ -1144,6 +1179,28 @@ export default function SettingsPage() {
             billingRuleRes.error ||
             'Failed to save invoice configuration'
           )
+          return
+        }
+        const billingProfileRes = await adminAPI.saveBillingProfile({
+          code: invoiceOrganizationProfile.code || 'primary',
+          name: invoiceOrganizationProfile.name || 'Primary Billing Profile',
+          billMode: 'prepaid',
+          defaultHomeBillMode: 'prepaid',
+          defaultBusinessBillMode: 'postpaid',
+          dueDays: Number(invoiceOrganizationProfile.dueDays || 0),
+          companyLegalName: invoiceOrganizationProfile.companyLegalName || '',
+          companyAddress: invoiceOrganizationProfile.companyAddress || '',
+          invoicePrefix: invoiceOrganizationProfile.invoicePrefix || 'JF',
+          invoiceSeriesCode: invoiceOrganizationProfile.invoiceSeriesCode || 'MAIN',
+          companyStateCode: invoiceOrganizationProfile.companyStateCode || '',
+          companyStateName: invoiceOrganizationProfile.companyStateName || '',
+          gstNumber: invoiceOrganizationProfile.gstNumber || '',
+          taxMode: invoiceOrganizationProfile.taxMode || 'india_gst',
+          taxPercent: Number(invoiceOrganizationProfile.taxPercent || 0),
+          active: true,
+        })
+        if (!billingProfileRes.success) {
+          toast.error(billingProfileRes.error || 'Failed to save invoice organization')
           return
         }
         toast.success('Invoice configuration saved')
@@ -1683,6 +1740,125 @@ export default function SettingsPage() {
               <>
                 {activeSection === 'invoice_template' ? (
                   <section className="space-y-4">
+                    <section className="card p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice organization</div>
+                          <div className="mt-1 text-sm text-slate-500">
+                            The invoice legal identity, GST, prefix, and due rule used during auto invoice generation.
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Profile name</div>
+                          <input
+                            className="input"
+                            value={invoiceOrganizationProfile.name || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, name: event.target.value }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Profile code</div>
+                          <input
+                            className="input"
+                            value={invoiceOrganizationProfile.code || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, code: event.target.value.trim().toLowerCase().replace(/\s+/g, '_') }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Legal name</div>
+                          <input
+                            className="input"
+                            value={invoiceOrganizationProfile.companyLegalName || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyLegalName: event.target.value }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GST number</div>
+                          <input
+                            className="input"
+                            value={invoiceOrganizationProfile.gstNumber || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, gstNumber: event.target.value.toUpperCase() }))}
+                          />
+                        </label>
+                        <label className="space-y-2 lg:col-span-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing address</div>
+                          <textarea
+                            className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+                            value={invoiceOrganizationProfile.companyAddress || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyAddress: event.target.value }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GST %</div>
+                          <input
+                            type="number"
+                            className="input"
+                            value={Number(invoiceOrganizationProfile.taxPercent || 0)}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, taxPercent: Number(event.target.value) }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Tax mode</div>
+                          <select
+                            className="input"
+                            value={invoiceOrganizationProfile.taxMode || 'india_gst'}
+                            onChange={(event) =>
+                              setInvoiceOrganizationProfile((current) => ({
+                                ...current,
+                                taxMode: event.target.value === 'flat_tax' ? 'flat_tax' : 'india_gst',
+                              }))
+                            }
+                          >
+                            <option value="india_gst">India GST</option>
+                            <option value="flat_tax">Flat tax</option>
+                          </select>
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice prefix</div>
+                          <input
+                            className="input"
+                            value={invoiceOrganizationProfile.invoicePrefix || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice series</div>
+                          <input
+                            className="input"
+                            value={invoiceOrganizationProfile.invoiceSeriesCode || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, invoiceSeriesCode: event.target.value.toUpperCase() }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">State code</div>
+                          <input
+                            className="input"
+                            value={invoiceOrganizationProfile.companyStateCode || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyStateCode: event.target.value.toUpperCase() }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">State name</div>
+                          <input
+                            className="input"
+                            value={invoiceOrganizationProfile.companyStateName || ''}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyStateName: event.target.value }))}
+                          />
+                        </label>
+                        <label className="space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Due days</div>
+                          <input
+                            type="number"
+                            className="input"
+                            value={Number(invoiceOrganizationProfile.dueDays || 0)}
+                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, dueDays: Number(event.target.value) }))}
+                          />
+                        </label>
+                      </div>
+                    </section>
+
                     <section className="card p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div>
