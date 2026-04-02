@@ -1169,25 +1169,11 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="card p-5">
-        <div>
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Settings</div>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Settings</h1>
-          <div className="mt-2 max-w-3xl text-sm text-slate-500">
-            Keep only low-frequency controls here. Daily operator work should stay on the main pages.
-          </div>
-        </div>
-      </section>
-
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="card p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Operational copy settings</div>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Parent launch pack sync</h2>
-              <div className="mt-2 text-sm text-slate-500">
-                Refresh billing, prefixes, template, router visibility, and payment policy from the parent zone.
-              </div>
+              <h1 className="text-3xl font-semibold text-slate-900">Settings</h1>
             </div>
             <button
               type="button"
@@ -1197,28 +1183,6 @@ export default function SettingsPage() {
             >
               {isCopyingLaunchPack ? 'Copying...' : 'Copy parent settings now'}
             </button>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Source zone</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">
-                {activeZoneFranchise?.copiedSettings?.sourceZoneCode || activeZoneFranchise?.metadata?.parentZoneCode || 'Parent not set'}
-              </div>
-              <div className="mt-1 text-sm text-slate-500">
-                Last copied: {activeZoneFranchise?.copiedSettings?.copiedAt ? new Date(activeZoneFranchise.copiedSettings.copiedAt).toLocaleString() : 'Not copied yet'}
-              </div>
-            </div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Inherited sections</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">
-                {activeZoneFranchise?.copiedSettings?.sectionCount || activeZoneFranchise?.copiedSettings?.inheritedSections?.length || 0}
-              </div>
-              <div className="mt-1 text-sm text-slate-500">
-                {activeZoneFranchise?.copiedSettings?.inheritedSections?.length
-                  ? activeZoneFranchise.copiedSettings.inheritedSections.join(', ')
-                  : 'No inherited sections captured yet'}
-              </div>
-            </div>
           </div>
         </div>
 

@@ -1534,13 +1534,7 @@ export default function BillingPage() {
               </button>
             ) : null}
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Bulk action preview</div>
-              <div className="mt-1 text-sm text-slate-300">
-                {bulkSelection.length} selected in current queue
-              </div>
-            </div>
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <select
                 className="input min-w-[180px]"
@@ -1566,109 +1560,6 @@ export default function BillingPage() {
                 Run bulk action
               </button>
             </div>
-          </div>
-          {lastBulkExecution ? (
-            <div className="mt-4 rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Last bulk execution</div>
-                  <div className="mt-1 text-sm text-slate-300">
-                    {lastBulkExecution.action.replaceAll('_', ' ')} on {lastBulkExecution.selectedAccounts} account(s)
-                  </div>
-                </div>
-                <div className="text-sm text-slate-300">
-                  Success {lastBulkExecution.succeeded} | Failed {lastBulkExecution.failed}
-                </div>
-              </div>
-              <div className="mt-4 space-y-2">
-                {lastBulkExecution.results.slice(0, 10).map((item) => (
-                  <div key={`${item.customerId}-${item.status}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm">
-                    <div>
-                      <div className="font-medium text-white">{item.customerId}</div>
-                      <div className="mt-1 text-xs text-slate-400">
-                        {item.status === 'success' ? 'Bulk action completed' : item.error || 'Bulk action failed'}
-                      </div>
-                    </div>
-                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                      item.status === 'success'
-                        ? 'bg-emerald-500/15 text-emerald-300'
-                        : 'bg-rose-500/15 text-rose-300'
-                    }`}>
-                      {item.status}
-                    </span>
-                  </div>
-                ))}
-                {lastBulkExecution.results.length > 10 ? (
-                  <div className="text-xs text-slate-500">
-                    Showing first 10 results out of {lastBulkExecution.results.length}.
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-          {bulkPreview ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Selected accounts</div>
-                <div className="mt-2 text-2xl font-semibold text-white">{bulkPreview.selectedAccounts}</div>
-                <div className="mt-1 text-xs text-slate-400">Current batch scope</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Total due</div>
-                <div className="mt-2 text-2xl font-semibold text-white">Rs {Number(bulkPreview.totalDueAmount || 0).toFixed(2)}</div>
-                <div className="mt-1 text-xs text-slate-400">Exposure across selected accounts</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Suspend eligible</div>
-                <div className="mt-2 text-2xl font-semibold text-white">{bulkPreview.counts.suspend}</div>
-                <div className="mt-1 text-xs text-slate-400">Immediate service action candidates</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0a0e27] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Reminder / follow-up</div>
-                <div className="mt-2 text-2xl font-semibold text-white">{bulkPreview.counts.remind} / {bulkPreview.counts.followUp}</div>
-                <div className="mt-1 text-xs text-slate-400">Ops outreach opportunities</div>
-              </div>
-            </div>
-          ) : null}
-        </div>
-        <div className="card overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-[#2a2f4a] px-4 py-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Top priority accounts</div>
-              <div className="mt-1 text-sm text-slate-400">Use this to work the riskiest accounts first.</div>
-            </div>
-            <div className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
-              {(collectionsWorkbench?.topPriorityAccounts || []).length} ranked
-            </div>
-          </div>
-          <div className="divide-y divide-[#2a2f4a]">
-            {(collectionsWorkbench?.topPriorityAccounts || []).map((item) => (
-              <div key={`${item.customerId}-${item.bucket}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <div>
-                  <div className="font-medium text-white">{item.customerName}</div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    {item.customerId} | {item.bucket.replaceAll('_', ' ')} | {item.overdueDays} day(s) overdue
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Link href={`/customers/${encodeURIComponent(item.customerId)}`} className="btn-secondary">
-                      Open customer
-                    </Link>
-                    <button className="btn-secondary" onClick={() => void sendCollectionReminder(item.customerId)}>
-                      Send reminder
-                    </button>
-                  </div>
-                </div>
-                <div className="text-right text-sm">
-                  <div className="font-semibold text-white">Rs {item.dueAmount.toFixed(2)}</div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    Risk {item.riskScore} | {item.priority.toUpperCase()}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {!(collectionsWorkbench?.topPriorityAccounts || []).length ? (
-              <div className="px-4 py-6 text-sm text-slate-500">No priority accounts in current queue.</div>
-            ) : null}
           </div>
         </div>
         <div className="card overflow-hidden">

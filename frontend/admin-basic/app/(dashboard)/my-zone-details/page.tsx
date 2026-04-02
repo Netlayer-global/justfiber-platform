@@ -149,7 +149,6 @@ export default function MyZoneDetailsPage() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-4xl font-semibold tracking-tight text-slate-900">My Zone Details</h1>
-            <p className="mt-2 text-sm text-slate-500">Simple zone list with switch, export, and identity details.</p>
           </div>
           <div className="flex gap-3">
             <Link href="/settings" className="btn-secondary">Open Settings</Link>
@@ -178,9 +177,6 @@ export default function MyZoneDetailsPage() {
                     <th className="px-4 py-4">API Token</th>
                     <th className="px-4 py-4">Email</th>
                     <th className="px-4 py-4">Phone</th>
-                    <th className="px-4 py-4">Inheritance</th>
-                    <th className="px-4 py-4">Admin Seats</th>
-                    <th className="px-4 py-4">Template</th>
                     <th className="px-4 py-4">Street Address1</th>
                     <th className="px-4 py-4">City</th>
                     <th className="px-4 py-4">State</th>
@@ -203,9 +199,6 @@ export default function MyZoneDetailsPage() {
                     <td className="px-4 py-3">{row.apiToken}</td>
                     <td className="px-4 py-3">{row.email}</td>
                     <td className="px-4 py-3">{row.phone}</td>
-                    <td className="px-4 py-3">{row.inheritanceLabel}</td>
-                    <td className="px-4 py-3">{row.adminSeats}</td>
-                    <td className="px-4 py-3">{row.templateKey}</td>
                     <td className="px-4 py-3">{row.streetAddress1}</td>
                     <td className="px-4 py-3">{row.city}</td>
                     <td className="px-4 py-3">{row.state}</td>
