@@ -263,6 +263,47 @@ function normalizeStateCode(value) {
   return String(value || "").trim().toUpperCase();
 }
 
+const STATE_CODE_MAP = {
+  AP: "ANDHRA PRADESH",
+  AR: "ARUNACHAL PRADESH",
+  AS: "ASSAM",
+  BR: "BIHAR",
+  CG: "CHHATTISGARH",
+  CH: "CHANDIGARH",
+  DD: "DAMAN AND DIU",
+  DL: "DELHI",
+  GA: "GOA",
+  GJ: "GUJARAT",
+  HR: "HARYANA",
+  HP: "HIMACHAL PRADESH",
+  JH: "JHARKHAND",
+  JK: "JAMMU AND KASHMIR",
+  KA: "KARNATAKA",
+  KL: "KERALA",
+  MP: "MADHYA PRADESH",
+  MH: "MAHARASHTRA",
+  OD: "ODISHA",
+  PB: "PUNJAB",
+  RJ: "RAJASTHAN",
+  TN: "TAMIL NADU",
+  TS: "TELANGANA",
+  UK: "UTTARAKHAND",
+  UP: "UTTAR PRADESH",
+  WB: "WEST BENGAL"
+};
+
+function normalizeStateName(value) {
+  return String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function resolveComparableStateCode(code, name = "") {
+  const normalizedCode = normalizeStateCode(code);
+  if (normalizedCode) return normalizedCode;
+  const normalizedName = normalizeStateName(name);
+  const match = Object.entries(STATE_CODE_MAP).find(([, stateName]) => stateName === normalizedName);
+  return match?.[0] || "";
+}
+
 function normalizeZoneCode(value) {
   return String(value || "")
     .trim()
@@ -374,11 +415,17 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
 
   const zoneMapping = resolveZoneMapping(billingProfile, customer);
   const customerStateName = zoneMapping?.stateName || customer?.billingStateName || customer?.address?.state || customer?.billingSnapshot?.billingStateName || "";
-  const customerStateCode = normalizeStateCode(zoneMapping?.stateCode || customer?.billingStateCode || customer?.address?.stateCode || customer?.billingSnapshot?.billingStateCode);
-  const companyStateCode = normalizeStateCode(billingProfile?.companyStateCode || "UP");
+  const customerStateCode = resolveComparableStateCode(
+    zoneMapping?.stateCode || customer?.billingStateCode || customer?.address?.stateCode || customer?.billingSnapshot?.billingStateCode,
+    customerStateName
+  );
+  const companyStateName = billingProfile?.companyStateName || zoneMapping?.companyStateName || "";
+  const companyStateCode = resolveComparableStateCode(billingProfile?.companyStateCode, companyStateName);
   const override = (billingProfile?.stateOverrides || []).find((item) => normalizeStateCode(item.stateCode) === customerStateCode);
 
-  const isIntrastate = customerStateCode && customerStateCode === companyStateCode;
+  const isIntrastate =
+    (customerStateCode && companyStateCode && customerStateCode === companyStateCode) ||
+    (normalizeStateName(customerStateName) && normalizeStateName(companyStateName) && normalizeStateName(customerStateName) === normalizeStateName(companyStateName));
   const effectiveTaxPercent = Number(
     isIntrastate
       ? (override?.cgstPercent ?? billingProfile?.intrastateCgstPercent ?? 9) +
