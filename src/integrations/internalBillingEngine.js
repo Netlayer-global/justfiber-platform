@@ -79,6 +79,13 @@ async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
   const serviceDigits = normalizeDigits(serviceToken);
 
   if (exactCustomerRegex) {
+    const linkedService = await SubscriberService.findOne({
+      radiusUsername: exactCustomerRegex
+    }).lean();
+    if (linkedService?.customerId) {
+      const customer = await Customer.findOne({ customerId: linkedService.customerId }).lean();
+      if (customer) return customer;
+    }
     const customer = await Customer.findOne({
       $or: [
         { customerId: exactCustomerRegex },
@@ -96,6 +103,16 @@ async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
   }
 
   if (exactServiceRegex) {
+    const linkedService = await SubscriberService.findOne({
+      $or: [
+        { serviceId: exactServiceRegex },
+        { radiusUsername: exactServiceRegex }
+      ]
+    }).lean();
+    if (linkedService?.customerId) {
+      const customer = await Customer.findOne({ customerId: linkedService.customerId }).lean();
+      if (customer) return customer;
+    }
     const customer = await Customer.findOne({
       $or: [
         { serviceId: exactServiceRegex },
@@ -109,6 +126,13 @@ async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
   }
 
   if (containsCustomerRegex) {
+    const linkedService = await SubscriberService.findOne({
+      radiusUsername: containsCustomerRegex
+    }).sort({ updatedAt: -1, createdAt: -1 }).lean();
+    if (linkedService?.customerId) {
+      const customer = await Customer.findOne({ customerId: linkedService.customerId }).lean();
+      if (customer) return customer;
+    }
     const customer = await Customer.findOne({
       $or: [
         { customerId: containsCustomerRegex },

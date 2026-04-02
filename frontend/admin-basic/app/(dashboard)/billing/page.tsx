@@ -841,7 +841,7 @@ export default function BillingPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">New invoice</div>
-              <div className="mt-1 text-sm text-slate-400">Customer, service, amount override.</div>
+              <div className="mt-1 text-sm text-slate-400">Customer ID, service ID, PPPoE username, or mobile. Amount override optional.</div>
             </div>
             <div className="text-xs text-slate-500">
               {isResolvingDraftCustomer ? 'Resolving...' : draftCustomer?.name || 'No customer selected'}
@@ -850,7 +850,7 @@ export default function BillingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <input
               className="input"
-              placeholder="Customer ID"
+              placeholder="Customer ID / PPPoE / mobile"
               value={invoiceDraft.customerId}
               onChange={(e) => setInvoiceDraft((prev) => ({ ...prev, customerId: e.target.value }))}
             />
