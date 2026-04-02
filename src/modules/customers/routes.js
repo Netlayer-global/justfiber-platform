@@ -340,6 +340,12 @@ async function buildCustomerResponse(customer) {
           limit: 5
         }).catch(() => [])
       : [];
+  const bngNode = subscriberService?.bngNodeCode
+    ? await BngNode.findOne({ nodeCode: subscriberService.bngNodeCode })
+        .select({ lastRadiusAuthTelemetry: 1 })
+        .lean()
+    : null;
+  const authTelemetry = bngNode?.lastRadiusAuthTelemetry || null;
 
   return {
     ...customer,
@@ -363,6 +369,18 @@ async function buildCustomerResponse(customer) {
           lastServiceControlAt: subscriberService.metadata?.lastServiceControlAt || null,
           lastServiceControlReason: subscriberService.metadata?.lastServiceControlReason || null,
           lastRadiusVerification: subscriberService.metadata?.lastRadiusVerification || null,
+          lastAuthTelemetry: authTelemetry
+            ? {
+                sourceIp: authTelemetry.sourceIp || null,
+                reply: authTelemetry.reply || null,
+                authDate: authTelemetry.authDate || null,
+                matchedTrustedClient:
+                  typeof authTelemetry.matchedTrustedClient === "boolean" ? authTelemetry.matchedTrustedClient : null,
+                trustedClientIps: Array.isArray(authTelemetry.trustedClientIps) ? authTelemetry.trustedClientIps : [],
+                mismatch: authTelemetry.mismatch === true,
+                reason: authTelemetry.reason || null
+              }
+            : null,
           usageSummary: radiusUsageSummary
             ? {
                 totalInputOctets: Number(radiusUsageSummary.totalInputOctets || 0),
@@ -810,6 +828,12 @@ customersRouter.get(
             limit: 5
           }).catch(() => [])
         : [];
+    const bngNode = subscriberService?.bngNodeCode
+      ? await BngNode.findOne({ nodeCode: subscriberService.bngNodeCode })
+          .select({ lastRadiusAuthTelemetry: 1 })
+          .lean()
+      : null;
+    const authTelemetry = bngNode?.lastRadiusAuthTelemetry || null;
     return ok(res, {
       ...customer,
       devices,
@@ -837,6 +861,18 @@ customersRouter.get(
             lastServiceControlAt: subscriberService.metadata?.lastServiceControlAt || null,
             lastServiceControlReason: subscriberService.metadata?.lastServiceControlReason || null,
             lastRadiusVerification: subscriberService.metadata?.lastRadiusVerification || null,
+            lastAuthTelemetry: authTelemetry
+              ? {
+                  sourceIp: authTelemetry.sourceIp || null,
+                  reply: authTelemetry.reply || null,
+                  authDate: authTelemetry.authDate || null,
+                  matchedTrustedClient:
+                    typeof authTelemetry.matchedTrustedClient === "boolean" ? authTelemetry.matchedTrustedClient : null,
+                  trustedClientIps: Array.isArray(authTelemetry.trustedClientIps) ? authTelemetry.trustedClientIps : [],
+                  mismatch: authTelemetry.mismatch === true,
+                  reason: authTelemetry.reason || null
+                }
+              : null,
             usageSummary: radiusUsageSummary
               ? {
                   totalInputOctets: Number(radiusUsageSummary.totalInputOctets || 0),

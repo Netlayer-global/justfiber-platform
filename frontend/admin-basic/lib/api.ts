@@ -539,6 +539,22 @@ function mapCustomer(customer: any): Customer {
                   : undefined,
               }
             : null,
+          lastAuthTelemetry: customer.radiusService.lastAuthTelemetry
+            ? {
+                sourceIp: customer.radiusService.lastAuthTelemetry.sourceIp || null,
+                reply: customer.radiusService.lastAuthTelemetry.reply || null,
+                authDate: customer.radiusService.lastAuthTelemetry.authDate || null,
+                matchedTrustedClient:
+                  typeof customer.radiusService.lastAuthTelemetry.matchedTrustedClient === 'boolean'
+                    ? customer.radiusService.lastAuthTelemetry.matchedTrustedClient
+                    : null,
+                trustedClientIps: Array.isArray(customer.radiusService.lastAuthTelemetry.trustedClientIps)
+                  ? customer.radiusService.lastAuthTelemetry.trustedClientIps
+                  : [],
+                mismatch: customer.radiusService.lastAuthTelemetry.mismatch === true,
+                reason: customer.radiusService.lastAuthTelemetry.reason || null,
+              }
+            : null,
           usageSummary: customer.radiusService.usageSummary
             ? {
                 totalInputOctets: Number(customer.radiusService.usageSummary.totalInputOctets || 0),

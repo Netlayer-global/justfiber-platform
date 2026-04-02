@@ -591,6 +591,8 @@ export default function CustomerDetailPage() {
                   <div><span className="font-medium text-slate-900">Live status:</span> {pppoeLiveStatus.label}</div>
                   <div><span className="font-medium text-slate-900">Radius state:</span> {radiusVerificationStatus.label}</div>
                   <div><span className="font-medium text-slate-900">Last control:</span> {formatValue(customer.radiusService?.lastServiceControlAction)}</div>
+                  <div><span className="font-medium text-slate-900">Last auth source:</span> {formatValue(customer.radiusService?.lastAuthTelemetry?.sourceIp)}</div>
+                  <div><span className="font-medium text-slate-900">Auth trust:</span> {customer.radiusService?.lastAuthTelemetry?.matchedTrustedClient === false ? 'Mismatch' : customer.radiusService?.lastAuthTelemetry?.matchedTrustedClient === true ? 'Trusted' : '-'}</div>
                   <div><span className="font-medium text-slate-900">Last session start:</span> {formatDate(customer.radiusService?.usageSummary?.latestSessionStart)}</div>
                   <div><span className="font-medium text-slate-900">Last session update:</span> {formatDate(customer.radiusService?.usageSummary?.latestUpdateAt)}</div>
                   <div><span className="font-medium text-slate-900">Recent usage:</span> {formatDataUsage(customer.radiusService?.usageSummary?.totalOctets)}</div>
@@ -631,6 +633,18 @@ export default function CustomerDetailPage() {
                 ) : (
                   <div className="text-sm text-slate-500">No recent PPPoE session history found.</div>
                 )}
+              </div>
+
+              <div className="card p-5 space-y-3">
+                <h2 className="text-lg font-semibold text-slate-900">Latest auth telemetry</h2>
+                <div className="grid gap-2 text-sm text-slate-600">
+                  <div><span className="font-medium text-slate-900">Source IP:</span> {formatValue(customer.radiusService?.lastAuthTelemetry?.sourceIp)}</div>
+                  <div><span className="font-medium text-slate-900">Reply:</span> {formatValue(customer.radiusService?.lastAuthTelemetry?.reply)}</div>
+                  <div><span className="font-medium text-slate-900">When:</span> {formatDate(customer.radiusService?.lastAuthTelemetry?.authDate)}</div>
+                  <div><span className="font-medium text-slate-900">Trust result:</span> {customer.radiusService?.lastAuthTelemetry?.matchedTrustedClient === false ? 'Mismatch' : customer.radiusService?.lastAuthTelemetry?.matchedTrustedClient === true ? 'Trusted' : '-'}</div>
+                  <div><span className="font-medium text-slate-900">Reason:</span> {formatValue(customer.radiusService?.lastAuthTelemetry?.reason)}</div>
+                  <div><span className="font-medium text-slate-900">Trusted IPs:</span> {customer.radiusService?.lastAuthTelemetry?.trustedClientIps?.length ? customer.radiusService.lastAuthTelemetry.trustedClientIps.join(', ') : '-'}</div>
+                </div>
               </div>
             </div>
           </div>

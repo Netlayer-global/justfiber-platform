@@ -229,6 +229,15 @@ export interface Customer {
         replyMessage?: string | null
       }
     } | null
+    lastAuthTelemetry?: {
+      sourceIp?: string | null
+      reply?: string | null
+      authDate?: string | null
+      matchedTrustedClient?: boolean | null
+      trustedClientIps?: string[]
+      mismatch?: boolean
+      reason?: string | null
+    } | null
     usageSummary?: {
       totalInputOctets?: number
       totalOutputOctets?: number
