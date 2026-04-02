@@ -1300,6 +1300,10 @@ export const adminAPI = {
       data: res.data
         ? {
             totalCustomers: Number(res.data.totalCustomers || 0),
+            onlineUsers: Number(res.data.onlineUsers || 0),
+            activeUsers: Number(res.data.activeUsers || 0),
+            suspendedCustomers: Number(res.data.suspendedCustomers || 0),
+            inactiveCustomers: Number(res.data.inactiveCustomers || 0),
             activeConnections: Number(
               (res.data.totalCustomers || 0) - (res.data.suspendedCustomers || 0)
             ),

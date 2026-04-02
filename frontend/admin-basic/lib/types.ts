@@ -782,6 +782,10 @@ export interface FranchiseProfile {
 
 export interface DashboardStats {
   totalCustomers: number
+  onlineUsers?: number
+  activeUsers?: number
+  suspendedCustomers?: number
+  inactiveCustomers?: number
   activeConnections: number
   monthlyRevenue: number
   systemHealth: number

@@ -28,16 +28,31 @@ dashboardRouter.get(
       return ok(res, snapshot);
     }
 
-    const [customers, suspended, devicesOffline, openCriticalTickets] = await Promise.all([
+    const liveCustomerIdsPromise = DeviceOperationalCache.distinct("customerId", {
+      customerId: { $nin: [null, ""] },
+      $or: [
+        { onlineStatus: "online" },
+        { "wanInfo.sessionStatus": { $in: ["up", "UP", "Up"] } },
+        { "wanInfo.ipv4Address": { $exists: true, $nin: ["", null] } },
+        { "wanInfo.ipAddress": { $exists: true, $nin: ["", null] } }
+      ]
+    });
+
+    const [customers, suspended, inactive, devicesOffline, openCriticalTickets, liveCustomerIds] = await Promise.all([
       Customer.countDocuments(),
       Customer.countDocuments({ operationalStatus: "suspended" }),
+      Customer.countDocuments({ operationalStatus: "inactive" }),
       DeviceOperationalCache.countDocuments({ onlineStatus: "offline" }),
-      SupportTicket.countDocuments({ status: { $in: ["open", "assigned", "in_progress"] }, priority: "critical" })
+      SupportTicket.countDocuments({ status: { $in: ["open", "assigned", "in_progress"] }, priority: "critical" }),
+      liveCustomerIdsPromise
     ]);
 
     return ok(res, {
       totalCustomers: customers,
+      onlineUsers: Array.isArray(liveCustomerIds) ? liveCustomerIds.length : 0,
+      activeUsers: Math.max(customers - suspended - inactive, 0),
       suspendedCustomers: suspended,
+      inactiveCustomers: inactive,
       offlineDevices: devicesOffline,
       openCriticalTickets
     });

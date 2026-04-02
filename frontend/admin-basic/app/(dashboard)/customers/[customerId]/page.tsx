@@ -55,6 +55,38 @@ function getPppoeLiveStatus(customer: Customer | null, device?: CustomerDevice |
   return { label: 'Offline', tone: 'bg-slate-100 text-slate-600' }
 }
 
+function getRadiusVerificationStatus(customer: Customer | null) {
+  const verification = customer?.radiusService?.lastRadiusVerification
+  const derivedState = String(
+    customer?.radiusService?.lastRadiusDerivedState ||
+      verification?.derivedState ||
+      customer?.radiusService?.status ||
+      ''
+  ).toLowerCase()
+
+  if (verification?.error) {
+    return { label: 'Radius Check Failed', tone: 'bg-rose-100 text-rose-700' }
+  }
+  if (verification?.attempted && verification?.matchesExpectedState) {
+    if (derivedState === 'suspended') {
+      return { label: 'Radius Suspended', tone: 'bg-amber-100 text-amber-700' }
+    }
+    if (derivedState === 'active') {
+      return { label: 'Radius Active', tone: 'bg-emerald-100 text-emerald-700' }
+    }
+  }
+  if (verification?.attempted) {
+    return { label: 'Radius Mismatch', tone: 'bg-rose-100 text-rose-700' }
+  }
+  if (String(customer?.radiusService?.status || '').toLowerCase() === 'suspended') {
+    return { label: 'Radius Suspended', tone: 'bg-amber-100 text-amber-700' }
+  }
+  if (String(customer?.radiusService?.status || '').toLowerCase() === 'active') {
+    return { label: 'Radius Ready', tone: 'bg-sky-100 text-sky-700' }
+  }
+  return { label: 'Radius Unknown', tone: 'bg-slate-100 text-slate-600' }
+}
+
 function normalizeCustomer(raw: Customer): Customer {
   return {
     ...raw,
@@ -366,6 +398,7 @@ export default function CustomerDetailPage() {
   }
 
   const pppoeLiveStatus = getPppoeLiveStatus(customer, primaryDevice)
+  const radiusVerificationStatus = getRadiusVerificationStatus(customer)
   const overviewCards = [
     { label: 'Customer', value: customer.name, sub: customer.phone || '-' },
     { label: 'PPPoE', value: customer.pppoeUsername || '-', sub: `Service ${formatValue(customer.serviceId)}` },
@@ -389,6 +422,7 @@ export default function CustomerDetailPage() {
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.plan?.name || 'No plan'}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.pppoeUsername || 'No PPPoE'}</span>
               <span className={`rounded-full px-3 py-1 ${pppoeLiveStatus.tone}`}>{pppoeLiveStatus.label}</span>
+              <span className={`rounded-full px-3 py-1 ${radiusVerificationStatus.tone}`}>{radiusVerificationStatus.label}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1">{customer.zoneName || customer.zoneCode || 'No zone'}</span>
             </div>
           </div>
@@ -469,6 +503,8 @@ export default function CustomerDetailPage() {
                   <div><span className="font-medium text-slate-900">Pool:</span> {formatValue(customer.radiusService?.ipv4Pool)}</div>
                   <div><span className="font-medium text-slate-900">PPPoE:</span> {formatValue(customer.pppoeUsername)}</div>
                   <div><span className="font-medium text-slate-900">Live status:</span> {pppoeLiveStatus.label}</div>
+                  <div><span className="font-medium text-slate-900">Radius state:</span> {radiusVerificationStatus.label}</div>
+                  <div><span className="font-medium text-slate-900">Last control:</span> {formatValue(customer.radiusService?.lastServiceControlAction)}</div>
                   <div><span className="font-medium text-slate-900">WAN MAC:</span> {formatValue(primaryDevice?.wanInfo?.macAddress || primaryDevice?.wanInfo?.mac)}</div>
                   <div><span className="font-medium text-slate-900">BNG:</span> {formatValue(customer.radiusService?.bngNodeCode)}</div>
                   <div><span className="font-medium text-slate-900">Zone:</span> {formatValue(customer.zoneName || customer.zoneCode)}</div>

@@ -74,8 +74,7 @@ function hasLivePppoeSession(customer: Customer) {
       const sessionUp = String(device.wanInfo?.sessionStatus || '').toLowerCase() === 'up'
       const hasIpv4 = Boolean(String(device.wanInfo?.ipv4Address || device.wanInfo?.ipAddress || '').trim())
       return online || sessionUp || hasIpv4
-    }) ||
-    String(customer.radiusService?.status || '').toLowerCase() === 'active'
+    })
   )
 }
 
@@ -282,19 +281,35 @@ export default function DashboardPage() {
   }, [customers])
 
   const userCountSummary = useMemo(() => {
-    const onlineUsers = customers.filter((customer) => hasLivePppoeSession(customer)).length
-    const activeUsers = customers.filter((customer) => customer.status === 'active').length
-    const suspendedUsers = customers.filter((customer) => customer.status === 'suspended').length
-    const blockedUsers = customers.filter((customer) => customer.status === 'inactive').length
+    const onlineUsers =
+      typeof stats?.onlineUsers === 'number'
+        ? stats.onlineUsers
+        : customers.filter((customer) => hasLivePppoeSession(customer)).length
+    const activeUsers =
+      typeof stats?.activeUsers === 'number'
+        ? stats.activeUsers
+        : customers.filter((customer) => customer.status === 'active').length
+    const suspendedUsers =
+      typeof stats?.suspendedCustomers === 'number'
+        ? stats.suspendedCustomers
+        : customers.filter((customer) => customer.status === 'suspended').length
+    const blockedUsers =
+      typeof stats?.inactiveCustomers === 'number'
+        ? stats.inactiveCustomers
+        : customers.filter((customer) => customer.status === 'inactive').length
+    const totalUsers =
+      typeof stats?.totalCustomers === 'number' && stats.totalCustomers > 0
+        ? stats.totalCustomers
+        : customers.length
 
     return {
-      totalUsers: customers.length,
+      totalUsers,
       onlineUsers,
       activeUsers,
       suspendedUsers,
       blockedUsers,
     }
-  }, [customers])
+  }, [customers, stats])
 
   const readiness = useMemo(() => {
     const helperReadyRouters = routers.filter((router) => router.freeradiusIntegrationHealth?.overallReady).length
