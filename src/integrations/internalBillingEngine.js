@@ -176,12 +176,18 @@ async function resolveCustomerFromBillingInput(rawValue = "", serviceId = "") {
 
 function deriveAmount(service, plan = null) {
   const durationMonths = resolveDurationMonths(service?.metadata);
+  const explicitTotalAmount = Number(
+    service?.metadata?.totalAmount ||
+    service?.metadata?.planTotalAmount ||
+    service?.metadata?.billingTotalAmount ||
+    0
+  );
   const recurringAmount = Number(service?.metadata?.recurringAmount || 0);
   const yearlyPrice = Number(service?.metadata?.yearlyPrice || plan?.yearlyPrice || 0);
   const halfYearlyPrice = Number(service?.metadata?.halfYearlyPrice || plan?.halfYearlyPrice || 0);
   const quarterlyPrice = Number(service?.metadata?.quarterlyPrice || plan?.quarterlyPrice || 0);
   const monthlyPrice = Number(service?.metadata?.monthlyPrice || service?.metadata?.planAmount || plan?.monthlyPrice || 0);
-  const resolved =
+  const planCharge =
     durationMonths >= 12
       ? yearlyPrice || recurringAmount || monthlyPrice * 12
       : durationMonths >= 6
@@ -189,7 +195,12 @@ function deriveAmount(service, plan = null) {
         : durationMonths >= 3
           ? quarterlyPrice || recurringAmount || monthlyPrice * 3
           : monthlyPrice || recurringAmount;
-  return Number.isFinite(resolved) && resolved > 0 ? resolved : 0;
+  if (Number.isFinite(explicitTotalAmount) && explicitTotalAmount > 0) {
+    return explicitTotalAmount;
+  }
+  const platformFee = resolvePlatformFeeForDuration(service, durationMonths, plan);
+  const resolved = Number(planCharge || 0) + Number(platformFee || 0);
+  return Number.isFinite(resolved) && resolved > 0 ? Number(resolved.toFixed(2)) : 0;
 }
 
 function resolvePlatformFeeForDuration(service = {}, durationMonths = 1, plan = null) {
