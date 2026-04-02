@@ -273,6 +273,7 @@ function pickBranding(profile, templateSettings = {}) {
   return {
     companyName: templateSettings.companyName || profile?.companyLegalName || "JustFiber",
     companyAddress: templateSettings.companyAddress || profile?.companyAddress || "",
+    layoutStyle: templateSettings.layoutStyle === "classic" ? "classic" : "modern",
     accent,
     text: "#0f172a",
     muted: "#64748b",
@@ -288,6 +289,7 @@ function pickBranding(profile, templateSettings = {}) {
     paymentInstructions: templateSettings.paymentInstructions || "",
     companyState: profile?.companyStateName || profile?.companyStateCode || "",
     logoBuffer: dataUrlToBuffer(templateSettings.logoDataUrl),
+    headerImageBuffer: dataUrlToBuffer(templateSettings.headerImageDataUrl),
     signatureBuffer: dataUrlToBuffer(templateSettings.signatureDataUrl),
     stampBuffer: dataUrlToBuffer(templateSettings.stampDataUrl)
   };
@@ -319,33 +321,69 @@ function buildInvoiceHtml(invoice, customer, branding) {
     .join("");
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber}</title></head>
-  <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div>
-        <div style="font-size:28px;font-weight:700;color:${appliedBranding.accent}">${appliedBranding.companyName}</div>
-        <div style="margin-top:8px;white-space:pre-line;color:#555">${appliedBranding.companyAddress || ""}</div>
-        <div style="margin-top:4px;color:#555">${appliedBranding.website || ""} ${appliedBranding.phoneNumber ? `| ${appliedBranding.phoneNumber}` : ""}</div>
+  <body style="font-family:Arial,sans-serif;padding:24px;color:#111;background:#f8fafc">
+    <div style="max-width:920px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:22px;overflow:hidden">
+      <div style="padding:28px;background:${appliedBranding.layoutStyle === "modern" ? `linear-gradient(135deg, ${appliedBranding.accent} 0%, #0f172a 100%)` : "#f8fafc"};color:${appliedBranding.layoutStyle === "modern" ? "#ffffff" : "#0f172a"}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+          <div style="display:flex;gap:16px;align-items:flex-start">
+            ${appliedBranding.logoBuffer ? `<img src="data:image/png;base64,${appliedBranding.logoBuffer.toString("base64")}" style="width:72px;height:72px;object-fit:contain;border-radius:18px;background:rgba(255,255,255,0.92);padding:10px" />` : ""}
+            <div>
+              <div style="font-size:28px;font-weight:700;">${appliedBranding.companyName}</div>
+              <div style="margin-top:8px;white-space:pre-line;opacity:0.86">${appliedBranding.companyAddress || ""}</div>
+              <div style="margin-top:6px;opacity:0.86">${appliedBranding.website || ""} ${appliedBranding.phoneNumber ? `| ${appliedBranding.phoneNumber}` : ""}</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.8">Tax Invoice</div>
+            <h1 style="margin:10px 0 0 0;font-size:28px">${invoice.invoiceNumber}</h1>
+            <div style="margin-top:8px;opacity:.86">Generated ${invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleString("en-IN") : "-"}</div>
+          </div>
+        </div>
       </div>
-      <div style="text-align:right">
-        <h1 style="margin:0">Invoice ${invoice.invoiceNumber}</h1>
-        <div style="margin-top:8px;color:#555">Generated ${invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleString("en-IN") : "-"}</div>
+      <div style="padding:24px">
+        <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:16px">
+          <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#f8fafc">
+            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Bill to</div>
+            <div style="margin-top:10px;font-size:18px;font-weight:700;color:#0f172a">${customer?.fullName || invoice.customerId}</div>
+            <div style="margin-top:6px;color:#475569">Customer ID: ${invoice.customerId}</div>
+            <div style="margin-top:6px;color:#475569">Bill Cycle: ${invoice.billCycle || "-"}</div>
+            <div style="margin-top:6px;color:#475569">Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#ffffff">
+            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Invoice details</div>
+            <div style="margin-top:10px;color:#0f172a">Template: ${invoice.appliedTemplateName || invoice.appliedTemplateKey || "-"}</div>
+            <div style="margin-top:6px;color:#0f172a">Series: ${invoice.invoicePrefix || "-"} / ${invoice.invoiceSeriesCode || "-"}</div>
+            <div style="margin-top:6px;color:#0f172a">Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</div>
+            <div style="margin-top:6px;color:#0f172a">GSTIN: ${appliedBranding.gstNumber || "-"}</div>
+          </div>
+        </div>
+        <table style="border-collapse:collapse;width:100%;margin-top:18px">
+          <thead>
+            <tr>
+              <th style="padding:12px 14px;background:#0f172a;color:#fff;text-align:left">Charge</th>
+              <th style="padding:12px 14px;background:#0f172a;color:#fff;text-align:right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineRows}
+            ${hasLineItems ? "" : `<tr><td style="padding:10px 14px;border:1px solid #ccc;">Taxable Amount</td><td style="padding:10px 14px;border:1px solid #ccc;text-align:right;">Rs ${Number(invoice.amount || 0).toFixed(2)}</td></tr>`}
+            ${taxRows}
+            <tr><td style="padding:12px 14px;border:1px solid #cbd5e1;font-weight:700;background:#eef2ff;">Total</td><td style="padding:12px 14px;border:1px solid #cbd5e1;text-align:right;font-weight:700;background:#eef2ff;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
+          </tbody>
+        </table>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
+          <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#f8fafc;color:#475569">
+            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Payment instructions</div>
+            <div style="margin-top:10px">${appliedBranding.paymentInstructions || "-"}</div>
+            <div style="margin-top:10px">${appliedBranding.bankName || ""} ${appliedBranding.bankAccountNumber ? `| ${appliedBranding.bankAccountNumber}` : ""} ${appliedBranding.bankIfscCode ? `| ${appliedBranding.bankIfscCode}` : ""}</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:18px;padding:16px;background:#ffffff;color:#475569">
+            <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Compliance</div>
+            <div style="margin-top:10px">${appliedBranding.gstNumber ? `GSTIN: ${appliedBranding.gstNumber}` : ""} ${appliedBranding.panNumber ? `<br/>PAN: ${appliedBranding.panNumber}` : ""}</div>
+            <div style="margin-top:10px">${appliedBranding.footerNote || ""}</div>
+          </div>
+        </div>
       </div>
-    </div>
-    <p>Customer: ${customer?.fullName || invoice.customerId}</p>
-    <p>Bill Cycle: ${invoice.billCycle || "-"}</p>
-    <p>Template: ${invoice.appliedTemplateName || invoice.appliedTemplateKey || "-"}</p>
-    <p>Series: ${invoice.invoicePrefix || "-"} / ${invoice.invoiceSeriesCode || "-"}</p>
-    <p>Place of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</p>
-    <table style="border-collapse:collapse;width:420px;margin-top:16px">
-      ${lineRows}
-      ${hasLineItems ? "" : `<tr><td style="padding:8px;border:1px solid #ccc;">Taxable Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(invoice.amount || 0).toFixed(2)}</td></tr>`}
-      ${taxRows}
-      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
-    </table>
-    <div style="margin-top:24px;color:#555">${appliedBranding.paymentInstructions || ""}</div>
-    <div style="margin-top:24px;border-top:1px solid #ddd;padding-top:12px;color:#666;font-size:12px">
-      ${appliedBranding.gstNumber ? `GSTIN: ${appliedBranding.gstNumber}` : ""} ${appliedBranding.panNumber ? `| PAN: ${appliedBranding.panNumber}` : ""}
-      <br/>${appliedBranding.footerNote || ""}
     </div>
   </body></html>`;
 }
@@ -394,7 +432,20 @@ function buildPaymentReceiptHtml(payment, customer, branding) {
 }
 
 function drawPdfHeader(doc, branding, title, identifier) {
-  doc.roundedRect(40, 36, 515, 96, 12).fillAndStroke(branding.accent, branding.accent);
+  if (branding.layoutStyle === "modern") {
+    doc.save();
+    doc.roundedRect(40, 36, 515, 110, 16).clip();
+    doc.rect(40, 36, 515, 110).fill(branding.accent);
+    doc.rect(250, 36, 305, 110).fill("#0f172a");
+    if (branding.headerImageBuffer) {
+      try {
+        doc.opacity(0.18).image(branding.headerImageBuffer, 40, 36, { width: 515, height: 110 }).opacity(1);
+      } catch {}
+    }
+    doc.restore();
+  } else {
+    doc.roundedRect(40, 36, 515, 96, 12).fillAndStroke(branding.accent, branding.accent);
+  }
   if (branding.logoBuffer) {
     try {
       doc.image(branding.logoBuffer, 54, 52, { fit: [78, 52], align: "left", valign: "center" });

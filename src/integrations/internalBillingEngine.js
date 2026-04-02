@@ -142,12 +142,17 @@ function normalizeInvoiceTemplates(baseSettings = {}) {
   return [{
     key: baseSettings.activeTemplate || "justfiber_standard",
     templateName: baseSettings.templateName || "JustFiber Standard",
+    layoutStyle: baseSettings.layoutStyle === "classic" ? "classic" : "modern",
     companyName: baseSettings.companyName || "JustFiber",
     companyAddress: baseSettings.companyAddress || "",
     gstNumber: baseSettings.gstNumber || "",
     invoicePrefix: baseSettings.invoicePrefix || "JF",
     footerNote: baseSettings.footerNote || "",
     paymentInstructions: baseSettings.paymentInstructions || "",
+    logoDataUrl: baseSettings.logoDataUrl || "",
+    headerImageDataUrl: baseSettings.headerImageDataUrl || "",
+    signatureDataUrl: baseSettings.signatureDataUrl || "",
+    stampDataUrl: baseSettings.stampDataUrl || "",
   }];
 }
 

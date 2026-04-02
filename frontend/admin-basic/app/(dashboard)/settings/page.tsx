@@ -20,6 +20,7 @@ type SectionMeta = {
 type InvoiceTemplateEntry = {
   key: string
   templateName: string
+  layoutStyle: 'modern' | 'classic'
   companyName: string
   companyAddress: string
   gstNumber: string
@@ -35,6 +36,7 @@ type InvoiceTemplateEntry = {
   footerNote: string
   paymentInstructions: string
   logoDataUrl: string
+  headerImageDataUrl: string
   signatureDataUrl: string
   stampDataUrl: string
 }
@@ -59,6 +61,7 @@ type InvoiceTemplateSection = {
   footerNote: string
   paymentInstructions: string
   logoDataUrl: string
+  headerImageDataUrl: string
   signatureDataUrl: string
   stampDataUrl: string
 }
@@ -279,6 +282,7 @@ function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTem
         {
           key: value?.activeTemplate || 'justfiber_standard',
           templateName: value?.templateName || 'JustFiber Standard',
+          layoutStyle: value?.layoutStyle === 'classic' ? 'classic' : 'modern',
           companyName: value?.companyName || '',
           companyAddress: value?.companyAddress || '',
           gstNumber: value?.gstNumber || '',
@@ -294,6 +298,7 @@ function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTem
           footerNote: value?.footerNote || '',
           paymentInstructions: value?.paymentInstructions || '',
           logoDataUrl: value?.logoDataUrl || '',
+          headerImageDataUrl: value?.headerImageDataUrl || '',
           signatureDataUrl: value?.signatureDataUrl || '',
           stampDataUrl: value?.stampDataUrl || '',
         },
@@ -305,6 +310,7 @@ function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTem
     templates: templates.map((item: any, index: number) => ({
       key: String(item?.key || `template_${index + 1}`).trim(),
       templateName: String(item?.templateName || item?.key || `Template ${index + 1}`).trim(),
+      layoutStyle: item?.layoutStyle === 'classic' ? 'classic' : value?.layoutStyle === 'classic' ? 'classic' : 'modern',
       companyName: String(item?.companyName || value?.companyName || '').trim(),
       companyAddress: String(item?.companyAddress || value?.companyAddress || '').trim(),
       gstNumber: String(item?.gstNumber || value?.gstNumber || '').trim(),
@@ -320,6 +326,7 @@ function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTem
       footerNote: String(item?.footerNote || value?.footerNote || '').trim(),
       paymentInstructions: String(item?.paymentInstructions || value?.paymentInstructions || '').trim(),
       logoDataUrl: String(item?.logoDataUrl || value?.logoDataUrl || '').trim(),
+      headerImageDataUrl: String(item?.headerImageDataUrl || value?.headerImageDataUrl || '').trim(),
       signatureDataUrl: String(item?.signatureDataUrl || value?.signatureDataUrl || '').trim(),
       stampDataUrl: String(item?.stampDataUrl || value?.stampDataUrl || '').trim(),
     })),
@@ -344,6 +351,7 @@ function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTem
     footerNote: String(value?.footerNote || '').trim(),
     paymentInstructions: String(value?.paymentInstructions || '').trim(),
     logoDataUrl: String(value?.logoDataUrl || '').trim(),
+    headerImageDataUrl: String(value?.headerImageDataUrl || '').trim(),
     signatureDataUrl: String(value?.signatureDataUrl || '').trim(),
     stampDataUrl: String(value?.stampDataUrl || '').trim(),
   }
@@ -352,6 +360,15 @@ function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTem
 function isLongText(fieldKey: string, value: string) {
   const normalized = fieldKey.toLowerCase()
   return value.length > 90 || normalized.includes('address') || normalized.includes('note') || normalized.includes('json')
+}
+
+async function fileToDataUrl(file: File) {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'))
+    reader.readAsDataURL(file)
+  })
 }
 
 type FieldEditorProps = {
@@ -1107,6 +1124,35 @@ export default function SettingsPage() {
     })
   }
 
+  async function handleInvoiceAssetUpload(
+    templateKey: string,
+    field: 'logoDataUrl' | 'headerImageDataUrl' | 'signatureDataUrl' | 'stampDataUrl',
+    file?: File | null
+  ) {
+    if (!file) return
+    try {
+      const dataUrl = await fileToDataUrl(file)
+      updateInvoiceTemplate(templateKey, (current) => ({
+        ...current,
+        [field]: dataUrl,
+      }))
+      toast.success('Template asset uploaded')
+    } catch (error) {
+      console.error('[settings] Failed to upload template asset', error)
+      toast.error('Failed to upload template asset')
+    }
+  }
+
+  function clearInvoiceAsset(
+    templateKey: string,
+    field: 'logoDataUrl' | 'headerImageDataUrl' | 'signatureDataUrl' | 'stampDataUrl'
+  ) {
+    updateInvoiceTemplate(templateKey, (current) => ({
+      ...current,
+      [field]: '',
+    }))
+  }
+
   function addInvoiceTemplate() {
     const nextKey = `zone_template_${invoiceTemplateSection.templates.length + 1}`
     replaceInvoiceTemplateSection({
@@ -1117,6 +1163,7 @@ export default function SettingsPage() {
         {
           key: nextKey,
           templateName: `Zone Template ${invoiceTemplateSection.templates.length + 1}`,
+          layoutStyle: 'modern',
           companyName: invoiceTemplateSection.companyName,
           companyAddress: invoiceTemplateSection.companyAddress,
           gstNumber: invoiceTemplateSection.gstNumber,
@@ -1132,6 +1179,7 @@ export default function SettingsPage() {
           footerNote: invoiceTemplateSection.footerNote,
           paymentInstructions: invoiceTemplateSection.paymentInstructions,
           logoDataUrl: invoiceTemplateSection.logoDataUrl,
+          headerImageDataUrl: invoiceTemplateSection.headerImageDataUrl,
           signatureDataUrl: invoiceTemplateSection.signatureDataUrl,
           stampDataUrl: invoiceTemplateSection.stampDataUrl,
         },
@@ -1583,7 +1631,7 @@ export default function SettingsPage() {
                           <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone-wise invoice templates</div>
                           <h3 className="mt-2 text-2xl font-semibold text-slate-900">Template assignment and fallback</h3>
                           <div className="mt-2 text-sm text-slate-500">
-                            Har zone ko template assign karo. Agar mapping missing ho, system active/default template par fallback karega.
+                            Assign an exact template to each zone. If no mapping exists, the active default template is used automatically.
                           </div>
                           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                             <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
@@ -1713,6 +1761,22 @@ export default function SettingsPage() {
                                 <input className="input" value={template.templateName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, templateName: event.target.value }))} />
                               </label>
                               <label className="space-y-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Layout style</div>
+                                <select
+                                  className="input"
+                                  value={template.layoutStyle}
+                                  onChange={(event) =>
+                                    updateInvoiceTemplate(template.key, (current) => ({
+                                      ...current,
+                                      layoutStyle: event.target.value === 'classic' ? 'classic' : 'modern',
+                                    }))
+                                  }
+                                >
+                                  <option value="modern">Modern</option>
+                                  <option value="classic">Classic</option>
+                                </select>
+                              </label>
+                              <label className="space-y-2">
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Company name</div>
                                 <input className="input" value={template.companyName} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, companyName: event.target.value }))} />
                               </label>
@@ -1732,6 +1796,47 @@ export default function SettingsPage() {
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Accent color</div>
                                 <input className="input" value={template.accentColor} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, accentColor: event.target.value }))} />
                               </label>
+                              <div className="space-y-2 lg:col-span-2">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Template assets</div>
+                                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                  {[
+                                    ['logoDataUrl', 'Logo'],
+                                    ['headerImageDataUrl', 'Header image'],
+                                    ['signatureDataUrl', 'Signature'],
+                                    ['stampDataUrl', 'Stamp'],
+                                  ].map(([field, label]) => {
+                                    const value = template[field as keyof InvoiceTemplateEntry] as string
+                                    return (
+                                      <div key={field} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</div>
+                                        <div className="mt-3 flex h-24 items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-slate-50">
+                                          {value ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={value} alt={label} className="h-full w-full object-contain" />
+                                          ) : (
+                                            <div className="text-xs text-slate-400">No asset</div>
+                                          )}
+                                        </div>
+                                        <input
+                                          type="file"
+                                          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                          className="mt-3 block w-full text-xs text-slate-500 file:mr-3 file:rounded-full file:border-0 file:bg-[#eef1ff] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[#2946ff]"
+                                          onChange={(event) => void handleInvoiceAssetUpload(template.key, field as 'logoDataUrl' | 'headerImageDataUrl' | 'signatureDataUrl' | 'stampDataUrl', event.target.files?.[0])}
+                                        />
+                                        {value ? (
+                                          <button
+                                            type="button"
+                                            className="mt-3 text-xs font-semibold text-rose-500"
+                                            onClick={() => clearInvoiceAsset(template.key, field as 'logoDataUrl' | 'headerImageDataUrl' | 'signatureDataUrl' | 'stampDataUrl')}
+                                          >
+                                            Remove
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
                               <label className="space-y-2">
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Website</div>
                                 <input className="input" value={template.website} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, website: event.target.value }))} />
@@ -1768,6 +1873,71 @@ export default function SettingsPage() {
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payment instructions</div>
                                 <textarea className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10" value={template.paymentInstructions} onChange={(event) => updateInvoiceTemplate(template.key, (current) => ({ ...current, paymentInstructions: event.target.value }))} />
                               </label>
+                              <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white overflow-hidden">
+                                <div
+                                  className="p-5"
+                                  style={{
+                                    background:
+                                      template.layoutStyle === 'modern'
+                                        ? `linear-gradient(135deg, ${template.accentColor || '#8224E3'} 0%, #0f172a 100%)`
+                                        : '#f8fafc',
+                                    color: template.layoutStyle === 'modern' ? '#ffffff' : '#0f172a',
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                      {template.logoDataUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={template.logoDataUrl} alt="Logo" className="h-14 w-14 rounded-2xl bg-white/90 p-2 object-contain" />
+                                      ) : null}
+                                      <div>
+                                        <div className="text-lg font-semibold">{template.companyName || 'Company name'}</div>
+                                        <div className="mt-1 text-sm opacity-80">{template.companyAddress || 'Billing address preview'}</div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-xs uppercase tracking-[0.18em] opacity-80">Invoice preview</div>
+                                      <div className="mt-1 text-sm font-semibold">{template.invoicePrefix || 'INV'} / MAIN / #0001</div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 p-5 md:grid-cols-[1.2fr_0.8fr]">
+                                  <div className="space-y-3">
+                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Customer</div>
+                                      <div className="mt-2 text-sm font-semibold text-slate-900">Customer name</div>
+                                      <div className="mt-1 text-sm text-slate-500">Place of supply and service details</div>
+                                    </div>
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-slate-500">Broadband plan</span>
+                                        <span className="font-semibold text-slate-900">Rs 999.00</span>
+                                      </div>
+                                      <div className="mt-2 flex items-center justify-between text-sm">
+                                        <span className="text-slate-500">Tax</span>
+                                        <span className="font-semibold text-slate-900">Rs 152.39</span>
+                                      </div>
+                                      <div className="mt-3 border-t border-slate-200 pt-3 flex items-center justify-between">
+                                        <span className="text-sm font-semibold text-slate-900">Grand total</span>
+                                        <span className="text-lg font-bold text-slate-900">Rs 1,151.39</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-3">
+                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">GST / PAN</div>
+                                      <div className="mt-2 text-sm text-slate-900">{template.gstNumber || 'GSTIN not set'}</div>
+                                      <div className="mt-1 text-sm text-slate-500">{template.panNumber || 'PAN not set'}</div>
+                                    </div>
+                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Payment block</div>
+                                      <div className="mt-2 text-sm text-slate-900">{template.bankName || 'Bank name'}</div>
+                                      <div className="mt-1 text-sm text-slate-500">{template.bankAccountNumber || 'Account number'} {template.bankIfscCode ? `| ${template.bankIfscCode}` : ''}</div>
+                                      <div className="mt-2 text-sm text-slate-500">{template.paymentInstructions || 'Payment instructions preview'}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ))}
