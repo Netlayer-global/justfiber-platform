@@ -1024,9 +1024,6 @@ export default function BillingPage() {
           <button className={`btn-secondary ${billingSectionTab === 'payments' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('payments')}>
             Payments queue
           </button>
-          <button className={`btn-secondary ${billingSectionTab === 'collections' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('collections')}>
-            Collections queue
-          </button>
         </div>
       </section>
       ) : null}
