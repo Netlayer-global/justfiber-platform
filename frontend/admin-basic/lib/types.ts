@@ -284,6 +284,31 @@ export interface ManualCustomerCreatePayload {
   createRadius?: boolean
 }
 
+export interface CustomerPppoeControlResponse {
+  serviceId?: string
+  customerId?: string
+  radiusUsername?: string
+  currentIpv4?: string | null
+  ipv4Pool?: string | null
+  status?: string
+  updated?: boolean
+  radiusState?: string | null
+  radiusVerification?: {
+    attempted?: boolean
+    derivedState?: string | null
+    matchesExpectedState?: boolean
+    matchesExpectedReplyMessage?: boolean
+    error?: string | null
+    checks?: {
+      hasCleartextPassword?: boolean
+      hasAuthTypeReject?: boolean
+      hasReplyMessage?: boolean
+      replyMessage?: string | null
+    }
+  } | null
+  serviceControl?: Record<string, unknown> | null
+}
+
 export interface CustomerBooking {
   id: string
   bookingNumber: string

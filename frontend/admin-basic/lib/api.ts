@@ -7,6 +7,7 @@ import type {
   LoginResponse,
   Plan,
   Customer,
+  CustomerPppoeControlResponse,
   ManualCustomerCreatePayload,
   Device,
   BngNode,
@@ -1665,17 +1666,17 @@ export const adminAPI = {
     id: string,
     data?: { pppoeUsername?: string; pppoePassword?: string; currentIpv4?: string | null; ipv4Pool?: string | null }
   ) =>
-    request(`/api/v1/admin/customers/${id}/pppoe/provision`, {
+    request<CustomerPppoeControlResponse>(`/api/v1/admin/customers/${id}/pppoe/provision`, {
       method: 'POST',
       body: JSON.stringify(data || {}),
     }),
   suspendCustomerPppoe: (id: string, reason?: string) =>
-    request(`/api/v1/admin/customers/${id}/pppoe/suspend`, {
+    request<CustomerPppoeControlResponse>(`/api/v1/admin/customers/${id}/pppoe/suspend`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
   resumeCustomerPppoe: (id: string) =>
-    request(`/api/v1/admin/customers/${id}/pppoe/resume`, {
+    request<CustomerPppoeControlResponse>(`/api/v1/admin/customers/${id}/pppoe/resume`, {
       method: 'POST',
       body: JSON.stringify({}),
     }),
