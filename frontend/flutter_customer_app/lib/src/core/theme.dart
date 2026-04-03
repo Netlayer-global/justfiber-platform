@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildJustFiberTheme() {
-  const background = Color(0xFFF8F6FD);
+  const background = Color(0xFFF5F7FB);
   const surface = Color(0xFFFFFFFF);
-  const surfaceAlt = Color(0xFFF3EDFB);
-  const primary = Color(0xFF8126CF);
-  const accent = Color(0xFFA855F7);
-  const tertiary = Color(0xFFA02D70);
-  const text = Color(0xFF2D2F30);
-  const muted = Color(0xFF6F7280);
-  const outline = Color(0xFFE8DDF7);
+  const surfaceAlt = Color(0xFFF0F4FA);
+  const primary = Color(0xFF0F4C81);
+  const accent = Color(0xFF1D9BF0);
+  const tertiary = Color(0xFF14B8A6);
+  const text = Color(0xFF142033);
+  const muted = Color(0xFF64748B);
+  const outline = Color(0xFFD8E1EE);
 
   return ThemeData(
     colorScheme: const ColorScheme.light(
@@ -29,46 +29,55 @@ ThemeData buildJustFiberTheme() {
     ),
     cardColor: surface,
     textTheme: const TextTheme(
-      headlineLarge: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: text, height: 1.05),
-      headlineMedium: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: text, height: 1.05),
+      headlineLarge: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: text, height: 1.02),
+      headlineMedium: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: text, height: 1.04),
       headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: text),
       titleLarge: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: text),
       titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: text),
       bodyLarge: TextStyle(fontSize: 15, color: text),
       bodyMedium: TextStyle(fontSize: 13, color: muted, height: 1.45),
-      labelMedium: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: muted, letterSpacing: 0.4),
+      labelMedium: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: muted, letterSpacing: 0.8),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: surfaceAlt,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(24),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(22),
+        borderSide: const BorderSide(color: outline),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(24),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(22),
+        borderSide: const BorderSide(color: outline),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         borderSide: const BorderSide(color: primary, width: 1.2),
       ),
       hintStyle: const TextStyle(color: muted),
       labelStyle: const TextStyle(color: muted),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: primary,
         foregroundColor: Colors.white,
+        elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: primary,
+        side: const BorderSide(color: outline),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
     ),
     snackBarTheme: const SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: Color(0xFF2D2F30),
+      backgroundColor: Color(0xFF142033),
       contentTextStyle: TextStyle(color: Colors.white),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(

@@ -21,7 +21,7 @@ class HomeTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 130),
         children: [
-          Text('Dashboard', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFFA02D70))),
+          Text('CUSTOMER DASHBOARD', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF0F4C81), letterSpacing: 1.4)),
           const SizedBox(height: 6),
           Text('Hello, ${dashboard.customerName}', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
@@ -32,18 +32,35 @@ class HomeTab extends StatelessWidget {
           const SizedBox(height: 18),
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF6750A4), Color(0xFFA855F7), Color(0xFFD2B4FF)],
+              colors: [Color(0xFF0F4C81), Color(0xFF1565A7), Color(0xFF1D9BF0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Fiber Ultra Plan', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Text(
+                        'LIVE CONNECTION',
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text('Your broadband plan', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
                 const SizedBox(height: 8),
                 Text(
                   billing.currentPlan,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, height: 1.1),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -73,7 +90,7 @@ class HomeTab extends StatelessWidget {
                         onPressed: () => onNavigate(1),
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF4A3B81),
+                          foregroundColor: const Color(0xFF0F4C81),
                         ),
                         child: const Text('Pay Bill'),
                       ),
@@ -83,7 +100,7 @@ class HomeTab extends StatelessWidget {
                       child: FilledButton.tonal(
                         onPressed: () => onNavigate(2),
                         style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white24,
+                          backgroundColor: const Color(0x29000000),
                           foregroundColor: Colors.white,
                         ),
                         child: const Text('Manage Wi-Fi'),
@@ -224,10 +241,10 @@ class HomeTab extends StatelessWidget {
                         height: 44,
                         width: 44,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3EDFB),
+                          color: const Color(0xFFEAF2FB),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.notifications_active_outlined, color: Color(0xFF8126CF)),
+                        child: const Icon(Icons.notifications_active_outlined, color: Color(0xFF0F4C81)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

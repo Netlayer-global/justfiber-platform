@@ -31,14 +31,14 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(child: pages[index]),
       ),
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.78),
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: Colors.white.withOpacity(0.7)),
+          color: const Color(0xFFFDFEFF).withOpacity(0.92),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFFD8E1EE)),
           boxShadow: const [
-            BoxShadow(color: Color(0x148126CF), blurRadius: 24, offset: Offset(0, 10)),
+            BoxShadow(color: Color(0x14142033), blurRadius: 28, offset: Offset(0, 10)),
           ],
         ),
         child: Row(
@@ -73,12 +73,17 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF8126CF) : const Color(0xFF8F8B99);
+    final color = selected ? const Color(0xFF0F4C81) : const Color(0xFF7A879A);
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEAF2FB) : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -105,13 +110,13 @@ class _CenterNavItem extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 56,
-        height: 56,
+        width: 58,
+        height: 58,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFA855F7), Color(0xFF8126CF)]),
-          borderRadius: BorderRadius.circular(22),
+          gradient: const LinearGradient(colors: [Color(0xFF1D9BF0), Color(0xFF0F4C81)]),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: selected
-              ? const [BoxShadow(color: Color(0x228126CF), blurRadius: 18, offset: Offset(0, 8))]
+              ? const [BoxShadow(color: Color(0x221D9BF0), blurRadius: 18, offset: Offset(0, 8))]
               : null,
         ),
         child: const Icon(Icons.router_rounded, color: Colors.white),
