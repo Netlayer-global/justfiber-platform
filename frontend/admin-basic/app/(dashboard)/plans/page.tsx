@@ -875,7 +875,7 @@ function PlansContent() {
 
       {isLoading ? (
         <div className="card p-8 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#2d7dff]" />
+              <Loader className="mx-auto h-6 w-6 animate-spin text-purple-700" />
         </div>
       ) : (
         <section className="space-y-4">
@@ -883,7 +883,7 @@ function PlansContent() {
           {filteredPlans.map((plan) => (
             <article
               key={plan.id}
-              className={`card p-5 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-[#5B6CFF]/30' : ''}`}
+              className={`card p-5 transition-all ${selectedPlan?.id === plan.id ? 'ring-1 ring-purple-300' : ''}`}
               onMouseEnter={() => setSelectedPlanId(plan.id)}
               onClick={() => setSelectedPlanId(plan.id)}
             >
@@ -948,7 +948,7 @@ function PlansContent() {
                 <button
                   type="button"
                   onClick={() => void togglePlanStatus(plan)}
-                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-600' : 'border-[#5B6CFF]/20 text-[#5B6CFF]'}`}
+                  className={`btn-secondary inline-flex items-center gap-2 ${plan.status === 'active' ? 'border-red-500/20 text-red-600' : 'border-purple-200 text-purple-700'}`}
                 >
                   <ShieldCheck className="h-4 w-4" />
                   {plan.status === 'active' ? 'Deactivate' : 'Activate'}
@@ -978,7 +978,7 @@ export default function PlansPage() {
     <Suspense
       fallback={
         <div className="card p-8 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#2d7dff]" />
+              <Loader className="mx-auto h-6 w-6 animate-spin text-purple-700" />
         </div>
       }
     >

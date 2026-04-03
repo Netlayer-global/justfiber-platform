@@ -411,7 +411,7 @@ function FieldEditor({ label, value, path, depth = 0, onChange, onRemove }: Fiel
           type="checkbox"
           checked={Boolean(value)}
           onChange={(event) => onChange(path, event.target.checked)}
-          className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
+          className="h-4 w-4 rounded border-slate-300 text-purple-700 focus:ring-purple-700"
         />
       </label>
     )
@@ -438,7 +438,7 @@ function FieldEditor({ label, value, path, depth = 0, onChange, onRemove }: Fiel
         <label className="space-y-2">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{normalizedLabel}</div>
           <textarea
-            className="min-h-[112px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+            className="min-h-[112px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-purple-300 focus:ring-4 focus:ring-purple-200"
             value={asString}
             onChange={(event) => onChange(path, event.target.value)}
           />
@@ -463,7 +463,7 @@ function FieldEditor({ label, value, path, depth = 0, onChange, onRemove }: Fiel
         <label className="space-y-2">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{normalizedLabel}</div>
           <textarea
-            className="min-h-[108px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+            className="min-h-[108px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-purple-300 focus:ring-4 focus:ring-purple-200"
             value={arrayValue.join('\n')}
             onChange={(event) => {
               const next = event.target.value
@@ -1672,7 +1672,7 @@ export default function SettingsPage() {
                 type="checkbox"
                 checked={showAdvanced}
                 onChange={(event) => setShowAdvanced(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
+                className="h-4 w-4 rounded border-slate-300 text-purple-700 focus:ring-purple-700"
               />
               Show advanced sections
             </label>
@@ -1695,7 +1695,7 @@ export default function SettingsPage() {
                           onClick={() => setActiveSection(item.section)}
                           className={`w-full rounded-[20px] border px-4 py-3 text-left transition ${
                             active
-                              ? 'border-[#5B6CFF]/25 bg-[#eef1ff] text-[#2946ff]'
+                              ? 'border-purple-300 bg-purple-50 text-purple-700'
                               : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900'
                           }`}
                         >
@@ -1733,7 +1733,7 @@ export default function SettingsPage() {
 
             {isSectionLoading ? (
               <div className="card p-8 text-center">
-                <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
+                <Loader2 className="mx-auto h-6 w-6 animate-spin text-purple-700" />
                 <div className="mt-3 text-sm text-slate-500">Loading {activeMeta.title}...</div>
               </div>
             ) : (
@@ -1785,7 +1785,7 @@ export default function SettingsPage() {
                         <label className="space-y-2 lg:col-span-2">
                           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing address</div>
                           <textarea
-                            className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+                            className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-purple-300 focus:ring-4 focus:ring-purple-200"
                             value={invoiceOrganizationProfile.companyAddress || ''}
                             onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyAddress: event.target.value }))}
                           />
@@ -2002,14 +2002,14 @@ export default function SettingsPage() {
                                       },
                                     })
                                   }
-                                  className="h-4 w-4 rounded border-slate-300 text-[#5B6CFF] focus:ring-[#5B6CFF]"
+                                  className="h-4 w-4 rounded border-slate-300 text-purple-700 focus:ring-purple-700"
                                 />
                               </label>
                             ))}
                             <label className="space-y-2">
                               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mandatory fields for payment</div>
                               <textarea
-                                className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+                                className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-purple-300 focus:ring-4 focus:ring-purple-200"
                                 value={(invoiceTemplateSection.billingRuleSettings.mandatoryFieldsForPayment || []).join('\n')}
                                 onChange={(event) =>
                                   replaceInvoiceTemplateSection({
@@ -2158,7 +2158,7 @@ export default function SettingsPage() {
                             type="button"
                             className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                               selectedInvoiceEditorTemplate?.key === template.key
-                                ? 'border-[#5B6CFF]/25 bg-[#eef1ff] text-[#2946ff]'
+                                ? 'border-purple-300 bg-purple-50 text-purple-700'
                                 : 'border-slate-200 bg-white text-slate-600'
                             }`}
                             onClick={() => setInvoiceEditorTemplateKey(template.key)}

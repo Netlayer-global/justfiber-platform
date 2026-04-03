@@ -288,7 +288,7 @@ export default function IpManagementPage() {
           </div>
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Non-active IPs</div>
-            <div className="mt-3 text-3xl font-semibold text-[#5B6CFF]">{summary.inactiveIps}</div>
+            <div className="mt-3 text-3xl font-semibold text-purple-700">{summary.inactiveIps}</div>
             <div className="mt-2 text-sm text-slate-500">Remaining capacity after exclusions and assignments</div>
           </div>
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
@@ -370,7 +370,7 @@ export default function IpManagementPage() {
                       <button type="button" onClick={() => beginEdit(pool)} className="text-left">
                         <div className="flex items-center gap-3">
                           <div className="font-semibold text-slate-900">{pool.name}</div>
-                          <span className="rounded-full bg-[#eef1ff] px-2 py-1 text-xs font-semibold text-[#5B6CFF]">
+                          <span className="rounded-full bg-purple-50 px-2 py-1 text-xs font-semibold text-purple-700">
                             {pool.metrics?.activeIps || 0}/{pool.metrics?.totalIps || 0}
                           </span>
                         </div>
@@ -391,7 +391,7 @@ export default function IpManagementPage() {
                     <td className="px-4 py-4">{pool.comments || '-'}</td>
                     <td className="px-4 py-4">
                       <div className="flex gap-3 text-sm">
-                        <button type="button" className="text-[#5B6CFF] hover:underline" onClick={() => beginEdit(pool)}>
+                        <button type="button" className="text-purple-700 hover:underline" onClick={() => beginEdit(pool)}>
                           Edit
                         </button>
                         <button type="button" className="text-red-600 hover:underline" onClick={() => void handleDelete(pool)} disabled={isDeleting}>
@@ -577,8 +577,8 @@ export default function IpManagementPage() {
         </div>
       ) : null}
 
-      <section className="rounded-[30px] border border-[#5B6CFF]/20 bg-[#eef1ff] p-5">
-        <div className="flex items-center gap-3 text-[#5B6CFF]">
+          <section className="rounded-[30px] border border-purple-200 bg-purple-50 p-5">
+            <div className="flex items-center gap-3 text-purple-700">
           <Network className="h-5 w-5" />
           <div className="text-lg font-bold">Pool strategy</div>
         </div>

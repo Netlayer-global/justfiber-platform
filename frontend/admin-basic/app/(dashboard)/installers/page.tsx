@@ -200,7 +200,7 @@ export default function InstallersPage() {
               <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
                 <div className="flex items-center justify-between">
                   <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</div>
-                  <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                  <Icon className="h-4 w-4 text-purple-700" />
                 </div>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
               </div>
@@ -239,7 +239,7 @@ export default function InstallersPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#5B6CFF]" />
+              <Loader className="w-6 h-6 animate-spin mx-auto text-purple-700" />
         </div>
       ) : (
         <div className="space-y-3">

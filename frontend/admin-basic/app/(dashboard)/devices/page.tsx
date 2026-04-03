@@ -457,7 +457,7 @@ export default function DevicesPage() {
   if (isLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
-        <Loader className="h-7 w-7 animate-spin text-[#5B6CFF]" />
+              <Loader className="h-7 w-7 animate-spin text-purple-700" />
       </div>
     )
   }
@@ -683,8 +683,8 @@ export default function DevicesPage() {
                   key={device.id}
                   className={`w-full rounded-xl border px-4 py-3 transition ${
                     selectedDevice?.id === device.id
-                      ? 'border-[#5B6CFF] bg-[#eef1ff]'
-                      : 'border-slate-200 bg-white hover:border-[#5B6CFF]/35 hover:bg-slate-50'
+                ? 'border-purple-700 bg-purple-50'
+                : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-slate-50'
                   }`}
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">

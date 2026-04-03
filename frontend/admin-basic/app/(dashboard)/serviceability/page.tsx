@@ -266,7 +266,7 @@ export default function ServiceabilityPage() {
                 key={label}
                 className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
               >
-                <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                <Icon className="h-4 w-4 text-purple-700" />
                 <div>
                   <div className="font-semibold text-slate-900">{value}</div>
                   <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{label}</div>
@@ -274,7 +274,7 @@ export default function ServiceabilityPage() {
               </div>
             ))}
             <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              <MapPin className="h-4 w-4 text-[#5B6CFF]" />
+              <MapPin className="h-4 w-4 text-purple-700" />
               <div>
                 <div className="font-semibold text-slate-900">{activeZoneLabel}</div>
                 <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Active zone scope</div>
@@ -420,7 +420,7 @@ export default function ServiceabilityPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#5B6CFF]" />
+          <Loader className="w-6 h-6 animate-spin mx-auto text-purple-700" />
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -444,7 +444,7 @@ export default function ServiceabilityPage() {
                     <tr key={zone.id} className="border-b border-slate-100 text-sm text-slate-600 last:border-b-0">
                       <td className="px-5 py-4">
                         <div className="flex items-start gap-3">
-                          <MapPin className="mt-0.5 h-4 w-4 text-[#5B6CFF]" />
+                          <MapPin className="mt-0.5 h-4 w-4 text-purple-700" />
                           <div>
                             <div className="font-semibold text-slate-900">{zone.name}</div>
                             <div className="mt-1 text-xs text-slate-500">{zone.zoneCode || zone.id}</div>

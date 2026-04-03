@@ -186,7 +186,7 @@ export default function TicketsPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</div>
-                  <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                  <Icon className="h-4 w-4 text-purple-700" />
                 </div>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
               </div>
@@ -231,7 +231,7 @@ export default function TicketsPage() {
             <button
               key={tab.key}
               className={`rounded-full px-4 py-2 text-sm font-medium ${
-                supportTab === tab.key ? 'bg-[#5B6CFF] text-white' : 'border border-slate-200 bg-slate-50 text-slate-600'
+                supportTab === tab.key ? 'bg-purple-700 text-white' : 'border border-slate-200 bg-slate-50 text-slate-600'
               }`}
               onClick={() => setSupportTab(tab.key)}
             >
@@ -254,7 +254,7 @@ export default function TicketsPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
+              <Loader className="mx-auto h-6 w-6 animate-spin text-purple-700" />
         </div>
       ) : (
         <div className="space-y-6">
@@ -415,7 +415,7 @@ export default function TicketsPage() {
                               {extractSnapshot(ticket.description).slice(0, 4).map((item) => (
                                 <span
                                   key={item}
-                                  className="rounded-full border border-[#5B6CFF]/20 bg-[#eef1ff] px-2 py-1 text-[11px] font-medium text-[#5B6CFF]"
+                                  className="rounded-full border border-purple-200 bg-purple-50 px-2 py-1 text-[11px] font-medium text-purple-700"
                                 >
                                   {item}
                                 </span>

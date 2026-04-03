@@ -454,7 +454,7 @@ export default function RoutersPage() {
           </div>
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">CoA enabled</div>
-            <div className="mt-3 text-3xl font-semibold text-[#5B6CFF]">{coaEnabledCount}</div>
+            <div className="mt-3 text-3xl font-semibold text-purple-700">{coaEnabledCount}</div>
             <div className="mt-2 text-sm text-slate-500">Nodes ready for live session disconnect and refresh</div>
           </div>
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
@@ -568,7 +568,7 @@ export default function RoutersPage() {
                 <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Selected router</div>
                 <div className="mt-2 text-2xl font-semibold text-slate-900">{selectedRouter?.displayName || 'No router selected'}</div>
               </div>
-              <div className="rounded-full border border-[#5B6CFF]/20 bg-[#eef1ff] px-3 py-2 text-xs font-semibold text-[#5B6CFF]">
+              <div className="rounded-full border border-purple-200 bg-purple-50 px-3 py-2 text-xs font-semibold text-purple-700">
                 {selectedRouter?.vendor || 'mikrotik'}
               </div>
             </div>
@@ -755,8 +755,8 @@ export default function RoutersPage() {
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-[#5B6CFF]/20 bg-[#eef1ff] p-5">
-            <div className="flex items-center gap-3 text-[#5B6CFF]">
+            <div className="rounded-[30px] border border-purple-200 bg-purple-50 p-5">
+              <div className="flex items-center gap-3 text-purple-700">
               <ShieldCheck className="h-5 w-5" />
               <div className="text-lg font-bold">MikroTik ready</div>
             </div>
@@ -854,7 +854,7 @@ export default function RoutersPage() {
 
             <div className="mt-6 rounded-[26px] border border-slate-200 bg-slate-50 p-5">
               <div className="flex items-center gap-3 text-lg font-bold">
-                <Wifi className="h-5 w-5 text-[#5B6CFF]" />
+                    <Wifi className="h-5 w-5 text-purple-700" />
                 Access and CoA
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
