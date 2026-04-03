@@ -6,12 +6,14 @@ class AppCard extends StatelessWidget {
     required this.child,
     this.gradient,
     this.color,
+    this.borderColor,
     this.padding = const EdgeInsets.all(20),
   });
 
   final Widget child;
   final Gradient? gradient;
   final Color? color;
+  final Color? borderColor;
   final EdgeInsetsGeometry padding;
 
   @override
@@ -22,7 +24,7 @@ class AppCard extends StatelessWidget {
         gradient: gradient,
         color: gradient == null ? (color ?? Colors.white.withOpacity(0.78)) : null,
         borderRadius: BorderRadius.circular(28),
-        border: gradient == null ? Border.all(color: Colors.white.withOpacity(0.65)) : null,
+        border: gradient == null ? Border.all(color: borderColor ?? Colors.white.withOpacity(0.65)) : null,
         boxShadow: const [
           BoxShadow(color: Color(0x148126CF), blurRadius: 28, offset: Offset(0, 16)),
         ],
