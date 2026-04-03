@@ -100,30 +100,30 @@ function SidebarContent({
   onLogout: () => void
 }) {
   return (
-      <div className="flex h-full flex-col sidebar">
-      <div className="border-b border-slate-700 px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-purple-700 text-xs font-medium text-white">
-            JF
+      <div className="flex h-full flex-col bg-white">
+      <div className="border-b border-purple-200 px-7 py-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-700 text-base font-semibold text-white shadow-[0_10px_25px_rgba(124,58,237,0.28)]">
+            J
           </div>
           <div>
-            <div className="text-xs font-medium text-slate-200">JustFiber</div>
-            <div className="text-[10px] text-slate-500">Admin</div>
+            <div className="text-lg font-semibold tracking-tight text-slate-900">JustFiber</div>
+            <div className="text-xs font-medium text-slate-500">Admin</div>
           </div>
         </div>
-        <div className="mt-2 flex items-center gap-1 rounded bg-slate-700/30 px-2 py-1">
-          <Search className="h-3 w-3 text-slate-500" />
-          <input type="text" placeholder="Search..." className="bg-transparent text-xs text-slate-300 outline-none placeholder:text-slate-600 w-full" />
+        <div className="modernize-search mt-5">
+          <Search className="h-4 w-4 text-slate-400" />
+          <span>Search modules</span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-1.5">
+      <div className="flex-1 overflow-y-auto px-0 py-4">
         {NAV_SECTIONS.map((section) => (
-          <div key={section.subheader} className="mb-1.5">
-            <div className="px-3 pb-1 text-[9px] font-medium uppercase tracking-wide text-slate-500">
+          <div key={section.subheader} className="mb-4">
+            <div className="px-7 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
               {section.subheader}
             </div>
-            <div className="space-y-0 px-1">
+            <div className="space-y-1 px-4">
               {section.items.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
@@ -132,12 +132,39 @@ function SidebarContent({
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={`sidebar-item ${isActive ? 'sidebar-item-active' : ''}`}
+                    className={`modernize-sidebar-item flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
+                      isActive
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
                   >
-                    <Icon className="h-3.5 w-3.5" strokeWidth={2} />
-                    <span className="text-xs">{item.label}</span>
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    <span>{item.label}</span>
                   </Link>
                 )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-purple-200 p-4">
+        <div className="rounded-xl bg-purple-100 p-4">
+          <div className="text-sm font-semibold text-slate-900">Upgrade workspace</div>
+          <div className="mt-1 text-xs leading-6 text-slate-500">
+            Keep finance, network, and field operations in one clean control surface.
+          </div>
+          <button
+            onClick={onLogout}
+            className="mt-4 inline-flex items-center gap-2 rounded-md bg-purple-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-purple-800"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  )
               })}
             </div>
           </div>
@@ -300,12 +327,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </aside>
 
         {mobileSidebarOpen ? (
-          <div className="fixed inset-0 z-50 bg-black/60 lg:hidden">
-            <div className="h-full w-[240px] sidebar shadow-2xl">
-              <div className="flex items-center justify-end border-b border-slate-700 px-2 py-1.5">
+          <div className="fixed inset-0 z-50 bg-slate-950/35 lg:hidden">
+            <div className="h-full w-[270px] border-r border-purple-200 bg-white shadow-xl">
+              <div className="flex items-center justify-end border-b border-purple-200 px-4 py-3">
                 <button
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                  className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -319,82 +346,84 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         ) : null}
 
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col bg-slate-950">
-          <header className="sticky top-0 z-20 border-b border-slate-700 bg-slate-900/80 backdrop-blur">
-            <div className="flex min-h-[50px] items-center gap-2 px-3">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-20 border-b border-purple-200 bg-white">
+            <div className="flex min-h-[70px] items-center gap-3 px-4 md:px-6">
               <button
                 onClick={() => setMobileSidebarOpen(true)}
-                className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-200 lg:hidden"
+                className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden"
               >
-                <Menu className="h-4 w-4" />
+                <Menu className="h-5 w-5" />
               </button>
 
-              <div className="hidden min-w-[250px] flex-1 lg:block">
-                <div className="flex items-center gap-1.5 rounded bg-slate-800/50 px-2 py-1">
-                  <Search className="h-3 w-3 text-slate-500" />
-                  <span className="text-xs text-slate-400">Search...</span>
+              <div className="hidden min-w-[320px] max-w-[520px] flex-1 lg:block">
+                <div className="modernize-search">
+                  <Search className="h-4 w-4 text-slate-400" />
+                  <span>Search customers, billing, jobs, devices</span>
                 </div>
               </div>
 
-              <div className="ml-auto flex items-center gap-2">
-                <button className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-200">
-                  <Bell className="h-4 w-4" />
+              <div className="ml-auto flex items-center gap-3">
+                <button className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+                  <Bell className="h-5 w-5" />
                 </button>
                 <div className="relative hidden md:block">
                   <button
                     type="button"
                     onClick={() => canAccessAllZones && setZoneMenuOpen((value) => !value)}
-                    className="flex items-center gap-1 rounded border border-slate-700 bg-slate-800/50 px-2 py-1 text-left text-xs transition hover:bg-slate-700"
+                    className="flex items-center gap-3 rounded-lg border border-purple-200 px-4 py-2 text-left transition hover:bg-slate-50"
                   >
                     <div>
-                      <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">{canAccessAllZones ? 'Zone' : 'Zone'}</div>
-                      <div className="text-xs font-medium text-slate-200">{currentZone.label}</div>
+                      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+                        {canAccessAllZones ? 'Zone' : 'Locked zone'}
+                      </div>
+                      <div className="text-sm font-semibold text-slate-900">{currentZone.label}</div>
                     </div>
-                    {canAccessAllZones ? <ChevronDown className="h-3 w-3 text-slate-500" /> : null}
+                    {canAccessAllZones ? <ChevronDown className="h-4 w-4 text-slate-400" /> : null}
                   </button>
                   {zoneMenuOpen && canAccessAllZones ? (
-                    <div className="absolute right-0 z-30 mt-1 w-56 rounded border border-slate-700 bg-slate-800 shadow-lg">
-                      <div className="px-2 py-1 text-[9px] font-medium uppercase tracking-wide text-slate-500">Zone Switch</div>
-                      <div className="space-y-0 max-h-48 overflow-y-auto">
+                    <div className="absolute right-0 z-30 mt-2 w-72 rounded-[18px] border border-purple-200 bg-white p-2 shadow-lg">
+                      <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone Switch</div>
+                      <div className="space-y-1">
                         {zoneOptions.map((item) => (
                           <button
                             key={item.key}
                             type="button"
                             onClick={() => handleSwitchZone(item)}
-                            className={`w-full px-2 py-1 text-left text-xs transition ${
+                            className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
                               currentZone.key === item.key
-                                ? 'bg-purple-600/30 font-medium text-purple-300'
-                                : 'text-slate-300 hover:bg-slate-700'
+                                ? 'bg-purple-100 font-semibold text-purple-700'
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                             }`}
                           >
                             {item.label}
                           </button>
                         ))}
-                        <div className="border-t border-slate-700 py-0.5">
-                          <Link href="/my-zone-details" className="block px-2 py-1 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-200">
-                            Zone Details
+                        <div className="border-t border-purple-200 pt-2">
+                          <Link href="/my-zone-details" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                            My Zone Details
                           </Link>
-                          <Link href="/create-sub-zone" className="block px-2 py-1 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-200">
+                          <Link href="/create-sub-zone" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
                             Create Sub-zone
                           </Link>
-                          <Link href="/settings" className="block px-2 py-1 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-200">
-                            Settings
+                          <Link href="/settings" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                            Zone Settings
                           </Link>
                         </div>
                       </div>
                     </div>
                   ) : null}
                 </div>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-xs font-medium text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-700 text-sm font-semibold text-white">
                   J
                 </div>
               </div>
             </div>
           </header>
 
-          <main className="flex-1 pb-[40px]">
-            <div className="mx-auto w-full max-w-full px-3 pt-3 md:px-4">
-              <div className="min-h-[calc(100vh-130px)]">{children}</div>
+          <main className="flex-1 pb-[60px]">
+            <div className="mx-auto w-full max-w-[1200px] px-4 pt-5 md:px-6">
+              <div className="min-h-[calc(100vh-170px)]">{children}</div>
             </div>
           </main>
         </div>
