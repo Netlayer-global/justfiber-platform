@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-const adminBasicPath = '/vercel/share/v0-project/frontend/admin-basic';
-
 // Color mapping
 const colorReplacements = [
   { from: '#5d87ff', to: '#7c3aed' },
@@ -20,17 +18,23 @@ const colorReplacements = [
   { from: 'border-\\[#e5eaf2\\]', to: 'border-purple-200' }
 ];
 
+const adminBasicPath = './frontend/admin-basic';
+
 function findTsxFiles(dir) {
   let files = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files = files.concat(findTsxFiles(fullPath));
-    } else if (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts')) {
-      files.push(fullPath);
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        files = files.concat(findTsxFiles(fullPath));
+      } else if (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts')) {
+        files.push(fullPath);
+      }
     }
+  } catch (e) {
+    console.error(`Error reading ${dir}: ${e.message}`);
   }
   return files;
 }
@@ -39,18 +43,22 @@ const files = findTsxFiles(adminBasicPath);
 let updatedCount = 0;
 
 files.forEach(file => {
-  let content = fs.readFileSync(file, 'utf8');
-  let originalContent = content;
-  
-  colorReplacements.forEach(({ from, to }) => {
-    content = content.replaceAll(from, to);
-  });
-  
-  if (content !== originalContent) {
-    fs.writeFileSync(file, content);
-    updatedCount++;
-    console.log(`Updated: ${file}`);
+  try {
+    let content = fs.readFileSync(file, 'utf8');
+    let originalContent = content;
+    
+    colorReplacements.forEach(({ from, to }) => {
+      content = content.replaceAll(from, to);
+    });
+    
+    if (content !== originalContent) {
+      fs.writeFileSync(file, content);
+      updatedCount++;
+      console.log(`✓ Updated: ${file}`);
+    }
+  } catch (e) {
+    console.error(`Error processing ${file}: ${e.message}`);
   }
 });
 
-console.log(`\nTotal files updated: ${updatedCount}`);
+console.log(`\n✓ Total files updated: ${updatedCount}`);

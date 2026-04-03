@@ -219,7 +219,7 @@ function CustomersContent() {
       <section className="card p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-sm font-semibold text-[#4aa7ff]">Customer Ops</div>
+            <div className="text-sm font-semibold text-purple-700">Customer Ops</div>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">Customers</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-500">
               Full customer list for the active zone. Open, edit, or create from one place.
@@ -263,10 +263,10 @@ function CustomersContent() {
         </div>
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader className="h-6 w-6 animate-spin text-[#5d87ff]" />
+            <Loader className="h-6 w-6 animate-spin text-purple-700" />
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="overflow-hidden rounded-2xl border border-purple-200 bg-white">
             <div className="max-h-[68vh] overflow-auto">
               <div className="sticky top-0 z-10 grid grid-cols-[56px_minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(120px,1fr)_110px_130px] gap-3 border-b border-slate-200 bg-slate-50/95 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 backdrop-blur">
                 <div>S.No</div>
@@ -306,7 +306,7 @@ function CustomersContent() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                    <Link href={`/customers/${customer.id}`} className="inline-flex items-center gap-2 font-medium text-[#2d7dff]">
+                    <Link href={`/customers/${customer.id}`} className="inline-flex items-center gap-2 font-medium text-purple-700">
                       <Eye className="h-4 w-4" />
                       Open
                     </Link>
