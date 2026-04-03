@@ -186,6 +186,54 @@ class ServiceHubScreen extends StatelessWidget {
                 ),
                 _quickAction(
                   context,
+                  Icons.devices_outlined,
+                  'Connected devices',
+                  'See active devices and block or unblock internet access',
+                  () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WifiSettingsScreen(initialAction: WifiLaunchAction.devices),
+                      ),
+                    );
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
+                ),
+                _quickAction(
+                  context,
+                  Icons.wifi_tethering_outlined,
+                  'Guest Wi-Fi',
+                  'Open guest network name, password, and access controls',
+                  () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WifiSettingsScreen(initialAction: WifiLaunchAction.guest),
+                      ),
+                    );
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
+                ),
+                _quickAction(
+                  context,
+                  Icons.family_restroom_outlined,
+                  'Parental controls',
+                  'Create schedules and internet restrictions for selected devices',
+                  () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WifiSettingsScreen(initialAction: WifiLaunchAction.parentalControls),
+                      ),
+                    );
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
+                ),
+                _quickAction(
+                  context,
                   Icons.home_work_outlined,
                   'Shift connection',
                   'Create a relocation request for your current broadband setup',

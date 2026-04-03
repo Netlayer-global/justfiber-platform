@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
+import '../wifi_settings_screen.dart';
 import '../../widgets/app_card.dart';
 
 class HomeTab extends StatelessWidget {
@@ -116,7 +117,7 @@ class HomeTab extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            childAspectRatio: 1.25,
+            childAspectRatio: 1.1,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
             children: [
@@ -143,6 +144,36 @@ class HomeTab extends StatelessWidget {
                 title: 'Profile',
                 subtitle: 'Account, requests and logout',
                 onTap: () => onNavigate(4),
+              ),
+              _ActionCard(
+                icon: Icons.devices_rounded,
+                title: 'Devices',
+                subtitle: 'View connected devices and internet access',
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const WifiSettingsScreen(initialAction: WifiLaunchAction.devices),
+                    ),
+                  );
+                  if (context.mounted) {
+                    await appState.refresh();
+                  }
+                },
+              ),
+              _ActionCard(
+                icon: Icons.family_restroom_rounded,
+                title: 'Parental',
+                subtitle: 'Schedules and restrictions for devices',
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const WifiSettingsScreen(initialAction: WifiLaunchAction.parentalControls),
+                    ),
+                  );
+                  if (context.mounted) {
+                    await appState.refresh();
+                  }
+                },
               ),
             ],
           ),

@@ -4,8 +4,16 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
 
+enum WifiLaunchAction {
+  devices,
+  guest,
+  parentalControls,
+}
+
 class WifiSettingsScreen extends StatefulWidget {
-  const WifiSettingsScreen({super.key});
+  const WifiSettingsScreen({super.key, this.initialAction});
+
+  final WifiLaunchAction? initialAction;
 
   @override
   State<WifiSettingsScreen> createState() => _WifiSettingsScreenState();
@@ -18,6 +26,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
   final _guestPasswordController = TextEditingController();
   String? _lastSyncedSsid;
   String? _lastSyncedGuestSsid;
+  bool _handledInitialAction = false;
 
   @override
   void didChangeDependencies() {
@@ -30,6 +39,25 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     if (_lastSyncedGuestSsid != appState.wifi.guestSsid) {
       _guestSsidController.text = appState.wifi.guestSsid;
       _lastSyncedGuestSsid = appState.wifi.guestSsid;
+    }
+    if (!_handledInitialAction && widget.initialAction != null) {
+      _handledInitialAction = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        switch (widget.initialAction!) {
+          case WifiLaunchAction.devices:
+            _showConnectedDevices(context, appState, accessMode: true);
+            break;
+          case WifiLaunchAction.guest:
+            _showGuestWifiSheet(context, appState);
+            break;
+          case WifiLaunchAction.parentalControls:
+            _showParentalControlsSheet(context, appState);
+            break;
+        }
+      });
     }
   }
 
