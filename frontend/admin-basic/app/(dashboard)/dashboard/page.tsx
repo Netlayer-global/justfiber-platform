@@ -451,7 +451,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
-        <Loader className="h-7 w-7 animate-spin text-[#5B6CFF]" />
+        <Loader className="h-7 w-7 animate-spin text-purple-700" />
       </div>
     )
   }
@@ -472,7 +472,7 @@ export default function DashboardPage() {
               <div key={label} className="modernize-stat-card">
                 <div className="flex items-center justify-between">
                   <div className="modernize-subtitle">{label}</div>
-                  <Icon className="h-4 w-4 text-[#5d87ff]" />
+                  <Icon className="h-4 w-4 text-purple-700" />
                 </div>
                 <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
                 <div className="mt-1 text-xs text-slate-500">{detail}</div>
@@ -527,7 +527,7 @@ export default function DashboardPage() {
             </button>
           </div>
           {otpValue ? (
-            <div className="mt-4 rounded-[20px] border border-[#5B6CFF]/20 bg-[#eef1ff] p-4">
+            <div className="mt-4 rounded-[20px] border border-purple-200 bg-purple-50 p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Current OTP</div>
               <div className="mt-2 text-3xl font-semibold tracking-[0.2em] text-slate-900">{otpValue}</div>
             </div>
