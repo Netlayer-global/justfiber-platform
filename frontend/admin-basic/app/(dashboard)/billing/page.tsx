@@ -759,7 +759,7 @@ export default function BillingPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button className={`btn-secondary ${billingSectionTab === 'invoices' ? 'ring-2 ring-[#5d87ff]' : ''}`} onClick={() => setBillingSectionTab('invoices')}>
+          <button className={`btn-secondary ${billingSectionTab === 'invoices' ? 'ring-2 ring-purple-700' : ''}`} onClick={() => setBillingSectionTab('invoices')}>
             Invoice queue
           </button>
         </div>
@@ -1505,7 +1505,7 @@ export default function BillingPage() {
                 <button
                   key={key}
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    invoiceQuickView === key ? 'bg-[#2d7dff] text-white' : 'bg-slate-100 text-slate-600'
+                    invoiceQuickView === key ? 'bg-purple-700 text-white' : 'bg-slate-100 text-slate-600'
                   }`}
                   onClick={() => setInvoiceQuickView(key as typeof invoiceQuickView)}
                 >

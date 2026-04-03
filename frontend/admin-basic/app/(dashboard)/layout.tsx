@@ -100,10 +100,10 @@ function SidebarContent({
   onLogout: () => void
 }) {
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="border-b border-slate-200 px-7 py-6">
+      <div className="flex h-full flex-col bg-white">
+      <div className="border-b border-purple-200 px-7 py-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#5d87ff] text-base font-semibold text-white shadow-[0_10px_25px_rgba(93,135,255,0.28)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-700 text-base font-semibold text-white shadow-[0_10px_25px_rgba(124,58,237,0.28)]">
             J
           </div>
           <div>
@@ -134,7 +134,7 @@ function SidebarContent({
                     onClick={onNavigate}
                     className={`modernize-sidebar-item flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                       isActive
-                        ? 'bg-[#ecf2ff] text-[#5d87ff]'
+                        ? 'bg-purple-100 text-purple-700'
                         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                     }`}
                   >
@@ -148,15 +148,15 @@ function SidebarContent({
         ))}
       </div>
 
-      <div className="border-t border-slate-200 p-4">
-        <div className="rounded-xl bg-[#ecf2ff] p-4">
+      <div className="border-t border-purple-200 p-4">
+        <div className="rounded-xl bg-purple-100 p-4">
           <div className="text-sm font-semibold text-slate-900">Upgrade workspace</div>
           <div className="mt-1 text-xs leading-6 text-slate-500">
             Keep finance, network, and field operations in one clean control surface.
           </div>
           <button
             onClick={onLogout}
-            className="mt-4 inline-flex items-center gap-2 rounded-md bg-[#5d87ff] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#4576ff]"
+            className="mt-4 inline-flex items-center gap-2 rounded-md bg-purple-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-purple-800"
           >
             <LogOut className="h-4 w-4" />
             Logout
@@ -303,16 +303,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="modernize-shell admin-light min-h-screen">
       <div className="flex min-h-screen w-full">
-        <aside className="hidden w-[270px] shrink-0 border-r border-slate-200 lg:block">
-          <div className="fixed inset-y-0 z-30 w-[270px] border-r border-slate-200 bg-white">
+        <aside className="hidden w-[270px] shrink-0 border-r border-purple-200 lg:block">
+          <div className="fixed inset-y-0 z-30 w-[270px] border-r border-purple-200 bg-white">
             <SidebarContent pathname={pathname} onLogout={handleLogout} />
           </div>
         </aside>
 
         {mobileSidebarOpen ? (
           <div className="fixed inset-0 z-50 bg-slate-950/35 lg:hidden">
-            <div className="h-full w-[270px] border-r border-slate-200 bg-white shadow-xl">
-              <div className="flex items-center justify-end border-b border-slate-200 px-4 py-3">
+            <div className="h-full w-[270px] border-r border-purple-200 bg-white shadow-xl">
+              <div className="flex items-center justify-end border-b border-purple-200 px-4 py-3">
                 <button
                   onClick={() => setMobileSidebarOpen(false)}
                   className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
@@ -330,7 +330,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ) : null}
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
+          <header className="sticky top-0 z-20 border-b border-purple-200 bg-white">
             <div className="flex min-h-[70px] items-center gap-3 px-4 md:px-6">
               <button
                 onClick={() => setMobileSidebarOpen(true)}
@@ -354,7 +354,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <button
                     type="button"
                     onClick={() => canAccessAllZones && setZoneMenuOpen((value) => !value)}
-                    className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-2 text-left transition hover:bg-slate-50"
+                    className="flex items-center gap-3 rounded-lg border border-purple-200 px-4 py-2 text-left transition hover:bg-slate-50"
                   >
                     <div>
                       <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
@@ -365,7 +365,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {canAccessAllZones ? <ChevronDown className="h-4 w-4 text-slate-400" /> : null}
                   </button>
                   {zoneMenuOpen && canAccessAllZones ? (
-                    <div className="absolute right-0 z-30 mt-2 w-72 rounded-[18px] border border-slate-200 bg-white p-2 shadow-lg">
+                    <div className="absolute right-0 z-30 mt-2 w-72 rounded-[18px] border border-purple-200 bg-white p-2 shadow-lg">
                       <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone Switch</div>
                       <div className="space-y-1">
                         {zoneOptions.map((item) => (
@@ -375,14 +375,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             onClick={() => handleSwitchZone(item)}
                             className={`w-full rounded-xl px-3 py-2 text-left text-sm transition ${
                               currentZone.key === item.key
-                                ? 'bg-[#eef1ff] font-semibold text-[#5d87ff]'
+                                ? 'bg-purple-100 font-semibold text-purple-700'
                                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                             }`}
                           >
                             {item.label}
                           </button>
                         ))}
-                        <div className="border-t border-slate-200 pt-2">
+                        <div className="border-t border-purple-200 pt-2">
                           <Link href="/my-zone-details" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
                             My Zone Details
                           </Link>
@@ -397,7 +397,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                   ) : null}
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#5d87ff] text-sm font-semibold text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-700 text-sm font-semibold text-white">
                   J
                 </div>
               </div>

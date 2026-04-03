@@ -63,7 +63,7 @@ export default function UsersCountPage() {
   if (isLoading) {
     return (
       <div className="card p-10 text-center">
-        <Loader className="mx-auto h-6 w-6 animate-spin text-[#5d87ff]" />
+        <Loader className="mx-auto h-6 w-6 animate-spin text-purple-700" />
       </div>
     )
   }

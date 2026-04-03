@@ -220,7 +220,7 @@ export default function JobsPage() {
               <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
                 <div className="flex items-center justify-between">
                   <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{label}</div>
-                  <Icon className="h-4 w-4 text-[#5B6CFF]" />
+                  <Icon className="h-4 w-4 text-purple-700" />
                 </div>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
               </div>
@@ -340,7 +340,7 @@ export default function JobsPage() {
 
       {isLoading ? (
         <div className="card p-6 text-center">
-          <Loader className="w-6 h-6 animate-spin mx-auto text-[#5B6CFF]" />
+              <Loader className="w-6 h-6 animate-spin mx-auto text-purple-700" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -361,7 +361,7 @@ export default function JobsPage() {
                     }`}>
                       {job.status}
                     </span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-[#eef1ff] text-[#5B6CFF]">
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-50 text-purple-700">
                       {job.type}
                     </span>
                     <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
@@ -501,7 +501,7 @@ export default function JobsPage() {
                     <div className="mt-3 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                       <div className="flex items-center justify-between gap-3">
                         <div className="font-semibold text-slate-900">Installation OTP Demo</div>
-                        <div className="font-mono text-sm text-[#5B6CFF]">{job.completionOtpDemo || '-'}</div>
+                        <div className="font-mono text-sm text-purple-700">{job.completionOtpDemo || '-'}</div>
                       </div>
                       {job.completionOtpSmsPreview ? <div className="mt-2 whitespace-pre-wrap">{job.completionOtpSmsPreview}</div> : null}
                     </div>

@@ -274,7 +274,7 @@ function UserManagementWorkspace() {
       <section className="card p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-sm font-semibold text-[#4aa7ff]">Customer Ops</div>
+            <div className="text-sm font-semibold text-purple-700">Customer Ops</div>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900">User Management</h1>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -390,14 +390,14 @@ function UserManagementWorkspace() {
 
           {isLoading ? (
             <div className="card p-10 text-center">
-              <Loader className="mx-auto h-6 w-6 animate-spin text-[#5d87ff]" />
+              <Loader className="mx-auto h-6 w-6 animate-spin text-purple-700" />
             </div>
           ) : (
             <section className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-[840px] w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-[0.16em] text-slate-500">
+                                    <tr className="border-b border-purple-200 bg-purple-50 text-left text-xs uppercase tracking-[0.16em] text-slate-500">
                       <th className="px-4 py-4">
                         <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAllVisible} aria-label="Select all visible users" />
                       </th>
@@ -430,7 +430,7 @@ function UserManagementWorkspace() {
                               <span className={`inline-block h-2.5 w-2.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-400' : 'bg-slate-300'}`} />
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-semibold text-[#2a8cff] cursor-pointer" onClick={() => router.push(`/customers/${customer.id}`)}>
+                          <td className="px-4 py-3 font-semibold text-purple-700 cursor-pointer" onClick={() => router.push(`/customers/${customer.id}`)}>
                             <Link href={`/customers/${customer.id}`}>{customer.pppoeUsername || customer.customerId || customer.id}</Link>
                           </td>
                           <td className="px-4 py-3">
@@ -447,7 +447,7 @@ function UserManagementWorkspace() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
-                              <Link href={`/customers/${customer.id}`} className="rounded-md bg-[#eef7ff] px-3 py-2 text-xs font-semibold text-[#2a8cff]">
+                              <Link href={`/customers/${customer.id}`} className="rounded-md bg-purple-100 px-3 py-2 text-xs font-semibold text-purple-700">
                                 Customer
                               </Link>
                               <Link href={`/customers/${customer.id}?tab=billing`} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">

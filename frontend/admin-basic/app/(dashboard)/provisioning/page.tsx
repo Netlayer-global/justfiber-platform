@@ -87,7 +87,7 @@ const styles = {
     padding: '12px 18px',
     borderRadius: 18,
     border: '1px solid rgba(91,108,255,0.45)',
-    background: '#5B6CFF',
+    background: '#7c3aed',
     color: '#ffffff',
     fontWeight: 700,
   } satisfies CSSProperties,
@@ -455,7 +455,7 @@ export default function ProvisioningPage() {
 
       {isLoading ? (
         <div className="card p-8 text-center">
-          <Loader className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
+              <Loader className="mx-auto h-6 w-6 animate-spin text-purple-700" />
         </div>
       ) : (
         <section className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
@@ -476,7 +476,7 @@ export default function ProvisioningPage() {
                     className="w-full p-4 text-left transition"
                     style={{
                       ...styles.surface,
-                                borderColor: selected ? '#5B6CFF' : '#e2e8f0',
+                                borderColor: selected ? '#7c3aed' : '#e2e8f0',
                                 background: selected ? '#eef1ff' : '#ffffff',
                               }}
                   >
@@ -676,7 +676,7 @@ export default function ProvisioningPage() {
               </div>
             ) : (
               <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
-                <ShieldCheck className="mx-auto h-10 w-10 text-[#5B6CFF]" />
+                <ShieldCheck className="mx-auto h-10 w-10 text-purple-700" />
                 <div className="mt-4 text-lg font-semibold text-slate-900">No plan selected</div>
                 <div className="mt-2 text-sm">Pick a plan from the left to maintain its activation template.</div>
               </div>
