@@ -11,30 +11,25 @@ export function getRedisConnection() {
         maxRetriesPerRequest: null,
         enableReadyCheck: false,
         enableOfflineQueue: true,
-        retryStrategy: (times) => {
-          if (times > 3) {
-            connectionError = new Error("Redis connection failed after 3 retries - Redis may not be running");
-            console.warn("[REDIS] Connection failed, queue operations will be disabled:", connectionError.message);
-            return null;
-          }
-          return Math.min(times * 50, 500);
-        }
+        lazyConnect: true,
+        retryStrategy: () => null,
+        reconnectOnError: () => false,
+        showFriendlyErrorStack: false
       });
 
-      connection.on("error", (err) => {
-        if (!connectionError) {
-          connectionError = err;
-          console.warn("[REDIS] Connection error:", err.message);
-        }
+      connection.on("error", () => {
+        connectionError = true;
       });
 
       connection.on("connect", () => {
         connectionError = null;
-        console.log("[REDIS] Connected successfully");
+      });
+
+      connection.connect().catch(() => {
+        connectionError = true;
       });
     } catch (err) {
-      connectionError = err;
-      console.warn("[REDIS] Failed to initialize:", err.message);
+      connectionError = true;
     }
   }
   return connection;
