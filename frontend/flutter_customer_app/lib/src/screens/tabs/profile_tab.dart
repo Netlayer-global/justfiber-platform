@@ -94,6 +94,7 @@ class _ProfileTabState extends State<ProfileTab> {
                             final requestNumber = await appState.requestPlanChange(
                               planCode: selectedPlanCode!,
                               effectiveMode: 'next_cycle',
+                              billingTerm: 'monthly',
                             );
                             if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
