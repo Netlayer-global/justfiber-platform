@@ -1,11 +1,13 @@
 import { z } from "zod";
 
 export const sendOtpSchema = z.object({
+  identifier: z.string().min(2).optional(),
   mobile: z.string().min(8).optional(),
   email: z.string().email().optional()
 });
 
 export const verifyOtpSchema = z.object({
+  identifier: z.string().min(2).optional(),
   mobile: z.string().min(8).optional(),
   email: z.string().email().optional(),
   otp: z.string().length(6),

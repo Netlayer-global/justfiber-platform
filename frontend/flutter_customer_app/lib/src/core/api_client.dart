@@ -126,14 +126,22 @@ class ApiClient {
     return items.first;
   }
 
-  Future<void> sendOtp(String mobile) async {
-    await _request('/api/v1/customer/auth/send-otp', method: 'POST', body: {'mobile': mobile});
+  Future<void> sendOtp(String identifier) async {
+    final value = identifier.trim();
+    final body = value.contains('@')
+        ? {'email': value, 'identifier': value}
+        : {'mobile': value, 'identifier': value};
+    await _request('/api/v1/customer/auth/send-otp', method: 'POST', body: body);
   }
 
-  Future<CustomerSession> verifyOtp(String mobile, String otp) async {
-    final data = _asMap(await _request('/api/v1/customer/auth/verify-otp', method: 'POST', body: {'mobile': mobile, 'otp': otp}));
+  Future<CustomerSession> verifyOtp(String identifier, String otp) async {
+    final value = identifier.trim();
+    final body = value.contains('@')
+        ? {'email': value, 'identifier': value, 'otp': otp}
+        : {'mobile': value, 'identifier': value, 'otp': otp};
+    final data = _asMap(await _request('/api/v1/customer/auth/verify-otp', method: 'POST', body: body));
     return CustomerSession(
-      mobile: mobile,
+      mobile: value,
       accessToken: (data['accessToken'] ?? '').toString(),
       refreshToken: (data['refreshToken'] ?? '').toString(),
     );

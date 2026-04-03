@@ -15,6 +15,26 @@ class _LoginScreenState extends State<LoginScreen> {
   final otpControllers = List.generate(6, (_) => TextEditingController());
   bool otpRequested = false;
 
+  String get _otpValue => otpControllers.map((controller) => controller.text).join();
+
+  Future<void> _handlePrimaryAction(AppState appState) async {
+    final identifier = identifierController.text.trim();
+    if (identifier.isEmpty) return;
+    if (_otpValue.length == 6) {
+      final ok = await appState.verifyOtp(identifier, _otpValue);
+      if (!mounted) return;
+      if (!ok) {
+        setState(() => otpRequested = true);
+      }
+      return;
+    }
+    await appState.requestOtp(identifier);
+    if (!mounted) return;
+    if ((appState.error ?? '').isEmpty) {
+      setState(() => otpRequested = true);
+    }
+  }
+
   @override
   void dispose() {
     identifierController.dispose();
@@ -103,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: identifierController,
                           keyboardType: TextInputType.phone,
                           decoration: const InputDecoration(
-                            labelText: 'Account ID or mobile number',
+                            labelText: 'Mobile, customer ID, account ID, or email',
                             prefixIcon: Icon(Icons.person_outline_rounded),
                           ),
                         ),
@@ -111,16 +131,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton(
-                            onPressed: appState.busy
-                                ? null
-                                : () async {
-                                    await appState.requestOtp(identifierController.text.trim());
-                                    if (!mounted) return;
-                                    if ((appState.error ?? '').isEmpty && (appState.demoOtp ?? '').isNotEmpty) {
-                                      setState(() => otpRequested = true);
-                                    }
-                                  },
-                            child: Text(appState.busy && !otpRequested ? 'Sending OTP...' : 'Get OTP'),
+                            onPressed: appState.busy ? null : () => _handlePrimaryAction(appState),
+                            child: Text(
+                              appState.busy
+                                  ? (_otpValue.length == 6 ? 'Verifying...' : 'Sending OTP...')
+                                  : (_otpValue.length == 6 ? 'Verify & Log In' : 'Send OTP'),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -197,24 +213,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: const Text('Resend OTP'),
                         ),
                         const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.tonal(
-                            onPressed: appState.busy
-                                ? null
-                                : () => appState.verifyOtp(
-                                      identifierController.text.trim(),
-                                      otpControllers.map((controller) => controller.text).join(),
-                                    ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFF3E8FF),
-                              foregroundColor: const Color(0xFF8126CF),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        if (!otpRequested)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Tap Send OTP, then enter the 6-digit code in the same screen.',
+                              style: theme.textTheme.bodySmall,
+                              textAlign: TextAlign.center,
                             ),
-                            child: Text(appState.busy && otpRequested ? 'Verifying...' : 'Verify & Log In'),
                           ),
-                        ),
                         if ((appState.demoOtp ?? '').isNotEmpty) ...[
                           const SizedBox(height: 12),
                           Text('Demo OTP: ${appState.demoOtp}', style: theme.textTheme.bodyMedium),

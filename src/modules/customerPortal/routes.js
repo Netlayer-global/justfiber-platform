@@ -86,6 +86,52 @@ import {
 export const customerPortalRouter = Router();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function normalizeAuthIdentifier(value = "") {
+  return String(value || "").trim();
+}
+
+async function resolveAuthIdentity(payload = {}) {
+  const identifier = normalizeAuthIdentifier(payload.identifier);
+  const directMobile = normalizeAuthIdentifier(payload.mobile);
+  const directEmail = normalizeAuthIdentifier(payload.email).toLowerCase();
+  if (directMobile || directEmail) {
+    return {
+      mobile: directMobile,
+      email: directEmail,
+      fullName: payload.fullName || "",
+    };
+  }
+  if (!identifier) {
+    return { mobile: "", email: "", fullName: payload.fullName || "" };
+  }
+  if (identifier.includes("@")) {
+    return { email: identifier.toLowerCase(), mobile: "", fullName: payload.fullName || "" };
+  }
+  const customer = await Customer.findOne({
+    $or: [
+      { customerId: identifier },
+      { accountNumber: identifier },
+      { serviceId: identifier },
+      { mobile: identifier },
+      { phone: identifier },
+      { email: identifier.toLowerCase() }
+    ]
+  }).lean();
+  if (customer) {
+    return {
+      mobile: String(customer.mobile || customer.phone || "").trim(),
+      email: String(customer.email || "").trim().toLowerCase(),
+      fullName: String(customer.fullName || payload.fullName || "").trim(),
+      linkedCustomerId: String(customer.customerId || "").trim(),
+    };
+  }
+  return {
+    mobile: /^\d{8,}$/.test(identifier) ? identifier : "",
+    email: "",
+    fullName: payload.fullName || "",
+  };
+}
+
 function normalizeZoneCode(value) {
   return String(value || "")
     .trim()
@@ -1364,28 +1410,30 @@ customerPortalRouter.post(
   "/auth/send-otp",
   asyncHandler(async (req, res) => {
     const payload = sendOtpSchema.parse(req.body);
-    if (!payload.mobile && !payload.email) {
+    const identity = await resolveAuthIdentity(payload);
+    if (!identity.mobile && !identity.email) {
       throw new ApiError(400, "Mobile or email required");
     }
-    const key = normalizeCustomerPortalOtpKey(payload.mobile || payload.email);
+    const key = normalizeCustomerPortalOtpKey(identity.mobile || identity.email);
     const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
     setCustomerPortalDemoOtp(key, otp);
-    if (payload.mobile) {
+    if (identity.mobile) {
       await notificationDispatcher.dispatchEvent({
         eventKey: "verification_code",
-        recipients: { sms: payload.mobile },
+        recipients: { sms: identity.mobile },
         subject: "JustFiber verification code",
         body: `Your JustFiber verification code is ${otp}. It is valid for 10 minutes.`,
         entityType: "customer_auth",
         entityId: key,
         metadata: {
-          mobile: payload.mobile,
+          mobile: identity.mobile,
           purpose: "customer_login_otp"
         }
       });
     }
     return ok(res, {
       sent: true,
+      identifier: identity.mobile || identity.email,
       ...(env.EXPOSE_DEMO_OTP ? { demoOtp: otp } : {})
     });
   })
@@ -1395,22 +1443,28 @@ customerPortalRouter.post(
   "/auth/verify-otp",
   asyncHandler(async (req, res) => {
     const payload = verifyOtpSchema.parse(req.body);
-    const key = normalizeCustomerPortalOtpKey(payload.mobile || payload.email);
+    const identity = await resolveAuthIdentity(payload);
+    const key = normalizeCustomerPortalOtpKey(identity.mobile || identity.email);
     if (!key || !verifyCustomerPortalDemoOtp(key, payload.otp)) {
       throw new ApiError(400, "Invalid OTP");
     }
     const identityClauses = [
-      ...(payload.mobile ? [{ mobile: payload.mobile }] : []),
-      ...(payload.email ? [{ email: payload.email }] : [])
+      ...(identity.mobile ? [{ mobile: identity.mobile }] : []),
+      ...(identity.email ? [{ email: identity.email }] : [])
     ];
     let user = identityClauses.length ? await CustomerUser.findOne({ $or: identityClauses }) : null;
     if (!user) {
       user = await CustomerUser.create({
-        mobile: payload.mobile,
-        email: payload.email,
-        fullName: payload.fullName,
-        authMode: payload.mobile ? "mobile_otp" : "email_otp"
+        mobile: identity.mobile || undefined,
+        email: identity.email || undefined,
+        fullName: identity.fullName || payload.fullName,
+        authMode: identity.mobile ? "mobile_otp" : "email_otp",
+        linkedCustomerIds: identity.linkedCustomerId ? [identity.linkedCustomerId] : []
       });
+    } else if (identity.linkedCustomerId && !user.linkedCustomerIds?.includes(identity.linkedCustomerId)) {
+      user.linkedCustomerIds = [...(user.linkedCustomerIds || []), identity.linkedCustomerId];
+      if (!user.fullName && identity.fullName) user.fullName = identity.fullName;
+      await user.save();
     }
     const accessToken = signCustomerAccessToken(user);
     const refreshToken = signCustomerRefreshToken(user);
