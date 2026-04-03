@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../widgets/app_card.dart';
+import '../notifications_screen.dart';
+import '../plan_catalog_screen.dart';
+import '../service_tracking_screen.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -147,6 +150,40 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
         ),
         const SizedBox(height: 18),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('More tools', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _shortcutButton(
+                    context,
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Plans',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen())),
+                  ),
+                  _shortcutButton(
+                    context,
+                    icon: Icons.track_changes_rounded,
+                    label: 'Tracking',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen())),
+                  ),
+                  _shortcutButton(
+                    context,
+                    icon: Icons.notifications_active_rounded,
+                    label: 'Notifications',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
         FilledButton.tonal(
           onPressed: appState.logout,
           child: const Text('Logout'),
@@ -182,6 +219,19 @@ class _ProfileTabState extends State<ProfileTab> {
           Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600))),
         ],
       ),
+    );
+  }
+
+  Widget _shortcutButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return FilledButton.tonalIcon(
+      onPressed: onTap,
+      icon: Icon(icon),
+      label: Text(label),
     );
   }
 }

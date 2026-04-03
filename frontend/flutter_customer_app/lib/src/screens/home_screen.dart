@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/gradient_orb_background.dart';
+import 'billing_history_screen.dart';
+import 'service_hub_screen.dart';
+import 'support_history_screen.dart';
 import 'tabs/home_tab.dart';
-import 'tabs/points_tab.dart';
 import 'tabs/profile_tab.dart';
-import 'tabs/stats_tab.dart';
-import 'tabs/shop_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,9 +21,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final pages = [
       HomeTab(onNavigate: _openTab),
-      const StatsTab(),
-      const ShopTab(),
-      const PointsTab(),
+      const BillingHistoryScreen(),
+      const ServiceHubScreen(),
+      const SupportHistoryScreen(),
       const ProfileTab(),
     ];
     return Scaffold(
