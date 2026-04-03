@@ -50,6 +50,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
     final blockedCount = appState.connectedDevices.where((device) => device.blocked).length;
     final allowedCount = appState.connectedDevices.where((device) => !device.blocked).length;
     final connectedCount = appState.connectedDevices.isNotEmpty ? appState.connectedDevices.length : wifi.connectedDevicesCount;
+    final parentalRulesCount = appState.parentalRules.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -139,6 +140,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     _statusChip('Allowed devices', '$allowedCount'),
                     _statusChip('Blocked devices', '$blockedCount'),
                     _statusChip('Guest Wi-Fi', wifi.guestEnabled ? 'On' : 'Off'),
+                    _statusChip('Parental rules', '$parentalRulesCount'),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -171,6 +173,12 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   title: 'Guest Wi-Fi',
                   subtitle: 'Set a separate name and password for your guests',
                   onTap: () => _showGuestWifiSheet(context, appState),
+                ),
+                _actionTile(
+                  icon: Icons.family_restroom_rounded,
+                  title: 'Parental controls',
+                  subtitle: 'Create internet pause schedules and restrictions for selected devices',
+                  onTap: () => _showParentalControlsSheet(context, appState),
                 ),
                 _actionTile(
                   icon: Icons.restart_alt_rounded,
