@@ -4,297 +4,168 @@ import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../widgets/app_card.dart';
 
-class ProfileTab extends StatelessWidget {
+class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
+
+  @override
+  State<ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<ProfileTab> {
+  String? selectedPlanCode;
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
     final dashboard = appState.dashboard;
-    final wifi = appState.wifi;
-    final theme = Theme.of(context);
-    final connections = appState.connections;
-    CustomerConnection? selectedConnection;
-    for (final item in connections) {
-      if (item.customerId == appState.selectedCustomerId) {
-        selectedConnection = item;
-        break;
-      }
-    }
-    final billingCycleLabel = billing.billCycle.isEmpty ? '-' : billing.billCycle;
-    final nextBillDateLabel = billing.nextBillDate.isEmpty ? 'Will update after activation' : billing.nextBillDate;
-    final recurringAmountLabel = billing.lastPaymentAmount > 0
-        ? 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'
-        : 'Rs ${billing.dueAmount.toStringAsFixed(0)}';
-    final billingStateLabel = billing.customerStateLabel;
+    final planOptions = appState.planChangeOptions;
+    selectedPlanCode ??= planOptions.firstOrNull?.planCode;
 
-    return RefreshIndicator(
-      color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFFF6F1EB),
-      onRefresh: appState.refresh,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
-        children: [
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 130),
+      children: [
+        Text('Profile', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 18),
         AppCard(
-          color: const Color(0xFFFFFFFF),
-          borderColor: const Color(0x228224E3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ACCOUNT CONSOLE',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF8224E3),
-                    letterSpacing: 2.6,
-                    fontWeight: FontWeight.w700,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF8126CF), Color(0xFFC284FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Account detail', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
+              const SizedBox(height: 12),
+              _heroRow('Customer', dashboard.customerName),
+              _heroRow('Current plan', billing.currentPlan),
+              _heroRow('Status', billing.paymentStatus),
+              _heroRow('Due date', billing.nextBillDate),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Billing snapshot', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              _row('Latest bill', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
+              _row('Last payment', 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'),
+              _row('Payment status', billing.paymentStatus),
+              _row('Bill cycle', billing.billCycle),
+              _row('Generated date', billing.generatedDate.isEmpty ? '-' : billing.generatedDate),
+              _row('Last paid on', billing.lastPaymentDate.isEmpty ? '-' : billing.lastPaymentDate),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Plan change', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              if (planOptions.isEmpty)
+                const Text('No alternate plans available right now.')
+              else ...[
+                DropdownButtonFormField<String>(
+                  value: selectedPlanCode,
+                  items: planOptions
+                      .map(
+                        (plan) => DropdownMenuItem(
+                          value: plan.planCode,
+                          child: Text('${plan.name} - ${plan.speedMbps.toStringAsFixed(0)} Mbps'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(() => selectedPlanCode = value),
+                  decoration: const InputDecoration(labelText: 'Choose new plan'),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: appState.busy || selectedPlanCode == null
+                        ? null
+                        : () async {
+                            final requestNumber = await appState.requestPlanChange(
+                              planCode: selectedPlanCode!,
+                              effectiveMode: 'next_cycle',
+                            );
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  requestNumber != null && requestNumber.isNotEmpty
+                                      ? 'Plan change requested: $requestNumber'
+                                      : (appState.error ?? 'Plan change failed'),
+                                ),
+                              ),
+                            );
+                          },
+                    child: const Text('Request plan change'),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  dashboard.customerName.isEmpty ? 'Customer account' : dashboard.customerName,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFF131313),
-                    fontSize: 28,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  appState.session?.mobile ?? '-',
-                  style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Your account console for connection, billing, and registered service details.',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFF6E6A67)),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _topMetric('Plan', billing.currentPlan.isEmpty ? '-' : billing.currentPlan)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _topMetric('Mode', billing.billMode.isEmpty ? '-' : billing.billMode)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: _topMetric('Due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}')),
-                    const SizedBox(width: 10),
-                    Expanded(child: _topMetric('Billing', billingStateLabel)),
-                  ],
                 ),
               ],
-            ),
+            ],
           ),
+        ),
         const SizedBox(height: 18),
-        if (connections.length > 1) ...[
-          _sectionCard(
-            title: 'My connections',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Use one login to manage all linked broadband connections.',
-                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                ),
-                const SizedBox(height: 14),
-                for (final item in connections)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () => appState.selectConnection(item.customerId),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: item.customerId == appState.selectedCustomerId ? const Color(0xFFF8F4FF) : const Color(0xFFFFFFFF),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: item.customerId == appState.selectedCustomerId ? const Color(0xFF8224E3) : const Color(0x228224E3),
-                          ),
-                        ),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Requests', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              ...(appState.requests.isEmpty
+                  ? [const Text('No recent requests.')]
+                  : appState.requests.take(5).map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
                         child: Row(
                           children: [
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    item.planName.isEmpty ? item.customerId : item.planName,
-                                    style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
-                                  ),
+                                  Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    item.serviceId.isEmpty ? item.customerId : item.serviceId,
-                                    style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.address.isEmpty ? 'Address unavailable' : item.address,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
-                                  ),
+                                  Text(item.createdAt, style: const TextStyle(color: Color(0xFF6F7280), fontSize: 12)),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                if (item.customerId == appState.selectedCustomerId)
-                                  const Text('Active', style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800)),
-                                Text(
-                                  'Rs ${item.dueAmount.toStringAsFixed(0)}',
-                                  style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
-                                ),
-                              ],
-                            ),
+                            Text(item.status, style: const TextStyle(color: Color(0xFF8126CF))),
                           ],
                         ),
                       ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-        ],
-        _sectionCard(
-          title: 'Account information',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _row('Customer name', dashboard.customerName.isEmpty ? '-' : dashboard.customerName),
-              _row('Registered mobile', appState.session?.mobile ?? '-'),
-              _row('Connection ID', selectedConnection?.serviceId.isEmpty == false ? selectedConnection!.serviceId : '-'),
-              _row('Connection name', dashboard.wifiName.isEmpty ? '-' : dashboard.wifiName),
-              _row('Current plan', billing.currentPlan.isEmpty ? '-' : billing.currentPlan),
-              _row('Billing mode', billing.billMode.isEmpty ? '-' : billing.billMode),
-              _row('Wi-Fi name', wifi.ssid24.isEmpty ? '-' : wifi.ssid24),
-              _row('Connected devices', '${wifi.connectedDevicesCount}'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        _sectionCard(
-          title: 'Account status',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _row('Billing state', billingStateLabel),
-              _row('Payment status', billing.paymentStatus.isEmpty ? '-' : billing.paymentStatus),
-              _row('Due amount', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
-              _row('Next bill date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate),
-              _row('Last payment date', billing.lastPaymentDate.isEmpty ? '-' : billing.lastPaymentDate),
-              _row('Last payment amount', 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'),
-              _row('Current bill cycle', billing.billCycle.isEmpty ? '-' : billing.billCycle),
-              _row('Loyalty points', '${dashboard.points}'),
-              _row('Active days', '${dashboard.activeDays}'),
-              if ((appState.error ?? '').isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Text(appState.error!, style: const TextStyle(color: Color(0xFFD81F26), fontWeight: FontWeight.w700)),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        _sectionCard(
-          title: 'Tenure and billing cycle',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F4FF),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0x228224E3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Commercial tenure snapshot',
-                            style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFFFFF),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: const Color(0x228224E3)),
-                          ),
-                          child: Text(
-                            billingCycleLabel,
-                            style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Your active connection follows this billing tenure and recurring commercial cycle.',
-                      style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                    ),
-                    const SizedBox(height: 14),
-                    _row('Recurring amount', recurringAmountLabel),
-                    _row('Next bill / expiry', nextBillDateLabel),
-                    _row('Cycle label', billingCycleLabel),
-                  ],
-                ),
-              ),
+                    )),
             ],
           ),
         ),
         const SizedBox(height: 18),
         FilledButton.tonal(
           onPressed: appState.logout,
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-          ),
           child: const Text('Logout'),
         ),
+        if ((appState.error ?? '').isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(appState.error!, style: const TextStyle(color: Color(0xFFB41340))),
         ],
-      ),
+      ],
     );
   }
 
-  Widget _topMetric(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _heroRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
-          const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionCard({required String title, required Widget child}) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
-          const SizedBox(height: 14),
-          child,
+          Text(label, style: const TextStyle(color: Colors.white70)),
+          const Spacer(),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -302,39 +173,18 @@ class ProfileTab extends StatelessWidget {
 
   Widget _row(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F4FF),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0x228224E3)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Flexible(
-              child: Text(
-                value,
-                textAlign: TextAlign.right,
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313)),
-              ),
-            ),
-          ],
-        ),
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF6F7280))),
+          const Spacer(),
+          Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600))),
+        ],
       ),
     );
   }
 }
 
-
-
-
-
-
+extension on List<PlanItem> {
+  PlanItem? get firstOrNull => isEmpty ? null : first;
+}

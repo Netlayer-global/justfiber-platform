@@ -1,974 +1,135 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../widgets/app_card.dart';
-import '../job_detail_screen.dart';
 
 class JobsTab extends StatefulWidget {
-  const JobsTab({
-    super.key,
-    this.initialQueueFilter = 'all',
-  });
-
-  final String initialQueueFilter;
+  const JobsTab({super.key});
 
   @override
   State<JobsTab> createState() => _JobsTabState();
 }
 
 class _JobsTabState extends State<JobsTab> {
-  final _searchController = TextEditingController();
-  late String _queueFilter = widget.initialQueueFilter;
-
-  @override
-  void didUpdateWidget(covariant JobsTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialQueueFilter != widget.initialQueueFilter && widget.initialQueueFilter != _queueFilter) {
-      _searchController.clear();
-      _queueFilter = widget.initialQueueFilter;
-    }
-  }
+  final serialController = TextEditingController(text: 'ALCLB3DCCB87');
 
   @override
   void dispose() {
-    _searchController.dispose();
+    serialController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
-    final theme = Theme.of(context);
-    final search = _searchController.text.trim().toLowerCase();
-    final filteredJobs = _filterJobs(appState.jobs, search);
-    final installationJobs = filteredJobs.where((job) => job.jobType != 'complaint' && !['completed', 'deferred', 'cancelled'].contains(job.status)).toList();
-    final complaintJobs = filteredJobs.where((job) => job.jobType == 'complaint' && !['completed', 'deferred', 'cancelled'].contains(job.status)).toList();
-    final deferredJobs = filteredJobs.where((job) => job.status == 'deferred').toList();
-    final completedJobs = filteredJobs.where((job) => job.status == 'completed').toList();
-    final cancelledJobs = filteredJobs.where((job) => job.status == 'cancelled').toList();
-    final liveInstalls = installationJobs.length;
-    final liveComplaints = complaintJobs.length;
-    final exceptionJobs = [...installationJobs, ...complaintJobs].where((job) => job.configStatus == 'failed').length + deferredJobs.length;
-    final hasFilters = search.isNotEmpty || _queueFilter != 'all';
-
-    return RefreshIndicator(
-      color: const Color(0xFF8224E3),
-      backgroundColor: const Color(0xFFF7F8FC),
-      onRefresh: appState.refresh,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
-        children: [
-          AppCard(
-            color: const Color(0xFFFFFFFF),
-            borderColor: const Color(0x140F172A),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x140F172A)),
-                      ),
-                      child: const Icon(Icons.assignment_rounded, color: Color(0xFF8224E3), size: 28),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x140F172A)),
-                      ),
-                      child: Text(
-                        '${installationJobs.length + complaintJobs.length} active',
-                        style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'FIELD JOBS',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF8224E3),
-                        letterSpacing: 2.6,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                Text('Dispatch queue', style: theme.textTheme.headlineSmall?.copyWith(color: const Color(0xFF131313))),
-                const SizedBox(height: 8),
-                Text(
-                  'Open any job card to continue the full field workflow: accept, travel, onsite, router link, activation, proof, OTP, and completion.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF6E6A67),
-                        height: 1.45,
-                      ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(child: _metricChip('Install', '$liveInstalls')),
-                    const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Complaint', '$liveComplaints')),
-                    const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Pending', '${deferredJobs.length}')),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: _metricChip('Completed', '${completedJobs.length}')),
-                    const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Cancelled', '${cancelledJobs.length}')),
-                    const SizedBox(width: 8),
-                    Expanded(child: _metricChip('Exceptions', '$exceptionJobs')),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _searchController,
-                  onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    labelText: 'Search jobs, phone, plan, address',
-                    prefixIcon: Icon(Icons.search_rounded),
-                  ),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _filterChip('All', 'all', filteredJobs.length),
-                    _filterChip('Install', 'install', installationJobs.length),
-                    _filterChip('Complaint', 'complaint', liveComplaints),
-                    _filterChip('Deferred', 'deferred', deferredJobs.length),
-                    _filterChip('Closed', 'closed', completedJobs.length),
-                    _filterChip('Cancelled', 'cancelled', cancelledJobs.length),
-                  ],
-                ),
-                if (hasFilters) ...[
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _queueFilter = 'all');
-                      },
-                      icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
-                      label: const Text('Clear filters'),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          if ((appState.error ?? '').isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: AppCard(
-                color: const Color(0xFFFFF5F5),
-                borderColor: const Color(0x66EF4444),
-                child: Text(
-                  appState.error!,
-                  style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-          if (appState.jobs.isEmpty)
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('No jobs available right now.', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Pull to refresh when dispatch assigns the next installation or complaint visit.',
-                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                  ),
-                ],
-              ),
-            )
-          else if (filteredJobs.isEmpty)
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('No jobs matched this queue.', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Try clearing the search or switching to another queue filter.',
-                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                  ),
-                ],
-              ),
-            )
-          else ...[
-            if (installationJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'INSTALLATION JOBS'),
-              ...installationJobs.map(
-                (job) => Padding(
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 130),
+      children: [
+        Text('Assigned Jobs', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 18),
+        ...(appState.jobs.isEmpty
+            ? [const AppCard(child: Text('No jobs available right now.'))]
+            : appState.jobs.map((job) => Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: _jobCard(context, appState, job),
-                ),
-              ),
-            ],
-            if (complaintJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'COMPLAINT JOBS'),
-              ...complaintJobs.map(
-                (job) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _jobCard(context, appState, job),
-                ),
-              ),
-            ],
-            if (deferredJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'PENDING / FOLLOW-UP JOBS'),
-              ...deferredJobs.map(
-                (job) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _jobCard(context, appState, job),
-                ),
-              ),
-            ],
-            if (completedJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'COMPLETED JOBS'),
-              ...completedJobs.map(
-                (job) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _jobCard(context, appState, job),
-                ),
-              ),
-            ],
-            if (cancelledJobs.isNotEmpty) ...[
-              _sectionLabel(context, 'CANCELLED INSTALLATIONS'),
-              ...cancelledJobs.map(
-                (job) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _jobCard(context, appState, job),
-                ),
-              ),
-            ],
-          ],
-        ],
-      ),
+                  child: _JobCard(job: job, serialController: serialController),
+                ))),
+      ],
     );
   }
+}
 
-  Future<void> _openJobWorkflow(BuildContext context, InstallerAppState appState, InstallerJob job) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
-    );
-    if (!mounted) return;
-    await appState.refresh();
-  }
+class _JobCard extends StatelessWidget {
+  const _JobCard({required this.job, required this.serialController});
 
-  Widget _sectionLabel(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF6E6A67),
-              letterSpacing: 2.8,
-              fontWeight: FontWeight.w700,
-            ),
-      ),
-    );
-  }
+  final InstallerJob job;
+  final TextEditingController serialController;
 
-  Widget _metricChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x140F172A)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 20,
-              color: Color(0xFF131313),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
+  @override
+  Widget build(BuildContext context) {
+    final appState = InstallerStateScope.of(context);
+    final preview = appState.selectedJobId == job.id ? appState.preview : null;
 
-  Widget _filterChip(String label, String value, int count) {
-    return ChoiceChip(
-      label: Text('$label ($count)'),
-      selected: _queueFilter == value,
-      onSelected: (_) => setState(() => _queueFilter = value),
-    );
-  }
-
-  Widget _jobCard(BuildContext context, InstallerAppState appState, InstallerJob job) {
-    final isComplaint = job.jobType == 'complaint';
-    final stageLabel = _stageLabel(job);
-    final primaryAction = _primaryActionLabel(job);
-    final hasConfigFailure = job.configStatus == 'failed';
-    final isDeferred = job.status == 'deferred';
-    final isCancelled = job.status == 'cancelled';
-    final hasPinnedLocation = job.latitude != null && job.longitude != null;
-    final nextVisitLabel = _nextVisitLabel(job);
-    final exceptionTone = hasConfigFailure || isDeferred ? const Color(0xFFB45309) : const Color(0xFF6E6A67);
-    final deferReason = _deferReasonLabel(job.subStatus);
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(28),
-      onTap: () => _openJobWorkflow(context, appState, job),
-      child: AppCard(
-        color: const Color(0xFFFFFFFF),
-        borderColor: const Color(0x140F172A),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x140F172A)),
-                  ),
-                  child: Icon(
-                    isComplaint ? Icons.build_circle_outlined : Icons.router_rounded,
-                    color: const Color(0xFF8224E3),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(job.jobNumber, style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 4),
-                      Text(
-                        job.customerName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: const Color(0xFF131313),
-                            ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (job.customerPhone.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          job.customerPhone,
-                          style: const TextStyle(
-                            color: Color(0xFF6E6A67),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isCancelled ? const Color(0xFFFEF2F2) : (isDeferred ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF)),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: isCancelled ? const Color(0xFFFCA5A5) : (isDeferred ? const Color(0xFFFCD34D) : const Color(0xFFD8B4FE))),
-                  ),
-                  child: Text(
-                    isCancelled ? 'Cancelled' : (isDeferred ? 'Follow-up required' : primaryAction),
-                    style: TextStyle(
-                      color: isCancelled ? const Color(0xFFB91C1C) : (isDeferred ? const Color(0xFFB45309) : const Color(0xFF8224E3)),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              job.customerAddress,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-            ),
-            if (job.planName.isNotEmpty || job.scheduledAt.isNotEmpty || nextVisitLabel != '-') ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (job.planName.isNotEmpty)
-                    Expanded(child: _infoBox('Plan', job.planName, icon: Icons.inventory_2_outlined)),
-                  if (job.planName.isNotEmpty && (job.scheduledAt.isNotEmpty || nextVisitLabel != '-')) const SizedBox(width: 10),
-                  if (job.scheduledAt.isNotEmpty)
-                    Expanded(child: _infoBox('Scheduled', _shortDate(job.scheduledAt), icon: Icons.schedule_rounded))
-                  else if (nextVisitLabel != '-')
-                    Expanded(child: _infoBox('Next step', nextVisitLabel, icon: Icons.arrow_circle_right_outlined)),
-                ],
-              ),
-              if (job.scheduledAt.isNotEmpty && nextVisitLabel != '-') ...[
-                const SizedBox(height: 10),
-                _infoBox('Next step', nextVisitLabel, icon: Icons.arrow_circle_right_outlined),
-              ],
-            ],
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _pill(isComplaint ? 'complaint' : 'installation'),
-                _pill(stageLabel),
-                if (isCancelled) _pill('cancelled'),
-                if (isDeferred) _pill('follow-up'),
-                _pill(_urgencyLabel(job)),
-              ],
-            ),
-            if (hasConfigFailure || isDeferred || isCancelled || job.latestEventCode.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E8),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: hasConfigFailure ? const Color(0x66F59E0B) : const Color(0x140F172A),
-                  ),
-                ),
-                child: Text(
-                  isCancelled
-                      ? 'This installation was cancelled. Open the job to review the cancellation note for refund follow-up.'
-                      : isDeferred
-                      ? 'This visit is marked for follow-up. Open the job to review the defer note and next steps.'
-                      : hasConfigFailure
-                      ? 'Router config failed. Open the job and retry activation.'
-                      : 'Latest event: ${job.latestEventCode.replaceAll('.', ' ')}',
-                  style: TextStyle(
-                    color: exceptionTone,
-                    fontWeight: FontWeight.w700,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-            ],
-            if (isCancelled && job.cancelNote.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFFCA5A5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cancellation note',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: const Color(0xFFB91C1C),
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      job.cancelNote,
-                      style: const TextStyle(color: Color(0xFF7F1D1D), height: 1.35),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            if (isDeferred && (deferReason != '-' || job.deferNote.isNotEmpty)) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFFCD34D)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Follow-up summary',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: const Color(0xFF92400E),
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (deferReason != '-')
-                      Text(
-                        'Reason: $deferReason',
-                        style: const TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w700),
-                      ),
-                    if (job.deferNote.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        job.deferNote,
-                        style: const TextStyle(color: Color(0xFF78350F), height: 1.35),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                if (hasPinnedLocation)
-                  OutlinedButton.icon(
-                    onPressed: () => _openMap(context, job),
-                    icon: const Icon(Icons.map_outlined, size: 18),
-                    label: const Text('Open map'),
-                  ),
-                if (job.customerPhone.isNotEmpty)
-                  OutlinedButton.icon(
-                    onPressed: () => _openCall(context, job.customerPhone),
-                    icon: const Icon(Icons.call_outlined, size: 18),
-                    label: const Text('Call customer'),
-                  ),
-                OutlinedButton.icon(
-                  onPressed: () => _copyCustomerPack(context, job),
-                  icon: const Icon(Icons.copy_all_rounded, size: 18),
-                  label: const Text('Copy customer'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _copyJobRefs(context, job),
-                  icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Copy refs'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _copyRoutePack(context, job),
-                  icon: const Icon(Icons.route_rounded, size: 18),
-                  label: const Text('Copy route pack'),
-                ),
-                if (isDeferred)
-                  OutlinedButton.icon(
-                    onPressed: appState.busy
-                        ? null
-                        : () => _runAction(
-                              context,
-                              appState,
-                              successMessage: 'Follow-up resumed',
-                              action: () async {
-                                await appState.api.resumeFollowUp(appState.session!, job.id);
-                                await appState.refresh();
-                                return true;
-                              },
-                            ),
-                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                    label: const Text('Resume revisit'),
-                  ),
-                OutlinedButton.icon(
-                  onPressed: appState.busy || !_canAccept(job)
-                      ? null
-                      : () => _runAction(
-                            context,
-                            appState,
-                            successMessage: 'Job accepted',
-                            action: () => appState.acceptJob(job.id),
-                          ),
-                  icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-                  label: const Text('Accept'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: appState.busy || !_canStartTravel(job)
-                      ? null
-                      : () => _runAction(
-                            context,
-                            appState,
-                            successMessage: 'Travel started',
-                            action: () => appState.startTravel(job.id),
-                          ),
-                  icon: const Icon(Icons.directions_car_outlined, size: 18),
-                  label: const Text('Start travel'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: appState.busy || !_canQuickPreview(job)
-                      ? null
-                      : () => _runAction(
-                            context,
-                            appState,
-                            successMessage: 'Preview loaded',
-                            action: () => appState.loadPreview(job.id),
-                          ),
-                  icon: const Icon(Icons.remove_red_eye_outlined, size: 18),
-                  label: const Text('Quick preview'),
-                ),
-                FilledButton.icon(
-                  onPressed: () => _openJobWorkflow(context, appState, job),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                  label: const Text('Open workflow'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoBox(String label, String value, {required IconData icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x140F172A)),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: const Color(0xFF8224E3)),
-              const SizedBox(width: 6),
-              Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 12)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(job.jobNumber, style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 4),
+                    Text(job.customerName, style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(job.customerAddress, style: Theme.of(context).textTheme.bodyMedium),
+                    const SizedBox(height: 6),
+                    Text(job.jobType, style: Theme.of(context).textTheme.labelMedium),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3E8FF),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(job.status, style: const TextStyle(color: Color(0xFF8126CF), fontWeight: FontWeight.w700)),
+              ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+          const SizedBox(height: 14),
+          TextField(
+            controller: serialController,
+            decoration: const InputDecoration(labelText: 'ONT Serial'),
           ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton(
+                onPressed: appState.busy ? null : () => appState.loadPreview(job.id),
+                child: const Text('Preview'),
+              ),
+              FilledButton.tonal(
+                onPressed: appState.busy ? null : () => appState.runActivationFlow(job.id, serialController.text),
+                child: Text(appState.busy ? 'Running...' : 'Activate'),
+              ),
+            ],
+          ),
+          if (preview != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6F2FF),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Preview - ${preview.brand}', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 10),
+                  Text('PPPoE: ${preview.pppoeUsername} / ${preview.pppoePassword}'),
+                  const SizedBox(height: 6),
+                  Text('Wi-Fi: ${preview.ssid24} / ${preview.ssid5}'),
+                  const SizedBox(height: 6),
+                  Text('Password: ${preview.wifiPassword}'),
+                  const SizedBox(height: 6),
+                  Text('VLAN: ${preview.vlanId}'),
+                ],
+              ),
+            ),
+          ],
+          if ((appState.error ?? '').isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(appState.error!, style: const TextStyle(color: Colors.redAccent)),
+          ],
         ],
       ),
     );
-  }
-
-  Widget _pill(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x140F172A)),
-      ),
-      child: Text(
-        label[0].toUpperCase() + label.substring(1),
-        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700, fontSize: 12),
-      ),
-    );
-  }
-
-  Future<void> _runAction(
-    BuildContext context,
-    InstallerAppState appState, {
-    required String successMessage,
-    required Future<bool> Function() action,
-  }) async {
-    final ok = await action();
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? successMessage : (appState.error ?? 'Action failed')),
-      ),
-    );
-  }
-
-  Future<void> _openMap(BuildContext context, InstallerJob job) async {
-    final url = job.mapUrl.isNotEmpty
-        ? job.mapUrl
-        : 'https://maps.google.com/?q=${job.latitude},${job.longitude}';
-    final uri = Uri.tryParse(url);
-    if (uri == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location link is not available right now.')),
-      );
-      return;
-    }
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open job location right now.')),
-      );
-    }
-  }
-
-  Future<void> _openCall(BuildContext context, String phone) async {
-    final uri = Uri.tryParse('tel:$phone');
-    if (uri == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Customer phone is not available right now.')),
-      );
-      return;
-    }
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open dialer right now.')),
-      );
-    }
-  }
-
-  Future<void> _copyCustomerPack(BuildContext context, InstallerJob job) async {
-    final customerPack = <String>[
-      'Customer: ${job.customerName.isEmpty ? '-' : job.customerName}',
-      'Phone: ${job.customerPhone.isEmpty ? '-' : job.customerPhone}',
-      'Address: ${job.customerAddress.isEmpty ? '-' : job.customerAddress}',
-      'Job number: ${job.jobNumber}',
-      'Plan: ${job.planName.isEmpty ? '-' : job.planName}',
-    ].join('\n');
-    await Clipboard.setData(ClipboardData(text: customerPack));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Customer pack copied')),
-    );
-  }
-
-  Future<void> _copyJobRefs(BuildContext context, InstallerJob job) async {
-    final refsPack = <String>[
-      'Job ID: ${job.id}',
-      'Job number: ${job.jobNumber}',
-      'Status: ${job.status}',
-      'Priority: ${job.priority.isEmpty ? '-' : job.priority}',
-      'Plan code: ${job.planCode.isEmpty ? '-' : job.planCode}',
-      'ONT serial: ${job.finalSerialNumber.isEmpty ? '-' : job.finalSerialNumber}',
-    ].join('\n');
-    await Clipboard.setData(ClipboardData(text: refsPack));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Job references copied')),
-    );
-  }
-
-  Future<void> _copyRoutePack(BuildContext context, InstallerJob job) async {
-    final routePack = <String>[
-      'Customer: ${job.customerName.isEmpty ? '-' : job.customerName}',
-      'Phone: ${job.customerPhone.isEmpty ? '-' : job.customerPhone}',
-      'Address: ${job.customerAddress.isEmpty ? '-' : job.customerAddress}',
-      'Map: ${job.mapUrl.isEmpty ? '-' : job.mapUrl}',
-      'Job number: ${job.jobNumber}',
-    ].join('\n');
-    await Clipboard.setData(ClipboardData(text: routePack));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Route pack copied')),
-    );
-  }
-
-  bool _canAccept(InstallerJob job) => job.status == 'assigned';
-
-  bool _canStartTravel(InstallerJob job) => job.status == 'accepted';
-
-  bool _canQuickPreview(InstallerJob job) => job.status != 'completed';
-
-  bool _isTodayJob(InstallerJob job) {
-    if (job.scheduledAt.isEmpty) return false;
-    final parsed = DateTime.tryParse(job.scheduledAt)?.toLocal();
-    if (parsed == null) return false;
-    final now = DateTime.now();
-    return parsed.year == now.year && parsed.month == now.month && parsed.day == now.day;
-  }
-
-  List<InstallerJob> _filterJobs(List<InstallerJob> jobs, String search) {
-    final filtered = jobs.where((job) {
-      final matchesFilter = switch (_queueFilter) {
-        'install' => job.jobType != 'complaint' && !['completed', 'deferred', 'cancelled'].contains(job.status),
-        'complaint' => job.jobType == 'complaint' && !['completed', 'deferred', 'cancelled'].contains(job.status),
-        'deferred' => job.status == 'deferred',
-        'closed' => job.status == 'completed',
-        'cancelled' => job.status == 'cancelled',
-        _ => true,
-      };
-      if (!matchesFilter) return false;
-      if (search.isEmpty) return true;
-      final haystack = [
-        job.jobNumber,
-        job.customerName,
-        job.customerPhone,
-        job.customerAddress,
-        job.planName,
-        job.status,
-        job.priority,
-        job.latestEventCode,
-      ].join(' ').toLowerCase();
-      return haystack.contains(search);
-    }).toList();
-    filtered.sort(_compareJobs);
-    return filtered;
-  }
-
-  int _compareJobs(InstallerJob a, InstallerJob b) {
-    final aClosed = ['completed', 'cancelled'].contains(a.status);
-    final bClosed = ['completed', 'cancelled'].contains(b.status);
-    if (aClosed != bClosed) {
-      return aClosed ? 1 : -1;
-    }
-    final priorityCompare = _priorityRank(a.priority).compareTo(_priorityRank(b.priority));
-    if (priorityCompare != 0) return priorityCompare;
-    final dateA = DateTime.tryParse(a.scheduledAt);
-    final dateB = DateTime.tryParse(b.scheduledAt);
-    if (dateA != null && dateB != null) {
-      return dateA.compareTo(dateB);
-    }
-    if (dateA != null) return -1;
-    if (dateB != null) return 1;
-    return a.jobNumber.compareTo(b.jobNumber);
-  }
-
-  int _priorityRank(String value) {
-    switch (value.toLowerCase()) {
-      case 'critical':
-        return 0;
-      case 'high':
-        return 1;
-      case 'medium':
-        return 2;
-      default:
-        return 3;
-    }
-  }
-
-  String _urgencyLabel(InstallerJob job) {
-    if (job.priority.toLowerCase() == 'critical') return 'Immediate';
-    if (job.priority.toLowerCase() == 'high') return 'Priority';
-    if (job.scheduledAt.isEmpty) return 'Queue ready';
-    final scheduled = DateTime.tryParse(job.scheduledAt)?.toLocal();
-    if (scheduled == null) return 'Queue ready';
-    final minutes = scheduled.difference(DateTime.now()).inMinutes;
-    if (minutes <= 0) return 'Due now';
-    if (minutes <= 30) return 'Due soon';
-    return 'Planned';
-  }
-
-  String _deferReasonLabel(String value) {
-    switch (value) {
-      case 'customer_unavailable':
-        return 'Customer unavailable';
-      case 'revisit_required':
-        return 'Revisit required';
-      case 'material_pending':
-        return 'Material pending';
-      case 'escalated':
-        return 'Escalated to backend/admin';
-      case 'other':
-        return 'Other follow-up';
-      default:
-        return '-';
-    }
-  }
-
-  String _nextVisitLabel(InstallerJob job) {
-    switch (job.status) {
-      case 'deferred':
-        return 'Revisit pending';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'assigned':
-        return 'Accept dispatch';
-      case 'accepted':
-        return 'Start travel';
-      case 'enroute':
-        return 'Reach customer site';
-      case 'onsite':
-        return 'Scan ONT serial';
-      case 'ont_scanned':
-        return 'Push activation';
-      case 'activation_in_progress':
-        return 'Wait for config';
-      case 'active':
-        return 'Capture proof';
-      case 'complaint_in_progress':
-        return 'Resolve complaint';
-      case 'completed':
-        return 'Closed';
-      default:
-        return '-';
-    }
-  }
-
-  String _primaryActionLabel(InstallerJob job) {
-    if (job.status == 'completed') return 'Review';
-    if (job.status == 'cancelled') return 'Cancelled';
-    if (job.status == 'deferred') return 'Revisit';
-    if (job.status == 'assigned') return 'Accept';
-    if (job.status == 'accepted') return 'Travel';
-    if (job.status == 'enroute') return 'Onsite';
-    if (job.status == 'ont_scanned') return 'Activate';
-    if (job.status == 'activation_in_progress') return 'Watch';
-    return 'Continue';
-  }
-
-  String _stageLabel(InstallerJob job) {
-    switch (job.status) {
-      case 'assigned':
-        return 'assigned';
-      case 'accepted':
-        return 'accepted';
-      case 'enroute':
-        return 'travelling';
-      case 'onsite':
-        return 'onsite';
-      case 'ont_scanned':
-        return 'router linked';
-      case 'activation_in_progress':
-        return 'activating';
-      case 'complaint_in_progress':
-        return 'complaint live';
-      case 'active':
-        return 'internet live';
-      case 'deferred':
-        return 'follow-up required';
-      case 'cancelled':
-        return 'cancelled';
-      case 'completed':
-        return 'completed';
-      default:
-        return job.status.replaceAll('_', ' ');
-    }
-  }
-
-  String _shortDate(String value) {
-    if (value.isEmpty) return '-';
-    final parsed = DateTime.tryParse(value);
-    if (parsed == null) return value;
-    final local = parsed.toLocal();
-    final month = <int, String>{
-      1: 'Jan',
-      2: 'Feb',
-      3: 'Mar',
-      4: 'Apr',
-      5: 'May',
-      6: 'Jun',
-      7: 'Jul',
-      8: 'Aug',
-      9: 'Sep',
-      10: 'Oct',
-      11: 'Nov',
-      12: 'Dec',
-    }[local.month]!;
-    final hour = local.hour == 0 ? 12 : (local.hour > 12 ? local.hour - 12 : local.hour);
-    final minute = local.minute.toString().padLeft(2, '0');
-    final suffix = local.hour >= 12 ? 'PM' : 'AM';
-    return '${local.day} $month, $hour:$minute $suffix';
   }
 }

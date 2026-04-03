@@ -1,14 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
-import '../../core/models.dart';
 import '../../widgets/app_card.dart';
-import '../billing_history_screen.dart';
-import '../plan_catalog_screen.dart';
-import '../service_tracking_screen.dart';
-import '../support_history_screen.dart';
 
 class ShopTab extends StatelessWidget {
   const ShopTab({super.key});
@@ -16,243 +9,196 @@ class ShopTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
-    final promoBanners = _displayBanners(appState.banners);
+    final wifi = appState.wifi;
+    final devices = appState.connectedDevices;
+    final quality = appState.networkQuality;
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 130),
       children: [
+        Text('Wi-Fi & Network', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 18),
         AppCard(
-          color: const Color(0xFFFFFFFF),
-          borderColor: const Color(0x228224E3),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                'OFFERS & HELP',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: const Color(0xFF8224E3),
-                      letterSpacing: 2.6,
-                      fontWeight: FontWeight.w700,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('SmartHub G-900', style: Theme.of(context).textTheme.headlineSmall),
+                    const SizedBox(height: 8),
+                    Text('Fiber connectivity established and performing optimally.', style: Theme.of(context).textTheme.bodyMedium),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.circle, size: 10, color: Colors.green),
+                        const SizedBox(width: 8),
+                        Text('System online', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF8126CF))),
+                      ],
                     ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-              Text('Shop', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(
-                'Explore upgrades, add-ons, and frequently asked questions from one place.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF6E6A67)),
+              const SizedBox(width: 12),
+              Container(
+                height: 80,
+                width: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3E8FF),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(Icons.router_rounded, size: 42, color: Color(0xFF8126CF)),
               ),
             ],
           ),
         ),
         const SizedBox(height: 18),
-        if (appState.banners.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Showing default JustFiber offers while live promotions sync in.',
-              style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-            ),
+        Row(
+          children: [
+            Expanded(child: _WifiCard(title: 'Primary Network', value: wifi.ssid24, icon: Icons.wifi_rounded)),
+            const SizedBox(width: 12),
+            Expanded(child: _WifiCard(title: 'Guest Network', value: wifi.guestSsid, icon: Icons.person_add_alt_1_rounded)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Security Key', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: Text(wifi.passwordMask, style: Theme.of(context).textTheme.titleLarge)),
+                  OutlinedButton(onPressed: () {}, child: const Text('View')),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SwitchListTile.adaptive(
+                value: wifi.guestEnabled,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Guest Network'),
+                subtitle: const Text('Isolated visitor access'),
+                onChanged: (value) async {
+                  await appState.updateGuestWifi(enabled: value, ssid: wifi.guestSsid, password: 'Guest@1234');
+                },
+              ),
+            ],
           ),
-        ...promoBanners.take(3).expand((banner) => [
-              _promoBanner(context, appState, banner),
-              const SizedBox(height: 14),
-            ]),
+        ),
         const SizedBox(height: 18),
-        Text('Available add-ons', style: Theme.of(context).textTheme.titleMedium),
+        Text('Network quality', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
-        ...(appState.addons.isEmpty
-            ? [
-                const AppCard(
-                  color: Color(0xFFFFFFFF),
-                  borderColor: Color(0x228224E3),
-                  child: Text('No add-ons returned from backend yet.', style: TextStyle(color: Color(0xFF6E6A67))),
-                )
-              ]
-            : appState.addons.map((addon) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: AppCard(
-                    color: const Color(0xFFFFFFFF),
-                    borderColor: const Color(0x228224E3),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(addon.name, style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Text(addon.description, style: Theme.of(context).textTheme.bodyMedium),
-                      ],
-                    ),
-                  ),
-                ))),
+        Row(
+          children: [
+            Expanded(child: _QualityCard(title: 'Latency', value: '${quality.latencyMs.toStringAsFixed(0)} ms')),
+            const SizedBox(width: 12),
+            Expanded(child: _QualityCard(title: 'Jitter', value: '${quality.jitterMs.toStringAsFixed(0)} ms')),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _QualityCard(title: 'Packet Loss', value: '${quality.packetLossPercent.toStringAsFixed(1)} %')),
+            const SizedBox(width: 12),
+            Expanded(child: _QualityCard(title: 'Quality', value: quality.quality)),
+          ],
+        ),
         const SizedBox(height: 18),
-        Text('Help & FAQs', style: Theme.of(context).textTheme.titleMedium),
+        Text('Connected devices', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
-        ...(appState.faqs.take(4).map((faq) => Padding(
+        if (devices.isEmpty)
+          const AppCard(child: Text('No connected devices returned from backend yet.'))
+        else
+          ...devices.map(
+            (device) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: AppCard(
-                color: const Color(0xFFFFFFFF),
-                borderColor: const Color(0x228224E3),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(faq.question, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    Text(faq.answer, style: Theme.of(context).textTheme.bodyMedium),
+                    Container(
+                      height: 48,
+                      width: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3E8FF),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        device.connectionType.toLowerCase().contains('ethernet') ? Icons.tv_rounded : Icons.smartphone_rounded,
+                        color: const Color(0xFF8126CF),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(device.name, style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          Text('${device.connectionType} • ${device.signal}', style: Theme.of(context).textTheme.bodyMedium),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: !device.blocked,
+                      onChanged: (value) => appState.setDeviceBlocked(device.clientId, !value),
+                    ),
                   ],
                 ),
               ),
-            ))),
+            ),
+          ),
       ],
     );
   }
+}
 
-  Future<void> _openPromo(BuildContext context, AppState appState, AppBannerItem banner) async {
-    switch (banner.targetType) {
-      case 'plans':
-      case 'plan_catalog':
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
-        break;
-      case 'billing':
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()));
-        break;
-      case 'support':
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportHistoryScreen()));
-        break;
-      case 'tracking':
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
-        break;
-      default:
-        return;
-    }
-    if (context.mounted) {
-      await appState.refresh();
-    }
-  }
+class _WifiCard extends StatelessWidget {
+  const _WifiCard({required this.title, required this.value, required this.icon});
 
-  Widget _promoBanner(BuildContext context, AppState appState, AppBannerItem banner) {
+  final String title;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
     return AppCard(
-      color: const Color(0xFFFFFFFF),
-      borderColor: const Color(0x228224E3),
-      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _promoMedia(banner),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(banner.title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 10),
-                Text(banner.description, style: Theme.of(context).textTheme.bodyMedium),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton(
-                    onPressed: () => _openPromo(context, appState, banner),
-                    child: Text(banner.ctaLabel),
-                  ),
-                ),
-              ],
-            ),
+          Container(
+            height: 42,
+            width: 42,
+            decoration: BoxDecoration(color: const Color(0xFFF3E8FF), borderRadius: BorderRadius.circular(16)),
+            child: Icon(icon, color: const Color(0xFF8126CF)),
           ),
+          const SizedBox(height: 10),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text(value, style: Theme.of(context).textTheme.bodyMedium),
         ],
-      ),
-    );
-  }
-
-  List<AppBannerItem> _displayBanners(List<AppBannerItem> source) {
-    if (source.isNotEmpty) return source;
-    return const [
-      AppBannerItem(
-        title: 'Upgrade to JustFiber 200',
-        description: 'Move to a faster plan for streaming, gaming, and office use.',
-        imageUrl: '',
-        targetType: 'plan_catalog',
-        targetValue: '',
-        ctaLabel: 'Upgrade',
-      ),
-      AppBannerItem(
-        title: 'Pay your latest bill',
-        description: 'Open billing to review dues, invoices, and payment history.',
-        imageUrl: '',
-        targetType: 'billing',
-        targetValue: '',
-        ctaLabel: 'Open billing',
-      ),
-      AppBannerItem(
-        title: 'Need service help?',
-        description: 'Raise a complaint or service request from the support center.',
-        imageUrl: '',
-        targetType: 'support',
-        targetValue: '',
-        ctaLabel: 'Get help',
-      ),
-    ];
-  }
-
-  Widget _promoMedia(AppBannerItem banner) {
-    final imageUrl = banner.imageUrl.trim();
-    if (imageUrl.isEmpty) {
-      return Container(
-        height: 112,
-        decoration: const BoxDecoration(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          gradient: LinearGradient(
-            colors: [Color(0xFF8224E3), Color(0xFFD8B4FE)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        child: const Text(
-          'JustFiber Offers',
-          style: TextStyle(
-            color: Color(0xFFFFFFFF),
-            fontWeight: FontWeight.w800,
-            fontSize: 22,
-          ),
-        ),
-      );
-    }
-    if (imageUrl.startsWith('data:image')) {
-      final base64Index = imageUrl.indexOf('base64,');
-      if (base64Index != -1) {
-        try {
-          final bytes = base64Decode(imageUrl.substring(base64Index + 7));
-          return ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            child: Image.memory(
-              bytes,
-              height: 112,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          );
-        } catch (_) {}
-      }
-    }
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      child: Image.network(
-        imageUrl,
-        height: 112,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          height: 112,
-          color: const Color(0xFFF8F4FF),
-          alignment: Alignment.center,
-          child: const Text(
-            'JustFiber Offers',
-            style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, fontSize: 22),
-          ),
-        ),
       ),
     );
   }
 }
 
+class _QualityCard extends StatelessWidget {
+  const _QualityCard({required this.title, required this.value});
 
+  final String title;
+  final String value;
 
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 8),
+          Text(value, style: Theme.of(context).textTheme.titleLarge),
+        ],
+      ),
+    );
+  }
+}

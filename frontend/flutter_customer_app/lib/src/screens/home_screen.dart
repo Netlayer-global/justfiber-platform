@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_state.dart';
-import 'billing_history_screen.dart';
-import 'plan_catalog_screen.dart';
-import 'service_tracking_screen.dart';
-import 'service_hub_screen.dart';
-import 'support_history_screen.dart';
+import '../widgets/gradient_orb_background.dart';
 import 'tabs/home_tab.dart';
+import 'tabs/points_tab.dart';
 import 'tabs/profile_tab.dart';
+import 'tabs/stats_tab.dart';
+import 'tabs/shop_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,171 +16,106 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
-  bool _handlingPendingNavigation = false;
-
-  Future<void> _setIndex(int value) async {
-    final appState = AppStateScope.of(context);
-    if (value == index) {
-      if (appState.session != null && !appState.busy) {
-        await appState.refresh();
-      }
-      return;
-    }
-    setState(() => index = value);
-    if (appState.session != null && !appState.busy) {
-      await appState.refresh();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final appState = AppStateScope.of(context);
-    _handlePendingNavigation(appState);
-    final unreadAlerts = appState.notifications.where((item) => item.readAt.isEmpty).length;
-    final billingAttention = appState.billing.dueAmount > 0;
     final pages = [
-      HomeTab(onNavigate: (value) => _setIndex(value)),
-      const ServiceHubScreen(),
-      const BillingHistoryScreen(),
-      const SupportHistoryScreen(),
+      HomeTab(onNavigate: _openTab),
+      const StatsTab(),
+      const ShopTab(),
+      const PointsTab(),
       const ProfileTab(),
     ];
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFAF7),
-      body: SafeArea(child: pages[index]),
+      body: GradientOrbBackground(
+        child: SafeArea(child: pages[index]),
+      ),
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(28),
+          color: Colors.white.withOpacity(0.78),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: Colors.white.withOpacity(0.7)),
           boxShadow: const [
-            BoxShadow(color: Color(0x12000000), blurRadius: 28, offset: Offset(0, 16)),
+            BoxShadow(color: Color(0x148126CF), blurRadius: 24, offset: Offset(0, 10)),
           ],
-          border: Border.all(color: const Color(0x228224E3)),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BottomNavigationBar(
-            currentIndex: index,
-            onTap: (value) => _setIndex(value),
-            items: [
-              BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.wifi_rounded), label: 'Services'),
-              BottomNavigationBarItem(
-                icon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.receipt_long_rounded),
-                    if (billingAttention)
-                      Positioned(
-                        right: -8,
-                        top: -6,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDC2626),
-                            borderRadius: BorderRadius.circular(99),
-                            border: Border.all(color: const Color(0xFFFFFFFF), width: 2),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                label: 'Billing',
-              ),
-              BottomNavigationBarItem(
-                icon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.support_agent_rounded),
-                    if (unreadAlerts > 0)
-                      Positioned(
-                        right: -12,
-                        top: -10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8224E3),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: const Color(0xFFFFFFFF), width: 2),
-                          ),
-                          child: Text(
-                            unreadAlerts > 9 ? '9+' : '$unreadAlerts',
-                            style: const TextStyle(
-                              color: Color(0xFFFFFFFF),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                label: 'Support',
-              ),
-              const BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
-            ],
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NavItem(icon: Icons.home_rounded, label: 'Home', selected: index == 0, onTap: () => _openTab(0)),
+            _NavItem(icon: Icons.payments_rounded, label: 'Billing', selected: index == 1, onTap: () => _openTab(1)),
+            _CenterNavItem(selected: index == 2, onTap: () => _openTab(2)),
+            _NavItem(icon: Icons.support_agent_rounded, label: 'Support', selected: index == 3, onTap: () => _openTab(3)),
+            _NavItem(icon: Icons.person_rounded, label: 'Profile', selected: index == 4, onTap: () => _openTab(4)),
+          ],
         ),
       ),
     );
   }
 
-  void _handlePendingNavigation(AppState appState) {
-    if (_handlingPendingNavigation) return;
-    final target = appState.consumePendingNavigationTarget();
-    if (target == null || target.isEmpty) return;
-    _handlingPendingNavigation = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) {
-        _handlingPendingNavigation = false;
-        return;
-      }
-      try {
-        switch (target) {
-          case 'billing':
-            if (index != 2) {
-              setState(() => index = 2);
-            }
-            break;
-          case 'support':
-            if (index != 3) {
-              setState(() => index = 3);
-            }
-            break;
-          case 'services':
-            if (index != 1) {
-              setState(() => index = 1);
-            }
-            break;
-          case 'profile':
-            if (index != 4) {
-              setState(() => index = 4);
-            }
-            break;
-        case 'plans':
-        case 'plans_resume':
-          await Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
-          );
-            break;
-          case 'tracking':
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
-            );
-            break;
-          default:
-            if (index != 3) {
-              setState(() => index = 3);
-            }
-        }
-      } finally {
-        _handlingPendingNavigation = false;
-      }
-    });
+  void _openTab(int value) => setState(() => index = value);
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? const Color(0xFF8126CF) : const Color(0xFF8F8B99);
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+          ],
+        ),
+      ),
+    );
   }
 }
 
+class _CenterNavItem extends StatelessWidget {
+  const _CenterNavItem({required this.selected, required this.onTap});
 
+  final bool selected;
+  final VoidCallback onTap;
 
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFFA855F7), Color(0xFF8126CF)]),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: selected
+              ? const [BoxShadow(color: Color(0x228126CF), blurRadius: 18, offset: Offset(0, 8))]
+              : null,
+        ),
+        child: const Icon(Icons.router_rounded, color: Colors.white),
+      ),
+    );
+  }
+}

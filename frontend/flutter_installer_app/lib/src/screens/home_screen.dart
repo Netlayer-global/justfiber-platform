@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_state.dart';
 import '../widgets/field_background.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/jobs_tab.dart';
@@ -16,194 +15,72 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
-  String _jobsFilter = 'all';
 
   @override
   Widget build(BuildContext context) {
-    final appState = InstallerStateScope.of(context);
-    final pages = [
-      DashboardTab(
-        onOpenJobs: () => setState(() {
-          _jobsFilter = 'all';
-          index = 1;
-        }),
-        onOpenFollowUps: () => setState(() {
-          _jobsFilter = 'deferred';
-          index = 1;
-        }),
-        onOpenAlerts: () => setState(() => index = 2),
-        onOpenProfile: () => setState(() => index = 3),
-      ),
-      JobsTab(initialQueueFilter: _jobsFilter),
-      NotificationsTab(
-        onOpenJobs: () => setState(() {
-          _jobsFilter = 'all';
-          index = 1;
-        }),
-        onOpenDashboard: () => setState(() => index = 0),
-      ),
-      const ProfileTab(),
+    const pages = [
+      DashboardTab(),
+      JobsTab(),
+      NotificationsTab(),
+      ProfileTab(),
     ];
-    final hasError = (appState.error ?? '').trim().isNotEmpty;
-    final activeJobsCount = appState.jobs.where((job) => job.status != 'completed').length;
-    final unreadAlertsCount = appState.notifications.where((item) => item.readAt == null).length;
-    final syncLabel = appState.busy
-        ? 'Syncing latest field data...'
-        : hasError
-            ? appState.error!.trim()
-            : appState.lastSyncedAt == null
-                ? 'Waiting for first sync...'
-                : 'Last synced ${_formatSyncTime(appState.lastSyncedAt!)}';
-    final syncIcon = appState.busy
-        ? Icons.sync_rounded
-        : hasError
-            ? Icons.wifi_tethering_error_rounded
-            : Icons.cloud_done_rounded;
-    final syncTint = hasError ? const Color(0xFFB45309) : const Color(0xFF8224E3);
-    final syncBg = hasError ? const Color(0xFFFFF7ED) : const Color(0xFFF8F4FF);
-    final syncBorder = hasError ? const Color(0xFFFCD34D) : const Color(0x558224E3);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFAF7),
       body: FieldBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: syncBg,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: syncBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(syncIcon, size: 18, color: syncTint),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          syncLabel,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: hasError ? const Color(0xFF9A3412) : const Color(0xFF4B1D95),
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12.5,
-                          ),
-                        ),
-                      ),
-                      if (!appState.busy)
-                        TextButton(
-                          onPressed: () => appState.refresh(),
-                          child: const Text('Refresh now'),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              Expanded(child: pages[index]),
-            ],
-          ),
-        ),
+        child: SafeArea(child: pages[index]),
       ),
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: const Color(0x140F172A)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x18000000),
-              blurRadius: 26,
-              offset: Offset(0, 16),
-            ),
-          ],
+          color: Colors.white.withOpacity(0.82),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: Colors.white.withOpacity(0.7)),
+          boxShadow: const [BoxShadow(color: Color(0x148126CF), blurRadius: 24, offset: Offset(0, 10))],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
-          child: BottomNavigationBar(
-            currentIndex: index,
-            onTap: (value) => setState(() => index = value),
-            items: [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard_customize_rounded),
-                label: 'Dashboard',
-              ),
-              BottomNavigationBarItem(
-                icon: _navIcon(
-                  icon: Icons.assignment_rounded,
-                  badgeCount: activeJobsCount,
-                  badgeLabel: activeJobsCount > 99 ? '99+' : '$activeJobsCount',
-                ),
-                label: 'Jobs',
-              ),
-              BottomNavigationBarItem(
-                icon: _navIcon(
-                  icon: Icons.notifications_active_outlined,
-                  badgeCount: unreadAlertsCount,
-                  badgeLabel: unreadAlertsCount > 99 ? '99+' : '$unreadAlertsCount',
-                ),
-                label: 'Alerts',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline_rounded),
-                label: 'Profile',
-              ),
-            ],
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _InstallerNavItem(icon: Icons.dashboard_customize_rounded, label: 'Dashboard', selected: index == 0, onTap: () => setState(() => index = 0)),
+            _InstallerNavItem(icon: Icons.assignment_rounded, label: 'Jobs', selected: index == 1, onTap: () => setState(() => index = 1)),
+            _InstallerNavItem(icon: Icons.notifications_none_rounded, label: 'Alerts', selected: index == 2, onTap: () => setState(() => index = 2)),
+            _InstallerNavItem(icon: Icons.person_outline_rounded, label: 'Profile', selected: index == 3, onTap: () => setState(() => index = 3)),
+          ],
         ),
       ),
     );
   }
+}
 
-  String _formatSyncTime(DateTime value) {
-    final now = DateTime.now();
-    final difference = now.difference(value);
-    if (difference.inSeconds < 30) return 'just now';
-    if (difference.inMinutes < 1) return '${difference.inSeconds}s ago';
-    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
-    if (difference.inDays < 1) return '${difference.inHours}h ago';
-    return '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-  }
+class _InstallerNavItem extends StatelessWidget {
+  const _InstallerNavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
-  Widget _navIcon({
-    required IconData icon,
-    required int badgeCount,
-    required String badgeLabel,
-  }) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Icon(icon),
-        if (badgeCount > 0)
-          Positioned(
-            right: -10,
-            top: -6,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 18),
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF8224E3),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0xFFFFFFFF), width: 1.5),
-              ),
-              child: Text(
-                badgeLabel,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFFFFFFFF),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-      ],
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? const Color(0xFF8126CF) : const Color(0xFF718096);
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+          ],
+        ),
+      ),
     );
   }
 }

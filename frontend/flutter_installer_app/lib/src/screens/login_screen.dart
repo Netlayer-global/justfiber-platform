@@ -11,28 +11,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final loginController = TextEditingController();
-  final passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _obscurePassword = true;
-
-  @override
-  void dispose() {
-    loginController.dispose();
-    passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit(InstallerAppState appState) async {
-    FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    await appState.login(
-      loginController.text.trim(),
-      passwordController.text,
-    );
-  }
+  final loginController = TextEditingController(text: '9000000001');
+  final passwordController = TextEditingController(text: 'Installer123!');
 
   @override
   Widget build(BuildContext context) {
@@ -41,246 +21,76 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: FieldBackground(
         child: SafeArea(
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-              children: [
-                const SizedBox(height: 36),
-                Row(
-                  children: [
-                    Container(
-                      width: 78,
-                      height: 78,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFFFFF),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: const Color(0x140F172A)),
-                      ),
-                      child: const Icon(
-                        Icons.network_check_rounded,
-                        color: Color(0xFF8224E3),
-                        size: 34,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0x120F172A)),
-                      ),
-                      child: const Text(
-                        'Field ready',
-                        style: TextStyle(
-                          color: Color(0xFF0F172A),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 28),
-                Container(
-                  padding: const EdgeInsets.all(18),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Container(
+                  padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: const Color(0x140F172A)),
+                    color: Colors.white.withOpacity(0.82),
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: Colors.white.withOpacity(0.7)),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x148126CF), blurRadius: 24, offset: Offset(0, 12)),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'INSTALLER CONSOLE',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 2,
-                          fontWeight: FontWeight.w800,
+                      Container(
+                        height: 54,
+                        width: 54,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          gradient: const LinearGradient(colors: [Color(0xFF8126CF), Color(0xFFC284FF)]),
                         ),
+                        child: const Icon(Icons.engineering_rounded, color: Colors.white, size: 28),
                       ),
+                      const SizedBox(height: 20),
+                      Text('JustFiber Field', style: theme.textTheme.headlineMedium),
                       const SizedBox(height: 10),
                       Text(
-                        'Sign in to field operations',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: const Color(0xFF0F172A),
-                          fontWeight: FontWeight.w800,
+                        'Installer app for jobs, activation, diagnostics and completion workflow.',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 24),
+                      TextField(
+                        controller: loginController,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone or email',
+                          prefixIcon: Icon(Icons.person_outline_rounded),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Access assigned jobs, provisioning preview, route links, and activation controls from one installer app.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFF64748B),
-                          height: 1.45,
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock_outline_rounded),
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: appState.busy ? null : () => appState.login(loginController.text, passwordController.text),
+                          child: Text(appState.busy ? 'Signing in...' : 'Open Installer App'),
+                        ),
+                      ),
+                      if ((appState.error ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(appState.error!, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 22),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0x140F172A)),
-                    ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Installer sign-in',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Use the live installer credentials assigned from admin. No demo credentials are prefilled in this app.',
-                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-                TextFormField(
-                  controller: loginController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone or email',
-                    hintText: 'Installer login',
-                  ),
-                  validator: (value) {
-                    final text = (value ?? '').trim();
-                    if (text.isEmpty) {
-                      return 'Enter installer phone or email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: passwordController,
-                  obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => appState.busy ? null : _submit(appState),
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Installer password',
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: const Color(0xFF6E6A67),
-                      ),
-                    ),
-                  ),
-                  validator: (value) {
-                    if ((value ?? '').isEmpty) {
-                      return 'Enter installer password';
-                    }
-                    if ((value ?? '').length < 6) {
-                      return 'Password looks too short';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: appState.busy ? null : () => _submit(appState),
-                    child: Text(appState.busy ? 'Signing in...' : 'Open Installer App'),
-                  ),
-                ),
-                if ((appState.error ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1F2),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x66EF4444)),
-                    ),
-                    child: Text(
-                      appState.error!,
-                      style: const TextStyle(color: Color(0xFFB91C1C), height: 1.4, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0x140F172A)),
-                    ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Sign-in flow',
-                        style: TextStyle(
-                          color: Color(0xFF131313),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _flowRow('1', 'Sign in with installer credentials.'),
-                _flowRow('2', 'Open assigned jobs and load provisioning preview.'),
-                _flowRow('3', 'Reach site, enter serial, and run activation.'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _flowRow(String index, String text) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x140F172A)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFD8B4FE)),
-            ),
-            child: Text(
-              index,
-              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                text,
-                style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
