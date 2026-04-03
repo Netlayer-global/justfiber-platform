@@ -165,23 +165,6 @@ function SidebarContent({
       </div>
     </div>
   )
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="border-t border-slate-700 px-2 py-1.5">
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-1.5 rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-700/50 hover:text-slate-200 transition"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          Logout
-        </button>
-      </div>
-    </div>
-  )
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
