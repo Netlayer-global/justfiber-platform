@@ -111,6 +111,7 @@ async function resolvePaymentGatewayForCustomer(customer) {
 
 function buildInvoiceHtml(invoice) {
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
+  const taxTotal = Number((invoice.taxBreakdown || []).reduce((sum, part) => sum + Number(part.amount || 0), 0).toFixed(2));
   const lineRows = (invoice.lineItems || [])
     .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.description || part.code || "Charge"}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
     .join("");
@@ -127,6 +128,7 @@ function buildInvoiceHtml(invoice) {
       ${lineRows}
       ${hasLineItems ? "" : `<tr><td style="padding:8px;border:1px solid #ccc;">Taxable Amount</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(invoice.amount || 0).toFixed(2)}</td></tr>`}
       ${taxRows}
+      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">GST Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${taxTotal.toFixed(2)}</td></tr>
       <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
     </table>
   </body></html>`;
@@ -240,6 +242,7 @@ function drawPdfFooter(doc, branding, generatedText) {
 function renderInvoicePdf(invoice, profile, customer) {
   const branding = pickBillingBranding(profile);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
+  const taxTotal = Number((invoice.taxBreakdown || []).reduce((sum, part) => sum + Number(part.amount || 0), 0).toFixed(2));
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
   let y = drawKeyValueGrid(doc, 130, [
@@ -265,7 +268,8 @@ function renderInvoicePdf(invoice, profile, customer) {
       ...(invoice.taxBreakdown || []).map((part) => ({
         label: `${part.label} (${part.rate || 0}%)`,
         amount: Number(part.amount || 0)
-      }))
+      })),
+      { label: "GST Total", amount: taxTotal }
     ],
     "Grand Total",
     Number(invoice.totalAmount || 0)

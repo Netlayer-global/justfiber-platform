@@ -323,6 +323,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
   const planSummary = resolveInvoicePlanSummary(invoice);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
   const seriesLabel = [invoice.invoicePrefix, invoice.invoiceSeriesCode].filter(Boolean).join(" / ") || "-";
+  const taxTotal = Number((invoice.taxBreakdown || []).reduce((sum, item) => sum + Number(item.amount || 0), 0).toFixed(2));
   const organizationMeta = [
     appliedBranding.gstNumber ? `GSTIN: ${appliedBranding.gstNumber}` : "",
     appliedBranding.panNumber ? `PAN: ${appliedBranding.panNumber}` : "",
@@ -331,7 +332,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
   const lineRows = (invoice.lineItems || [])
     .map(
       (item) =>
-        `<tr><td style="padding:8px;border:1px solid #ccc;">${item.description || item.code || "Charge"}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(item.amount || 0).toFixed(2)}</td></tr>`
+        `<tr><td style="padding:14px 18px;border-top:1px solid #e2e8f0;">${item.description || item.code || "Charge"}</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;">Rs ${Number(item.amount || 0).toFixed(2)}</td></tr>`
     )
     .join("");
   const taxRows = (invoice.taxBreakdown || [])
@@ -418,9 +419,10 @@ function buildInvoiceHtml(invoice, customer, branding) {
             </tr>
           </thead>
           <tbody>
-            ${lineRows.replaceAll('padding:8px;border:1px solid #ccc;', 'padding:14px 18px;border-top:1px solid #e2e8f0;').replaceAll('padding:8px;border:1px solid #ccc;text-align:right;', 'padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;')}
+            ${lineRows}
             ${hasLineItems ? "" : `<tr><td style="padding:14px 18px;border-top:1px solid #e2e8f0;">Taxable Amount</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;">Rs ${Number(invoice.amount || 0).toFixed(2)}</td></tr>`}
             ${taxRows}
+            <tr><td style="padding:14px 18px;border-top:1px solid #e2e8f0;font-weight:700;background:#f8fbff;">GST Total</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;font-weight:700;background:#f8fbff;">Rs ${taxTotal.toFixed(2)}</td></tr>
             <tr><td style="padding:16px 18px;border-top:1px solid #cbd5e1;font-weight:800;background:#eef4ff;">Grand Total</td><td style="padding:16px 18px;border-top:1px solid #cbd5e1;text-align:right;font-weight:800;background:#eef4ff;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
           </tbody>
         </table>
@@ -592,6 +594,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   const planSummary = resolveInvoicePlanSummary(invoice);
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
   const seriesLabel = [invoice.invoicePrefix, invoice.invoiceSeriesCode].filter(Boolean).join(" / ") || "-";
+  const taxTotal = Number((invoice.taxBreakdown || []).reduce((sum, part) => sum + Number(part.amount || 0), 0).toFixed(2));
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
   let y = drawKeyValueGrid(doc, 152, [
@@ -622,7 +625,8 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
       ...(invoice.taxBreakdown || []).map((part) => ({
         label: `${part.label} (${part.rate || 0}%)`,
         amount: Number(part.amount || 0)
-      }))
+      })),
+      { label: "GST Total", amount: taxTotal }
     ],
     "Grand Total",
     Number(invoice.totalAmount || 0)
