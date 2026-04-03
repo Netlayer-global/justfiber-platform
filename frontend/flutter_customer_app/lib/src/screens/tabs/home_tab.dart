@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_state.dart';
+import '../booking_flow_screen.dart';
 import '../wifi_settings_screen.dart';
 import '../../widgets/app_card.dart';
 
@@ -143,6 +144,19 @@ class HomeTab extends StatelessWidget {
                 title: 'Pay Bill',
                 subtitle: 'Invoices and payment methods',
                 onTap: () => onNavigate(1),
+              ),
+              _ActionCard(
+                icon: Icons.add_home_work_rounded,
+                title: 'Book Connection',
+                subtitle: 'Start a new broadband booking flow',
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
+                  );
+                  if (context.mounted) {
+                    await appState.refresh();
+                  }
+                },
               ),
               _ActionCard(
                 icon: Icons.router_rounded,

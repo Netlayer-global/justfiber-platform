@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_state.dart';
 import '../../core/models.dart';
 import '../../widgets/app_card.dart';
+import '../booking_flow_screen.dart';
 import '../notifications_screen.dart';
 import '../plan_catalog_screen.dart';
 import '../service_tracking_screen.dart';
@@ -160,6 +161,12 @@ class _ProfileTabState extends State<ProfileTab> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
+                  _shortcutButton(
+                    context,
+                    icon: Icons.add_home_work_rounded,
+                    label: 'Book',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingFlowScreen())),
+                  ),
                   _shortcutButton(
                     context,
                     icon: Icons.receipt_long_rounded,

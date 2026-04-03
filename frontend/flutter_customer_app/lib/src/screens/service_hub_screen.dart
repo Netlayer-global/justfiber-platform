@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_state.dart';
 import '../widgets/app_card.dart';
+import 'booking_flow_screen.dart';
 import 'plan_catalog_screen.dart';
 import 'service_tracking_screen.dart';
 import 'wifi_settings_screen.dart';
@@ -226,6 +227,20 @@ class ServiceHubScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => const WifiSettingsScreen(initialAction: WifiLaunchAction.parentalControls),
                       ),
+                    );
+                    if (context.mounted) {
+                      await appState.refresh();
+                    }
+                  },
+                ),
+                _quickAction(
+                  context,
+                  Icons.add_home_work_outlined,
+                  'Book connection',
+                  'Create a new broadband booking with plan, address, and checkout flow',
+                  () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
                     );
                     if (context.mounted) {
                       await appState.refresh();
