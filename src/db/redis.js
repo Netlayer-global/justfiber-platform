@@ -10,15 +10,18 @@ export function getRedisConnection() {
       connection = new Redis(env.REDIS_URL, {
         maxRetriesPerRequest: null,
         enableReadyCheck: false,
-        enableOfflineQueue: true,
+        enableOfflineQueue: false,
         lazyConnect: true,
         retryStrategy: () => null,
         reconnectOnError: () => false,
-        showFriendlyErrorStack: false
+        showFriendlyErrorStack: false,
+        closeClient: false
       });
 
-      connection.on("error", () => {
-        connectionError = true;
+      connection.on("error", (err) => {
+        if (err.code !== "ECONNREFUSED") {
+          connectionError = err;
+        }
       });
 
       connection.on("connect", () => {
