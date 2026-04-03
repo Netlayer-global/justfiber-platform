@@ -64,7 +64,9 @@ function buildSyntheticServiceFromCustomer(customer = {}) {
       planCode: customer.planCode || "",
       planName: customer.planName || "",
       durationMonths: inferDurationMonthsFromCustomer(customer),
-      recurringAmount: Number(customer?.billingSnapshot?.lastInvoiceAmount || 0) || undefined
+      recurringAmount: Number(customer?.billingSnapshot?.lastInvoiceAmount || customer?.billingSnapshot?.lastPlanPrice || 0) || undefined,
+      monthlyPrice: Number(customer?.billingSnapshot?.lastPlanPrice || 0) || undefined,
+      billingBreakup: customer?.billingSnapshot?.billingBreakup || undefined
     }
   };
 }
@@ -266,8 +268,16 @@ function buildInvoiceLineItems(service, plan, totalAmount, durationMonths, billC
 
 async function resolveBillingPlan(service = {}) {
   const planCode = String(service?.metadata?.planCode || "").trim();
-  if (!planCode) return null;
-  return await PlanCatalog.findOne({ planCode, archivedAt: { $exists: false } }).lean();
+  if (planCode) {
+    const byCode = await PlanCatalog.findOne({ planCode, archivedAt: { $exists: false } }).lean();
+    if (byCode) return byCode;
+  }
+  const planName = String(service?.metadata?.planName || "").trim();
+  if (planName) {
+    const byName = await PlanCatalog.findOne({ name: planName, archivedAt: { $exists: false } }).lean();
+    if (byName) return byName;
+  }
+  return null;
 }
 
 function normalizeStateCode(value) {
