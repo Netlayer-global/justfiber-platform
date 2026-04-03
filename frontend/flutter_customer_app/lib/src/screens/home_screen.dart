@@ -34,11 +34,11 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFFDFEFF).withOpacity(0.92),
+          color: Colors.white.withOpacity(0.82),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0xFFD8E1EE)),
+          border: Border.all(color: const Color(0x228224E3)),
           boxShadow: const [
-            BoxShadow(color: Color(0x14142033), blurRadius: 28, offset: Offset(0, 10)),
+            BoxShadow(color: Color(0x148126CF), blurRadius: 24, offset: Offset(0, 10)),
           ],
         ),
         child: Row(
@@ -73,7 +73,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF0F4C81) : const Color(0xFF7A879A);
+    final color = selected ? const Color(0xFF8126CF) : const Color(0xFF8F8B99);
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
@@ -81,7 +81,7 @@ class _NavItem extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEAF2FB) : Colors.transparent,
+          color: selected ? const Color(0xFFF3EDFB) : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
@@ -113,10 +113,10 @@ class _CenterNavItem extends StatelessWidget {
         width: 58,
         height: 58,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF1D9BF0), Color(0xFF0F4C81)]),
+          gradient: const LinearGradient(colors: [Color(0xFFA855F7), Color(0xFF8126CF)]),
           borderRadius: BorderRadius.circular(20),
           boxShadow: selected
-              ? const [BoxShadow(color: Color(0x221D9BF0), blurRadius: 18, offset: Offset(0, 8))]
+              ? const [BoxShadow(color: Color(0x228126CF), blurRadius: 18, offset: Offset(0, 8))]
               : null,
         ),
         child: const Icon(Icons.router_rounded, color: Colors.white),

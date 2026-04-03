@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildJustFiberTheme() {
-  const background = Color(0xFFF5F7FB);
+  const background = Color(0xFFF6F1EB);
   const surface = Color(0xFFFFFFFF);
-  const surfaceAlt = Color(0xFFF0F4FA);
-  const primary = Color(0xFF0F4C81);
-  const accent = Color(0xFF1D9BF0);
-  const tertiary = Color(0xFF14B8A6);
-  const text = Color(0xFF142033);
-  const muted = Color(0xFF64748B);
-  const outline = Color(0xFFD8E1EE);
+  const surfaceAlt = Color(0xFFF8F4FF);
+  const primary = Color(0xFF8224E3);
+  const accent = Color(0xFFA855F7);
+  const tertiary = Color(0xFFA02D70);
+  const text = Color(0xFF131313);
+  const muted = Color(0xFF6E6A67);
+  const outline = Color(0x228224E3);
 
   return ThemeData(
     colorScheme: const ColorScheme.light(
@@ -77,7 +77,7 @@ ThemeData buildJustFiberTheme() {
     ),
     snackBarTheme: const SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: Color(0xFF142033),
+      backgroundColor: Color(0xFF131313),
       contentTextStyle: TextStyle(color: Colors.white),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(

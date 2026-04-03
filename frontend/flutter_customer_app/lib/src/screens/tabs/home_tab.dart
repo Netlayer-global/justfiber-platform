@@ -21,7 +21,7 @@ class HomeTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 130),
         children: [
-          Text('CUSTOMER DASHBOARD', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF0F4C81), letterSpacing: 1.4)),
+          Text('CUSTOMER DASHBOARD', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF8224E3), letterSpacing: 1.4)),
           const SizedBox(height: 6),
           Text('Hello, ${dashboard.customerName}', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
@@ -32,7 +32,7 @@ class HomeTab extends StatelessWidget {
           const SizedBox(height: 18),
           AppCard(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0F4C81), Color(0xFF1565A7), Color(0xFF1D9BF0)],
+              colors: [Color(0xFF8224E3), Color(0xFFA855F7), Color(0xFFD2B4FF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -90,7 +90,7 @@ class HomeTab extends StatelessWidget {
                         onPressed: () => onNavigate(1),
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF0F4C81),
+                          foregroundColor: const Color(0xFF4A3B81),
                         ),
                         child: const Text('Pay Bill'),
                       ),
@@ -241,10 +241,10 @@ class HomeTab extends StatelessWidget {
                         height: 44,
                         width: 44,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEAF2FB),
+                          color: const Color(0xFFF3EDFB),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.notifications_active_outlined, color: Color(0xFF0F4C81)),
+                        child: const Icon(Icons.notifications_active_outlined, color: Color(0xFF8126CF)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

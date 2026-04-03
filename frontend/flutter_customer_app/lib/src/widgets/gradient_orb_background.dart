@@ -12,7 +12,7 @@ class GradientOrbBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF8FBFF), Color(0xFFF3F7FD), Color(0xFFEAF2FB)],
+          colors: [Color(0xFFFBF7F2), Color(0xFFF7F1EB), Color(0xFFF3ECE4)],
         ),
       ),
       child: Stack(
@@ -22,7 +22,7 @@ class GradientOrbBackground extends StatelessWidget {
             right: -40,
             child: _Orb(
               size: 260,
-              colors: [Color(0x331D9BF0), Color(0x001D9BF0)],
+              colors: [Color(0x338224E3), Color(0x008224E3)],
             ),
           ),
           Positioned(
@@ -30,7 +30,7 @@ class GradientOrbBackground extends StatelessWidget {
             left: -80,
             child: _Orb(
               size: 220,
-              colors: [Color(0x220F4C81), Color(0x000F4C81)],
+              colors: [Color(0x22A855F7), Color(0x00A855F7)],
             ),
           ),
           Positioned(
@@ -38,7 +38,7 @@ class GradientOrbBackground extends StatelessWidget {
             right: -20,
             child: _Orb(
               size: 240,
-              colors: [Color(0x2214B8A6), Color(0x0014B8A6)],
+              colors: [Color(0x18A02D70), Color(0x00A02D70)],
             ),
           ),
           child,
