@@ -450,43 +450,39 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[70vh] items-center justify-center">
-        <Loader className="h-7 w-7 animate-spin text-purple-700" />
+      <div className="flex h-[40vh] items-center justify-center">
+        <Loader className="h-5 w-5 animate-spin text-purple-600" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <section className="modernize-page-card p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+    <div className="space-y-3">
+      <section className="card p-3">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="modernize-subtitle">Release readiness</div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Zone hardening console</h1>
-            <div className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">
-              Use this desk to check whether the active zone is ready for invoicing, collections, provisioning, and rollout.
+            <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">Release Readiness</div>
+            <h1 className="mt-1 text-lg font-light text-slate-100">Zone Hardening Console</h1>
+            <div className="mt-1 max-w-2xl text-xs text-slate-400">
+              Check zone readiness for invoicing, collections, provisioning, and rollout.
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {executiveSummary.map(({ label, value, detail, icon: Icon }) => (
-              <div key={label} className="modernize-stat-card">
+              <div key={label} className="stat-card">
                 <div className="flex items-center justify-between">
-                  <div className="modernize-subtitle">{label}</div>
-                  <Icon className="h-4 w-4 text-purple-700" />
+                  <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
+                  <Icon className="h-3.5 w-3.5 text-purple-500" />
                 </div>
-                <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</div>
-                <div className="mt-1 text-xs text-slate-500">{detail}</div>
+                <div className="mt-2 text-lg font-light text-purple-300">{value}</div>
+                <div className="mt-0.5 text-[9px] text-slate-500">{detail}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      
-
-      
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
         {[
           ['Total Users', userCountSummary.totalUsers],
           ['Online Users', userCountSummary.onlineUsers],
@@ -494,28 +490,18 @@ export default function DashboardPage() {
           ['Suspended', userCountSummary.suspendedUsers],
           ['Blocked', userCountSummary.blockedUsers],
         ].map(([label, value]) => (
-          <div key={String(label)} className="card p-5">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</div>
-            <div className="mt-3 text-3xl font-semibold text-slate-900">{value as number}</div>
+          <div key={String(label)} className="card p-2.5">
+            <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
+            <div className="mt-1.5 text-xl font-light text-purple-300">{value as number}</div>
           </div>
         ))}
       </section>
 
-      
-
-      
-
-      
-
-      
-
-      
-
-      <section className="card p-6">
+      <section className="card p-3">
         <div>
-          <div className="text-xs uppercase tracking-[0.22em] text-slate-400">Customer OTP</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900">Fetch current OTP</div>
-          <div className="mt-4 flex flex-col gap-3 md:flex-row">
+          <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">Customer OTP</div>
+          <div className="mt-1 text-sm font-light text-slate-100">Fetch current OTP</div>
+          <div className="mt-2.5 flex flex-col gap-2 md:flex-row">
             <input
               className="input flex-1"
               placeholder="Enter customer mobile"
