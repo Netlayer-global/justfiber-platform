@@ -22,6 +22,7 @@ class PaymentDetailScreen extends StatelessWidget {
     final paidAt = payment.paidAt.isEmpty ? '-' : payment.paidAt;
     final provider = payment.provider.isEmpty ? '-' : payment.provider.toUpperCase();
     final reference = payment.reference.isEmpty ? '-' : payment.reference;
+    final receiptReady = payment.pdfUrl.isNotEmpty || payment.viewUrl.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -74,7 +75,7 @@ class PaymentDetailScreen extends StatelessWidget {
                 _detailRow('Paid on', paidAt),
                 _detailRow('Provider', provider),
                 _detailRow('Reference', reference),
-                _detailRow('Receipt access', payment.pdfUrl.isNotEmpty || payment.viewUrl.isNotEmpty ? 'Available' : 'Not generated yet'),
+                _detailRow('Receipt access', receiptReady ? 'Available' : 'Not generated yet'),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
@@ -82,13 +83,15 @@ class PaymentDetailScreen extends StatelessWidget {
                   children: [
                     _infoChip('Provider', provider),
                     _infoChip('Status', paidAt == '-' ? 'Pending' : 'Success'),
-                    _infoChip('Receipt', payment.pdfUrl.isNotEmpty || payment.viewUrl.isNotEmpty ? 'Ready' : 'Pending'),
+                    _infoChip('Receipt', receiptReady ? 'Ready' : 'Pending'),
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Your service and billing records have been updated for this payment.',
-                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                Text(
+                  receiptReady
+                      ? 'Your service and billing records have been updated for this payment.'
+                      : 'Payment is recorded, but the receipt document is still being generated. Pull to refresh or use support if it takes too long.',
+                  style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                 ),
               ],
             ),
@@ -112,11 +115,21 @@ class PaymentDetailScreen extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => _shareDocumentWithFeedback(context, appState),
-                        child: const Text('Share receipt'),
+                        child: Text(receiptReady ? 'Share receipt' : 'Share details'),
                       ),
                     ),
                   ],
                 ),
+                if (!receiptReady) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonal(
+                      onPressed: appState.busy ? null : appState.refresh,
+                      child: const Text('Refresh receipt status'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,

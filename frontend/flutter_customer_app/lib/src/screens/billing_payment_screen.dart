@@ -24,6 +24,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   bool helping = false;
   String? paymentError;
   String? walletHint;
+  String? lastPaymentId;
   int retryCount = 0;
 
   @override
@@ -42,9 +43,10 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   }
 
   void _openCheckout() {
-    if (launching) return;
+    if (launching || verifying) return;
     setState(() {
       launching = true;
+      verifying = false;
       paymentError = null;
       walletHint = null;
     });
@@ -107,8 +109,10 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     final appState = AppStateScope.of(context);
     setState(() {
+      launching = false;
       verifying = true;
       paymentError = null;
+      lastPaymentId = response.paymentId;
     });
     final ok = await appState.verifyBillPayment(
       orderId: response.orderId ?? widget.paymentOrder.orderId,
@@ -125,7 +129,7 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     if (ok) {
       await appState.refresh();
       if (!mounted) return;
-      final latestPayment = appState.billing.payments.isNotEmpty ? appState.billing.payments.first : null;
+      final latestPayment = _findMatchingPayment(appState);
       if (latestPayment != null) {
         await Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: latestPayment)),
@@ -139,6 +143,24 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
         verifying = false;
       });
     }
+  }
+
+  BillingPaymentItem? _findMatchingPayment(AppState appState) {
+    final payments = appState.billing.payments;
+    if (payments.isEmpty) return null;
+    final orderId = widget.paymentOrder.orderId.toLowerCase();
+    final paymentId = (lastPaymentId ?? '').toLowerCase();
+    for (final payment in payments) {
+      final tx = payment.transactionId.toLowerCase();
+      final reference = payment.reference.toLowerCase();
+      if (paymentId.isNotEmpty && (tx.contains(paymentId) || reference.contains(paymentId))) {
+        return payment;
+      }
+      if (orderId.isNotEmpty && (tx.contains(orderId) || reference.contains(orderId))) {
+        return payment;
+      }
+    }
+    return payments.first;
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
@@ -164,6 +186,29 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Order reference copied')),
+    );
+  }
+
+  Future<void> _refreshReceiptStatus() async {
+    final appState = AppStateScope.of(context);
+    setState(() {
+      verifying = true;
+      paymentError = null;
+    });
+    await appState.refresh();
+    if (!mounted) return;
+    final payment = _findMatchingPayment(appState);
+    setState(() => verifying = false);
+    if (payment != null && payment.paidAt.isNotEmpty) {
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: payment)),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(appState.error ?? 'Receipt is not available yet. If amount was debited, wait briefly or contact support.'),
+      ),
     );
   }
 
@@ -417,8 +462,16 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _openCheckout,
+                      onPressed: (launching || verifying) ? null : _openCheckout,
                       child: Text(retryCount > 0 ? 'Retry payment' : 'Pay now'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: (launching || verifying) ? null : _refreshReceiptStatus,
+                      child: const Text('I paid, refresh receipt'),
                     ),
                   ),
                   const SizedBox(height: 10),

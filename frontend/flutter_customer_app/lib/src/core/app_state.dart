@@ -828,6 +828,12 @@ class AppState extends ChangeNotifier {
   Future<BillingPaymentOrder?> loadBillingPaymentOrder({double? amount}) async {
     final current = session;
     if (current == null) return null;
+    final payableAmount = amount ?? billing.dueAmount;
+    if (payableAmount <= 0) {
+      error = 'No payable bill amount is available right now.';
+      notifyListeners();
+      return null;
+    }
     busy = true;
     error = null;
     notifyListeners();
@@ -835,7 +841,7 @@ class AppState extends ChangeNotifier {
       return await api.createBillingPaymentOrder(
         current,
         customerId: selectedCustomerId,
-        amount: amount,
+        amount: payableAmount,
       );
     } catch (e) {
       error = e.toString();
