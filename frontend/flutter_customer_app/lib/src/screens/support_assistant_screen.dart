@@ -494,6 +494,26 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFFFF),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0x228224E3)),
+              ),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _topChip('Issue', widget.issueType == 'general' ? 'General' : widget.issueType),
+                  _topChip('Tickets', '${appState.tickets.length}'),
+                  _topChip('Requests', '${appState.requests.length}'),
+                  if (_lastDiagnosis != null) _topChip('Diagnosis', _lastDiagnosis!.diagnosisCode),
+                ],
+              ),
+            ),
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
@@ -575,6 +595,26 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _topChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
           ],
         ),
       ),

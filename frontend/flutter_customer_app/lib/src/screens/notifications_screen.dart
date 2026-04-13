@@ -260,6 +260,17 @@ class NotificationsScreen extends StatelessWidget {
                       : 'You have ${notifications.length} recent service, billing, or support alerts.',
                   style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
                 ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _quickChip('Unread', '$unreadCount'),
+                    _quickChip('Billing', '${notifications.where((n) => _kindFor(n) == _AlertKind.billing).length}'),
+                    _quickChip('Support', '${notifications.where((n) => _kindFor(n) == _AlertKind.support).length}'),
+                    _quickChip('Tracking', '${notifications.where((n) => _kindFor(n) == _AlertKind.tracking).length}'),
+                  ],
+                ),
                 if (appState.error != null && appState.error!.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   Container(
@@ -569,6 +580,26 @@ class NotificationsScreen extends StatelessWidget {
       child: Text(
         '$label: $value',
         style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Widget _quickChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
       ),
     );
   }
