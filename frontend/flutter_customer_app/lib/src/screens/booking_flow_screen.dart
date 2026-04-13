@@ -63,6 +63,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     final session = appState.session;
     final plans = appState.plans;
     final latestBooking = appState.latestBooking;
+    final selectedPlan = _selectedPlan(plans);
 
     if (nameController.text.isEmpty && session != null) {
       nameController.text = appState.dashboard.customerName;
@@ -92,7 +93,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
           children: [
-          _heroBanner(),
+          _heroBanner(selectedPlan),
           const SizedBox(height: 18),
           _stepper(),
           const SizedBox(height: 20),
@@ -587,13 +588,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   }
 
   Widget _bookingStep(AppState appState, List<dynamic> plans) {
-    dynamic selected;
-    for (final item in plans) {
-      if (item.planCode == selectedPlanCode) {
-        selected = item;
-        break;
-      }
-    }
+    final selected = _selectedPlan(plans);
 
     return _sectionCard(
       title: 'Review checkout',
@@ -616,6 +611,20 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _summaryRow('Upload', selected == null ? '-' : '${selected.uploadSpeedMbps.toStringAsFixed(0)} Mbps'),
           _summaryRow('Duration', _selectedDurationLabel),
           _summaryRow('Payable now', 'Rs ${_bookingAmountFor(selected).toStringAsFixed(0)}'),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0x33F59E0B)),
+            ),
+            child: const Text(
+              'Payment completes the booking first. Preferred install date and slot are confirmed in the next step.',
+              style: TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w700, height: 1.45),
+            ),
+          ),
           const SizedBox(height: 16),
           const Text('Secure payment', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 10),
@@ -1001,7 +1010,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
-  Widget _heroBanner() {
+  Widget _heroBanner(dynamic selectedPlan) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFFFFFFF),
@@ -1033,6 +1042,17 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   const Text(
                     'Select your plan, confirm address, and create a live booking with an exact install map pin.',
                     style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _progressChip('Step', '${step + 1}/5'),
+                      _progressChip('Plan', selectedPlan?.name ?? 'Not selected'),
+                      _progressChip('Duration', _selectedDurationLabel),
+                      _progressChip('Mobile', mobileController.text.trim().isEmpty ? '-' : mobileController.text.trim()),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -1229,34 +1249,74 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: List.generate(labels.length, (index) {
-            final active = index <= step;
-            return Expanded(
-              child: Column(
-                children: [
-                  Container(
-                    height: 4,
-                    margin: EdgeInsets.only(left: index == 0 ? 24 : 0, right: index == labels.length - 1 ? 24 : 0),
-                    decoration: BoxDecoration(
-                      color: active ? const Color(0xFF8224E3) : const Color(0xFFD7D3D0),
-                      borderRadius: BorderRadius.circular(99),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFFFF),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0x228224E3)),
+          ),
+          child: Row(
+            children: List.generate(labels.length, (index) {
+              final active = index <= step;
+              final current = index == step;
+              return Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      height: 6,
+                      margin: EdgeInsets.only(left: index == 0 ? 12 : 4, right: index == labels.length - 1 ? 12 : 4),
+                      decoration: BoxDecoration(
+                        color: active ? const Color(0xFF8224E3) : const Color(0xFFE7E2DD),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    labels[index],
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: active ? const Color(0xFF131313) : const Color(0xFF6B7280),
+                    const SizedBox(height: 10),
+                    Text(
+                      labels[index],
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: current ? FontWeight.w800 : FontWeight.w700,
+                        color: active ? const Color(0xFF131313) : const Color(0xFF6B7280),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }),
+                  ],
+                ),
+              );
+            }),
+          ),
         ),
       ],
+    );
+  }
+
+  dynamic _selectedPlan(List<dynamic> plans) {
+    for (final item in plans) {
+      if (item.planCode == selectedPlanCode) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  Widget _progressChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
     );
   }
 
