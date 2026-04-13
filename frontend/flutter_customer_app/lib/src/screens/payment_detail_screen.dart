@@ -6,6 +6,7 @@ import '../core/app_state.dart';
 import '../core/models.dart';
 import '../widgets/app_card.dart';
 import 'document_viewer_screen.dart';
+import 'support_history_screen.dart';
 
 class PaymentDetailScreen extends StatelessWidget {
   const PaymentDetailScreen({
@@ -75,6 +76,16 @@ class PaymentDetailScreen extends StatelessWidget {
                 _detailRow('Reference', reference),
                 _detailRow('Receipt access', payment.pdfUrl.isNotEmpty || payment.viewUrl.isNotEmpty ? 'Available' : 'Not generated yet'),
                 const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _infoChip('Provider', provider),
+                    _infoChip('Status', paidAt == '-' ? 'Pending' : 'Success'),
+                    _infoChip('Receipt', payment.pdfUrl.isNotEmpty || payment.viewUrl.isNotEmpty ? 'Ready' : 'Pending'),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 const Text(
                   'Your service and billing records have been updated for this payment.',
                   style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
@@ -87,19 +98,38 @@ class PaymentDetailScreen extends StatelessWidget {
             color: const Color(0xFFF8F4FF),
             borderColor: const Color(0x228224E3),
             textColor: const Color(0xFF131313),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Back to billing'),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Back to billing'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _shareDocumentWithFeedback(context, appState),
+                        child: const Text('Share receipt'),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () => _shareDocumentWithFeedback(context, appState),
-                    child: const Text('Share receipt'),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                      );
+                      if (context.mounted) {
+                        await appState.refresh();
+                      }
+                    },
+                    child: const Text('Need payment support'),
                   ),
                 ),
               ],
@@ -210,6 +240,26 @@ class PaymentDetailScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _infoChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
       ),
     );
   }

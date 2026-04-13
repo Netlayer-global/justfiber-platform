@@ -83,6 +83,74 @@ class BillingHistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'QUICK ACTIONS',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF8224E3),
+                    letterSpacing: 2.2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    FilledButton(
+                      onPressed: appState.busy || billing.dueAmount <= 0
+                          ? null
+                          : () => _payNow(context, appState, amount: billing.dueAmount),
+                      child: const Text('Pay current due'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
+                      child: const Text('Payment history'),
+                    ),
+                    if (latestInvoice != null && (latestInvoice.pdfUrl.isNotEmpty || latestInvoice.viewUrl.isNotEmpty))
+                      OutlinedButton(
+                        onPressed: () async {
+                          await _openDocument(
+                            context,
+                            appState,
+                            'Latest invoice',
+                            latestInvoice.pdfUrl.isNotEmpty ? latestInvoice.pdfUrl : latestInvoice.viewUrl,
+                          );
+                          if (context.mounted) {
+                            await appState.refresh();
+                          }
+                        },
+                        child: const Text('Open latest invoice'),
+                      ),
+                    OutlinedButton(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
+                        );
+                        if (context.mounted) {
+                          await appState.refresh();
+                        }
+                      },
+                      child: const Text('Billing support'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            color: const Color(0xFFFFFFFF),
+            borderColor: const Color(0x228224E3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   'BILLING OVERVIEW',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: const Color(0xFF8224E3),

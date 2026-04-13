@@ -291,6 +291,16 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                 _detailRow('Currency', widget.paymentOrder.currency),
                 _detailRow('Payable now', 'Rs ${widget.paymentOrder.amount.toStringAsFixed(2)}'),
                 const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _statusChip('Provider', widget.paymentOrder.provider.toUpperCase()),
+                    _statusChip('Order', widget.paymentOrder.orderId),
+                    _statusChip('Mode', retryCount > 0 ? 'Retry flow' : 'Fresh payment'),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
@@ -423,27 +433,52 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: TextButton(
+                        child: OutlinedButton(
                           onPressed: helping ? null : _requestPaymentHelp,
-                          child: Text(helping ? 'Creating ticket...' : 'Need help?'),
+                          child: Text(helping ? 'Creating ticket...' : 'Need help'),
                         ),
                       ),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: TextButton(
+                        child: OutlinedButton(
                           onPressed: _openSupportCenter,
                           child: const Text('Support center'),
                         ),
                       ),
                     ],
                   ),
-                  TextButton(
-                    onPressed: _copyOrderReference,
-                    child: const Text('Copy order reference'),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: _copyOrderReference,
+                      child: const Text('Copy order reference'),
+                    ),
                   ),
                 ],
               ],
             ),
           ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
           ],
         ),
       ),
