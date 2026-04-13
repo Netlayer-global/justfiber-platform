@@ -580,11 +580,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        String query = '';
+        bool blockedOnly = false;
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
-          child: AnimatedBuilder(
-            animation: appState,
-            builder: (context, _) {
+          child: StatefulBuilder(
+            builder: (context, setLocalState) => AnimatedBuilder(
+              animation: appState,
+              builder: (context, _) {
               final devices = appState.connectedDevices;
               final hasLiveDevices = devices.isNotEmpty;
               final displayDevices = hasLiveDevices
@@ -599,6 +602,14 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                         blocked: false,
                       ),
                     );
+              final filteredDevices = displayDevices.where((device) {
+                final input = query.trim().toLowerCase();
+                final matchesQuery = input.isEmpty ||
+                    device.name.toLowerCase().contains(input) ||
+                    _connectionTypeLabel(device.connectionType).toLowerCase().contains(input);
+                final matchesBlocked = !blockedOnly || device.blocked;
+                return matchesQuery && matchesBlocked;
+              }).toList();
               final blockedCount = displayDevices.where((device) => device.blocked).length;
               final allowedCount = displayDevices.where((device) => !device.blocked).length;
               return AppCard(
@@ -623,11 +634,38 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    if (displayDevices.isEmpty)
+                    TextField(
+                      onChanged: (value) => setLocalState(() => query = value),
+                      decoration: const InputDecoration(
+                        labelText: 'Search device or connection type',
+                        prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF8224E3)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All devices'),
+                          selected: !blockedOnly,
+                          onSelected: (_) => setLocalState(() => blockedOnly = false),
+                          selectedColor: const Color(0xFFF3EDFB),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Blocked only'),
+                          selected: blockedOnly,
+                          onSelected: (_) => setLocalState(() => blockedOnly = true),
+                          selectedColor: const Color(0xFFFFF1F2),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    if (filteredDevices.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
                         child: Text(
-                          'No connected device at the moment. Try reconnecting to Wi-Fi or refresh later.',
+                          'No devices match the current filter.',
                           style: TextStyle(color: Color(0xFF6E6A67)),
                         ),
                       )
@@ -640,7 +678,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                             style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
                           ),
                         ),
-                      ...displayDevices.map((device) => Padding(
+                      ...filteredDevices.map((device) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Container(
                           padding: const EdgeInsets.all(14),
@@ -688,32 +726,31 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                                         ),
                                       ),
                                       child: Text(
-                                        device.blocked ? 'Blocked' : 'Allowed',
+                                        device.blocked ? 'Internet paused' : 'Internet active',
                                         style: TextStyle(
                                           color: device.blocked ? const Color(0xFFBE123C) : const Color(0xFF166534),
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Switch(
-                                      value: !device.blocked,
-                                      activeColor: const Color(0xFF8224E3),
-                                      onChanged: appState.busy || !hasLiveDevices
+                                    const SizedBox(height: 8),
+                                    FilledButton.tonal(
+                                      onPressed: appState.busy || !hasLiveDevices
                                           ? null
-                                          : (allowed) async {
-                                              final ok = await appState.setDeviceBlocked(device.clientId, !allowed);
+                                          : () async {
+                                              final ok = await appState.setDeviceBlocked(device.clientId, !device.blocked);
                                               if (!context.mounted) return;
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
                                                   content: Text(
                                                     ok
-                                                        ? (allowed ? 'Device access restored' : 'Device blocked')
+                                                        ? (device.blocked ? 'Internet restored for device' : 'Internet paused for device')
                                                         : (appState.error ?? 'Unable to update device access'),
                                                   ),
                                                 ),
                                               );
                                             },
+                                      child: Text(device.blocked ? 'Resume internet' : 'Pause internet'),
                                     ),
                                   ],
                                 ),
@@ -745,7 +782,7 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                   ],
                 ),
               );
-            },
+            }),
           ),
         );
       },
@@ -780,6 +817,15 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                     const Text(
                       'Create a separate guest network with its own name and password.',
                       style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _sheetStatusChip('Status', enabled ? 'Enabled' : 'Disabled'),
+                        _sheetStatusChip('Network', _guestSsidController.text.trim().isEmpty ? '-' : _guestSsidController.text.trim()),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
@@ -931,6 +977,45 @@ class _WifiSettingsScreenState extends State<WifiSettingsScreen> {
                           ),
                         ),
                       ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Quick presets',
+                      style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ActionChip(
+                          label: const Text('Night lock'),
+                          onPressed: submitting
+                              ? null
+                              : () => setLocalState(() {
+                                    startController.text = '22:00';
+                                    endController.text = '06:00';
+                                  }),
+                        ),
+                        ActionChip(
+                          label: const Text('Study hours'),
+                          onPressed: submitting
+                              ? null
+                              : () => setLocalState(() {
+                                    startController.text = '16:00';
+                                    endController.text = '18:00';
+                                  }),
+                        ),
+                        ActionChip(
+                          label: const Text('Sleep mode'),
+                          onPressed: submitting
+                              ? null
+                              : () => setLocalState(() {
+                                    startController.text = '23:00';
+                                    endController.text = '07:00';
+                                  }),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: targetController,
