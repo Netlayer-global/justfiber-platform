@@ -54,6 +54,26 @@ class _ProfileTabState extends State<ProfileTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text('Quick access', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _summaryChip('Due', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
+                  _summaryChip('Plan', billing.currentPlan.isEmpty ? '-' : billing.currentPlan),
+                  _summaryChip('Requests', '${appState.requests.length}'),
+                  _summaryChip('Tickets', '${appState.tickets.length}'),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text('Billing snapshot', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 14),
               _row('Latest bill', 'Rs ${billing.dueAmount.toStringAsFixed(0)}'),
@@ -130,20 +150,36 @@ class _ProfileTabState extends State<ProfileTab> {
                   : appState.requests.take(5).map(
                       (item) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 4),
-                                  Text(item.createdAt, style: const TextStyle(color: Color(0xFF6F7280), fontSize: 12)),
-                                ],
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F4FF),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x228224E3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item.title, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313))),
+                                    const SizedBox(height: 4),
+                                    Text(item.createdAt, style: const TextStyle(color: Color(0xFF6F7280), fontSize: 12)),
+                                  ],
+                                ),
                               ),
-                            ),
-                            Text(item.status, style: const TextStyle(color: Color(0xFF8126CF))),
-                          ],
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFFFFF),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(color: const Color(0x228224E3)),
+                                ),
+                                child: Text(item.status, style: const TextStyle(color: Color(0xFF8126CF), fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     )),
@@ -239,6 +275,26 @@ class _ProfileTabState extends State<ProfileTab> {
       onPressed: onTap,
       icon: Icon(icon),
       label: Text(label),
+    );
+  }
+
+  Widget _summaryChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
     );
   }
 }

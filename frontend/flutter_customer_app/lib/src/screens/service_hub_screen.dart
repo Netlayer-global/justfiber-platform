@@ -22,6 +22,7 @@ class ServiceHubScreen extends StatelessWidget {
     final displayWifiName = wifi.ssid24.isEmpty ? '${session?.mobile ?? ''}_wifi' : wifi.ssid24;
     final planName = billing.currentPlan.isNotEmpty ? billing.currentPlan : (dashboard.planName.isNotEmpty ? dashboard.planName : 'No active plan');
     final isActive = !wifi.paused && planName != 'No active plan';
+    final openItemsCount = appState.requests.length + appState.tickets.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -85,6 +86,7 @@ class ServiceHubScreen extends StatelessWidget {
                           _heroMetric('State', isActive ? 'Active' : 'Paused'),
                           _heroMetric('Devices', '${wifi.connectedDevicesCount}'),
                           _heroMetric('Mode', billing.billMode.isEmpty ? 'Unset' : billing.billMode),
+                          _heroMetric('Open items', '$openItemsCount'),
                         ],
                       ),
                     ],
@@ -114,6 +116,16 @@ class ServiceHubScreen extends StatelessWidget {
                 Text(
                   '$planName | $displayWifiName',
                   style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                ),
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _serviceChip('Status', isActive ? 'Active' : 'Paused'),
+                    _serviceChip('Quality', networkQuality.quality.isEmpty ? '-' : networkQuality.quality),
+                    _serviceChip('Wi-Fi', displayWifiName),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -289,6 +301,16 @@ class ServiceHubScreen extends StatelessWidget {
               children: [
                 const Text('Service health', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24)),
                 const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _serviceChip('Latency', '${networkQuality.latencyMs.toStringAsFixed(0)} ms'),
+                    _serviceChip('Packet loss', '${networkQuality.packetLossPercent.toStringAsFixed(1)}%'),
+                    _serviceChip('Speed test', speedTest.status.isEmpty ? 'Not run' : speedTest.status),
+                  ],
+                ),
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(child: _summaryHealthTile('Quality', networkQuality.quality)),
@@ -432,6 +454,26 @@ class ServiceHubScreen extends StatelessWidget {
       borderColor: const Color(0x228224E3),
       padding: const EdgeInsets.all(20),
       child: child,
+    );
+  }
+
+  Widget _serviceChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x228224E3)),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
+          children: [
+            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
     );
   }
 
