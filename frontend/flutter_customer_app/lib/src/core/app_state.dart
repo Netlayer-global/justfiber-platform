@@ -33,6 +33,7 @@ class AppState extends ChangeNotifier {
   String? bookingError;
   String? selectedCustomerId;
   String? pendingNavigationTarget;
+  String? pendingNotificationReadId;
   DateTime? lastSyncedAt;
   final Set<String> _seenNotificationIds = <String>{};
   final Map<String, DateTime> _recentNotificationFingerprints = <String, DateTime>{};
@@ -304,7 +305,10 @@ class AppState extends ChangeNotifier {
       }
       _seenNotificationIds.add(item.id);
       _recentNotificationFingerprints[fingerprint] = DateTime.now();
-      final payload = jsonEncode({'target': _notificationTarget(item)});
+      final payload = jsonEncode({
+        'target': _notificationTarget(item),
+        'notificationId': item.id,
+      });
       await CustomerNotificationService.instance.showAlert(
         id: CustomerNotificationService.instance.stableIdFor(item.id),
         title: item.title.isEmpty ? 'JustFiber update' : item.title,
@@ -484,19 +488,63 @@ class AppState extends ChangeNotifier {
     try {
       final data = jsonDecode(payload);
       if (data is Map<String, dynamic>) {
-        final target = (data['target'] ?? '').toString().trim();
+        final target = _normalizeNavigationTarget((data['target'] ?? '').toString().trim());
+        final notificationId = (data['notificationId'] ?? data['id'] ?? '').toString().trim();
+        if (notificationId.isNotEmpty) {
+          pendingNotificationReadId = notificationId;
+        }
         if (target.isNotEmpty) {
           pendingNavigationTarget = target;
+          notifyListeners();
+        } else if (notificationId.isNotEmpty) {
           notifyListeners();
         }
       }
     } catch (_) {}
   }
 
+  String _normalizeNavigationTarget(String raw) {
+    final target = raw.toLowerCase().replaceAll('-', '_').trim();
+    switch (target) {
+      case 'bill':
+      case 'billing':
+      case 'invoice':
+      case 'payment':
+      case 'receipt':
+        return 'billing';
+      case 'booking':
+      case 'install':
+      case 'installer':
+      case 'tracking':
+      case 'service':
+        return 'tracking';
+      case 'ticket':
+      case 'complaint':
+      case 'request':
+      case 'support':
+        return 'support';
+      case 'plan':
+      case 'plans':
+      case 'plans_resume':
+      case 'upgrade':
+        return target == 'plans_resume' ? 'plans_resume' : 'plans';
+      default:
+        return target;
+    }
+  }
+
   String? consumePendingNavigationTarget() {
     final target = pendingNavigationTarget;
     pendingNavigationTarget = null;
+    notifyListeners();
     return target;
+  }
+
+  String? consumePendingNotificationReadId() {
+    final id = pendingNotificationReadId;
+    pendingNotificationReadId = null;
+    notifyListeners();
+    return id;
   }
 
   Future<void> refreshBookingTracking({bool silent = false}) async {
@@ -714,8 +762,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> markAllNotificationsRead() async {
-    for (final item in notifications.where((item) => item.readAt.isEmpty)) {
-      await markNotificationRead(item.id);
+    final unreadIds = notifications.where((item) => item.readAt.isEmpty && item.id.isNotEmpty).map((item) => item.id).toList(growable: false);
+    if (unreadIds.isEmpty) return;
+    for (final id in unreadIds) {
+      await markNotificationRead(id);
     }
   }
 
@@ -1231,6 +1281,7 @@ class AppState extends ChangeNotifier {
     );
     bookingError = null;
     pendingNavigationTarget = null;
+    pendingNotificationReadId = null;
     lastSyncedAt = null;
     _seenNotificationIds.clear();
     _recentNotificationFingerprints.clear();

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_state.dart';
 import '../widgets/gradient_orb_background.dart';
 import 'billing_history_screen.dart';
+import 'plan_catalog_screen.dart';
 import 'service_hub_screen.dart';
+import 'service_tracking_screen.dart';
 import 'support_history_screen.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/profile_tab.dart';
@@ -16,9 +19,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
+  bool _handlingPendingNavigation = false;
 
   @override
   Widget build(BuildContext context) {
+    final appState = AppStateScope.of(context);
+    _handlePendingNavigation(appState);
     final pages = [
       HomeTab(onNavigate: _openTab),
       const BillingHistoryScreen(),
@@ -56,6 +62,55 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openTab(int value) => setState(() => index = value);
+
+  void _handlePendingNavigation(AppState appState) {
+    final target = appState.pendingNavigationTarget;
+    if (target == null || target.isEmpty || _handlingPendingNavigation) return;
+    _handlingPendingNavigation = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (!mounted) return;
+        final nextTarget = appState.consumePendingNavigationTarget();
+        final notificationId = appState.consumePendingNotificationReadId();
+        if (notificationId != null && notificationId.isNotEmpty) {
+          await appState.markNotificationRead(notificationId);
+        }
+        if (nextTarget == null || nextTarget.isEmpty) return;
+        switch (nextTarget) {
+          case 'billing':
+            _openTab(1);
+            await appState.refresh();
+            return;
+          case 'tracking':
+            _openTab(2);
+            await appState.refreshBookingTracking();
+            return;
+          case 'support':
+            _openTab(3);
+            await appState.refresh();
+            return;
+          case 'plans':
+          case 'plans_resume':
+            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
+            if (mounted) {
+              await appState.refresh();
+            }
+            return;
+          case 'tracking_detail':
+            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
+            if (mounted) {
+              await appState.refreshBookingTracking();
+            }
+            return;
+          default:
+            _openTab(0);
+            await appState.refresh();
+        }
+      } finally {
+        _handlingPendingNavigation = false;
+      }
+    });
+  }
 }
 
 class _NavItem extends StatelessWidget {
