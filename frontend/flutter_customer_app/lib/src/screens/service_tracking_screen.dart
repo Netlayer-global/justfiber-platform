@@ -46,6 +46,32 @@ class ServiceTrackingScreen extends StatelessWidget {
             _connectionStrip(selectedConnection),
             const SizedBox(height: 18),
           ],
+          if ((appState.error ?? '').isNotEmpty) ...[
+            AppCard(
+              color: const Color(0xFFFFFBEB),
+              borderColor: const Color(0x33F59E0B),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tracking refresh needs attention',
+                    style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313), fontSize: 18),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    appState.error!,
+                    style: const TextStyle(color: Color(0xFF92400E), height: 1.45),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: appState.busy ? null : () => _refreshTrackingWithFeedback(context, appState),
+                    child: const Text('Retry tracking refresh'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           AppCard(
             gradient: const LinearGradient(
               colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],

@@ -436,12 +436,14 @@ class AppState extends ChangeNotifier {
     }
     try {
       installerVisits = await api.fetchServiceVisits(current, customerId: selectedCustomerId);
+      requests = await api.fetchRequests(current, customerId: selectedCustomerId);
       if (latestBooking != null && latestBooking!.bookingNumber.isNotEmpty) {
         try {
           bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
         } catch (_) {}
       }
       tickets = await api.fetchTickets(current, customerId: selectedCustomerId);
+      notifications = await api.fetchNotifications(current);
     } catch (e) {
       error = e.toString();
     } finally {
@@ -729,6 +731,7 @@ class AppState extends ChangeNotifier {
     if (current == null) return null;
     bookingBusy = true;
     bookingError = null;
+    error = null;
     notifyListeners();
     try {
       return await api.createBookingPaymentOrder(
@@ -738,6 +741,7 @@ class AppState extends ChangeNotifier {
       );
     } catch (e) {
       bookingError = e.toString();
+      error = bookingError;
       return null;
     } finally {
       bookingBusy = false;

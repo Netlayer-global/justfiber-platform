@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import '../core/app_state.dart';
@@ -23,8 +24,10 @@ class BookingPaymentScreen extends StatefulWidget {
 class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
   late final Razorpay _razorpay;
   bool launching = false;
+  bool verifying = false;
   bool helping = false;
   String? paymentError;
+  String? walletHint;
   int retryCount = 0;
 
   @override
@@ -44,10 +47,12 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
   }
 
   void _openCheckout() {
-    if (launching) return;
+    if (launching || verifying) return;
     setState(() {
       launching = true;
+      verifying = false;
       paymentError = null;
+      walletHint = null;
     });
     try {
       _razorpay.open({
@@ -66,17 +71,23 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
           'color': '#8224E3',
         },
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         launching = false;
         paymentError = 'Unable to launch checkout right now. Please retry.';
       });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     final appState = AppStateScope.of(context);
+    setState(() {
+      launching = false;
+      verifying = true;
+      paymentError = null;
+    });
     final ok = await appState.verifyBookingPayment(
       bookingNumber: widget.bookingNumber,
       orderId: response.orderId ?? widget.paymentOrder.orderId,
@@ -91,9 +102,11 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
       ),
     );
     if (ok) {
+      await appState.refreshBookingTracking(silent: true);
+      if (!mounted) return;
       Navigator.of(context).pop(true);
     } else {
-      setState(() => launching = false);
+      setState(() => verifying = false);
     }
   }
 
@@ -101,6 +114,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
     if (!mounted) return;
     setState(() {
       launching = false;
+      verifying = false;
       paymentError = response.message ?? 'Payment failed';
       retryCount += 1;
     });
@@ -108,8 +122,29 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
 
   void _handleExternalWallet(ExternalWalletResponse response) {
     if (!mounted) return;
+    setState(() {
+      launching = false;
+      walletHint = 'Continue payment in ${response.walletName ?? 'wallet'} and return here after completion.';
+    });
+  }
+
+  Future<void> _refreshBookingStatus() async {
+    final appState = AppStateScope.of(context);
+    await appState.refreshBookingTracking();
+    if (!mounted) return;
+    final hasUpdate = (appState.bookingTracking?.steps.isNotEmpty ?? false) || appState.latestBooking != null;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Continue payment in ${response.walletName ?? 'wallet'} and return here after completion.')),
+      SnackBar(
+        content: Text(hasUpdate ? 'Booking status refreshed.' : (appState.error ?? 'No booking update found yet')),
+      ),
+    );
+  }
+
+  Future<void> _copyOrderReference() async {
+    await Clipboard.setData(ClipboardData(text: widget.paymentOrder.orderId));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Order reference copied')),
     );
   }
 
@@ -148,6 +183,9 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
     }
     if (text.contains('network') || text.contains('timeout') || text.contains('unable to connect')) {
       return 'This looks like a network issue. Retry once after connection stabilizes.';
+    }
+    if (text.contains('verify') || text.contains('signature')) {
+      return 'Payment may be received but verification is pending. Refresh booking status once before retrying.';
     }
     return 'Retry the booking payment once. If the amount was deducted but the booking did not update, create a support ticket from here.';
   }
@@ -199,6 +237,16 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Color(0xFF6E6A67)),
                   ),
+                ] else if (verifying) ...[
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  const Text('Verifying payment...', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'We have the callback. Hold this screen while booking records are updated.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF6E6A67)),
+                  ),
                 ] else ...[
                   Container(
                     width: double.infinity,
@@ -232,6 +280,55 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F4FF),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0x228224E3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Order reference',
+                          style: TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.paymentOrder.orderId,
+                          style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton(
+                            onPressed: _copyOrderReference,
+                            child: const Text('Copy reference'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (walletHint != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F4FF),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x558224E3)),
+                      ),
+                      child: Text(
+                        walletHint!,
+                        style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                   if (paymentError != null) ...[
                     const SizedBox(height: 16),
                     Container(
@@ -253,8 +350,16 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _openCheckout,
+                      onPressed: (launching || verifying) ? null : _openCheckout,
                       child: Text(retryCount > 0 ? 'Retry payment' : 'Open checkout'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: (launching || verifying) ? null : _refreshBookingStatus,
+                      child: const Text('Refresh booking status'),
                     ),
                   ),
                   const SizedBox(height: 10),
