@@ -528,6 +528,46 @@ class PlanChangeDraft {
   final String savedAt;
 }
 
+class BookingFlowDraft {
+  const BookingFlowDraft({
+    required this.step,
+    required this.selectedPlanCode,
+    required this.selectedDurationMonths,
+    required this.selectedDurationLabel,
+    required this.selectedSlotCode,
+    required this.selectedSlotLabel,
+    required this.preferredDateIso,
+    required this.name,
+    required this.mobile,
+    required this.email,
+    required this.address,
+    required this.pinCode,
+    required this.latitude,
+    required this.longitude,
+    required this.hasPickedLocation,
+    required this.usedCurrentLocation,
+    required this.savedAt,
+  });
+
+  final int step;
+  final String selectedPlanCode;
+  final int selectedDurationMonths;
+  final String selectedDurationLabel;
+  final String selectedSlotCode;
+  final String selectedSlotLabel;
+  final String preferredDateIso;
+  final String name;
+  final String mobile;
+  final String email;
+  final String address;
+  final String pinCode;
+  final double latitude;
+  final double longitude;
+  final bool hasPickedLocation;
+  final bool usedCurrentLocation;
+  final String savedAt;
+}
+
 class BookingQuote {
   const BookingQuote({
     required this.bookingNumber,

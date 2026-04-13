@@ -41,6 +41,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   bool _locationServiceDisabled = false;
   bool _usedCurrentLocation = false;
   bool _showUnavailableState = false;
+  bool _draftHydrated = false;
   final nameController = TextEditingController();
   final mobileController = TextEditingController();
   final emailController = TextEditingController();
@@ -48,7 +49,53 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   final pinController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    nameController.addListener(_handleDraftInputChanged);
+    mobileController.addListener(_handleDraftInputChanged);
+    emailController.addListener(_handleDraftInputChanged);
+    addressController.addListener(_handleDraftInputChanged);
+    pinController.addListener(_handleDraftInputChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_draftHydrated) return;
+    final appState = AppStateScope.of(context);
+    final draft = appState.bookingFlowDraft;
+    if (draft != null) {
+      nameController.text = draft.name;
+      mobileController.text = draft.mobile.isNotEmpty ? draft.mobile : (widget.initialMobile ?? '');
+      emailController.text = draft.email;
+      addressController.text = draft.address;
+      pinController.text = draft.pinCode;
+      selectedPlanCode = draft.selectedPlanCode.isEmpty ? null : draft.selectedPlanCode;
+      _selectedDurationMonths = draft.selectedDurationMonths;
+      _selectedDurationLabel = draft.selectedDurationLabel;
+      _selectedSlotCode = draft.selectedSlotCode.isEmpty ? 'morning' : draft.selectedSlotCode;
+      _selectedSlotLabel = draft.selectedSlotLabel.isEmpty ? '10 AM - 1 PM' : draft.selectedSlotLabel;
+      _preferredDate = DateTime.tryParse(draft.preferredDateIso) ?? DateTime.now().add(const Duration(days: 1));
+      _selectedLocation = LatLng(draft.latitude, draft.longitude);
+      _hasPickedLocation = draft.hasPickedLocation;
+      _usedCurrentLocation = draft.usedCurrentLocation;
+      step = draft.step.clamp(0, 3).toInt();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _mapController.move(_selectedLocation, _hasPickedLocation ? 16 : 14);
+        }
+      });
+    }
+    _draftHydrated = true;
+  }
+
+  @override
   void dispose() {
+    nameController.removeListener(_handleDraftInputChanged);
+    mobileController.removeListener(_handleDraftInputChanged);
+    emailController.removeListener(_handleDraftInputChanged);
+    addressController.removeListener(_handleDraftInputChanged);
+    pinController.removeListener(_handleDraftInputChanged);
     nameController.dispose();
     mobileController.dispose();
     emailController.dispose();
@@ -121,6 +168,35 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           const Text('Unlock plans and offers available in your area.', style: TextStyle(color: Color(0xFF6B7280), height: 1.4)),
           const SizedBox(height: 16),
           _addressChecklist(),
+          if (appState.bookingFlowDraft != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F4FF),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0x228224E3)),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Saved booking draft restored. Continue from where you left off or clear it.',
+                      style: TextStyle(color: Color(0xFF6B7280), height: 1.4, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton(
+                    onPressed: () async {
+                      await _resetBookingFlow(clearSavedDraft: true);
+                    },
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _field('Full name', nameController),
           const SizedBox(height: 12),
@@ -169,6 +245,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         _usedCurrentLocation = false;
                       });
                       _mapController.move(point, 16);
+                      _persistBookingDraft();
                     },
                   ),
                   children: [
@@ -231,6 +308,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                       _selectedLocation = const LatLng(28.6139, 77.2090);
                     });
                     _mapController.move(_selectedLocation, 14);
+                    _persistBookingDraft();
                   },
                   child: const Text('Reset pin'),
                 ),
@@ -304,6 +382,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         }
                         setState(() => _showUnavailableState = false);
                         setState(() => step = 1);
+                        _persistBookingDraft();
                       } else {
                         final leadNumber = await appState.submitFeasibilityLead(
                           fullName: nameController.text.trim(),
@@ -408,6 +487,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                             _showUnavailableState = false;
                             step = 1;
                           });
+                          _persistBookingDraft();
                         }
                       },
                 child: const Text('Check again'),
@@ -476,7 +556,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 data: plan.dataPolicy == 'unlimited' ? 'Unlimited' : '${plan.dataLimitGb.toStringAsFixed(0)} GB',
                 price: 'Rs ${plan.monthlyPrice.toStringAsFixed(0)} /m + GST',
                 selected: selectedPlanCode == plan.planCode,
-                onSelect: () => setState(() => selectedPlanCode = plan.planCode),
+                onSelect: () {
+                  setState(() => selectedPlanCode = plan.planCode);
+                  _persistBookingDraft();
+                },
               ),
             ),
           SizedBox(
@@ -495,6 +578,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         _selectedDurationLabel = defaultDuration.$2;
                       }
                       setState(() => step = 2);
+                      _persistBookingDraft();
                     },
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF8224E3),
@@ -507,7 +591,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => setState(() => step = 0),
+              onPressed: () {
+                setState(() => step = 0);
+                _persistBookingDraft();
+              },
               child: const Text('Back to Address'),
             ),
           ),
@@ -551,10 +638,13 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                 recurringAmount: _priceForDuration(selected, option.$1),
                 setupAmount: setupAmount,
                 selected: _selectedDurationMonths == option.$1,
-                onSelect: () => setState(() {
-                  _selectedDurationMonths = option.$1;
-                  _selectedDurationLabel = option.$2;
-                }),
+                onSelect: () {
+                  setState(() {
+                    _selectedDurationMonths = option.$1;
+                    _selectedDurationLabel = option.$2;
+                  });
+                  _persistBookingDraft();
+                },
               ),
             ),
           const SizedBox(height: 8),
@@ -566,7 +656,12 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: selected == null ? null : () => setState(() => step = 3),
+              onPressed: selected == null
+                  ? null
+                  : () {
+                      setState(() => step = 3);
+                      _persistBookingDraft();
+                    },
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF8224E3),
                 foregroundColor: const Color(0xFFFFFFFF),
@@ -578,7 +673,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => setState(() => step = 1),
+              onPressed: () {
+                setState(() => step = 1);
+                _persistBookingDraft();
+              },
               child: const Text('Back to Plans'),
             ),
           ),
@@ -695,6 +793,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                           if (!mounted) return;
                           if (paid == true) {
                             await appState.refresh();
+                            await appState.clearBookingFlowDraft();
+                            if (!mounted) return;
                             setState(() => step = 4);
                           }
                         } else {
@@ -716,7 +816,12 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: appState.bookingBusy ? null : () => setState(() => step = 2),
+              onPressed: appState.bookingBusy
+                  ? null
+                  : () {
+                      setState(() => step = 2);
+                      _persistBookingDraft();
+                    },
               child: const Text('Back to Duration'),
             ),
           ),
@@ -837,7 +942,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     color: selectedDate ? const Color(0xFF111111) : const Color(0xFF131313),
                     fontWeight: FontWeight.w700,
                   ),
-                  onSelected: (_) => setState(() => _preferredDate = date),
+                  onSelected: (_) {
+                    setState(() => _preferredDate = date);
+                    _persistBookingDraft();
+                  },
                 );
               },
               separatorBuilder: (_, __) => const SizedBox(width: 8),
@@ -867,6 +975,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     _selectedSlotCode = slot.$1;
                     _selectedSlotLabel = slot.$2;
                   });
+                  _persistBookingDraft();
                 },
               );
             }).toList(),
@@ -910,6 +1019,10 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                         preferredSlotLabel: _selectedSlotLabel,
                       );
                       if (!context.mounted) return;
+                      if (ok) {
+                        await AppStateScope.of(context).clearBookingFlowDraft();
+                        if (!context.mounted) return;
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(ok ? 'Booking confirmed and slot saved.' : (AppStateScope.of(context).error ?? 'Unable to save slot preference')),
@@ -954,23 +1067,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => setState(() {
-                step = 0;
-                selectedPlanCode = null;
-                _selectedDurationMonths = 1;
-                _selectedDurationLabel = '1 month';
-                _selectedSlotCode = 'morning';
-                _selectedSlotLabel = '10 AM - 1 PM';
-                _preferredDate = DateTime.now().add(const Duration(days: 1));
-                _selectedLocation = const LatLng(28.6139, 77.2090);
-                _hasPickedLocation = false;
-                _locationError = null;
-                nameController.clear();
-                mobileController.text = AppStateScope.of(context).session?.mobile ?? widget.initialMobile ?? '';
-                addressController.clear();
-                pinController.clear();
-                AppStateScope.of(context).clearBookingDraft();
-              }),
+              onPressed: () async {
+                await _resetBookingFlow(clearSavedDraft: true);
+              },
               child: const Text('Create another booking'),
             ),
           ),
@@ -1211,6 +1310,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         _usedCurrentLocation = true;
       });
       _mapController.move(_selectedLocation, 17);
+      _persistBookingDraft();
       _showLocationFeedback('Current location pinned on the map.');
     } catch (e) {
       setState(() {
@@ -1222,6 +1322,76 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           _locationBusy = false;
         });
       }
+    }
+  }
+
+  void _handleDraftInputChanged() {
+    _persistBookingDraft();
+  }
+
+  bool _hasDraftContent() {
+    return step > 0 ||
+        (selectedPlanCode ?? '').isNotEmpty ||
+        nameController.text.trim().isNotEmpty ||
+        mobileController.text.trim().isNotEmpty ||
+        emailController.text.trim().isNotEmpty ||
+        addressController.text.trim().isNotEmpty ||
+        pinController.text.trim().isNotEmpty ||
+        _hasPickedLocation;
+  }
+
+  Future<void> _persistBookingDraft() async {
+    if (!mounted || !_draftHydrated) return;
+    final appState = AppStateScope.of(context);
+    if (step >= 4 || !_hasDraftContent()) {
+      await appState.clearBookingFlowDraft();
+      return;
+    }
+    await appState.saveBookingFlowDraft(
+      step: step,
+      selectedPlanCode: selectedPlanCode ?? '',
+      selectedDurationMonths: _selectedDurationMonths,
+      selectedDurationLabel: _selectedDurationLabel,
+      selectedSlotCode: _selectedSlotCode ?? 'morning',
+      selectedSlotLabel: _selectedSlotLabel ?? '10 AM - 1 PM',
+      preferredDateIso: _preferredDate.toIso8601String(),
+      name: nameController.text.trim(),
+      mobile: mobileController.text.trim(),
+      email: emailController.text.trim(),
+      address: addressController.text.trim(),
+      pinCode: pinController.text.trim(),
+      latitude: _selectedLocation.latitude,
+      longitude: _selectedLocation.longitude,
+      hasPickedLocation: _hasPickedLocation,
+      usedCurrentLocation: _usedCurrentLocation,
+    );
+  }
+
+  Future<void> _resetBookingFlow({required bool clearSavedDraft}) async {
+    final appState = AppStateScope.of(context);
+    setState(() {
+      step = 0;
+      selectedPlanCode = null;
+      _selectedDurationMonths = 1;
+      _selectedDurationLabel = '1 month';
+      _selectedSlotCode = 'morning';
+      _selectedSlotLabel = '10 AM - 1 PM';
+      _preferredDate = DateTime.now().add(const Duration(days: 1));
+      _selectedLocation = const LatLng(28.6139, 77.2090);
+      _hasPickedLocation = false;
+      _usedCurrentLocation = false;
+      _locationError = null;
+      _showUnavailableState = false;
+      nameController.clear();
+      mobileController.text = AppStateScope.of(context).session?.mobile ?? widget.initialMobile ?? '';
+      emailController.clear();
+      addressController.clear();
+      pinController.clear();
+    });
+    appState.clearBookingDraft();
+    _mapController.move(_selectedLocation, 14);
+    if (clearSavedDraft) {
+      await appState.clearBookingFlowDraft();
     }
   }
 

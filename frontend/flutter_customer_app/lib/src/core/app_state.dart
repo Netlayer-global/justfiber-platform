@@ -13,6 +13,7 @@ const _accessTokenKey = 'justfiber.access_token';
 const _refreshTokenKey = 'justfiber.refresh_token';
 const _selectedCustomerKey = 'justfiber.selected_customer_id';
 const _planChangeDraftKey = 'justfiber.plan_change_draft';
+const _bookingFlowDraftKey = 'justfiber.booking_flow_draft';
 const _surfacedNotificationIdsKey = 'justfiber.surfaced_notification_ids';
 
 class AppState extends ChangeNotifier {
@@ -120,6 +121,7 @@ class AppState extends ChangeNotifier {
   FeasibilityResult? feasibility;
   PlanChangeApplyResult? lastPlanChangeResult;
   PlanChangeDraft? planChangeDraft;
+  BookingFlowDraft? bookingFlowDraft;
 
   SpeedTestData speedTest = const SpeedTestData(
     downloadMbps: 0,
@@ -173,6 +175,7 @@ class AppState extends ChangeNotifier {
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_selectedCustomerKey);
     await prefs.remove(_planChangeDraftKey);
+    await prefs.remove(_bookingFlowDraftKey);
     await prefs.remove(_surfacedNotificationIdsKey);
     session = null;
     demoOtp = null;
@@ -365,6 +368,76 @@ class AppState extends ChangeNotifier {
     planChangeDraft = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_planChangeDraftKey);
+    notifyListeners();
+  }
+
+  Future<void> saveBookingFlowDraft({
+    required int step,
+    required String selectedPlanCode,
+    required int selectedDurationMonths,
+    required String selectedDurationLabel,
+    required String selectedSlotCode,
+    required String selectedSlotLabel,
+    required String preferredDateIso,
+    required String name,
+    required String mobile,
+    required String email,
+    required String address,
+    required String pinCode,
+    required double latitude,
+    required double longitude,
+    required bool hasPickedLocation,
+    required bool usedCurrentLocation,
+  }) async {
+    bookingFlowDraft = BookingFlowDraft(
+      step: step,
+      selectedPlanCode: selectedPlanCode,
+      selectedDurationMonths: selectedDurationMonths,
+      selectedDurationLabel: selectedDurationLabel,
+      selectedSlotCode: selectedSlotCode,
+      selectedSlotLabel: selectedSlotLabel,
+      preferredDateIso: preferredDateIso,
+      name: name,
+      mobile: mobile,
+      email: email,
+      address: address,
+      pinCode: pinCode,
+      latitude: latitude,
+      longitude: longitude,
+      hasPickedLocation: hasPickedLocation,
+      usedCurrentLocation: usedCurrentLocation,
+      savedAt: DateTime.now().toIso8601String(),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _bookingFlowDraftKey,
+      jsonEncode({
+        'step': step,
+        'selectedPlanCode': selectedPlanCode,
+        'selectedDurationMonths': selectedDurationMonths,
+        'selectedDurationLabel': selectedDurationLabel,
+        'selectedSlotCode': selectedSlotCode,
+        'selectedSlotLabel': selectedSlotLabel,
+        'preferredDateIso': preferredDateIso,
+        'name': name,
+        'mobile': mobile,
+        'email': email,
+        'address': address,
+        'pinCode': pinCode,
+        'latitude': latitude,
+        'longitude': longitude,
+        'hasPickedLocation': hasPickedLocation,
+        'usedCurrentLocation': usedCurrentLocation,
+        'savedAt': bookingFlowDraft!.savedAt,
+      }),
+    );
+    notifyListeners();
+  }
+
+  Future<void> clearBookingFlowDraft() async {
+    bookingFlowDraft = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_bookingFlowDraftKey);
     notifyListeners();
   }
 
@@ -1052,6 +1125,7 @@ class AppState extends ChangeNotifier {
     bookingDraft = null;
     feasibility = null;
     bookingError = null;
+    clearBookingFlowDraft();
     notifyListeners();
   }
 
@@ -1137,6 +1211,7 @@ class AppState extends ChangeNotifier {
     latestBooking = null;
     bookingTracking = null;
     bookingDraft = null;
+    bookingFlowDraft = null;
     feasibility = null;
     lastPlanChangeResult = null;
     planChangeDraft = null;
@@ -1173,6 +1248,7 @@ class AppState extends ChangeNotifier {
     final refreshToken = prefs.getString(_refreshTokenKey);
     selectedCustomerId = prefs.getString(_selectedCustomerKey);
     final savedPlanChangeDraft = prefs.getString(_planChangeDraftKey);
+    final savedBookingFlowDraft = prefs.getString(_bookingFlowDraftKey);
     if (savedPlanChangeDraft != null && savedPlanChangeDraft.isNotEmpty) {
       try {
         final map = jsonDecode(savedPlanChangeDraft);
@@ -1183,6 +1259,32 @@ class AppState extends ChangeNotifier {
             billingTerm: (map['billingTerm'] ?? 'monthly').toString(),
             effectiveMode: (map['effectiveMode'] ?? 'immediate').toString(),
             step: int.tryParse('${map['step'] ?? 0}') ?? 0,
+            savedAt: (map['savedAt'] ?? '').toString(),
+          );
+        }
+      } catch (_) {}
+    }
+    if (savedBookingFlowDraft != null && savedBookingFlowDraft.isNotEmpty) {
+      try {
+        final map = jsonDecode(savedBookingFlowDraft);
+        if (map is Map<String, dynamic>) {
+          bookingFlowDraft = BookingFlowDraft(
+            step: int.tryParse('${map['step'] ?? 0}') ?? 0,
+            selectedPlanCode: (map['selectedPlanCode'] ?? '').toString(),
+            selectedDurationMonths: int.tryParse('${map['selectedDurationMonths'] ?? 1}') ?? 1,
+            selectedDurationLabel: (map['selectedDurationLabel'] ?? '1 month').toString(),
+            selectedSlotCode: (map['selectedSlotCode'] ?? 'morning').toString(),
+            selectedSlotLabel: (map['selectedSlotLabel'] ?? '10 AM - 1 PM').toString(),
+            preferredDateIso: (map['preferredDateIso'] ?? '').toString(),
+            name: (map['name'] ?? '').toString(),
+            mobile: (map['mobile'] ?? '').toString(),
+            email: (map['email'] ?? '').toString(),
+            address: (map['address'] ?? '').toString(),
+            pinCode: (map['pinCode'] ?? '').toString(),
+            latitude: double.tryParse('${map['latitude'] ?? 28.6139}') ?? 28.6139,
+            longitude: double.tryParse('${map['longitude'] ?? 77.2090}') ?? 77.2090,
+            hasPickedLocation: map['hasPickedLocation'] == true,
+            usedCurrentLocation: map['usedCurrentLocation'] == true,
             savedAt: (map['savedAt'] ?? '').toString(),
           );
         }
