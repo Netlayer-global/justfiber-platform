@@ -139,10 +139,18 @@ class AppState extends ChangeNotifier {
 
   Future<String?> _handleUnauthorized() async {
     final current = session;
-    if (current == null || current.refreshToken.isEmpty) return null;
+    if (current == null || current.refreshToken.isEmpty) {
+      if (current != null) {
+        await _clearPersistedSession(message: 'Session expired. Please log in again.');
+      }
+      return null;
+    }
     try {
       final nextAccessToken = await api.refreshCustomerSession(current.refreshToken);
-      if (nextAccessToken.isEmpty) return null;
+      if (nextAccessToken.isEmpty) {
+        await _clearPersistedSession(message: 'Session expired. Please log in again.');
+        return null;
+      }
       session = CustomerSession(
         mobile: current.mobile,
         accessToken: nextAccessToken,
@@ -153,8 +161,26 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       return nextAccessToken;
     } catch (_) {
+      await _clearPersistedSession(message: 'Session expired. Please log in again.');
       return null;
     }
+  }
+
+  Future<void> _clearPersistedSession({String? message}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_mobileKey);
+    await prefs.remove(_accessTokenKey);
+    await prefs.remove(_refreshTokenKey);
+    await prefs.remove(_selectedCustomerKey);
+    await prefs.remove(_planChangeDraftKey);
+    await prefs.remove(_surfacedNotificationIdsKey);
+    session = null;
+    demoOtp = null;
+    error = message;
+    selectedCustomerId = null;
+    restoringSession = false;
+    _resetCustomerState();
+    notifyListeners();
   }
 
   Future<void> requestOtp(String mobile) async {
@@ -1026,20 +1052,7 @@ class AppState extends ChangeNotifier {
   }
 
   void logout() {
-    SharedPreferences.getInstance().then((prefs) async {
-      await prefs.remove(_mobileKey);
-      await prefs.remove(_accessTokenKey);
-      await prefs.remove(_refreshTokenKey);
-      await prefs.remove(_selectedCustomerKey);
-      await prefs.remove(_surfacedNotificationIdsKey);
-    });
-    session = null;
-    demoOtp = null;
-    error = null;
-    selectedCustomerId = null;
-    pendingNavigationTarget = null;
-    _resetCustomerState();
-    notifyListeners();
+    _clearPersistedSession();
   }
 
   void _resetCustomerState() {
@@ -1148,6 +1161,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> restoreSession() async {
     restoringSession = true;
+    error = null;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     final mobile = prefs.getString(_mobileKey);
@@ -1182,6 +1196,11 @@ class AppState extends ChangeNotifier {
     );
     notifyListeners();
     await refresh();
+    if (session == null) {
+      restoringSession = false;
+      notifyListeners();
+      return;
+    }
     restoringSession = false;
     notifyListeners();
   }

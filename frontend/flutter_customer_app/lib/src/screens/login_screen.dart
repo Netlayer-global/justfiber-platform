@@ -11,15 +11,22 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final identifierController = TextEditingController(text: '9876543210');
+  final identifierController = TextEditingController();
   final otpControllers = List.generate(6, (_) => TextEditingController());
   bool otpRequested = false;
 
   String get _otpValue => otpControllers.map((controller) => controller.text).join();
 
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _handlePrimaryAction(AppState appState) async {
     final identifier = identifierController.text.trim();
-    if (identifier.isEmpty) return;
+    if (identifier.isEmpty) {
+      _showSnack('Enter your mobile number or customer ID first.');
+      return;
+    }
     if (_otpValue.length == 6) {
       final ok = await appState.verifyOtp(identifier, _otpValue);
       if (!mounted) return;
@@ -32,6 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if ((appState.error ?? '').isEmpty) {
       setState(() => otpRequested = true);
+      _showSnack('OTP sent successfully.');
     }
   }
 
@@ -195,7 +203,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               const Icon(Icons.schedule_rounded, size: 16, color: Color(0xFF8126CF)),
                               const SizedBox(width: 8),
-                              Text('Resend in 00:45', style: theme.textTheme.bodyMedium),
+                              Text(
+                                otpRequested ? 'OTP sent. Resend if needed.' : 'Request OTP to continue.',
+                                style: theme.textTheme.bodyMedium,
+                              ),
                             ],
                           ),
                         ),
@@ -204,10 +215,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: appState.busy
                               ? null
                               : () async {
-                                  await appState.requestOtp(identifierController.text.trim());
+                                  final identifier = identifierController.text.trim();
+                                  if (identifier.isEmpty) {
+                                    _showSnack('Enter your mobile number or customer ID first.');
+                                    return;
+                                  }
+                                  await appState.requestOtp(identifier);
                                   if (!mounted) return;
                                   if ((appState.error ?? '').isEmpty) {
                                     setState(() => otpRequested = true);
+                                    _showSnack('OTP resent successfully.');
                                   }
                                 },
                           child: const Text('Resend OTP'),
