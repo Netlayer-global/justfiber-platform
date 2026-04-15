@@ -7,52 +7,43 @@ class GradientOrbBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFBF7F2), Color(0xFFF7F1EB), Color(0xFFF3ECE4)],
+    return Stack(
+      children: [
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF07070F), Color(0xFF0E0E1A), Color(0xFF120A24)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -120,
-            right: -40,
-            child: _Orb(
-              size: 260,
-              colors: [Color(0x338224E3), Color(0x008224E3)],
-            ),
-          ),
-          Positioned(
-            top: 120,
-            left: -80,
-            child: _Orb(
-              size: 220,
-              colors: [Color(0x22A855F7), Color(0x00A855F7)],
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            right: -20,
-            child: _Orb(
-              size: 240,
-              colors: [Color(0x18A02D70), Color(0x00A02D70)],
-            ),
-          ),
-          child,
-        ],
-      ),
+        // Purple top-right orb
+        Positioned(
+          top: -100,
+          right: -60,
+          child: _Orb(size: 320, color: const Color(0xFFA855F7), opacity: 0.18),
+        ),
+        // Purple bottom-left orb
+        Positioned(
+          bottom: 100,
+          left: -80,
+          child: _Orb(size: 260, color: const Color(0xFF22D3EE), opacity: 0.08),
+        ),
+        child,
+      ],
     );
   }
 }
 
 class _Orb extends StatelessWidget {
-  const _Orb({required this.size, required this.colors});
+  const _Orb({required this.size, required this.color, required this.opacity});
 
   final double size;
-  final List<Color> colors;
+  final Color color;
+  final double opacity;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +53,9 @@ class _Orb extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: RadialGradient(colors: colors),
+          gradient: RadialGradient(
+            colors: [color.withValues(alpha: opacity), Colors.transparent],
+          ),
         ),
       ),
     );

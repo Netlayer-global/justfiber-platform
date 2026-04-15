@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
+import '../core/theme.dart';
 import '../widgets/gradient_orb_background.dart';
 import 'billing_history_screen.dart';
 import 'plan_catalog_screen.dart';
@@ -18,50 +20,42 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int index = 0;
+  int _index = 0;
   bool _handlingPendingNavigation = false;
+
+  static const _navItems = [
+    (icon: Icons.home_rounded, label: 'Home'),
+    (icon: Icons.receipt_long_rounded, label: 'Billing'),
+    (icon: Icons.router_rounded, label: 'Network'),
+    (icon: Icons.support_agent_rounded, label: 'Support'),
+    (icon: Icons.person_rounded, label: 'Profile'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     _handlePendingNavigation(appState);
+
     final pages = [
-      HomeTab(onNavigate: _openTab),
+      HomeTab(onNavigate: _goTo),
       const BillingHistoryScreen(),
       const ServiceHubScreen(),
       const SupportHistoryScreen(),
       const ProfileTab(),
     ];
+
     return Scaffold(
-      body: GradientOrbBackground(
-        child: SafeArea(child: pages[index]),
-      ),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.82),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0x228224E3)),
-          boxShadow: const [
-            BoxShadow(color: Color(0x148126CF), blurRadius: 24, offset: Offset(0, 10)),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(icon: Icons.home_rounded, label: 'Home', selected: index == 0, onTap: () => _openTab(0)),
-            _NavItem(icon: Icons.payments_rounded, label: 'Billing', selected: index == 1, onTap: () => _openTab(1)),
-            _CenterNavItem(selected: index == 2, onTap: () => _openTab(2)),
-            _NavItem(icon: Icons.support_agent_rounded, label: 'Support', selected: index == 3, onTap: () => _openTab(3)),
-            _NavItem(icon: Icons.person_rounded, label: 'Profile', selected: index == 4, onTap: () => _openTab(4)),
-          ],
-        ),
+      backgroundColor: kBg,
+      body: GradientOrbBackground(child: pages[_index]),
+      bottomNavigationBar: _BottomNav(
+        current: _index,
+        items: _navItems,
+        onTap: _goTo,
       ),
     );
   }
 
-  void _openTab(int value) => setState(() => index = value);
+  void _goTo(int i) => setState(() => _index = i);
 
   void _handlePendingNavigation(AppState appState) {
     final target = appState.pendingNavigationTarget;
@@ -70,40 +64,40 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (!mounted) return;
-        final nextTarget = appState.consumePendingNavigationTarget();
-        final notificationId = appState.consumePendingNotificationReadId();
-        if (notificationId != null && notificationId.isNotEmpty) {
-          await appState.markNotificationRead(notificationId);
+        final next = appState.consumePendingNavigationTarget();
+        final notifId = appState.consumePendingNotificationReadId();
+        if (notifId != null && notifId.isNotEmpty) {
+          await appState.markNotificationRead(notifId);
         }
-        if (nextTarget == null || nextTarget.isEmpty) return;
-        switch (nextTarget) {
+        if (next == null || next.isEmpty) return;
+        switch (next) {
           case 'billing':
-            _openTab(1);
+            _goTo(1);
             await appState.refresh();
             return;
           case 'tracking':
-            _openTab(2);
+            _goTo(2);
             await appState.refreshBookingTracking();
             return;
           case 'support':
-            _openTab(3);
+            _goTo(3);
             await appState.refresh();
             return;
           case 'plans':
           case 'plans_resume':
+            if (!mounted) return;
+            // ignore: use_build_context_synchronously
             await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
-            if (mounted) {
-              await appState.refresh();
-            }
+            if (mounted) await appState.refresh();
             return;
           case 'tracking_detail':
+            if (!mounted) return;
+            // ignore: use_build_context_synchronously
             await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()));
-            if (mounted) {
-              await appState.refreshBookingTracking();
-            }
+            if (mounted) await appState.refreshBookingTracking();
             return;
           default:
-            _openTab(0);
+            _goTo(0);
             await appState.refresh();
         }
       } finally {
@@ -113,38 +107,112 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
+// Bottom Navigation
+
+typedef _NavItem = ({IconData icon, String label});
+
+class _BottomNav extends StatelessWidget {
+  const _BottomNav({
+    required this.current,
+    required this.items,
     required this.onTap,
   });
 
-  final IconData icon;
-  final String label;
+  final int current;
+  final List<_NavItem> items;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Container(
+          height: 70,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF100C1F), Color(0xFF161128)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: kPrimaryLight.withValues(alpha: 0.32)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 32,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: kPrimary.withValues(alpha: 0.06),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(items.length, (i) {
+              final item = items[i];
+              final selected = i == current;
+              // Centre item (index 2) gets accent treatment
+              if (i == 2) {
+                return _CentreNavBtn(selected: selected, item: item, onTap: () => onTap(i));
+              }
+              return _NavBtn(selected: selected, item: item, onTap: () => onTap(i));
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavBtn extends StatelessWidget {
+  const _NavBtn({required this.selected, required this.item, required this.onTap});
+
   final bool selected;
+  final _NavItem item;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF8126CF) : const Color(0xFF8F8B99);
     return InkWell(
-      borderRadius: BorderRadius.circular(22),
       onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF3EDFB) : Colors.transparent,
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [Color(0xFF7C3AED), Color(0xFFA855F7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: selected ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
+          border: selected ? Border.all(color: Colors.white.withValues(alpha: 0.18)) : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+            Icon(
+              item.icon,
+              size: 22,
+              color: selected ? Colors.white : kPrimaryLight,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              item.label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+                color: selected ? Colors.white : kPrimaryLight,
+              ),
+            ),
           ],
         ),
       ),
@@ -152,29 +220,52 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _CenterNavItem extends StatelessWidget {
-  const _CenterNavItem({required this.selected, required this.onTap});
+class _CentreNavBtn extends StatelessWidget {
+  const _CentreNavBtn({required this.selected, required this.item, required this.onTap});
 
   final bool selected;
+  final _NavItem item;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(24),
       onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: 58,
-        height: 58,
+        duration: const Duration(milliseconds: 220),
+        width: 60,
+        height: 56,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFA855F7), Color(0xFF8126CF)]),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: selected
-              ? const [BoxShadow(color: Color(0x228126CF), blurRadius: 18, offset: Offset(0, 8))]
-              : null,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF22D3EE), Color(0xFFA855F7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: kPrimary.withValues(alpha: selected ? 0.55 : 0.3),
+              blurRadius: selected ? 20 : 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-        child: const Icon(Icons.router_rounded, color: Colors.white),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(item.icon, color: Colors.white, size: 22),
+            const SizedBox(height: 2),
+            Text(
+              item.label,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
