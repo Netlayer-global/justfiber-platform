@@ -3,11 +3,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { AdminRoleSummary, AdminUserSummary, BillingProfile, FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
-import { Loader2, Save, Search, Settings2 } from 'lucide-react'
+import { Loader2, Save } from 'lucide-react'
 import { toast } from 'sonner'
 
 type SectionValue = Record<string, any>
 type PathSegment = string | number
+type WorkspaceKey = 'zone' | 'billing' | 'system'
+type WorkspaceNavItem = {
+  id: string
+  title: string
+  description: string
+  sections: string[]
+}
+type InvoiceSetupView = 'organization' | 'template'
+type ZoneOperationsView = 'subzone' | 'logins' | 'contact'
 
 type SectionMeta = {
   title: string
@@ -198,6 +207,72 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   Advanced: 'Low-frequency operational switches that should stay out of day-to-day screens.',
 }
 
+const WORKSPACE_META: Record<WorkspaceKey, { title: string; description: string }> = {
+  zone: {
+    title: 'Sub-zones',
+    description: 'Create sub-zones, create zone logins, manage zone admin contact, and control zone-only settings.',
+  },
+  billing: {
+    title: 'Billing & Invoice',
+    description: 'Keep invoice organization, billing address, billing period, billing rules, prefixes, and payment tagging in one flow.',
+  },
+  system: {
+    title: 'System Settings',
+    description: 'Keep core organization defaults, user fields, integrations, and advanced platform switches in one place.',
+  },
+}
+
+const WORKSPACE_NAV: Record<WorkspaceKey, WorkspaceNavItem[]> = {
+  zone: [
+    {
+      id: 'zone-operations',
+      title: 'Zone Operations',
+      description: 'Sub-zone creation, zone logins, and zone governance.',
+      sections: ['franchise_configuration', 'router_visibility'],
+    },
+  ],
+  billing: [
+    {
+      id: 'invoice-setup',
+      title: 'Invoice Setup',
+      description: 'Organization profile, invoice template, and billing rules.',
+      sections: ['invoice_template', 'billing_address', 'billing_period', 'billing'],
+    },
+    {
+      id: 'billing-numbers',
+      title: 'Prefixes and Payments',
+      description: 'Invoice prefixes, payment tags, and numbering rules.',
+      sections: ['prefix_settings', 'tag_payment_gateway'],
+    },
+  ],
+  system: [
+    {
+      id: 'basic-settings',
+      title: 'Basic Settings',
+      description: 'General, express, and miscellaneous platform defaults.',
+      sections: ['general', 'express_configuration', 'miscellaneous'],
+    },
+    {
+      id: 'profile-fields',
+      title: 'Profile Fields',
+      description: 'Customer profile fields and additional data blocks.',
+      sections: ['user_fields', 'additional_fields'],
+    },
+    {
+      id: 'integrations',
+      title: 'Integrations',
+      description: 'External integrations and API-facing controls.',
+      sections: ['external_integrations', 'api_settings'],
+    },
+    {
+      id: 'advanced-controls',
+      title: 'Advanced Controls',
+      description: 'Support SLA, rules, and inventory controls.',
+      sections: ['helpdesk_sla', 'helpdesk_rules', 'inventory_configuration'],
+    },
+  ],
+}
+
 const initialSubZoneDraft: SubZoneDraft = {
   subZoneName: '',
   email: '',
@@ -275,6 +350,13 @@ function getSectionMeta(section: string): SectionMeta {
       advanced: true,
     }
   )
+}
+
+function getWorkspaceForSection(section: string): WorkspaceKey {
+  const meta = getSectionMeta(section)
+  if (meta.group === 'Zone & Franchise') return 'zone'
+  if (meta.group === 'Billing & Finance' || section === 'invoice_template') return 'billing'
+  return 'system'
 }
 
 function normalizeInvoiceTemplateSection(value: Record<string, any>): InvoiceTemplateSection {
@@ -558,7 +640,7 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('general')
   const [sectionValue, setSectionValue] = useState<SectionValue>({})
   const [sectionUpdatedAt, setSectionUpdatedAt] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceKey>('system')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSectionLoading, setIsSectionLoading] = useState(false)
@@ -590,6 +672,8 @@ export default function SettingsPage() {
   })
   const [passwordResetDraft, setPasswordResetDraft] = useState<Record<string, string>>({})
   const [invoiceEditorTemplateKey, setInvoiceEditorTemplateKey] = useState('')
+  const [invoiceSetupView, setInvoiceSetupView] = useState<InvoiceSetupView>('organization')
+  const [zoneOperationsView, setZoneOperationsView] = useState<ZoneOperationsView>('subzone')
   const [invoiceOrganizationProfile, setInvoiceOrganizationProfile] = useState<Partial<BillingProfile>>({
     code: 'primary',
     name: 'Primary Billing Profile',
@@ -610,13 +694,7 @@ export default function SettingsPage() {
       .filter((item) => {
         const meta = getSectionMeta(item.section)
         if (meta.advanced && !showAdvanced) return false
-        if (!search.trim()) return true
-        const query = search.trim().toLowerCase()
-        return (
-          meta.title.toLowerCase().includes(query) ||
-          meta.description.toLowerCase().includes(query) ||
-          item.section.toLowerCase().includes(query)
-        )
+        return true
       })
       .sort((left, right) => {
         const leftMeta = getSectionMeta(left.section)
@@ -626,21 +704,45 @@ export default function SettingsPage() {
         if (leftGroupIndex !== rightGroupIndex) return leftGroupIndex - rightGroupIndex
         return leftMeta.title.localeCompare(rightMeta.title)
       })
-  }, [catalog, search, showAdvanced])
+  }, [catalog, showAdvanced])
 
-  const groupedCatalog = useMemo(() => {
-    const groups = new Map<string, SettingsCatalogItem[]>()
-    for (const item of visibleCatalog) {
-      const meta = getSectionMeta(item.section)
-      const existing = groups.get(meta.group) || []
-      existing.push(item)
-      groups.set(meta.group, existing)
+  const workspaceSections = useMemo(() => {
+    return {
+      zone: visibleCatalog.filter((item) => getWorkspaceForSection(item.section) === 'zone'),
+      billing: visibleCatalog.filter((item) => getWorkspaceForSection(item.section) === 'billing'),
+      system: visibleCatalog.filter((item) => getWorkspaceForSection(item.section) === 'system'),
     }
-    return GROUP_ORDER.map((group) => ({
-      group,
-      items: groups.get(group) || [],
-    })).filter((entry) => entry.items.length)
   }, [visibleCatalog])
+
+  const activeWorkspaceSections = workspaceSections[activeWorkspace]
+  const activeWorkspaceNav = useMemo(() => {
+    const availableSections = new Set(activeWorkspaceSections.map((item) => item.section))
+    const fallbackItems = activeWorkspaceSections.map((item) => ({
+      id: item.section,
+      title: getSectionMeta(item.section).title,
+      description: getSectionMeta(item.section).description,
+      sections: [item.section],
+    }))
+
+    const curated = WORKSPACE_NAV[activeWorkspace]
+      .map((item) => ({
+        ...item,
+        sections: item.sections.filter((section) => availableSections.has(section)),
+      }))
+      .filter((item) => item.sections.length)
+
+    const coveredSections = new Set(curated.flatMap((item) => item.sections))
+    const fallback = fallbackItems.filter((item) => !coveredSections.has(item.sections[0]))
+    return [...curated, ...fallback]
+  }, [activeWorkspace, activeWorkspaceSections])
+  const activeNavItem = useMemo(
+    () => activeWorkspaceNav.find((item) => item.sections.includes(activeSection)) || activeWorkspaceNav[0] || null,
+    [activeSection, activeWorkspaceNav]
+  )
+  const activeNavSections = useMemo(
+    () => activeNavItem?.sections.map((section) => activeWorkspaceSections.find((item) => item.section === section)).filter(Boolean) as SettingsCatalogItem[] || [],
+    [activeNavItem, activeWorkspaceSections]
+  )
 
   const activeMeta = getSectionMeta(activeSection)
   const invoiceTemplateSection = useMemo(
@@ -714,6 +816,10 @@ export default function SettingsPage() {
     if (!catalog.length) return
     void loadSection(activeSection)
   }, [catalog.length, activeSection])
+
+  useEffect(() => {
+    setActiveWorkspace(getWorkspaceForSection(activeSection))
+  }, [activeSection])
 
   useEffect(() => {
     const syncZone = () => {
@@ -861,6 +967,7 @@ export default function SettingsPage() {
   }
 
   function openSubZoneWorkspace() {
+    setActiveWorkspace('zone')
     setActiveSection('franchise_configuration')
     document.getElementById('sub-zone-workspace')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     setHighlightSubZoneWorkspace(true)
@@ -1270,6 +1377,17 @@ export default function SettingsPage() {
     setSectionValue((current) => removeValueAtPath(current, path))
   }
 
+  function handleWorkspaceChange(workspace: WorkspaceKey) {
+    setActiveWorkspace(workspace)
+    const nextSection = WORKSPACE_NAV[workspace]
+      .flatMap((item) => item.sections)
+      .find((section) => workspaceSections[workspace].some((entry) => entry.section === section))
+      || workspaceSections[workspace][0]?.section
+    if (nextSection && getWorkspaceForSection(activeSection) !== workspace) {
+      setActiveSection(nextSection)
+    }
+  }
+
   function replaceInvoiceTemplateSection(nextSection: InvoiceTemplateSection) {
     setSectionValue(nextSection as unknown as SectionValue)
   }
@@ -1377,17 +1495,18 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="card p-5">
-        <div className="flex items-start justify-between gap-3">
+      <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold text-slate-900">Settings</h1>
-            <div className="mt-2 text-sm text-slate-500">
-              Manage zone operations, billing defaults, invoice setup, and sub-zone logins from one place.
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Settings</div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Admin settings</h1>
+            <div className="mt-2 max-w-3xl text-sm text-slate-500">
+              Use one simple flow: pick a workspace, pick a section, update the form, then save.
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button type="button" className="btn-secondary" onClick={openSubZoneWorkspace}>
-              Sub-zone workspace
+              Open sub-zone
             </button>
             <button
               type="button"
@@ -1399,8 +1518,32 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {(Object.entries(WORKSPACE_META) as Array<[WorkspaceKey, { title: string; description: string }]>).map(([workspace, meta]) => {
+            const active = activeWorkspace === workspace
+            return (
+              <button
+                key={workspace}
+                type="button"
+                onClick={() => handleWorkspaceChange(workspace)}
+                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  active
+                    ? 'border-purple-300 bg-purple-50 text-purple-700'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                }`}
+              >
+                {meta.title}
+              </button>
+            )
+          })}
+        </div>
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          {WORKSPACE_META[activeWorkspace].description}
+          {activeZoneLabel ? ` Current zone: ${activeZoneLabel}.` : ''}
+        </div>
       </section>
 
+      {activeWorkspace === 'zone' ? (
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div
           id="sub-zone-workspace"
@@ -1417,99 +1560,218 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-          <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Create sub-zone</div>
-                <div className="mt-1 text-sm text-slate-500">Create a new child zone under the current zone.</div>
-              </div>
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
-              className="btn-primary"
-              onClick={handleCreateSubZoneFromSettings}
-              disabled={!canAccessAllZones || isCreatingSubZone}
+              onClick={() => setZoneOperationsView('subzone')}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                zoneOperationsView === 'subzone'
+                  ? 'border-purple-300 bg-purple-50 text-purple-700'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
             >
-                {!canAccessAllZones ? 'Main admin only' : isCreatingSubZone ? 'Creating...' : 'Create sub-zone'}
+              Create Sub-zone
             </button>
+            <button
+              type="button"
+              onClick={() => setZoneOperationsView('logins')}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                zoneOperationsView === 'logins'
+                  ? 'border-purple-300 bg-purple-50 text-purple-700'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              Zone Logins
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoneOperationsView('contact')}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                zoneOperationsView === 'contact'
+                  ? 'border-purple-300 bg-purple-50 text-purple-700'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              Zone Admin Contact
+            </button>
+          </div>
+
+          {zoneOperationsView === 'subzone' ? (
+            <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">Create sub-zone</div>
+                  <div className="mt-1 text-sm text-slate-500">Create a new child zone under the current zone.</div>
+                </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleCreateSubZoneFromSettings}
+                disabled={!canAccessAllZones || isCreatingSubZone}
+              >
+                  {!canAccessAllZones ? 'Main admin only' : isCreatingSubZone ? 'Creating...' : 'Create sub-zone'}
+              </button>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <input
+                  className="input"
+                  placeholder="Sub-zone name"
+                  value={subZoneDraft.subZoneName}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, subZoneName: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Contact email"
+                  value={subZoneDraft.email}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, email: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Contact phone"
+                  value={subZoneDraft.phone}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, phone: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="City"
+                  value={subZoneDraft.city}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, city: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="State"
+                  value={subZoneDraft.state}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, state: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Pincode"
+                  value={subZoneDraft.pincode}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, pincode: event.target.value }))}
+                />
+                <input
+                  className="input md:col-span-2"
+                  placeholder="Area"
+                  value={subZoneDraft.area}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, area: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Zone admin full name"
+                  value={subZoneDraft.adminFullName}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminFullName: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Zone admin email"
+                  value={subZoneDraft.adminEmail}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminEmail: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Zone admin phone"
+                  value={subZoneDraft.adminPhone}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminPhone: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Zone admin username"
+                  value={subZoneDraft.adminUsername}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminUsername: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Zone admin password"
+                  type="text"
+                  value={subZoneDraft.adminPassword}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminPassword: event.target.value }))}
+                />
+                <select
+                  className="input"
+                  value={subZoneDraft.adminRole}
+                  onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminRole: event.target.value }))}
+                >
+                  {(adminRoles.length ? adminRoles : [{ code: 'ops_admin', name: 'Operations Admin', id: 'ops_admin', permissions: [] }]).map((role) => (
+                    <option key={role.code} value={role.code}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm text-slate-600">
+                {[
+                  ['Billing profile', 'inheritBillingProfile'],
+                  ['Invoice template', 'inheritInvoiceTemplate'],
+                  ['Plans', 'inheritPlans'],
+                  ['Payment gateway', 'inheritPaymentGateway'],
+                  ['Router visibility', 'inheritRouterVisibility'],
+                  ['Use parent routers', 'useParentRouters'],
+                ].map(([label, key]) => (
+                  <label key={key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(subZoneDraft[key as keyof SubZoneDraft])}
+                      onChange={(event) => setSubZoneDraft((current) => ({ ...current, [key]: event.target.checked }))}
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
+          ) : null}
+
+          {zoneOperationsView === 'logins' ? (
+            <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">Create zone login</div>
+                  <div className="mt-1 text-sm text-slate-500">Create a username and password for the active zone.</div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleCreateZoneLogin}
+                  disabled={!activeZoneCode || activeZoneCode === 'default' || isCreatingZoneLogin}
+                >
+                  {isCreatingZoneLogin ? 'Creating...' : 'Create zone login'}
+                </button>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
               <input
                 className="input"
-                placeholder="Sub-zone name"
-                value={subZoneDraft.subZoneName}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, subZoneName: event.target.value }))}
+                placeholder="Full name"
+                value={zoneLoginDraft.fullName}
+                onChange={(event) => setZoneLoginDraft((current) => ({ ...current, fullName: event.target.value }))}
               />
               <input
                 className="input"
-                placeholder="Contact email"
-                value={subZoneDraft.email}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, email: event.target.value }))}
+                placeholder="Username"
+                value={zoneLoginDraft.username}
+                onChange={(event) => setZoneLoginDraft((current) => ({ ...current, username: event.target.value }))}
               />
               <input
                 className="input"
-                placeholder="Contact phone"
-                value={subZoneDraft.phone}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, phone: event.target.value }))}
+                placeholder="Email"
+                value={zoneLoginDraft.email}
+                onChange={(event) => setZoneLoginDraft((current) => ({ ...current, email: event.target.value }))}
               />
               <input
                 className="input"
-                placeholder="City"
-                value={subZoneDraft.city}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, city: event.target.value }))}
+                placeholder="Phone"
+                value={zoneLoginDraft.phone}
+                onChange={(event) => setZoneLoginDraft((current) => ({ ...current, phone: event.target.value }))}
               />
               <input
                 className="input"
-                placeholder="State"
-                value={subZoneDraft.state}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, state: event.target.value }))}
-              />
-              <input
-                className="input"
-                placeholder="Pincode"
-                value={subZoneDraft.pincode}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, pincode: event.target.value }))}
-              />
-              <input
-                className="input md:col-span-2"
-                placeholder="Area"
-                value={subZoneDraft.area}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, area: event.target.value }))}
-              />
-              <input
-                className="input"
-                placeholder="Zone admin full name"
-                value={subZoneDraft.adminFullName}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminFullName: event.target.value }))}
-              />
-              <input
-                className="input"
-                placeholder="Zone admin email"
-                value={subZoneDraft.adminEmail}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminEmail: event.target.value }))}
-              />
-              <input
-                className="input"
-                placeholder="Zone admin phone"
-                value={subZoneDraft.adminPhone}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminPhone: event.target.value }))}
-              />
-              <input
-                className="input"
-                placeholder="Zone admin username"
-                value={subZoneDraft.adminUsername}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminUsername: event.target.value }))}
-              />
-              <input
-                className="input"
-                placeholder="Zone admin password"
+                placeholder="Password"
                 type="text"
-                value={subZoneDraft.adminPassword}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminPassword: event.target.value }))}
+                value={zoneLoginDraft.password}
+                onChange={(event) => setZoneLoginDraft((current) => ({ ...current, password: event.target.value }))}
               />
               <select
                 className="input"
-                value={subZoneDraft.adminRole}
-                onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminRole: event.target.value }))}
+                value={zoneLoginDraft.role}
+                onChange={(event) => setZoneLoginDraft((current) => ({ ...current, role: event.target.value }))}
               >
                 {(adminRoles.length ? adminRoles : [{ code: 'ops_admin', name: 'Operations Admin', id: 'ops_admin', permissions: [] }]).map((role) => (
                   <option key={role.code} value={role.code}>
@@ -1517,131 +1779,54 @@ export default function SettingsPage() {
                   </option>
                 ))}
               </select>
+              </div>
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                Login scope: {activeZoneLabel || 'No zone selected'} ({activeZoneCode || 'default'})
+              </div>
             </div>
-            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm text-slate-600">
-              {[
-                ['Billing profile', 'inheritBillingProfile'],
-                ['Invoice template', 'inheritInvoiceTemplate'],
-                ['Plans', 'inheritPlans'],
-                ['Payment gateway', 'inheritPaymentGateway'],
-                ['Router visibility', 'inheritRouterVisibility'],
-                ['Use parent routers', 'useParentRouters'],
-              ].map(([label, key]) => (
-                <label key={key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(subZoneDraft[key as keyof SubZoneDraft])}
-                    onChange={(event) => setSubZoneDraft((current) => ({ ...current, [key]: event.target.checked }))}
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+          ) : null}
 
-          <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Create zone login</div>
-                <div className="mt-1 text-sm text-slate-500">Create a username and password for the active zone.</div>
+          {zoneOperationsView === 'contact' ? (
+            <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">Zone admin contact</div>
+                  <div className="mt-1 text-sm text-slate-500">Keep one admin contact for this zone.</div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleSaveZoneAdmins}
+                  disabled={!activeZoneFranchise || isSavingZoneAdmins}
+                >
+                  {isSavingZoneAdmins ? 'Saving...' : 'Save admin seats'}
+                </button>
               </div>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleCreateZoneLogin}
-                disabled={!activeZoneCode || activeZoneCode === 'default' || isCreatingZoneLogin}
-              >
-                {isCreatingZoneLogin ? 'Creating...' : 'Create zone login'}
-              </button>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <input
-              className="input"
-              placeholder="Full name"
-              value={zoneLoginDraft.fullName}
-              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, fullName: event.target.value }))}
-            />
-            <input
-              className="input"
-              placeholder="Username"
-              value={zoneLoginDraft.username}
-              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, username: event.target.value }))}
-            />
-            <input
-              className="input"
-              placeholder="Email"
-              value={zoneLoginDraft.email}
-              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, email: event.target.value }))}
-            />
-            <input
-              className="input"
-              placeholder="Phone"
-              value={zoneLoginDraft.phone}
-              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, phone: event.target.value }))}
-            />
-            <input
-              className="input"
-              placeholder="Password"
-              type="text"
-              value={zoneLoginDraft.password}
-              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, password: event.target.value }))}
-            />
-            <select
-              className="input"
-              value={zoneLoginDraft.role}
-              onChange={(event) => setZoneLoginDraft((current) => ({ ...current, role: event.target.value }))}
-            >
-              {(adminRoles.length ? adminRoles : [{ code: 'ops_admin', name: 'Operations Admin', id: 'ops_admin', permissions: [] }]).map((role) => (
-                <option key={role.code} value={role.code}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-            </div>
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-              Login scope: {activeZoneLabel || 'No zone selected'} ({activeZoneCode || 'default'})
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Zone admin contact</div>
-                <div className="mt-1 text-sm text-slate-500">Keep one admin contact for this zone.</div>
-              </div>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleSaveZoneAdmins}
-                disabled={!activeZoneFranchise || isSavingZoneAdmins}
-              >
-                {isSavingZoneAdmins ? 'Saving...' : 'Save admin seats'}
-              </button>
-            </div>
-            <div className="mt-4 grid gap-3">
-              <input
-                className="input"
-                placeholder="Admin full name"
-                value={zoneAdminDraft.fullName}
-                onChange={(event) => setZoneAdminDraft((current) => ({ ...current, fullName: event.target.value }))}
-              />
-              <input
-                className="input"
-                placeholder="Admin email"
-                value={zoneAdminDraft.email}
-                onChange={(event) => setZoneAdminDraft((current) => ({ ...current, email: event.target.value }))}
-              />
-              <input
-                className="input"
-                placeholder="Admin phone"
-                value={zoneAdminDraft.phone}
-                onChange={(event) => setZoneAdminDraft((current) => ({ ...current, phone: event.target.value }))}
-              />
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                Last updated: {activeZoneFranchise?.adminAccountsUpdatedAt ? new Date(activeZoneFranchise.adminAccountsUpdatedAt).toLocaleString() : 'Not saved yet'}
+              <div className="mt-4 grid gap-3">
+                <input
+                  className="input"
+                  placeholder="Admin full name"
+                  value={zoneAdminDraft.fullName}
+                  onChange={(event) => setZoneAdminDraft((current) => ({ ...current, fullName: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Admin email"
+                  value={zoneAdminDraft.email}
+                  onChange={(event) => setZoneAdminDraft((current) => ({ ...current, email: event.target.value }))}
+                />
+                <input
+                  className="input"
+                  placeholder="Admin phone"
+                  value={zoneAdminDraft.phone}
+                  onChange={(event) => setZoneAdminDraft((current) => ({ ...current, phone: event.target.value }))}
+                />
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                  Last updated: {activeZoneFranchise?.adminAccountsUpdatedAt ? new Date(activeZoneFranchise.adminAccountsUpdatedAt).toLocaleString() : 'Not saved yet'}
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="card p-5">
@@ -1696,6 +1881,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </section>
+      ) : null}
 
       {isLoading ? (
         <div className="card p-8 text-center">
@@ -1703,75 +1889,55 @@ export default function SettingsPage() {
           <div className="mt-3 text-sm text-slate-500">Loading settings...</div>
         </div>
       ) : (
-        <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="rounded-[28px] border border-slate-200 bg-white p-4">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              <Settings2 className="h-4 w-4" />
-              Settings Menu
-            </div>
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-slate-400" />
+        <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Sections</div>
+            {activeWorkspace === 'system' ? (
+              <label className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
                 <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search settings"
-                  className="w-full bg-transparent text-sm text-slate-700 outline-none"
+                  type="checkbox"
+                  checked={showAdvanced}
+                  onChange={(event) => setShowAdvanced(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-purple-700 focus:ring-purple-700"
                 />
+                Show advanced sections
+              </label>
+            ) : null}
+            <div className="mt-4 space-y-2">
+              {activeWorkspaceNav.map((item) => {
+                const active = item.sections.includes(activeSection)
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveSection(item.sections[0])}
+                    className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                      active
+                        ? 'border-purple-300 bg-purple-50 text-purple-700'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold">{item.title}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.description}</div>
+                  </button>
+                )
+              })}
+            </div>
+            {activeWorkspaceNav.length ? null : (
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                No settings available in this workspace.
               </div>
-            </div>
-            <label className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={showAdvanced}
-                onChange={(event) => setShowAdvanced(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-purple-700 focus:ring-purple-700"
-              />
-              Show advanced sections
-            </label>
-
-            <div className="mt-4 space-y-4">
-              {groupedCatalog.map(({ group, items }) => (
-                <div key={group}>
-                  <div className="mb-2 px-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{group}</div>
-                    <div className="mt-1 text-xs text-slate-400">{GROUP_DESCRIPTIONS[group]}</div>
-                  </div>
-                  <div className="space-y-2">
-                    {items.map((item) => {
-                      const meta = getSectionMeta(item.section)
-                      const active = item.section === activeSection
-                      return (
-                        <button
-                          key={item.section}
-                          type="button"
-                          onClick={() => setActiveSection(item.section)}
-                          className={`w-full rounded-[20px] border px-4 py-3 text-left transition ${
-                            active
-                              ? 'border-purple-300 bg-purple-50 text-purple-700'
-                              : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-                          }`}
-                        >
-                          <div className="font-semibold">{meta.title}</div>
-                          <div className="mt-1 text-xs text-slate-400">{meta.description}</div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
+            )}
           </aside>
 
           <div className="space-y-4">
-            <section className="card p-5">
+            <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.24em] text-slate-400">{activeMeta.group}</div>
+                  <div className="text-xs uppercase tracking-[0.24em] text-purple-500">{activeMeta.group}</div>
                   <h2 className="mt-2 text-2xl font-semibold text-slate-900">{activeMeta.title}</h2>
                   <div className="mt-2 max-w-3xl text-sm text-slate-500">{activeMeta.description}</div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                    <span className="rounded-full bg-slate-100 px-3 py-1">Section key: {activeSection}</span>
                     {sectionUpdatedAt ? (
                       <span className="rounded-full bg-slate-100 px-3 py-1">Updated {new Date(sectionUpdatedAt).toLocaleString()}</span>
                     ) : null}
@@ -1782,6 +1948,28 @@ export default function SettingsPage() {
                   {isSaving ? 'Saving...' : 'Save Section'}
                 </button>
               </div>
+              {activeNavSections.length > 1 ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {activeNavSections.map((item) => {
+                    const meta = getSectionMeta(item.section)
+                    const active = item.section === activeSection
+                    return (
+                      <button
+                        key={item.section}
+                        type="button"
+                        onClick={() => setActiveSection(item.section)}
+                        className={`rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                          active
+                            ? 'border-purple-300 bg-purple-50 text-purple-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                        }`}
+                      >
+                        {meta.title}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
             </section>
 
             {isSectionLoading ? (
@@ -1794,130 +1982,160 @@ export default function SettingsPage() {
                 {activeSection === 'invoice_template' ? (
                   <section className="space-y-4">
                     <section className="card p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice organization</div>
-                          <div className="mt-1 text-sm text-slate-500">
-                            The invoice legal identity, GST, prefix, and due rule used during auto invoice generation.
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Profile name</div>
-                          <input
-                            className="input"
-                            value={invoiceOrganizationProfile.name || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, name: event.target.value }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Profile code</div>
-                          <input
-                            className="input"
-                            value={invoiceOrganizationProfile.code || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, code: event.target.value.trim().toLowerCase().replace(/\s+/g, '_') }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Legal name</div>
-                          <input
-                            className="input"
-                            value={invoiceOrganizationProfile.companyLegalName || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyLegalName: event.target.value }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GST number</div>
-                          <input
-                            className="input"
-                            value={invoiceOrganizationProfile.gstNumber || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, gstNumber: event.target.value.toUpperCase() }))}
-                          />
-                        </label>
-                        <label className="space-y-2 lg:col-span-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing address</div>
-                          <textarea
-                            className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-purple-300 focus:ring-4 focus:ring-purple-200"
-                            value={invoiceOrganizationProfile.companyAddress || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyAddress: event.target.value }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GST %</div>
-                          <input
-                            type="number"
-                            className="input"
-                            value={Number(invoiceOrganizationProfile.taxPercent || 0)}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, taxPercent: Number(event.target.value) }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Tax mode</div>
-                          <select
-                            className="input"
-                            value={invoiceOrganizationProfile.taxMode || 'india_gst'}
-                            onChange={(event) =>
-                              setInvoiceOrganizationProfile((current) => ({
-                                ...current,
-                                taxMode: event.target.value === 'flat_tax' ? 'flat_tax' : 'india_gst',
-                              }))
-                            }
-                          >
-                            <option value="india_gst">India GST</option>
-                            <option value="flat_tax">Flat tax</option>
-                          </select>
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice prefix</div>
-                          <input
-                            className="input"
-                            value={invoiceOrganizationProfile.invoicePrefix || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice series</div>
-                          <input
-                            className="input"
-                            value={invoiceOrganizationProfile.invoiceSeriesCode || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, invoiceSeriesCode: event.target.value.toUpperCase() }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">State code</div>
-                          <input
-                            className="input"
-                            value={invoiceOrganizationProfile.companyStateCode || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyStateCode: event.target.value.toUpperCase() }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">State name</div>
-                          <input
-                            className="input"
-                            value={invoiceOrganizationProfile.companyStateName || ''}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyStateName: event.target.value }))}
-                          />
-                        </label>
-                        <label className="space-y-2">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Due days</div>
-                          <input
-                            type="number"
-                            className="input"
-                            value={Number(invoiceOrganizationProfile.dueDays || 0)}
-                            onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, dueDays: Number(event.target.value) }))}
-                          />
-                        </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setInvoiceSetupView('organization')}
+                          className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                            invoiceSetupView === 'organization'
+                              ? 'border-purple-300 bg-purple-50 text-purple-700'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          Organization & Tax
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInvoiceSetupView('template')}
+                          className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                            invoiceSetupView === 'template'
+                              ? 'border-purple-300 bg-purple-50 text-purple-700'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          Template & Rules
+                        </button>
                       </div>
                     </section>
 
+                    {invoiceSetupView === 'organization' ? (
+                      <section className="card p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Organization and tax</div>
+                            <div className="mt-1 text-sm text-slate-500">
+                              Keep legal name, GST, billing address, prefix, and tax defaults here.
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Profile name</div>
+                            <input
+                              className="input"
+                              value={invoiceOrganizationProfile.name || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, name: event.target.value }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Profile code</div>
+                            <input
+                              className="input"
+                              value={invoiceOrganizationProfile.code || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, code: event.target.value.trim().toLowerCase().replace(/\s+/g, '_') }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Legal name</div>
+                            <input
+                              className="input"
+                              value={invoiceOrganizationProfile.companyLegalName || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyLegalName: event.target.value }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GST number</div>
+                            <input
+                              className="input"
+                              value={invoiceOrganizationProfile.gstNumber || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, gstNumber: event.target.value.toUpperCase() }))}
+                            />
+                          </label>
+                          <label className="space-y-2 lg:col-span-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Billing address</div>
+                            <textarea
+                              className="min-h-[96px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-purple-300 focus:ring-4 focus:ring-purple-200"
+                              value={invoiceOrganizationProfile.companyAddress || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyAddress: event.target.value }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">GST %</div>
+                            <input
+                              type="number"
+                              className="input"
+                              value={Number(invoiceOrganizationProfile.taxPercent || 0)}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, taxPercent: Number(event.target.value) }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Tax mode</div>
+                            <select
+                              className="input"
+                              value={invoiceOrganizationProfile.taxMode || 'india_gst'}
+                              onChange={(event) =>
+                                setInvoiceOrganizationProfile((current) => ({
+                                  ...current,
+                                  taxMode: event.target.value === 'flat_tax' ? 'flat_tax' : 'india_gst',
+                                }))
+                              }
+                            >
+                              <option value="india_gst">India GST</option>
+                              <option value="flat_tax">Flat tax</option>
+                            </select>
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice prefix</div>
+                            <input
+                              className="input"
+                              value={invoiceOrganizationProfile.invoicePrefix || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, invoicePrefix: event.target.value.toUpperCase() }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice series</div>
+                            <input
+                              className="input"
+                              value={invoiceOrganizationProfile.invoiceSeriesCode || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, invoiceSeriesCode: event.target.value.toUpperCase() }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">State code</div>
+                            <input
+                              className="input"
+                              value={invoiceOrganizationProfile.companyStateCode || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyStateCode: event.target.value.toUpperCase() }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">State name</div>
+                            <input
+                              className="input"
+                              value={invoiceOrganizationProfile.companyStateName || ''}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, companyStateName: event.target.value }))}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Due days</div>
+                            <input
+                              type="number"
+                              className="input"
+                              value={Number(invoiceOrganizationProfile.dueDays || 0)}
+                              onChange={(event) => setInvoiceOrganizationProfile((current) => ({ ...current, dueDays: Number(event.target.value) }))}
+                            />
+                          </label>
+                        </div>
+                      </section>
+                    ) : null}
+
+                    {invoiceSetupView === 'template' ? (
                     <section className="card p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice automation</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template and rules</div>
                           <div className="mt-1 text-sm text-slate-500">
-                            Plan amount and duration come from plan management and the customer booking. Configure cadence and automation rules here.
+                            Plan amount and duration come from plan management and customer booking. Keep template layout and billing rules here.
                           </div>
                         </div>
                       </div>
@@ -2133,6 +2351,7 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     </section>
+                    ) : null}
 
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
