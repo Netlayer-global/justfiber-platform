@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
+import '../core/theme.dart';
+import '../widgets/pressable_scale.dart';
 import 'billing_payment_screen.dart';
 
 class PlanCatalogScreen extends StatefulWidget {
@@ -27,7 +30,9 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     if (hydratedDraft) return;
     hydratedDraft = true;
     final appState = AppStateScope.of(context);
-    if (appState.planChangeOptions.isEmpty && appState.plans.isEmpty && !loadingPlans) {
+    if (appState.planChangeOptions.isEmpty &&
+        appState.plans.isEmpty &&
+        !loadingPlans) {
       loadingPlans = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await appState.refreshPlans();
@@ -46,10 +51,12 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     final terms = _terms(match);
     selectedPlan = match;
     effectiveMode = draft.effectiveMode;
-    billingTerm = terms.contains(draft.billingTerm) ? draft.billingTerm : terms.first;
+    billingTerm =
+        terms.contains(draft.billingTerm) ? draft.billingTerm : terms.first;
     step = draft.step.clamp(1, 2);
     if (step == 2) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadCheckout(appState, quiet: true));
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _loadCheckout(appState, quiet: true));
     }
   }
 
@@ -58,155 +65,348 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
     final plans = _availablePlans(appState);
-    return WillPopScope(
-      onWillPop: () async {
-        if (step == 0 || selectedPlan == null) return true;
+
+    return PopScope(
+      canPop: step == 0 || selectedPlan == null,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
         await _saveDraftAndExit(appState);
-        return false;
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(step == 0 ? 'Choose your plan' : step == 1 ? 'Choose duration' : 'Checkout'),
-          backgroundColor: const Color(0xFFF6F1EB),
-          foregroundColor: const Color(0xFF131313),
-          leading: step == 0 ? null : IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => _saveDraftAndExit(appState)),
-        ),
-        backgroundColor: const Color(0xFFF6F1EB),
+        backgroundColor: kBg,
         body: RefreshIndicator(
-          color: const Color(0xFF8224E3),
-          backgroundColor: const Color(0xFFF6F1EB),
+          color: kPrimary,
+          backgroundColor: kSurface,
           onRefresh: appState.refresh,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-            children: [
-              _hero(step == 0 ? (billing.currentPlan.isEmpty ? 'Choose your next plan' : billing.currentPlan) : selectedPlan?.name ?? 'Plan change',
-                  step == 0 ? 'Select a plan first, then choose duration like booking flow.' : step == 1 ? 'Choose the duration before checkout.' : 'Review and confirm the plan change.'),
-              const SizedBox(height: 16),
-              _stepper(),
-              const SizedBox(height: 16),
-              if (step == 0) ...[
-                _modeSwitcher(),
-                const SizedBox(height: 16),
-                if (appState.planChangeDraft != null)
-                  _surface(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Resume saved change', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
-                      const SizedBox(height: 8),
-                      Text('Saved draft for ${appState.planChangeDraft!.planName}. Hidden everywhere else and resumes only here.', style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4)),
-                      const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(child: FilledButton(onPressed: () => setState(() {}), style: _filledStyle(), child: const Text('Resume'))),
-                        const SizedBox(width: 12),
-                        Expanded(child: OutlinedButton(onPressed: () async => appState.clearPlanChangeDraft(), child: const Text('Discard'))),
-                      ]),
-                    ]),
+          child: CustomScrollView(
+            slivers: [
+              // ── Gradient header ────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF8224E3),
                   ),
-                if (appState.planChangeDraft != null) const SizedBox(height: 16),
-              if (plans.isEmpty)
-                  _surface(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('No plans available right now.', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
-                        const SizedBox(height: 8),
-                        Text(
-                          loadingPlans
-                              ? 'Loading full plan catalog...'
-                              : 'We could not load alternate or catalog plans right now. Pull to refresh and try again.',
-                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                        ),
-                        if (!loadingPlans && (appState.error ?? '').isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Text(appState.error!, style: const TextStyle(color: Color(0xFFB42318), fontWeight: FontWeight.w700)),
-                        ],
-                        if (!loadingPlans) ...[
-                          const SizedBox(height: 14),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              onPressed: () async {
-                                setState(() => loadingPlans = true);
-                                await appState.refreshPlans();
-                                if (!mounted) return;
-                                setState(() => loadingPlans = false);
-                              },
-                              style: _filledStyle(),
-                              child: const Text('Reload plans'),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 8, 16, 24),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              if (step == 0 || selectedPlan == null) {
+                                Navigator.of(context).maybePop();
+                              } else {
+                                _saveDraftAndExit(appState);
+                              }
+                            },
+                            icon: Icon(
+                              step == 0
+                                  ? Icons.arrow_back_ios_new_rounded
+                                  : Icons.close_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 12),
+                                Text(
+                                  step == 0
+                                      ? 'Choose Plan'
+                                      : step == 1
+                                          ? 'Choose Duration'
+                                          : 'Checkout',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  step == 0
+                                      ? (billing.currentPlan.isEmpty
+                                          ? 'Select a plan to get started'
+                                          : 'Current: ${billing.currentPlan}')
+                                      : step == 1
+                                          ? selectedPlan?.name ??
+                                              'Choose billing duration'
+                                          : 'Review and confirm your plan change',
+                                  style: GoogleFonts.inter(
+                                      color: Colors.white60, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              'PLAN STUDIO',
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFFD8B4FE),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.8,
+                              ),
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  )
-                else
-                  ...plans.map((plan) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _planCard(plan, billing.recurringAmount, appState),
-                      )),
-              ] else if (step == 1 && selectedPlan != null) ...[
-                _durationCard(selectedPlan!),
-                const SizedBox(height: 16),
-                _responsiveActionButtons(
-                  primary: FilledButton(
-                    onPressed: loadingCheckout ? null : () => _loadCheckout(appState),
-                    style: _filledStyle(),
-                    child: Text(loadingCheckout ? 'Preparing...' : 'Continue to checkout'),
-                  ),
-                  secondary: OutlinedButton(
-                    onPressed: () => setState(() => step = 0),
-                    child: const Text('Back to plans'),
                   ),
                 ),
-              ] else if (step == 2 && selectedPlan != null) ...[
-                _surface(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Review checkout', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313))),
-                    const SizedBox(height: 12),
-                    _row('Plan', selectedPlan!.name),
-                    _row('Speed', '${selectedPlan!.speedMbps.toStringAsFixed(0)} Mbps'),
-                    _row('Duration', _termLabel(billingTerm)),
-                    _row('Mode', effectiveMode == 'next_cycle' ? 'Apply next cycle' : 'Apply now'),
-                    _row('Commercial price', 'Rs ${_price(selectedPlan!, billingTerm).toStringAsFixed(0)}'),
+              ),
+
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // Stepper
+                    _stepper(),
+                    const SizedBox(height: 18),
+
+                    // ── Step 0: Plan selection ─────────────────────────
+                    if (step == 0) ...[
+                      _modeSwitcher(),
+                      const SizedBox(height: 14),
+                      if (appState.planChangeDraft != null) ...[
+                        _card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Resume saved change',
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: Colors.white)),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Saved draft for ${appState.planChangeDraft!.planName}. Resumes only here.',
+                                style: GoogleFonts.inter(
+                                    color: kMuted, height: 1.4, fontSize: 13),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(children: [
+                                Expanded(
+                                    child: FilledButton(
+                                        onPressed: () => setState(() {}),
+                                        child: const Text('Resume'))),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                    child: OutlinedButton(
+                                        onPressed:
+                                            appState.clearPlanChangeDraft,
+                                        child: const Text('Discard'))),
+                              ]),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      if (plans.isEmpty)
+                        _card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('No plans available',
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: Colors.white)),
+                              const SizedBox(height: 8),
+                              Text(
+                                loadingPlans
+                                    ? 'Loading full plan catalog...'
+                                    : 'Could not load plans. Pull to refresh and try again.',
+                                style: GoogleFonts.inter(
+                                    color: kMuted, height: 1.4, fontSize: 13),
+                              ),
+                              if (!loadingPlans &&
+                                  (appState.error ?? '').isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(appState.error!,
+                                    style: GoogleFonts.inter(
+                                        color: const Color(0xFFFF8A8A),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12)),
+                              ],
+                              if (!loadingPlans) ...[
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton(
+                                    onPressed: () async {
+                                      setState(() => loadingPlans = true);
+                                      await appState.refreshPlans();
+                                      if (!mounted) return;
+                                      setState(() => loadingPlans = false);
+                                    },
+                                    child: const Text('Reload plans'),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        )
+                      else
+                        ...plans.map((plan) => Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: _planCard(
+                                  plan, billing.recurringAmount, appState),
+                            )),
+                    ]
+
+                    // ── Step 1: Duration ───────────────────────────────
+                    else if (step == 1 && selectedPlan != null) ...[
+                      _durationCard(selectedPlan!),
+                      const SizedBox(height: 14),
+                      _card(
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                onPressed: loadingCheckout
+                                    ? null
+                                    : () => _loadCheckout(appState),
+                                child: Text(loadingCheckout
+                                    ? 'Preparing...'
+                                    : 'Continue to checkout'),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () => setState(() => step = 0),
+                                child: const Text('Back to plans'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]
+
+                    // ── Step 2: Checkout ───────────────────────────────
+                    else if (step == 2 && selectedPlan != null) ...[
+                      _card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Review checkout',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: Colors.white)),
+                            const SizedBox(height: 14),
+                            _row('Plan', selectedPlan!.name),
+                            _row('Speed',
+                                '${selectedPlan!.speedMbps.toStringAsFixed(0)} Mbps'),
+                            _row('Duration', _termLabel(billingTerm)),
+                            _row(
+                                'Mode',
+                                effectiveMode == 'next_cycle'
+                                    ? 'Apply next cycle'
+                                    : 'Apply now'),
+                            _row('Price',
+                                'Rs ${_price(selectedPlan!, billingTerm).toStringAsFixed(0)}',
+                                last: true),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _card(
+                        child: preview == null
+                            ? Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: kPrimaryLight)),
+                                    const SizedBox(width: 12),
+                                    Text('Loading checkout summary...',
+                                        style: GoogleFonts.inter(
+                                            color: kMuted, fontSize: 13)),
+                                  ],
+                                ),
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Pricing breakdown',
+                                      style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                          color: Colors.white)),
+                                  const SizedBox(height: 14),
+                                  _row('Current price',
+                                      'Rs ${preview!.currentPrice.toStringAsFixed(0)}'),
+                                  _row('Next price',
+                                      'Rs ${preview!.nextPrice.toStringAsFixed(0)}'),
+                                  _row('Adjustment',
+                                      'Rs ${preview!.adjustmentAmount.toStringAsFixed(0)}'),
+                                  if (preview!.payableNow > 0)
+                                    _row('Payable now',
+                                        'Rs ${preview!.payableNow.toStringAsFixed(0)}'),
+                                  if (preview!.creditAmount > 0)
+                                    _row('Credit',
+                                        'Rs ${preview!.creditAmount.toStringAsFixed(0)}',
+                                        last: true),
+                                ],
+                              ),
+                      ),
+                      const SizedBox(height: 14),
+                      _card(
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                onPressed: appState.busy || preview == null
+                                    ? null
+                                    : () => _confirm(appState),
+                                child: const Text('Confirm plan change'),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () => setState(() => step = 1),
+                                child: const Text('Back to duration'),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () => _cancelCheckout(appState),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFFF8A8A),
+                                  side: const BorderSide(
+                                      color: Color(0x44EF4444)),
+                                ),
+                                child: const Text('Cancel plan change'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ]),
                 ),
-                const SizedBox(height: 16),
-                _surface(
-                  child: preview == null
-                      ? const Text('Checkout summary is loading.', style: TextStyle(color: Color(0xFF6E6A67)))
-                      : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          _row('Current price', 'Rs ${preview!.currentPrice.toStringAsFixed(0)}'),
-                          _row('Next price', 'Rs ${preview!.nextPrice.toStringAsFixed(0)}'),
-                          _row('Adjustment', 'Rs ${preview!.adjustmentAmount.toStringAsFixed(0)}'),
-                          if (preview!.payableNow > 0) _row('Payable now', 'Rs ${preview!.payableNow.toStringAsFixed(0)}'),
-                          if (preview!.creditAmount > 0) _row('Credit amount', 'Rs ${preview!.creditAmount.toStringAsFixed(0)}'),
-                        ]),
-                ),
-                const SizedBox(height: 16),
-                _responsiveActionButtons(
-                  primary: FilledButton(
-                    onPressed: appState.busy || preview == null ? null : () => _confirm(appState),
-                    style: _filledStyle(),
-                    child: const Text('Confirm'),
-                  ),
-                  secondary: OutlinedButton(
-                    onPressed: () => setState(() => step = 1),
-                    child: const Text('Back to Duration'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => _cancelCheckout(appState),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFB42318),
-                      backgroundColor: const Color(0xFFFFFFFF),
-                      side: const BorderSide(color: Color(0x33B42318)),
-                    ),
-                    child: const Text('Cancel plan change'),
-                  ),
-                ),
-              ],
+              ),
             ],
           ),
         ),
@@ -214,20 +414,24 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     );
   }
 
+  // ── Stepper ──────────────────────────────────────────────────────────
+
   Widget _stepper() {
     const labels = ['Plan', 'Duration', 'Checkout'];
-    return _surface(
+    return _card(
       child: Column(
         children: [
           Row(
-            children: List.generate(labels.length, (index) {
-              final active = index <= step;
+            children: List.generate(labels.length, (i) {
+              final active = i <= step;
               return Expanded(
                 child: Container(
-                  height: 5,
-                  margin: EdgeInsets.only(left: index == 0 ? 12 : 6, right: index == labels.length - 1 ? 12 : 6),
+                  height: 4,
+                  margin: EdgeInsets.only(
+                      left: i == 0 ? 0 : 4,
+                      right: i == labels.length - 1 ? 0 : 4),
                   decoration: BoxDecoration(
-                    color: active ? const Color(0xFF8224E3) : const Color(0xFFE7E1DA),
+                    color: active ? kPrimary : kBorder,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -236,33 +440,40 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
           ),
           const SizedBox(height: 14),
           Row(
-            children: List.generate(labels.length, (index) {
-              final active = index == step;
-              final complete = index < step;
+            children: List.generate(labels.length, (i) {
+              final active = i == step;
+              final complete = i < step;
               return Expanded(
                 child: Column(
                   children: [
                     Container(
-                      width: 34,
-                      height: 34,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: active || complete ? const Color(0xFF8224E3) : const Color(0xFFF8F4FF),
+                        color: active || complete
+                            ? kPrimary
+                            : kPrimary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: active || complete ? const Color(0xFF8224E3) : const Color(0x338224E3)),
+                        border: Border.all(
+                            color: active || complete
+                                ? kPrimary
+                                : kPrimary.withValues(alpha: 0.2)),
                       ),
                       child: Icon(
                         complete ? Icons.check_rounded : Icons.circle,
-                        size: complete ? 18 : 12,
-                        color: active || complete ? const Color(0xFFFFFFFF) : const Color(0xFF8224E3),
+                        size: complete ? 16 : 10,
+                        color:
+                            active || complete ? Colors.white : kPrimaryLight,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
-                      labels[index],
+                      labels[i],
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: active || complete ? const Color(0xFF131313) : const Color(0xFF7B746D),
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        color: active || complete ? Colors.white : kMuted,
                       ),
                     ),
                   ],
@@ -275,280 +486,344 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     );
   }
 
-  Widget _hero(String title, String subtitle) => Container(
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF8224E3), Color(0xFF9B51E0)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: const [BoxShadow(color: Color(0x220F172A), blurRadius: 28, offset: Offset(0, 14))],
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('PLAN STUDIO', style: TextStyle(color: Color(0xFFE9D5FF), fontWeight: FontWeight.w800, letterSpacing: 2.1, fontSize: 11)),
-          const SizedBox(height: 10),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 28, color: Color(0xFFFFFFFF))),
-          const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: Color(0xFFF3E8FF), height: 1.45)),
-        ]),
-      );
+  // ── Mode switcher ────────────────────────────────────────────────────
 
-  Widget _modeSwitcher() => _surface(
+  Widget _modeSwitcher() => _card(
         child: Row(children: [
-          Expanded(child: _modeButton('immediate', 'Switch now')),
+          Expanded(child: _modeBtn('immediate', 'Switch now')),
           const SizedBox(width: 8),
-          Expanded(child: _modeButton('next_cycle', 'Next cycle')),
+          Expanded(child: _modeBtn('next_cycle', 'Next cycle')),
         ]),
       );
 
-  Widget _modeButton(String value, String label) {
+  Widget _modeBtn(String value, String label) {
     final active = effectiveMode == value;
-    return InkWell(
+    return PressableScale(
       onTap: () => setState(() => effectiveMode = value),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: active ? const Color(0xFF8224E3) : const Color(0x338224E3)),
+          color: active ? kPrimary.withValues(alpha: 0.18) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: active ? kPrimary.withValues(alpha: 0.5) : kBorder),
         ),
-        child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
+        alignment: Alignment.center,
+        child: Text(label,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: active ? kPrimaryLight : kMuted)),
       ),
     );
   }
 
-  Widget _planCard(PlanItem plan, double currentRecurring, AppState appState) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: const Color(0x338224E3)),
-          boxShadow: const [BoxShadow(color: Color(0x14030B14), blurRadius: 18, offset: Offset(0, 10))],
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  _pill(_isPremium(plan) ? 'Recommended' : 'Broadband', _isPremium(plan)),
-                  _pill(_terms(plan).map(_termShort).join(' / '), false),
-                ]),
-                const SizedBox(height: 14),
-                Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF131313))),
-                const SizedBox(height: 6),
-                Text('Rs ${plan.monthlyPrice.toStringAsFixed(0)} / month', style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800, fontSize: 18)),
-              ]),
-            ),
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: _isPremium(plan) ? const [Color(0xFFF1E8FF), Color(0xFF8224E3)] : const [Color(0xFFF8F4FF), Color(0xFF8224E3)]),
-                borderRadius: BorderRadius.circular(22),
+  // ── Plan card ────────────────────────────────────────────────────────
+
+  Widget _planCard(PlanItem plan, double currentRecurring, AppState appState) {
+    final premium = _isPremium(plan);
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(spacing: 6, runSpacing: 6, children: [
+                      _pill(premium ? 'Recommended' : 'Broadband', premium),
+                      _pill(_terms(plan).map(_termShort).join(' · '), false),
+                    ]),
+                    const SizedBox(height: 12),
+                    Text(plan.name,
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                            color: Colors.white,
+                            letterSpacing: -0.3)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Rs ${plan.monthlyPrice.toStringAsFixed(0)} / month',
+                      style: GoogleFonts.inter(
+                          color: kPrimaryLight,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16),
+                    ),
+                  ],
+                ),
               ),
-              child: Icon(_isPremium(plan) ? Icons.rocket_launch_rounded : Icons.wifi_rounded, color: const Color(0xFFFFFFFF), size: 30),
-            ),
-          ]),
-          const SizedBox(height: 18),
+              const SizedBox(width: 12),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: kPrimary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
+                ),
+                child: Icon(
+                  premium ? Icons.rocket_launch_rounded : Icons.wifi_rounded,
+                  color: kPrimaryLight,
+                  size: 24,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0x338224E3)),
+              color: kBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: kBorder),
             ),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            child: Row(
               children: [
-                _metricTile('${plan.speedMbps.toStringAsFixed(0)} Mbps', 'Speed'),
-                _metricTile('${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps', 'Upload'),
-                _metricTile(_dataLabel(plan), 'Data'),
-                _metricTile(_terms(plan).length.toString(), 'Terms'),
+                _metric(plan.speedMbps.toStringAsFixed(0), 'Mbps Down'),
+                _metricDiv(),
+                _metric(plan.uploadSpeedMbps.toStringAsFixed(0), 'Mbps Up'),
+                _metricDiv(),
+                _metric(_dataLabel(plan), 'Data'),
+                _metricDiv(),
+                _metric('${_terms(plan).length}', 'Terms'),
               ],
             ),
           ),
           const SizedBox(height: 14),
-          _row('Current recurring', currentRecurring > 0 ? 'Rs ${currentRecurring.toStringAsFixed(0)}' : 'Not available'),
-          _row('Available durations', _terms(plan).map(_termLabel).join(' / ')),
-          const SizedBox(height: 12),
-          _responsiveActionButtons(
-            primary: FilledButton(
-              onPressed: () => _selectPlan(plan, appState),
-              style: _filledStyle(),
-              child: const Text('Select plan'),
-            ),
-            secondary: OutlinedButton(
-              onPressed: () => _previewPlan(plan, appState),
-              child: const Text('View details'),
-            ),
-          ),
-        ]),
-      );
-
-  Widget _durationCard(PlanItem plan) => _surface(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Select duration', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313))),
-          const SizedBox(height: 8),
-          Text('${plan.name} ke liye booking jaisa duration choose karo, then checkout continue karo.', style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45)),
+          _row(
+              'Current plan cost',
+              currentRecurring > 0
+                  ? 'Rs ${currentRecurring.toStringAsFixed(0)}'
+                  : '—'),
+          _row('Durations', _terms(plan).map(_termLabel).join(' · '),
+              last: true),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          Row(
             children: [
-              _pill('${plan.speedMbps.toStringAsFixed(0)} Mbps', true),
-              _pill(effectiveMode == 'next_cycle' ? 'Apply next cycle' : 'Apply now', false),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _previewPlan(plan, appState),
+                  child: const Text('View details'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => _selectPlan(plan, appState),
+                  child: const Text('Select'),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          ..._terms(plan).map((term) => Padding(padding: const EdgeInsets.only(bottom: 12), child: _durationOption(plan, term))),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0x228224E3)),
+        ],
+      ),
+    );
+  }
+
+  // ── Duration card ────────────────────────────────────────────────────
+
+  Widget _durationCard(PlanItem plan) => _card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Select duration',
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: Colors.white)),
+            const SizedBox(height: 6),
+            Text(
+              'Choose a billing term for ${plan.name}.',
+              style:
+                  GoogleFonts.inter(color: kMuted, height: 1.4, fontSize: 13),
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Selected summary', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
-              const SizedBox(height: 10),
-              _row('Plan', plan.name),
-              _row('Duration', _termLabel(billingTerm)),
-              _row('Payable value', 'Rs ${_price(plan, billingTerm).toStringAsFixed(0)}'),
-              _row('Billing mode', _termBillingCaption(billingTerm)),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              _pill('${plan.speedMbps.toStringAsFixed(0)} Mbps', true),
+              _pill(effectiveMode == 'next_cycle' ? 'Next cycle' : 'Apply now',
+                  false),
             ]),
-          ),
-        ]),
+            const SizedBox(height: 16),
+            ..._terms(plan).map((term) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _durationOption(plan, term),
+                )),
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: kBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: kBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Summary',
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Colors.white)),
+                  const SizedBox(height: 10),
+                  _row('Plan', plan.name),
+                  _row('Duration', _termLabel(billingTerm)),
+                  _row('Amount',
+                      'Rs ${_price(plan, billingTerm).toStringAsFixed(0)}'),
+                  _row('Billing', _termBillingCaption(billingTerm), last: true),
+                ],
+              ),
+            ),
+          ],
+        ),
       );
 
   Widget _durationOption(PlanItem plan, String term) {
     final selected = billingTerm == term;
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
+    return PressableScale(
       onTap: () => setState(() => billingTerm = term),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF8F4FF) : const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x338224E3)),
+          color: selected ? kPrimary.withValues(alpha: 0.1) : kBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: selected ? kPrimary.withValues(alpha: 0.4) : kBorder),
         ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 340;
-            final details = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_termLabel(term), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
-                const SizedBox(height: 4),
-                Text(_durationHelp(term), style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35)),
-                const SizedBox(height: 8),
-                Text(_termBillingCaption(term), style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700)),
-              ],
-            );
-            final price = Column(
-              crossAxisAlignment: compact ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-              children: [
-                Text('Rs ${_price(plan, term).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF8224E3))),
-                const SizedBox(height: 6),
-                if (selected)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: const Color(0xFF8224E3), borderRadius: BorderRadius.circular(999)),
-                    child: const Text('Selected', style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800, fontSize: 11)),
-                  ),
-              ],
-            );
-            if (compact) {
-              return Column(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  details,
-                  const SizedBox(height: 12),
-                  price,
+                  Text(_termLabel(term),
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: Colors.white)),
+                  const SizedBox(height: 3),
+                  Text(_durationHelp(term),
+                      style: GoogleFonts.inter(
+                          color: kMuted, fontSize: 12, height: 1.3)),
+                  const SizedBox(height: 5),
+                  Text(_termBillingCaption(term),
+                      style: GoogleFonts.inter(
+                          color: kPrimaryLight,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11)),
                 ],
-              );
-            }
-            return Row(
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Expanded(child: details),
-                const SizedBox(width: 12),
-                price,
+                Text(
+                  'Rs ${_price(plan, term).toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: selected ? kPrimaryLight : Colors.white),
+                ),
+                if (selected) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: kPrimary,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text('Selected',
+                        style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10)),
+                  ),
+                ],
               ],
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _surface({required Widget child}) => Container(
+  // ── Helpers ──────────────────────────────────────────────────────────
+
+  Widget _card({required Widget child}) => Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0x338224E3)),
+          color: kSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kBorder),
         ),
         child: child,
       );
 
   Widget _pill(String label, bool highlight) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
-          color: highlight ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: highlight ? const Color(0x668224E3) : const Color(0x338224E3)),
+          color: highlight ? kPrimary.withValues(alpha: 0.15) : kBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: highlight ? kPrimary.withValues(alpha: 0.4) : kBorder),
         ),
-        child: Text(label, style: TextStyle(color: highlight ? const Color(0xFF8224E3) : const Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
+        child: Text(label,
+            style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: highlight ? kPrimaryLight : kMuted)),
       );
 
-  Widget _metric(String value, String label) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFF8A92A3))),
-        ],
+  Widget _metric(String value, String label) => Expanded(
+        child: Column(
+          children: [
+            Text(value,
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: Colors.white)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: GoogleFonts.inter(fontSize: 10, color: kMuted),
+                textAlign: TextAlign.center),
+          ],
+        ),
       );
 
-  Widget _metricTile(String value, String label) => SizedBox(
-        width: 120,
-        child: _metric(value, label),
+  Widget _metricDiv() => Container(
+      width: 1, height: 24, color: Colors.white.withValues(alpha: 0.08));
+
+  Widget _row(String label, String value, {bool last = false}) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          border: Border(
+              bottom:
+                  last ? BorderSide.none : const BorderSide(color: kBorder)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+                child: Text(label,
+                    style: GoogleFonts.inter(color: kMuted, fontSize: 13))),
+            Flexible(
+              child: Text(value,
+                  textAlign: TextAlign.right,
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      fontSize: 13)),
+            ),
+          ],
+        ),
       );
 
-  Widget _row(String label, String value) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
-          const Spacer(),
-          Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700))),
-        ]),
-      );
-
-  Widget _responsiveActionButtons({required Widget primary, required Widget secondary}) => LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth < 360) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                primary,
-                const SizedBox(height: 12),
-                secondary,
-              ],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: secondary),
-              const SizedBox(width: 12),
-              Expanded(child: primary),
-            ],
-          );
-        },
-      );
-
-  ButtonStyle _filledStyle() => FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF));
+  // ── Business logic ───────────────────────────────────────────────────
 
   Future<void> _selectPlan(PlanItem plan, AppState appState) async {
     final terms = _terms(plan);
@@ -558,13 +833,21 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       step = 1;
       preview = null;
     });
-    await appState.savePlanChangeDraft(planCode: plan.planCode, planName: plan.name, billingTerm: billingTerm, effectiveMode: effectiveMode, step: 1);
+    await appState.savePlanChangeDraft(
+        planCode: plan.planCode,
+        planName: plan.name,
+        billingTerm: billingTerm,
+        effectiveMode: effectiveMode,
+        step: 1);
   }
 
   Future<void> _loadCheckout(AppState appState, {bool quiet = false}) async {
     if (selectedPlan == null) return;
     setState(() => loadingCheckout = true);
-    final nextPreview = await appState.previewPlanChange(planCode: selectedPlan!.planCode, effectiveMode: effectiveMode, billingTerm: billingTerm);
+    final nextPreview = await appState.previewPlanChange(
+        planCode: selectedPlan!.planCode,
+        effectiveMode: effectiveMode,
+        billingTerm: billingTerm);
     if (!mounted) return;
     setState(() {
       preview = nextPreview;
@@ -572,50 +855,105 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
       if (nextPreview != null) step = 2;
     });
     if (nextPreview != null) {
-      await appState.savePlanChangeDraft(planCode: selectedPlan!.planCode, planName: selectedPlan!.name, billingTerm: billingTerm, effectiveMode: effectiveMode, step: 2);
+      await appState.savePlanChangeDraft(
+          planCode: selectedPlan!.planCode,
+          planName: selectedPlan!.name,
+          billingTerm: billingTerm,
+          effectiveMode: effectiveMode,
+          step: 2);
     } else if (!quiet) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to prepare checkout')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(appState.error ?? 'Unable to prepare checkout')));
     }
   }
 
   Future<void> _confirm(AppState appState) async {
     if (selectedPlan == null) return;
-    final request = await appState.requestPlanChange(planCode: selectedPlan!.planCode, effectiveMode: effectiveMode, billingTerm: billingTerm);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final request = await appState.requestPlanChange(
+        planCode: selectedPlan!.planCode,
+        effectiveMode: effectiveMode,
+        billingTerm: billingTerm);
     if (!mounted) return;
     final result = appState.lastPlanChangeResult;
     if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(appState.error ?? 'Unable to apply plan change')));
+      messenger.showSnackBar(SnackBar(
+          content: Text(appState.error ?? 'Unable to apply plan change')));
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.paymentRequired ? 'Pay Rs ${result.payableNow.toStringAsFixed(0)} to complete this change.' : 'Plan change submitted: ${request ?? result.requestNumber}')));
+    messenger.showSnackBar(SnackBar(
+        content: Text(result.paymentRequired
+            ? 'Pay Rs ${result.payableNow.toStringAsFixed(0)} to complete this change.'
+            : 'Plan change submitted: ${request ?? result.requestNumber}')));
     if (result.paymentRequired && result.payableNow > 0) {
-      final paymentOrder = await appState.loadBillingPaymentOrder(amount: result.payableNow);
+      final paymentOrder =
+          await appState.loadBillingPaymentOrder(amount: result.payableNow);
       if (!mounted || paymentOrder == null) return;
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)));
+      await navigator.push(MaterialPageRoute(
+          builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder)));
     }
     if (mounted) {
       await appState.refresh();
-      Navigator.of(context).pop();
+      navigator.pop();
     }
   }
 
   Future<void> _previewPlan(PlanItem plan, AppState appState) async {
-    final tempPreview = await appState.previewPlanChange(planCode: plan.planCode, effectiveMode: effectiveMode, billingTerm: 'monthly');
+    final tempPreview = await appState.previewPlanChange(
+        planCode: plan.planCode,
+        effectiveMode: effectiveMode,
+        billingTerm: 'monthly');
     if (!mounted || tempPreview == null) return;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-        child: _surface(
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(plan.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 26, color: Color(0xFF131313))),
-            const SizedBox(height: 10),
-            _row('Monthly price', 'Rs ${tempPreview.nextPrice.toStringAsFixed(0)}'),
-            _row('Available durations', _terms(plan).map(_termLabel).join(' / ')),
-            const SizedBox(height: 12),
-            SizedBox(width: double.infinity, child: FilledButton(onPressed: () { Navigator.of(context).pop(); _selectPlan(plan, appState); }, style: _filledStyle(), child: const Text('Select this plan'))),
-          ]),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 20, 18, 32),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: kSurface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: kBorder),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: kBorder,
+                        borderRadius: BorderRadius.circular(999))),
+              ),
+              const SizedBox(height: 16),
+              Text(plan.name,
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      color: Colors.white,
+                      letterSpacing: -0.3)),
+              const SizedBox(height: 14),
+              _row('Monthly price',
+                  'Rs ${tempPreview.nextPrice.toStringAsFixed(0)}'),
+              _row('Durations', _terms(plan).map(_termLabel).join(' · '),
+                  last: true),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _selectPlan(plan, appState);
+                    },
+                    child: const Text('Select this plan')),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -639,23 +977,31 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
     final ok = await appState.cancelPlanChangeCheckout();
     if (!mounted) return;
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Plan change checkout cancelled' : (appState.error ?? 'Unable to cancel plan change'))));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? 'Plan change checkout cancelled'
+            : (appState.error ?? 'Unable to cancel plan change'))));
   }
 
+  // ── Data helpers ─────────────────────────────────────────────────────
+
   List<PlanItem> _availablePlans(AppState appState) {
-    final currentPlanCode = appState.connections.cast<CustomerConnection?>().firstWhere(
+    final currentPlanCode = appState.connections
+        .cast<CustomerConnection?>()
+        .firstWhere(
           (item) => item?.customerId == appState.selectedCustomerId,
           orElse: () => null,
-        )?.planName;
-    final alternates = appState.planChangeOptions.where((item) => item.planCode.isNotEmpty).toList(growable: false);
-    if (alternates.isNotEmpty) {
-      return alternates;
-    }
-    final catalog = appState.plans.where((item) => item.planCode.isNotEmpty).toList();
-    if (catalog.isEmpty) {
-      return const <PlanItem>[];
-    }
-    final filtered = catalog.where((item) => item.name != currentPlanCode).toList();
+        )
+        ?.planName;
+    final alternates = appState.planChangeOptions
+        .where((item) => item.planCode.isNotEmpty)
+        .toList(growable: false);
+    if (alternates.isNotEmpty) return alternates;
+    final catalog =
+        appState.plans.where((item) => item.planCode.isNotEmpty).toList();
+    if (catalog.isEmpty) return const <PlanItem>[];
+    final filtered =
+        catalog.where((item) => item.name != currentPlanCode).toList();
     return filtered.isNotEmpty ? filtered : catalog;
   }
 
@@ -672,9 +1018,13 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
   double _price(PlanItem plan, String term) {
     switch (term) {
       case 'quarterly':
-        return plan.quarterlyPrice > 0 ? plan.quarterlyPrice : plan.monthlyPrice;
+        return plan.quarterlyPrice > 0
+            ? plan.quarterlyPrice
+            : plan.monthlyPrice;
       case 'halfYearly':
-        return plan.halfYearlyPrice > 0 ? plan.halfYearlyPrice : plan.monthlyPrice;
+        return plan.halfYearlyPrice > 0
+            ? plan.halfYearlyPrice
+            : plan.monthlyPrice;
       case 'yearly':
         return plan.yearlyPrice > 0 ? plan.yearlyPrice : plan.monthlyPrice;
       default:
@@ -710,25 +1060,31 @@ class _PlanCatalogScreenState extends State<PlanCatalogScreen> {
 
   String _dataLabel(PlanItem plan) {
     if (plan.dataPolicy == 'unlimited') return 'Unlimited';
-    if (plan.dataLimitGb > 0) return '${plan.dataLimitGb.toStringAsFixed(0)} GB';
+    if (plan.dataLimitGb > 0) {
+      return '${plan.dataLimitGb.toStringAsFixed(0)} GB';
+    }
     return plan.dataPolicy.toUpperCase();
   }
 
   bool _isPremium(PlanItem plan) {
     final lower = plan.name.toLowerCase();
-    return lower.contains('entertainment') || lower.contains('ott') || lower.contains('combo') || plan.monthlyPrice >= 999 || plan.speedMbps >= 200;
+    return lower.contains('entertainment') ||
+        lower.contains('ott') ||
+        lower.contains('combo') ||
+        plan.monthlyPrice >= 999 ||
+        plan.speedMbps >= 200;
   }
 
   String _durationHelp(String term) {
     switch (term) {
       case 'quarterly':
-        return 'Booking jaisa 3 month commitment with fewer renewals.';
+        return '3 month commitment with fewer renewals.';
       case 'halfYearly':
-        return '6 month duration for a longer uninterrupted billing cycle.';
+        return '6 month uninterrupted billing cycle.';
       case 'yearly':
-        return '12 month duration for the longest stable commercial term.';
+        return '12 month duration for maximum stability.';
       default:
-        return 'Monthly duration for a flexible short-term cycle.';
+        return 'Flexible monthly cycle.';
     }
   }
 

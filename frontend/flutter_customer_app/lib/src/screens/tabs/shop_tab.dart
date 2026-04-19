@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/app_state.dart';
-import '../../widgets/app_card.dart';
+import '../../core/theme.dart';
+import '../../widgets/pressable_scale.dart';
+import '../wifi_settings_screen.dart';
 
 class ShopTab extends StatelessWidget {
   const ShopTab({super.key});
@@ -12,191 +15,344 @@ class ShopTab extends StatelessWidget {
     final wifi = appState.wifi;
     final devices = appState.connectedDevices;
     final quality = appState.networkQuality;
+    final blockedCount = devices.where((d) => d.blocked).length;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 130),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 18,
+        left: 18,
+        right: 18,
+        bottom: 100,
+      ),
       children: [
-        Text('Wi-Fi & Network', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 18),
-        AppCard(
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SmartHub G-900', style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 8),
-                    Text('Fiber connectivity established and performing optimally.', style: Theme.of(context).textTheme.bodyMedium),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.circle, size: 10, color: Colors.green),
-                        const SizedBox(width: 8),
-                        Text('System online', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF8126CF))),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                height: 80,
-                width: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3E8FF),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Icon(Icons.router_rounded, size: 42, color: Color(0xFF8126CF)),
+        // Hero card
+        Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0D051A), Color(0xFF2A0866), Color(0xFF7C3AED)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: const Color(0x55A855F7)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF7C3AED).withValues(alpha: 0.36),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(child: _WifiCard(title: 'Primary Network', value: wifi.ssid24, icon: Icons.wifi_rounded)),
-            const SizedBox(width: 12),
-            Expanded(child: _WifiCard(title: 'Guest Network', value: wifi.guestSsid, icon: Icons.person_add_alt_1_rounded)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        AppCard(
+          padding: const EdgeInsets.all(22),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Security Key', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(child: Text(wifi.passwordMask, style: Theme.of(context).textTheme.titleLarge)),
-                  OutlinedButton(onPressed: () {}, child: const Text('View')),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.wifi_rounded,
+                        color: Colors.white, size: 26),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          wifi.ssid24.isEmpty ? 'Not configured' : wifi.ssid24,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Signal quality: ${quality.quality.isEmpty ? '—' : quality.quality}',
+                          style: GoogleFonts.inter(
+                              color: Colors.white60, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: wifi.paused
+                                ? const Color(0xFFFBBF24)
+                                : const Color(0xFF4ADE80),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          wifi.paused ? 'Paused' : 'Online',
+                          style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 10),
-              SwitchListTile.adaptive(
-                value: wifi.guestEnabled,
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Guest Network'),
-                subtitle: const Text('Isolated visitor access'),
-                onChanged: (value) async {
-                  await appState.updateGuestWifi(enabled: value, ssid: wifi.guestSsid, password: 'Guest@1234');
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  _stat('Devices', '${wifi.connectedDevicesCount}'),
+                  _statDiv(),
+                  _stat(
+                      'Allowed', '${devices.where((d) => !d.blocked).length}'),
+                  _statDiv(),
+                  _stat('Blocked', '$blockedCount'),
+                  _statDiv(),
+                  _stat('Guest', wifi.guestEnabled ? 'On' : 'Off'),
+                ],
+              ),
+              const SizedBox(height: 18),
+              PressableScale(
+                onTap: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const WifiSettingsScreen()));
+                  if (context.mounted) await appState.refresh();
                 },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text('Manage Wi-Fi Settings',
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14)),
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 18),
-        Text('Network quality', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
+
+        const SizedBox(height: 22),
+        _sectionLabel('NETWORK QUALITY'),
+        const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _QualityCard(title: 'Latency', value: '${quality.latencyMs.toStringAsFixed(0)} ms')),
-            const SizedBox(width: 12),
-            Expanded(child: _QualityCard(title: 'Jitter', value: '${quality.jitterMs.toStringAsFixed(0)} ms')),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _QualityCard(title: 'Packet Loss', value: '${quality.packetLossPercent.toStringAsFixed(1)} %')),
-            const SizedBox(width: 12),
-            Expanded(child: _QualityCard(title: 'Quality', value: quality.quality)),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Text('Connected devices', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
-        if (devices.isEmpty)
-          const AppCard(child: Text('No connected devices returned from backend yet.'))
-        else
-          ...devices.map(
-            (device) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: AppCard(
-                child: Row(
-                  children: [
-                    Container(
-                      height: 48,
-                      width: 48,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3E8FF),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        device.connectionType.toLowerCase().contains('ethernet') ? Icons.tv_rounded : Icons.smartphone_rounded,
-                        color: const Color(0xFF8126CF),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(device.name, style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 4),
-                          Text('${device.connectionType} • ${device.signal}', style: Theme.of(context).textTheme.bodyMedium),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: !device.blocked,
-                      onChanged: (value) => appState.setDeviceBlocked(device.clientId, !value),
-                    ),
-                  ],
-                ),
-              ),
+            Expanded(
+              child: _StatTile(
+                  icon: Icons.speed_rounded,
+                  label: 'Quality',
+                  value: quality.quality.isEmpty ? '—' : quality.quality,
+                  accent: const Color(0xFF4ADE80)),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatTile(
+                  icon: Icons.timer_rounded,
+                  label: 'Latency',
+                  value: '${quality.latencyMs.toStringAsFixed(0)} ms',
+                  accent: const Color(0xFF60A5FA)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatTile(
+                  icon: Icons.wifi_off_rounded,
+                  label: 'Packet Loss',
+                  value: '${quality.packetLossPercent.toStringAsFixed(1)}%',
+                  accent: const Color(0xFFFBBF24)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatTile(
+                  icon: Icons.graphic_eq_rounded,
+                  label: 'Jitter',
+                  value: '${quality.jitterMs.toStringAsFixed(0)} ms',
+                  accent: kPrimaryLight),
+            ),
+          ],
+        ),
+
+        if (devices.isNotEmpty) ...[
+          const SizedBox(height: 22),
+          _sectionLabel('CONNECTED DEVICES'),
+          const SizedBox(height: 10),
+          ...devices.take(5).map((d) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: kSurface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: kBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: kPrimary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(
+                          d.connectionType.toLowerCase().contains('ethernet')
+                              ? Icons.settings_ethernet_rounded
+                              : Icons.smartphone_rounded,
+                          color: kPrimaryLight,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(d.name,
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    fontSize: 13)),
+                            Text('${d.connectionType} · ${d.signal}',
+                                style: GoogleFonts.inter(
+                                    fontSize: 11, color: kMuted)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: d.blocked
+                              ? const Color(0x22EF4444)
+                              : const Color(0x224ADE80),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                              color: d.blocked
+                                  ? const Color(0x44EF4444)
+                                  : const Color(0x444ADE80)),
+                        ),
+                        child: Text(
+                          d.blocked ? 'Blocked' : 'Active',
+                          style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: d.blocked
+                                  ? const Color(0xFFFF8A8A)
+                                  : const Color(0xFF4ADE80)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+        ],
       ],
     );
   }
+
+  Widget _sectionLabel(String t) => Text(
+        t,
+        style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: kMuted,
+            letterSpacing: 1.6),
+      );
+
+  Widget _stat(String label, String value) => Expanded(
+        child: Column(children: [
+          Text(value,
+              style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: GoogleFonts.inter(
+                  color: Colors.white54,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500)),
+        ]),
+      );
+
+  Widget _statDiv() => Container(
+      width: 1, height: 24, color: Colors.white.withValues(alpha: 0.18));
 }
 
-class _WifiCard extends StatelessWidget {
-  const _WifiCard({required this.title, required this.value, required this.icon});
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.accent,
+  });
 
-  final String title;
-  final String value;
   final IconData icon;
+  final String label, value;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: kBorder),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 42,
-            width: 42,
-            decoration: BoxDecoration(color: const Color(0xFFF3E8FF), borderRadius: BorderRadius.circular(16)),
-            child: Icon(icon, color: const Color(0xFF8126CF)),
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: accent, size: 16),
           ),
           const SizedBox(height: 10),
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 6),
-          Text(value, style: Theme.of(context).textTheme.bodyMedium),
-        ],
-      ),
-    );
-  }
-}
-
-class _QualityCard extends StatelessWidget {
-  const _QualityCard({required this.title, required this.value});
-
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 8),
-          Text(value, style: Theme.of(context).textTheme.titleLarge),
+          Text(value,
+              style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.4)),
+          const SizedBox(height: 3),
+          Text(label,
+              style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: Colors.white60,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );

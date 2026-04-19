@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/app_state.dart';
-import '../widgets/app_card.dart';
+import '../core/theme.dart';
 import 'booking_payment_screen.dart';
 import 'service_tracking_screen.dart';
 
@@ -19,9 +20,9 @@ class BookingFlowScreen extends StatefulWidget {
 
 class _BookingFlowScreenState extends State<BookingFlowScreen> {
   static const _slotOptions = [
-    ('morning', '10 AM - 1 PM'),
-    ('afternoon', '1 PM - 4 PM'),
-    ('evening', '4 PM - 7 PM'),
+    ('morning', '10 AM – 1 PM'),
+    ('afternoon', '1 PM – 4 PM'),
+    ('evening', '4 PM – 7 PM'),
   ];
 
   int step = 0;
@@ -30,7 +31,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   String _selectedDurationLabel = '1 month';
   static const String _selectedPaymentMode = 'razorpay';
   String? _selectedSlotCode = 'morning';
-  String? _selectedSlotLabel = '10 AM - 1 PM';
+  String? _selectedSlotLabel = '10 AM – 1 PM';
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
   final MapController _mapController = MapController();
   LatLng _selectedLocation = const LatLng(28.6139, 77.2090);
@@ -66,16 +67,22 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     final draft = appState.bookingFlowDraft;
     if (draft != null) {
       nameController.text = draft.name;
-      mobileController.text = draft.mobile.isNotEmpty ? draft.mobile : (widget.initialMobile ?? '');
+      mobileController.text =
+          draft.mobile.isNotEmpty ? draft.mobile : (widget.initialMobile ?? '');
       emailController.text = draft.email;
       addressController.text = draft.address;
       pinController.text = draft.pinCode;
-      selectedPlanCode = draft.selectedPlanCode.isEmpty ? null : draft.selectedPlanCode;
+      selectedPlanCode =
+          draft.selectedPlanCode.isEmpty ? null : draft.selectedPlanCode;
       _selectedDurationMonths = draft.selectedDurationMonths;
       _selectedDurationLabel = draft.selectedDurationLabel;
-      _selectedSlotCode = draft.selectedSlotCode.isEmpty ? 'morning' : draft.selectedSlotCode;
-      _selectedSlotLabel = draft.selectedSlotLabel.isEmpty ? '10 AM - 1 PM' : draft.selectedSlotLabel;
-      _preferredDate = DateTime.tryParse(draft.preferredDateIso) ?? DateTime.now().add(const Duration(days: 1));
+      _selectedSlotCode =
+          draft.selectedSlotCode.isEmpty ? 'morning' : draft.selectedSlotCode;
+      _selectedSlotLabel = draft.selectedSlotLabel.isEmpty
+          ? '10 AM – 1 PM'
+          : draft.selectedSlotLabel;
+      _preferredDate = DateTime.tryParse(draft.preferredDateIso) ??
+          DateTime.now().add(const Duration(days: 1));
       _selectedLocation = LatLng(draft.latitude, draft.longitude);
       _hasPickedLocation = draft.hasPickedLocation;
       _usedCurrentLocation = draft.usedCurrentLocation;
@@ -104,6 +111,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     super.dispose();
   }
 
+  // ─── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
@@ -120,40 +129,43 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          children: [
-            Text('Book Wi-Fi', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 2),
-            const Text('Address, plan, and booking in one flow', style: TextStyle(fontSize: 15, color: Color(0xFF64748B))),
-          ],
-        ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFFF6F1EB),
-        foregroundColor: const Color(0xFF131313),
-      ),
-      backgroundColor: const Color(0xFFF6F1EB),
-      body: RefreshIndicator(
-        color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF6F1EB),
-        onRefresh: appState.refresh,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-          children: [
-          _heroBanner(selectedPlan),
-          const SizedBox(height: 18),
-          _stepper(),
-          const SizedBox(height: 20),
-          if (step == 0) _addressStep(appState),
-          if (step == 1) _planStep(appState, plans),
-          if (step == 2) _durationStep(plans),
-          if (step == 3) _bookingStep(appState, plans),
-          if (step == 4 && latestBooking != null) _successStep(latestBooking),
-          ],
-        ),
+      backgroundColor: kBg,
+      body: Column(
+        children: [
+          // Gradient header
+          _BookingHeader(
+            step: step,
+            selectedPlan: selectedPlan,
+            mobileText: mobileController.text.trim(),
+            durationLabel: _selectedDurationLabel,
+          ),
+          // Content
+          Expanded(
+            child: RefreshIndicator(
+              color: kPrimary,
+              backgroundColor: kSurface,
+              onRefresh: appState.refresh,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
+                children: [
+                  _stepper(),
+                  const SizedBox(height: 20),
+                  if (step == 0) _addressStep(appState),
+                  if (step == 1) _planStep(appState, plans),
+                  if (step == 2) _durationStep(plans),
+                  if (step == 3) _bookingStep(appState, plans),
+                  if (step == 4 && latestBooking != null)
+                    _successStep(latestBooking),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  // ─── Steps ─────────────────────────────────────────────────────────────────
 
   Widget _addressStep(AppState appState) {
     final feasibility = appState.feasibility;
@@ -161,73 +173,122 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       return _unavailableState(appState, feasibility.message);
     }
     return _sectionCard(
-      title: 'Confirm service address',
+      title: 'Service address',
+      subtitle: 'Confirm your location to unlock available plans',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Unlock plans and offers available in your area.', style: TextStyle(color: Color(0xFF6B7280), height: 1.4)),
-          const SizedBox(height: 16),
-          _addressChecklist(),
+          // Draft restore banner
           if (appState.bookingFlowDraft != null) ...[
-            const SizedBox(height: 14),
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F4FF),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0x228224E3)),
+                color: kPrimary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: kPrimary.withValues(alpha: 0.25)),
               ),
               child: Row(
                 children: [
-                  const Expanded(
+                  const Icon(Icons.restore_rounded, color: kPrimary, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
                     child: Text(
-                      'Saved booking draft restored. Continue from where you left off or clear it.',
-                      style: TextStyle(color: Color(0xFF6B7280), height: 1.4, fontWeight: FontWeight.w600),
+                      'Draft restored — continue where you left off.',
+                      style: GoogleFonts.inter(
+                          color: kPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  OutlinedButton(
-                    onPressed: () async {
-                      await _resetBookingFlow(clearSavedDraft: true);
-                    },
-                    child: const Text('Clear'),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () async =>
+                        await _resetBookingFlow(clearSavedDraft: true),
+                    child: Text(
+                      'Clear',
+                      style: GoogleFonts.inter(
+                          color: kPrimary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13),
+                    ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 16),
           ],
-          const SizedBox(height: 16),
-          _field('Full name', nameController),
+
+          // Checklist
+          _addressChecklist(),
+          const SizedBox(height: 18),
+
+          // Fields
+          _field('Full name', nameController,
+              icon: Icons.person_outline_rounded),
           const SizedBox(height: 12),
-          _field('Mobile number', mobileController, keyboardType: TextInputType.phone),
+          _field('Mobile number', mobileController,
+              icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
           const SizedBox(height: 12),
-          _field('Email address', emailController, keyboardType: TextInputType.emailAddress),
+          _field('Email address', emailController,
+              icon: Icons.mail_outline_rounded,
+              keyboardType: TextInputType.emailAddress),
           const SizedBox(height: 12),
-          _field('Address', addressController, maxLines: 3),
+          _field('Installation address', addressController,
+              icon: Icons.home_outlined, maxLines: 3),
           const SizedBox(height: 12),
-          _field('Pin code', pinController, keyboardType: TextInputType.number),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.tonal(
-                  onPressed: _locationBusy ? null : _fetchCurrentLocation,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFFFFF),
-                    foregroundColor: const Color(0xFF131313),
-                  ),
-                  child: Text(_locationBusy ? 'Fetching location...' : 'Use Current Location'),
-                ),
+          _field('Pin code', pinController,
+              icon: Icons.pin_drop_outlined,
+              keyboardType: TextInputType.number),
+
+          const SizedBox(height: 18),
+
+          // Location button
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _locationBusy ? null : _fetchCurrentLocation,
+              icon: _locationBusy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location_rounded, size: 18),
+              label: Text(
+                _locationBusy ? 'Fetching location…' : 'Use Current Location',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
               ),
-            ],
+              style: FilledButton.styleFrom(
+                backgroundColor: kSurface2,
+                foregroundColor: Colors.white,
+                side: BorderSide(color: kPrimary.withValues(alpha: 0.3)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
           ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 14),
+
+          // Map
           Container(
-            height: 260,
+            height: 320,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0x338224E3)),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                  color: _hasPickedLocation
+                      ? kPrimary.withValues(alpha: 0.5)
+                      : kPrimary.withValues(alpha: 0.2)),
+              boxShadow: _hasPickedLocation
+                  ? [
+                      BoxShadow(
+                          color: kPrimary.withValues(alpha: 0.18),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6))
+                    ]
+                  : null,
             ),
             clipBehavior: Clip.antiAlias,
             child: Stack(
@@ -250,7 +311,8 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      urlTemplate:
+                          'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
                       userAgentPackageName: 'com.justfiber.customer',
                     ),
                     MarkerLayer(
@@ -259,115 +321,303 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                           point: _selectedLocation,
                           width: 48,
                           height: 48,
-                          child: const Icon(Icons.location_pin, size: 42, color: Color(0xFFD81F26)),
+                          child: const Icon(Icons.location_pin,
+                              size: 42, color: Color(0xFFEF4444)),
                         ),
                       ],
                     ),
                   ],
                 ),
-                const Positioned(
-                  top: 12,
-                  left: 12,
-                  right: 12,
-                  child: _MapHint(),
-                ),
+                // Hint overlay at top
+                if (!_hasPickedLocation)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xF5050508),
+                        borderRadius: BorderRadius.circular(12),
+                        border:
+                            Border.all(color: kPrimary.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.touch_app_rounded,
+                              color: kPrimary, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Tap on the map to drop the exact install pin',
+                              style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Pinned badge at bottom
+                if (_hasPickedLocation)
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xF5050508),
+                        borderRadius: BorderRadius.circular(12),
+                        border:
+                            Border.all(color: kPrimary.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                                color: Color(0xFF4ADE80),
+                                shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _usedCurrentLocation
+                                  ? 'GPS pin active'
+                                  : 'Manual pin active',
+                              style: GoogleFonts.inter(
+                                  color: const Color(0xFF4ADE80),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _hasPickedLocation = false;
+                                _usedCurrentLocation = false;
+                                _locationError = null;
+                                _selectedLocation =
+                                    const LatLng(28.6139, 77.2090);
+                              });
+                              _mapController.move(_selectedLocation, 14);
+                              _persistBookingDraft();
+                            },
+                            child: Text(
+                              'Reset',
+                              style: GoogleFonts.inter(
+                                  color: kMuted,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            _hasPickedLocation
-                ? 'Pinned location: ${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'
-                : 'Tap on the map to drop the exact install location pin.',
-            style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600),
-          ),
-          if (_hasPickedLocation) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F4FF),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0x558224E3)),
-                  ),
-                  child: Text(
-                    _usedCurrentLocation ? 'Current GPS pin' : 'Manual map pin',
-                    style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      _hasPickedLocation = false;
-                      _usedCurrentLocation = false;
-                      _locationError = null;
-                      _selectedLocation = const LatLng(28.6139, 77.2090);
-                    });
-                    _mapController.move(_selectedLocation, 14);
-                    _persistBookingDraft();
-                  },
-                  child: const Text('Reset pin'),
-                ),
-              ],
-            ),
-          ],
+
           if ((_locationError ?? '').isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(_locationError!, style: const TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0x18EF4444),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x44EF4444)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_rounded,
+                      color: Color(0xFFEF4444), size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _locationError!,
+                      style: GoogleFonts.inter(
+                          color: const Color(0xFFEF4444), fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
             Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 if (_locationServiceDisabled)
-                  OutlinedButton(
-                    onPressed: Geolocator.openLocationSettings,
-                    child: const Text('Open location settings'),
-                  ),
+                  _ghostBtn(
+                      'Location settings', Geolocator.openLocationSettings),
                 if (_locationPermissionDeniedForever)
-                  OutlinedButton(
-                    onPressed: Geolocator.openAppSettings,
-                    child: const Text('Open app settings'),
-                  ),
-                OutlinedButton(
-                  onPressed: _locationBusy ? null : _fetchCurrentLocation,
-                  child: const Text('Try again'),
-                ),
+                  _ghostBtn('App settings', Geolocator.openAppSettings),
+                _ghostBtn(
+                    'Try again', _locationBusy ? null : _fetchCurrentLocation),
               ],
             ),
           ],
-          const SizedBox(height: 16),
-          if (feasibility != null)
+
+          // Feasibility result
+          if (appState.feasibility != null) ...[
+            const SizedBox(height: 14),
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: feasibility.feasible ? const Color(0xFF0D1A12) : const Color(0xFF220B0B),
-                borderRadius: BorderRadius.circular(18),
+                color: appState.feasibility!.feasible
+                    ? const Color(0x124ADE80)
+                    : const Color(0x12EF4444),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: feasibility.feasible ? const Color(0x668224E3) : const Color(0x66EF4444),
-                ),
+                    color: appState.feasibility!.feasible
+                        ? const Color(0x444ADE80)
+                        : const Color(0x44EF4444)),
               ),
-              child: Text(
-                feasibility.message,
-                style: TextStyle(
-                  color: feasibility.feasible ? const Color(0xFF8224E3) : const Color(0xFFFCA5A5),
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                children: [
+                  Icon(
+                    appState.feasibility!.feasible
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.cancel_outlined,
+                    size: 18,
+                    color: appState.feasibility!.feasible
+                        ? const Color(0xFF4ADE80)
+                        : const Color(0xFFEF4444),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      appState.feasibility!.message,
+                      style: GoogleFonts.inter(
+                        color: appState.feasibility!.feasible
+                            ? const Color(0xFF4ADE80)
+                            : const Color(0xFFEF4444),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          const SizedBox(height: 16),
+          ],
+
+          const SizedBox(height: 18),
+          _primaryBtn(
+            label: appState.bookingBusy ? 'Checking…' : 'Confirm & View Plans',
+            onPressed: appState.bookingBusy
+                ? null
+                : () async {
+                    if (!_validateAddressStep()) return;
+                    final ok = await appState.checkFeasibility(
+                      address: addressController.text.trim(),
+                      pinCode: pinController.text.trim(),
+                      lat: _selectedLocation.latitude,
+                      lng: _selectedLocation.longitude,
+                    );
+                    if (!mounted) return;
+                    if (ok) {
+                      if (appState.plans.isEmpty) {
+                        await appState.refreshPlans();
+                        if (!mounted) return;
+                      }
+                      setState(() {
+                        _showUnavailableState = false;
+                        step = 1;
+                      });
+                      _persistBookingDraft();
+                    } else {
+                      final leadNumber = await appState.submitFeasibilityLead(
+                        fullName: nameController.text.trim(),
+                        mobile: mobileController.text.trim(),
+                        address: addressController.text.trim(),
+                        pinCode: pinController.text.trim(),
+                        lat: _selectedLocation.latitude,
+                        lng: _selectedLocation.longitude,
+                      );
+                      if (!mounted) return;
+                      setState(() => _showUnavailableState = true);
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      if (leadNumber != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Lead $leadNumber created for manual follow-up.'),
+                          ),
+                        );
+                      }
+                    }
+                  },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _unavailableState(AppState appState, String message) {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0x44EF4444)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0x18EF4444),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0x44EF4444)),
+            ),
+            child: const Icon(Icons.location_off_rounded,
+                color: Color(0xFFEF4444), size: 38),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'We are not live here yet',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+                fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            message.isEmpty
+                ? 'This address is outside our live serviceability map right now.'
+                : message,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(color: kMuted, height: 1.5, fontSize: 14),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Your inquiry has been captured for manual follow-up.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+                color: const Color(0xFFFBBF24),
+                fontWeight: FontWeight.w700,
+                fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          _primaryBtn(
+            label: 'Update address or pin',
+            onPressed: () => setState(() => _showUnavailableState = false),
+          ),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
+            child: OutlinedButton(
               onPressed: appState.bookingBusy
                   ? null
                   : () async {
-                      if (!_validateAddressStep()) return;
                       final ok = await appState.checkFeasibility(
                         address: addressController.text.trim(),
                         pinCode: pinController.text.trim(),
@@ -380,32 +630,16 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                           await appState.refreshPlans();
                           if (!mounted) return;
                         }
-                        setState(() => _showUnavailableState = false);
-                        setState(() => step = 1);
+                        setState(() {
+                          _showUnavailableState = false;
+                          step = 1;
+                        });
                         _persistBookingDraft();
-                      } else {
-                        final leadNumber = await appState.submitFeasibilityLead(
-                          fullName: nameController.text.trim(),
-                          mobile: mobileController.text.trim(),
-                          address: addressController.text.trim(),
-                          pinCode: pinController.text.trim(),
-                          lat: _selectedLocation.latitude,
-                          lng: _selectedLocation.longitude,
-                        );
-                        if (!mounted) return;
-                        setState(() => _showUnavailableState = true);
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        if (leadNumber != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Lead $leadNumber has been created for manual follow-up.'),
-                            ),
-                          );
-                        }
                       }
                     },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-                              child: Text(appState.bookingBusy ? 'Checking...' : 'Confirm & View Plans'),
+              style: _outlinedStyle(),
+              child: Text('Check again',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
             ),
           ),
         ],
@@ -413,191 +647,85 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
-  Widget _unavailableState(AppState appState, String message) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 520),
-      alignment: Alignment.center,
-      child: AppCard(
-        color: const Color(0xFFFFFFFF),
-        borderColor: const Color(0x22EF4444),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 74,
-              height: 74,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFDF2F2),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0x33EF4444)),
-              ),
-              child: const Icon(Icons.location_off_rounded, color: Color(0xFFDC2626), size: 38),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'We are not live here yet',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF131313)),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              message.isEmpty ? 'This address is outside our live serviceability map right now.' : message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.5, fontSize: 15),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Your inquiry has been captured for rollout and manual follow-up.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => setState(() => _showUnavailableState = false),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF8224E3),
-                  foregroundColor: const Color(0xFFFFFFFF),
-                ),
-                child: const Text('Update address or pin'),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: appState.bookingBusy
-                    ? null
-                    : () async {
-                        final ok = await appState.checkFeasibility(
-                          address: addressController.text.trim(),
-                          pinCode: pinController.text.trim(),
-                          lat: _selectedLocation.latitude,
-                          lng: _selectedLocation.longitude,
-                        );
-                        if (!mounted) return;
-                        if (ok) {
-                          if (appState.plans.isEmpty) {
-                            await appState.refreshPlans();
-                            if (!mounted) return;
-                          }
-                          setState(() {
-                            _showUnavailableState = false;
-                            step = 1;
-                          });
-                          _persistBookingDraft();
-                        }
-                      },
-                child: const Text('Check again'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _planStep(AppState appState, List<dynamic> plans) {
     return _sectionCard(
-      title: 'Popular plans',
+      title: 'Choose a plan',
+      subtitle: 'Pick the plan that fits your usage',
       child: Column(
         children: [
           if (plans.isEmpty) ...[
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F4FF),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0x338224E3)),
-              ),
+                  color: kSurface2,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: kPrimary.withValues(alpha: 0.2))),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Plans are loading',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF131313)),
-                  ),
+                  Text('Plans are loading…',
+                      style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white)),
                   const SizedBox(height: 8),
                   Text(
                     (appState.error ?? '').isNotEmpty
-                        ? 'Plan catalog abhi load nahi hui. ${appState.error}'
-                        : 'Serviceability check complete hai, but plan catalog abhi fetch nahi hui. Retry once.',
-                    style: const TextStyle(color: Color(0xFF6B7280), height: 1.45),
+                        ? appState.error!
+                        : 'Serviceability check passed. Retrying plan catalog…',
+                    style: GoogleFonts.inter(
+                        color: kMuted, height: 1.45, fontSize: 13),
                   ),
                   const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () async {
-                        await appState.refreshPlans();
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-                      ),
-                      child: const Text('Reload plans'),
-                    ),
-                  ),
+                  _primaryBtn(
+                      label: 'Reload plans',
+                      onPressed: () async => await appState.refreshPlans()),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
           ],
-          for (final plan in plans)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: _planTile(
-                planName: plan.name,
-                speed: '${plan.speedMbps.toStringAsFixed(0)} Mbps',
-                upload: '${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps',
-                data: plan.dataPolicy == 'unlimited' ? 'Unlimited' : '${plan.dataLimitGb.toStringAsFixed(0)} GB',
-                price: 'Rs ${plan.monthlyPrice.toStringAsFixed(0)} /m + GST',
-                selected: selectedPlanCode == plan.planCode,
-                onSelect: () {
-                  setState(() => selectedPlanCode = plan.planCode);
-                  _persistBookingDraft();
-                },
-              ),
-            ),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: selectedPlanCode == null
-                  ? null
-                  : () {
-                      final selected = plans.cast<dynamic?>().firstWhere(
-                            (item) => item?.planCode == selectedPlanCode,
-                            orElse: () => null,
-                          );
-                      if (selected != null) {
-                        final defaultDuration = _availableDurations(selected).first;
-                        _selectedDurationMonths = defaultDuration.$1;
-                        _selectedDurationLabel = defaultDuration.$2;
-                      }
-                      setState(() => step = 2);
-                      _persistBookingDraft();
-                    },
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-              ),
-              child: const Text('Continue to Duration'),
-            ),
+          ...plans.map((plan) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _planTile(
+                  planName: plan.name,
+                  speed: '${plan.speedMbps.toStringAsFixed(0)} Mbps',
+                  upload: '${plan.uploadSpeedMbps.toStringAsFixed(0)} Mbps',
+                  data: plan.dataPolicy == 'unlimited'
+                      ? 'Unlimited'
+                      : '${plan.dataLimitGb.toStringAsFixed(0)} GB',
+                  price: 'Rs ${plan.monthlyPrice.toStringAsFixed(0)} /mo',
+                  selected: selectedPlanCode == plan.planCode,
+                  onSelect: () {
+                    setState(() => selectedPlanCode = plan.planCode);
+                    _persistBookingDraft();
+                  },
+                ),
+              )),
+          const SizedBox(height: 4),
+          _primaryBtn(
+            label: 'Continue to Duration',
+            onPressed: selectedPlanCode == null
+                ? null
+                : () {
+                    final sel = plans.cast<dynamic>().firstWhere(
+                          (item) => item?.planCode == selectedPlanCode,
+                          orElse: () => null,
+                        );
+                    if (sel != null) {
+                      final def = _availableDurations(sel).first;
+                      _selectedDurationMonths = def.$1;
+                      _selectedDurationLabel = def.$2;
+                    }
+                    setState(() => step = 2);
+                    _persistBookingDraft();
+                  },
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                setState(() => step = 0);
-                _persistBookingDraft();
-              },
-              child: const Text('Back to Address'),
-            ),
-          ),
+          _backBtn('Back to Address', () {
+            setState(() => step = 0);
+            _persistBookingDraft();
+          }),
         ],
       ),
     );
@@ -611,75 +739,64 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         break;
       }
     }
-    final durations = selected == null ? const <(int, String)>[(1, '1 month')] : _availableDurations(selected);
-    final recurringAmount = selected == null ? 0.0 : _priceForDuration(selected, _selectedDurationMonths);
+    final durations = selected == null
+        ? const <(int, String)>[(1, '1 month')]
+        : _availableDurations(selected);
+    final recurringAmount = selected == null
+        ? 0.0
+        : _priceForDuration(selected, _selectedDurationMonths);
     final setupAmount = selected == null
         ? 0.0
-        : ((selected.otcCharge ?? 0) as num).toDouble() + ((selected.installationCharge ?? 0) as num).toDouble();
+        : ((selected.otcCharge ?? 0) as num).toDouble() +
+            ((selected.installationCharge ?? 0) as num).toDouble();
     final totalAmount = recurringAmount + setupAmount;
 
     return _sectionCard(
-      title: 'Choose plan duration',
+      title: 'Choose duration',
+      subtitle: selected == null
+          ? 'Select a plan first'
+          : 'Billing duration for ${selected.name}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            selected == null
-                ? 'Select a plan first to continue.'
-                : 'Pick billing duration for ${selected.name}. Total payable will update automatically.',
-            style: const TextStyle(color: Color(0xFF6B7280), height: 1.45),
-          ),
-          const SizedBox(height: 16),
-          for (final option in durations)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _durationTile(
-                label: option.$2,
-                recurringAmount: _priceForDuration(selected, option.$1),
-                setupAmount: setupAmount,
-                selected: _selectedDurationMonths == option.$1,
-                onSelect: () {
-                  setState(() {
-                    _selectedDurationMonths = option.$1;
-                    _selectedDurationLabel = option.$2;
-                  });
-                  _persistBookingDraft();
-                },
-              ),
-            ),
+          ...durations.map((option) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _durationTile(
+                  label: option.$2,
+                  recurringAmount: _priceForDuration(selected, option.$1),
+                  setupAmount: setupAmount,
+                  selected: _selectedDurationMonths == option.$1,
+                  onSelect: () {
+                    setState(() {
+                      _selectedDurationMonths = option.$1;
+                      _selectedDurationLabel = option.$2;
+                    });
+                    _persistBookingDraft();
+                  },
+                ),
+              )),
           const SizedBox(height: 8),
-          _summaryRow('Selected duration', _selectedDurationLabel),
-          _summaryRow('Recurring amount', 'Rs ${recurringAmount.toStringAsFixed(0)}'),
-          _summaryRow('Setup charges', 'Rs ${setupAmount.toStringAsFixed(0)}'),
-          _summaryRow('Payable now', 'Rs ${totalAmount.toStringAsFixed(0)}'),
+          _summaryBox([
+            ('Duration', _selectedDurationLabel),
+            ('Plan amount', 'Rs ${recurringAmount.toStringAsFixed(0)}'),
+            ('Setup charges', 'Rs ${setupAmount.toStringAsFixed(0)}'),
+            ('Payable now', 'Rs ${totalAmount.toStringAsFixed(0)}'),
+          ]),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: selected == null
-                  ? null
-                  : () {
-                      setState(() => step = 3);
-                      _persistBookingDraft();
-                    },
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF8224E3),
-                foregroundColor: const Color(0xFFFFFFFF),
-              ),
-              child: const Text('Continue to Booking'),
-            ),
+          _primaryBtn(
+            label: 'Continue to Checkout',
+            onPressed: selected == null
+                ? null
+                : () {
+                    setState(() => step = 3);
+                    _persistBookingDraft();
+                  },
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                setState(() => step = 1);
-                _persistBookingDraft();
-              },
-              child: const Text('Back to Plans'),
-            ),
-          ),
+          _backBtn('Back to Plans', () {
+            setState(() => step = 1);
+            _persistBookingDraft();
+          }),
         ],
       ),
     );
@@ -689,530 +806,1081 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     final selected = _selectedPlan(plans);
 
     return _sectionCard(
-      title: 'Review checkout',
+      title: 'Review & Pay',
+      subtitle: 'Confirm details before opening secure payment',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Check customer details, plan, and payable amount before opening secure payment.',
-            style: TextStyle(color: Color(0xFF6B7280), height: 1.45),
-          ),
+          _summaryBox([
+            (
+              'Customer',
+              nameController.text.trim().isEmpty
+                  ? '—'
+                  : nameController.text.trim()
+            ),
+            (
+              'Mobile',
+              mobileController.text.trim().isEmpty
+                  ? '—'
+                  : mobileController.text.trim()
+            ),
+            (
+              'Email',
+              emailController.text.trim().isEmpty
+                  ? '—'
+                  : emailController.text.trim()
+            ),
+            (
+              'Address',
+              addressController.text.trim().isEmpty
+                  ? '—'
+                  : addressController.text.trim()
+            ),
+            (
+              'Pin code',
+              pinController.text.trim().isEmpty
+                  ? '—'
+                  : pinController.text.trim()
+            ),
+            ('Plan', selected?.name ?? '—'),
+            (
+              'Speed',
+              selected == null
+                  ? '—'
+                  : '${selected.speedMbps.toStringAsFixed(0)} Mbps'
+            ),
+            ('Duration', _selectedDurationLabel),
+            (
+              'Payable now',
+              'Rs ${_bookingAmountFor(selected).toStringAsFixed(0)}'
+            ),
+          ]),
+
           const SizedBox(height: 16),
-          _summaryRow('Customer', nameController.text.trim().isEmpty ? '-' : nameController.text.trim()),
-          _summaryRow('Mobile', mobileController.text.trim().isEmpty ? '-' : mobileController.text.trim()),
-          _summaryRow('Email', emailController.text.trim().isEmpty ? '-' : emailController.text.trim()),
-          _summaryRow('Address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
-          _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
-          _summaryRow('Pinned coordinates', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
-          _summaryRow('Plan', selected?.name ?? '-'),
-          _summaryRow('Speed', selected == null ? '-' : '${selected.speedMbps.toStringAsFixed(0)} Mbps'),
-          _summaryRow('Upload', selected == null ? '-' : '${selected.uploadSpeedMbps.toStringAsFixed(0)} Mbps'),
-          _summaryRow('Duration', _selectedDurationLabel),
-          _summaryRow('Payable now', 'Rs ${_bookingAmountFor(selected).toStringAsFixed(0)}'),
-          const SizedBox(height: 16),
+
+          // Payment info note
           Container(
-            width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFBEB),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0x33F59E0B)),
+              color: const Color(0x12FBBD24),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0x44FBBF24)),
             ),
-            child: const Text(
-              'Payment completes the booking first. Preferred install date and slot are confirmed in the next step.',
-              style: TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w700, height: 1.45),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('Secure payment', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0x228224E3)),
-            ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.lock_rounded, color: Color(0xFF8224E3)),
-                SizedBox(width: 10),
+                const Icon(Icons.info_outline_rounded,
+                    color: Color(0xFFFBBF24), size: 16),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Razorpay checkout will open next',
-                    style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+                    'Payment completes the booking first. Install date and slot are confirmed in the next step.',
+                    style: GoogleFonts.inter(
+                        color: const Color(0xFFFBBF24),
+                        fontSize: 12,
+                        height: 1.45,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
             ),
           ),
+
+          const SizedBox(height: 14),
+
+          // Secure payment indicator
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  kPrimary.withValues(alpha: 0.12),
+                  const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kPrimary.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                      color: kPrimary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12)),
+                  child:
+                      const Icon(Icons.lock_rounded, color: kPrimary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Secure Payment',
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14),
+                    ),
+                    Text(
+                      'Razorpay checkout will open next',
+                      style: GoogleFonts.inter(color: kMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
           if (appState.session == null) ...[
-            const SizedBox(height: 8),
-            const Text(
-              'Login is required before opening secure payment checkout.',
-              style: TextStyle(color: Color(0xFF6B7280), height: 1.4),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0x12EF4444),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x44EF4444)),
+              ),
+              child: Text(
+                'Login is required before opening secure payment checkout.',
+                style: GoogleFonts.inter(
+                    color: const Color(0xFFEF4444), fontSize: 13),
+              ),
             ),
           ],
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: appState.bookingBusy || appState.session == null
-                  ? null
-                  : () async {
-                      final ok = await appState.createBooking(
-                        planCode: selectedPlanCode!,
-                        fullName: nameController.text.trim(),
-                        mobile: mobileController.text.trim(),
-                        email: emailController.text.trim(),
-                        address: addressController.text.trim(),
-                        pinCode: pinController.text.trim(),
-                        lat: _selectedLocation.latitude,
-                        lng: _selectedLocation.longitude,
-                        durationMonths: _selectedDurationMonths,
-                        durationLabel: _selectedDurationLabel,
-                        paymentMode: _selectedPaymentMode,
+
+          const SizedBox(height: 18),
+          _primaryBtn(
+            label: appState.bookingBusy ? 'Preparing checkout…' : 'Pay now',
+            onPressed: appState.bookingBusy || appState.session == null
+                ? null
+                : () async {
+                    final ok = await appState.createBooking(
+                      planCode: selectedPlanCode!,
+                      fullName: nameController.text.trim(),
+                      mobile: mobileController.text.trim(),
+                      email: emailController.text.trim(),
+                      address: addressController.text.trim(),
+                      pinCode: pinController.text.trim(),
+                      lat: _selectedLocation.latitude,
+                      lng: _selectedLocation.longitude,
+                      durationMonths: _selectedDurationMonths,
+                      durationLabel: _selectedDurationLabel,
+                      paymentMode: _selectedPaymentMode,
+                    );
+                    if (!mounted) return;
+                    if (ok) {
+                      final order = await appState.loadBookingPaymentOrder(
+                        bookingNumber: appState.latestBooking!.bookingNumber,
+                        amount: appState.latestBooking!.amount,
                       );
                       if (!mounted) return;
-                      if (ok) {
-                        final order = await appState.loadBookingPaymentOrder(
-                          bookingNumber: appState.latestBooking!.bookingNumber,
-                          amount: appState.latestBooking!.amount,
+                      if (order != null) {
+                        final paid = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => BookingPaymentScreen(
+                              bookingNumber:
+                                  appState.latestBooking!.bookingNumber,
+                              paymentOrder: order,
+                            ),
+                          ),
                         );
                         if (!mounted) return;
-                        if (order != null) {
-                          final paid = await Navigator.of(context).push<bool>(
-                            MaterialPageRoute(
-                              builder: (_) => BookingPaymentScreen(
-                                bookingNumber: appState.latestBooking!.bookingNumber,
-                                paymentOrder: order,
-                              ),
-                            ),
-                          );
+                        if (paid == true) {
+                          await appState.refresh();
+                          await appState.clearBookingFlowDraft();
                           if (!mounted) return;
-                          if (paid == true) {
-                            await appState.refresh();
-                            await appState.clearBookingFlowDraft();
-                            if (!mounted) return;
-                            setState(() => step = 4);
-                          }
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(appState.error ?? 'Unable to start booking payment')),
-                          );
+                          setState(() => step = 4);
                         }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(appState.bookingError ?? 'Unable to create booking')),
+                          SnackBar(
+                              content: Text(appState.error ??
+                                  'Unable to start booking payment')),
                         );
                       }
-                    },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-              child: Text(appState.bookingBusy ? 'Preparing checkout...' : 'Pay now'),
-            ),
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(appState.bookingError ??
+                                'Unable to create booking')),
+                      );
+                    }
+                  },
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: appState.bookingBusy
-                  ? null
-                  : () {
-                      setState(() => step = 2);
-                      _persistBookingDraft();
-                    },
-              child: const Text('Back to Duration'),
-            ),
-          ),
+          _backBtn('Back to Duration', () {
+            setState(() => step = 2);
+            _persistBookingDraft();
+          }),
         ],
       ),
     );
   }
 
   Widget _successStep(dynamic latestBooking) {
+    final appState = AppStateScope.of(context);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     return _sectionCard(
       title: 'Confirm install slot',
+      subtitle: 'Pick your preferred date and time',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Success hero
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
+                colors: [
+                  Color(0xFF13051F),
+                  Color(0xFF3B0D7A),
+                  Color(0xFFA855F7)
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0x55D8B4FE)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0x55FFFFFF)),
-                      ),
-                      child: const Icon(Icons.event_available_rounded, color: Color(0xFFFFFFFF)),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Payment received',
-                        style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w900, fontSize: 22),
-                      ),
-                    ),
-                  ],
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  ),
+                  child: const Icon(Icons.check_rounded,
+                      color: Colors.white, size: 28),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  'Booking ${latestBooking.bookingNumber} is ${latestBooking.status}.',
-                  style: const TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Pick your preferred date and install slot so operations can schedule the visit correctly.',
-                  style: TextStyle(color: Color(0xFFF3E8FF), height: 1.45),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payment received!',
+                        style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Booking ${latestBooking.bookingNumber} · ${latestBooking.status}',
+                        style: GoogleFonts.inter(
+                            color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
+
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+
+          // Booking chips
+          Row(
             children: [
               _successChip('Booking ID', latestBooking.bookingNumber),
+              const SizedBox(width: 10),
               _successChip('Status', latestBooking.status.replaceAll('_', ' ')),
-              _successChip('Duration', latestBooking.durationLabel),
             ],
           ),
-          const SizedBox(height: 16),
-          _summaryRow('Plan', latestBooking.planName),
-          _summaryRow('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
-          _summaryRow('Duration', latestBooking.durationLabel),
-          _summaryRow('Current step', latestBooking.currentStep),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0x228224E3)),
+
+          const SizedBox(height: 14),
+
+          _summaryBox([
+            ('Plan', latestBooking.planName),
+            ('Amount', 'Rs ${latestBooking.amount.toStringAsFixed(0)}'),
+            ('Duration', latestBooking.durationLabel),
+            ('Current step', latestBooking.currentStep),
+            (
+              'Install address',
+              addressController.text.trim().isEmpty
+                  ? '—'
+                  : addressController.text.trim()
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Install summary',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF131313)),
-                ),
-                const SizedBox(height: 10),
-                _summaryRow('Install address', addressController.text.trim().isEmpty ? '-' : addressController.text.trim()),
-                _summaryRow('Pin code', pinController.text.trim().isEmpty ? '-' : pinController.text.trim()),
-                _summaryRow('Map pin', '${_selectedLocation.latitude.toStringAsFixed(6)}, ${_selectedLocation.longitude.toStringAsFixed(6)}'),
-              ],
+            (
+              'Pin code',
+              pinController.text.trim().isEmpty
+                  ? '—'
+                  : pinController.text.trim()
             ),
+          ]),
+
+          const SizedBox(height: 20),
+
+          // Date picker
+          Text(
+            'Choose install date',
+            style: GoogleFonts.inter(
+                color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
           ),
-          const SizedBox(height: 16),
-          const Text('Choose install date', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 44,
+            height: 52,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              itemCount: 5,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, index) {
                 final date = DateTime.now().add(Duration(days: index + 1));
-                final selectedDate = _isSameDate(date, _preferredDate);
-                return ChoiceChip(
-                  label: Text(_formatDate(date)),
-                  selected: selectedDate,
-                  backgroundColor: const Color(0xFFF8F4FF),
-                  selectedColor: const Color(0xFF8224E3),
-                  side: BorderSide(color: selectedDate ? const Color(0xFF8224E3) : const Color(0x228224E3)),
-                  labelStyle: TextStyle(
-                    color: selectedDate ? const Color(0xFF111111) : const Color(0xFF131313),
-                    fontWeight: FontWeight.w700,
-                  ),
-                  onSelected: (_) {
+                final sel = _isSameDate(date, _preferredDate);
+                return GestureDetector(
+                  onTap: () {
                     setState(() => _preferredDate = date);
                     _persistBookingDraft();
                   },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: sel
+                          ? const LinearGradient(
+                              colors: [Color(0xFFBB6FF7), Color(0xFF7C3AED)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: sel ? null : kSurface2,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: sel
+                            ? Colors.transparent
+                            : kPrimary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Text(
+                      _formatDate(date),
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
                 );
               },
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemCount: 5,
             ),
           ),
+
+          const SizedBox(height: 18),
+
+          // Slot picker
+          Text(
+            'Choose install slot',
+            style: GoogleFonts.inter(
+                color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+          ),
           const SizedBox(height: 12),
-          const Text('Choose install slot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          Column(
             children: _slotOptions.map((slot) {
-              final selectedSlot = _selectedSlotCode == slot.$1;
-              return ChoiceChip(
-                label: Text(slot.$2),
-                selected: selectedSlot,
-                backgroundColor: const Color(0xFFF8F4FF),
-                selectedColor: const Color(0xFF8224E3),
-                side: BorderSide(color: selectedSlot ? const Color(0xFF8224E3) : const Color(0x228224E3)),
-                labelStyle: TextStyle(
-                  color: selectedSlot ? const Color(0xFF111111) : const Color(0xFF131313),
-                  fontWeight: FontWeight.w700,
+              final sel = _selectedSlotCode == slot.$1;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedSlotCode = slot.$1;
+                      _selectedSlotLabel = slot.$2;
+                    });
+                    _persistBookingDraft();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: sel
+                          ? const LinearGradient(
+                              colors: [Color(0xFF1D0545), Color(0xFF3B0D7A)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: sel ? null : kSurface2,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: sel
+                            ? kPrimary.withValues(alpha: 0.5)
+                            : kPrimary.withValues(alpha: 0.12),
+                        width: sel ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: sel ? kPrimary : Colors.transparent,
+                            border: Border.all(
+                              color: sel
+                                  ? kPrimary
+                                  : kMuted.withValues(alpha: 0.4),
+                              width: 2,
+                            ),
+                          ),
+                          child: sel
+                              ? const Icon(Icons.check_rounded,
+                                  size: 12, color: Colors.white)
+                              : null,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            slot.$2,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight:
+                                  sel ? FontWeight.w700 : FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        if (sel)
+                          Text(
+                            'Selected',
+                            style: GoogleFonts.inter(
+                                color: kPrimary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-                onSelected: (_) {
-                  setState(() {
-                    _selectedSlotCode = slot.$1;
-                    _selectedSlotLabel = slot.$2;
-                  });
-                  _persistBookingDraft();
-                },
               );
             }).toList(),
           ),
-          const SizedBox(height: 16),
-          _summaryRow('Preferred date', _formatDate(_preferredDate)),
-          _summaryRow('Preferred slot', _selectedSlotLabel ?? '-'),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 14),
+
+          _summaryBox([
+            ('Preferred date', _formatDate(_preferredDate)),
+            ('Preferred slot', _selectedSlotLabel ?? '—'),
+          ]),
+
+          const SizedBox(height: 14),
+
+          // What happens next
           Container(
-            width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFFFFF),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0x228224E3)),
+              color: kSurface2,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kPrimary.withValues(alpha: 0.12)),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('What happens next?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF131313))),
-                SizedBox(height: 8),
-                Text('1. Operations and installer teams can now see this booking.', style: TextStyle(color: Color(0xFF6E6A67))),
-                SizedBox(height: 4),
-                Text('2. The exact map pin and preferred install slot are attached to the job.', style: TextStyle(color: Color(0xFF6E6A67))),
-                SizedBox(height: 4),
-                Text('3. You can track updates from the booking and service tracking screen.', style: TextStyle(color: Color(0xFF6E6A67))),
+                Text(
+                  'What happens next?',
+                  style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14),
+                ),
+                const SizedBox(height: 10),
+                _nextStep('1',
+                    'Operations and installer teams can see this booking now.'),
+                _nextStep('2',
+                    'Your map pin and preferred slot are attached to the job.'),
+                _nextStep('3',
+                    'Track live updates from the service tracking screen.'),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: AppStateScope.of(context).busy
-                  ? null
-                  : () async {
-                      final ok = await AppStateScope.of(context).saveBookingPreferences(
-                        bookingNumber: latestBooking.bookingNumber,
-                        preferredDate: _preferredDate.toIso8601String(),
-                        preferredSlotCode: _selectedSlotCode,
-                        preferredSlotLabel: _selectedSlotLabel,
-                      );
-                      if (!context.mounted) return;
-                      if (ok) {
-                        await AppStateScope.of(context).clearBookingFlowDraft();
-                        if (!context.mounted) return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(ok ? 'Booking confirmed and slot saved.' : (AppStateScope.of(context).error ?? 'Unable to save slot preference')),
-                        ),
-                      );
-                    },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-              child: const Text('Save slot and confirm'),
-            ),
+
+          const SizedBox(height: 18),
+
+          _primaryBtn(
+            label: 'Save slot and confirm',
+            onPressed: appState.busy
+                ? null
+                : () async {
+                    final ok = await appState.saveBookingPreferences(
+                      bookingNumber: latestBooking.bookingNumber,
+                      preferredDate: _preferredDate.toIso8601String(),
+                      preferredSlotCode: _selectedSlotCode,
+                      preferredSlotLabel: _selectedSlotLabel,
+                    );
+                    if (!mounted) return;
+                    if (ok) {
+                      await appState.clearBookingFlowDraft();
+                      if (!mounted) return;
+                    }
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(ok
+                            ? 'Booking confirmed and slot saved.'
+                            : (appState.error ??
+                                'Unable to save slot preference')),
+                      ),
+                    );
+                  },
           ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 10),
+
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
                   onPressed: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ServiceTrackingScreen()),
+                    await navigator.push(
+                      MaterialPageRoute(
+                          builder: (_) => const ServiceTrackingScreen()),
                     );
-                    if (context.mounted) {
-                      await AppStateScope.of(context).refreshBookingTracking();
+                    if (mounted) {
+                      await appState.refreshBookingTracking();
                     }
                   },
-                  child: const Text('Track Booking'),
+                  style: _outlinedStyle(),
+                  child: Text('Track booking',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
                   onPressed: () async {
-                    await AppStateScope.of(context).refreshBookingTracking();
-                    if (!context.mounted) return;
-                    Navigator.of(context).pop();
+                    await appState.refreshBookingTracking();
+                    if (!mounted) return;
+                    navigator.pop();
                   },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-                  child: const Text('Done'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: kPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text('Done',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () async {
-                await _resetBookingFlow(clearSavedDraft: true);
-              },
-              child: const Text('Create another booking'),
-            ),
-          ),
+
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () async {
-                await AppStateScope.of(context).refresh();
-                if (!context.mounted) return;
-                Navigator.of(context).pop();
-              },
-              child: const Text('Return to App Home'),
-            ),
+
+          _backBtn('Create another booking', () async {
+            await _resetBookingFlow(clearSavedDraft: true);
+          }),
+          const SizedBox(height: 8),
+          _backBtn('Return to App Home', () async {
+            await appState.refresh();
+            if (!mounted) return;
+            navigator.pop();
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ─── Stepper ───────────────────────────────────────────────────────────────
+
+  Widget _stepper() {
+    const labels = ['Address', 'Plan', 'Duration', 'Checkout', 'Confirm'];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: List.generate(labels.length, (i) {
+              final active = i <= step;
+              final current = i == step;
+              final isLast = i == labels.length - 1;
+              return Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              gradient: active
+                                  ? const LinearGradient(
+                                      colors: [
+                                        Color(0xFFBB6FF7),
+                                        Color(0xFF7C3AED)
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: active ? null : kSurface2,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: active ? Colors.transparent : kBorder,
+                              ),
+                              boxShadow: current
+                                  ? [
+                                      BoxShadow(
+                                        color: kPrimary.withValues(alpha: 0.4),
+                                        blurRadius: 10,
+                                        spreadRadius: 1,
+                                      )
+                                    ]
+                                  : null,
+                            ),
+                            child: Center(
+                              child: active && !current
+                                  ? const Icon(Icons.check_rounded,
+                                      size: 15, color: Colors.white)
+                                  : Text(
+                                      '${i + 1}',
+                                      style: GoogleFonts.inter(
+                                        color: active ? Colors.white : kMuted,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            labels[i],
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight:
+                                  current ? FontWeight.w800 : FontWeight.w500,
+                              color: active ? Colors.white : kMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isLast)
+                      Expanded(
+                        child: Container(
+                          height: 2,
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            gradient: i < step
+                                ? const LinearGradient(
+                                    colors: [
+                                      Color(0xFFBB6FF7),
+                                      Color(0xFF7C3AED)
+                                    ],
+                                  )
+                                : null,
+                            color: i < step ? null : kBorder,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
           ),
         ],
       ),
     );
   }
 
-  Widget _successChip(String label, String value) {
+  // ─── UI helpers ────────────────────────────────────────────────────────────
+
+  Widget _sectionCard({
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x558224E3)),
+        color: kSurface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kPrimary.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontSize: 11, fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
+          Text(
+            subtitle,
+            style: GoogleFonts.inter(color: kMuted, fontSize: 13),
+          ),
+          const SizedBox(height: 20),
+          child,
         ],
       ),
     );
   }
 
-  Widget _heroBanner(dynamic selectedPlan) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0x228224E3)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 8)),
-        ],
+  Widget _field(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+    IconData? icon,
+  }) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(color: kMuted, fontSize: 13),
+        prefixIcon: icon != null ? Icon(icon, size: 18, color: kMuted) : null,
+        filled: true,
+        fillColor: kSurface2,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: kPrimary.withValues(alpha: 0.2)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: kPrimary.withValues(alpha: 0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: kPrimary.withValues(alpha: 0.6)),
+        ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+    );
+  }
+
+  Widget _planTile({
+    required String planName,
+    required String speed,
+    required String upload,
+    required String data,
+    required String price,
+    required bool selected,
+    required VoidCallback onSelect,
+  }) {
+    return GestureDetector(
+      onTap: onSelect,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFF13051F),
+                    Color(0xFF3B0D7A),
+                    Color(0xFFA855F7)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: selected ? null : kSurface2,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? const Color(0x88D8B4FE)
+                : kPrimary.withValues(alpha: 0.12),
+            width: selected ? 1.5 : 1,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                      color: kPrimary.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6))
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    planName,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 17,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? Colors.white.withValues(alpha: 0.18)
+                        : kPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.3)
+                          : kPrimary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    selected ? 'Selected ✓' : 'Select',
+                    style: GoogleFonts.inter(
+                      color: selected ? Colors.white : kPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              price,
+              style: GoogleFonts.inter(
+                color: selected ? Colors.white : Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 22,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _planStat(speed, 'Speed'),
+                _planDivider(),
+                _planStat(upload, 'Upload'),
+                _planDivider(),
+                _planStat(data, 'Data'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _planStat(String value, String label) => Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value,
+                style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: GoogleFonts.inter(color: Colors.white60, fontSize: 11)),
+          ],
+        ),
+      );
+
+  Widget _planDivider() => Container(
+      width: 1,
+      height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      color: Colors.white.withValues(alpha: 0.15));
+
+  Widget _durationTile({
+    required String label,
+    required double recurringAmount,
+    required double setupAmount,
+    required bool selected,
+    required VoidCallback onSelect,
+  }) {
+    final payable = recurringAmount + setupAmount;
+    return GestureDetector(
+      onTap: onSelect,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFF13051F),
+                    Color(0xFF3B0D7A),
+                    Color(0xFFA855F7)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: selected ? null : kSurface2,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? const Color(0x88D8B4FE)
+                : kPrimary.withValues(alpha: 0.12),
+            width: selected ? 1.5 : 1,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                      color: kPrimary.withValues(alpha: 0.28),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6))
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? kPrimary : Colors.transparent,
+                border: Border.all(
+                  color: selected ? kPrimary : kMuted.withValues(alpha: 0.4),
+                  width: 2,
+                ),
+              ),
+              child: selected
+                  ? const Icon(Icons.check_rounded,
+                      size: 13, color: Colors.white)
+                  : null,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'BOOKING CONSOLE',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: const Color(0xFF6E6A67),
-                          letterSpacing: 3.2,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    label,
+                    style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16),
                   ),
-                  const SizedBox(height: 10),
-                  const Text('Book new Wi-Fi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF131313))),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Select your plan, confirm address, and create a live booking with an exact install map pin.',
-                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _progressChip('Step', '${step + 1}/5'),
-                      _progressChip('Plan', selectedPlan?.name ?? 'Not selected'),
-                      _progressChip('Duration', _selectedDurationLabel),
-                      _progressChip('Mobile', mobileController.text.trim().isEmpty ? '-' : mobileController.text.trim()),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F4FF),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0x228224E3)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.verified_user_rounded, size: 18, color: Color(0xFF8224E3)),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Secure booking, live feasibility, and slot confirmation in one flow.',
-                            style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w600, height: 1.35),
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rs ${recurringAmount.toStringAsFixed(0)} plan + Rs ${setupAmount.toStringAsFixed(0)} setup',
+                    style:
+                        GoogleFonts.inter(color: Colors.white60, fontSize: 12),
                   ),
                 ],
               ),
             ),
-          ),
-          Container(
-            width: 120,
-            height: 120,
-            margin: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F4FF),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0x668224E3)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'Rs ${payable.toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16),
+                ),
+                Text(
+                  'payable',
+                  style: GoogleFonts.inter(color: Colors.white60, fontSize: 10),
+                ),
+              ],
             ),
-            child: const Icon(Icons.wifi_rounded, color: Color(0xFF8224E3), size: 56),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryBox(List<(String, String)> rows) {
+    return Container(
+      decoration: BoxDecoration(
+        color: kSurface2,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kPrimary.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        children: rows.asMap().entries.map((e) {
+          final isLast = e.key == rows.length - 1;
+          return Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      e.value.$1,
+                      style: GoogleFonts.inter(
+                          color: kMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500),
+                    ),
+                    const Spacer(),
+                    Flexible(
+                      child: Text(
+                        e.value.$2,
+                        textAlign: TextAlign.right,
+                        style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isLast)
+                Divider(
+                    height: 1,
+                    color: kPrimary.withValues(alpha: 0.08),
+                    indent: 16,
+                    endIndent: 16),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
 
   Widget _addressChecklist() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
+        color: kSurface2,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kPrimary.withValues(alpha: 0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Complete these before checking plans',
-            style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+          Text(
+            'Complete before checking plans',
+            style: GoogleFonts.inter(
+                color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
           ),
           const SizedBox(height: 10),
           _checkItem('Full name', nameController.text.trim().isNotEmpty),
-          _checkItem('Mobile number', mobileController.text.trim().length >= 10),
+          _checkItem(
+              'Mobile number', mobileController.text.trim().length >= 10),
           _checkItem('Address', addressController.text.trim().length >= 5),
           _checkItem('Pin code', pinController.text.trim().length >= 4),
           _checkItem('Map pin dropped', _hasPickedLocation),
@@ -1227,16 +1895,19 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       child: Row(
         children: [
           Icon(
-            done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-            size: 18,
-            color: done ? const Color(0xFF8224E3) : const Color(0xFF6B7280),
+            done
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
+            size: 17,
+            color: done ? const Color(0xFF4ADE80) : kMuted,
           ),
           const SizedBox(width: 8),
           Text(
             label,
-            style: TextStyle(
-              color: done ? const Color(0xFF131313) : const Color(0xFF6E6A67),
+            style: GoogleFonts.inter(
+              color: done ? Colors.white : kMuted,
               fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
           ),
         ],
@@ -1244,38 +1915,172 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
+  Widget _successChip(String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: kSurface2,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: GoogleFonts.inter(
+                    color: kMuted, fontSize: 10, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(value,
+                style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _nextStep(String number, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            margin: const EdgeInsets.only(top: 1),
+            decoration: BoxDecoration(
+              color: kPrimary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+              border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: GoogleFonts.inter(
+                    color: kPrimary, fontSize: 10, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style:
+                  GoogleFonts.inter(color: kMuted, fontSize: 13, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _primaryBtn(
+      {required String label, required VoidCallback? onPressed}) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: kPrimary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: kPrimary.withValues(alpha: 0.3),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        child: Text(label,
+            style:
+                GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15)),
+      ),
+    );
+  }
+
+  Widget _backBtn(String label, VoidCallback onPressed) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: _outlinedStyle(),
+        child: Text(label,
+            style:
+                GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+      ),
+    );
+  }
+
+  Widget _ghostBtn(String label, VoidCallback? onPressed) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: _outlinedStyle(),
+      child: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+    );
+  }
+
+  ButtonStyle _outlinedStyle() => OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        side: BorderSide(color: kPrimary.withValues(alpha: 0.3)),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      );
+
+  // ─── Logic helpers (unchanged) ─────────────────────────────────────────────
+
   bool _validateAddressStep() {
     final messenger = ScaffoldMessenger.of(context);
     if (nameController.text.trim().length < 2) {
-      messenger.showSnackBar(const SnackBar(content: Text('Enter customer name before continuing.')));
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Enter customer name before continuing.')));
       return false;
     }
     final mobile = mobileController.text.trim();
     if (mobile.length != 10 || int.tryParse(mobile) == null) {
-      messenger.showSnackBar(const SnackBar(content: Text('Enter a valid 10-digit mobile number before continuing.')));
+      messenger.showSnackBar(const SnackBar(
+          content:
+              Text('Enter a valid 10-digit mobile number before continuing.')));
       return false;
     }
     if (addressController.text.trim().length < 5) {
-      messenger.showSnackBar(const SnackBar(content: Text('Enter installation address before continuing.')));
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Enter installation address before continuing.')));
       return false;
     }
     if (pinController.text.trim().length < 4) {
-      messenger.showSnackBar(const SnackBar(content: Text('Enter a valid pin code before continuing.')));
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Enter a valid pin code before continuing.')));
       return false;
     }
     if (!_hasPickedLocation) {
-      messenger.showSnackBar(const SnackBar(content: Text('Drop the exact installation pin on the map.')));
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Drop the exact installation pin on the map.')));
       return false;
     }
     return true;
   }
 
-  bool _isSameDate(DateTime left, DateTime right) {
-    return left.year == right.year && left.month == right.month && left.day == right.day;
-  }
+  bool _isSameDate(DateTime left, DateTime right) =>
+      left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
 
   String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${date.day} ${months[date.month - 1]}';
   }
 
@@ -1298,12 +2103,16 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       }
       if (permission == LocationPermission.deniedForever) {
         setState(() => _locationPermissionDeniedForever = true);
-        throw Exception('Location permission is permanently denied. Open app settings and allow location access.');
+        throw Exception(
+            'Location permission is permanently denied. Open app settings and allow location access.');
       }
       if (permission == LocationPermission.denied) {
-        throw Exception('Location permission is required to fetch current location.');
+        throw Exception(
+            'Location permission is required to fetch current location.');
       }
-      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final position = await Geolocator.getCurrentPosition(
+          locationSettings:
+              const LocationSettings(accuracy: LocationAccuracy.high));
       setState(() {
         _selectedLocation = LatLng(position.latitude, position.longitude);
         _hasPickedLocation = true;
@@ -1317,28 +2126,21 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         _locationError = e.toString().replaceFirst('Exception: ', '');
       });
     } finally {
-      if (mounted) {
-        setState(() {
-          _locationBusy = false;
-        });
-      }
+      if (mounted) setState(() => _locationBusy = false);
     }
   }
 
-  void _handleDraftInputChanged() {
-    _persistBookingDraft();
-  }
+  void _handleDraftInputChanged() => _persistBookingDraft();
 
-  bool _hasDraftContent() {
-    return step > 0 ||
-        (selectedPlanCode ?? '').isNotEmpty ||
-        nameController.text.trim().isNotEmpty ||
-        mobileController.text.trim().isNotEmpty ||
-        emailController.text.trim().isNotEmpty ||
-        addressController.text.trim().isNotEmpty ||
-        pinController.text.trim().isNotEmpty ||
-        _hasPickedLocation;
-  }
+  bool _hasDraftContent() =>
+      step > 0 ||
+      (selectedPlanCode ?? '').isNotEmpty ||
+      nameController.text.trim().isNotEmpty ||
+      mobileController.text.trim().isNotEmpty ||
+      emailController.text.trim().isNotEmpty ||
+      addressController.text.trim().isNotEmpty ||
+      pinController.text.trim().isNotEmpty ||
+      _hasPickedLocation;
 
   Future<void> _persistBookingDraft() async {
     if (!mounted || !_draftHydrated) return;
@@ -1353,7 +2155,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       selectedDurationMonths: _selectedDurationMonths,
       selectedDurationLabel: _selectedDurationLabel,
       selectedSlotCode: _selectedSlotCode ?? 'morning',
-      selectedSlotLabel: _selectedSlotLabel ?? '10 AM - 1 PM',
+      selectedSlotLabel: _selectedSlotLabel ?? '10 AM – 1 PM',
       preferredDateIso: _preferredDate.toIso8601String(),
       name: nameController.text.trim(),
       mobile: mobileController.text.trim(),
@@ -1375,7 +2177,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       _selectedDurationMonths = 1;
       _selectedDurationLabel = '1 month';
       _selectedSlotCode = 'morning';
-      _selectedSlotLabel = '10 AM - 1 PM';
+      _selectedSlotLabel = '10 AM – 1 PM';
       _preferredDate = DateTime.now().add(const Duration(days: 1));
       _selectedLocation = const LatLng(28.6139, 77.2090);
       _hasPickedLocation = false;
@@ -1383,7 +2185,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       _locationError = null;
       _showUnavailableState = false;
       nameController.clear();
-      mobileController.text = AppStateScope.of(context).session?.mobile ?? widget.initialMobile ?? '';
+      mobileController.text = AppStateScope.of(context).session?.mobile ??
+          widget.initialMobile ??
+          '';
       emailController.clear();
       addressController.clear();
       pinController.clear();
@@ -1397,372 +2201,195 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   void _showLocationFeedback(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Widget _stepper() {
-    final labels = ['Address', 'Select Plan', 'Duration', 'Checkout', 'Confirm'];
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Step ${step + 1} of ${labels.length}',
-                style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700),
-              ),
-            ),
-            Text(
-              labels[step],
-              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFFFFF),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0x228224E3)),
-          ),
-          child: Row(
-            children: List.generate(labels.length, (index) {
-              final active = index <= step;
-              final current = index == step;
-              return Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      height: 6,
-                      margin: EdgeInsets.only(left: index == 0 ? 12 : 4, right: index == labels.length - 1 ? 12 : 4),
-                      decoration: BoxDecoration(
-                        color: active ? const Color(0xFF8224E3) : const Color(0xFFE7E2DD),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      labels[index],
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: current ? FontWeight.w800 : FontWeight.w700,
-                        color: active ? const Color(0xFF131313) : const Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ),
-        ),
-      ],
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   dynamic _selectedPlan(List<dynamic> plans) {
     for (final item in plans) {
-      if (item.planCode == selectedPlanCode) {
-        return item;
-      }
+      if (item.planCode == selectedPlanCode) return item;
     }
     return null;
   }
 
-  Widget _progressChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
-          children: [
-            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
-            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
-          ],
-        ),
-      ),
-    );
-  }
-
   List<(int, String)> _availableDurations(dynamic plan) {
     final durations = <(int, String)>[];
-    final monthlyPrice = ((plan.monthlyPrice ?? 0) as num).toDouble();
-    final quarterlyPrice = ((plan.quarterlyPrice ?? 0) as num).toDouble();
-    final halfYearlyPrice = ((plan.halfYearlyPrice ?? 0) as num).toDouble();
-    final yearlyPrice = ((plan.yearlyPrice ?? 0) as num).toDouble();
-
-    if (plan.validityMonthly == true || monthlyPrice > 0) durations.add((1, '1 month'));
-    if (plan.validityQuarterly == true || quarterlyPrice > 0) durations.add((3, '3 months'));
-    if (plan.validityHalfYearly == true || halfYearlyPrice > 0) durations.add((6, '6 months'));
-    if (plan.validityYearly == true || yearlyPrice > 0) durations.add((12, '12 months'));
-    if (durations.isEmpty) {
+    final mp = ((plan.monthlyPrice ?? 0) as num).toDouble();
+    final qp = ((plan.quarterlyPrice ?? 0) as num).toDouble();
+    final hp = ((plan.halfYearlyPrice ?? 0) as num).toDouble();
+    final yp = ((plan.yearlyPrice ?? 0) as num).toDouble();
+    if (plan.validityMonthly == true || mp > 0) {
       durations.add((1, '1 month'));
     }
+    if (plan.validityQuarterly == true || qp > 0) {
+      durations.add((3, '3 months'));
+    }
+    if (plan.validityHalfYearly == true || hp > 0) {
+      durations.add((6, '6 months'));
+    }
+    if (plan.validityYearly == true || yp > 0) {
+      durations.add((12, '12 months'));
+    }
+    if (durations.isEmpty) durations.add((1, '1 month'));
     return durations;
   }
 
   double _priceForDuration(dynamic plan, int months) {
     if (plan == null) return 0;
-    final monthlyPrice = ((plan.monthlyPrice ?? 0) as num).toDouble();
-    final quarterlyPrice = ((plan.quarterlyPrice ?? 0) as num).toDouble();
-    final halfYearlyPrice = ((plan.halfYearlyPrice ?? 0) as num).toDouble();
-    final yearlyPrice = ((plan.yearlyPrice ?? 0) as num).toDouble();
+    final mp = ((plan.monthlyPrice ?? 0) as num).toDouble();
+    final qp = ((plan.quarterlyPrice ?? 0) as num).toDouble();
+    final hp = ((plan.halfYearlyPrice ?? 0) as num).toDouble();
+    final yp = ((plan.yearlyPrice ?? 0) as num).toDouble();
     switch (months) {
       case 12:
-        return yearlyPrice > 0 ? yearlyPrice : monthlyPrice * 12;
+        return yp > 0 ? yp : mp * 12;
       case 6:
-        return halfYearlyPrice > 0 ? halfYearlyPrice : monthlyPrice * 6;
+        return hp > 0 ? hp : mp * 6;
       case 3:
-        return quarterlyPrice > 0 ? quarterlyPrice : monthlyPrice * 3;
+        return qp > 0 ? qp : mp * 3;
       default:
-        return monthlyPrice;
+        return mp;
     }
   }
 
   double _bookingAmountFor(dynamic plan) {
     if (plan == null) return 0;
     final recurring = _priceForDuration(plan, _selectedDurationMonths);
-    final setup = ((plan.otcCharge ?? 0) as num).toDouble() + ((plan.installationCharge ?? 0) as num).toDouble();
+    final setup = ((plan.otcCharge ?? 0) as num).toDouble() +
+        ((plan.installationCharge ?? 0) as num).toDouble();
     return recurring + setup;
-  }
-
-  Widget _sectionCard({required String title, required Widget child}) {
-    return AppCard(
-      color: const Color(0xFFFFFFFF),
-      borderColor: const Color(0x228224E3),
-      textColor: const Color(0xFF131313),
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313))),
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _field(String label, TextEditingController controller, {int maxLines = 1, TextInputType keyboardType = TextInputType.text}) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      style: const TextStyle(color: Color(0xFF131313)),
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: const Color(0xFFFFFFFF),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0x228224E3)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0x228224E3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0x668224E3)),
-        ),
-      ),
-    );
-  }
-
-  Widget _planTile({
-    required String planName,
-    required String speed,
-    required String upload,
-    required String data,
-    required String price,
-    required bool selected,
-    required VoidCallback onSelect,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x228224E3), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(price, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Color(0xFF131313))),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _summaryPill(speed, 'Speed')),
-              Expanded(child: _summaryPill(upload, 'Upload')),
-              Expanded(child: _summaryPill(data, 'Data')),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(child: Text(planName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF131313)))),
-              OutlinedButton(
-                onPressed: onSelect,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: selected ? const Color(0xFF8224E3) : const Color(0xFF131313),
-                  backgroundColor: selected ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
-                  side: BorderSide(color: selected ? const Color(0x668224E3) : const Color(0x228224E3)),
-                ),
-                child: Text(selected ? 'Selected' : 'Select Plan'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _durationTile({
-    required String label,
-    required double recurringAmount,
-    required double setupAmount,
-    required bool selected,
-    required VoidCallback onSelect,
-  }) {
-    final payableNow = recurringAmount + setupAmount;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: selected
-            ? const LinearGradient(
-                colors: [Color(0xFF8224E3), Color(0xFF9B51E0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: selected ? null : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x228224E3), width: selected ? 1.5 : 1),
-        boxShadow: selected
-            ? const [BoxShadow(color: Color(0x208224E3), blurRadius: 22, offset: Offset(0, 10))]
-            : const [BoxShadow(color: Color(0x0F000000), blurRadius: 10, offset: Offset(0, 6))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 22,
-                    color: selected ? const Color(0xFFFFFFFF) : const Color(0xFF131313),
-                  ),
-                ),
-              ),
-              FilledButton.tonal(
-                onPressed: onSelect,
-                style: FilledButton.styleFrom(
-                  foregroundColor: selected ? const Color(0xFF8224E3) : const Color(0xFF131313),
-                  backgroundColor: const Color(0xFFFFFFFF),
-                  elevation: 0,
-                ),
-                child: Text(selected ? 'Selected' : 'Choose'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: selected ? const Color(0x14FFFFFF) : const Color(0xFFF8F4FF),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: selected ? const Color(0x33FFFFFF) : const Color(0x228224E3)),
-            ),
-            child: Column(
-              children: [
-                _durationSummaryRow('Plan amount', 'Rs ${recurringAmount.toStringAsFixed(0)}', selected),
-                const SizedBox(height: 8),
-                _durationSummaryRow('Setup charges', 'Rs ${setupAmount.toStringAsFixed(0)}', selected),
-                const SizedBox(height: 8),
-                _durationSummaryRow('Payable now', 'Rs ${payableNow.toStringAsFixed(0)}', selected, emphasize: true),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _durationSummaryRow(String label, String value, bool selected, {bool emphasize = false}) {
-    final color = selected ? const Color(0xFFFFFFFF) : const Color(0xFF131313);
-    final muted = selected ? const Color(0xFFE9D5FF) : const Color(0xFF6E6A67);
-    return Row(
-      children: [
-        Expanded(child: Text(label, style: TextStyle(color: muted, fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500))),
-        Text(
-          value,
-          style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: emphasize ? 16 : 14),
-        ),
-      ],
-    );
-  }
-
-  Widget _summaryPill(String value, String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
-      ],
-    );
-  }
-
-  Widget _summaryRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
-          const Spacer(),
-          Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313)))),
-        ],
-      ),
-    );
   }
 }
 
-class _MapHint extends StatelessWidget {
-  const _MapHint();
+// ─── Booking Header ────────────────────────────────────────────────────────────
+
+class _BookingHeader extends StatelessWidget {
+  const _BookingHeader({
+    required this.step,
+    required this.selectedPlan,
+    required this.mobileText,
+    required this.durationLabel,
+  });
+
+  final int step;
+  final dynamic selectedPlan;
+  final String mobileText;
+  final String durationLabel;
+
+  static const _stepNames = [
+    'Address',
+    'Plan',
+    'Duration',
+    'Checkout',
+    'Confirm',
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF).withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x338224E3)),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF13051F), Color(0xFF3B0D7A), Color(0xFFA855F7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-      child: const Text(
-        'Tap map to drop the exact install pin. This live lat/lng will be saved for installer allocation.',
-        style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF131313)),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -60,
+            right: -50,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  Colors.white.withValues(alpha: 0.07),
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 18, 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 12),
+                        Text(
+                          'Book Wi-Fi',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          step < _stepNames.length
+                              ? 'Step ${step + 1} of ${_stepNames.length} · ${_stepNames[step]}'
+                              : 'Booking flow',
+                          style: GoogleFonts.inter(
+                              color: Colors.white60, fontSize: 13),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _chip(Icons.wifi_rounded,
+                                selectedPlan?.name ?? 'No plan yet'),
+                            _chip(Icons.calendar_month_rounded, durationLabel),
+                            if (mobileText.isNotEmpty)
+                              _chip(Icons.phone_rounded, mobileText),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: Colors.white70),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+                color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
 }
-
-
-
-
-
-

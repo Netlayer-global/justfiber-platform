@@ -8,10 +8,11 @@ class ApiClient {
   ApiClient({required this.baseUrl});
 
   final String baseUrl;
-  static const Duration _requestTimeout = Duration(seconds: 25);
+  static const Duration _requestTimeout = Duration(seconds: 12);
   Future<String?> Function()? onUnauthorized;
 
-  Uri _uri(String path) => Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
+  Uri _uri(String path) =>
+      Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
 
   String _withCustomerId(String path, String? customerId) {
     final normalized = (customerId ?? '').trim();
@@ -39,12 +40,14 @@ class ApiClient {
             .post(uri, headers: headers, body: jsonEncode(body ?? {}))
             .timeout(_requestTimeout);
       } else {
-        response = await http.get(uri, headers: headers).timeout(_requestTimeout);
+        response =
+            await http.get(uri, headers: headers).timeout(_requestTimeout);
       }
     } on FormatException {
       throw Exception('Invalid server URL. Check app API configuration.');
     } on http.ClientException {
-      throw Exception('Unable to connect to server. Check network or server status.');
+      throw Exception(
+          'Unable to connect to server. Check network or server status.');
     } on Exception catch (error) {
       final message = error.toString().toLowerCase();
       if (message.contains('timeout')) {
@@ -116,8 +119,10 @@ class ApiClient {
         .toList(growable: false);
     if (items.isEmpty) return const <String, dynamic>{};
     items.sort((left, right) {
-      final rightDate = _parseDate((right['at'] ?? right['createdAt'] ?? '').toString());
-      final leftDate = _parseDate((left['at'] ?? left['createdAt'] ?? '').toString());
+      final rightDate =
+          _parseDate((right['at'] ?? right['createdAt'] ?? '').toString());
+      final leftDate =
+          _parseDate((left['at'] ?? left['createdAt'] ?? '').toString());
       if (rightDate == null && leftDate == null) return 0;
       if (rightDate == null) return -1;
       if (leftDate == null) return 1;
@@ -131,7 +136,8 @@ class ApiClient {
     final body = value.contains('@')
         ? {'email': value, 'identifier': value}
         : {'mobile': value, 'identifier': value};
-    await _request('/api/v1/customer/auth/send-otp', method: 'POST', body: body);
+    await _request('/api/v1/customer/auth/send-otp',
+        method: 'POST', body: body);
   }
 
   Future<CustomerSession> verifyOtp(String identifier, String otp) async {
@@ -139,7 +145,8 @@ class ApiClient {
     final body = value.contains('@')
         ? {'email': value, 'identifier': value, 'otp': otp}
         : {'mobile': value, 'identifier': value, 'otp': otp};
-    final data = _asMap(await _request('/api/v1/customer/auth/verify-otp', method: 'POST', body: body));
+    final data = _asMap(await _request('/api/v1/customer/auth/verify-otp',
+        method: 'POST', body: body));
     return CustomerSession(
       mobile: value,
       accessToken: (data['accessToken'] ?? '').toString(),
@@ -157,40 +164,58 @@ class ApiClient {
     return (data['accessToken'] ?? '').toString();
   }
 
-  Future<(String?, List<CustomerConnection>)> fetchConnections(CustomerSession session, {String? selectedCustomerId}) async {
-    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/connections', selectedCustomerId), token: session.accessToken));
+  Future<(String?, List<CustomerConnection>)> fetchConnections(
+      CustomerSession session,
+      {String? selectedCustomerId}) async {
+    final data = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/connections', selectedCustomerId),
+        token: session.accessToken));
     final selected = (data['selectedCustomerId'] ?? '').toString().trim();
-    final connections = _asList(data['connections']).map((item) {
-      final map = item as Map<String, dynamic>;
-      return CustomerConnection(
-        customerId: (map['customerId'] ?? '').toString(),
-        serviceId: (map['serviceId'] ?? '').toString(),
-        accountNumber: (map['accountNumber'] ?? '').toString(),
-        fullName: (map['fullName'] ?? '').toString(),
-        mobile: (map['mobile'] ?? '').toString(),
-        email: (map['email'] ?? '').toString(),
-        planName: (map['planName'] ?? '').toString(),
-        status: (map['status'] ?? '').toString(),
-        dueAmount: double.tryParse('${map['dueAmount'] ?? 0}') ?? 0,
-        paymentStatus: (map['paymentStatus'] ?? '').toString(),
-        billMode: (map['billMode'] ?? '').toString(),
-        wifiName: (map['wifiName'] ?? '').toString(),
-        onlineStatus: (map['onlineStatus'] ?? '').toString(),
-        address: (map['address'] ?? '').toString(),
-      );
-    }).where((item) => item.customerId.isNotEmpty).toList();
+    final connections = _asList(data['connections'])
+        .map((item) {
+          final map = item as Map<String, dynamic>;
+          return CustomerConnection(
+            customerId: (map['customerId'] ?? '').toString(),
+            serviceId: (map['serviceId'] ?? '').toString(),
+            accountNumber: (map['accountNumber'] ?? '').toString(),
+            fullName: (map['fullName'] ?? '').toString(),
+            mobile: (map['mobile'] ?? '').toString(),
+            email: (map['email'] ?? '').toString(),
+            planName: (map['planName'] ?? '').toString(),
+            status: (map['status'] ?? '').toString(),
+            dueAmount: double.tryParse('${map['dueAmount'] ?? 0}') ?? 0,
+            paymentStatus: (map['paymentStatus'] ?? '').toString(),
+            billMode: (map['billMode'] ?? '').toString(),
+            wifiName: (map['wifiName'] ?? '').toString(),
+            onlineStatus: (map['onlineStatus'] ?? '').toString(),
+            address: (map['address'] ?? '').toString(),
+          );
+        })
+        .where((item) => item.customerId.isNotEmpty)
+        .toList();
     return (selected.isEmpty ? null : selected, connections);
   }
 
-  Future<DashboardData> fetchDashboard(CustomerSession session, {String? customerId}) async {
-    final dashboard = _asMap(await _request(_withCustomerId('/api/v1/customer/dashboard', customerId), token: session.accessToken));
-    final billing = _asMap(await _request(_withCustomerId('/api/v1/customer/billing/summary', customerId), token: session.accessToken));
-    final wifi = _asMap(await _request(_withCustomerId('/api/v1/customer/wifi', customerId), token: session.accessToken));
-    final serviceStatus = (billing['serviceStatus'] ?? dashboard['status'] ?? '').toString();
+  Future<DashboardData> fetchDashboard(CustomerSession session,
+      {String? customerId}) async {
+    final dashboard = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/dashboard', customerId),
+        token: session.accessToken));
+    final billing = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/billing/summary', customerId),
+        token: session.accessToken));
+    final wifi = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/wifi', customerId),
+        token: session.accessToken));
+    final serviceStatus =
+        (billing['serviceStatus'] ?? dashboard['status'] ?? '').toString();
     final paymentStatus = (billing['paymentStatus'] ?? '').toString();
-    final hasSuspensionWarning = (billing['lastSuspensionWarningAt'] ?? '').toString().isNotEmpty;
-    final hasOverdueReminder = (billing['lastOverdueReminderAt'] ?? '').toString().isNotEmpty;
-    final hasDueReminder = (billing['lastDueReminderAt'] ?? '').toString().isNotEmpty;
+    final hasSuspensionWarning =
+        (billing['lastSuspensionWarningAt'] ?? '').toString().isNotEmpty;
+    final hasOverdueReminder =
+        (billing['lastOverdueReminderAt'] ?? '').toString().isNotEmpty;
+    final hasDueReminder =
+        (billing['lastDueReminderAt'] ?? '').toString().isNotEmpty;
     final billingDue = double.tryParse('${billing['dueAmount'] ?? 0}') ?? 0;
     final billingAlert = hasSuspensionWarning
         ? 'Suspension warning active'
@@ -201,19 +226,27 @@ class ApiClient {
                 : serviceStatus.toLowerCase() == 'suspended' && billingDue > 0
                     ? 'Service suspended for unpaid bill'
                     : '';
-    final billingAlertTone = hasSuspensionWarning || serviceStatus.toLowerCase() == 'suspended'
-        ? 'critical'
-        : hasOverdueReminder
-            ? 'warning'
-            : hasDueReminder
-                ? 'info'
-                : 'info';
+    final billingAlertTone =
+        hasSuspensionWarning || serviceStatus.toLowerCase() == 'suspended'
+            ? 'critical'
+            : hasOverdueReminder
+                ? 'warning'
+                : hasDueReminder
+                    ? 'info'
+                    : 'info';
     return DashboardData(
-      customerName: (dashboard['fullName'] ?? dashboard['customerName'] ?? '').toString(),
-      planName: (dashboard['currentPlanName'] ?? billing['currentPlanName'] ?? '').toString(),
+      customerName:
+          (dashboard['fullName'] ?? dashboard['customerName'] ?? '').toString(),
+      planName:
+          (dashboard['currentPlanName'] ?? billing['currentPlanName'] ?? '')
+              .toString(),
       walletBalance: double.tryParse('${billing['walletBalance'] ?? 0}') ?? 0,
-      usedGb: double.tryParse('${dashboard['usedDataGb'] ?? billing['usageGb'] ?? 0}') ?? 0,
-      totalGb: double.tryParse('${dashboard['totalDataGb'] ?? billing['usageCapGb'] ?? billing['dataLimitGb'] ?? 0}') ?? 0,
+      usedGb: double.tryParse(
+              '${dashboard['usedDataGb'] ?? billing['usageGb'] ?? 0}') ??
+          0,
+      totalGb: double.tryParse(
+              '${dashboard['totalDataGb'] ?? billing['usageCapGb'] ?? billing['dataLimitGb'] ?? 0}') ??
+          0,
       points: int.tryParse('${dashboard['loyaltyPoints'] ?? 0}') ?? 0,
       activeDays: int.tryParse('${dashboard['activeDays'] ?? 0}') ?? 0,
       wifiName: (wifi['ssid24'] ?? wifi['ssid5'] ?? '').toString(),
@@ -225,8 +258,11 @@ class ApiClient {
     );
   }
 
-  Future<WifiData> fetchWifi(CustomerSession session, {String? customerId}) async {
-    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/wifi', customerId), token: session.accessToken));
+  Future<WifiData> fetchWifi(CustomerSession session,
+      {String? customerId}) async {
+    final data = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/wifi', customerId),
+        token: session.accessToken));
     return _mapWifi(data);
   }
 
@@ -238,81 +274,119 @@ class ApiClient {
       paused: data['paused'] == true,
       guestEnabled: _asMap(data['guestWifi'])['enabled'] == true,
       guestSsid: (_asMap(data['guestWifi'])['ssid'] ?? '').toString(),
-      connectedDevicesCount: int.tryParse('${data['connectedDevices'] ?? 0}') ?? 0,
+      connectedDevicesCount:
+          int.tryParse('${data['connectedDevices'] ?? 0}') ?? 0,
     );
   }
 
-  Future<BillingData> fetchBilling(CustomerSession session, {String? customerId}) async {
-    final details = _asMap(await _request(_withCustomerId('/api/v1/customer/billing/details', customerId), token: session.accessToken));
+  Future<BillingData> fetchBilling(CustomerSession session,
+      {String? customerId}) async {
+    final details = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/billing/details', customerId),
+        token: session.accessToken));
     final data = _asMap(details['summary']);
-    final invoices = _sortByDateDesc(_asList(details['invoices']).map((item) {
-      final map = item as Map<String, dynamic>;
-      return BillingInvoiceItem(
-        invoiceNumber: (map['invoiceNumber'] ?? map['invoiceId'] ?? '').toString(),
-        totalAmount: double.tryParse('${map['totalAmount'] ?? map['amount'] ?? 0}') ?? 0,
-        generatedAt: (map['generatedAt'] ?? '').toString(),
-        dueDate: (map['dueDate'] ?? '').toString(),
-        paymentStatus: (map['paymentStatus'] ?? 'unknown').toString(),
-        lifecycleStatus: (map['lifecycleStatus'] ?? '').toString(),
-        viewUrl: (map['viewUrl'] ?? '').toString(),
-        pdfUrl: (map['pdfUrl'] ?? '').toString(),
-      );
-    }).toList(), (item) => item.generatedAt);
-    final payments = _sortByDateDesc(_asList(details['payments']).map((item) {
-      final map = item as Map<String, dynamic>;
-      return BillingPaymentItem(
-        transactionId: (map['transactionId'] ?? '').toString(),
-        amount: double.tryParse('${map['amount'] ?? 0}') ?? 0,
-        paidAt: (map['paidAt'] ?? '').toString(),
-        provider: (map['provider'] ?? '').toString(),
-        reference: (map['reference'] ?? '').toString(),
-        viewUrl: (map['viewUrl'] ?? '').toString(),
-        pdfUrl: (map['pdfUrl'] ?? '').toString(),
-      );
-    }).toList(), (item) => item.paidAt);
-    final notes = _sortByDateDesc(_asList(details['notes']).map((item) {
-      final map = item as Map<String, dynamic>;
-      return BillingNoteItem(
-        noteNumber: (map['noteNumber'] ?? '').toString(),
-        type: (map['type'] ?? '').toString(),
-        totalAmount: double.tryParse('${map['totalAmount'] ?? map['amount'] ?? 0}') ?? 0,
-        reason: (map['reasonCode'] ?? map['note'] ?? '').toString(),
-        issuedAt: (map['issuedAt'] ?? '').toString(),
-        viewUrl: (map['viewUrl'] ?? '').toString(),
-        pdfUrl: (map['pdfUrl'] ?? '').toString(),
-      );
-    }).toList(), (item) => item.issuedAt);
+    final invoices = _sortByDateDesc(
+        _asList(details['invoices']).map((item) {
+          final map = item as Map<String, dynamic>;
+          return BillingInvoiceItem(
+            invoiceNumber:
+                (map['invoiceNumber'] ?? map['invoiceId'] ?? '').toString(),
+            totalAmount: double.tryParse(
+                    '${map['totalAmount'] ?? map['amount'] ?? 0}') ??
+                0,
+            generatedAt: (map['generatedAt'] ?? '').toString(),
+            dueDate: (map['dueDate'] ?? '').toString(),
+            paymentStatus: (map['paymentStatus'] ?? 'unknown').toString(),
+            lifecycleStatus: (map['lifecycleStatus'] ?? '').toString(),
+            viewUrl: (map['viewUrl'] ?? '').toString(),
+            pdfUrl: (map['pdfUrl'] ?? '').toString(),
+          );
+        }).toList(),
+        (item) => item.generatedAt);
+    final payments = _sortByDateDesc(
+        _asList(details['payments']).map((item) {
+          final map = item as Map<String, dynamic>;
+          return BillingPaymentItem(
+            transactionId: (map['transactionId'] ?? '').toString(),
+            amount: double.tryParse('${map['amount'] ?? 0}') ?? 0,
+            paidAt: (map['paidAt'] ?? '').toString(),
+            provider: (map['provider'] ?? '').toString(),
+            reference: (map['reference'] ?? '').toString(),
+            viewUrl: (map['viewUrl'] ?? '').toString(),
+            pdfUrl: (map['pdfUrl'] ?? '').toString(),
+          );
+        }).toList(),
+        (item) => item.paidAt);
+    final notes = _sortByDateDesc(
+        _asList(details['notes']).map((item) {
+          final map = item as Map<String, dynamic>;
+          return BillingNoteItem(
+            noteNumber: (map['noteNumber'] ?? '').toString(),
+            type: (map['type'] ?? '').toString(),
+            totalAmount: double.tryParse(
+                    '${map['totalAmount'] ?? map['amount'] ?? 0}') ??
+                0,
+            reason: (map['reasonCode'] ?? map['note'] ?? '').toString(),
+            issuedAt: (map['issuedAt'] ?? '').toString(),
+            viewUrl: (map['viewUrl'] ?? '').toString(),
+            pdfUrl: (map['pdfUrl'] ?? '').toString(),
+          );
+        }).toList(),
+        (item) => item.issuedAt);
     final pendingPlanChangeMap = _asMap(data['pendingPlanChange']);
     return BillingData(
-      currentPlan: (data['currentPlan'] ?? data['currentPlanName'] ?? '').toString(),
-      dueAmount: double.tryParse('${data['dueAmount'] ?? data['amount'] ?? 0}') ?? 0,
-      recurringAmount: double.tryParse('${data['recurringAmount'] ?? data['amount'] ?? data['dueAmount'] ?? 0}') ?? 0,
+      currentPlan:
+          (data['currentPlan'] ?? data['currentPlanName'] ?? '').toString(),
+      dueAmount:
+          double.tryParse('${data['dueAmount'] ?? data['amount'] ?? 0}') ?? 0,
+      recurringAmount: double.tryParse(
+              '${data['recurringAmount'] ?? data['amount'] ?? data['dueAmount'] ?? 0}') ??
+          0,
       nextBillDate: (data['dueDate'] ?? data['nextBillDate'] ?? '').toString(),
-      lastPaymentAmount: double.tryParse('${data['lastPaymentAmount'] ?? payments.firstOrNull?.amount ?? 0}') ?? 0,
+      lastPaymentAmount: double.tryParse(
+              '${data['lastPaymentAmount'] ?? payments.firstOrNull?.amount ?? 0}') ??
+          0,
       billCycle: (data['billCycle'] ?? '').toString(),
       billMode: (data['billMode'] ?? '').toString(),
       generatedDate: (data['generatedDate'] ?? '').toString(),
       paymentStatus: (data['paymentStatus'] ?? 'unknown').toString(),
-      invoiceLifecycle: (data['invoiceLifecycle'] ?? invoices.firstOrNull?.lifecycleStatus ?? '').toString(),
-      latestInvoiceNumber: (data['latestInvoiceNumber'] ?? invoices.firstOrNull?.invoiceNumber ?? '').toString(),
-      latestInvoiceStatus: (data['latestInvoiceStatus'] ?? invoices.firstOrNull?.paymentStatus ?? '').toString(),
-      invoiceCount: int.tryParse('${data['invoiceCount'] ?? invoices.length}') ?? invoices.length,
+      invoiceLifecycle: (data['invoiceLifecycle'] ??
+              invoices.firstOrNull?.lifecycleStatus ??
+              '')
+          .toString(),
+      latestInvoiceNumber: (data['latestInvoiceNumber'] ??
+              invoices.firstOrNull?.invoiceNumber ??
+              '')
+          .toString(),
+      latestInvoiceStatus: (data['latestInvoiceStatus'] ??
+              invoices.firstOrNull?.paymentStatus ??
+              '')
+          .toString(),
+      invoiceCount:
+          int.tryParse('${data['invoiceCount'] ?? invoices.length}') ??
+              invoices.length,
       serviceStatus: (data['serviceStatus'] ?? '').toString(),
       lastDueReminderAt: (data['lastDueReminderAt'] ?? '').toString(),
       lastOverdueReminderAt: (data['lastOverdueReminderAt'] ?? '').toString(),
-      lastSuspensionWarningAt: (data['lastSuspensionWarningAt'] ?? '').toString(),
+      lastSuspensionWarningAt:
+          (data['lastSuspensionWarningAt'] ?? '').toString(),
       promiseToPayAt: (data['promiseToPayAt'] ?? '').toString(),
       promiseAmount: double.tryParse('${data['promiseAmount'] ?? 0}') ?? 0,
       promiseNote: (data['promiseNote'] ?? '').toString(),
-      lastPaymentDate: (data['lastPaymentDate'] ?? payments.firstOrNull?.paidAt ?? '').toString(),
-      adjustmentPreview: double.tryParse('${data['adjustmentPreview'] ?? 0}') ?? 0,
+      lastPaymentDate:
+          (data['lastPaymentDate'] ?? payments.firstOrNull?.paidAt ?? '')
+              .toString(),
+      adjustmentPreview:
+          double.tryParse('${data['adjustmentPreview'] ?? 0}') ?? 0,
       speedMbps: double.tryParse('${data['speedMbps'] ?? 0}') ?? 0,
       uploadSpeedMbps: double.tryParse('${data['uploadSpeedMbps'] ?? 0}') ?? 0,
       dataPolicy: (data['dataPolicy'] ?? 'unlimited').toString(),
       dataLimitGb: double.tryParse('${data['dataLimitGb'] ?? 0}') ?? 0,
       fupSpeedMbps: double.tryParse('${data['fupSpeedMbps'] ?? 0}') ?? 0,
       usageGb: double.tryParse('${data['usageGb'] ?? 0}') ?? 0,
-      usageCapGb: double.tryParse('${data['usageCapGb'] ?? data['dataLimitGb'] ?? 0}') ?? 0,
+      usageCapGb: double.tryParse(
+              '${data['usageCapGb'] ?? data['dataLimitGb'] ?? 0}') ??
+          0,
       usageCapReached: data['usageCapReached'] == true,
       usageCycleStartedAt: (data['usageCycleStartedAt'] ?? '').toString(),
       usageLastUpdatedAt: (data['usageLastUpdatedAt'] ?? '').toString(),
@@ -320,13 +394,23 @@ class ApiClient {
           ? null
           : PendingPlanChange(
               planCode: (pendingPlanChangeMap['planCode'] ?? '').toString(),
-              planName: (pendingPlanChangeMap['planName'] ?? pendingPlanChangeMap['planCode'] ?? '').toString(),
-              effectiveMode: (pendingPlanChangeMap['effectiveMode'] ?? '').toString(),
-              billingTerm: (pendingPlanChangeMap['billingTerm'] ?? 'monthly').toString(),
+              planName: (pendingPlanChangeMap['planName'] ??
+                      pendingPlanChangeMap['planCode'] ??
+                      '')
+                  .toString(),
+              effectiveMode:
+                  (pendingPlanChangeMap['effectiveMode'] ?? '').toString(),
+              billingTerm:
+                  (pendingPlanChangeMap['billingTerm'] ?? 'monthly').toString(),
               billMode: (pendingPlanChangeMap['billMode'] ?? '').toString(),
-              currentPrice: double.tryParse('${pendingPlanChangeMap['currentPrice'] ?? 0}') ?? 0,
-              nextPrice: double.tryParse('${pendingPlanChangeMap['nextPrice'] ?? 0}') ?? 0,
-              requestedAt: (pendingPlanChangeMap['requestedAt'] ?? '').toString(),
+              currentPrice: double.tryParse(
+                      '${pendingPlanChangeMap['currentPrice'] ?? 0}') ??
+                  0,
+              nextPrice: double.tryParse(
+                      '${pendingPlanChangeMap['nextPrice'] ?? 0}') ??
+                  0,
+              requestedAt:
+                  (pendingPlanChangeMap['requestedAt'] ?? '').toString(),
               noteNumber: (pendingPlanChangeMap['noteNumber'] ?? '').toString(),
             ),
       invoices: invoices,
@@ -357,63 +441,89 @@ class ApiClient {
     return _mapWifi(_asMap(data['wifi']));
   }
 
-  Future<List<RequestItem>> fetchRequests(CustomerSession session, {String? customerId}) async {
-    final list = _asList(await _request(_withCustomerId('/api/v1/customer/requests', customerId), token: session.accessToken));
-    return _sortByDateDesc(list.map((item) {
-      final map = item as Map<String, dynamic>;
-      final payload = _asMap(map['payload']);
-      final latestTimeline = _latestTimelineEntry(map['timeline']);
-      return RequestItem(
-        id: (map['_id'] ?? '').toString(),
-        referenceNumber: (map['requestNumber'] ?? '').toString(),
-        title: (map['subject'] ?? map['title'] ?? map['requestType'] ?? map['type'] ?? 'Customer request').toString(),
-        type: (map['type'] ?? 'request').toString(),
-        note: (payload['note'] ?? payload['description'] ?? '').toString(),
-        latestUpdateNote: (latestTimeline['note'] ?? '').toString(),
-        latestUpdateAt: (latestTimeline['at'] ?? latestTimeline['createdAt'] ?? '').toString(),
-        status: (map['status'] ?? 'open').toString(),
-        createdAt: (map['createdAt'] ?? '').toString(),
-      );
-    }).toList(), (item) => item.createdAt);
+  Future<List<RequestItem>> fetchRequests(CustomerSession session,
+      {String? customerId}) async {
+    final list = _asList(await _request(
+        _withCustomerId('/api/v1/customer/requests', customerId),
+        token: session.accessToken));
+    return _sortByDateDesc(
+        list.map((item) {
+          final map = item as Map<String, dynamic>;
+          final payload = _asMap(map['payload']);
+          final latestTimeline = _latestTimelineEntry(map['timeline']);
+          return RequestItem(
+            id: (map['_id'] ?? '').toString(),
+            referenceNumber: (map['requestNumber'] ?? '').toString(),
+            title: (map['subject'] ??
+                    map['title'] ??
+                    map['requestType'] ??
+                    map['type'] ??
+                    'Customer request')
+                .toString(),
+            type: (map['type'] ?? 'request').toString(),
+            note: (payload['note'] ?? payload['description'] ?? '').toString(),
+            latestUpdateNote: (latestTimeline['note'] ?? '').toString(),
+            latestUpdateAt:
+                (latestTimeline['at'] ?? latestTimeline['createdAt'] ?? '')
+                    .toString(),
+            status: (map['status'] ?? 'open').toString(),
+            createdAt: (map['createdAt'] ?? '').toString(),
+          );
+        }).toList(),
+        (item) => item.createdAt);
   }
 
-  Future<List<SupportTicketItem>> fetchTickets(CustomerSession session, {String? customerId}) async {
-    final list = _asList(await _request(_withCustomerId('/api/v1/customer/tickets', customerId), token: session.accessToken));
-    return _sortByDateDesc(list.map((item) {
-      final map = item as Map<String, dynamic>;
-      final latestTimeline = _latestTimelineEntry(map['timeline']);
-      return SupportTicketItem(
-        id: (map['_id'] ?? '').toString(),
-        ticketNumber: (map['ticketNumber'] ?? '').toString(),
-        category: (map['category'] ?? '').toString(),
-        subject: (map['subject'] ?? 'Support ticket').toString(),
-        description: (map['description'] ?? '').toString(),
-        latestUpdateNote: (latestTimeline['note'] ?? map['resolutionSummary'] ?? '').toString(),
-        latestUpdateAt: (latestTimeline['at'] ?? latestTimeline['createdAt'] ?? '').toString(),
-        status: (map['status'] ?? 'open').toString(),
-        priority: (map['priority'] ?? 'medium').toString(),
-        createdAt: (map['createdAt'] ?? '').toString(),
-      );
-    }).toList(), (item) => item.createdAt);
+  Future<List<SupportTicketItem>> fetchTickets(CustomerSession session,
+      {String? customerId}) async {
+    final list = _asList(await _request(
+        _withCustomerId('/api/v1/customer/tickets', customerId),
+        token: session.accessToken));
+    return _sortByDateDesc(
+        list.map((item) {
+          final map = item as Map<String, dynamic>;
+          final latestTimeline = _latestTimelineEntry(map['timeline']);
+          return SupportTicketItem(
+            id: (map['_id'] ?? '').toString(),
+            ticketNumber: (map['ticketNumber'] ?? '').toString(),
+            category: (map['category'] ?? '').toString(),
+            subject: (map['subject'] ?? 'Support ticket').toString(),
+            description: (map['description'] ?? '').toString(),
+            latestUpdateNote:
+                (latestTimeline['note'] ?? map['resolutionSummary'] ?? '')
+                    .toString(),
+            latestUpdateAt:
+                (latestTimeline['at'] ?? latestTimeline['createdAt'] ?? '')
+                    .toString(),
+            status: (map['status'] ?? 'open').toString(),
+            priority: (map['priority'] ?? 'medium').toString(),
+            createdAt: (map['createdAt'] ?? '').toString(),
+          );
+        }).toList(),
+        (item) => item.createdAt);
   }
 
-  Future<List<NotificationItem>> fetchNotifications(CustomerSession session) async {
-    final list = _asList(await _request('/api/v1/customer/notifications', token: session.accessToken));
-    return _sortByDateDesc(list.map((item) {
-      final map = item as Map<String, dynamic>;
-      return NotificationItem(
-        id: (map['_id'] ?? '').toString(),
-        type: (map['type'] ?? 'general').toString(),
-        title: (map['title'] ?? 'Notification').toString(),
-        body: (map['body'] ?? map['message'] ?? '').toString(),
-        createdAt: (map['createdAt'] ?? '').toString(),
-        readAt: (map['readAt'] ?? '').toString(),
-        payload: _asMap(map['payload']),
-      );
-    }).toList(), (item) => item.createdAt);
+  Future<List<NotificationItem>> fetchNotifications(
+      CustomerSession session) async {
+    final list = _asList(await _request('/api/v1/customer/notifications',
+        token: session.accessToken));
+    return _sortByDateDesc(
+        list.map((item) {
+          final map = item as Map<String, dynamic>;
+          return NotificationItem(
+            id: (map['_id'] ?? '').toString(),
+            type: (map['type'] ?? 'general').toString(),
+            title: (map['title'] ?? 'Notification').toString(),
+            body: (map['body'] ?? map['message'] ?? '').toString(),
+            createdAt: (map['createdAt'] ?? '').toString(),
+            readAt: (map['readAt'] ?? '').toString(),
+            payload: _asMap(map['payload']),
+          );
+        }).toList(),
+        (item) => item.createdAt);
   }
 
-  Future<void> markNotificationRead(CustomerSession session, String notificationId) async {
+  Future<void> markNotificationRead(
+      CustomerSession session, String notificationId) async {
     await _request(
       '/api/v1/customer/notifications/$notificationId/read',
       method: 'POST',
@@ -433,7 +543,8 @@ class ApiClient {
   }
 
   Future<List<AddonItem>> fetchAddons(CustomerSession session) async {
-    final list = _asList(await _request('/api/v1/customer/addons', token: session.accessToken));
+    final list = _asList(
+        await _request('/api/v1/customer/addons', token: session.accessToken));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       return AddonItem(
@@ -448,29 +559,40 @@ class ApiClient {
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       final rawTargetType = (map['targetType'] ?? 'shop').toString();
-      final targetType = rawTargetType == 'plans' ? 'plan_catalog' : rawTargetType;
+      final targetType =
+          rawTargetType == 'plans' ? 'plan_catalog' : rawTargetType;
       final targetValue = (map['targetValue'] ?? '').toString();
       String description;
       String ctaLabel;
       switch (targetType) {
         case 'plan_catalog':
-          description = targetValue.isEmpty ? 'Explore available upgrade plans and higher speed options.' : targetValue;
+          description = targetValue.isEmpty
+              ? 'Explore available upgrade plans and higher speed options.'
+              : targetValue;
           ctaLabel = 'Explore plans';
           break;
         case 'billing':
-          description = targetValue.isEmpty ? 'Review invoices, payments, and due amount from billing.' : targetValue;
+          description = targetValue.isEmpty
+              ? 'Review invoices, payments, and due amount from billing.'
+              : targetValue;
           ctaLabel = 'Open billing';
           break;
         case 'support':
-          description = targetValue.isEmpty ? 'Reach support for service and billing help.' : targetValue;
+          description = targetValue.isEmpty
+              ? 'Reach support for service and billing help.'
+              : targetValue;
           ctaLabel = 'Get help';
           break;
         case 'tracking':
-          description = targetValue.isEmpty ? 'Track booking progress and installer updates.' : targetValue;
+          description = targetValue.isEmpty
+              ? 'Track booking progress and installer updates.'
+              : targetValue;
           ctaLabel = 'Track service';
           break;
         default:
-          description = targetValue.isEmpty ? 'Latest JustFiber offers and service actions.' : targetValue;
+          description = targetValue.isEmpty
+              ? 'Latest JustFiber offers and service actions.'
+              : targetValue;
           ctaLabel = 'Open';
       }
       return AppBannerItem(
@@ -484,13 +606,21 @@ class ApiClient {
     }).toList();
   }
 
-  Future<List<ConnectedDevice>> fetchConnectedDevices(CustomerSession session, {String? customerId}) async {
-    final list = _asList(await _request(_withCustomerId('/api/v1/customer/device/connected-devices', customerId), token: session.accessToken));
+  Future<List<ConnectedDevice>> fetchConnectedDevices(CustomerSession session,
+      {String? customerId}) async {
+    final list = _asList(await _request(
+        _withCustomerId(
+            '/api/v1/customer/device/connected-devices', customerId),
+        token: session.accessToken));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       return ConnectedDevice(
         clientId: (map['clientId'] ?? '').toString(),
-        name: (map['name'] ?? map['hostName'] ?? map['deviceName'] ?? 'Connected device').toString(),
+        name: (map['name'] ??
+                map['hostName'] ??
+                map['deviceName'] ??
+                'Connected device')
+            .toString(),
         connectionType: (map['connectionType'] ?? 'wifi').toString(),
         signal: (map['signal'] ?? 'good').toString(),
         blocked: map['blocked'] == true,
@@ -500,35 +630,53 @@ class ApiClient {
 
   Future<List<PlanItem>> fetchPlans() async {
     final list = _asList(await _request('/api/v1/customer/plans'));
-    return list.map((item) {
-      final map = item as Map<String, dynamic>;
-      return PlanItem(
-        planCode: (map['planCode'] ?? '').toString(),
-        name: (map['name'] ?? '').toString(),
-        speedMbps: double.tryParse('${map['speedMbps'] ?? 100}') ?? 100,
-        uploadSpeedMbps: double.tryParse('${map['uploadSpeedMbps'] ?? 0}') ?? 0,
-        dataLimitGb: double.tryParse('${map['dataLimitGb'] ?? 0}') ?? 0,
-        fupSpeedMbps: double.tryParse('${map['fupSpeedMbps'] ?? 0}') ?? 0,
-        dataPolicy: (map['dataPolicy'] ?? 'unlimited').toString(),
-        monthlyPrice: double.tryParse('${map['monthlyPrice'] ?? 0}') ?? 0,
-        quarterlyPrice: double.tryParse('${map['quarterlyPrice'] ?? 0}') ?? 0,
-        halfYearlyPrice: double.tryParse('${map['halfYearlyPrice'] ?? 0}') ?? 0,
-        yearlyPrice: double.tryParse('${map['yearlyPrice'] ?? 0}') ?? 0,
-        otcCharge: double.tryParse('${map['otcCharge'] ?? 0}') ?? 0,
-        installationCharge: double.tryParse('${map['installationCharge'] ?? 0}') ?? 0,
-        category: (map['category'] ?? 'home').toString(),
-        taxIncluded: map['taxIncluded'] != false,
-        gstRate: double.tryParse('${map['gstRate'] ?? 0}') ?? 0,
-        pricesExcludeGst: map['pricesExcludeGst'] == true,
-        tags: _asList(map['tags']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-        staticBenefits: _asList(map['staticBenefits']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-        features: _asList(map['features']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-        validityMonthly: _asMap(map['validityOptions'])['monthly'] != false,
-        validityQuarterly: _asMap(map['validityOptions'])['quarterly'] == true,
-        validityHalfYearly: _asMap(map['validityOptions'])['halfYearly'] == true,
-        validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
-      );
-    }).where((item) => item.planCode.isNotEmpty).toList();
+    return list
+        .map((item) {
+          final map = item as Map<String, dynamic>;
+          return PlanItem(
+            planCode: (map['planCode'] ?? '').toString(),
+            name: (map['name'] ?? '').toString(),
+            speedMbps: double.tryParse('${map['speedMbps'] ?? 100}') ?? 100,
+            uploadSpeedMbps:
+                double.tryParse('${map['uploadSpeedMbps'] ?? 0}') ?? 0,
+            dataLimitGb: double.tryParse('${map['dataLimitGb'] ?? 0}') ?? 0,
+            fupSpeedMbps: double.tryParse('${map['fupSpeedMbps'] ?? 0}') ?? 0,
+            dataPolicy: (map['dataPolicy'] ?? 'unlimited').toString(),
+            monthlyPrice: double.tryParse('${map['monthlyPrice'] ?? 0}') ?? 0,
+            quarterlyPrice:
+                double.tryParse('${map['quarterlyPrice'] ?? 0}') ?? 0,
+            halfYearlyPrice:
+                double.tryParse('${map['halfYearlyPrice'] ?? 0}') ?? 0,
+            yearlyPrice: double.tryParse('${map['yearlyPrice'] ?? 0}') ?? 0,
+            otcCharge: double.tryParse('${map['otcCharge'] ?? 0}') ?? 0,
+            installationCharge:
+                double.tryParse('${map['installationCharge'] ?? 0}') ?? 0,
+            category: (map['category'] ?? 'home').toString(),
+            taxIncluded: map['taxIncluded'] != false,
+            gstRate: double.tryParse('${map['gstRate'] ?? 0}') ?? 0,
+            pricesExcludeGst: map['pricesExcludeGst'] == true,
+            tags: _asList(map['tags'])
+                .map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList(),
+            staticBenefits: _asList(map['staticBenefits'])
+                .map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList(),
+            features: _asList(map['features'])
+                .map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList(),
+            validityMonthly: _asMap(map['validityOptions'])['monthly'] != false,
+            validityQuarterly:
+                _asMap(map['validityOptions'])['quarterly'] == true,
+            validityHalfYearly:
+                _asMap(map['validityOptions'])['halfYearly'] == true,
+            validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
+          );
+        })
+        .where((item) => item.planCode.isNotEmpty)
+        .toList();
   }
 
   Future<BookingQuote> createBooking({
@@ -557,15 +705,24 @@ class ApiClient {
       'pinCode': pinCode,
       'lat': lat,
       'lng': lng,
-      if (durationMonths != null && durationMonths > 0) 'durationMonths': durationMonths,
-      if (durationLabel != null && durationLabel.isNotEmpty) 'durationLabel': durationLabel,
-      if (preferredDate != null && preferredDate.isNotEmpty) 'preferredDate': preferredDate,
-      if (preferredSlotCode != null && preferredSlotCode.isNotEmpty) 'preferredSlotCode': preferredSlotCode,
-      if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty) 'preferredSlotLabel': preferredSlotLabel,
+      if (durationMonths != null && durationMonths > 0)
+        'durationMonths': durationMonths,
+      if (durationLabel != null && durationLabel.isNotEmpty)
+        'durationLabel': durationLabel,
+      if (preferredDate != null && preferredDate.isNotEmpty)
+        'preferredDate': preferredDate,
+      if (preferredSlotCode != null && preferredSlotCode.isNotEmpty)
+        'preferredSlotCode': preferredSlotCode,
+      if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty)
+        'preferredSlotLabel': preferredSlotLabel,
       'paymentMode': paymentMode,
     };
-    final primaryPath = session == null ? '/api/v1/customer/bookings/public' : '/api/v1/customer/bookings';
-    final fallbackPath = session == null ? '/api/v1/customer/bookings' : '/api/v1/customer/bookings/public';
+    final primaryPath = session == null
+        ? '/api/v1/customer/bookings/public'
+        : '/api/v1/customer/bookings';
+    final fallbackPath = session == null
+        ? '/api/v1/customer/bookings'
+        : '/api/v1/customer/bookings/public';
     Map<String, dynamic> data;
     try {
       data = _asMap(
@@ -598,8 +755,13 @@ class ApiClient {
       currentStep: (tracking['currentStep'] ?? 'booking_placed').toString(),
       preferredDate: preferredDate ?? '',
       preferredSlotLabel: preferredSlotLabel ?? '',
-      durationMonths: int.tryParse('${selectedPlan['durationMonths'] ?? durationMonths ?? 1}') ?? 1,
-      durationLabel: (selectedPlan['durationLabel'] ?? durationLabel ?? '${durationMonths ?? 1} month').toString(),
+      durationMonths: int.tryParse(
+              '${selectedPlan['durationMonths'] ?? durationMonths ?? 1}') ??
+          1,
+      durationLabel: (selectedPlan['durationLabel'] ??
+              durationLabel ??
+              '${durationMonths ?? 1} month')
+          .toString(),
     );
   }
 
@@ -615,9 +777,12 @@ class ApiClient {
       method: 'POST',
       token: session.accessToken,
       body: {
-        if (preferredDate != null && preferredDate.isNotEmpty) 'preferredDate': preferredDate,
-        if (preferredSlotCode != null && preferredSlotCode.isNotEmpty) 'preferredSlotCode': preferredSlotCode,
-        if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty) 'preferredSlotLabel': preferredSlotLabel,
+        if (preferredDate != null && preferredDate.isNotEmpty)
+          'preferredDate': preferredDate,
+        if (preferredSlotCode != null && preferredSlotCode.isNotEmpty)
+          'preferredSlotCode': preferredSlotCode,
+        if (preferredSlotLabel != null && preferredSlotLabel.isNotEmpty)
+          'preferredSlotLabel': preferredSlotLabel,
       },
     );
   }
@@ -674,8 +839,11 @@ class ApiClient {
     return leadNumber.isEmpty ? null : leadNumber;
   }
 
-  Future<BookingTrackingData> fetchBookingTracking(CustomerSession session, String bookingNumber) async {
-    final data = _asMap(await _request('/api/v1/customer/bookings/$bookingNumber/tracking', token: session.accessToken));
+  Future<BookingTrackingData> fetchBookingTracking(
+      CustomerSession session, String bookingNumber) async {
+    final data = _asMap(await _request(
+        '/api/v1/customer/bookings/$bookingNumber/tracking',
+        token: session.accessToken));
     final steps = _asList(data['steps']).map((item) {
       final map = item as Map<String, dynamic>;
       return BookingTrackingItem(
@@ -696,7 +864,8 @@ class ApiClient {
   }) async {
     final normalizedMobile = mobile.replaceAll(RegExp(r'\D+'), '');
     final data = _asMap(
-      await _request('/api/v1/customer/bookings/$bookingNumber/tracking/public?mobile=$normalizedMobile'),
+      await _request(
+          '/api/v1/customer/bookings/$bookingNumber/tracking/public?mobile=$normalizedMobile'),
     );
     final steps = _asList(data['steps']).map((item) {
       final map = item as Map<String, dynamic>;
@@ -712,45 +881,56 @@ class ApiClient {
     );
   }
 
-  Future<List<InstallerVisitItem>> fetchServiceVisits(CustomerSession session, {String? customerId}) async {
-    final list = _asList(await _request(_withCustomerId('/api/v1/customer/services/track', customerId), token: session.accessToken));
-    return _sortByDateDesc(list.map((item) {
-      final map = item as Map<String, dynamic>;
-      return InstallerVisitItem(
-        jobNumber: (map['jobNumber'] ?? '').toString(),
-        type: (map['type'] ?? '').toString(),
-        status: (map['status'] ?? '').toString(),
-        priority: (map['priority'] ?? 'medium').toString(),
-        createdAt: (map['createdAt'] ?? '').toString(),
-        completedAt: (map['completedAt'] ?? '').toString(),
-        installerName: (map['installerName'] ?? '').toString(),
-        installerPhone: (map['installerPhone'] ?? '').toString(),
-        planName: (map['planName'] ?? '').toString(),
-        planCode: (map['planCode'] ?? '').toString(),
-        planCategory: (map['planCategory'] ?? 'home').toString(),
-        planTags: _asList(map['planTags']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-        lastUpdateAt: (map['lastUpdateAt'] ?? '').toString(),
-        lastUpdateNote: (map['lastUpdateNote'] ?? '').toString(),
-        latestEventCode: (map['latestEventCode'] ?? '').toString(),
-        mapUrl: (map['mapUrl'] ?? '').toString(),
-        etaText: (map['etaText'] ?? '').toString(),
-        configStatus: (map['configStatus'] ?? '').toString(),
-        proofUploadedAt: (map['proofUploadedAt'] ?? '').toString(),
-        routerPhotoUploaded: map['routerPhotoUploaded'] == true,
-        cablePhotoUploaded: map['cablePhotoUploaded'] == true,
-        completionOtpVerifiedAt: (map['completionOtpVerifiedAt'] ?? '').toString(),
-        wifiSsid24: (map['wifiSsid24'] ?? '').toString(),
-        wifiSsid5: (map['wifiSsid5'] ?? '').toString(),
-        complaintResolutionCode: (map['resolutionCode'] ?? '').toString(),
-        complaintResolutionNote: (map['resolutionNote'] ?? '').toString(),
-        complaintReplacedDevice: map['replacedDevice'] == true,
-        oldSerialNumber: (map['oldSerialNumber'] ?? '').toString(),
-        newSerialNumber: (map['newSerialNumber'] ?? '').toString(),
-      );
-    }).toList(), (item) => item.lastUpdateAt.isNotEmpty ? item.lastUpdateAt : item.createdAt);
+  Future<List<InstallerVisitItem>> fetchServiceVisits(CustomerSession session,
+      {String? customerId}) async {
+    final list = _asList(await _request(
+        _withCustomerId('/api/v1/customer/services/track', customerId),
+        token: session.accessToken));
+    return _sortByDateDesc(
+        list.map((item) {
+          final map = item as Map<String, dynamic>;
+          return InstallerVisitItem(
+            jobNumber: (map['jobNumber'] ?? '').toString(),
+            type: (map['type'] ?? '').toString(),
+            status: (map['status'] ?? '').toString(),
+            priority: (map['priority'] ?? 'medium').toString(),
+            createdAt: (map['createdAt'] ?? '').toString(),
+            completedAt: (map['completedAt'] ?? '').toString(),
+            installerName: (map['installerName'] ?? '').toString(),
+            installerPhone: (map['installerPhone'] ?? '').toString(),
+            planName: (map['planName'] ?? '').toString(),
+            planCode: (map['planCode'] ?? '').toString(),
+            planCategory: (map['planCategory'] ?? 'home').toString(),
+            planTags: _asList(map['planTags'])
+                .map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList(),
+            lastUpdateAt: (map['lastUpdateAt'] ?? '').toString(),
+            lastUpdateNote: (map['lastUpdateNote'] ?? '').toString(),
+            latestEventCode: (map['latestEventCode'] ?? '').toString(),
+            mapUrl: (map['mapUrl'] ?? '').toString(),
+            etaText: (map['etaText'] ?? '').toString(),
+            configStatus: (map['configStatus'] ?? '').toString(),
+            proofUploadedAt: (map['proofUploadedAt'] ?? '').toString(),
+            routerPhotoUploaded: map['routerPhotoUploaded'] == true,
+            cablePhotoUploaded: map['cablePhotoUploaded'] == true,
+            completionOtpVerifiedAt:
+                (map['completionOtpVerifiedAt'] ?? '').toString(),
+            wifiSsid24: (map['wifiSsid24'] ?? '').toString(),
+            wifiSsid5: (map['wifiSsid5'] ?? '').toString(),
+            complaintResolutionCode: (map['resolutionCode'] ?? '').toString(),
+            complaintResolutionNote: (map['resolutionNote'] ?? '').toString(),
+            complaintReplacedDevice: map['replacedDevice'] == true,
+            oldSerialNumber: (map['oldSerialNumber'] ?? '').toString(),
+            newSerialNumber: (map['newSerialNumber'] ?? '').toString(),
+          );
+        }).toList(),
+        (item) =>
+            item.lastUpdateAt.isNotEmpty ? item.lastUpdateAt : item.createdAt);
   }
 
-  Future<BillingPaymentOrder> createBillingPaymentOrder(CustomerSession session, {String? customerId, double? amount}) async {
+  Future<BillingPaymentOrder> createBillingPaymentOrder(CustomerSession session,
+      {String? customerId, double? amount}) async {
     final data = _asMap(
       await _request(
         _withCustomerId('/api/v1/customer/billing/payment/order', customerId),
@@ -887,7 +1067,8 @@ class ApiClient {
     return (data['requestNumber'] ?? '').toString();
   }
 
-  Future<void> pauseWifi(CustomerSession session, bool paused, {String? customerId}) async {
+  Future<void> pauseWifi(CustomerSession session, bool paused,
+      {String? customerId}) async {
     await _request(
       _withCustomerId('/api/v1/customer/wifi/pause', customerId),
       method: 'POST',
@@ -896,7 +1077,8 @@ class ApiClient {
     );
   }
 
-  Future<void> rebootDevice(CustomerSession session, {String? customerId}) async {
+  Future<void> rebootDevice(CustomerSession session,
+      {String? customerId}) async {
     await _request(
       _withCustomerId('/api/v1/customer/device/reboot', customerId),
       method: 'POST',
@@ -928,11 +1110,16 @@ class ApiClient {
       lineStatus: (data['lineStatus'] ?? 'unknown').toString(),
       recommendation: (data['recommendation'] ?? '').toString(),
       needsTicket: data['needsTicket'] == true,
-      steps: _asList(data['steps']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+      steps: _asList(data['steps'])
+          .map((item) => item.toString())
+          .where((item) => item.isNotEmpty)
+          .toList(),
       opticalRxPower: double.tryParse('${data['opticalRxPower']}'),
       latencyMs: double.tryParse('${data['latencyMs'] ?? 0}') ?? 0,
-      packetLossPercent: double.tryParse('${data['packetLossPercent'] ?? 0}') ?? 0,
-      estimatedSpeedMbps: double.tryParse('${data['estimatedSpeedMbps'] ?? 0}') ?? 0,
+      packetLossPercent:
+          double.tryParse('${data['packetLossPercent'] ?? 0}') ?? 0,
+      estimatedSpeedMbps:
+          double.tryParse('${data['estimatedSpeedMbps'] ?? 0}') ?? 0,
     );
   }
 
@@ -951,8 +1138,11 @@ class ApiClient {
     );
   }
 
-  Future<List<ParentalRule>> fetchParentalRules(CustomerSession session, {String? customerId}) async {
-    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/wifi/parental-controls', customerId), token: session.accessToken));
+  Future<List<ParentalRule>> fetchParentalRules(CustomerSession session,
+      {String? customerId}) async {
+    final data = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/wifi/parental-controls', customerId),
+        token: session.accessToken));
     return _asList(data['rules']).map((item) {
       final map = item as Map<String, dynamic>;
       return ParentalRule(
@@ -1004,37 +1194,58 @@ class ApiClient {
     );
   }
 
-  Future<List<PlanItem>> fetchPlanChangeOptions(CustomerSession session, {String? customerId}) async {
-    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/plan/change-options', customerId), token: session.accessToken));
-    return _asList(data['options']).map((item) {
-      final map = item as Map<String, dynamic>;
-      return PlanItem(
-        planCode: (map['planCode'] ?? '').toString(),
-        name: (map['name'] ?? '').toString(),
-        speedMbps: double.tryParse('${map['speedMbps'] ?? 100}') ?? 100,
-        uploadSpeedMbps: double.tryParse('${map['uploadSpeedMbps'] ?? 0}') ?? 0,
-        dataLimitGb: double.tryParse('${map['dataLimitGb'] ?? 0}') ?? 0,
-        fupSpeedMbps: double.tryParse('${map['fupSpeedMbps'] ?? 0}') ?? 0,
-        dataPolicy: (map['dataPolicy'] ?? 'unlimited').toString(),
-        monthlyPrice: double.tryParse('${map['monthlyPrice'] ?? 0}') ?? 0,
-        quarterlyPrice: double.tryParse('${map['quarterlyPrice'] ?? 0}') ?? 0,
-        halfYearlyPrice: double.tryParse('${map['halfYearlyPrice'] ?? 0}') ?? 0,
-        yearlyPrice: double.tryParse('${map['yearlyPrice'] ?? 0}') ?? 0,
-        otcCharge: double.tryParse('${map['otcCharge'] ?? 0}') ?? 0,
-        installationCharge: double.tryParse('${map['installationCharge'] ?? 0}') ?? 0,
-        category: (map['category'] ?? 'home').toString(),
-        taxIncluded: map['taxIncluded'] != false,
-        gstRate: double.tryParse('${map['gstRate'] ?? 0}') ?? 0,
-        pricesExcludeGst: map['pricesExcludeGst'] == true,
-        tags: _asList(map['tags']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-        staticBenefits: _asList(map['staticBenefits']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-        features: _asList(map['features']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-        validityMonthly: _asMap(map['validityOptions'])['monthly'] != false,
-        validityQuarterly: _asMap(map['validityOptions'])['quarterly'] == true,
-        validityHalfYearly: _asMap(map['validityOptions'])['halfYearly'] == true,
-        validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
-      );
-    }).where((item) => item.planCode.isNotEmpty).toList();
+  Future<List<PlanItem>> fetchPlanChangeOptions(CustomerSession session,
+      {String? customerId}) async {
+    final data = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/plan/change-options', customerId),
+        token: session.accessToken));
+    return _asList(data['options'])
+        .map((item) {
+          final map = item as Map<String, dynamic>;
+          return PlanItem(
+            planCode: (map['planCode'] ?? '').toString(),
+            name: (map['name'] ?? '').toString(),
+            speedMbps: double.tryParse('${map['speedMbps'] ?? 100}') ?? 100,
+            uploadSpeedMbps:
+                double.tryParse('${map['uploadSpeedMbps'] ?? 0}') ?? 0,
+            dataLimitGb: double.tryParse('${map['dataLimitGb'] ?? 0}') ?? 0,
+            fupSpeedMbps: double.tryParse('${map['fupSpeedMbps'] ?? 0}') ?? 0,
+            dataPolicy: (map['dataPolicy'] ?? 'unlimited').toString(),
+            monthlyPrice: double.tryParse('${map['monthlyPrice'] ?? 0}') ?? 0,
+            quarterlyPrice:
+                double.tryParse('${map['quarterlyPrice'] ?? 0}') ?? 0,
+            halfYearlyPrice:
+                double.tryParse('${map['halfYearlyPrice'] ?? 0}') ?? 0,
+            yearlyPrice: double.tryParse('${map['yearlyPrice'] ?? 0}') ?? 0,
+            otcCharge: double.tryParse('${map['otcCharge'] ?? 0}') ?? 0,
+            installationCharge:
+                double.tryParse('${map['installationCharge'] ?? 0}') ?? 0,
+            category: (map['category'] ?? 'home').toString(),
+            taxIncluded: map['taxIncluded'] != false,
+            gstRate: double.tryParse('${map['gstRate'] ?? 0}') ?? 0,
+            pricesExcludeGst: map['pricesExcludeGst'] == true,
+            tags: _asList(map['tags'])
+                .map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList(),
+            staticBenefits: _asList(map['staticBenefits'])
+                .map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList(),
+            features: _asList(map['features'])
+                .map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList(),
+            validityMonthly: _asMap(map['validityOptions'])['monthly'] != false,
+            validityQuarterly:
+                _asMap(map['validityOptions'])['quarterly'] == true,
+            validityHalfYearly:
+                _asMap(map['validityOptions'])['halfYearly'] == true,
+            validityYearly: _asMap(map['validityOptions'])['yearly'] == true,
+          );
+        })
+        .where((item) => item.planCode.isNotEmpty)
+        .toList();
   }
 
   Future<String> submitPlanChangeRequest(
@@ -1066,7 +1277,11 @@ class ApiClient {
         _withCustomerId('/api/v1/customer/plan/change/preview', customerId),
         method: 'POST',
         token: session.accessToken,
-        body: {'planCode': planCode, 'effectiveMode': effectiveMode, 'billingTerm': billingTerm},
+        body: {
+          'planCode': planCode,
+          'effectiveMode': effectiveMode,
+          'billingTerm': billingTerm
+        },
       ),
     );
     return PlanChangePreview(
@@ -1078,7 +1293,8 @@ class ApiClient {
       billingTerm: (data['billingTerm'] ?? billingTerm).toString(),
       currentPrice: double.tryParse('${data['currentPrice'] ?? 0}') ?? 0,
       nextPrice: double.tryParse('${data['nextPrice'] ?? 0}') ?? 0,
-      adjustmentAmount: double.tryParse('${data['adjustmentAmount'] ?? 0}') ?? 0,
+      adjustmentAmount:
+          double.tryParse('${data['adjustmentAmount'] ?? 0}') ?? 0,
       payableNow: double.tryParse('${data['payableNow'] ?? 0}') ?? 0,
       creditAmount: double.tryParse('${data['creditAmount'] ?? 0}') ?? 0,
       remainingDays: int.tryParse('${data['remainingDays'] ?? 0}') ?? 0,
@@ -1097,7 +1313,11 @@ class ApiClient {
         _withCustomerId('/api/v1/customer/plan/change/apply', customerId),
         method: 'POST',
         token: session.accessToken,
-        body: {'planCode': planCode, 'effectiveMode': effectiveMode, 'billingTerm': billingTerm},
+        body: {
+          'planCode': planCode,
+          'effectiveMode': effectiveMode,
+          'billingTerm': billingTerm
+        },
       ),
     );
     return PlanChangeApplyResult(
@@ -1112,7 +1332,8 @@ class ApiClient {
     );
   }
 
-  Future<bool> cancelPlanChange(CustomerSession session, {String? customerId}) async {
+  Future<bool> cancelPlanChange(CustomerSession session,
+      {String? customerId}) async {
     final data = _asMap(
       await _request(
         _withCustomerId('/api/v1/customer/plan/change/cancel', customerId),
@@ -1124,22 +1345,30 @@ class ApiClient {
     return data['cancelled'] == true || data.isNotEmpty;
   }
 
-  Future<SpeedTestData> fetchSpeedTest(CustomerSession session, {String? customerId}) async {
-    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/network/speed-test', customerId), token: session.accessToken));
+  Future<SpeedTestData> fetchSpeedTest(CustomerSession session,
+      {String? customerId}) async {
+    final data = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/network/speed-test', customerId),
+        token: session.accessToken));
     return SpeedTestData(
       downloadMbps: double.tryParse('${data['downloadMbps'] ?? 0}') ?? 0,
       uploadMbps: double.tryParse('${data['uploadMbps'] ?? 0}') ?? 0,
       latencyMs: double.tryParse('${data['latencyMs'] ?? 0}') ?? 0,
-      packetLossPercent: double.tryParse('${data['packetLossPercent'] ?? 0}') ?? 0,
+      packetLossPercent:
+          double.tryParse('${data['packetLossPercent'] ?? 0}') ?? 0,
       status: (data['status'] ?? 'unknown').toString(),
     );
   }
 
-  Future<NetworkQualityData> fetchNetworkQuality(CustomerSession session, {String? customerId}) async {
-    final data = _asMap(await _request(_withCustomerId('/api/v1/customer/network/quality', customerId), token: session.accessToken));
+  Future<NetworkQualityData> fetchNetworkQuality(CustomerSession session,
+      {String? customerId}) async {
+    final data = _asMap(await _request(
+        _withCustomerId('/api/v1/customer/network/quality', customerId),
+        token: session.accessToken));
     return NetworkQualityData(
       latencyMs: double.tryParse('${data['latencyMs'] ?? 0}') ?? 0,
-      packetLossPercent: double.tryParse('${data['packetLossPercent'] ?? 0}') ?? 0,
+      packetLossPercent:
+          double.tryParse('${data['packetLossPercent'] ?? 0}') ?? 0,
       jitterMs: double.tryParse('${data['jitterMs'] ?? 0}') ?? 0,
       opticalRxPower: double.tryParse('${data['opticalRxPower'] ?? 0}') ?? 0,
       quality: (data['quality'] ?? 'unknown').toString(),

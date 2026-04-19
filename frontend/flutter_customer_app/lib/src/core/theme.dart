@@ -4,23 +4,23 @@ import 'package:google_fonts/google_fonts.dart';
 
 // JustFiber Premium Dark Theme
 // Palette
-const kBg = Color(0xFF07070F); // ultra-dark purple-black
-const kSurface = Color(0xFF0E0E1A); // card dark
-const kSurface2 = Color(0xFF161624); // elevated card
+const kBg = Color(0xFF000000); // pure black
+const kSurface = Color(0xFF0C0C18); // card dark
+const kSurface2 = Color(0xFF111120); // elevated card
 const kPrimary = Color(0xFFA855F7); // bright Wi-Fi purple
 const kPrimaryLight = Color(0xFFD8B4FE); // soft glow purple
 const kAccentCyan = Color(0xFF22D3EE); // network accent
 const kText = Color(0xFFFFFFFF); // primary text
-const kMuted = Color(0xFFC7B8FF); // brighter secondary text
-const kBorder = Color(0x24FFFFFF); // visible glass border
-const kDivider = Color(0x08FFFFFF);
+const kMuted = Color(0xFFB8ACCC); // muted secondary text
+const kBorder = Color(0x1FFFFFFF); // subtle glass border
+const kDivider = Color(0x0AFFFFFF);
 
 ThemeData buildJustFiberTheme() {
   // System chrome
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: kBg,
+    systemNavigationBarColor: Colors.black,
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 

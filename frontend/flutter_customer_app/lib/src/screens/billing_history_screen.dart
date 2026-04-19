@@ -1,11 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
-import '../widgets/app_card.dart';
+import '../core/theme.dart';
+import '../widgets/pressable_scale.dart';
 import 'billing_payment_screen.dart';
-import 'document_viewer_screen.dart';
 import 'payments_history_screen.dart';
 import 'plan_catalog_screen.dart';
 import 'support_history_screen.dart';
@@ -17,1102 +22,1260 @@ class BillingHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
-    final theme = Theme.of(context);
-    CustomerConnection? selectedConnection;
-    for (final item in appState.connections) {
-      if (item.customerId == appState.selectedCustomerId) {
-        selectedConnection = item;
-        break;
-      }
-    }
-    final latestInvoice = billing.invoices.isEmpty ? null : billing.invoices.first;
-    final latestPayment = billing.payments.isEmpty ? null : billing.payments.first;
-    final usageRatio = billing.usageCapGb > 0 ? (billing.usageGb / billing.usageCapGb).clamp(0, 1) : 0.0;
-    final showUpgradePrompt = billing.usageCapReached || (billing.usageCapGb > 0 && usageRatio >= 0.65);
-    final billingCycleLabel = billing.billCycle.isEmpty ? 'Monthly' : billing.billCycle;
-    final nextBillDateLabel = billing.nextBillDate.isEmpty ? 'Will update after activation' : billing.nextBillDate;
-    final recurringAmount = billing.recurringAmount > 0 ? billing.recurringAmount : (billing.dueAmount > 0 ? billing.dueAmount : billing.lastPaymentAmount);
-    final serviceStatusLabel = billing.serviceStatus.isEmpty ? 'Unknown' : billing.serviceStatus;
-    final latestInvoiceLabel = billing.latestInvoiceNumber.isNotEmpty
-        ? billing.latestInvoiceNumber
-        : (latestInvoice?.invoiceNumber.isNotEmpty == true ? latestInvoice!.invoiceNumber : 'Will appear after billing run');
-    final hasSuspensionWarning = billing.lastSuspensionWarningAt.isNotEmpty;
-    final hasOverdueReminder = billing.lastOverdueReminderAt.isNotEmpty;
-    final hasDueReminder = billing.lastDueReminderAt.isNotEmpty;
-    final hasPromiseToPay = billing.promiseToPayAt.isNotEmpty;
 
-    final latestInvoiceStatus = billing.latestInvoiceStatus.isEmpty
-        ? (latestInvoice?.customerStateLabel.isNotEmpty == true ? latestInvoice!.customerStateLabel : 'Not generated yet')
-        : billing.customerStateLabel;
-    final lastPaymentLabel = billing.lastPaymentDate.isNotEmpty
-        ? billing.lastPaymentDate
-        : (latestPayment?.paidAt.isNotEmpty == true ? latestPayment!.paidAt : 'No payment recorded');
+    final latestInvoice =
+        billing.invoices.isEmpty ? null : billing.invoices.first;
+    final latestPayment =
+        billing.payments.isEmpty ? null : billing.payments.first;
+    final recurringAmt = billing.recurringAmount > 0
+        ? billing.recurringAmount
+        : (billing.dueAmount > 0
+            ? billing.dueAmount
+            : billing.lastPaymentAmount);
+    final hasDue = billing.dueAmount > 0;
+    final hasAlert = billing.lastSuspensionWarningAt.isNotEmpty ||
+        billing.lastOverdueReminderAt.isNotEmpty;
+
+    final isFirstLoad =
+        appState.busy && billing.currentPlan.isEmpty && billing.invoices.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Billing & Invoices')),
+      backgroundColor: kBg,
       body: RefreshIndicator(
-        color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF6F1EB),
+        color: kPrimary,
+        backgroundColor: kSurface,
         onRefresh: appState.refresh,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-          children: [
-          if (selectedConnection != null) ...[
-            _connectionStrip(selectedConnection),
-            const SizedBox(height: 18),
-          ],
-          if (appState.error != null && appState.error!.isNotEmpty) ...[
-            AppCard(
-              color: const Color(0xFFFFFFFF),
-              borderColor: const Color(0x33F59E0B),
-              child: Text(
-                appState.error!,
-                style: const TextStyle(
-                  color: Color(0xFFC2410C),
-                  fontWeight: FontWeight.w600,
-                  height: 1.4,
+        child: isFirstLoad
+            ? const _BillingShimmer()
+            : CustomScrollView(
+          slivers: [
+            // ── Gradient header ──────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _BillingHeader(
+                billing: billing,
+                hasDue: hasDue,
+                hasAlert: hasAlert,
+                onPayNow: !hasDue || appState.busy
+                    ? null
+                    : () => _payNow(context, appState),
+                onHistory: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const PaymentsHistoryScreen()),
                 ),
               ),
             ),
-            const SizedBox(height: 18),
-          ],
-          AppCard(
-            color: const Color(0xFFFFFFFF),
-            borderColor: const Color(0x228224E3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'QUICK ACTIONS',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF8224E3),
-                    letterSpacing: 2.2,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    FilledButton(
-                      onPressed: appState.busy || billing.dueAmount <= 0
-                          ? null
-                          : () => _payNow(context, appState, amount: billing.dueAmount),
-                      child: const Text('Pay current due'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
-                        );
-                        if (context.mounted) {
-                          await appState.refresh();
-                        }
-                      },
-                      child: const Text('Payment history'),
-                    ),
-                    if (latestInvoice != null && (latestInvoice.pdfUrl.isNotEmpty || latestInvoice.viewUrl.isNotEmpty))
-                      OutlinedButton(
-                        onPressed: () async {
-                          await _openDocument(
-                            context,
-                            appState,
-                            'Latest invoice',
-                            latestInvoice.pdfUrl.isNotEmpty ? latestInvoice.pdfUrl : latestInvoice.viewUrl,
-                          );
-                          if (context.mounted) {
-                            await appState.refresh();
-                          }
-                        },
-                        child: const Text('Open latest invoice'),
-                      ),
-                    OutlinedButton(
-                      onPressed: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                        );
-                        if (context.mounted) {
-                          await appState.refresh();
-                        }
-                      },
-                      child: const Text('Billing support'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          AppCard(
-            color: const Color(0xFFFFFFFF),
-            borderColor: const Color(0x228224E3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'BILLING OVERVIEW',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF8224E3),
-                    letterSpacing: 2.6,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(billing.dueHeadline, style: theme.textTheme.headlineSmall),
-                const SizedBox(height: 10),
-                Text(
-                  billing.dueAmount > 0 ? 'Rs ${billing.dueAmount.toStringAsFixed(2)}' : 'No due right now',
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 34, color: Color(0xFF131313), letterSpacing: -1),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  billing.paymentStatus.isEmpty
-                      ? 'Your active billing snapshot for this cycle'
-                      : 'Status: ${billing.customerStateLabel}',
-                  style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(child: _summaryTile('Generated', billing.generatedDate.isEmpty ? '-' : billing.generatedDate, compact: true)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _summaryTile('Due date', billing.nextBillDate.isEmpty ? '-' : billing.nextBillDate, compact: true)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: _summaryTile('Cycle', billing.billCycle, compact: true)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _summaryTile('Mode', billing.billMode, compact: true)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: _summaryTile('Recurring amount', 'Rs ${recurringAmount.toStringAsFixed(2)}', compact: true)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _summaryTile('Invoices', '${billing.invoiceCount}', compact: true)),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x228224E3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Bill snapshot', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
-                      const SizedBox(height: 10),
-                      _billBreakupRow('Current due', 'Rs ${billing.dueAmount.toStringAsFixed(2)}'),
-                      _billBreakupRow('Last payment', billing.lastPaymentAmount <= 0 ? '-' : 'Rs ${billing.lastPaymentAmount.toStringAsFixed(2)}'),
-                      _billBreakupRow('Last payment date', lastPaymentLabel),
-                      _billBreakupRow('Adjustment preview', billing.adjustmentPreview == 0 ? '-' : 'Rs ${billing.adjustmentPreview.toStringAsFixed(2)}'),
-                      _billBreakupRow('Latest invoice status', latestInvoiceStatus),
-                    ],
-                  ),
-                ),
-                if (hasSuspensionWarning || hasOverdueReminder || hasDueReminder || hasPromiseToPay) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: hasSuspensionWarning ? const Color(0x55FF6B6B) : const Color(0x228224E3),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          hasSuspensionWarning
-                              ? 'Suspension warning active'
-                              : hasOverdueReminder
-                                  ? 'Overdue reminder active'
-                                  : hasDueReminder
-                                      ? 'Upcoming due reminder sent'
-                                      : 'Promise to pay active',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: hasSuspensionWarning ? const Color(0xFFC2410C) : const Color(0xFF131313),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          hasSuspensionWarning
-                              ? 'Please clear the pending invoice immediately to avoid service suspension.'
-                              : hasOverdueReminder
-                                  ? 'Your current invoice is overdue. Pay now to keep the service active.'
-                                  : hasDueReminder
-                                      ? 'A due reminder has been issued for your current cycle.'
-                                      : 'Your billing team has a promise-to-pay note on this account.',
-                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                        ),
-                        const SizedBox(height: 10),
-                        if (hasPromiseToPay)
-                          _billBreakupRow(
-                            'Promise to pay',
-                            billing.promiseAmount > 0
-                                ? '${billing.promiseToPayAt} | Rs ${billing.promiseAmount.toStringAsFixed(2)}'
-                                : billing.promiseToPayAt,
-                          ),
-                        if (billing.promiseNote.isNotEmpty) _billBreakupRow('Promise note', billing.promiseNote),
-                        if (billing.lastSuspensionWarningAt.isNotEmpty) _billBreakupRow('Warning sent', billing.lastSuspensionWarningAt),
-                        if (!hasSuspensionWarning && billing.lastOverdueReminderAt.isNotEmpty) _billBreakupRow('Reminder sent', billing.lastOverdueReminderAt),
-                        if (!hasSuspensionWarning && !hasOverdueReminder && billing.lastDueReminderAt.isNotEmpty) _billBreakupRow('Reminder sent', billing.lastDueReminderAt),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x228224E3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Tenure and cycle',
-                              style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: const Color(0x148224E3),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: const Color(0x448224E3)),
-                            ),
-                            child: Text(
-                              billingCycleLabel,
-                              style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w800),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'This section reflects your active connection tenure and the recurring commercial cycle for this service.',
-                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(child: _summaryTile('Recurring amount', 'Rs ${recurringAmount.toStringAsFixed(2)}')),
-                          const SizedBox(width: 10),
-                          Expanded(child: _summaryTile('Next bill / expiry', nextBillDateLabel)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: _summaryTile('Latest invoice', latestInvoiceLabel)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _summaryTile('Service status', serviceStatusLabel)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (billing.dataPolicy != 'unlimited' || billing.usageCapGb > 0) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x228224E3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text('Usage policy', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
-                            ),
-                            Text(
-                              billing.usageCapReached ? 'Cap reached' : billing.dataPolicy.toUpperCase(),
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: billing.usageCapReached ? const Color(0xFFFF8A8A) : const Color(0xFF8224E3),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        _billBreakupRow('Usage', '${billing.usageGb.toStringAsFixed(2)} GB'),
-                        _billBreakupRow(
-                          'Plan limit',
-                          billing.usageCapGb > 0 ? '${billing.usageCapGb.toStringAsFixed(0)} GB' : 'Unlimited',
-                        ),
-                        _billBreakupRow(
-                          'Policy',
-                          billing.dataPolicy == 'fup'
-                              ? 'FUP at ${billing.fupSpeedMbps > 0 ? '${billing.fupSpeedMbps.toStringAsFixed(0)} Mbps' : 'reduced speed'}'
-                              : billing.dataPolicy == 'hard_cap'
-                                  ? 'Hard cap'
-                                  : 'Unlimited',
-                        ),
-                        if (billing.usageLastUpdatedAt.isNotEmpty)
-                          _billBreakupRow('Last updated', billing.usageLastUpdatedAt),
-                        if (billing.usageCapGb > 0) ...[
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: LinearProgressIndicator(
-                              value: (billing.usageGb / billing.usageCapGb).clamp(0, 1),
-                              minHeight: 10,
-                              backgroundColor: const Color(0xFFF1E8FF),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                billing.usageCapReached ? const Color(0xFFFF6B6B) : const Color(0xFF8224E3),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-                if (showUpgradePrompt) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: billing.usageCapReached ? const Color(0x55FF6B6B) : const Color(0x558224E3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          billing.usageCapReached ? 'Your current plan has hit its limit.' : 'You are nearing your data policy threshold.',
-                          style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313)),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          billing.usageCapReached
-                              ? 'Upgrade now to restore headroom and avoid slower service or cap restrictions.'
-                              : 'Move to a faster plan before cap or FUP controls affect your connection.',
-                          style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: () async {
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
-                                  );
-                                  if (context.mounted) {
-                                    await appState.refresh();
-                                  }
-                                },
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-                                ),
-                                child: const Text('Upgrade plan'),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () async {
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                                  );
-                                  if (context.mounted) {
-                                    await appState.refresh();
-                                  }
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF8224E3),
-                                  backgroundColor: const Color(0xFFFFFFFF),
-                                  side: const BorderSide(color: Color(0x668224E3)),
-                                ),
-                                child: const Text('Need help'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (billing.pendingPlanChange != null) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0x228224E3)),
-                    ),
-                    child: Text(
-                      'Pending plan change: ${billing.pendingPlanChange!.planName}',
-                      style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF8224E3)),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: appState.busy || billing.dueAmount <= 0
-                            ? null
-                            : () => _payNow(context, appState, amount: billing.dueAmount),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-                          elevation: 0,
-                        ),
-                        child: Text(billing.pendingPlanChange != null ? 'Pay to switch plan' : 'Pay now'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: appState.busy ? null : appState.refresh,
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFFFFF),
-                          foregroundColor: const Color(0xFF8224E3),
-                          side: const BorderSide(color: Color(0x668224E3)),
-                        ),
-                        child: const Text('Refresh'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F4FF),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0x228224E3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFFFFF),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0x228224E3)),
-                        ),
-                        child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF8224E3)),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Billing documents',
-                              style: TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Invoices, receipts, and adjustments stay available below for quick access.',
-                              style: TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (billing.invoices.isEmpty && billing.payments.isEmpty) ...[
-            const SizedBox(height: 18),
-            AppCard(
-              color: const Color(0xFFFFFFFF),
-              borderColor: const Color(0x228224E3),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Billing documents are not ready yet',
-                    style: TextStyle(
-                      color: Color(0xFF131313),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Your invoices and receipts will appear here after activation billing or the first billing cycle is generated.',
-                    style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: appState.busy ? null : appState.refresh,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF8224E3),
-                            backgroundColor: const Color(0xFFFFFFFF),
-                            side: const BorderSide(color: Color(0x668224E3)),
-                          ),
-                          child: const Text('Refresh billing'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                            );
-                            if (context.mounted) {
-                              await appState.refresh();
-                            }
-                          },
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF8224E3),
-                            foregroundColor: const Color(0xFFFFFFFF),
-                          ),
-                          child: const Text('Need help'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 18),
-          _sectionCard(
-            title: 'Invoices',
-            child: billing.invoices.isEmpty
-                ? _emptyState(
-                    title: 'No invoices available yet.',
-                    subtitle: 'Invoices appear here as soon as activation billing is generated for your connection.',
-                    actionLabel: 'Refresh billing',
-                    onTap: appState.refresh,
-                  )
-                : Column(
-                    children: billing.invoices
-                        .map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _documentRow(
-                              context,
-                              appState,
-                              title: item.invoiceNumber.isEmpty ? 'Invoice' : item.invoiceNumber,
-                              subtitle: item.dueDate.isEmpty
-                                  ? 'Generated ${item.generatedAt.isEmpty ? '-' : item.generatedAt}'
-                                  : 'Due ${item.dueDate}',
-                              amount: 'Rs ${item.totalAmount.toStringAsFixed(2)}',
-                              meta: item.customerStateLabel,
-                              viewUrl: item.viewUrl,
-                              pdfUrl: item.pdfUrl,
-                              primaryActionLabel: 'Open invoice',
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-          ),
-          const SizedBox(height: 18),
-          _sectionCard(
-            title: 'Payments',
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0x228224E3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Payments overview', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313))),
-                  const SizedBox(height: 8),
-                  Text(
-                    billing.payments.isEmpty
-                        ? 'No payment history available yet.'
-                        : 'Latest payment: Rs ${billing.payments.first.amount.toStringAsFixed(2)} | ${billing.payments.first.paidAt.isEmpty ? billing.payments.first.provider.toUpperCase() : billing.payments.first.paidAt}',
-                    style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: _summaryTile('Payments', '${billing.payments.length}', compact: true)),
-                      const SizedBox(width: 10),
-                      Expanded(child: _summaryTile('Last amount', latestPayment == null ? '-' : 'Rs ${latestPayment.amount.toStringAsFixed(2)}', compact: true)),
-                      const SizedBox(width: 10),
-                      Expanded(child: _summaryTile('Last status', latestPayment == null ? '-' : (latestPayment.paidAt.isEmpty ? 'Pending' : 'Success'), compact: true)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                        OutlinedButton(
-                          onPressed: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const PaymentsHistoryScreen()),
-                            );
-                            if (context.mounted) {
-                              await appState.refresh();
-                            }
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF8224E3),
-                            backgroundColor: const Color(0xFFFFFFFF),
-                            side: const BorderSide(color: Color(0x668224E3)),
-                          ),
-                          child: const Text('Open payments history'),
-                        ),
-                      if (latestInvoice != null && latestInvoice.pdfUrl.isNotEmpty)
-                        OutlinedButton(
-                          onPressed: () async {
-                            await _openDocument(context, appState, latestInvoice.invoiceNumber, latestInvoice.pdfUrl);
-                            if (context.mounted) {
-                              await appState.refresh();
-                            }
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF8224E3),
-                            backgroundColor: const Color(0xFFFFFFFF),
-                            side: const BorderSide(color: Color(0x668224E3)),
-                          ),
-                          child: const Text('Latest invoice PDF'),
-                        ),
-                      if (latestPayment != null && latestPayment.pdfUrl.isNotEmpty)
-                        FilledButton.tonal(
-                          onPressed: () async {
-                            await _openDocument(context, appState, latestPayment.transactionId, latestPayment.pdfUrl);
-                            if (context.mounted) {
-                              await appState.refresh();
-                            }
-                          },
-                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8224E3), foregroundColor: const Color(0xFFFFFFFF)),
-                          child: const Text('Latest receipt PDF'),
-                        ),
-                    ],
-                  ),
-                  if (billing.payments.isEmpty) ...[
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: billing.dueAmount > 0 ? () => _payNow(context, appState, amount: billing.dueAmount) : appState.refresh,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-                      ),
-                      child: Text(billing.dueAmount > 0 ? 'Pay current bill' : 'Refresh billing'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          _sectionCard(
-            title: 'Adjustments & notes',
-            child: billing.notes.isEmpty
-                ? _emptyState(
-                    title: 'No billing notes right now.',
-                    subtitle: 'Credit notes, adjustments, and other billing notes will appear here when available.',
-                    actionLabel: 'Refresh billing',
-                    onTap: appState.refresh,
-                  )
-                : Column(
-                    children: billing.notes
-                        .map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _documentRow(
-                              context,
-                              appState,
-                              title: item.noteNumber,
-                              subtitle: item.reason.isEmpty ? item.type : item.reason,
-                              amount: 'Rs ${item.totalAmount.toStringAsFixed(2)}',
-                              meta: item.issuedAt.isEmpty ? item.type : item.issuedAt,
-                              viewUrl: item.viewUrl,
-                              pdfUrl: item.pdfUrl,
-                              primaryActionLabel: 'Open note',
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-          ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _summaryTile(String label, String value, {bool compact = false}) {
-    return Container(
-      padding: EdgeInsets.all(compact ? 12 : 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: compact ? 2 : null,
-            overflow: compact ? TextOverflow.ellipsis : null,
-            style: TextStyle(fontWeight: FontWeight.w800, color: const Color(0xFF131313), fontSize: compact ? 13 : 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _connectionStrip(CustomerConnection connection) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'ACTIVE CONNECTION',
-            style: TextStyle(
-              color: Color(0xFF8224E3),
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2.2,
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            connection.planName.isEmpty ? 'Broadband connection' : connection.planName,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF131313)),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            connection.address.isEmpty ? connection.serviceId : connection.address,
-            style: const TextStyle(color: Color(0xFF6E6A67), height: 1.35),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _connectionPill('Service', connection.serviceId.isEmpty ? connection.customerId : connection.serviceId),
-              _connectionPill('Status', connection.status),
-              _connectionPill('Due', 'Rs ${connection.dueAmount.toStringAsFixed(0)}'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _connectionPill(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Text(
-        '$label: $value',
-        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-
-  Widget _sectionCard({required String title, required Widget child}) {
-    return AppCard(
-      color: const Color(0xFFFFFFFF),
-      borderColor: const Color(0x228224E3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF131313))),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _emptyState({
-    required String title,
-    required String subtitle,
-    required String actionLabel,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45)),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: onTap,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-            ),
-            child: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _billBreakupRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label, style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w700)),
-          ),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF131313))),
-        ],
-      ),
-    );
-  }
-
-  Widget _documentRow(
-    BuildContext context,
-    AppState appState, {
-    required String title,
-    required String subtitle,
-    required String amount,
-    required String meta,
-    required String viewUrl,
-    required String pdfUrl,
-    String primaryActionLabel = 'Open PDF',
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
+            // ── Bill Summary ─────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 4, 18, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF131313))),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: const TextStyle(color: Color(0xFF6E6A67))),
+                    _sectionLabel('BILL SUMMARY'),
+                    const SizedBox(height: 8),
+                    _card(
+                      child: Column(
+                        children: [
+                          _row('Plan',
+                              billing.currentPlan.isEmpty
+                                  ? '—'
+                                  : billing.currentPlan),
+                          _row(
+                              'Monthly',
+                              recurringAmt > 0
+                                  ? 'Rs ${recurringAmt.toStringAsFixed(0)}'
+                                  : '—'),
+                          _row('Bill Cycle',
+                              billing.billCycle.isEmpty
+                                  ? '—'
+                                  : billing.billCycle),
+                          _row('Bill Mode',
+                              billing.billMode.isEmpty
+                                  ? '—'
+                                  : billing.billMode),
+                          _row(
+                              'Generated',
+                              billing.generatedDate.isEmpty
+                                  ? '—'
+                                  : _fmtDate(billing.generatedDate)),
+                          _row(
+                              'Due Date',
+                              billing.nextBillDate.isEmpty
+                                  ? '—'
+                                  : _fmtDate(billing.nextBillDate)),
+                          _row(
+                              'Last Payment',
+                              billing.lastPaymentAmount > 0
+                                  ? 'Rs ${billing.lastPaymentAmount.toStringAsFixed(0)}'
+                                  : '—'),
+                          _row(
+                              'Last Paid On',
+                              billing.lastPaymentDate.isEmpty
+                                  ? '—'
+                                  : _fmtDate(billing.lastPaymentDate),
+                              last: true),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Latest Invoice Receipt ───────────────────────
+                    _sectionLabel('LATEST INVOICE'),
+                    const SizedBox(height: 8),
+                    if (latestInvoice == null)
+                      _card(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'No invoice generated yet.',
+                            style:
+                                GoogleFonts.inter(color: kMuted, fontSize: 13),
+                          ),
+                        ),
+                      )
+                    else
+                      _ReceiptCard(
+                        invoice: latestInvoice,
+                        onOpen: (latestInvoice.pdfUrl.isNotEmpty ||
+                                latestInvoice.viewUrl.isNotEmpty)
+                            ? () => _openDocument(
+                                  context,
+                                  appState,
+                                  'Invoice ${latestInvoice.invoiceNumber}',
+                                  latestInvoice.pdfUrl.isNotEmpty
+                                      ? latestInvoice.pdfUrl
+                                      : latestInvoice.viewUrl,
+                                )
+                            : null,
+                      ),
+
+                    const SizedBox(height: 20),
+
+                    // ── Latest Payment ───────────────────────────────
+                    _sectionLabel('LATEST PAYMENT'),
+                    const SizedBox(height: 8),
+                    if (latestPayment == null)
+                      _card(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'No payment recorded yet.',
+                            style:
+                                GoogleFonts.inter(color: kMuted, fontSize: 13),
+                          ),
+                        ),
+                      )
+                    else
+                      _PaymentReceiptCard(payment: latestPayment),
+
+                    const SizedBox(height: 20),
+
+                    // ── All Invoices ─────────────────────────────────
+                    if (billing.invoices.length > 1) ...[
+                      _sectionLabel('ALL INVOICES'),
+                      const SizedBox(height: 8),
+                      ...billing.invoices.map(
+                        (inv) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _InvoiceRow(
+                            invoice: inv,
+                            onOpen: (inv.pdfUrl.isNotEmpty ||
+                                    inv.viewUrl.isNotEmpty)
+                                ? () => _openDocument(
+                                      context,
+                                      appState,
+                                      'Invoice ${inv.invoiceNumber}',
+                                      inv.pdfUrl.isNotEmpty
+                                          ? inv.pdfUrl
+                                          : inv.viewUrl,
+                                    )
+                                : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+
+                    // ── More Options ─────────────────────────────────
+                    _sectionLabel('MORE'),
+                    const SizedBox(height: 8),
+                    _card(
+                      child: Column(
+                        children: [
+                          _linkRow(
+                            icon: Icons.receipt_long_rounded,
+                            label: 'Payment History',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const PaymentsHistoryScreen()),
+                            ),
+                          ),
+                          const Divider(color: kBorder, height: 1),
+                          _linkRow(
+                            icon: Icons.wifi_rounded,
+                            label: 'View Plan Catalog',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const PlanCatalogScreen()),
+                            ),
+                          ),
+                          const Divider(color: kBorder, height: 1),
+                          _linkRow(
+                            icon: Icons.headset_mic_rounded,
+                            label: 'Billing Support',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const SupportHistoryScreen()),
+                            ),
+                            last: true,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(amount, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF8224E3))),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F4FF),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0x228224E3)),
-                    ),
-                    child: Text(meta, style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          if (viewUrl.isNotEmpty || pdfUrl.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (viewUrl.isNotEmpty && pdfUrl.isEmpty)
-                  OutlinedButton(
-                    onPressed: () async {
-                      await _openDocument(context, appState, title, viewUrl);
-                      if (context.mounted) {
-                        await appState.refresh();
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF8224E3),
-                      backgroundColor: const Color(0xFFFFFFFF),
-                      side: const BorderSide(color: Color(0x668224E3)),
-                    ),
-                    child: const Text('Open'),
-                  ),
-                if (pdfUrl.isNotEmpty)
-                  FilledButton.tonal(
-                    onPressed: () async {
-                      await _openDocument(context, appState, '$title PDF', pdfUrl);
-                      if (context.mounted) {
-                        await appState.refresh();
-                      }
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-                    ),
-                    child: Text(primaryActionLabel),
-                  ),
-                if (pdfUrl.isNotEmpty || viewUrl.isNotEmpty)
-                  TextButton(
-                    onPressed: () => _shareDocumentWithFeedback(context, appState, pdfUrl.isNotEmpty ? pdfUrl : viewUrl),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF8224E3),
-                    ),
-                    child: const Text('Share'),
-                  ),
-              ],
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Future<void> _openDocument(BuildContext context, AppState appState, String title, String relativeUrl) async {
-    final session = appState.session;
-    if (session == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login again to open this document.')),
-      );
-      return;
-    }
-    final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
-    final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DocumentViewerScreen(
-          title: title,
-          url: fullUrl,
-          accessToken: session.accessToken,
         ),
       ),
     );
   }
 
-  Future<void> _payNow(BuildContext context, AppState appState, {double? amount}) async {
+  // ─── UI helpers ────────────────────────────────────────────────────────────
+
+  Widget _sectionLabel(String text) => Text(
+        text,
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: kMuted,
+          letterSpacing: 1.6,
+        ),
+      );
+
+  Widget _card({required Widget child}) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kBorder),
+        ),
+        child: child,
+      );
+
+  Widget _row(String label, String value, {bool last = false}) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 116,
+                  child: Text(label,
+                      style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: kMuted,
+                          fontWeight: FontWeight.w500)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.right,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!last) const Divider(color: kBorder, height: 1),
+        ],
+      );
+
+  Widget _linkRow({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool last = false,
+  }) =>
+      PressableScale(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: kPrimaryLight),
+              const SizedBox(width: 12),
+              Text(label,
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white)),
+              const Spacer(),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFF3D3D5C), size: 20),
+            ],
+          ),
+        ),
+      );
+
+  // ─── Actions ──────────────────────────────────────────────────────────────
+
+  Future<void> _payNow(BuildContext context, AppState appState) async {
     final messenger = ScaffoldMessenger.of(context);
     if (appState.session == null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Please login again to continue bill payment.')),
-      );
+          const SnackBar(content: Text('Please login again to continue.')));
       return;
     }
-    final paymentOrder = await appState.loadBillingPaymentOrder(amount: amount);
+    final order = await appState.loadBillingPaymentOrder(
+        amount: appState.billing.dueAmount);
     if (!context.mounted) return;
-    if (paymentOrder == null) {
-      final errorMessage = appState.error ?? 'Unable to create payment order';
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          action: SnackBarAction(
-            label: 'Get help',
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-              );
-              if (context.mounted) {
-                await appState.refresh();
-              }
-            },
-          ),
-        ),
-      );
+    if (order == null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(appState.error ?? 'Unable to create payment order'),
+      ));
       return;
     }
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => BillingPaymentScreen(paymentOrder: paymentOrder),
-      ),
+          builder: (_) => BillingPaymentScreen(paymentOrder: order)),
     );
     await appState.refresh();
   }
 
-  Future<void> _shareDocument(AppState appState, String relativeUrl) async {
-    if (relativeUrl.isEmpty) return;
-    final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
-    final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
-    await Share.share(fullUrl);
-  }
-
-  Future<void> _shareDocumentWithFeedback(BuildContext context, AppState appState, String relativeUrl) async {
-    if (relativeUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No document available to share yet.')),
+  Future<void> _openDocument(BuildContext context, AppState appState,
+      String title, String relativeUrl) async {
+    final session = appState.session;
+    if (session == null) return;
+    final base = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
+    final fullUrl =
+        relativeUrl.startsWith('http') ? relativeUrl : '$base$relativeUrl';
+    try {
+      final response = await http.get(
+        Uri.parse(fullUrl),
+        headers: {'Authorization': 'Bearer ${session.accessToken}'},
       );
-      return;
+      if (response.statusCode == 200) {
+        final tmp = Directory.systemTemp;
+        final file = File('${tmp.path}/${title.replaceAll(' ', '_')}.pdf');
+        await file.writeAsBytes(response.bodyBytes);
+        await Share.shareXFiles([XFile(file.path)], subject: title);
+      } else {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open document (${response.statusCode}).')));
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open document.')));
     }
-    await _shareDocument(appState, relativeUrl);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Document ready to share')),
+  }
+}
+
+// ── Billing shimmer skeleton ──────────────────────────────────────────────────
+
+class _BillingShimmer extends StatelessWidget {
+  const _BillingShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFF1A1828),
+      highlightColor: const Color(0xFF2D2B3D),
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(
+            18, MediaQuery.of(context).padding.top + 18, 18, 40),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          // Header card
+          Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+            ),
+          ),
+          const SizedBox(height: 28),
+          // Section label
+          Container(
+            width: 100,
+            height: 10,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Summary card
+          Container(
+            height: 240,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            width: 100,
+            height: 10,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Receipt card
+          Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
+// ── Billing gradient header ───────────────────────────────────────────────────
 
+class _BillingHeader extends StatelessWidget {
+  const _BillingHeader({
+    required this.billing,
+    required this.hasDue,
+    required this.hasAlert,
+    required this.onPayNow,
+    required this.onHistory,
+  });
 
+  final BillingData billing;
+  final bool hasDue;
+  final bool hasAlert;
+  final VoidCallback? onPayNow;
+  final VoidCallback onHistory;
 
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(18, topPad + 16, 18, 20),
+      child: Column(
+        children: [
+          // ── Main due card ──────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: const Color(0xFF8224E3),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: const Color(0x55A855F7)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Status pill row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: hasDue
+                                  ? const Color(0xFFFBBF24)
+                                  : const Color(0xFF4ADE80),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            hasDue ? 'Payment Due' : 'All Clear',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'BILLING',
+                      style: GoogleFonts.inter(
+                        color: Colors.white60,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
 
+                const SizedBox(height: 18),
 
+                // Amount + subtitle
+                Text(
+                  hasDue
+                      ? 'Rs ${billing.dueAmount.toStringAsFixed(0)}'
+                      : billing.currentPlan.isEmpty ? 'All Clear' : billing.currentPlan,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: hasDue ? 48 : 32,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: hasDue ? -2 : -0.5,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  billing.nextBillDate.isEmpty
+                      ? 'No outstanding dues'
+                      : (hasDue
+                          ? 'Due by ${_fmtDate(billing.nextBillDate)}'
+                          : 'Next bill ${_fmtDate(billing.nextBillDate)}'),
+                  style: GoogleFonts.inter(
+                    color: Colors.white60,
+                    fontSize: 13,
+                  ),
+                ),
+                if (!hasDue && billing.recurringAmount > 0) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rs ${billing.recurringAmount.toStringAsFixed(0)}/mo · ${billing.billMode}',
+                    style: GoogleFonts.inter(
+                      color: Colors.white54,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+
+                // Buttons
+                Row(
+                  children: [
+                    if (hasDue) ...[
+                      Expanded(
+                        child: _GradientBtn(
+                          label: 'Pay Now',
+                          onTap: onPayNow,
+                          filled: true,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: _GradientBtn(
+                        label: 'History',
+                        onTap: onHistory,
+                        filled: false,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // ── Alert banner ───────────────────────────────────────────
+          if (hasAlert) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2A0A0A),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0x55FF6B6B)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Color(0xFFFF6B6B), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      billing.lastSuspensionWarningAt.isNotEmpty
+                          ? 'Suspension warning — clear dues immediately to avoid disconnection.'
+                          : 'Overdue reminder — please pay to keep service active.',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFFFF8A8A),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GradientBtn extends StatefulWidget {
+  const _GradientBtn({
+    required this.label,
+    required this.onTap,
+    required this.filled,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool filled;
+
+  @override
+  State<_GradientBtn> createState() => _GradientBtnState();
+}
+
+class _GradientBtnState extends State<_GradientBtn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 90));
+    _scale = Tween<double>(begin: 1.0, end: 0.96)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.onTap != null ? (_) => _ctrl.forward() : null,
+      onTapUp: (_) => _ctrl.reverse(),
+      onTapCancel: () => _ctrl.reverse(),
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: widget.filled ? Colors.white : Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+            border: widget.filled
+                ? null
+                : Border.all(color: Colors.white.withValues(alpha: 0.3)),
+          ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: widget.filled
+                    ? (widget.onTap == null
+                        ? Colors.white54
+                        : const Color(0xFF3B0D7A))
+                    : Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Receipt-style invoice card ────────────────────────────────────────────────
+
+class _ReceiptCard extends StatelessWidget {
+  const _ReceiptCard({required this.invoice, this.onOpen});
+
+  final BillingInvoiceItem invoice;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPaid =
+        invoice.customerStateLabel.toLowerCase().contains('paid');
+    final statusColor =
+        isPaid ? const Color(0xFF4ADE80) : const Color(0xFFFBBF24);
+    final statusBg = isPaid
+        ? const Color(0xFF0A2A14)
+        : const Color(0xFF1F1500);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ── Receipt header ───────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  kPrimary.withValues(alpha: 0.12),
+                  kPrimary.withValues(alpha: 0.04),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(23)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: kPrimary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(13),
+                    border:
+                        Border.all(color: kPrimary.withValues(alpha: 0.25)),
+                  ),
+                  child: const Icon(Icons.receipt_rounded,
+                      color: kPrimaryLight, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Invoice',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: kMuted,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        invoice.invoiceNumber.isEmpty
+                            ? '—'
+                            : invoice.invoiceNumber,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Status stamp
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                        color: statusColor.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    invoice.customerStateLabel.isEmpty
+                        ? 'PENDING'
+                        : invoice.customerStateLabel.toUpperCase(),
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: statusColor,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Perforated divider ───────────────────────────────────
+          const _PerforatedDivider(color: kBorder),
+
+          // ── Receipt body ─────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Column(
+              children: [
+                _receiptRow('Amount',
+                    'Rs ${invoice.totalAmount.toStringAsFixed(0)}',
+                    large: true),
+                const SizedBox(height: 10),
+                _receiptRow('Due Date',
+                    invoice.dueDate.isEmpty ? '—' : _fmtDate(invoice.dueDate)),
+                const SizedBox(height: 6),
+                _receiptRow('Invoice No.',
+                    invoice.invoiceNumber.isEmpty ? '—' : invoice.invoiceNumber,
+                    mono: true),
+              ],
+            ),
+          ),
+
+          // ── Open button ──────────────────────────────────────────
+          if (onOpen != null) ...[
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+              child: _OpenInvoiceBtn(onTap: onOpen!),
+            ),
+          ] else
+            const SizedBox(height: 18),
+        ],
+      ),
+    );
+  }
+
+  Widget _receiptRow(String label, String value,
+      {bool large = false, bool mono = false}) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+              fontSize: 12, color: kMuted, fontWeight: FontWeight.w500),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: mono
+              ? GoogleFonts.robotoMono(
+                  fontSize: 12,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500)
+              : GoogleFonts.inter(
+                  fontSize: large ? 18 : 13,
+                  fontWeight: large ? FontWeight.w900 : FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: large ? -0.5 : 0),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Payment receipt card ──────────────────────────────────────────────────────
+
+class _PaymentReceiptCard extends StatelessWidget {
+  const _PaymentReceiptCard({required this.payment});
+  final BillingPaymentItem payment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF4ADE80).withValues(alpha: 0.08),
+                  const Color(0xFF4ADE80).withValues(alpha: 0.02),
+                ],
+              ),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(23)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4ADE80).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(
+                        color: const Color(0xFF4ADE80).withValues(alpha: 0.2)),
+                  ),
+                  child: const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF4ADE80), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Payment',
+                          style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: kMuted,
+                              fontWeight: FontWeight.w500)),
+                      Text(
+                        'Rs ${payment.amount.toStringAsFixed(0)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A2A14),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                        color: const Color(0xFF4ADE80).withValues(alpha: 0.35)),
+                  ),
+                  child: Text(
+                    'PAID',
+                    style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF4ADE80),
+                        letterSpacing: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const _PerforatedDivider(color: kBorder),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+            child: Column(
+              children: [
+                _row2('Method',
+                    payment.provider.isEmpty
+                        ? '—'
+                        : payment.provider.toUpperCase()),
+                const SizedBox(height: 8),
+                _row2(
+                    'Date',
+                    payment.paidAt.isEmpty
+                        ? 'Pending'
+                        : _fmtDate(payment.paidAt)),
+                const SizedBox(height: 6),
+                _row2('Transaction ID',
+                    payment.transactionId.isEmpty ? '—' : payment.transactionId,
+                    mono: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row2(String label, String value, {bool mono = false}) {
+    return Row(
+      children: [
+        Text(label,
+            style: GoogleFonts.inter(
+                fontSize: 12, color: kMuted, fontWeight: FontWeight.w500)),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: mono
+                ? GoogleFonts.robotoMono(
+                    fontSize: 11,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500)
+                : GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Invoice row (all invoices list) ──────────────────────────────────────────
+
+class _InvoiceRow extends StatelessWidget {
+  const _InvoiceRow({required this.invoice, this.onOpen});
+  final BillingInvoiceItem invoice;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPaid =
+        invoice.customerStateLabel.toLowerCase().contains('paid');
+    final statusColor =
+        isPaid ? const Color(0xFF4ADE80) : const Color(0xFFFBBF24);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: kBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: kPrimary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
+            ),
+            child: const Icon(Icons.receipt_rounded,
+                color: kPrimaryLight, size: 19),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  invoice.invoiceNumber.isEmpty
+                      ? 'Invoice'
+                      : invoice.invoiceNumber,
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  invoice.dueDate.isEmpty
+                      ? 'No due date'
+                      : 'Due ${_fmtDate(invoice.dueDate)}',
+                  style: GoogleFonts.inter(fontSize: 11, color: kMuted),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Rs ${invoice.totalAmount.toStringAsFixed(0)}',
+                style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  invoice.customerStateLabel.isEmpty
+                      ? 'Pending'
+                      : invoice.customerStateLabel,
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor),
+                ),
+              ),
+              if (onOpen != null) ...[
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: onOpen,
+                  child: Text(
+                    'Open',
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: kPrimaryLight),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Open invoice button ───────────────────────────────────────────────────────
+
+class _OpenInvoiceBtn extends StatefulWidget {
+  const _OpenInvoiceBtn({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_OpenInvoiceBtn> createState() => _OpenInvoiceBtnState();
+}
+
+class _OpenInvoiceBtnState extends State<_OpenInvoiceBtn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 90));
+    _scale = Tween<double>(begin: 1.0, end: 0.96)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) => _ctrl.reverse(),
+      onTapCancel: () => _ctrl.reverse(),
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: kPrimary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+            border:
+                Border.all(color: kPrimary.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.open_in_new_rounded,
+                  color: kPrimaryLight, size: 15),
+              const SizedBox(width: 7),
+              Text(
+                'Open Invoice',
+                style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: kPrimaryLight),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Perforated divider ────────────────────────────────────────────────────────
+
+class _PerforatedDivider extends StatelessWidget {
+  const _PerforatedDivider({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(double.infinity, 24),
+      painter: _DashedLinePainter(color: color),
+    );
+  }
+}
+
+class _DashedLinePainter extends CustomPainter {
+  const _DashedLinePainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+
+    // Semicircle cutouts at edges
+    final circlePaint = Paint()
+      ..color = kBg
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(Offset(0, size.height / 2), 10, circlePaint);
+    canvas.drawCircle(Offset(size.width, size.height / 2), 10, circlePaint);
+
+    // Dashed line
+    const dashWidth = 6.0;
+    const dashGap = 5.0;
+    double x = 14;
+    final y = size.height / 2;
+    while (x < size.width - 14) {
+      canvas.drawLine(Offset(x, y), Offset(x + dashWidth, y), paint);
+      x += dashWidth + dashGap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedLinePainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+// ── Date formatter ─────────────────────────────────────────────────────────────
+
+String _fmtDate(String raw) {
+  try {
+    final dt = DateTime.parse(raw);
+    const m = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${m[dt.month - 1]} ${dt.day}, ${dt.year}';
+  } catch (_) {
+    final t = raw.indexOf('T');
+    return t > 0 ? raw.substring(0, t) : raw;
+  }
+}

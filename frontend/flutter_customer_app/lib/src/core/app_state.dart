@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -7,7 +8,10 @@ import 'api_client.dart';
 import 'models.dart';
 import 'notification_service.dart';
 
-const defaultApiBase = 'http://103.139.191.114:4000';
+const defaultApiBase = String.fromEnvironment(
+  'JUSTFIBER_API_BASE',
+  defaultValue: 'http://103.139.191.114:4000',
+);
 const _mobileKey = 'justfiber.mobile';
 const _accessTokenKey = 'justfiber.access_token';
 const _refreshTokenKey = 'justfiber.refresh_token';
@@ -29,6 +33,7 @@ class AppState extends ChangeNotifier {
   bool busy = false;
   bool bookingBusy = false;
   bool restoringSession = true;
+  Future<void>? _refreshInFlight;
   String? error;
   String? bookingError;
   String? selectedCustomerId;
@@ -36,7 +41,8 @@ class AppState extends ChangeNotifier {
   String? pendingNotificationReadId;
   DateTime? lastSyncedAt;
   final Set<String> _seenNotificationIds = <String>{};
-  final Map<String, DateTime> _recentNotificationFingerprints = <String, DateTime>{};
+  final Map<String, DateTime> _recentNotificationFingerprints =
+      <String, DateTime>{};
 
   DashboardData dashboard = const DashboardData(
     customerName: 'JustFiber Customer',
@@ -144,14 +150,17 @@ class AppState extends ChangeNotifier {
     final current = session;
     if (current == null || current.refreshToken.isEmpty) {
       if (current != null) {
-        await _clearPersistedSession(message: 'Session expired. Please log in again.');
+        await _clearPersistedSession(
+            message: 'Session expired. Please log in again.');
       }
       return null;
     }
     try {
-      final nextAccessToken = await api.refreshCustomerSession(current.refreshToken);
+      final nextAccessToken =
+          await api.refreshCustomerSession(current.refreshToken);
       if (nextAccessToken.isEmpty) {
-        await _clearPersistedSession(message: 'Session expired. Please log in again.');
+        await _clearPersistedSession(
+            message: 'Session expired. Please log in again.');
         return null;
       }
       session = CustomerSession(
@@ -164,7 +173,8 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       return nextAccessToken;
     } catch (_) {
-      await _clearPersistedSession(message: 'Session expired. Please log in again.');
+      await _clearPersistedSession(
+          message: 'Session expired. Please log in again.');
       return null;
     }
   }
@@ -229,50 +239,108 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool silent = false}) async {
     final current = session;
     if (current == null) return;
-    busy = true;
+    final existingRefresh = _refreshInFlight;
+    if (existingRefresh != null) return existingRefresh;
+    if (!silent) busy = true;
     error = null;
     notifyListeners();
+    final refreshFuture =
+        _performRefresh(current, showBusy: !silent).whenComplete(() {
+      _refreshInFlight = null;
+    });
+    _refreshInFlight = refreshFuture;
+    return refreshFuture;
+  }
+
+  Future<void> _performRefresh(CustomerSession current,
+      {required bool showBusy}) async {
+    final failures = <String>[];
+    Future<void> runRefreshTask(
+        String label, Future<void> Function() task) async {
+      try {
+        await task();
+      } catch (e) {
+        failures.add('$label: $e');
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedSelectedCustomer = prefs.getString(_selectedCustomerKey);
-      final connectionResult = await api.fetchConnections(current, selectedCustomerId: selectedCustomerId ?? savedSelectedCustomer);
+      final connectionResult = await api.fetchConnections(current,
+          selectedCustomerId: selectedCustomerId ?? savedSelectedCustomer);
       final nextSelected = connectionResult.$1;
       connections = connectionResult.$2;
-      selectedCustomerId = nextSelected ?? (connections.isNotEmpty ? connections.first.customerId : null);
+      selectedCustomerId = nextSelected ??
+          (connections.isNotEmpty ? connections.first.customerId : null);
       if (selectedCustomerId != null) {
         await prefs.setString(_selectedCustomerKey, selectedCustomerId!);
       }
 
-      dashboard = await api.fetchDashboard(current, customerId: selectedCustomerId);
-      wifi = await api.fetchWifi(current, customerId: selectedCustomerId);
-      billing = await api.fetchBilling(current, customerId: selectedCustomerId);
-      requests = await api.fetchRequests(current, customerId: selectedCustomerId);
-      tickets = await api.fetchTickets(current, customerId: selectedCustomerId);
-      notifications = await api.fetchNotifications(current);
-      faqs = await api.fetchFaqs();
-      addons = await api.fetchAddons(current);
-      banners = await api.fetchAppBanners();
-      plans = await api.fetchPlans();
-      connectedDevices = await api.fetchConnectedDevices(current, customerId: selectedCustomerId);
-      try {
-        planChangeOptions = await api.fetchPlanChangeOptions(current, customerId: selectedCustomerId);
-      } catch (_) {
-        planChangeOptions = const [];
-      }
-      parentalRules = await api.fetchParentalRules(current, customerId: selectedCustomerId);
-      networkQuality = await api.fetchNetworkQuality(current, customerId: selectedCustomerId);
-      speedTest = await api.fetchSpeedTest(current, customerId: selectedCustomerId);
+      await Future.wait<void>([
+        runRefreshTask(
+            'dashboard',
+            () async => dashboard = await api.fetchDashboard(current,
+                customerId: selectedCustomerId)),
+        runRefreshTask(
+            'wifi',
+            () async => wifi =
+                await api.fetchWifi(current, customerId: selectedCustomerId)),
+        runRefreshTask(
+            'billing',
+            () async => billing = await api.fetchBilling(current,
+                customerId: selectedCustomerId)),
+        runRefreshTask(
+            'requests',
+            () async => requests = await api.fetchRequests(current,
+                customerId: selectedCustomerId)),
+        runRefreshTask(
+            'tickets',
+            () async => tickets = await api.fetchTickets(current,
+                customerId: selectedCustomerId)),
+        runRefreshTask('notifications',
+            () async => notifications = await api.fetchNotifications(current)),
+        runRefreshTask('faqs', () async => faqs = await api.fetchFaqs()),
+        runRefreshTask(
+            'addons', () async => addons = await api.fetchAddons(current)),
+        runRefreshTask(
+            'banners', () async => banners = await api.fetchAppBanners()),
+        runRefreshTask('plans', () async => plans = await api.fetchPlans()),
+        runRefreshTask(
+            'devices',
+            () async => connectedDevices = await api.fetchConnectedDevices(
+                current,
+                customerId: selectedCustomerId)),
+        runRefreshTask(
+            'plan options',
+            () async => planChangeOptions = await api.fetchPlanChangeOptions(
+                current,
+                customerId: selectedCustomerId)),
+        runRefreshTask(
+            'parental rules',
+            () async => parentalRules = await api.fetchParentalRules(current,
+                customerId: selectedCustomerId)),
+        runRefreshTask(
+            'network quality',
+            () async => networkQuality = await api.fetchNetworkQuality(current,
+                customerId: selectedCustomerId)),
+        runRefreshTask(
+            'speed test',
+            () async => speedTest = await api.fetchSpeedTest(current,
+                customerId: selectedCustomerId)),
+      ]);
 
       await refreshBookingTracking(silent: true);
       lastSyncedAt = DateTime.now();
       await _surfaceNewNotifications();
+      error = failures.isEmpty ? null : failures.first;
     } catch (e) {
       error = e.toString();
     } finally {
-      busy = false;
+      if (showBusy) busy = false;
       notifyListeners();
     }
   }
@@ -281,10 +349,16 @@ class AppState extends ChangeNotifier {
     await CustomerNotificationService.instance.initialize();
     final prefs = await SharedPreferences.getInstance();
     if (_seenNotificationIds.isEmpty) {
-      _seenNotificationIds.addAll(prefs.getStringList(_surfacedNotificationIdsKey) ?? const <String>[]);
+      _seenNotificationIds.addAll(
+          prefs.getStringList(_surfacedNotificationIdsKey) ?? const <String>[]);
     }
 
-    final candidates = notifications.where((item) => item.id.isNotEmpty && item.readAt.isEmpty && !_seenNotificationIds.contains(item.id)).toList()
+    final candidates = notifications
+        .where((item) =>
+            item.id.isNotEmpty &&
+            item.readAt.isEmpty &&
+            !_seenNotificationIds.contains(item.id))
+        .toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     final latestByFingerprint = <String, NotificationItem>{};
@@ -299,7 +373,9 @@ class AppState extends ChangeNotifier {
         continue;
       }
       final lastShownAt = _recentNotificationFingerprints[fingerprint];
-      if (lastShownAt != null && DateTime.now().difference(lastShownAt) < const Duration(minutes: 10)) {
+      if (lastShownAt != null &&
+          DateTime.now().difference(lastShownAt) <
+              const Duration(minutes: 10)) {
         _seenNotificationIds.add(item.id);
         continue;
       }
@@ -312,12 +388,15 @@ class AppState extends ChangeNotifier {
       await CustomerNotificationService.instance.showAlert(
         id: CustomerNotificationService.instance.stableIdFor(item.id),
         title: item.title.isEmpty ? 'JustFiber update' : item.title,
-        body: item.body.isEmpty ? 'Open the app to review the latest update.' : item.body,
+        body: item.body.isEmpty
+            ? 'Open the app to review the latest update.'
+            : item.body,
         payload: payload,
       );
     }
 
-    await prefs.setStringList(_surfacedNotificationIdsKey, _seenNotificationIds.take(200).toList(growable: false));
+    await prefs.setStringList(_surfacedNotificationIdsKey,
+        _seenNotificationIds.take(200).toList(growable: false));
   }
 
   String _notificationFingerprint(NotificationItem item) {
@@ -359,7 +438,8 @@ class AppState extends ChangeNotifier {
     if (notifyResume) {
       await CustomerNotificationService.instance.initialize();
       await CustomerNotificationService.instance.showAlert(
-        id: CustomerNotificationService.instance.stableIdFor('plan-change-resume'),
+        id: CustomerNotificationService.instance
+            .stableIdFor('plan-change-resume'),
         title: 'Resume your plan change',
         body: 'Continue switching to $planName when you are ready.',
         payload: jsonEncode({'target': 'plans_resume'}),
@@ -453,13 +533,19 @@ class AppState extends ChangeNotifier {
     }
     final type = item.type.toLowerCase();
     final text = '${item.title} ${item.body}'.toLowerCase();
-    if (type.contains('billing_') || type.contains('refund') || type.contains('receipt')) {
+    if (type.contains('billing_') ||
+        type.contains('refund') ||
+        type.contains('receipt')) {
       return 'billing';
     }
-    if (type.contains('booking') || type.contains('installer') || type.contains('job')) {
+    if (type.contains('booking') ||
+        type.contains('installer') ||
+        type.contains('job')) {
       return 'tracking';
     }
-    if (type.contains('ticket') || type.contains('request') || type.contains('support')) {
+    if (type.contains('ticket') ||
+        type.contains('request') ||
+        type.contains('support')) {
       return 'support';
     }
     if (text.contains('invoice') ||
@@ -488,8 +574,10 @@ class AppState extends ChangeNotifier {
     try {
       final data = jsonDecode(payload);
       if (data is Map<String, dynamic>) {
-        final target = _normalizeNavigationTarget((data['target'] ?? '').toString().trim());
-        final notificationId = (data['notificationId'] ?? data['id'] ?? '').toString().trim();
+        final target = _normalizeNavigationTarget(
+            (data['target'] ?? '').toString().trim());
+        final notificationId =
+            (data['notificationId'] ?? data['id'] ?? '').toString().trim();
         if (notificationId.isNotEmpty) {
           pendingNotificationReadId = notificationId;
         }
@@ -556,11 +644,14 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
     try {
-      installerVisits = await api.fetchServiceVisits(current, customerId: selectedCustomerId);
-      requests = await api.fetchRequests(current, customerId: selectedCustomerId);
+      installerVisits =
+          await api.fetchServiceVisits(current, customerId: selectedCustomerId);
+      requests =
+          await api.fetchRequests(current, customerId: selectedCustomerId);
       if (latestBooking != null && latestBooking!.bookingNumber.isNotEmpty) {
         try {
-          bookingTracking = await api.fetchBookingTracking(current, latestBooking!.bookingNumber);
+          bookingTracking = await api.fetchBookingTracking(
+              current, latestBooking!.bookingNumber);
         } catch (_) {}
       }
       tickets = await api.fetchTickets(current, customerId: selectedCustomerId);
@@ -694,7 +785,8 @@ class AppState extends ChangeNotifier {
         startTime: startTime,
         endTime: endTime,
       );
-      parentalRules = await api.fetchParentalRules(current, customerId: selectedCustomerId);
+      parentalRules =
+          await api.fetchParentalRules(current, customerId: selectedCustomerId);
       return true;
     } catch (e) {
       error = e.toString();
@@ -718,7 +810,8 @@ class AppState extends ChangeNotifier {
         clientId: clientId,
         blocked: blocked,
       );
-      connectedDevices = await api.fetchConnectedDevices(current, customerId: selectedCustomerId);
+      connectedDevices = await api.fetchConnectedDevices(current,
+          customerId: selectedCustomerId);
       return true;
     } catch (e) {
       error = e.toString();
@@ -762,7 +855,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> markAllNotificationsRead() async {
-    final unreadIds = notifications.where((item) => item.readAt.isEmpty && item.id.isNotEmpty).map((item) => item.id).toList(growable: false);
+    final unreadIds = notifications
+        .where((item) => item.readAt.isEmpty && item.id.isNotEmpty)
+        .map((item) => item.id)
+        .toList(growable: false);
     if (unreadIds.isEmpty) return;
     for (final id in unreadIds) {
       await markNotificationRead(id);
@@ -814,7 +910,8 @@ class AppState extends ChangeNotifier {
         type: type,
         note: note,
       );
-      requests = await api.fetchRequests(current, customerId: selectedCustomerId);
+      requests =
+          await api.fetchRequests(current, customerId: selectedCustomerId);
       return requestNumber.isEmpty ? null : requestNumber;
     } catch (e) {
       error = e.toString();
@@ -1007,7 +1104,8 @@ class AppState extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final ok = await api.cancelPlanChange(current, customerId: selectedCustomerId);
+      final ok =
+          await api.cancelPlanChange(current, customerId: selectedCustomerId);
       await clearPlanChangeDraft();
       await refresh();
       return ok;
@@ -1123,9 +1221,12 @@ class AppState extends ChangeNotifier {
         durationLabel: durationLabel,
       );
       bookingDraft = latestBooking;
-      if (session != null && latestBooking != null && latestBooking!.bookingNumber.isNotEmpty) {
+      if (session != null &&
+          latestBooking != null &&
+          latestBooking!.bookingNumber.isNotEmpty) {
         try {
-          bookingTracking = await api.fetchBookingTracking(session!, latestBooking!.bookingNumber);
+          bookingTracking = await api.fetchBookingTracking(
+              session!, latestBooking!.bookingNumber);
         } catch (_) {}
       }
       return latestBooking != null;
@@ -1161,7 +1262,8 @@ class AppState extends ChangeNotifier {
       if (latestBooking?.bookingNumber == bookingNumber) {
         latestBooking = latestBooking?.copyWith(
           preferredDate: preferredDate ?? latestBooking?.preferredDate,
-          preferredSlotLabel: preferredSlotLabel ?? latestBooking?.preferredSlotLabel,
+          preferredSlotLabel:
+              preferredSlotLabel ?? latestBooking?.preferredSlotLabel,
         );
       }
       return true;
@@ -1328,18 +1430,23 @@ class AppState extends ChangeNotifier {
           bookingFlowDraft = BookingFlowDraft(
             step: int.tryParse('${map['step'] ?? 0}') ?? 0,
             selectedPlanCode: (map['selectedPlanCode'] ?? '').toString(),
-            selectedDurationMonths: int.tryParse('${map['selectedDurationMonths'] ?? 1}') ?? 1,
-            selectedDurationLabel: (map['selectedDurationLabel'] ?? '1 month').toString(),
+            selectedDurationMonths:
+                int.tryParse('${map['selectedDurationMonths'] ?? 1}') ?? 1,
+            selectedDurationLabel:
+                (map['selectedDurationLabel'] ?? '1 month').toString(),
             selectedSlotCode: (map['selectedSlotCode'] ?? 'morning').toString(),
-            selectedSlotLabel: (map['selectedSlotLabel'] ?? '10 AM - 1 PM').toString(),
+            selectedSlotLabel:
+                (map['selectedSlotLabel'] ?? '10 AM - 1 PM').toString(),
             preferredDateIso: (map['preferredDateIso'] ?? '').toString(),
             name: (map['name'] ?? '').toString(),
             mobile: (map['mobile'] ?? '').toString(),
             email: (map['email'] ?? '').toString(),
             address: (map['address'] ?? '').toString(),
             pinCode: (map['pinCode'] ?? '').toString(),
-            latitude: double.tryParse('${map['latitude'] ?? 28.6139}') ?? 28.6139,
-            longitude: double.tryParse('${map['longitude'] ?? 77.2090}') ?? 77.2090,
+            latitude:
+                double.tryParse('${map['latitude'] ?? 28.6139}') ?? 28.6139,
+            longitude:
+                double.tryParse('${map['longitude'] ?? 77.2090}') ?? 77.2090,
             hasPickedLocation: map['hasPickedLocation'] == true,
             usedCurrentLocation: map['usedCurrentLocation'] == true,
             savedAt: (map['savedAt'] ?? '').toString(),
@@ -1357,15 +1464,9 @@ class AppState extends ChangeNotifier {
       accessToken: accessToken,
       refreshToken: refreshToken,
     );
-    notifyListeners();
-    await refresh();
-    if (session == null) {
-      restoringSession = false;
-      notifyListeners();
-      return;
-    }
     restoringSession = false;
     notifyListeners();
+    unawaited(refresh(silent: true));
   }
 }
 

@@ -12,7 +12,8 @@ class JustFiberCustomerApp extends StatefulWidget {
   State<JustFiberCustomerApp> createState() => _JustFiberCustomerAppState();
 }
 
-class _JustFiberCustomerAppState extends State<JustFiberCustomerApp> with WidgetsBindingObserver {
+class _JustFiberCustomerAppState extends State<JustFiberCustomerApp>
+    with WidgetsBindingObserver {
   final appState = AppState();
 
   @override
@@ -31,14 +32,16 @@ class _JustFiberCustomerAppState extends State<JustFiberCustomerApp> with Widget
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      appState.refresh();
+      appState.refresh(silent: true);
     }
   }
 
   Future<void> _setupNotificationBridge() async {
     await CustomerNotificationService.instance.initialize();
-    CustomerNotificationService.instance.tapStream.listen(appState.handleNotificationPayload);
-    final initialPayload = CustomerNotificationService.instance.takeInitialPayload();
+    CustomerNotificationService.instance.tapStream
+        .listen(appState.handleNotificationPayload);
+    final initialPayload =
+        CustomerNotificationService.instance.takeInitialPayload();
     if (initialPayload != null && initialPayload.isNotEmpty) {
       appState.handleNotificationPayload(initialPayload);
     }

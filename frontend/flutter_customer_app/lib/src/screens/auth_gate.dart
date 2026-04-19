@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
-import '../widgets/app_card.dart';
+import '../core/theme.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -24,52 +25,65 @@ class _AuthGateLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F1EB),
+      backgroundColor: kBg,
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: AppCard(
-            color: const Color(0xFFFFFFFF),
-            borderColor: const Color(0x228224E3),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.wifi_rounded, color: Color(0xFF8224E3), size: 34),
-                SizedBox(height: 18),
-                SizedBox(
-                  width: 34,
-                  height: 34,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.6,
-                    valueColor: AlwaysStoppedAnimation(Color(0xFF8224E3)),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFBB6FF7), Color(0xFF7C3AED)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kPrimary.withValues(alpha: 0.45),
+                      blurRadius: 28,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 18),
-                Text(
-                  'Restoring your JustFiber session',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF131313),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: const Icon(Icons.wifi_rounded,
+                    color: Colors.white, size: 36),
+              ),
+              const SizedBox(height: 28),
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(kPrimaryLight),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Checking saved login, latest booking, and customer console state.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Restoring your session',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Checking saved login and latest account state.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                    color: kMuted, height: 1.5, fontSize: 14),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 }
-
-
-
-
-

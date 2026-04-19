@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
+import '../core/theme.dart';
 import 'billing_history_screen.dart';
 import 'plan_catalog_screen.dart';
 
 class SupportAssistantScreen extends StatefulWidget {
-  const SupportAssistantScreen({
-    super.key,
-    this.issueType = 'general',
-  });
-
+  const SupportAssistantScreen({super.key, this.issueType = 'general'});
   final String issueType;
 
   @override
@@ -49,22 +47,13 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     final appState = AppStateScope.of(context);
     _latestTicket = appState.tickets.isNotEmpty ? appState.tickets.first : null;
     setState(() {
-      _messages.add(
-        _ChatMessage.bot(
-          'We are here to help you out. Tell me what is happening with your connection, billing, Wi-Fi, or speed.',
-        ),
-      );
-      _messages.add(
-        _ChatMessage.bot(
-          'You can type things like: internet not working, Wi-Fi problem, slow speed, bill issue, or plan issue.',
-        ),
-      );
+      _messages.add(_ChatMessage.bot(
+          'We are here to help you out. Tell me what is happening with your connection, billing, Wi-Fi, or speed.'));
+      _messages.add(_ChatMessage.bot(
+          'You can type things like: internet not working, Wi-Fi problem, slow speed, bill issue, or plan issue.'));
       if (_latestTicket != null) {
-        _messages.add(
-          _ChatMessage.bot(
-            'Your latest support case is ${_latestTicket!.ticketNumber} with status ${_latestTicket!.status}. If this is about the same issue, type still not resolved.',
-          ),
-        );
+        _messages.add(_ChatMessage.bot(
+            'Your latest support case is ${_latestTicket!.ticketNumber} with status ${_latestTicket!.status}. If this is about the same issue, type still not resolved.'));
       }
       if (widget.issueType != 'general') {
         _messages.add(_ChatMessage.user(prompt));
@@ -94,96 +83,93 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
   }
 
   String _inferIssueType(String text) {
-    final query = text.toLowerCase();
-    if (query.contains('bill') ||
-        query.contains('billing') ||
-        query.contains('due') ||
-        query.contains('payment') ||
-        query.contains('recharge')) {
+    final q = text.toLowerCase();
+    if (q.contains('bill') ||
+        q.contains('due') ||
+        q.contains('payment') ||
+        q.contains('recharge')) {
       return 'billing';
     }
-    if (query.contains('wifi') ||
-        query.contains('wi-fi') ||
-        query.contains('ssid') ||
-        query.contains('router') ||
-        query.contains('password')) {
+    if (q.contains('wifi') ||
+        q.contains('wi-fi') ||
+        q.contains('ssid') ||
+        q.contains('router') ||
+        q.contains('password')) {
       return 'wifi';
     }
-    if (query.contains('slow') ||
-        query.contains('speed') ||
-        query.contains('latency') ||
-        query.contains('ping')) {
+    if (q.contains('slow') ||
+        q.contains('speed') ||
+        q.contains('latency') ||
+        q.contains('ping')) {
       return 'speed';
     }
-    if (query.contains('plan') ||
-        query.contains('fup') ||
-        query.contains('data') ||
-        query.contains('upgrade') ||
-        query.contains('cap')) {
+    if (q.contains('plan') ||
+        q.contains('fup') ||
+        q.contains('data') ||
+        q.contains('upgrade') ||
+        q.contains('cap')) {
       return 'plan';
     }
     return 'internet';
   }
 
   bool _isFollowUpIntent(String text) {
-    final query = text.toLowerCase();
-    return query.contains('still') ||
-        query.contains('not resolved') ||
-        query.contains('not fixed') ||
-        query.contains('same issue') ||
-        query.contains('continue') ||
-        query.contains('proceed') ||
-        query == 'yes' ||
-        query.contains('agent') ||
-        query.contains('human');
+    final q = text.toLowerCase();
+    return q.contains('still') ||
+        q.contains('not resolved') ||
+        q.contains('not fixed') ||
+        q.contains('same issue') ||
+        q.contains('continue') ||
+        q.contains('proceed') ||
+        q == 'yes' ||
+        q.contains('agent') ||
+        q.contains('human');
   }
 
   bool _handleContextualReply(String text) {
     final diagnosis = _lastDiagnosis;
     if (diagnosis == null) return false;
-    final query = text.toLowerCase();
-
-    if (query.contains('agent') || query.contains('human')) {
+    final q = text.toLowerCase();
+    if (q.contains('agent') || q.contains('human')) {
       setState(() {
-        _messages.add(
-          _ChatMessage.bot(
-            'I can prepare the full diagnostic snapshot and hand this over as a complaint for the support team.',
-            actions: [
-              _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint, primary: true),
-            ],
-          ),
-        );
+        _messages.add(_ChatMessage.bot(
+          'I can prepare the full diagnostic snapshot and hand this over as a complaint for the support team.',
+          actions: [
+            _ChatAction(
+                label: 'Raise complaint', onTap: _raiseComplaint, primary: true)
+          ],
+        ));
       });
       _scrollToBottom();
       return true;
     }
-
     if (_isFollowUpIntent(text)) {
       setState(() {
-        _messages.add(
-          _ChatMessage.bot(
-            diagnosis.needsTicket
-                ? 'This still looks like a service-side issue from our checks. The fastest next step is to raise a complaint so the support team can act on the diagnosis directly.'
-                : 'I can run the checks again for you, or I can raise a complaint if you want a manual investigation.',
-            actions: [
-              if (diagnosis.needsTicket)
-                _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint, primary: true)
-              else
-                _ChatAction(
-                  label: 'Check again',
-                  onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType),
-                  primary: true,
-                ),
-              if (!diagnosis.needsTicket)
-                _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
-            ],
-          ),
-        );
+        _messages.add(_ChatMessage.bot(
+          diagnosis.needsTicket
+              ? 'This still looks like a service-side issue from our checks. The fastest next step is to raise a complaint so the support team can act on the diagnosis directly.'
+              : 'I can run the checks again for you, or I can raise a complaint if you want a manual investigation.',
+          actions: [
+            if (diagnosis.needsTicket)
+              _ChatAction(
+                  label: 'Raise complaint',
+                  onTap: _raiseComplaint,
+                  primary: true)
+            else
+              _ChatAction(
+                label: 'Check again',
+                onTap: () => _sendUserIntent('Please check my issue again',
+                    issueTypeOverride: diagnosis.issueType),
+                primary: true,
+              ),
+            if (!diagnosis.needsTicket)
+              _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
+          ],
+        ));
       });
       _scrollToBottom();
       return true;
     }
-
     return false;
   }
 
@@ -192,19 +178,14 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     final session = appState.session;
     if (session == null) {
       setState(() {
-        _messages.add(
-          _ChatMessage.bot('Please login again so I can check your account and connection health.'),
-        );
+        _messages.add(_ChatMessage.bot(
+            'Please login again so I can check your account and connection health.'));
       });
       return;
     }
-
     final issueType = issueTypeOverride ?? _inferIssueType(text);
-    setState(() {
-      _loading = true;
-    });
+    setState(() => _loading = true);
     _scrollToBottom();
-
     try {
       final diagnosis = await appState.api.fetchSupportDiagnosis(
         session,
@@ -216,28 +197,24 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       setState(() {
         _lastDiagnosis = diagnosis;
         _loading = false;
-        _messages.add(
-          _ChatMessage.bot(
-            '${_humanHeadline(diagnosis)}\n\n${diagnosis.summary}',
-            actions: actions,
-            meta: [
-              _ChatMetaChip(label: 'Internet', value: diagnosis.internetStatus),
-              _ChatMetaChip(label: 'Wi-Fi', value: diagnosis.wifiStatus),
-              _ChatMetaChip(label: 'Line', value: diagnosis.lineStatus),
-            ],
-          ),
-        );
-        _messages.add(
-          _ChatMessage.bot(
-            _diagnosisSnapshotText(diagnosis),
-          ),
-        );
+        _messages.add(_ChatMessage.bot(
+          '${_humanHeadline(diagnosis)}\n\n${diagnosis.summary}',
+          actions: actions,
+          meta: [
+            _ChatMetaChip(label: 'Internet', value: diagnosis.internetStatus),
+            _ChatMetaChip(label: 'Wi-Fi', value: diagnosis.wifiStatus),
+            _ChatMetaChip(label: 'Line', value: diagnosis.lineStatus),
+          ],
+        ));
+        _messages.add(_ChatMessage.bot(_diagnosisSnapshotText(diagnosis)));
         if (diagnosis.steps.isNotEmpty) {
-          _messages.add(
-            _ChatMessage.bot(
-              diagnosis.steps.asMap().entries.map((entry) => '${entry.key + 1}. ${entry.value}').join('\n'),
-            ),
-          );
+          _messages.add(_ChatMessage.bot(
+            diagnosis.steps
+                .asMap()
+                .entries
+                .map((e) => '${e.key + 1}. ${e.value}')
+                .join('\n'),
+          ));
         }
       });
       _scrollToBottom();
@@ -245,20 +222,20 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _messages.add(
-          _ChatMessage.bot(
-            'I could not complete the checks right now. Please try again, or raise a complaint if the issue is urgent.',
-            actions: [
-              _ChatAction(label: 'Check again', onTap: () => _sendUserIntent(text, issueTypeOverride: issueType)),
-              _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
-            ],
-          ),
-        );
+        _messages.add(_ChatMessage.bot(
+          'I could not complete the checks right now. Please try again, or raise a complaint if the issue is urgent.',
+          actions: [
+            _ChatAction(
+                label: 'Check again',
+                onTap: () =>
+                    _sendUserIntent(text, issueTypeOverride: issueType)),
+            _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint),
+          ],
+        ));
       });
       _scrollToBottom();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -281,17 +258,27 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     }
     if (diagnosis.needsTicket) {
       return [
-        _ChatAction(label: 'Raise complaint', onTap: _raiseComplaint, primary: true),
-        _ChatAction(label: 'Check again', onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType)),
+        _ChatAction(
+            label: 'Raise complaint', onTap: _raiseComplaint, primary: true),
+        _ChatAction(
+            label: 'Check again',
+            onTap: () => _sendUserIntent('Please check my issue again',
+                issueTypeOverride: diagnosis.issueType)),
       ];
     }
     return [
-      _ChatAction(label: 'Check again', onTap: () => _sendUserIntent('Please check my issue again', issueTypeOverride: diagnosis.issueType), primary: true),
+      _ChatAction(
+          label: 'Check again',
+          onTap: () => _sendUserIntent('Please check my issue again',
+              issueTypeOverride: diagnosis.issueType),
+          primary: true),
     ];
   }
 
   String _diagnosisSnapshotText(SupportDiagnosis diagnosis) {
-    final opticalText = diagnosis.opticalRxPower == null ? '-' : '${diagnosis.opticalRxPower!.toStringAsFixed(1)} dBm';
+    final opticalText = diagnosis.opticalRxPower == null
+        ? '-'
+        : '${diagnosis.opticalRxPower!.toStringAsFixed(1)} dBm';
     return 'Recommended next step: ${diagnosis.recommendation}\n\n'
         'Live snapshot\n'
         '- Internet: ${diagnosis.internetStatus}\n'
@@ -335,17 +322,15 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
   }
 
   Future<void> _openBilling() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const BillingHistoryScreen()));
     if (!mounted) return;
     await AppStateScope.of(context).refresh();
   }
 
   Future<void> _openPlans() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PlanCatalogScreen()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const PlanCatalogScreen()));
     if (!mounted) return;
     await AppStateScope.of(context).refresh();
   }
@@ -355,22 +340,20 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     final diagnosis = _lastDiagnosis;
     if (diagnosis == null || _raisingTicket) return;
     setState(() => _raisingTicket = true);
+    final subject = diagnosis.issueType == 'billing'
+        ? 'Billing issue detected'
+        : diagnosis.issueType == 'plan'
+            ? 'Plan issue detected'
+            : diagnosis.issueType == 'wifi'
+                ? 'Wi-Fi issue detected'
+                : diagnosis.issueType == 'speed'
+                    ? 'Slow speed detected'
+                    : 'Internet issue detected';
     final ticketNumber = await appState.raiseComplaint(
       category: diagnosis.issueType == 'billing' ? 'billing' : 'technical',
-      subject: diagnosis.issueType == 'billing'
-          ? 'Billing issue detected'
-          : diagnosis.issueType == 'plan'
-              ? 'Plan issue detected'
-              : diagnosis.issueType == 'wifi'
-                  ? 'Wi-Fi issue detected'
-                  : diagnosis.issueType == 'speed'
-                      ? 'Slow speed detected'
-                      : 'Internet issue detected',
-      description:
-          '${diagnosis.headline}\n\n'
-          '${diagnosis.summary}\n\n'
-          'Recommendation: ${diagnosis.recommendation}\n\n'
-          'Snapshot:\n'
+      subject: subject,
+      description: '${diagnosis.headline}\n\n${diagnosis.summary}\n\n'
+          'Recommendation: ${diagnosis.recommendation}\n\nSnapshot:\n'
           '- Issue type: ${diagnosis.issueType}\n'
           '- Internet: ${diagnosis.internetStatus}\n'
           '- Wi-Fi: ${diagnosis.wifiStatus}\n'
@@ -383,27 +366,18 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     if (!mounted) return;
     setState(() {
       _raisingTicket = false;
-      _messages.add(
-        _ChatMessage.bot(
-          ticketNumber != null
-              ? 'Your complaint has been raised successfully. Reference: $ticketNumber'
-              : (appState.error ?? 'I could not raise the complaint right now. Please try again shortly.'),
-        ),
-      );
+      _messages.add(_ChatMessage.bot(
+        ticketNumber != null
+            ? 'Your complaint has been raised successfully. Reference: $ticketNumber'
+            : (appState.error ??
+                'I could not raise the complaint right now. Please try again shortly.'),
+      ));
       if (ticketNumber != null) {
         _latestTicket = SupportTicketItem(
           id: '',
           ticketNumber: ticketNumber,
           category: diagnosis.issueType == 'billing' ? 'billing' : 'technical',
-          subject: diagnosis.issueType == 'billing'
-              ? 'Billing issue detected'
-              : diagnosis.issueType == 'plan'
-                  ? 'Plan issue detected'
-                  : diagnosis.issueType == 'wifi'
-                      ? 'Wi-Fi issue detected'
-                      : diagnosis.issueType == 'speed'
-                          ? 'Slow speed detected'
-                          : 'Internet issue detected',
+          subject: subject,
           description: diagnosis.summary,
           latestUpdateNote: 'Complaint created from support chat',
           latestUpdateAt: '',
@@ -411,22 +385,14 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
           priority: diagnosis.needsTicket ? 'high' : 'normal',
           createdAt: '',
         );
-        _messages.add(
-          _ChatMessage.bot(
-            'Our support team will now review your connection snapshot and continue the case from this reference. You can track updates from Support & requests.',
-          ),
-        );
-        _messages.add(
-          _ChatMessage.bot(
-            'Complaint progress\n1. Complaint created\n2. Diagnostics attached\n3. Support review pending',
-          ),
-        );
+        _messages.add(_ChatMessage.bot(
+            'Our support team will now review your connection snapshot and continue the case from this reference. You can track updates from Support & requests.'));
+        _messages.add(_ChatMessage.bot(
+            'Complaint progress\n1. Complaint created\n2. Diagnostics attached\n3. Support review pending'));
       }
     });
     _scrollToBottom();
-    if (ticketNumber != null) {
-      await appState.refresh();
-    }
+    if (ticketNumber != null) await appState.refresh();
   }
 
   void _submitComposer() {
@@ -437,9 +403,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
       _controller.clear();
     });
     _scrollToBottom();
-    if (_handleContextualReply(text)) {
-      return;
-    }
+    if (_handleContextualReply(text)) return;
     _sendUserIntent(text);
   }
 
@@ -472,98 +436,126 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
         break;
       }
     }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F3FF),
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'justfiber chat',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
-            ),
-            SizedBox(height: 2),
-            Text(
-              'get help 24x7',
-              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xFF6E6A67)),
-            ),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0x228224E3)),
-              ),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _topChip('Issue', widget.issueType == 'general' ? 'General' : widget.issueType),
-                  _topChip('Tickets', '${appState.tickets.length}'),
-                  _topChip('Requests', '${appState.requests.length}'),
-                  if (_lastDiagnosis != null) _topChip('Diagnosis', _lastDiagnosis!.diagnosisCode),
+      backgroundColor: kBg,
+      body: Column(
+        children: [
+          // ── Gradient header ──────────────────────────────────────────
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF0D051A),
+                  Color(0xFF2A0866),
+                  Color(0xFF7C3AED)
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                itemCount: (selectedConnection == null ? 0 : 1) +
-                    (_latestTicket == null ? 0 : 1) +
-                    _messages.length +
-                    (_loading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (selectedConnection != null && index == 0) {
-                    return _connectionCard(selectedConnection);
-                  }
-                  final ticketOffset = selectedConnection == null ? 0 : 1;
-                  if (_latestTicket != null && index == ticketOffset) {
-                    return _ticketCard(_latestTicket!);
-                  }
-                  final messageIndex = index - ticketOffset - (_latestTicket == null ? 0 : 1);
-                  if (_loading && messageIndex == _messages.length) {
-                    return _assistantTypingBubble();
-                  }
-                  final message = _messages[messageIndex];
-                  return _chatBubble(message);
-                },
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 8, 16, 16),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('JustFiber Chat',
+                              style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.3)),
+                          Text('Get help 24×7',
+                              style: GoogleFonts.inter(
+                                  color: Colors.white60, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    // Status chips
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        _headerChip(widget.issueType == 'general'
+                            ? 'General'
+                            : widget.issueType),
+                        if (_lastDiagnosis != null)
+                          _headerChip(_lastDiagnosis!.diagnosisCode),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1ECFF),
-                border: Border(top: BorderSide(color: Color(0x14000000))),
-              ),
+          ),
+
+          // ── Chat area ────────────────────────────────────────────────
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              itemCount: (selectedConnection == null ? 0 : 1) +
+                  (_latestTicket == null ? 0 : 1) +
+                  _messages.length +
+                  (_loading ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (selectedConnection != null && index == 0) {
+                  return _connectionCard(selectedConnection);
+                }
+                final ticketOffset = selectedConnection == null ? 0 : 1;
+                if (_latestTicket != null && index == ticketOffset) {
+                  return _ticketCard(_latestTicket!);
+                }
+                final msgIndex =
+                    index - ticketOffset - (_latestTicket == null ? 0 : 1);
+                if (_loading && msgIndex == _messages.length) {
+                  return _typingBubble();
+                }
+                return _chatBubble(_messages[msgIndex]);
+              },
+            ),
+          ),
+
+          // ── Composer ─────────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+            decoration: const BoxDecoration(
+              color: kSurface,
+              border: Border(top: BorderSide(color: kBorder)),
+            ),
+            child: SafeArea(
+              top: false,
               child: Row(
                 children: [
                   Container(
-                    width: 46,
-                    height: 46,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0x228224E3)),
+                      color: kPrimary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(13),
+                      border:
+                          Border.all(color: kPrimary.withValues(alpha: 0.2)),
                     ),
-                    child: const Icon(Icons.support_agent_rounded, color: Color(0xFF8224E3)),
+                    child: const Icon(Icons.support_agent_rounded,
+                        color: kPrimaryLight, size: 20),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFFFFF),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0x228224E3)),
+                        color: kBg,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: kBorder),
                       ),
                       child: Row(
                         children: [
@@ -574,10 +566,15 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                               maxLines: 4,
                               textInputAction: TextInputAction.send,
                               onSubmitted: (_) => _submitComposer(),
-                              decoration: const InputDecoration(
+                              style: GoogleFonts.inter(
+                                  color: Colors.white, fontSize: 14),
+                              decoration: InputDecoration(
                                 hintText: 'Type your query here...',
+                                hintStyle: GoogleFonts.inter(
+                                    color: kMuted, fontSize: 14),
                                 border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
                               ),
                             ),
                           ),
@@ -585,7 +582,8 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                             onPressed: _loading ? null : _submitComposer,
                             icon: Icon(
                               Icons.send_rounded,
-                              color: _loading ? const Color(0xFFB9B2C5) : const Color(0xFF8224E3),
+                              color: _loading ? kMuted : kPrimaryLight,
+                              size: 20,
                             ),
                           ),
                         ],
@@ -595,68 +593,65 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _topChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(color: Color(0xFF131313), fontSize: 12),
-          children: [
-            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.w600)),
-            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800)),
-          ],
+  Widget _headerChip(String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(999),
         ),
-      ),
-    );
-  }
+        child: Text(label,
+            style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700)),
+      );
 
   Widget _chatBubble(_ChatMessage message) {
-    final alignment = message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final bubbleColor = message.isUser ? const Color(0xFFEFE9FF) : const Color(0xFFFFFFFF);
-    final borderColor = message.isUser ? const Color(0x338224E3) : const Color(0x22000000);
+    final isUser = message.isUser;
+    final bubbleColor = isUser ? kPrimary.withValues(alpha: 0.2) : kSurface;
+    final borderColor = isUser ? kPrimary.withValues(alpha: 0.4) : kBorder;
     final radius = BorderRadius.only(
-      topLeft: const Radius.circular(22),
-      topRight: const Radius.circular(22),
-      bottomLeft: Radius.circular(message.isUser ? 22 : 8),
-      bottomRight: Radius.circular(message.isUser ? 8 : 22),
+      topLeft: const Radius.circular(18),
+      topRight: const Radius.circular(18),
+      bottomLeft: Radius.circular(isUser ? 18 : 4),
+      bottomRight: Radius.circular(isUser ? 4 : 18),
     );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
-        crossAxisAlignment: alignment,
+        crossAxisAlignment:
+            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment:
+                isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!message.isUser) ...[
+              if (!isUser) ...[
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0x22000000)),
+                    color: kPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
                   ),
-                  child: const Icon(Icons.support_agent_rounded, color: Color(0xFF8224E3)),
+                  child: const Icon(Icons.support_agent_rounded,
+                      color: kPrimaryLight, size: 17),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
               ],
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     color: bubbleColor,
                     borderRadius: radius,
@@ -664,83 +659,43 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
                   ),
                   child: Text(
                     message.text,
-                    style: const TextStyle(color: Color(0xFF131313), height: 1.42, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.inter(
+                        color: Colors.white, height: 1.45, fontSize: 13),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Padding(
-            padding: EdgeInsets.only(left: message.isUser ? 0 : 52, right: message.isUser ? 8 : 0),
+            padding:
+                EdgeInsets.only(left: isUser ? 0 : 44, right: isUser ? 4 : 0),
             child: Text(
               _timeLabel(),
-              style: const TextStyle(color: Color(0xFF8E8898), fontSize: 12, fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(color: kMuted, fontSize: 10),
             ),
           ),
           if (message.actions.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.only(left: 52),
+              padding: const EdgeInsets.only(left: 44),
               child: Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                spacing: 8,
+                runSpacing: 8,
                 children: message.actions
-                    .map(
-                      (action) => OutlinedButton(
-                        onPressed: action.onTap,
-                        style: action.primary
-                            ? OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFFFFFFFF),
-                                backgroundColor: const Color(0xFF8224E3),
-                                side: const BorderSide(color: Color(0xFF8224E3)),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                              )
-                            : OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF1860D9),
-                                backgroundColor: const Color(0xFFF8F6FF),
-                                side: const BorderSide(color: Color(0x22000000)),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                              ),
-                        child: Text(
-                          action.label,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    )
+                    .map((action) => _actionBtn(action))
                     .toList(),
               ),
             ),
           ],
           if (message.meta.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.only(left: 52),
+              padding: const EdgeInsets.only(left: 44),
               child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: message.meta
-                    .map(
-                      (item) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8F4FF),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: const Color(0x228224E3)),
-                        ),
-                        child: Text(
-                          '${item.label}: ${item.value}',
-                          style: const TextStyle(
-                            color: Color(0xFF131313),
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
+                spacing: 6,
+                runSpacing: 6,
+                children: message.meta.map((item) => _metaChip(item)).toList(),
               ),
             ),
           ],
@@ -749,163 +704,173 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
     );
   }
 
-  Widget _connectionCard(CustomerConnection connection) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0x228224E3)),
+  Widget _actionBtn(_ChatAction action) => GestureDetector(
+        onTap: action.onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: action.primary ? kPrimary : kSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: action.primary ? kPrimary : kBorder),
+          ),
+          child: Text(action.label,
+              style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'ACTIVE CONNECTION',
-              style: TextStyle(
-                color: Color(0xFF8224E3),
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2.2,
-                fontSize: 11,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              connection.planName.isEmpty ? 'Broadband connection' : connection.planName,
-              style: const TextStyle(
-                color: Color(0xFF131313),
-                fontWeight: FontWeight.w800,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              connection.address.isEmpty ? connection.serviceId : connection.address,
-              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _connectionPill('Service', connection.serviceId.isEmpty ? connection.customerId : connection.serviceId),
-                _connectionPill('Status', connection.status.isEmpty ? '-' : connection.status),
-                _connectionPill('Online', connection.onlineStatus.isEmpty ? 'unknown' : connection.onlineStatus),
-                _connectionPill(
-                  'Due',
-                  connection.dueAmount > 0 ? 'Rs ${connection.dueAmount.toStringAsFixed(0)}' : 'clear',
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      );
 
-  Widget _connectionPill(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Text(
-        '$label: $value',
-        style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
-      ),
-    );
-  }
+  Widget _metaChip(_ChatMetaChip item) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: kPrimary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
+        ),
+        child: Text(
+          '${item.label}: ${item.value}',
+          style: GoogleFonts.inter(
+              color: kPrimaryLight, fontWeight: FontWeight.w600, fontSize: 11),
+        ),
+      );
+
+  Widget _connectionCard(CustomerConnection connection) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: kSurface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: kBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('ACTIVE CONNECTION',
+                  style: GoogleFonts.inter(
+                      color: kPrimaryLight,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.6,
+                      fontSize: 10)),
+              const SizedBox(height: 8),
+              Text(
+                connection.planName.isEmpty
+                    ? 'Broadband connection'
+                    : connection.planName,
+                style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                connection.address.isEmpty
+                    ? connection.serviceId
+                    : connection.address,
+                style:
+                    GoogleFonts.inter(color: kMuted, fontSize: 12, height: 1.4),
+              ),
+              const SizedBox(height: 10),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                _pill(
+                    'Service',
+                    connection.serviceId.isEmpty
+                        ? connection.customerId
+                        : connection.serviceId),
+                _pill('Status',
+                    connection.status.isEmpty ? '-' : connection.status),
+                _pill(
+                    'Online',
+                    connection.onlineStatus.isEmpty
+                        ? 'unknown'
+                        : connection.onlineStatus),
+                _pill(
+                    'Due',
+                    connection.dueAmount > 0
+                        ? 'Rs ${connection.dueAmount.toStringAsFixed(0)}'
+                        : 'clear'),
+              ]),
+            ],
+          ),
+        ),
+      );
 
   Widget _ticketCard(SupportTicketItem ticket) {
     final statusColor = _ticketStatusColor(ticket.status);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0x228224E3)),
+          color: kSurface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: kBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'LATEST TICKET',
-              style: TextStyle(
-                color: Color(0xFF8224E3),
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2.2,
-                fontSize: 11,
-              ),
-            ),
+            Text('LATEST TICKET',
+                style: GoogleFonts.inter(
+                    color: kPrimaryLight,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.6,
+                    fontSize: 10)),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    ticket.ticketNumber,
-                    style: const TextStyle(
-                      color: Color(0xFF131313),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                    ),
-                  ),
+                  child: Text(ticket.ticketNumber,
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15)),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.10),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.26)),
+                    border:
+                        Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
-                  child: Text(
-                    ticket.status,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                  child: Text(ticket.status,
+                      style: GoogleFonts.inter(
+                          color: statusColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11)),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              ticket.subject,
-              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
-            ),
+            const SizedBox(height: 4),
+            Text(ticket.subject,
+                style: GoogleFonts.inter(
+                    color: kMuted, fontSize: 12, height: 1.4)),
             if (ticket.latestUpdateNote.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8F4FF),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0x228224E3)),
+                  color: kBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kBorder),
                 ),
-                child: Text(
-                  'Latest update: ${ticket.latestUpdateNote}',
-                  style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4, fontWeight: FontWeight.w600),
-                ),
+                child: Text('Latest: ${ticket.latestUpdateNote}',
+                    style: GoogleFonts.inter(
+                        color: kMuted, height: 1.4, fontSize: 11)),
               ),
             ],
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _connectionPill('Priority', ticket.priority),
-                _connectionPill('Category', ticket.category),
-                if (ticket.createdAt.isNotEmpty) _connectionPill('Opened', ticket.createdAt),
-              ],
-            ),
+            const SizedBox(height: 10),
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              _pill('Priority', ticket.priority),
+              _pill('Category', ticket.category),
+              if (ticket.createdAt.isNotEmpty)
+                _pill('Opened', ticket.createdAt),
+            ]),
           ],
         ),
       ),
@@ -913,61 +878,70 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
   }
 
   Color _ticketStatusColor(String status) {
-    final normalized = status.toLowerCase();
-    if (normalized.contains('closed') || normalized.contains('resolved') || normalized.contains('done')) {
-      return const Color(0xFF16A34A);
+    final n = status.toLowerCase();
+    if (n.contains('closed') || n.contains('resolved') || n.contains('done')) {
+      return const Color(0xFF22C55E);
     }
-    if (normalized.contains('open') || normalized.contains('pending') || normalized.contains('progress')) {
+    if (n.contains('open') || n.contains('pending') || n.contains('progress')) {
       return const Color(0xFFF59E0B);
     }
-    return const Color(0xFF8224E3);
+    return kPrimaryLight;
   }
 
-  Widget _assistantTypingBubble() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFFFFF),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0x22000000)),
-            ),
-            child: const Icon(Icons.support_agent_rounded, color: Color(0xFF8224E3)),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFFFFF),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(22),
-                topRight: Radius.circular(22),
-                bottomLeft: Radius.circular(8),
-                bottomRight: Radius.circular(22),
+  Widget _pill(String label, String value) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: kBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: kBorder),
+        ),
+        child: Text('$label: $value',
+            style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 10)),
+      );
+
+  Widget _typingBubble() => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: kPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
               ),
-              border: Border.all(color: const Color(0x22000000)),
+              child: const Icon(Icons.support_agent_rounded,
+                  color: kPrimaryLight, size: 17),
             ),
-            child: const SizedBox(
-              width: 56,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _TypingDot(),
-                  _TypingDot(),
-                  _TypingDot(),
-                ],
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: kSurface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(4),
+                  bottomRight: Radius.circular(18),
+                ),
+                border: Border.all(color: kBorder),
+              ),
+              child: const SizedBox(
+                width: 44,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [_TypingDot(), _TypingDot(), _TypingDot()],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 }
 
 class _ChatMessage {
@@ -978,13 +952,12 @@ class _ChatMessage {
     this.meta = const [],
   });
 
-  factory _ChatMessage.user(String text) => _ChatMessage(text: text, isUser: true);
-
-  factory _ChatMessage.bot(
-    String text, {
-    List<_ChatAction> actions = const [],
-    List<_ChatMetaChip> meta = const [],
-  }) => _ChatMessage(text: text, isUser: false, actions: actions, meta: meta);
+  factory _ChatMessage.user(String text) =>
+      _ChatMessage(text: text, isUser: true);
+  factory _ChatMessage.bot(String text,
+          {List<_ChatAction> actions = const [],
+          List<_ChatMetaChip> meta = const []}) =>
+      _ChatMessage(text: text, isUser: false, actions: actions, meta: meta);
 
   final String text;
   final bool isUser;
@@ -993,23 +966,15 @@ class _ChatMessage {
 }
 
 class _ChatAction {
-  const _ChatAction({
-    required this.label,
-    required this.onTap,
-    this.primary = false,
-  });
-
+  const _ChatAction(
+      {required this.label, required this.onTap, this.primary = false});
   final String label;
   final VoidCallback onTap;
   final bool primary;
 }
 
 class _ChatMetaChip {
-  const _ChatMetaChip({
-    required this.label,
-    required this.value,
-  });
-
+  const _ChatMetaChip({required this.label, required this.value});
   final String label;
   final String value;
 }
@@ -1018,14 +983,12 @@ class _TypingDot extends StatelessWidget {
   const _TypingDot();
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: const BoxDecoration(
-        color: Color(0xFFB4AFC0),
-        shape: BoxShape.circle,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        width: 7,
+        height: 7,
+        decoration: const BoxDecoration(
+          color: kMuted,
+          shape: BoxShape.circle,
+        ),
+      );
 }

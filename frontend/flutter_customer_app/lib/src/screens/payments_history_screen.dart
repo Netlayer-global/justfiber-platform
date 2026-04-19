@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
-import '../widgets/app_card.dart';
+import '../core/models.dart';
+import '../core/theme.dart';
+import '../widgets/pressable_scale.dart';
 import 'document_viewer_screen.dart';
 import 'payment_detail_screen.dart';
 import 'support_history_screen.dart';
@@ -14,233 +17,159 @@ class PaymentsHistoryScreen extends StatefulWidget {
 }
 
 class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
-  String statusFilter = 'all';
+  String _filter = 'all';
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
     final billing = appState.billing;
-    final payments = billing.payments.where((payment) {
-      if (statusFilter == 'all') return true;
-      final haystack = '${payment.reference} ${payment.provider} ${payment.transactionId}'.toLowerCase();
-      if (statusFilter == 'success') return haystack.contains('success') || payment.paidAt.isNotEmpty;
-      if (statusFilter == 'pending') return payment.paidAt.isEmpty && !haystack.contains('failed');
-      if (statusFilter == 'failed') return haystack.contains('failed');
+    final all = billing.payments;
+    final payments = all.where((p) {
+      if (_filter == 'all') return true;
+      final hay = '${p.reference} ${p.provider} ${p.transactionId}'.toLowerCase();
+      if (_filter == 'success') return p.paidAt.isNotEmpty;
+      if (_filter == 'pending') return p.paidAt.isEmpty && !hay.contains('failed');
+      if (_filter == 'failed') return hay.contains('failed');
       return true;
     }).toList();
 
+    final successCount = all.where((p) => p.paidAt.isNotEmpty).length;
+    final pendingCount = all.where((p) => p.paidAt.isEmpty && !p.reference.toLowerCase().contains('failed')).length;
+    final failedCount = all.where((p) => p.reference.toLowerCase().contains('failed')).length;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Payments', style: Theme.of(context).textTheme.headlineSmall),
-      ),
+      backgroundColor: kBg,
       body: RefreshIndicator(
-        color: const Color(0xFF8224E3),
-        backgroundColor: const Color(0xFFF6F1EB),
+        color: kPrimary,
+        backgroundColor: kSurface,
         onRefresh: appState.refresh,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-          children: [
-          AppCard(
-            color: const Color(0xFFFFFFFF),
-            borderColor: const Color(0x228224E3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'PAYMENT HISTORY',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF8224E3),
-                        letterSpacing: 2.6,
-                        fontWeight: FontWeight.w700,
-                      ),
+        child: CustomScrollView(
+          slivers: [
+            // ── Gradient header ─────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF13051F), Color(0xFF3B0D7A), Color(0xFFA855F7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Payment timeline',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 28),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 8, 16, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: () => Navigator.of(context).maybePop(),
+                              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.white, size: 20),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'Payment History',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 0, 0),
+                          child: Text(
+                            'Track all your broadband payments',
+                            style: GoogleFonts.inter(color: Colors.white60, fontSize: 13),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              _heroStat('Total', '${all.length}'),
+                              _heroDivider(),
+                              _heroStat('Success', '$successCount'),
+                              _heroDivider(),
+                              _heroStat('Pending', '$pendingCount'),
+                              _heroDivider(),
+                              _heroStat('Failed', '$failedCount'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  payments.isEmpty
-                      ? 'No payment activity found right now.'
-                      : 'Track successful, pending, and failed broadband payments from one place.',
-                  style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                ),
-                const SizedBox(height: 16),
-                Row(
+              ),
+            ),
+
+            // ── Filter chips ─────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                child: Row(
                   children: [
-                    Expanded(child: _heroMetric('Total', '${billing.payments.length}')),
-                    const SizedBox(width: 10),
-                    Expanded(child: _heroMetric('Success', '${billing.payments.where((p) => p.paidAt.isNotEmpty).length}')),
-                    const SizedBox(width: 10),
-                    Expanded(child: _heroMetric('Pending', '${billing.payments.where((p) => p.paidAt.isEmpty && !p.reference.toLowerCase().contains('failed')).length}')),
+                    _filterChip('all', 'All'),
+                    const SizedBox(width: 8),
+                    _filterChip('success', 'Success'),
+                    const SizedBox(width: 8),
+                    _filterChip('pending', 'Pending'),
+                    const SizedBox(width: 8),
+                    _filterChip('failed', 'Failed'),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(child: _filterChip('all', 'All')),
-              const SizedBox(width: 10),
-              Expanded(child: _filterChip('success', 'Success')),
-              const SizedBox(width: 10),
-              Expanded(child: _filterChip('pending', 'Pending')),
-              const SizedBox(width: 10),
-              Expanded(child: _filterChip('failed', 'Failed')),
-            ],
-          ),
-          const SizedBox(height: 18),
-          if (payments.isEmpty)
-            const AppCard(
-              color: Color(0xFFFFFFFF),
-              borderColor: Color(0x228224E3),
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text('No payments found for this filter.', style: TextStyle(color: Color(0xFF6E6A67))),
-              ),
-            )
-          else
-            ...payments.map(
-              (payment) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0x338224E3)),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x0F030B14), blurRadius: 16, offset: Offset(0, 8)),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8F4FF),
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF8224E3)),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Broadband bill payment',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF6E6A67)),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(payment.transactionId, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20, color: Color(0xFF131313))),
-                                const SizedBox(height: 4),
-                                Text(
-                                  payment.paidAt.isEmpty ? payment.provider.toUpperCase() : payment.paidAt,
-                                  style: const TextStyle(color: Color(0xFF6E6A67)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            'Rs ${payment.amount.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: Color(0xFF8224E3)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _statusBadge(payment),
-                          if (payment.provider.isNotEmpty) _infoBadge(payment.provider.toUpperCase()),
-                          if (payment.reference.isNotEmpty) _infoBadge(payment.reference),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          TextButton(
-                            onPressed: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => PaymentDetailScreen(payment: payment)),
-                              );
-                              if (context.mounted) {
-                                await appState.refresh();
-                              }
+
+            // ── Payment list ─────────────────────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 32),
+              sliver: payments.isEmpty
+                  ? SliverToBoxAdapter(child: _emptyCard())
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _PaymentCard(
+                            payment: payments[i],
+                            onTap: () async {
+                              await Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => PaymentDetailScreen(payment: payments[i])));
+                              if (context.mounted) await appState.refresh();
                             },
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF8224E3),
-                            ),
-                            child: const Text('Details'),
-                          ),
-                          OutlinedButton(
-                            onPressed: payment.viewUrl.isEmpty
+                            onOpenReceipt: payments[i].viewUrl.isEmpty
                                 ? null
                                 : () async {
-                                    await _openDocument(context, appState, payment.transactionId, payment.viewUrl);
-                                    if (context.mounted) {
-                                      await appState.refresh();
-                                    }
+                                    await _openDocument(context, appState,
+                                        payments[i].transactionId, payments[i].viewUrl);
+                                    if (context.mounted) await appState.refresh();
                                   },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF8224E3),
-                              backgroundColor: const Color(0xFFFFFFFF),
-                              side: const BorderSide(color: Color(0x668224E3)),
-                            ),
-                            child: const Text('Receipt'),
-                          ),
-                          FilledButton(
-                            onPressed: payment.pdfUrl.isEmpty
+                            onOpenPdf: payments[i].pdfUrl.isEmpty
                                 ? null
                                 : () async {
-                                    await _openDocument(context, appState, '${payment.transactionId} PDF', payment.pdfUrl);
-                                    if (context.mounted) {
-                                      await appState.refresh();
-                                    }
+                                    await _openDocument(context, appState,
+                                        '${payments[i].transactionId} PDF', payments[i].pdfUrl);
+                                    if (context.mounted) await appState.refresh();
                                   },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF8224E3),
-                        foregroundColor: const Color(0xFFFFFFFF),
-                            ),
-                            child: const Text('PDF'),
+                            onHelp: () async {
+                              await Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => const SupportHistoryScreen()));
+                              if (context.mounted) await appState.refresh();
+                            },
                           ),
-                          if (payment.paidAt.isEmpty || payment.reference.toLowerCase().contains('failed'))
-                            OutlinedButton(
-                              onPressed: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const SupportHistoryScreen()),
-                                );
-                                if (context.mounted) {
-                                  await appState.refresh();
-                                }
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF8224E3),
-                                backgroundColor: const Color(0xFFFFFFFF),
-                                side: const BorderSide(color: Color(0x338224E3)),
-                              ),
-                              child: const Text('Help'),
-                            ),
-                        ],
+                        ),
+                        childCount: payments.length,
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
             ),
           ],
         ),
@@ -248,102 +177,298 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
     );
   }
 
-  Widget _filterChip(String value, String label) {
-    final selected = statusFilter == value;
-    return GestureDetector(
-      onTap: () => setState(() => statusFilter = value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF1E8FF) : const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: selected ? const Color(0xFF8224E3) : const Color(0x338224E3)),
+  Widget _heroStat(String label, String value) => Expanded(
+        child: Column(
+          children: [
+            Text(value,
+                style: GoogleFonts.inter(
+                    color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 3),
+            Text(label,
+                style: GoogleFonts.inter(
+                    color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w600)),
+          ],
         ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: selected ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+      );
+
+  Widget _heroDivider() =>
+      Container(width: 1, height: 28, color: Colors.white.withValues(alpha: 0.18));
+
+  Widget _filterChip(String value, String label) {
+    final selected = _filter == value;
+    return Expanded(
+      child: PressableScale(
+        onTap: () => setState(() => _filter = value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? kPrimary.withValues(alpha: 0.18) : kSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: selected ? kPrimary.withValues(alpha: 0.5) : kBorder),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected ? kPrimaryLight : kMuted,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _heroMetric(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x228224E3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(value, style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
-        ],
-      ),
-    );
-  }
+  Widget _emptyCard() => Container(
+        margin: const EdgeInsets.only(top: 4),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: kBorder),
+        ),
+        child: Text(
+          'No payments found for this filter.',
+          style: GoogleFonts.inter(color: kMuted, height: 1.5),
+        ),
+      );
 
-  Widget _statusBadge(dynamic payment) {
-    final pending = payment.paidAt.isEmpty;
-    final failed = payment.reference.toLowerCase().contains('failed');
-    final label = failed ? 'Failed' : (pending ? 'Pending' : 'Success');
-    final color = failed ? const Color(0xFFFFF1F2) : (pending ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4));
-    final text = failed ? const Color(0xFFBE123C) : (pending ? const Color(0xFFC2410C) : const Color(0xFF166534));
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: text.withOpacity(0.28)),
-      ),
-      child: Text(label, style: TextStyle(color: text, fontWeight: FontWeight.w700)),
-    );
-  }
-
-  Widget _infoBadge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(text, style: const TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w600)),
-    );
-  }
-
-  Future<void> _openDocument(BuildContext context, AppState appState, String title, String relativeUrl) async {
+  Future<void> _openDocument(BuildContext context, AppState appState,
+      String title, String relativeUrl) async {
     final session = appState.session;
     if (session == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please login again to open this receipt.')),
-        );
-      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please login again to open this receipt.')));
       return;
     }
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
-    await Navigator.of(context).push(
-      MaterialPageRoute(
+    await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => DocumentViewerScreen(
-          title: title,
-          url: fullUrl,
-          accessToken: session.accessToken,
+            title: title, url: fullUrl, accessToken: session.accessToken)));
+  }
+}
+
+class _PaymentCard extends StatelessWidget {
+  const _PaymentCard({
+    required this.payment,
+    required this.onTap,
+    required this.onHelp,
+    this.onOpenReceipt,
+    this.onOpenPdf,
+  });
+
+  final BillingPaymentItem payment;
+  final VoidCallback onTap;
+  final VoidCallback onHelp;
+  final VoidCallback? onOpenReceipt;
+  final VoidCallback? onOpenPdf;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPaid = payment.paidAt.isNotEmpty;
+    final isFailed = payment.reference.toLowerCase().contains('failed');
+    final statusLabel = isFailed ? 'Failed' : (isPaid ? 'Success' : 'Pending');
+    final statusColor = isFailed
+        ? const Color(0xFFFF8A8A)
+        : isPaid
+            ? const Color(0xFF4ADE80)
+            : const Color(0xFFFBBF24);
+    final statusBg = isFailed
+        ? const Color(0x22EF4444)
+        : isPaid
+            ? const Color(0x2222C55E)
+            : const Color(0x22F59E0B);
+    final iconColor = isFailed
+        ? const Color(0xFFFF8A8A)
+        : isPaid
+            ? const Color(0xFF4ADE80)
+            : kPrimaryLight;
+    final needsHelp = !isPaid || isFailed;
+
+    return PressableScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: kSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: iconColor.withValues(alpha: 0.2)),
+                  ),
+                  child: Icon(Icons.receipt_long_rounded, color: iconColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        payment.transactionId,
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isPaid ? payment.paidAt : (payment.provider.isEmpty ? '—' : payment.provider.toUpperCase()),
+                        style: GoogleFonts.inter(fontSize: 11, color: kMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Rs ${payment.amount.toStringAsFixed(0)}',
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          fontSize: 16),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(statusLabel,
+                          style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (payment.provider.isNotEmpty || payment.reference.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (payment.provider.isNotEmpty)
+                    _infoBadge(payment.provider.toUpperCase()),
+                  if (payment.reference.isNotEmpty && !isFailed)
+                    _infoBadge(payment.reference),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _actionBtn(
+                    label: 'Details',
+                    icon: Icons.info_outline_rounded,
+                    onTap: onTap,
+                    filled: false,
+                  ),
+                ),
+                if (onOpenReceipt != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _actionBtn(
+                      label: 'Receipt',
+                      icon: Icons.open_in_new_rounded,
+                      onTap: onOpenReceipt!,
+                      filled: false,
+                    ),
+                  ),
+                ],
+                if (onOpenPdf != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _actionBtn(
+                      label: 'PDF',
+                      icon: Icons.picture_as_pdf_rounded,
+                      onTap: onOpenPdf!,
+                      filled: true,
+                    ),
+                  ),
+                ],
+                if (needsHelp) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _actionBtn(
+                      label: 'Help',
+                      icon: Icons.support_agent_rounded,
+                      onTap: onHelp,
+                      filled: false,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _infoBadge(String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: kPrimary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
+        ),
+        child: Text(text,
+            style: GoogleFonts.inter(
+                fontSize: 10, fontWeight: FontWeight.w600, color: kPrimaryLight)),
+      );
+
+  Widget _actionBtn({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool filled,
+  }) =>
+      PressableScale(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: filled ? kPrimary.withValues(alpha: 0.18) : kSurface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+                color: filled ? kPrimary.withValues(alpha: 0.4) : kBorder),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 13, color: filled ? kPrimaryLight : kMuted),
+              const SizedBox(width: 4),
+              Text(label,
+                  style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: filled ? kPrimaryLight : kMuted)),
+            ],
+          ),
+        ),
+      );
 }
-
-
-
-
-
-
