@@ -15,7 +15,7 @@ type WorkspaceNavItem = {
   description: string
   sections: string[]
 }
-type InvoiceSetupView = 'organization' | 'template'
+type InvoiceSetupView = 'organization' | 'rules' | 'template'
 type ZoneOperationsView = 'subzone' | 'logins' | 'contact'
 
 type SectionMeta = {
@@ -228,7 +228,13 @@ const WORKSPACE_NAV: Record<WorkspaceKey, WorkspaceNavItem[]> = {
       id: 'zone-operations',
       title: 'Zone Operations',
       description: 'Sub-zone creation, zone logins, and zone governance.',
-      sections: ['franchise_configuration', 'router_visibility'],
+      sections: ['franchise_configuration'],
+    },
+    {
+      id: 'router-visibility',
+      title: 'Router Visibility',
+      description: 'Control router, OLT, CPE, IP, and analytics visibility for zone users.',
+      sections: ['router_visibility'],
     },
   ],
   billing: [
@@ -236,7 +242,7 @@ const WORKSPACE_NAV: Record<WorkspaceKey, WorkspaceNavItem[]> = {
       id: 'invoice-setup',
       title: 'Invoice Setup',
       description: 'Organization profile, invoice template, and billing rules.',
-      sections: ['invoice_template', 'billing_address', 'billing_period', 'billing'],
+      sections: ['invoice_template'],
     },
     {
       id: 'billing-numbers',
@@ -271,6 +277,25 @@ const WORKSPACE_NAV: Record<WorkspaceKey, WorkspaceNavItem[]> = {
       sections: ['helpdesk_sla', 'helpdesk_rules', 'inventory_configuration'],
     },
   ],
+}
+
+const SIMPLE_SECTION_LABELS: Record<string, string> = {
+  general: 'Company Profile',
+  express_configuration: 'Quick Defaults',
+  miscellaneous: 'Security & Login',
+  user_fields: 'Main Fields',
+  additional_fields: 'Extra Fields',
+  external_integrations: 'External Apps',
+  api_settings: 'API Access',
+  helpdesk_sla: 'Support SLA',
+  helpdesk_rules: 'Support Rules',
+  inventory_configuration: 'Inventory Controls',
+  billing_address: 'Billing Address',
+  billing_period: 'Billing Period',
+  billing: 'Billing Rules',
+  prefix_settings: 'Prefixes',
+  tag_payment_gateway: 'Payment Mapping',
+  router_visibility: 'Visibility Rules',
 }
 
 const initialSubZoneDraft: SubZoneDraft = {
@@ -745,6 +770,10 @@ export default function SettingsPage() {
   )
 
   const activeMeta = getSectionMeta(activeSection)
+  const activePanelTitle = activeNavItem?.title || activeMeta.title
+  const activePanelDescription = activeNavItem?.description || activeMeta.description
+  const activeSectionLabel = SIMPLE_SECTION_LABELS[activeSection] || activeMeta.title
+  const showSectionEditor = activeWorkspace !== 'zone' || activeSection === 'router_visibility'
   const invoiceTemplateSection = useMemo(
     () => normalizeInvoiceTemplateSection(sectionValue),
     [sectionValue]
@@ -1888,7 +1917,7 @@ export default function SettingsPage() {
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#5B6CFF]" />
           <div className="mt-3 text-sm text-slate-500">Loading settings...</div>
         </div>
-      ) : (
+      ) : showSectionEditor ? (
         <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Sections</div>
@@ -1934,10 +1963,13 @@ export default function SettingsPage() {
             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.24em] text-purple-500">{activeMeta.group}</div>
-                  <h2 className="mt-2 text-2xl font-semibold text-slate-900">{activeMeta.title}</h2>
-                  <div className="mt-2 max-w-3xl text-sm text-slate-500">{activeMeta.description}</div>
+                  <div className="text-xs uppercase tracking-[0.24em] text-purple-500">{WORKSPACE_META[activeWorkspace].title}</div>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-900">{activePanelTitle}</h2>
+                  <div className="mt-2 max-w-3xl text-sm text-slate-500">{activePanelDescription}</div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    {activeNavSections.length > 1 ? (
+                      <span className="rounded-full bg-purple-50 px-3 py-1 text-purple-700">Now editing: {activeSectionLabel}</span>
+                    ) : null}
                     {sectionUpdatedAt ? (
                       <span className="rounded-full bg-slate-100 px-3 py-1">Updated {new Date(sectionUpdatedAt).toLocaleString()}</span>
                     ) : null}
@@ -1951,7 +1983,6 @@ export default function SettingsPage() {
               {activeNavSections.length > 1 ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {activeNavSections.map((item) => {
-                    const meta = getSectionMeta(item.section)
                     const active = item.section === activeSection
                     return (
                       <button
@@ -1964,7 +1995,7 @@ export default function SettingsPage() {
                             : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
                         }`}
                       >
-                        {meta.title}
+                        {SIMPLE_SECTION_LABELS[item.section] || getSectionMeta(item.section).title}
                       </button>
                     )
                   })}
@@ -1996,6 +2027,17 @@ export default function SettingsPage() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => setInvoiceSetupView('rules')}
+                          className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                            invoiceSetupView === 'rules'
+                              ? 'border-purple-300 bg-purple-50 text-purple-700'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          Billing Rules
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setInvoiceSetupView('template')}
                           className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                             invoiceSetupView === 'template'
@@ -2003,7 +2045,7 @@ export default function SettingsPage() {
                               : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                           }`}
                         >
-                          Template & Rules
+                          Templates
                         </button>
                       </div>
                     </section>
@@ -2129,34 +2171,20 @@ export default function SettingsPage() {
                       </section>
                     ) : null}
 
-                    {invoiceSetupView === 'template' ? (
+                    {invoiceSetupView === 'rules' ? (
                     <section className="card p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template and rules</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Billing rules</div>
                           <div className="mt-1 text-sm text-slate-500">
-                            Plan amount and duration come from plan management and customer booking. Keep template layout and billing rules here.
+                            Plan amount comes from plan management, duration comes from customer booking, and GST comes from organization settings.
                           </div>
                         </div>
                       </div>
-                      <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr_1fr]">
-                        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                          <div className="mb-4 text-sm font-semibold text-slate-900">Plan billing source</div>
-                          <div className="space-y-3 rounded-[20px] border border-slate-200 bg-white p-4 text-sm text-slate-600">
-                            <div>
-                              <div className="font-semibold text-slate-900">Amount source</div>
-                              <div className="mt-1">Invoice amount comes from the selected plan in plan management.</div>
-                            </div>
-                            <div>
-                              <div className="font-semibold text-slate-900">Duration source</div>
-                              <div className="mt-1">Billing duration comes from the duration selected while booking the customer.</div>
-                            </div>
-                            <div>
-                              <div className="font-semibold text-slate-900">Tax source</div>
-                              <div className="mt-1">GST percentage comes from the invoice organization for the active zone.</div>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        Auto billing source: plan amount from plan management, duration from booked plan term, GST from organization profile.
+                      </div>
+                      <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_1fr]">
                         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
                           <div className="mb-4 flex items-center justify-between gap-3">
                             <div className="text-sm font-semibold text-slate-900">Billing period</div>
@@ -2353,11 +2381,13 @@ export default function SettingsPage() {
                     </section>
                     ) : null}
 
+                    {invoiceSetupView === 'template' ? (
+                    <>
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Invoice template</div>
-                          <div className="mt-1 text-sm text-slate-500">Choose the default template and the template you want to use for the final invoice design.</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template selection</div>
+                          <div className="mt-1 text-sm text-slate-500">Choose the default template and the template you want to edit for final invoice design.</div>
                         </div>
                         <button type="button" className="btn-secondary" onClick={addInvoiceTemplate}>
                           Add template
@@ -2419,8 +2449,8 @@ export default function SettingsPage() {
                     <section className="card p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Modern template editor</div>
-                          <div className="mt-1 text-sm text-slate-500">Keep only the branding and payment details you want on the customer invoice.</div>
+                          <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Template editor</div>
+                          <div className="mt-1 text-sm text-slate-500">Keep only branding and payment details you want on the customer invoice.</div>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -2654,6 +2684,8 @@ export default function SettingsPage() {
                         ) : null}
                       </div>
                     </section>
+                    </>
+                    ) : null}
                   </section>
                 ) : (
                   <section className="card p-5">
@@ -2672,6 +2704,12 @@ export default function SettingsPage() {
 
               </>
             )}
+          </div>
+        </section>
+      ) : (
+        <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="text-sm text-slate-600">
+            Zone operations are shown above. Select <span className="font-semibold text-slate-900">Router Visibility</span> from the left menu only when you need device visibility controls for zone users.
           </div>
         </section>
       )}
