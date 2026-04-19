@@ -206,27 +206,11 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
           SliverToBoxAdapter(
             child: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: paymentError != null
-                      ? [
-                          const Color(0xFF1A0505),
-                          const Color(0xFF5C0A0A),
-                          const Color(0xFFEF4444)
-                        ]
-                      : verifying
-                          ? [
-                              const Color(0xFF051A0A),
-                              const Color(0xFF0A4020),
-                              const Color(0xFF22C55E)
-                            ]
-                          : [
-                              const Color(0xFF13051F),
-                              const Color(0xFF3B0D7A),
-                              const Color(0xFFA855F7)
-                            ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: paymentError != null
+                    ? const Color(0xFFDC2626)
+                    : verifying
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFF8224E3),
               ),
               child: SafeArea(
                 bottom: false,

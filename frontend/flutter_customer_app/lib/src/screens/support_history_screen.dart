@@ -881,11 +881,7 @@ class _TrackingEntryCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF13051F), Color(0xFF3B0D7A), Color(0xFFA855F7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: const Color(0xFF8224E3),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: const Color(0x55D8B4FE)),
           boxShadow: [

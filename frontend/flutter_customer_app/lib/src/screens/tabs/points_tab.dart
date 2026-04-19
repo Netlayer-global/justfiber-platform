@@ -34,20 +34,9 @@ class PointsTab extends StatelessWidget {
         // Hero
         Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0D051A), Color(0xFF2A0866), Color(0xFF7C3AED)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFF8224E3),
             borderRadius: BorderRadius.circular(26),
             border: Border.all(color: const Color(0x55A855F7)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF7C3AED).withValues(alpha: 0.36),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
           ),
           padding: const EdgeInsets.all(22),
           child: Column(

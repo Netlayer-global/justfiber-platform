@@ -1,48 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  Activity,
-  Loader,
-  Network,
-  Router,
-  ShieldCheck,
-  TriangleAlert,
-  Users,
-  Wallet,
-} from 'lucide-react'
+import { Activity, Loader, Router, ShieldCheck, Users, Wallet } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
-import type {
-  AdminRoleSummary,
-  AdminUserSummary,
-  AuditOverview,
-  BillingProfile,
-  BngNode,
-  Customer,
-  DashboardStats,
-  FranchiseProfile,
-  IntegrationSummary,
-  IpPoolRange,
-  Plan,
-  ServiceZone,
-  SettingsSection,
-} from '@/lib/types'
-
-type InvoiceTemplateValue = {
-  templates?: Array<{
-    key?: string
-    name?: string
-    companyName?: string
-    gstNumber?: string
-    invoicePrefix?: string
-  }>
-  zoneAssignments?: Array<{
-    zoneCode?: string
-    zoneName?: string
-    templateKey?: string
-  }>
-}
+import type { BngNode, Customer, DashboardStats } from '@/lib/types'
 
 type ZoneSwitchDetail = {
   key?: string
@@ -74,7 +35,7 @@ function hasLivePppoeSession(customer: Customer) {
       const sessionUp = String(device.wanInfo?.sessionStatus || '').toLowerCase() === 'up'
       const hasIpv4 = Boolean(String(device.wanInfo?.ipv4Address || device.wanInfo?.ipAddress || '').trim())
       return online || sessionUp || hasIpv4
-    })
+    }),
   )
 }
 
@@ -82,18 +43,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [routers, setRouters] = useState<BngNode[]>([])
-  const [integrations, setIntegrations] = useState<IntegrationSummary[]>([])
-  const [serviceZones, setServiceZones] = useState<ServiceZone[]>([])
-  const [franchises, setFranchises] = useState<FranchiseProfile[]>([])
-  const [billingProfiles, setBillingProfiles] = useState<BillingProfile[]>([])
-  const [ipPools, setIpPools] = useState<IpPoolRange[]>([])
-  const [plans, setPlans] = useState<Plan[]>([])
-  const [adminUsers, setAdminUsers] = useState<AdminUserSummary[]>([])
-  const [adminRoles, setAdminRoles] = useState<AdminRoleSummary[]>([])
-  const [auditOverview, setAuditOverview] = useState<AuditOverview | null>(null)
-  const [recentAuditLogs, setRecentAuditLogs] = useState<any[]>([])
-  const [invoiceTemplateSettings, setInvoiceTemplateSettings] = useState<SettingsSection<InvoiceTemplateValue> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
   const [otpLookup, setOtpLookup] = useState('')
   const [otpValue, setOtpValue] = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
@@ -136,55 +87,28 @@ export default function DashboardPage() {
 
   async function loadDashboard() {
     setIsLoading(true)
+    setError('')
     try {
-      const [
-        statsRes,
-        customersRes,
-        routersRes,
-        integrationsRes,
-        serviceZonesRes,
-        franchisesRes,
-        billingProfilesRes,
-        ipPoolsRes,
-        plansRes,
-        invoiceTemplateRes,
-        adminUsersRes,
-        adminRolesRes,
-        auditOverviewRes,
-        auditLogsRes,
-      ] = await Promise.allSettled([
+      const [statsRes, customersRes, routersRes] = await Promise.allSettled([
         adminAPI.getDashboardStats(),
         adminAPI.getCustomers(1, 100),
         adminAPI.getBngNodes(),
-        adminAPI.getIntegrations(),
-        adminAPI.getServiceZones(),
-        adminAPI.getFranchises(),
-        adminAPI.getBillingProfiles(),
-        adminAPI.getIpPools(),
-        adminAPI.getPlans(),
-        adminAPI.getSettingsSection<InvoiceTemplateValue>('invoice_template'),
-        adminAPI.getAdminUsers(1, 100),
-        adminAPI.getAdminRoles(),
-        adminAPI.getAuditOverview(),
-        adminAPI.getAuditLogs(1, 20),
       ])
 
-      if (statsRes.status === 'fulfilled' && statsRes.value.success && statsRes.value.data) setStats(statsRes.value.data)
-      if (customersRes.status === 'fulfilled' && customersRes.value.success && customersRes.value.data?.items) setCustomers(customersRes.value.data.items)
-      if (routersRes.status === 'fulfilled' && routersRes.value.success && routersRes.value.data) setRouters(routersRes.value.data)
-      if (integrationsRes.status === 'fulfilled' && integrationsRes.value.success && integrationsRes.value.data) setIntegrations(integrationsRes.value.data)
-      if (serviceZonesRes.status === 'fulfilled' && serviceZonesRes.value.success && serviceZonesRes.value.data) setServiceZones(serviceZonesRes.value.data)
-      if (franchisesRes.status === 'fulfilled' && franchisesRes.value.success && franchisesRes.value.data) setFranchises(franchisesRes.value.data)
-      if (billingProfilesRes.status === 'fulfilled' && billingProfilesRes.value.success && billingProfilesRes.value.data) setBillingProfiles(billingProfilesRes.value.data)
-      if (ipPoolsRes.status === 'fulfilled' && ipPoolsRes.value.success && ipPoolsRes.value.data) setIpPools(ipPoolsRes.value.data)
-      if (plansRes.status === 'fulfilled' && plansRes.value.success && plansRes.value.data?.items) setPlans(plansRes.value.data.items)
-      if (invoiceTemplateRes.status === 'fulfilled' && invoiceTemplateRes.value.success && invoiceTemplateRes.value.data) setInvoiceTemplateSettings(invoiceTemplateRes.value.data)
-      if (adminUsersRes.status === 'fulfilled' && adminUsersRes.value.success && adminUsersRes.value.data?.items) setAdminUsers(adminUsersRes.value.data.items)
-      if (adminRolesRes.status === 'fulfilled' && adminRolesRes.value.success && adminRolesRes.value.data) setAdminRoles(adminRolesRes.value.data)
-      if (auditOverviewRes.status === 'fulfilled' && auditOverviewRes.value.success && auditOverviewRes.value.data) setAuditOverview(auditOverviewRes.value.data)
-      if (auditLogsRes.status === 'fulfilled' && auditLogsRes.value.success && Array.isArray(auditLogsRes.value.data)) setRecentAuditLogs(auditLogsRes.value.data)
-    } catch (error) {
-      console.log('[dashboard] Error loading release readiness data:', error)
+      if (statsRes.status === 'fulfilled' && statsRes.value.success && statsRes.value.data) {
+        setStats(statsRes.value.data)
+      }
+      if (customersRes.status === 'fulfilled' && customersRes.value.success && customersRes.value.data?.items) {
+        setCustomers(customersRes.value.data.items)
+      }
+      if (routersRes.status === 'fulfilled' && routersRes.value.success && routersRes.value.data) {
+        setRouters(routersRes.value.data)
+      }
+
+      const failed = [statsRes, customersRes, routersRes].filter((item) => item.status === 'rejected').length
+      if (failed) setError('Some dashboard data could not be loaded. Refresh and try again.')
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Dashboard failed to load')
     } finally {
       setIsLoading(false)
     }
@@ -212,73 +136,12 @@ export default function DashboardPage() {
             : (res.error as { message?: string } | undefined)?.message || 'OTP not found'
         setOtpError(message)
       }
-    } catch (error) {
-      setOtpError(error instanceof Error ? error.message : 'OTP lookup failed')
+    } catch (lookupError) {
+      setOtpError(lookupError instanceof Error ? lookupError.message : 'OTP lookup failed')
     } finally {
       setOtpLoading(false)
     }
   }
-
-  const currentFranchise = useMemo(() => {
-    return (
-      franchises.find((item) => item.zoneCode === currentZoneCode) ||
-      franchises.find((item) => item.zoneCode === currentZoneLabel) ||
-      null
-    )
-  }, [currentZoneCode, currentZoneLabel, franchises])
-
-  const currentBillingProfile = useMemo(() => {
-    return (
-      billingProfiles.find((profile) =>
-        profile.zoneMappings?.some((mapping) => mapping.zoneCode === currentZoneCode),
-      ) || null
-    )
-  }, [billingProfiles, currentZoneCode])
-
-  const zonePaymentRoute = useMemo(() => {
-    return integrations.find((item) => {
-      if (item.category !== 'payment_gateway') return false
-      const mappings = Array.isArray(item.config?.zoneMappings) ? item.config.zoneMappings : []
-      return mappings.some((mapping: { zoneCode?: string }) => mapping.zoneCode === currentZoneCode)
-    }) || null
-  }, [currentZoneCode, integrations])
-
-  const resolvedTemplate = useMemo(() => {
-    const value = invoiceTemplateSettings?.value || {}
-    const zoneAssignments = Array.isArray(value.zoneAssignments) ? value.zoneAssignments : []
-    const templates = Array.isArray(value.templates) ? value.templates : []
-    const assignment =
-      zoneAssignments.find((item) => item.zoneCode === currentZoneCode) ||
-      (currentFranchise?.invoiceConfig?.templateKey
-        ? { templateKey: currentFranchise.invoiceConfig.templateKey }
-        : null)
-
-    if (!assignment?.templateKey) return null
-    return templates.find((item) => item.key === assignment.templateKey) || null
-  }, [currentFranchise, currentZoneCode, invoiceTemplateSettings])
-
-  const usageMetrics = useMemo(() => {
-    let watch = 0
-    let high = 0
-    let capReached = 0
-
-    customers.forEach((customer) => {
-      const snapshot = customer.billingSnapshot || {}
-      const policy = String(snapshot.dataPolicy || 'unlimited')
-      const used = Number(snapshot.usageGb || 0)
-      const cap = Number(snapshot.usageCapGb || snapshot.dataLimitGb || 0)
-      if (snapshot.usageCapReached) {
-        capReached += 1
-        return
-      }
-      if (policy === 'unlimited' || cap <= 0) return
-      const ratio = used / cap
-      if (ratio >= 0.9) high += 1
-      else if (ratio >= 0.65) watch += 1
-    })
-
-    return { watch, high, capReached }
-  }, [customers])
 
   const userCountSummary = useMemo(() => {
     const onlineUsers =
@@ -298,154 +161,49 @@ export default function DashboardPage() {
         ? stats.inactiveCustomers
         : customers.filter((customer) => customer.status === 'inactive').length
     const totalUsers =
-      typeof stats?.totalCustomers === 'number' && stats.totalCustomers > 0
-        ? stats.totalCustomers
-        : customers.length
+      typeof stats?.totalCustomers === 'number' && stats.totalCustomers > 0 ? stats.totalCustomers : customers.length
 
-    return {
-      totalUsers,
-      onlineUsers,
-      activeUsers,
-      suspendedUsers,
-      blockedUsers,
-    }
+    return { totalUsers, onlineUsers, activeUsers, suspendedUsers, blockedUsers }
   }, [customers, stats])
 
-  const readiness = useMemo(() => {
-    const helperReadyRouters = routers.filter((router) => router.freeradiusIntegrationHealth?.overallReady).length
-    const authMismatchRouters = routers.filter(
-      (router) =>
-        router.lastRadiusAuthTelemetry?.matchedTrustedClient === false || router.lastRadiusAuthTelemetry?.mismatch,
-    ).length
-    const radiusReadyRanges = ipPools.filter((pool) => pool.useForRadius).length
-    const adminSeats = currentFranchise?.adminAccounts?.length || 0
-    const inheritanceCount = Object.values(currentFranchise?.inheritanceProfile || {}).filter(Boolean).length
-    const activeCustomers = customers.filter((customer) => customer.status === 'active').length
+  const routerSummary = useMemo(() => {
+    const ready = routers.filter((router) => router.freeradiusIntegrationHealth?.overallReady).length
+    return { total: routers.length, ready }
+  }, [routers])
 
-    const blockers = [
-      !resolvedTemplate ? 'Invoice template mapping missing for active zone' : null,
-      !currentBillingProfile ? 'GST and billing profile not mapped to active zone' : null,
-      !zonePaymentRoute ? 'Payment gateway not assigned to active zone' : null,
-      routers.length === 0 ? 'No routers mapped for active zone' : null,
-      radiusReadyRanges === 0 ? 'No RADIUS-ready IP pools available in active zone' : null,
-      serviceZones.length === 0 ? 'No serviceability zones mapped for active zone' : null,
-      adminSeats === 0 ? 'No delegated zone admin seats configured' : null,
-    ].filter(Boolean) as string[]
-
-    return {
-      helperReadyRouters,
-      authMismatchRouters,
-      radiusReadyRanges,
-      adminSeats,
-      inheritanceCount,
-      activeCustomers,
-      blockers,
-    }
-  }, [currentBillingProfile, currentFranchise, customers, ipPools, resolvedTemplate, routers, serviceZones, zonePaymentRoute])
-
-  const dataTruth = useMemo(() => {
-    const scopedPlanCodes = new Set(
-      plans.flatMap((plan) => [plan.id, plan.planCode, plan.name].filter(Boolean) as string[]),
-    )
-    const customersMissingZone = customers.filter((customer) => !customer.zoneCode && !customer.zoneName).length
-    const customersOutsideZone = customers.filter(
-      (customer) =>
-        currentZoneCode !== 'default' &&
-        customer.zoneCode &&
-        customer.zoneCode !== currentZoneCode,
-    ).length
-    const customersMissingPlan = customers.filter((customer) => !customer.plan?.id && !customer.plan?.name).length
-    const customerPlanDrift = customers.filter((customer) => {
-      const candidate = customer.plan?.id || customer.plan?.name
-      if (!candidate) return false
-      return !scopedPlanCodes.has(candidate)
-    }).length
-    const zoneMappedRouters = routers.filter((router) => router.zoneCode || router.zoneName).length
-    const unmappedRouters = routers.length - zoneMappedRouters
-    const inactiveIntegrations = integrations.filter((item) => item.status !== 'active').length
-
-    const issues = [
-      customersMissingZone ? `${customersMissingZone} customers are missing zone binding` : null,
-      customersOutsideZone ? `${customersOutsideZone} customers do not match the active zone scope` : null,
-      customersMissingPlan ? `${customersMissingPlan} customers do not have a mapped plan` : null,
-      customerPlanDrift ? `${customerPlanDrift} customers reference plans outside the scoped catalog` : null,
-      unmappedRouters ? `${unmappedRouters} routers are still unassigned to any zone` : null,
-      inactiveIntegrations ? `${inactiveIntegrations} integrations are not active and should be reviewed` : null,
-    ].filter(Boolean) as string[]
-
-    return {
-      scopedPlans: plans.length,
-      customersMissingZone,
-      customersOutsideZone,
-      customersMissingPlan,
-      customerPlanDrift,
-      unmappedRouters,
-      inactiveIntegrations,
-      issues,
-    }
-  }, [currentZoneCode, customers, integrations, plans, routers])
-
-  const securityReadiness = useMemo(() => {
-    const activeAdmins = adminUsers.filter((user) => user.status === 'active').length
-    const disabledAdmins = adminUsers.filter((user) => user.status !== 'active').length
-    const mfaEnabled = adminUsers.filter((user) => user.mfaEnabled).length
-    const stalePasswords = adminUsers.filter((user) => {
-      if (!user.passwordChangedAt) return true
-      const ageMs = Date.now() - new Date(user.passwordChangedAt).getTime()
-      return Number.isFinite(ageMs) && ageMs > 1000 * 60 * 60 * 24 * 90
-    }).length
-    const privilegedRoles = adminRoles.filter((role) =>
-      role.permissions.includes('config.update') ||
-      role.permissions.includes('approval.decide') ||
-      role.permissions.includes('admin.user.manage'),
-    ).length
-    const recentSensitiveAudit = recentAuditLogs.filter((item) =>
-      ['franchise.settings_copied', 'franchise.admin_accounts_saved', 'billing.writeoff.created', 'billing.waiver.created'].includes(String(item.action || '')),
-    ).length
-    const blockers = [
-      activeAdmins === 0 ? 'No active admin users available' : null,
-      adminRoles.length === 0 ? 'Role matrix not loaded for review' : null,
-      mfaEnabled === 0 ? 'No admin account has MFA enabled' : null,
-      stalePasswords > 0 ? `${stalePasswords} admin accounts need password rotation` : null,
-      !auditOverview?.auditLogs ? 'Audit log stream is empty or unavailable' : null,
-    ].filter(Boolean) as string[]
-
-    return {
-      activeAdmins,
-      disabledAdmins,
-      mfaEnabled,
-      stalePasswords,
-      privilegedRoles,
-      recentSensitiveAudit,
-      blockers,
-    }
-  }, [adminRoles, adminUsers, auditOverview?.auditLogs, recentAuditLogs])
-
-  const executiveSummary = [
+  const topCards = [
     {
       label: 'Total customers',
-      value: stats?.totalCustomers?.toLocaleString() ?? '0',
-      detail: 'Whole subscriber base',
+      value: userCountSummary.totalUsers.toLocaleString(),
+      detail: 'Subscriber base',
       icon: Users,
     },
     {
-      label: 'Active connections',
-      value: stats?.activeConnections?.toLocaleString() ?? '0',
-      detail: 'Live broadband sessions',
+      label: 'Online users',
+      value: userCountSummary.onlineUsers.toLocaleString(),
+      detail: 'Live PPPoE sessions',
       icon: Activity,
     },
     {
       label: 'Monthly revenue',
       value: toCurrency(stats?.monthlyRevenue || 0),
-      detail: 'Current collection pulse',
+      detail: 'Current billing pulse',
       icon: Wallet,
     },
     {
       label: 'System health',
       value: `${stats?.systemHealth ?? 0}%`,
-      detail: 'Provisioning and device health',
+      detail: 'Provisioning health',
       icon: ShieldCheck,
     },
+  ]
+
+  const userCards = [
+    ['Active users', userCountSummary.activeUsers],
+    ['Suspended', userCountSummary.suspendedUsers],
+    ['Blocked', userCountSummary.blockedUsers],
+    ['Active connections', stats?.activeConnections || 0],
+    ['Routers ready', `${routerSummary.ready}/${routerSummary.total}`],
   ]
 
   if (isLoading) {
@@ -461,38 +219,44 @@ export default function DashboardPage() {
       <section className="card p-3">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">Release Readiness</div>
-            <h1 className="mt-1 text-lg font-light text-slate-100">Zone Hardening Console</h1>
+            <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">Dashboard</div>
+            <h1 className="mt-1 text-lg font-light text-slate-100">{currentZoneLabel}</h1>
             <div className="mt-1 max-w-2xl text-xs text-slate-400">
-              Check zone readiness for invoicing, collections, provisioning, and rollout.
+              Live business snapshot for customers, online sessions, revenue, routers, and OTP support.
             </div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {executiveSummary.map(({ label, value, detail, icon: Icon }) => (
-              <div key={label} className="stat-card">
-                <div className="flex items-center justify-between">
-                  <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
-                  <Icon className="h-3.5 w-3.5 text-purple-500" />
-                </div>
-                <div className="mt-2 text-lg font-light text-purple-300">{value}</div>
-                <div className="mt-0.5 text-[9px] text-slate-500">{detail}</div>
-              </div>
-            ))}
-          </div>
+          <button type="button" onClick={() => void loadDashboard()} className="btn-secondary">
+            Refresh
+          </button>
         </div>
+        {error ? (
+          <div className="mt-3 rounded-[18px] border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
+            {error}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {topCards.map(({ label, value, detail, icon: Icon }) => (
+          <div key={label} className="stat-card">
+            <div className="flex items-center justify-between">
+              <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
+              <Icon className="h-3.5 w-3.5 text-purple-500" />
+            </div>
+            <div className="mt-2 text-lg font-light text-purple-300">{value}</div>
+            <div className="mt-0.5 text-[9px] text-slate-500">{detail}</div>
+          </div>
+        ))}
       </section>
 
       <section className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-        {[
-          ['Total Users', userCountSummary.totalUsers],
-          ['Online Users', userCountSummary.onlineUsers],
-          ['Active Users', userCountSummary.activeUsers],
-          ['Suspended', userCountSummary.suspendedUsers],
-          ['Blocked', userCountSummary.blockedUsers],
-        ].map(([label, value]) => (
+        {userCards.map(([label, value]) => (
           <div key={String(label)} className="card p-2.5">
-            <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
-            <div className="mt-1.5 text-xl font-light text-purple-300">{value as number}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-[9px] font-medium uppercase tracking-wide text-slate-500">{label}</div>
+              {label === 'Routers ready' ? <Router className="h-3.5 w-3.5 text-purple-500" /> : null}
+            </div>
+            <div className="mt-1.5 text-xl font-light text-purple-300">{value}</div>
           </div>
         ))}
       </section>
@@ -506,29 +270,28 @@ export default function DashboardPage() {
               className="input flex-1"
               placeholder="Enter customer mobile"
               value={otpLookup}
-              onChange={(e) => setOtpLookup(e.target.value)}
+              onChange={(event) => setOtpLookup(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void fetchDemoOtp()
+              }}
             />
-            <button type="button" onClick={() => void fetchDemoOtp()} className="btn-primary">
+            <button type="button" onClick={() => void fetchDemoOtp()} className="btn-primary" disabled={otpLoading}>
               {otpLoading ? 'Fetching...' : 'Fetch OTP'}
             </button>
           </div>
           {otpValue ? (
-            <div className="mt-4 rounded-[20px] border border-purple-200 bg-purple-50 p-4">
+            <div className="mt-4 rounded-[20px] border border-purple-400/30 bg-purple-500/10 p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Current OTP</div>
-              <div className="mt-2 text-3xl font-semibold tracking-[0.2em] text-slate-900">{otpValue}</div>
+              <div className="mt-2 text-3xl font-semibold tracking-[0.2em] text-purple-200">{otpValue}</div>
             </div>
           ) : null}
           {otpError ? (
-            <div className="mt-4 rounded-[20px] border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+            <div className="mt-4 rounded-[20px] border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
               {otpError}
             </div>
           ) : null}
         </div>
       </section>
-
     </div>
   )
 }
-
-
-

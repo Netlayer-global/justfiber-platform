@@ -69,6 +69,7 @@ const GENERIC_PROFILE = {
 
 const BRAND_OVERRIDES = {
   nokia: {
+    replaceBase: true,
     pppoeUsernamePath: [
       `${IGD_PPP}.Username`,
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.2.Username",
@@ -105,38 +106,26 @@ const BRAND_OVERRIDES = {
       `${DEVICE_WIFI_24}.SSID`
     ],
     pass24Path: [
-      ...buildNokiaPasswordPaths("ssid24"),
-      `${DEVICE_AP_24}.KeyPassphrase`,
-      `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`
+      `${IGD_WIFI_24}.KeyPassphrase`
     ],
     ssid5Path: [
-      ...buildNokiaSsidPaths("ssid5"),
       `${IGD_WIFI_5}.SSID`,
+      ...buildNokiaSsidPaths("ssid5"),
       `${DEVICE_WIFI_5}.SSID`
     ],
     pass5Path: [
-      ...buildNokiaPasswordPaths("ssid5"),
-      `${IGD_WIFI_5}.KeyPassphrase`,
-      `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`,
-      `${DEVICE_AP_5}.KeyPassphrase`,
-      `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`
+      `${IGD_WIFI_5}.KeyPassphrase`
     ]
   },
   dasan: {
+    replaceBase: true,
     pppoeUsernamePath: [
       `${IGD_PPP}.Username`,
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Username",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.UserName",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.UserName",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.Username",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.UserName"
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Username"
     ],
     pppoePasswordPath: [
       `${IGD_PPP}.Password`,
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.Password",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password",
-      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.Password"
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.Password"
     ],
     vlanPath: [
       "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.WANIPConnection.1.X_DZS_VlanID",
@@ -145,9 +134,14 @@ const BRAND_OVERRIDES = {
       `${IGD_PPP}.X_DASAN_VLANID`,
       `${IGD_PPP}.X_CT-COM_VLANID`
     ],
+    natPath: [
+      "Device.NAT.Enable",
+      `${IGD_PPP}.NATEnabled`,
+      `${DEVICE_IP}.NAT`
+    ],
     ssid24Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID"
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID"
     ],
     wifiSecurity24Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.BeaconType|WPAand11i",
@@ -163,14 +157,10 @@ const BRAND_OVERRIDES = {
     ],
     pass24Path: [
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.PreSharedKey",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PreSharedKey.1.PreSharedKey"
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase"
     ],
     ssid5Path: [
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.SSID",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID",
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.SSID"
     ],
     wifiSecurity5Path: [
@@ -186,12 +176,8 @@ const BRAND_OVERRIDES = {
       "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.IEEE11iEncryptionModes|AESEncryption"
     ],
     pass5Path: [
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.5.PreSharedKey.1.PreSharedKey",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.KeyPassphrase",
-      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.PreSharedKey.1.PreSharedKey"
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.KeyPassphrase",
+      "InternetGatewayDevice.LANDevice.1.WLANConfiguration.6.KeyPassphrase"
     ]
   },
   zte: {
@@ -404,7 +390,9 @@ export function resolveProvisioningProfile(brand) {
   const override = BRAND_OVERRIDES[brand] || {};
   const merged = {};
   for (const key of Object.keys(GENERIC_PROFILE)) {
-    merged[key] = mergePathLists(GENERIC_PROFILE[key], override[key]);
+    merged[key] = override.replaceBase
+      ? (override[key] || GENERIC_PROFILE[key])
+      : mergePathLists(GENERIC_PROFILE[key], override[key]);
   }
   return merged;
 }

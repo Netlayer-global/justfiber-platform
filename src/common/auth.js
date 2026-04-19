@@ -52,6 +52,37 @@ export async function resolvePermissions(admin) {
   return [...new Set([...rolePermissions, ...allow])].filter((permission) => !deny.has(permission));
 }
 
+export function normalizeZoneCode(value) {
+  return String(value || "").trim();
+}
+
+export function adminCanAccessAllZones(admin) {
+  return (
+    Boolean(admin?.canAccessAllZones) ||
+    !normalizeZoneCode(admin?.zoneCode) ||
+    (Array.isArray(admin?.roles) && admin.roles.includes("super_admin"))
+  );
+}
+
+export function assertAdminZoneAccess(admin, requestedZoneCode) {
+  if (adminCanAccessAllZones(admin)) {
+    return normalizeZoneCode(requestedZoneCode);
+  }
+
+  const assignedZoneCode = normalizeZoneCode(admin?.zoneCode);
+  const normalizedRequestedZoneCode = normalizeZoneCode(requestedZoneCode);
+  if (normalizedRequestedZoneCode && normalizedRequestedZoneCode.toLowerCase() !== assignedZoneCode.toLowerCase()) {
+    throw new ApiError(403, "Zone access denied");
+  }
+  return assignedZoneCode;
+}
+
+export function assertMainAdminAccess(admin) {
+  if (!adminCanAccessAllZones(admin)) {
+    throw new ApiError(403, "Only main admin can manage zones");
+  }
+}
+
 export function requirePermission(permission) {
   return async (req, _res, next) => {
     if (!req.admin) {

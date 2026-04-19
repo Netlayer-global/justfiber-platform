@@ -11,3 +11,9 @@ flutter run
 ```
 
 Default API base is `https://api.justfiber.in`.
+
+Override it only for local testing:
+
+```bash
+flutter run --dart-define=JUSTFIBER_API_BASE=http://127.0.0.1:4000
+```

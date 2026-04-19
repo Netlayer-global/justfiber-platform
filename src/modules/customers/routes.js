@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
-import { requireAuth, requirePermission } from "../../common/auth.js";
+import { assertAdminZoneAccess, requireAuth, requirePermission } from "../../common/auth.js";
 import { permissions } from "../../config/permissions.js";
 import { Customer } from "../../models/Customer.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
@@ -64,6 +64,11 @@ const SEEDED_BANNER_TITLES = ["Upgrade to 200 Mbps Family"];
 const SEEDED_SALES_AGENT_CODES = ["SAL-1001"];
 const SEEDED_LEAD_NUMBERS = ["LD100101"];
 const SEEDED_CUSTOMER_USER_MOBILES = ["9876543210"];
+
+function assertCustomerZoneAccess(req, customer) {
+  const customerZoneCode = customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || customer?.zoneCode;
+  return assertAdminZoneAccess(req.admin, customerZoneCode);
+}
 
 async function deleteCustomerCascade(customer) {
   const services = await SubscriberService.find({
@@ -449,13 +454,14 @@ customersRouter.get(
     if (req.query.city) {
       filter["address.city"] = req.query.city;
     }
-    if (req.query.zoneCode) {
+    const scopedZoneCode = assertAdminZoneAccess(req.admin, req.query.zoneCode);
+    if (scopedZoneCode) {
       filter.$and = [
         ...(Array.isArray(filter.$and) ? filter.$and : []),
         {
           $or: [
-            { zoneCode: req.query.zoneCode },
-            { billingZoneCode: req.query.zoneCode }
+            { zoneCode: scopedZoneCode },
+            { billingZoneCode: scopedZoneCode }
           ]
         }
       ];
@@ -522,8 +528,14 @@ customersRouter.post(
         ? billingProfile?.defaultBusinessBillMode
         : billingProfile?.defaultHomeBillMode) ||
       (payload.customerType === "business" ? "postpaid" : "prepaid");
-    const resolvedZoneCode = String(payload.zoneCode || bngNode?.groupName || bngNode?.nodeCode || "").trim() || undefined;
-    const resolvedZoneName = String(payload.zoneName || bngNode?.displayName || resolvedZoneCode || "").trim() || undefined;
+    const scopedZoneCode = assertAdminZoneAccess(req.admin, payload.zoneCode || bngNode?.groupName || bngNode?.nodeCode);
+    const resolvedZoneCode = scopedZoneCode || String(payload.zoneCode || bngNode?.groupName || bngNode?.nodeCode || "").trim() || undefined;
+    const resolvedZoneName =
+      String(
+        scopedZoneCode && req.admin.zoneName && scopedZoneCode === req.admin.zoneCode
+          ? req.admin.zoneName
+          : payload.zoneName || bngNode?.displayName || resolvedZoneCode || ""
+      ).trim() || undefined;
     const resolvedZoneStateCode = String(payload.zoneStateCode || "").trim() || undefined;
     const resolvedZoneStateName = String(payload.zoneStateName || payload.address.state || "").trim() || undefined;
 
@@ -749,6 +761,7 @@ customersRouter.delete(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
+    assertCustomerZoneAccess(req, customer);
 
     const result = await deleteCustomerCascade(customer);
 
@@ -771,6 +784,7 @@ customersRouter.get(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
+    assertCustomerZoneAccess(req, customer);
     const linkedUsers = await CustomerUser.find({
       $or: [
         { linkedCustomerIds: customer.customerId },
@@ -901,6 +915,10 @@ customersRouter.patch(
     if (!existingCustomer) {
       throw new ApiError(404, "Customer not found");
     }
+    assertCustomerZoneAccess(req, existingCustomer);
+    if (payload.zoneCode !== undefined) {
+      assertAdminZoneAccess(req.admin, payload.zoneCode);
+    }
     const zonePatch =
       payload.zoneCode || payload.zoneName || payload.zoneStateCode || payload.zoneStateName
         ? {
@@ -986,6 +1004,7 @@ customersRouter.patch(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
+    assertCustomerZoneAccess(req, customer);
 
     const linkedUsers = await CustomerUser.find({
       $or: [
@@ -1059,6 +1078,7 @@ customersRouter.post(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
+    assertCustomerZoneAccess(req, customer);
 
     const linkedUsers = await CustomerUser.find({
       $or: [
@@ -1252,6 +1272,7 @@ async function createActionRequest(req, res, actionType) {
   if (!customer) {
     throw new ApiError(404, "Customer not found");
   }
+  assertCustomerZoneAccess(req, customer);
 
   const existing = await AdminActionRequest.findOne({
     actionType,
@@ -1315,6 +1336,7 @@ customersRouter.post(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
+    assertCustomerZoneAccess(req, customer);
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
     if (!plan) {
       throw new ApiError(404, "Plan not found");
@@ -1341,6 +1363,7 @@ customersRouter.post(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
+    assertCustomerZoneAccess(req, customer);
     const plan = await PlanCatalog.findOne({ planCode: payload.planCode, active: true }).lean();
     if (!plan) {
       throw new ApiError(404, "Plan not found");
@@ -1588,6 +1611,7 @@ customersRouter.post(
     if (!customer) {
       throw new ApiError(404, "Customer not found");
     }
+    assertCustomerZoneAccess(req, customer);
     if (!allowedPresets.has(payload.presetName)) {
       throw new ApiError(400, "Preset not allowed");
     }

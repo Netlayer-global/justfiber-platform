@@ -58,8 +58,8 @@ class ServiceTrackingScreen extends StatelessWidget {
                       message: appState.error!,
                       onRetry: appState.busy
                           ? null
-                          : () =>
-                              _refreshTrackingWithFeedback(context, appState),
+                          : () => _refreshTrackingWithFeedback(
+                              context, appState),
                     ),
                   ],
 
@@ -133,8 +133,8 @@ class ServiceTrackingScreen extends StatelessWidget {
                       subtitle:
                           'Assigned jobs and visit updates will appear here once operations dispatches a team.',
                       actionLabel: 'Refresh tracking',
-                      onTap: () =>
-                          _refreshTrackingWithFeedback(context, appState),
+                      onTap: () => _refreshTrackingWithFeedback(
+                          context, appState),
                     ),
                   ],
 
@@ -205,8 +205,8 @@ class ServiceTrackingScreen extends StatelessWidget {
         appState.tickets.isNotEmpty ||
         appState.notifications.isNotEmpty;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content:
-          Text(hasData ? 'Tracking updated' : 'No new tracking updates yet'),
+      content: Text(
+          hasData ? 'Tracking updated' : 'No new tracking updates yet'),
     ));
   }
 }
@@ -369,7 +369,8 @@ class _ConnectionCard extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: kPrimary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
@@ -378,7 +379,9 @@ class _ConnectionCard extends StatelessWidget {
             child: Text(
               connection.status.isEmpty ? 'Active' : connection.status,
               style: GoogleFonts.inter(
-                  color: kPrimary, fontSize: 11, fontWeight: FontWeight.w700),
+                  color: kPrimary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -491,14 +494,16 @@ class _BookingCard extends StatelessWidget {
 
                 if (latestBooking != null) ...[
                   const SizedBox(height: 16),
-                  _bookingRow(
-                      'Booking no.', latestBooking.bookingNumber ?? '-'),
+                  _bookingRow('Booking no.',
+                      latestBooking.bookingNumber ?? '-'),
                   _bookingRow('Plan', latestBooking.planName ?? '-'),
                   _bookingRow('Amount',
                       'Rs ${latestBooking.amount?.toStringAsFixed(0) ?? '-'}'),
-                  _bookingRow('Current step', latestBooking.currentStep ?? '-'),
+                  _bookingRow('Current step',
+                      latestBooking.currentStep ?? '-'),
                   if ((latestBooking.preferredDate ?? '').isNotEmpty)
-                    _bookingRow('Preferred date', latestBooking.preferredDate),
+                    _bookingRow(
+                        'Preferred date', latestBooking.preferredDate),
                   if ((latestBooking.preferredSlotLabel ?? '').isNotEmpty)
                     _bookingRow(
                         'Preferred slot', latestBooking.preferredSlotLabel),
@@ -517,8 +522,8 @@ class _BookingCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                        child:
-                            _CountChip(label: 'Visits', count: visits.length)),
+                        child: _CountChip(
+                            label: 'Visits', count: visits.length)),
                     const SizedBox(width: 8),
                     Expanded(
                         child: _CountChip(
@@ -543,8 +548,8 @@ class _BookingCard extends StatelessWidget {
                       style: GoogleFonts.inter(fontWeight: FontWeight.w700),
                     ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0B0712),
-                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF3B0D7A),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
@@ -611,7 +616,8 @@ class _BookingCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(color: Colors.white60, fontSize: 13),
+            style: GoogleFonts.inter(
+                color: Colors.white60, fontSize: 13),
           ),
           const Spacer(),
           Flexible(
@@ -651,12 +657,15 @@ class _CountChip extends StatelessWidget {
           Text(
             '$count',
             style: GoogleFonts.inter(
-                color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 18),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: GoogleFonts.inter(color: Colors.white54, fontSize: 10),
+            style: GoogleFonts.inter(
+                color: Colors.white54, fontSize: 10),
           ),
         ],
       ),
@@ -823,8 +832,11 @@ class _TimelineStep extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    (step.at as String).isEmpty ? 'Pending' : step.at as String,
-                    style: GoogleFonts.inter(color: kMuted, fontSize: 12),
+                    (step.at as String).isEmpty
+                        ? 'Pending'
+                        : step.at as String,
+                    style:
+                        GoogleFonts.inter(color: kMuted, fontSize: 12),
                   ),
                   if (showSlot) ...[
                     const SizedBox(height: 4),
@@ -909,14 +921,15 @@ class _VisitCard extends StatelessWidget {
                       ),
                       Text(
                         '${visit.type} · ${visit.priority}',
-                        style: GoogleFonts.inter(color: kMuted, fontSize: 12),
+                        style: GoogleFonts.inter(
+                            color: kMuted, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
@@ -938,16 +951,14 @@ class _VisitCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
             child: Column(
               children: [
-                _visitRow(
-                    Icons.person_rounded,
-                    visit.installerName.isEmpty
-                        ? 'Assigned team'
-                        : visit.installerName),
+                _visitRow(Icons.person_rounded,
+                    visit.installerName.isEmpty ? 'Assigned team' : visit.installerName),
                 if (visit.installerPhone.isNotEmpty)
                   _visitRow(Icons.phone_rounded, visit.installerPhone),
                 if (visit.planName.isNotEmpty)
                   _visitRow(Icons.wifi_rounded, visit.planName),
-                _visitRow(Icons.access_time_rounded,
+                _visitRow(
+                    Icons.access_time_rounded,
                     visit.etaText.isEmpty ? '—' : visit.etaText,
                     label: 'ETA'),
                 if (visit.lastUpdateNote.isNotEmpty ||
@@ -1090,8 +1101,8 @@ class _MapCard extends StatelessWidget {
                     end: Alignment.centerRight,
                   ),
                   borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1141,7 +1152,8 @@ class _MapGridPainter extends CustomPainter {
 // ─── Alerts Card ───────────────────────────────────────────────────────────────
 
 class _AlertsCard extends StatelessWidget {
-  const _AlertsCard({required this.notifications, required this.onOpenAll});
+  const _AlertsCard(
+      {required this.notifications, required this.onOpenAll});
   final List notifications;
   final VoidCallback onOpenAll;
 
@@ -1178,8 +1190,8 @@ class _AlertsCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: kSurface2,
                       borderRadius: BorderRadius.circular(16),
-                      border:
-                          Border.all(color: kPrimary.withValues(alpha: 0.12)),
+                      border: Border.all(
+                          color: kPrimary.withValues(alpha: 0.12)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1300,7 +1312,9 @@ class _SupportCard extends StatelessWidget {
           Expanded(
             child: Text(label,
                 style: GoogleFonts.inter(
-                    color: kMuted, fontWeight: FontWeight.w500, fontSize: 13)),
+                    color: kMuted,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13)),
           ),
           const SizedBox(width: 16),
           Flexible(
@@ -1402,16 +1416,16 @@ class _EmptyCard extends StatelessWidget {
                 fontSize: 14)),
         const SizedBox(height: 5),
         Text(subtitle,
-            style:
-                GoogleFonts.inter(color: kMuted, fontSize: 12, height: 1.45)),
+            style: GoogleFonts.inter(
+                color: kMuted, fontSize: 12, height: 1.45)),
         const SizedBox(height: 14),
         FilledButton(
           onPressed: onTap,
           style: FilledButton.styleFrom(
             backgroundColor: kPrimary,
             foregroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
           ),
           child: Text(actionLabel,
               style: GoogleFonts.inter(fontWeight: FontWeight.w700)),

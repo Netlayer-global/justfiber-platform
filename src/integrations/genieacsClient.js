@@ -139,6 +139,19 @@ function selectExistingPaths(summary, pathOrPaths) {
   return matched.length ? matched : paths.filter(Boolean).slice(0, 1);
 }
 
+function isUsableDeviceSummary(summary) {
+  return Boolean(
+    summary &&
+      typeof summary === "object" &&
+      (
+        summary.Device ||
+        summary.InternetGatewayDevice ||
+        summary.DeviceID ||
+        summary._id
+      )
+  );
+}
+
 function collectMatchingPaths(root, predicate, basePath = "", acc = []) {
   if (!root || typeof root !== "object") return acc;
   for (const [key, value] of Object.entries(root)) {
@@ -403,6 +416,9 @@ export class GenieacsClient {
     } catch {
       liveSummary = null;
     }
+    if (!isUsableDeviceSummary(liveSummary)) {
+      liveSummary = null;
+    }
 
     const enableValue = !paused;
     const dynamicEnablePaths = discoverDynamicConfigPaths(liveSummary, "wifiEnable");
@@ -516,6 +532,9 @@ export class GenieacsClient {
     } catch {
       liveSummary = null;
     }
+    if (!isUsableDeviceSummary(liveSummary)) {
+      liveSummary = null;
+    }
     const dynamicPppoeUsernamePaths = discoverDynamicConfigPaths(liveSummary, "pppoeUsername");
     const dynamicPppoePasswordPaths = discoverDynamicConfigPaths(liveSummary, "pppoePassword");
     const dynamicSsid24Paths = discoverDynamicConfigPaths(liveSummary, "ssid24");
@@ -594,7 +613,7 @@ export class GenieacsClient {
       push(profile.vlanPath, vlanId, "xsd:unsignedInt", Number);
     }
     if (natEnabled !== undefined && natEnabled !== null) {
-      push(profile.natPath, natEnabled, "xsd:boolean", Boolean);
+      push(profile.natPath, natEnabled, "xsd:boolean", Boolean, { configMultiPath: isDasan });
     }
     if (unifyWifiAliases) {
       push([...profile.ssid24Path, ...profile.ssid5Path], normalizedSsid24, undefined, (input) => input, { wifiMultiPath: true });
@@ -602,10 +621,8 @@ export class GenieacsClient {
     } else {
       push(profile.ssid24Path, ssid24);
       push(profile.pass24Path, wifiPassword24 ?? wifiPassword);
-      push(profile.wifiSecurity24Path, true);
       push(profile.ssid5Path, ssid5);
       push(profile.pass5Path, wifiPassword5 ?? wifiPassword24 ?? wifiPassword);
-      push(profile.wifiSecurity5Path, true);
     }
 
     if (values.length > 0) {
@@ -615,9 +632,7 @@ export class GenieacsClient {
       }
 
       if (wifiValues.length > 0) {
-        for (const entry of wifiValues) {
-          await this.setParameterValues(deviceId, [entry], { connectionRequest: true });
-        }
+        await this.setParameterValues(deviceId, wifiValues, { connectionRequest: true });
       }
     }
 

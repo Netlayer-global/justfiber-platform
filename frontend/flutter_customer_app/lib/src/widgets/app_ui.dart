@@ -60,30 +60,10 @@ class AppHeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF13051F), Color(0xFF3B0D7A), kPrimary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Color(0xFF8224E3),
       ),
       child: Stack(
         children: [
-          Positioned(
-            top: -70,
-            right: -56,
-            child: _GlowOrb(
-              size: 230,
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
-          ),
-          Positioned(
-            bottom: -84,
-            left: -70,
-            child: _GlowOrb(
-              size: 210,
-              color: kAccentCyan.withValues(alpha: 0.12),
-            ),
-          ),
           SafeArea(
             bottom: false,
             child: Padding(
@@ -574,28 +554,6 @@ class _HeroIcon extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.13)),
       ),
       child: Icon(icon, color: kText, size: 21),
-    );
-  }
-}
-
-class _GlowOrb extends StatelessWidget {
-  const _GlowOrb({
-    required this.size,
-    required this.color,
-  });
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, Colors.transparent]),
-      ),
     );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../core/theme.dart';
+
 class SerialScanScreen extends StatefulWidget {
   const SerialScanScreen({
     super.key,
@@ -42,7 +44,7 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      backgroundColor: const Color(0xFFFCFAF7),
+      backgroundColor: kBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
@@ -52,9 +54,9 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFFFF),
+                  color: kSurface,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0x140F172A)),
+                  border: Border.all(color: kBorder),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +64,7 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                     Text(
                       'SCAN SERIAL',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF64748B),
+                        color: kSubtle,
                         letterSpacing: 2,
                         fontWeight: FontWeight.w800,
                       ),
@@ -71,27 +73,31 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                     Text(
                       widget.subtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF64748B),
+                        color: kMuted,
                         height: 1.45,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: kSurface2,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0x120F172A)),
+                        border: Border.all(color: kBorder),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF8224E3)),
+                          const Icon(Icons.qr_code_scanner_rounded,
+                              color: kPrimaryLight),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              _latestCode.isEmpty ? 'Point camera at barcode or QR code.' : _latestCode,
+                              _latestCode.isEmpty
+                                  ? 'Point camera at barcode or QR code.'
+                                  : _latestCode,
                               style: const TextStyle(
-                                color: Color(0xFF0F172A),
+                                color: kText,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -113,7 +119,8 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                         onDetect: (capture) {
                           final value = capture.barcodes
                               .map((barcode) => barcode.rawValue ?? '')
-                              .firstWhere((item) => item.trim().isNotEmpty, orElse: () => '');
+                              .firstWhere((item) => item.trim().isNotEmpty,
+                                  orElse: () => '');
                           if (value.isEmpty) return;
                           setState(() => _latestCode = value);
                           _finish(value);
@@ -126,10 +133,10 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                         height: 180,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(28),
-                          border: Border.all(color: const Color(0xFF8224E3), width: 2),
+                          border: Border.all(color: kPrimary, width: 2),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x338224E3),
+                              color: Color(0x558B1CF6),
                               blurRadius: 18,
                               spreadRadius: 1,
                             ),
@@ -144,9 +151,9 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xF2FFFFFF),
+                          color: kSurface.withValues(alpha: 0.94),
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: const Color(0x140F172A)),
+                          border: Border.all(color: kBorder),
                         ),
                         child: Row(
                           children: [
@@ -159,7 +166,9 @@ class _SerialScanScreenState extends State<SerialScanScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: FilledButton(
-                                onPressed: _latestCode.trim().isEmpty ? null : () => _finish(_latestCode),
+                                onPressed: _latestCode.trim().isEmpty
+                                    ? null
+                                    : () => _finish(_latestCode),
                                 child: const Text('Use code'),
                               ),
                             ),

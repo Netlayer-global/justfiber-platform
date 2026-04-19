@@ -498,8 +498,8 @@ class InstallerStateScope extends InheritedNotifier<InstallerAppState> {
   const InstallerStateScope({
     super.key,
     required InstallerAppState appState,
-    required Widget child,
-  }) : super(notifier: appState, child: child);
+    required super.child,
+  }) : super(notifier: appState);
 
   static InstallerAppState of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<InstallerStateScope>();

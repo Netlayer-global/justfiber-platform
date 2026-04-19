@@ -632,6 +632,8 @@ export default function BillingPage() {
   }
 
   async function deleteInvoice(invoiceId: string) {
+    const confirmed = window.confirm('Delete this invoice? Paid invoices cannot be deleted. This action will remove invoice ledger entries.')
+    if (!confirmed) return
     try {
       const res = await adminAPI.deleteInvoice(invoiceId)
       if (!res.success) {
@@ -722,6 +724,14 @@ export default function BillingPage() {
     if (source === 'manual_admin') return 'bg-fuchsia-500/15 text-fuchsia-300'
     return 'bg-white/5 text-slate-300'
   }
+  const invoiceTaxParts = (item: BillingData) => {
+    const taxBreakdown = Array.isArray(item.taxBreakdown) ? item.taxBreakdown : []
+    const cgst = taxBreakdown.find((part) => /cgst/i.test(part.label || ''))
+    const sgst = taxBreakdown.find((part) => /sgst/i.test(part.label || ''))
+    const igst = taxBreakdown.find((part) => /igst/i.test(part.label || ''))
+    const other = taxBreakdown.filter((part) => !/c?gst|sgst|igst/i.test(part.label || ''))
+    return { cgst, sgst, igst, other }
+  }
   const billingSectionTabs: Array<{
     key: 'invoices' | 'payments' | 'collections'
     label: string
@@ -729,7 +739,6 @@ export default function BillingPage() {
   }> = [
     { key: 'invoices', label: 'Invoice Desk', hint: 'Generate and manage invoices' },
     { key: 'payments', label: 'Payments & Recon', hint: 'Reconcile, receipts, and refunds' },
-    { key: 'collections', label: 'Collections Desk', hint: 'Work pending and overdue accounts' },
   ]
 
   return (
@@ -1525,7 +1534,10 @@ export default function BillingPage() {
                 </tr>
               </thead>
               <tbody>
-                {visibleInvoices.length ? visibleInvoices.map((item) => (
+                {visibleInvoices.length ? visibleInvoices.map((item) => {
+                  const taxParts = invoiceTaxParts(item)
+                  const taxableAmount = Math.max(Number(item.totalAmount || item.amount || 0) - Number(item.taxAmount || 0), 0)
+                  return (
                 <tr
                   key={item.id}
                   className="border-t border-slate-200 align-top hover:bg-slate-50"
@@ -1552,6 +1564,20 @@ export default function BillingPage() {
                   </td>
                   <td className="table-cell">
                     <div className="mt-1 font-semibold text-slate-900">Total Rs {Number(item.totalAmount || item.amount || 0).toFixed(2)}</div>
+                    <div className="mt-1 text-xs text-slate-500">Plan + platform Rs {taxableAmount.toFixed(2)}</div>
+                    <div className="mt-1 text-xs text-slate-500">Tax Rs {Number(item.taxAmount || 0).toFixed(2)}</div>
+                    {taxParts.cgst || taxParts.sgst || taxParts.igst ? (
+                      <div className="mt-2 space-y-0.5 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
+                        {taxParts.cgst ? <div>CGST {Number(taxParts.cgst.rate || 0)}%: Rs {Number(taxParts.cgst.amount || 0).toFixed(2)}</div> : null}
+                        {taxParts.sgst ? <div>SGST {Number(taxParts.sgst.rate || 0)}%: Rs {Number(taxParts.sgst.amount || 0).toFixed(2)}</div> : null}
+                        {taxParts.igst ? <div>IGST {Number(taxParts.igst.rate || 0)}%: Rs {Number(taxParts.igst.amount || 0).toFixed(2)}</div> : null}
+                      </div>
+                    ) : null}
+                    {taxParts.other.length ? (
+                      <div className="mt-1 text-xs text-slate-500">
+                        {taxParts.other.map((part) => `${part.label}: Rs ${Number(part.amount || 0).toFixed(2)}`).join(' | ')}
+                      </div>
+                    ) : null}
                     <div className="mt-1 text-xs text-slate-500">
                       {item.billingZoneCode ? `Zone ${item.billingZoneCode}` : item.billingStateCode || '-'}
                       {item.appliedTemplateName ? ` | ${item.appliedTemplateName}` : item.appliedTemplateKey ? ` | ${item.appliedTemplateKey}` : ''}
@@ -1603,7 +1629,8 @@ export default function BillingPage() {
                     </div>
                   </td>
                 </tr>
-                )) : (
+                  )
+                }) : (
                   <tr className="border-t border-slate-200">
                     <td className="table-cell text-slate-500" colSpan={6}>
                       No invoices match the current quick view and filters. Try switching tabs or clearing filters.

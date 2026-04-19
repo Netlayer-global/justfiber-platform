@@ -8,10 +8,9 @@ import { ok } from "../../common/response.js";
 import { loginSchema, refreshSchema } from "./schemas.js";
 import { AdminUser } from "../../models/AdminUser.js";
 import { AdminSession } from "../../models/AdminSession.js";
-import { signAccessToken, signRefreshToken, requireAuth, resolvePermissions } from "../../common/auth.js";
+import { adminCanAccessAllZones, signAccessToken, signRefreshToken, requireAuth, resolvePermissions } from "../../common/auth.js";
 import { env } from "../../config/env.js";
 import { auditFromRequest } from "../../common/audit.js";
-import { permissions } from "../../config/permissions.js";
 
 export const authRouter = Router();
 
@@ -99,12 +98,7 @@ authRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const grantedPermissions = await resolvePermissions(req.admin);
-    const canAccessAllZones =
-      Boolean(req.admin.canAccessAllZones) ||
-      !req.admin.zoneCode ||
-      Array.isArray(req.admin.roles) && req.admin.roles.includes("super_admin") ||
-      grantedPermissions.includes(permissions.adminUserManage) ||
-      grantedPermissions.includes(permissions.adminRoleManage);
+    const canAccessAllZones = adminCanAccessAllZones(req.admin);
     return ok(res, {
       id: req.admin._id,
       username: req.admin.username,

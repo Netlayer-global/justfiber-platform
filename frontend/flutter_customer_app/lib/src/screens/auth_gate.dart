@@ -5,6 +5,7 @@ import '../core/app_state.dart';
 import '../core/theme.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
+import 'new_user_home_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -15,7 +16,9 @@ class AuthGate extends StatelessWidget {
     if (appState.restoringSession) {
       return const _AuthGateLoading();
     }
-    return appState.session == null ? const LoginScreen() : const HomeScreen();
+    if (appState.session == null) return const LoginScreen();
+    if (appState.connections.isNotEmpty) return const HomeScreen();
+    return const NewUserHomeScreen();
   }
 }
 

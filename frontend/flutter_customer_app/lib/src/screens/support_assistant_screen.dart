@@ -444,15 +444,7 @@ class _SupportAssistantScreenState extends State<SupportAssistantScreen> {
           // ── Gradient header ──────────────────────────────────────────
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF0D051A),
-                  Color(0xFF2A0866),
-                  Color(0xFF7C3AED)
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Color(0xFF8224E3),
             ),
             child: SafeArea(
               bottom: false,

@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { AdminRoleSummary, AdminUserSummary, BillingProfile, FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
@@ -566,10 +565,12 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [activeZoneCode, setActiveZoneCode] = useState('')
   const [activeZoneLabel, setActiveZoneLabel] = useState('')
+  const [canAccessAllZones, setCanAccessAllZones] = useState(false)
   const [isCopyingLaunchPack, setIsCopyingLaunchPack] = useState(false)
   const [isSavingZoneAdmins, setIsSavingZoneAdmins] = useState(false)
   const [isCreatingZoneLogin, setIsCreatingZoneLogin] = useState(false)
   const [isCreatingSubZone, setIsCreatingSubZone] = useState(false)
+  const [highlightSubZoneWorkspace, setHighlightSubZoneWorkspace] = useState(false)
   const [busyZoneLoginId, setBusyZoneLoginId] = useState('')
   const [zoneLogins, setZoneLogins] = useState<AdminUserSummary[]>([])
   const [adminRoles, setAdminRoles] = useState<AdminRoleSummary[]>([])
@@ -733,6 +734,23 @@ export default function SettingsPage() {
   }, [])
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('workspace') !== 'sub-zones') return
+
+    setActiveSection('franchise_configuration')
+    const scrollTimer = window.setTimeout(() => {
+      document.getElementById('sub-zone-workspace')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setHighlightSubZoneWorkspace(true)
+    }, 150)
+    const highlightTimer = window.setTimeout(() => setHighlightSubZoneWorkspace(false), 1800)
+
+    return () => {
+      window.clearTimeout(scrollTimer)
+      window.clearTimeout(highlightTimer)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!activeZoneCode || activeZoneCode === 'default') {
       setZoneLogins([])
       return
@@ -767,12 +785,14 @@ export default function SettingsPage() {
       if (!meRes.success || !meRes.data) return
 
       if (meRes.data.canAccessAllZones) {
+        setCanAccessAllZones(true)
         window.localStorage.setItem('justfiber-admin-can-access-all-zones', '1')
         window.localStorage.setItem('justfiber-admin-zone-code', '')
         window.localStorage.setItem('justfiber-admin-zone-label', '')
         setActiveZoneCode(window.localStorage.getItem('justfiber-active-zone-key') || 'default')
         setActiveZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || 'JustFiber HQ')
       } else {
+        setCanAccessAllZones(false)
         window.localStorage.setItem('justfiber-admin-can-access-all-zones', '0')
         window.localStorage.setItem('justfiber-admin-zone-code', meRes.data.zoneCode || '')
         window.localStorage.setItem('justfiber-admin-zone-label', meRes.data.zoneName || '')
@@ -812,6 +832,10 @@ export default function SettingsPage() {
   }
 
   async function handleCopyLaunchPack() {
+    if (!canAccessAllZones) {
+      toast.error('Only main admin can copy zone settings')
+      return
+    }
     if (!activeZoneFranchise) {
       toast.error('Create or select a sub-zone first')
       return
@@ -834,6 +858,18 @@ export default function SettingsPage() {
     } finally {
       setIsCopyingLaunchPack(false)
     }
+  }
+
+  function openSubZoneWorkspace() {
+    setActiveSection('franchise_configuration')
+    document.getElementById('sub-zone-workspace')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setHighlightSubZoneWorkspace(true)
+    window.setTimeout(() => setHighlightSubZoneWorkspace(false), 1600)
+
+    const url = new URL(window.location.href)
+    url.searchParams.set('workspace', 'sub-zones')
+    url.hash = 'sub-zone-workspace'
+    window.history.replaceState({}, '', url.toString())
   }
 
   async function handleSaveZoneAdmins() {
@@ -867,6 +903,10 @@ export default function SettingsPage() {
   }
 
   async function handleCreateSubZoneFromSettings() {
+    if (!canAccessAllZones) {
+      toast.error('Only main admin can create sub-zones')
+      return
+    }
     if (!subZoneDraft.subZoneName.trim() || !subZoneDraft.email.trim() || !subZoneDraft.phone.trim() || !subZoneDraft.city.trim()) {
       toast.error('Sub-zone name, email, phone, and city are required')
       return
@@ -1341,26 +1381,39 @@ export default function SettingsPage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900">Settings</h1>
+            <div className="mt-2 text-sm text-slate-500">
+              Manage zone operations, billing defaults, invoice setup, and sub-zone logins from one place.
+            </div>
           </div>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={handleCopyLaunchPack}
-            disabled={!activeZoneFranchise || isCopyingLaunchPack}
-          >
-            {isCopyingLaunchPack ? 'Copying...' : 'Copy parent settings now'}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button type="button" className="btn-secondary" onClick={openSubZoneWorkspace}>
+              Sub-zone workspace
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleCopyLaunchPack}
+              disabled={!canAccessAllZones || !activeZoneFranchise || isCopyingLaunchPack}
+            >
+              {isCopyingLaunchPack ? 'Copying...' : 'Copy parent settings now'}
+            </button>
+          </div>
         </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="card p-5">
+        <div
+          id="sub-zone-workspace"
+          className={`card p-5 transition ${
+            highlightSubZoneWorkspace ? 'ring-4 ring-purple-200 ring-offset-2 ring-offset-slate-50' : ''
+          }`}
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Sub-zone and login manager</div>
+              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Zone workspace</div>
               <h2 className="mt-2 text-2xl font-semibold text-slate-900">Sub-Zones and Logins</h2>
               <div className="mt-2 text-sm text-slate-500">
-                Create sub-zones and zone logins here.
+                Create every sub-zone and zone login here. Sub-zone users stay locked to their assigned zone; only main admin can switch zones.
               </div>
             </div>
           </div>
@@ -1370,14 +1423,14 @@ export default function SettingsPage() {
                 <div className="text-sm font-semibold text-slate-900">Create sub-zone</div>
                 <div className="mt-1 text-sm text-slate-500">Create a new child zone under the current zone.</div>
               </div>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleCreateSubZoneFromSettings}
-                disabled={isCreatingSubZone}
-              >
-                {isCreatingSubZone ? 'Creating...' : 'Create sub-zone'}
-              </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleCreateSubZoneFromSettings}
+              disabled={!canAccessAllZones || isCreatingSubZone}
+            >
+                {!canAccessAllZones ? 'Main admin only' : isCreatingSubZone ? 'Creating...' : 'Create sub-zone'}
+            </button>
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <input

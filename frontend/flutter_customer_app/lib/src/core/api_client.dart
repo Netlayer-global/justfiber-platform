@@ -8,7 +8,7 @@ class ApiClient {
   ApiClient({required this.baseUrl});
 
   final String baseUrl;
-  static const Duration _requestTimeout = Duration(seconds: 12);
+  static const Duration _requestTimeout = Duration(seconds: 22);
   Future<String?> Function()? onUnauthorized;
 
   Uri _uri(String path) =>
@@ -198,15 +198,17 @@ class ApiClient {
 
   Future<DashboardData> fetchDashboard(CustomerSession session,
       {String? customerId}) async {
-    final dashboard = _asMap(await _request(
-        _withCustomerId('/api/v1/customer/dashboard', customerId),
-        token: session.accessToken));
-    final billing = _asMap(await _request(
-        _withCustomerId('/api/v1/customer/billing/summary', customerId),
-        token: session.accessToken));
-    final wifi = _asMap(await _request(
-        _withCustomerId('/api/v1/customer/wifi', customerId),
-        token: session.accessToken));
+    final results = await Future.wait([
+      _request(_withCustomerId('/api/v1/customer/dashboard', customerId),
+          token: session.accessToken),
+      _request(_withCustomerId('/api/v1/customer/billing/summary', customerId),
+          token: session.accessToken),
+      _request(_withCustomerId('/api/v1/customer/wifi', customerId),
+          token: session.accessToken),
+    ]);
+    final dashboard = _asMap(results[0]);
+    final billing = _asMap(results[1]);
+    final wifi = _asMap(results[2]);
     final serviceStatus =
         (billing['serviceStatus'] ?? dashboard['status'] ?? '').toString();
     final paymentStatus = (billing['paymentStatus'] ?? '').toString();
@@ -832,6 +834,49 @@ class ApiClient {
           'pinCode': pinCode,
           'lat': lat,
           'lng': lng,
+        },
+      ),
+    );
+    final leadNumber = (data['leadNumber'] ?? '').toString().trim();
+    return leadNumber.isEmpty ? null : leadNumber;
+  }
+
+  Future<String?> submitConnectionLead({
+    required String fullName,
+    required String mobile,
+    String? email,
+    required String address,
+    required String pinCode,
+    required double lat,
+    required double lng,
+    String? planCode,
+    String? planName,
+    int? durationMonths,
+    String? durationLabel,
+    String? preferredSlotCode,
+    String? preferredSlotLabel,
+  }) async {
+    final data = _asMap(
+      await _request(
+        '/api/v1/customer/feasibility/lead',
+        method: 'POST',
+        body: {
+          'fullName': fullName,
+          'mobile': mobile,
+          if ((email ?? '').trim().isNotEmpty) 'email': email,
+          'address': address,
+          'pinCode': pinCode,
+          'lat': lat,
+          'lng': lng,
+          'source': 'app_new_user',
+          if ((planCode ?? '').isNotEmpty) 'planCode': planCode,
+          if ((planName ?? '').isNotEmpty) 'planName': planName,
+          if (durationMonths != null) 'durationMonths': durationMonths,
+          if ((durationLabel ?? '').isNotEmpty) 'durationLabel': durationLabel,
+          if ((preferredSlotCode ?? '').isNotEmpty)
+            'preferredSlotCode': preferredSlotCode,
+          if ((preferredSlotLabel ?? '').isNotEmpty)
+            'preferredSlotLabel': preferredSlotLabel,
         },
       ),
     );

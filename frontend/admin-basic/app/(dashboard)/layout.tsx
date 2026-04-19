@@ -16,7 +16,6 @@ import {
   LogOut,
   MapPinned,
   Menu,
-  Plus,
   Router,
   Search,
   Settings,
@@ -84,7 +83,6 @@ const NAV_SECTIONS: NavSection[] = [
     subheader: 'SYSTEM',
     items: [
       { href: '/my-zone-details', label: 'My Zone Details', icon: MapPinned },
-      { href: '/create-sub-zone', label: 'Create Sub-zone', icon: Plus },
       { href: '/settings', label: 'Settings', icon: Settings },
     ],
   },
@@ -173,7 +171,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [zoneMenuOpen, setZoneMenuOpen] = useState(false)
   const [zoneOptions, setZoneOptions] = useState<Array<{ key: string; label: string }>>([])
-  const [canAccessAllZones, setCanAccessAllZones] = useState(true)
+  const [canAccessAllZones, setCanAccessAllZones] = useState(false)
+  const [zoneScopeReady, setZoneScopeReady] = useState(false)
   const [currentZone, setCurrentZone] = useState<{ key: string; label: string }>({
     key: 'default',
     label: 'JustFiber HQ',
@@ -197,7 +196,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (typeof window === 'undefined') return
     const storedLabel = window.localStorage.getItem('justfiber-active-zone-label')
     const storedKey = window.localStorage.getItem('justfiber-active-zone-key')
-    const nextCanAccessAllZones = window.localStorage.getItem('justfiber-admin-can-access-all-zones') !== '0'
+    const nextCanAccessAllZones = window.localStorage.getItem('justfiber-admin-can-access-all-zones') === '1'
     setCanAccessAllZones(nextCanAccessAllZones)
     if (nextCanAccessAllZones) {
       window.localStorage.setItem('justfiber-admin-zone-code', '')
@@ -267,7 +266,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     try {
       if (typeof window === 'undefined') return
       const meRes = await adminAPI.getCurrentAdmin()
-      if (!meRes.success || !meRes.data) return
+      if (!meRes.success || !meRes.data) {
+        setCanAccessAllZones(false)
+        setZoneScopeReady(true)
+        return
+      }
 
       const nextCanAccessAllZones = Boolean(meRes.data.canAccessAllZones)
       window.localStorage.setItem('justfiber-admin-can-access-all-zones', nextCanAccessAllZones ? '1' : '0')
@@ -277,13 +280,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         window.localStorage.setItem('justfiber-admin-zone-label', '')
         setCanAccessAllZones(true)
       } else {
-        window.localStorage.setItem('justfiber-admin-zone-code', meRes.data.zoneCode || '')
-        window.localStorage.setItem('justfiber-admin-zone-label', meRes.data.zoneName || '')
+        const assignedZone = {
+          key: meRes.data.zoneCode || 'default',
+          label: meRes.data.zoneName || meRes.data.zoneCode || 'Assigned zone',
+        }
+        window.localStorage.setItem('justfiber-admin-zone-code', assignedZone.key)
+        window.localStorage.setItem('justfiber-admin-zone-label', assignedZone.label)
+        window.localStorage.setItem('justfiber-active-zone-key', assignedZone.key)
+        window.localStorage.setItem('justfiber-active-zone-label', assignedZone.label)
+        setCurrentZone(assignedZone)
         setCanAccessAllZones(false)
+        window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: assignedZone }))
       }
+      setZoneScopeReady(true)
 
       await loadZoneOptions()
-    } catch {}
+    } catch {
+      setCanAccessAllZones(false)
+      setZoneScopeReady(true)
+    }
   }
 
   function handleSwitchZone(item: { key: string; label: string }) {
@@ -353,18 +368,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="relative hidden md:block">
                   <button
                     type="button"
-                    onClick={() => canAccessAllZones && setZoneMenuOpen((value) => !value)}
-                    className="flex items-center gap-3 rounded-lg border border-purple-200 px-4 py-2 text-left transition hover:bg-slate-50"
+                    onClick={() => zoneScopeReady && canAccessAllZones && setZoneMenuOpen((value) => !value)}
+                    className={`flex items-center gap-3 rounded-lg border border-purple-200 px-4 py-2 text-left transition ${
+                      zoneScopeReady && canAccessAllZones ? 'hover:bg-slate-50' : 'cursor-not-allowed bg-slate-50'
+                    }`}
                   >
                     <div>
                       <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                        {canAccessAllZones ? 'Zone' : 'Locked zone'}
+                        {!zoneScopeReady ? 'Checking zone' : canAccessAllZones ? 'Zone' : 'Locked zone'}
                       </div>
                       <div className="text-sm font-semibold text-slate-900">{currentZone.label}</div>
                     </div>
-                    {canAccessAllZones ? <ChevronDown className="h-4 w-4 text-slate-400" /> : null}
+                    {zoneScopeReady && canAccessAllZones ? <ChevronDown className="h-4 w-4 text-slate-400" /> : null}
                   </button>
-                  {zoneMenuOpen && canAccessAllZones ? (
+                  {zoneMenuOpen && zoneScopeReady && canAccessAllZones ? (
                     <div className="absolute right-0 z-30 mt-2 w-72 rounded-[18px] border border-purple-200 bg-white p-2 shadow-lg">
                       <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Zone Switch</div>
                       <div className="space-y-1">
@@ -386,11 +403,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <Link href="/my-zone-details" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
                             My Zone Details
                           </Link>
-                          <Link href="/create-sub-zone" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                            Create Sub-zone
-                          </Link>
                           <Link href="/settings" className="block rounded-xl px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                            Zone Settings
+                            Zone Settings & Sub-zones
                           </Link>
                         </div>
                       </div>

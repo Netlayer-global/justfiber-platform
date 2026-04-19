@@ -1,9 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import 'package:share_plus/share_plus.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../core/app_state.dart';
@@ -11,6 +7,7 @@ import '../core/models.dart';
 import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
 import 'billing_payment_screen.dart';
+import 'document_viewer_screen.dart';
 import 'payments_history_screen.dart';
 import 'plan_catalog_screen.dart';
 import 'support_history_screen.dart';
@@ -364,26 +361,13 @@ class BillingHistoryScreen extends StatelessWidget {
     final base = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl =
         relativeUrl.startsWith('http') ? relativeUrl : '$base$relativeUrl';
-    try {
-      final response = await http.get(
-        Uri.parse(fullUrl),
-        headers: {'Authorization': 'Bearer ${session.accessToken}'},
-      );
-      if (response.statusCode == 200) {
-        final tmp = Directory.systemTemp;
-        final file = File('${tmp.path}/${title.replaceAll(' ', '_')}.pdf');
-        await file.writeAsBytes(response.bodyBytes);
-        await Share.shareXFiles([XFile(file.path)], subject: title);
-      } else {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not open document (${response.statusCode}).')));
-      }
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open document.')));
-    }
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DocumentViewerScreen(
+        title: title,
+        url: fullUrl,
+        accessToken: session.accessToken,
+      ),
+    ));
   }
 }
 

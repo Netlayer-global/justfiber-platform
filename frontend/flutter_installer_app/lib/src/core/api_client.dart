@@ -6,14 +6,16 @@ import 'package:http/http.dart' as http;
 import 'models.dart';
 
 String installerFriendlyError(Object error) {
-  final text = error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+  final text =
+      error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
   if (text.contains('TimeoutException') || text.contains('timed out')) {
     return 'Server took too long to respond. Please retry.';
   }
   if (text.contains('SocketException') ||
       text.contains('Failed host lookup') ||
       text.contains('Connection refused') ||
-      text.contains('Connection reset')) {
+      text.contains('Connection reset') ||
+      text.contains('HandshakeException')) {
     return 'Unable to reach server right now. Check internet and retry.';
   }
   if (text.isEmpty) {
@@ -27,8 +29,11 @@ class InstallerApiClient {
 
   final String baseUrl;
   Future<String?> Function()? onUnauthorized;
+  final http.Client _client = http.Client();
 
-  Uri _uri(String path) => Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
+  Uri _uri(String path) =>
+      Uri.parse('${baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
+  String _requestId() => 'installer-${DateTime.now().microsecondsSinceEpoch}';
 
   Future<dynamic> _request(
     String path, {
@@ -36,41 +41,97 @@ class InstallerApiClient {
     String? token,
     Map<String, dynamic>? body,
     bool allowRetry = true,
+    bool allowTransientRetry = true,
+    Duration timeout = const Duration(seconds: 18),
   }) async {
     final headers = <String, String>{
+      'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Client': 'justfiber-installer-app',
+      'X-Request-ID': _requestId(),
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
+
+    Future<http.Response> send() {
+      if (method == 'POST') {
+        return _client
+            .post(_uri(path), headers: headers, body: jsonEncode(body ?? {}))
+            .timeout(timeout);
+      }
+      return _client.get(_uri(path), headers: headers).timeout(timeout);
+    }
+
     late http.Response response;
     try {
-      if (method == 'POST') {
-        response = await http.post(_uri(path), headers: headers, body: jsonEncode(body ?? {})).timeout(const Duration(seconds: 20));
-      } else {
-        response = await http.get(_uri(path), headers: headers).timeout(const Duration(seconds: 20));
+      response = await send();
+      if (method == 'GET' &&
+          allowTransientRetry &&
+          {502, 503, 504}.contains(response.statusCode)) {
+        await Future<void>.delayed(const Duration(milliseconds: 650));
+        response = await send();
       }
     } on TimeoutException {
       throw 'Server took too long to respond. Please retry.';
     } catch (_) {
       throw 'Unable to reach server right now. Check internet and retry.';
     }
-    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+
+    final payload = _decodeResponse(response);
     if (response.statusCode == 401 && allowRetry && onUnauthorized != null) {
       final refreshedToken = await onUnauthorized!.call();
       if (refreshedToken != null && refreshedToken.isNotEmpty) {
-        return _request(path, method: method, token: refreshedToken, body: body, allowRetry: false);
+        return _request(
+          path,
+          method: method,
+          token: refreshedToken,
+          body: body,
+          allowRetry: false,
+          allowTransientRetry: allowTransientRetry,
+          timeout: timeout,
+        );
       }
     }
     if (response.statusCode >= 400 || payload['success'] == false) {
-      throw installerFriendlyError(payload['error']?['message'] ?? 'Request failed');
+      final message = payload['error']?['message'] ??
+          payload['message'] ??
+          'Request failed (${response.statusCode})';
+      throw installerFriendlyError(message);
     }
     return payload['data'];
   }
 
-  Map<String, dynamic> _asMap(dynamic data) => data is Map<String, dynamic> ? data : <String, dynamic>{};
+  Map<String, dynamic> _decodeResponse(http.Response response) {
+    if (response.body.trim().isEmpty) {
+      return <String, dynamic>{'success': response.statusCode < 400};
+    }
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      return <String, dynamic>{
+        'success': response.statusCode < 400,
+        'data': decoded
+      };
+    } catch (_) {
+      if (response.statusCode >= 500) {
+        return <String, dynamic>{
+          'success': false,
+          'message': 'Server returned an invalid response. Please retry.'
+        };
+      }
+      return <String, dynamic>{
+        'success': false,
+        'message': response.body.trim()
+      };
+    }
+  }
+
+  Map<String, dynamic> _asMap(dynamic data) =>
+      data is Map<String, dynamic> ? data : <String, dynamic>{};
   List<dynamic> _asList(dynamic data) => data is List ? data : const [];
 
   Future<InstallerSession> login(String login, String password) async {
-    final data = _asMap(await _request('/api/v1/installer/auth/login', method: 'POST', body: {'login': login, 'password': password}));
+    final data = _asMap(await _request('/api/v1/installer/auth/login',
+        method: 'POST', body: {'login': login, 'password': password}));
     return InstallerSession(
       login: login,
       accessToken: (data['accessToken'] ?? '').toString(),
@@ -91,9 +152,11 @@ class InstallerApiClient {
   }
 
   Future<InstallerDashboard> fetchDashboard(InstallerSession session) async {
-    final data = _asMap(await _request('/api/v1/installer/dashboard', token: session.accessToken));
+    final data = _asMap(await _request('/api/v1/installer/dashboard',
+        token: session.accessToken));
     return InstallerDashboard(
-      todayNewInstallationJobs: int.tryParse('${data['todayNewInstallationJobs'] ?? 0}') ?? 0,
+      todayNewInstallationJobs:
+          int.tryParse('${data['todayNewInstallationJobs'] ?? 0}') ?? 0,
       pendingJobs: int.tryParse('${data['pendingJobs'] ?? 0}') ?? 0,
       completedJobs: int.tryParse('${data['completedJobs'] ?? 0}') ?? 0,
       availabilityStatus: (data['availabilityStatus'] ?? '-').toString(),
@@ -101,7 +164,8 @@ class InstallerApiClient {
   }
 
   Future<InstallerProfile> fetchProfile(InstallerSession session) async {
-    final data = _asMap(await _request('/api/v1/installer/profile', token: session.accessToken));
+    final data = _asMap(await _request('/api/v1/installer/profile',
+        token: session.accessToken));
     return InstallerProfile(
       fullName: (data['fullName'] ?? '').toString(),
       installerCode: (data['installerCode'] ?? '-').toString(),
@@ -111,7 +175,8 @@ class InstallerApiClient {
   }
 
   Future<List<InstallerJob>> fetchJobs(InstallerSession session) async {
-    final list = _asList(await _request('/api/v1/installer/jobs', token: session.accessToken));
+    final list = _asList(
+        await _request('/api/v1/installer/jobs', token: session.accessToken));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       return InstallerJob(
@@ -119,54 +184,99 @@ class InstallerApiClient {
         jobNumber: (map['jobNumber'] ?? '-').toString(),
         status: (map['status'] ?? 'assigned').toString(),
         subStatus: (map['subStatus'] ?? '').toString(),
-        customerName: (map['customerName'] ?? map['customer']?['fullName'] ?? '-').toString(),
-        customerPhone: (map['customerSnapshot']?['phone'] ?? map['phone'] ?? '').toString(),
-        customerAddress: (map['customerAddress'] ?? map['serviceAddress'] ?? '-').toString(),
+        customerName:
+            (map['customerName'] ?? map['customer']?['fullName'] ?? '-')
+                .toString(),
+        customerPhone: (map['customerSnapshot']?['phone'] ?? map['phone'] ?? '')
+            .toString(),
+        customerAddress:
+            (map['customerAddress'] ?? map['serviceAddress'] ?? '-').toString(),
         planName: (map['customerSnapshot']?['planName'] ?? '').toString(),
         planCode: (map['customerSnapshot']?['planCode'] ?? '').toString(),
-        planCategory: (map['customerSnapshot']?['planCategory'] ?? 'home').toString(),
-        monthlyPrice: double.tryParse('${map['customerSnapshot']?['monthlyPrice'] ?? 0}') ?? 0,
-        downloadSpeedMbps: double.tryParse('${map['customerSnapshot']?['speedMbps'] ?? 0}') ?? 0,
-        uploadSpeedMbps: double.tryParse('${map['customerSnapshot']?['uploadSpeedMbps'] ?? 0}') ?? 0,
-        dataLimitGb: double.tryParse('${map['customerSnapshot']?['dataLimitGb'] ?? 0}') ?? 0,
-        fupSpeedMbps: double.tryParse('${map['customerSnapshot']?['fupSpeedMbps'] ?? 0}') ?? 0,
-        dataPolicy: (map['customerSnapshot']?['dataPolicy'] ?? 'unlimited').toString(),
-        otcCharge: double.tryParse('${map['customerSnapshot']?['otcCharge'] ?? 0}') ?? 0,
-        installationCharge: double.tryParse('${map['customerSnapshot']?['installationCharge'] ?? 0}') ?? 0,
-        tags: _asList(map['customerSnapshot']?['tags']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-        staticBenefits: _asList(map['customerSnapshot']?['staticBenefits']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+        planCategory:
+            (map['customerSnapshot']?['planCategory'] ?? 'home').toString(),
+        monthlyPrice: double.tryParse(
+                '${map['customerSnapshot']?['monthlyPrice'] ?? 0}') ??
+            0,
+        downloadSpeedMbps:
+            double.tryParse('${map['customerSnapshot']?['speedMbps'] ?? 0}') ??
+                0,
+        uploadSpeedMbps: double.tryParse(
+                '${map['customerSnapshot']?['uploadSpeedMbps'] ?? 0}') ??
+            0,
+        dataLimitGb: double.tryParse(
+                '${map['customerSnapshot']?['dataLimitGb'] ?? 0}') ??
+            0,
+        fupSpeedMbps: double.tryParse(
+                '${map['customerSnapshot']?['fupSpeedMbps'] ?? 0}') ??
+            0,
+        dataPolicy:
+            (map['customerSnapshot']?['dataPolicy'] ?? 'unlimited').toString(),
+        otcCharge:
+            double.tryParse('${map['customerSnapshot']?['otcCharge'] ?? 0}') ??
+                0,
+        installationCharge: double.tryParse(
+                '${map['customerSnapshot']?['installationCharge'] ?? 0}') ??
+            0,
+        tags: _asList(map['customerSnapshot']?['tags'])
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList(),
+        staticBenefits: _asList(map['customerSnapshot']?['staticBenefits'])
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList(),
         jobType: (map['jobType'] ?? 'installation').toString(),
         priority: (map['priority'] ?? 'medium').toString(),
-        scheduledAt: (map['scheduledDate'] ?? map['assignment']?['assignedAt'] ?? '').toString(),
-        latestEventCode: ((map['timeline'] is List && (map['timeline'] as List).isNotEmpty)
-                ? ((map['timeline'] as List).last as Map<String, dynamic>)['event']
-                : '')?.toString() ??
-            '',
+        scheduledAt:
+            (map['scheduledDate'] ?? map['assignment']?['assignedAt'] ?? '')
+                .toString(),
+        latestEventCode:
+            ((map['timeline'] is List && (map['timeline'] as List).isNotEmpty)
+                        ? ((map['timeline'] as List).last
+                            as Map<String, dynamic>)['event']
+                        : '')
+                    ?.toString() ??
+                '',
         configStatus: (map['activation']?['configStatus'] ?? '').toString(),
-        finalSerialNumber: (map['deviceContext']?['finalSerialNumber'] ?? map['deviceContext']?['manualSerialNumber'] ?? '').toString(),
-        latitude: double.tryParse('${map['customerSnapshot']?['location']?['lat'] ?? ''}'),
-        longitude: double.tryParse('${map['customerSnapshot']?['location']?['lng'] ?? ''}'),
-        mapUrl: (map['customerSnapshot']?['location']?['mapUrl'] ?? '').toString(),
+        finalSerialNumber: (map['deviceContext']?['finalSerialNumber'] ??
+                map['deviceContext']?['manualSerialNumber'] ??
+                '')
+            .toString(),
+        latitude: double.tryParse(
+            '${map['customerSnapshot']?['location']?['lat'] ?? ''}'),
+        longitude: double.tryParse(
+            '${map['customerSnapshot']?['location']?['lng'] ?? ''}'),
+        mapUrl:
+            (map['customerSnapshot']?['location']?['mapUrl'] ?? '').toString(),
         deferNote: (map['deviceContext']?['deferNote'] ?? '').toString(),
         cancelNote: (map['deviceContext']?['cancelNote'] ?? '').toString(),
       );
     }).toList();
   }
 
-  Future<Map<String, dynamic>> fetchJobDetail(InstallerSession session, String jobId) async {
-    return _asMap(await _request('/api/v1/installer/jobs/$jobId', token: session.accessToken));
+  Future<Map<String, dynamic>> fetchJobDetail(
+      InstallerSession session, String jobId) async {
+    return _asMap(await _request('/api/v1/installer/jobs/$jobId',
+        token: session.accessToken));
   }
 
-  Future<ProvisioningPreview> fetchProvisioningPreview(InstallerSession session, String jobId) async {
-    final data = _asMap(await _request('/api/v1/installer/jobs/$jobId/provisioning-preview', token: session.accessToken));
-    final credentials = _asMap(data['preparedCredentials'] ?? data['credentials']);
+  Future<ProvisioningPreview> fetchProvisioningPreview(
+      InstallerSession session, String jobId) async {
+    final data = _asMap(await _request(
+        '/api/v1/installer/jobs/$jobId/provisioning-preview',
+        token: session.accessToken));
+    final credentials =
+        _asMap(data['preparedCredentials'] ?? data['credentials']);
     final pppoe = _asMap(credentials['pppoe']);
     final wifi = _asMap(credentials['wifi']);
     final planSummary = _asMap(data['planSummary']);
     return ProvisioningPreview(
       brand: (credentials['brand'] ?? data['ontBrand'] ?? 'generic').toString(),
-      pppoeUsername: (pppoe['username'] ?? data['pppoeUsername'] ?? '').toString(),
-      pppoePassword: (pppoe['password'] ?? data['pppoePassword'] ?? '').toString(),
+      pppoeUsername:
+          (pppoe['username'] ?? data['pppoeUsername'] ?? '').toString(),
+      pppoePassword:
+          (pppoe['password'] ?? data['pppoePassword'] ?? '').toString(),
       ssid24: (wifi['ssid24'] ?? '').toString(),
       ssid5: (wifi['ssid5'] ?? '').toString(),
       wifiPassword: (wifi['password'] ?? '').toString(),
@@ -175,21 +285,35 @@ class InstallerApiClient {
       planName: (planSummary['planName'] ?? '').toString(),
       planCategory: (planSummary['category'] ?? 'home').toString(),
       monthlyPrice: double.tryParse('${planSummary['monthlyPrice'] ?? 0}') ?? 0,
-      downloadSpeedMbps: double.tryParse('${planSummary['speedMbps'] ?? 0}') ?? 0,
-      uploadSpeedMbps: double.tryParse('${planSummary['uploadSpeedMbps'] ?? 0}') ?? 0,
+      downloadSpeedMbps:
+          double.tryParse('${planSummary['speedMbps'] ?? 0}') ?? 0,
+      uploadSpeedMbps:
+          double.tryParse('${planSummary['uploadSpeedMbps'] ?? 0}') ?? 0,
       dataLimitGb: double.tryParse('${planSummary['dataLimitGb'] ?? 0}') ?? 0,
       fupSpeedMbps: double.tryParse('${planSummary['fupSpeedMbps'] ?? 0}') ?? 0,
       dataPolicy: (planSummary['dataPolicy'] ?? 'unlimited').toString(),
       otcCharge: double.tryParse('${planSummary['otcCharge'] ?? 0}') ?? 0,
-      installationCharge: double.tryParse('${planSummary['installationCharge'] ?? 0}') ?? 0,
-      tags: _asList(planSummary['tags']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-      staticBenefits: _asList(planSummary['staticBenefits']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
-      features: _asList(planSummary['features']).map((item) => item.toString()).where((item) => item.isNotEmpty).toList(),
+      installationCharge:
+          double.tryParse('${planSummary['installationCharge'] ?? 0}') ?? 0,
+      tags: _asList(planSummary['tags'])
+          .map((item) => item.toString())
+          .where((item) => item.isNotEmpty)
+          .toList(),
+      staticBenefits: _asList(planSummary['staticBenefits'])
+          .map((item) => item.toString())
+          .where((item) => item.isNotEmpty)
+          .toList(),
+      features: _asList(planSummary['features'])
+          .map((item) => item.toString())
+          .where((item) => item.isNotEmpty)
+          .toList(),
     );
   }
 
-  Future<List<InstallerNotificationItem>> fetchNotifications(InstallerSession session) async {
-    final list = _asList(await _request('/api/v1/installer/notifications', token: session.accessToken));
+  Future<List<InstallerNotificationItem>> fetchNotifications(
+      InstallerSession session) async {
+    final list = _asList(await _request('/api/v1/installer/notifications',
+        token: session.accessToken));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       return InstallerNotificationItem(
@@ -205,15 +329,18 @@ class InstallerApiClient {
   }
 
   Future<void> acceptJob(InstallerSession session, String jobId) async {
-    await _request('/api/v1/installer/jobs/$jobId/accept', method: 'POST', token: session.accessToken);
+    await _request('/api/v1/installer/jobs/$jobId/accept',
+        method: 'POST', token: session.accessToken);
   }
 
   Future<void> startTravel(InstallerSession session, String jobId) async {
-    await _request('/api/v1/installer/jobs/$jobId/start-travel', method: 'POST', token: session.accessToken);
+    await _request('/api/v1/installer/jobs/$jobId/start-travel',
+        method: 'POST', token: session.accessToken);
   }
 
   Future<void> startOnsite(InstallerSession session, String jobId) async {
-    await _request('/api/v1/installer/jobs/$jobId/start-onsite', method: 'POST', token: session.accessToken);
+    await _request('/api/v1/installer/jobs/$jobId/start-onsite',
+        method: 'POST', token: session.accessToken);
   }
 
   Future<Map<String, dynamic>> deferJob(
@@ -232,7 +359,8 @@ class InstallerApiClient {
     );
   }
 
-  Future<Map<String, dynamic>> resumeFollowUp(InstallerSession session, String jobId) async {
+  Future<Map<String, dynamic>> resumeFollowUp(
+      InstallerSession session, String jobId) async {
     return _asMap(
       await _request(
         '/api/v1/installer/jobs/$jobId/resume-follow-up',
@@ -273,12 +401,19 @@ class InstallerApiClient {
     );
   }
 
-  Future<void> setManualSerial(InstallerSession session, String jobId, String serial) async {
-    await _request('/api/v1/installer/jobs/$jobId/manual-serial', method: 'POST', token: session.accessToken, body: {'serialNumber': serial});
+  Future<void> setManualSerial(
+      InstallerSession session, String jobId, String serial) async {
+    await _request('/api/v1/installer/jobs/$jobId/manual-serial',
+        method: 'POST',
+        token: session.accessToken,
+        body: {'serialNumber': serial});
   }
 
   Future<void> checkOptical(InstallerSession session, String jobId) async {
-    await _request('/api/v1/installer/jobs/$jobId/check-optical', method: 'POST', token: session.accessToken, body: {'rxPower': '-19.5', 'txPower': '1.2'});
+    await _request('/api/v1/installer/jobs/$jobId/check-optical',
+        method: 'POST',
+        token: session.accessToken,
+        body: {'rxPower': '-19.5', 'txPower': '1.2'});
   }
 
   Future<void> saveChecklist(InstallerSession session, String jobId) async {
@@ -299,20 +434,32 @@ class InstallerApiClient {
   }
 
   Future<void> activate(InstallerSession session, String jobId) async {
-    await _request('/api/v1/installer/jobs/$jobId/activate', method: 'POST', token: session.accessToken);
+    await _request(
+      '/api/v1/installer/jobs/$jobId/activate',
+      method: 'POST',
+      token: session.accessToken,
+      timeout: const Duration(seconds: 35),
+    );
   }
 
-  Future<Map<String, dynamic>> fetchDiagnostics(InstallerSession session, String jobId) async {
-    return _asMap(await _request('/api/v1/installer/jobs/$jobId/diagnostics', token: session.accessToken));
+  Future<Map<String, dynamic>> fetchDiagnostics(
+      InstallerSession session, String jobId) async {
+    return _asMap(await _request('/api/v1/installer/jobs/$jobId/diagnostics',
+        token: session.accessToken));
   }
 
-  Future<String?> sendCompletionOtp(InstallerSession session, String jobId) async {
-    final data = _asMap(await _request('/api/v1/installer/jobs/$jobId/send-completion-otp', method: 'POST', token: session.accessToken));
+  Future<String?> sendCompletionOtp(
+      InstallerSession session, String jobId) async {
+    final data = _asMap(await _request(
+        '/api/v1/installer/jobs/$jobId/send-completion-otp',
+        method: 'POST',
+        token: session.accessToken));
     final otp = data['demoOtp']?.toString();
     return otp == null || otp.isEmpty ? null : otp;
   }
 
-  Future<void> verifyCompletionOtp(InstallerSession session, String jobId, String otp) async {
+  Future<void> verifyCompletionOtp(
+      InstallerSession session, String jobId, String otp) async {
     await _request(
       '/api/v1/installer/jobs/$jobId/verify-completion-otp',
       method: 'POST',
@@ -321,15 +468,20 @@ class InstallerApiClient {
     );
   }
 
-  Future<Map<String, dynamic>> completeJob(InstallerSession session, String jobId) async {
-    return _asMap(await _request('/api/v1/installer/jobs/$jobId/complete', method: 'POST', token: session.accessToken));
+  Future<Map<String, dynamic>> completeJob(
+      InstallerSession session, String jobId) async {
+    return _asMap(await _request('/api/v1/installer/jobs/$jobId/complete',
+        method: 'POST', token: session.accessToken));
   }
 
-  Future<void> markNotificationRead(InstallerSession session, String notificationId) async {
-    await _request('/api/v1/installer/notifications/$notificationId/read', method: 'POST', token: session.accessToken);
+  Future<void> markNotificationRead(
+      InstallerSession session, String notificationId) async {
+    await _request('/api/v1/installer/notifications/$notificationId/read',
+        method: 'POST', token: session.accessToken);
   }
 
-  Future<void> retryActivation(InstallerSession session, String jobId, {required String note}) async {
+  Future<void> retryActivation(InstallerSession session, String jobId,
+      {required String note}) async {
     await _request(
       '/api/v1/installer/jobs/$jobId/retry-activation',
       method: 'POST',
@@ -367,7 +519,8 @@ class InstallerApiClient {
       token: session.accessToken,
       body: {
         'note': note,
-        if (resolutionCode != null && resolutionCode.isNotEmpty) 'resolutionCode': resolutionCode,
+        if (resolutionCode != null && resolutionCode.isNotEmpty)
+          'resolutionCode': resolutionCode,
       },
     );
   }
@@ -389,7 +542,8 @@ class InstallerApiClient {
     );
   }
 
-  Future<void> rebootComplaintDevice(InstallerSession session, String jobId) async {
+  Future<void> rebootComplaintDevice(
+      InstallerSession session, String jobId) async {
     await _request(
       '/api/v1/installer/jobs/$jobId/reboot-device',
       method: 'POST',
@@ -397,13 +551,18 @@ class InstallerApiClient {
     );
   }
 
-  Future<String?> sendComplaintOtp(InstallerSession session, String jobId) async {
-    final data = _asMap(await _request('/api/v1/installer/jobs/$jobId/send-complaint-otp', method: 'POST', token: session.accessToken));
+  Future<String?> sendComplaintOtp(
+      InstallerSession session, String jobId) async {
+    final data = _asMap(await _request(
+        '/api/v1/installer/jobs/$jobId/send-complaint-otp',
+        method: 'POST',
+        token: session.accessToken));
     final otp = data['demoOtp']?.toString();
     return otp == null || otp.isEmpty ? null : otp;
   }
 
-  Future<void> verifyComplaintOtp(InstallerSession session, String jobId, String otp) async {
+  Future<void> verifyComplaintOtp(
+      InstallerSession session, String jobId, String otp) async {
     await _request(
       '/api/v1/installer/jobs/$jobId/verify-complaint-otp',
       method: 'POST',
@@ -412,8 +571,12 @@ class InstallerApiClient {
     );
   }
 
-  Future<Map<String, dynamic>> resolveComplaint(InstallerSession session, String jobId) async {
-    return _asMap(await _request('/api/v1/installer/jobs/$jobId/resolve-complaint', method: 'POST', token: session.accessToken));
+  Future<Map<String, dynamic>> resolveComplaint(
+      InstallerSession session, String jobId) async {
+    return _asMap(await _request(
+        '/api/v1/installer/jobs/$jobId/resolve-complaint',
+        method: 'POST',
+        token: session.accessToken));
   }
 
   Future<void> startLeave(
@@ -427,12 +590,14 @@ class InstallerApiClient {
       token: session.accessToken,
       body: {
         'reason': reason,
-        if (expectedEndAt != null) 'expectedEndAt': expectedEndAt.toUtc().toIso8601String(),
+        if (expectedEndAt != null)
+          'expectedEndAt': expectedEndAt.toUtc().toIso8601String(),
       },
     );
   }
 
   Future<void> endLeave(InstallerSession session) async {
-    await _request('/api/v1/installer/profile/end-leave', method: 'POST', token: session.accessToken);
+    await _request('/api/v1/installer/profile/end-leave',
+        method: 'POST', token: session.accessToken);
   }
 }

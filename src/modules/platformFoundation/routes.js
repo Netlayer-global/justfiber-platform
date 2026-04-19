@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
-import { requireAuth, requirePermission } from "../../common/auth.js";
+import { adminCanAccessAllZones, assertAdminZoneAccess, assertMainAdminAccess, requireAuth, requirePermission } from "../../common/auth.js";
 import { addAdminJob } from "../../common/adminQueue.js";
 import { permissions } from "../../config/permissions.js";
 import { AccessProfile } from "../../models/AccessProfile.js";
@@ -15,6 +15,7 @@ import { AuditLog } from "../../models/AuditLog.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
 import { BngNode } from "../../models/BngNode.js";
 import { CollectionRequest } from "../../models/CollectionRequest.js";
+import { Customer } from "../../models/Customer.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { DiscountVoucher } from "../../models/DiscountVoucher.js";
 import { FranchiseProfile } from "../../models/FranchiseProfile.js";
@@ -43,6 +44,10 @@ import { env } from "../../config/env.js";
 import { auditFromRequest } from "../../common/audit.js";
 
 const execFileAsync = promisify(execFile);
+
+function assertNodeZoneAccess(req, node) {
+  return assertAdminZoneAccess(req.admin, node?.zoneCode);
+}
 
 const accessProfileSchema = z.object({
   code: z.string().min(2),
@@ -1182,7 +1187,7 @@ platformFoundationRouter.get(
   "/foundation/bng-nodes",
   requirePermission(permissions.configRead),
   asyncHandler(async (req, res) => {
-    const zoneCode = String(req.query.zoneCode || "").trim();
+    const zoneCode = assertAdminZoneAccess(req.admin, req.query.zoneCode);
     const items = await BngNode.find(buildZoneScopedMatch("zoneCode", zoneCode)).sort({ status: 1, nodeCode: 1 }).lean();
     return ok(res, items.map(serializeBngNode));
   })
@@ -1194,13 +1199,18 @@ platformFoundationRouter.post(
   asyncHandler(async (req, res) => {
     const payload = bngNodeSchema.parse(req.body);
     const existing = await BngNode.findOne({ nodeCode: payload.nodeCode }).lean();
+    if (existing) assertNodeZoneAccess(req, existing);
+    const scopedZoneCode = assertAdminZoneAccess(req.admin, payload.zoneCode || existing?.zoneCode);
     const normalizedAdditionalIps = Array.from(
       new Set((payload.additionalRadiusClientIps || []).map((item) => String(item || "").trim()).filter(Boolean))
     ).filter((item) => item !== String(payload.radiusClientIp || "").trim());
     const nextPayload = {
       ...payload,
-      zoneCode: String(payload.zoneCode || "").trim() || undefined,
-      zoneName: String(payload.zoneName || "").trim() || undefined,
+      zoneCode: scopedZoneCode || String(payload.zoneCode || "").trim() || undefined,
+      zoneName:
+        scopedZoneCode && req.admin.zoneName && scopedZoneCode === req.admin.zoneCode
+          ? req.admin.zoneName
+          : String(payload.zoneName || "").trim() || undefined,
       zoneStateCode: String(payload.zoneStateCode || "").trim() || undefined,
       additionalRadiusClientIps: normalizedAdditionalIps,
       coaSecret:
@@ -1236,6 +1246,8 @@ platformFoundationRouter.delete(
     if (!nodeCode) {
       throw new Error("BNG node code is required");
     }
+    const node = await BngNode.findOne({ nodeCode }).lean();
+    if (node) assertNodeZoneAccess(req, node);
     await BngNode.deleteOne({ nodeCode });
     const freeradiusClientSync = await removeFreeradiusClientForNode(nodeCode);
     return ok(res, { deleted: true, nodeCode, freeradiusClientSync, freeradiusIntegrationHealth: buildFreeradiusIntegrationHealth({ nodeCode }) });
@@ -1251,6 +1263,7 @@ platformFoundationRouter.post(
     if (!node) {
       throw new Error("BNG node not found");
     }
+    assertNodeZoneAccess(req, node);
 
     const coaHost = String(node.coaHost || node.managementIp || "").trim();
     const coaPort = Number(node.coaPort || 3799);
@@ -1294,6 +1307,7 @@ platformFoundationRouter.post(
     if (!node) {
       throw new Error("BNG node not found");
     }
+    assertNodeZoneAccess(req, node);
     const freeradiusClientSync = await syncFreeradiusClientForNode(node);
     const item = await BngNode.findOne({ nodeCode }).lean();
     return ok(res, serializeBngNode({ ...item, freeradiusClientSync }));
@@ -1309,6 +1323,7 @@ platformFoundationRouter.post(
     if (!node) {
       throw new Error("BNG node not found");
     }
+    assertNodeZoneAccess(req, node);
     const authTelemetry = await syncRadiusAuthTelemetryForNode(node);
     const item = await BngNode.findOne({ nodeCode }).lean();
     return ok(res, serializeBngNode({ ...item, authTelemetry }));
@@ -1324,6 +1339,7 @@ platformFoundationRouter.post(
     if (!node) {
       throw new Error("BNG node not found");
     }
+    assertNodeZoneAccess(req, node);
     const sourceIp = String(req.body?.sourceIp || node.lastRadiusAuthTelemetry?.sourceIp || "").trim();
     if (!sourceIp) {
       throw new Error("Source IP is required");
@@ -1355,6 +1371,7 @@ platformFoundationRouter.post(
     if (!node) {
       throw new Error("BNG node not found");
     }
+    assertNodeZoneAccess(req, node);
 
     const service = await SubscriberService.findOne({
       radiusUsername: payload.radiusUsername,
@@ -1382,7 +1399,7 @@ platformFoundationRouter.get(
   "/foundation/ip-pools",
   requirePermission(permissions.configRead),
   asyncHandler(async (req, res) => {
-    const zoneCode = String(req.query.zoneCode || "").trim();
+    const zoneCode = assertAdminZoneAccess(req.admin, req.query.zoneCode);
     const [items, services, routers] = await Promise.all([
       IpPoolRange.find(buildZoneScopedMatch("zone", zoneCode)).sort({ createdAt: -1 }).lean(),
       SubscriberService.find({}).select({ currentIpv4: 1, ipv4Pool: 1 }).lean(),
@@ -1422,6 +1439,11 @@ platformFoundationRouter.post(
   asyncHandler(async (req, res) => {
     const payload = ipPoolRangeSchema.parse(req.body || {});
     const normalized = normalizeIpPoolPayload(payload);
+    if (payload.id) {
+      const existingPool = await IpPoolRange.findById(payload.id).lean();
+      if (existingPool) assertAdminZoneAccess(req.admin, existingPool.zone);
+    }
+    normalized.zone = assertAdminZoneAccess(req.admin, normalized.zone) || normalized.zone;
     const saved = await IpPoolRange.findOneAndUpdate(
       payload.id
         ? { _id: payload.id }
@@ -1460,6 +1482,7 @@ platformFoundationRouter.delete(
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const pool = await IpPoolRange.findById(req.params.poolId).lean();
+    if (pool) assertAdminZoneAccess(req.admin, pool.zone);
     const routerSyncs = pool
       ? await mikrotikBngManager.deleteIpPoolRange({
           poolName: pool.name,
@@ -1485,6 +1508,16 @@ platformFoundationRouter.get(
     if (req.query.customerId) filter.customerId = req.query.customerId;
     if (req.query.status) filter.status = req.query.status;
     if (req.query.bngNodeCode) filter.bngNodeCode = req.query.bngNodeCode;
+    const scopedZoneCode = assertAdminZoneAccess(req.admin, req.query.zoneCode);
+    if (scopedZoneCode) {
+      const scopedCustomers = await Customer.find({
+        $or: [{ zoneCode: scopedZoneCode }, { billingZoneCode: scopedZoneCode }]
+      }).select({ customerId: 1 }).lean();
+      const scopedCustomerIds = scopedCustomers.map((customer) => customer.customerId);
+      filter.customerId = req.query.customerId
+        ? scopedCustomerIds.includes(String(req.query.customerId)) ? String(req.query.customerId) : "__zone_scope_without_customer__"
+        : { $in: scopedCustomerIds };
+    }
     const [items, total] = await Promise.all([
       SubscriberService.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
       SubscriberService.countDocuments(filter)
@@ -1498,6 +1531,10 @@ platformFoundationRouter.get(
   requirePermission(permissions.customerRead),
   asyncHandler(async (req, res) => {
     const item = await SubscriberService.findOne({ serviceId: req.params.serviceId }).lean();
+    if (item) {
+      const customer = await Customer.findOne({ customerId: item.customerId }).lean();
+      assertAdminZoneAccess(req.admin, customer?.billingZoneCode || customer?.zoneCode);
+    }
     return ok(res, item);
   })
 );
@@ -1582,7 +1619,7 @@ platformFoundationRouter.get(
     const translatedDestinationPort = Number(req.query.translatedDestinationPort || 0);
     const protocol = Number(req.query.protocol || 0);
     const routerIp = String(req.query.routerIp || "").trim();
-    const zoneCode = String(req.query.zoneCode || "").trim();
+    const zoneCode = assertAdminZoneAccess(req.admin, req.query.zoneCode);
     const pppoeUsername = String(req.query.pppoeUsername || "").trim();
     const customerId = String(req.query.customerId || "").trim();
     const subscriberId = String(req.query.subscriberId || "").trim();
@@ -1818,8 +1855,16 @@ platformFoundationRouter.post(
 platformFoundationRouter.get(
   "/foundation/franchises",
   requirePermission(permissions.configRead),
-  asyncHandler(async (_req, res) => {
-    const items = await FranchiseProfile.find({}).sort({ name: 1 }).lean();
+  asyncHandler(async (req, res) => {
+    const filter = adminCanAccessAllZones(req.admin)
+      ? {}
+      : {
+          $or: [
+            { zoneCode: req.admin.zoneCode },
+            { franchiseCode: req.admin.zoneCode }
+          ]
+        };
+    const items = await FranchiseProfile.find(filter).sort({ name: 1 }).lean();
     return ok(res, items);
   })
 );
@@ -1828,6 +1873,7 @@ platformFoundationRouter.post(
   "/foundation/franchises",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
+    assertMainAdminAccess(req.admin);
     const payload = franchiseSchema.parse(req.body || {});
     await FranchiseProfile.updateOne({ franchiseCode: payload.franchiseCode }, { $set: payload }, { upsert: true });
     const item = await FranchiseProfile.findOne({ franchiseCode: payload.franchiseCode }).lean();
@@ -1839,6 +1885,7 @@ platformFoundationRouter.post(
   "/foundation/franchises/:franchiseCode/copy-settings",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
+    assertMainAdminAccess(req.admin);
     const payload = franchiseCopySettingsSchema.parse(req.body || {});
     const franchise = await FranchiseProfile.findOne({ franchiseCode: req.params.franchiseCode });
     if (!franchise) {
@@ -1908,6 +1955,7 @@ platformFoundationRouter.post(
   "/foundation/franchises/:franchiseCode/admin-accounts",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
+    assertMainAdminAccess(req.admin);
     const payload = franchiseAdminAccountsSchema.parse(req.body || {});
     const franchise = await FranchiseProfile.findOne({ franchiseCode: req.params.franchiseCode });
     if (!franchise) {

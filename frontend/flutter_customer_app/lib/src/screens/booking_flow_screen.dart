@@ -1035,15 +1035,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF13051F),
-                  Color(0xFF3B0D7A),
-                  Color(0xFFA855F7)
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: const Color(0xFF8224E3),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0x55D8B4FE)),
             ),
@@ -1202,14 +1194,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 18, vertical: 14),
                     decoration: BoxDecoration(
-                      gradient: sel
-                          ? const LinearGradient(
-                              colors: [Color(0xFF1D0545), Color(0xFF3B0D7A)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : null,
-                      color: sel ? null : kSurface2,
+                      color: sel ? const Color(0xFF8224E3) : kSurface2,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: sel
@@ -1590,18 +1575,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  colors: [
-                    Color(0xFF13051F),
-                    Color(0xFF3B0D7A),
-                    Color(0xFFA855F7)
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: selected ? null : kSurface2,
+          color: selected ? const Color(0xFF8224E3) : kSurface2,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected
@@ -1721,18 +1695,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  colors: [
-                    Color(0xFF13051F),
-                    Color(0xFF3B0D7A),
-                    Color(0xFFA855F7)
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: selected ? null : kSurface2,
+          color: selected ? const Color(0xFF8224E3) : kSurface2,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected
@@ -2288,29 +2251,10 @@ class _BookingHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF13051F), Color(0xFF3B0D7A), Color(0xFFA855F7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Color(0xFF8224E3),
       ),
       child: Stack(
         children: [
-          Positioned(
-            top: -60,
-            right: -50,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  Colors.white.withValues(alpha: 0.07),
-                  Colors.transparent,
-                ]),
-              ),
-            ),
-          ),
           SafeArea(
             bottom: false,
             child: Padding(

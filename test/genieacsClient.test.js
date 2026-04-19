@@ -55,7 +55,7 @@ test("nokia wifi password update uses direct KeyPassphrase paths without xsd:str
   ]);
   assert.match(
     setParameterRequest.url,
-    /\/devices\/240B88-G%252D2425G%252DA-ALCLB3DCCB87\/tasks$/
+    /\/devices\/240B88-G%252D2425G%252DA-ALCLB3DCCB87\/tasks(?:\?connection_request)?$/
   );
 });
 

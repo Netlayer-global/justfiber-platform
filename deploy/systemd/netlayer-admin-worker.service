@@ -5,9 +5,9 @@ After=network.target redis.service mongod.service
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/opt/netlayer-admin
-EnvironmentFile=/opt/netlayer-admin/.env
-ExecStart=/usr/bin/node /opt/netlayer-admin/src/worker.js
+WorkingDirectory=/opt/justfiber-platform
+EnvironmentFile=/opt/justfiber-platform/.env
+ExecStart=/usr/bin/node /opt/justfiber-platform/src/worker.js
 Restart=always
 RestartSec=5
 

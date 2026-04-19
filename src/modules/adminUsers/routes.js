@@ -4,7 +4,7 @@ import { z } from "zod";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ApiError } from "../../common/ApiError.js";
 import { ok } from "../../common/response.js";
-import { requireAuth, requirePermission } from "../../common/auth.js";
+import { adminCanAccessAllZones, assertAdminZoneAccess, requireAuth, requirePermission } from "../../common/auth.js";
 import { permissions } from "../../config/permissions.js";
 import { AdminUser } from "../../models/AdminUser.js";
 import { AdminSession } from "../../models/AdminSession.js";
@@ -69,7 +69,8 @@ adminUsersRouter.get(
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = buildPagination(req.query);
     const filter = {};
-    if (req.query.zoneCode) filter.zoneCode = req.query.zoneCode;
+    const scopedZoneCode = assertAdminZoneAccess(req.admin, req.query.zoneCode);
+    if (scopedZoneCode) filter.zoneCode = scopedZoneCode;
     const [items, total] = await Promise.all([
       AdminUser.find(filter).select(adminUserSafeSelect).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       AdminUser.countDocuments(filter)
@@ -83,8 +84,18 @@ adminUsersRouter.post(
   requirePermission(permissions.adminUserManage),
   asyncHandler(async (req, res) => {
     const payload = createUserSchema.parse(req.body);
+    const canManageAllZones = adminCanAccessAllZones(req.admin);
+    const scopedZoneCode = assertAdminZoneAccess(req.admin, payload.zoneCode);
+    if (!canManageAllZones && payload.canAccessAllZones) {
+      throw new ApiError(403, "Only main admin can create all-zone logins");
+    }
+    if (!canManageAllZones && !scopedZoneCode) {
+      throw new ApiError(403, "Admin is not assigned to a zone");
+    }
+    const userZoneCode = canManageAllZones ? payload.zoneCode : scopedZoneCode;
+    const userZoneName = canManageAllZones ? payload.zoneName : req.admin.zoneName || scopedZoneCode;
     const normalizedUsername = payload.username.trim().toLowerCase();
-    const fallbackZone = String(payload.zoneCode || "hq")
+    const fallbackZone = String(userZoneCode || "hq")
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-") || "hq";
@@ -107,9 +118,9 @@ adminUsersRouter.post(
       phone: payload.phone,
       passwordHash,
       roles: payload.roles,
-      zoneCode: payload.zoneCode,
-      zoneName: payload.zoneName,
-      canAccessAllZones: Boolean(payload.canAccessAllZones),
+      zoneCode: userZoneCode,
+      zoneName: userZoneName,
+      canAccessAllZones: canManageAllZones ? Boolean(payload.canAccessAllZones) : false,
       passwordChangedAt: new Date(),
       createdBy: req.admin._id
     });
@@ -140,6 +151,7 @@ adminUsersRouter.patch(
     if (!user) {
       return ok(res, null, { found: false });
     }
+    assertAdminZoneAccess(req.admin, user.zoneCode);
     user.status = payload.status;
     await user.save();
     if (payload.status !== "active") {
@@ -172,6 +184,7 @@ adminUsersRouter.post(
     if (!user) {
       return ok(res, null, { found: false });
     }
+    assertAdminZoneAccess(req.admin, user.zoneCode);
     user.passwordHash = await argon2.hash(payload.password);
     user.passwordChangedAt = new Date();
     await user.save();

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme.dart';
+
 class FieldBackground extends StatelessWidget {
   const FieldBackground({super.key, required this.child});
 
@@ -12,7 +14,7 @@ class FieldBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFF8F5FC), Color(0xFFF5F0FB), Color(0xFFF1EBFA)],
+          colors: [Color(0xFF000000), Color(0xFF080411), Color(0xFF0D071A)],
         ),
       ),
       child: Stack(
@@ -21,12 +23,12 @@ class FieldBackground extends StatelessWidget {
             top: -60,
             right: -20,
             child: Container(
-              width: 180,
-              height: 180,
+              width: 220,
+              height: 220,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [Color(0x168224E3), Color(0x008224E3)],
+                  colors: [Color(0x448B1CF6), Color(0x008B1CF6)],
                 ),
               ),
             ),
@@ -35,13 +37,20 @@ class FieldBackground extends StatelessWidget {
             left: -40,
             bottom: -80,
             child: Container(
-              width: 220,
-              height: 220,
+              width: 260,
+              height: 260,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [Color(0x0FA855F7), Color(0x00A855F7)],
+                  colors: [Color(0x2422D3EE), Color(0x0022D3EE)],
                 ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(color: kDivider),
               ),
             ),
           ),

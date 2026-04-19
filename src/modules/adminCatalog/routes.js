@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
-import { requireAuth, requirePermission } from "../../common/auth.js";
+import { adminCanAccessAllZones, assertAdminZoneAccess, assertMainAdminAccess, requireAuth, requirePermission } from "../../common/auth.js";
 import { permissions } from "../../config/permissions.js";
 import { ApiError } from "../../common/ApiError.js";
 import { AppBanner } from "../../models/AppBanner.js";
@@ -265,10 +265,12 @@ adminCatalogRouter.get(
   "/serviceability/zones",
   requirePermission(permissions.configRead),
   asyncHandler(async (req, res) => {
-    const parentZoneCode = normalizeZoneCode(req.query.parentZoneCode);
+    const scopedZoneCode = assertAdminZoneAccess(req.admin, req.query.parentZoneCode || req.query.zoneCode);
+    const parentZoneCode = normalizeZoneCode(scopedZoneCode || req.query.parentZoneCode);
     const filter = parentZoneCode
       ? {
           $or: [
+            { zoneCode: parentZoneCode },
             { parentZoneCode },
             { parentZoneCode: { $exists: false } },
             { parentZoneCode: null },
@@ -285,6 +287,7 @@ adminCatalogRouter.post(
   "/serviceability/zones",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
+    assertMainAdminAccess(req.admin);
     const payload = zoneSchema.parse(req.body);
     const zoneCode = payload.zoneCode || normalizeZoneCode(payload.zoneName);
     await ServiceabilityZone.updateOne(
@@ -308,6 +311,7 @@ adminCatalogRouter.patch(
   "/serviceability/zones/:zoneId",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
+    assertMainAdminAccess(req.admin);
     const payload = zoneSchema.partial().parse(req.body || {});
     const zone = await ServiceabilityZone.findOne({
       $or: [{ _id: req.params.zoneId }, { zoneCode: req.params.zoneId }]
@@ -334,6 +338,7 @@ adminCatalogRouter.delete(
   "/serviceability/zones/:zoneId",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
+    assertMainAdminAccess(req.admin);
     const zone = await ServiceabilityZone.findOneAndDelete({
       $or: [{ _id: req.params.zoneId }, { zoneCode: req.params.zoneId }]
     }).lean();
@@ -348,7 +353,7 @@ adminCatalogRouter.get(
   "/catalog/plans",
   requirePermission(permissions.configRead),
   asyncHandler(async (req, res) => {
-    const activeZoneCode = normalizeZoneCode(req.query.zoneCode);
+    const activeZoneCode = normalizeZoneCode(assertAdminZoneAccess(req.admin, req.query.zoneCode));
     const filter = activeZoneCode
       ? {
           archivedAt: { $exists: false },
@@ -371,6 +376,14 @@ adminCatalogRouter.post(
     const payload = planSchema.parse(req.body);
     payload.planCode = normalizePlanCode(payload.planCode);
     payload.planScope = payload.planScope || "global";
+    if (!adminCanAccessAllZones(req.admin)) {
+      payload.planScope = "zone";
+      payload.zoneContext = {
+        ...(payload.zoneContext || {}),
+        zoneCode: assertAdminZoneAccess(req.admin, payload.zoneContext?.zoneCode),
+        zoneName: req.admin.zoneName || payload.zoneContext?.zoneName
+      };
+    }
     if (payload.planScope === "zone") {
       payload.zoneContext = {
         zoneCode: normalizeZoneCode(payload.zoneContext?.zoneCode),
@@ -396,6 +409,16 @@ adminCatalogRouter.patch(
     const existing = await PlanCatalog.findOne({ planCode: req.params.planCode });
     if (!existing) {
       throw new ApiError(404, "Plan not found");
+    }
+    if (!adminCanAccessAllZones(req.admin)) {
+      if (existing.planScope !== "zone") {
+        throw new ApiError(403, "Only main admin can update global plans");
+      }
+      assertAdminZoneAccess(req.admin, existing.zoneContext?.zoneCode);
+      if (payload.zoneContext?.zoneCode) {
+        assertAdminZoneAccess(req.admin, payload.zoneContext.zoneCode);
+      }
+      payload.planScope = "zone";
     }
     const merged = {
       ...existing.toObject(),
@@ -438,6 +461,16 @@ adminCatalogRouter.delete(
   "/catalog/plans/:planCode",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
+    const existing = await PlanCatalog.findOne({ planCode: req.params.planCode, archivedAt: { $exists: false } }).lean();
+    if (!existing) {
+      throw new ApiError(404, "Plan not found");
+    }
+    if (!adminCanAccessAllZones(req.admin)) {
+      if (existing.planScope !== "zone") {
+        throw new ApiError(403, "Only main admin can delete global plans");
+      }
+      assertAdminZoneAccess(req.admin, existing.zoneContext?.zoneCode);
+    }
     const plan = await PlanCatalog.findOneAndUpdate(
       { planCode: req.params.planCode, archivedAt: { $exists: false } },
       { $set: { active: false, archivedAt: new Date() } },

@@ -69,7 +69,7 @@ npm run worker
 
 ## Admin console setup
 
-The admin UI lives in [`frontend/admin-basic`](C:/Users/Himan/justfiber-platform/frontend/admin-basic).
+The admin UI lives in [`frontend/admin-basic`](./frontend/admin-basic).
 
 ```bash
 cd frontend/admin-basic
@@ -80,8 +80,7 @@ npm run dev
 For production build:
 
 ```bash
-cd frontend/admin-basic
-npm run build
+npm run ui:admin:build
 ```
 
 ## Common scripts
@@ -95,6 +94,7 @@ npm run seed:admin
 npm run seed:sample-data
 npm run smoke:all
 npm run verify:all
+npm run ui:admin:build
 npm test
 ```
 
@@ -118,12 +118,16 @@ Typical server flow:
 cd /opt/justfiber-platform
 git pull origin main
 npm install
-cd frontend/admin-basic
-npm install
-npm run build
+npm install --prefix frontend/admin-basic
+npm run ui:admin:build
 systemctl restart justfiber-admin-web.service
 systemctl restart netlayer-admin-api.service
 ```
+
+## API domain
+
+Admin UI, customer app, and installer app default to `https://api.justfiber.in`.
+Do not ship app builds with a server IP as the API base. If the server IP changes later, update the DNS `A` record and reverse proxy for `api.justfiber.in`; the apps will continue using the same domain.
 
 Use [`LIVE_DEPLOYMENT.md`](./LIVE_DEPLOYMENT.md) for live environment notes.
 

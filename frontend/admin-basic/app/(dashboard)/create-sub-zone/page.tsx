@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function CreateSubZonePage() {
-  redirect('/settings')
+  redirect('/settings?workspace=sub-zones#sub-zone-workspace')
 }

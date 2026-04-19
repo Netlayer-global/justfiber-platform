@@ -17,11 +17,11 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000
+Open http://localhost:3001
 
 ## Environment
 
-- `NEXT_PUBLIC_API_BASE_URL` - Backend API base URL (default: http://127.0.0.1:4000)
+- `NEXT_PUBLIC_API_BASE_URL` - Backend API base URL (default: https://api.justfiber.in)
 
 ## Modules
 

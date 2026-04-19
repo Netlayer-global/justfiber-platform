@@ -10,7 +10,7 @@ import 'notification_service.dart';
 
 const defaultApiBase = String.fromEnvironment(
   'JUSTFIBER_API_BASE',
-  defaultValue: 'http://103.139.191.114:4000',
+  defaultValue: 'https://api.justfiber.in',
 );
 const _mobileKey = 'justfiber.mobile';
 const _accessTokenKey = 'justfiber.access_token';
@@ -228,7 +228,7 @@ class AppState extends ChangeNotifier {
       await prefs.remove(_selectedCustomerKey);
       await prefs.remove(_planChangeDraftKey);
       await prefs.remove(_surfacedNotificationIdsKey);
-      await refresh();
+      unawaited(refresh(silent: true));
       return true;
     } catch (e) {
       error = e.toString();
@@ -293,56 +293,85 @@ class AppState extends ChangeNotifier {
             'billing',
             () async => billing = await api.fetchBilling(current,
                 customerId: selectedCustomerId)),
-        runRefreshTask(
-            'requests',
-            () async => requests = await api.fetchRequests(current,
-                customerId: selectedCustomerId)),
-        runRefreshTask(
-            'tickets',
-            () async => tickets = await api.fetchTickets(current,
-                customerId: selectedCustomerId)),
         runRefreshTask('notifications',
             () async => notifications = await api.fetchNotifications(current)),
-        runRefreshTask('faqs', () async => faqs = await api.fetchFaqs()),
-        runRefreshTask(
-            'addons', () async => addons = await api.fetchAddons(current)),
-        runRefreshTask(
-            'banners', () async => banners = await api.fetchAppBanners()),
-        runRefreshTask('plans', () async => plans = await api.fetchPlans()),
-        runRefreshTask(
-            'devices',
-            () async => connectedDevices = await api.fetchConnectedDevices(
-                current,
-                customerId: selectedCustomerId)),
-        runRefreshTask(
-            'plan options',
-            () async => planChangeOptions = await api.fetchPlanChangeOptions(
-                current,
-                customerId: selectedCustomerId)),
-        runRefreshTask(
-            'parental rules',
-            () async => parentalRules = await api.fetchParentalRules(current,
-                customerId: selectedCustomerId)),
-        runRefreshTask(
-            'network quality',
-            () async => networkQuality = await api.fetchNetworkQuality(current,
-                customerId: selectedCustomerId)),
-        runRefreshTask(
-            'speed test',
-            () async => speedTest = await api.fetchSpeedTest(current,
-                customerId: selectedCustomerId)),
       ]);
 
-      await refreshBookingTracking(silent: true);
       lastSyncedAt = DateTime.now();
       await _surfaceNewNotifications();
       error = failures.isEmpty ? null : failures.first;
+      unawaited(_refreshSecondaryData(current));
     } catch (e) {
       error = e.toString();
     } finally {
       if (showBusy) busy = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _refreshSecondaryData(CustomerSession current) async {
+    if (session?.accessToken != current.accessToken) return;
+    final failures = <String>[];
+    Future<void> runTask(String label, Future<void> Function() task) async {
+      try {
+        await task();
+      } catch (e) {
+        failures.add('$label: $e');
+      }
+    }
+
+    await Future.wait<void>([
+      runTask(
+          'requests',
+          () async => requests =
+              await api.fetchRequests(current, customerId: selectedCustomerId)),
+      runTask(
+          'tickets',
+          () async => tickets =
+              await api.fetchTickets(current, customerId: selectedCustomerId)),
+      runTask('faqs', () async => faqs = await api.fetchFaqs()),
+      runTask('addons', () async => addons = await api.fetchAddons(current)),
+      runTask('banners', () async => banners = await api.fetchAppBanners()),
+      runTask('plans', () async => plans = await api.fetchPlans()),
+      runTask(
+          'devices',
+          () async => connectedDevices = await api
+              .fetchConnectedDevices(current, customerId: selectedCustomerId)),
+      runTask(
+          'plan options',
+          () async => planChangeOptions = await api
+              .fetchPlanChangeOptions(current, customerId: selectedCustomerId)),
+      runTask(
+          'parental rules',
+          () async => parentalRules = await api.fetchParentalRules(current,
+              customerId: selectedCustomerId)),
+      runTask(
+          'network quality',
+          () async => networkQuality = await api.fetchNetworkQuality(current,
+              customerId: selectedCustomerId)),
+      runTask(
+          'speed test',
+          () async => speedTest = await api.fetchSpeedTest(current,
+              customerId: selectedCustomerId)),
+      runTask(
+          'service visits',
+          () async => installerVisits = await api.fetchServiceVisits(current,
+              customerId: selectedCustomerId)),
+    ]);
+
+    final bookingNumber = latestBooking?.bookingNumber ?? '';
+    if (bookingNumber.isNotEmpty) {
+      await runTask(
+          'booking tracking',
+          () async => bookingTracking =
+              await api.fetchBookingTracking(current, bookingNumber));
+    }
+
+    if (session?.accessToken != current.accessToken) return;
+    if (failures.isNotEmpty && (error ?? '').isEmpty) {
+      error = failures.first;
+    }
+    notifyListeners();
   }
 
   Future<void> _surfaceNewNotifications() async {
@@ -644,18 +673,26 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
     try {
-      installerVisits =
-          await api.fetchServiceVisits(current, customerId: selectedCustomerId);
-      requests =
-          await api.fetchRequests(current, customerId: selectedCustomerId);
-      if (latestBooking != null && latestBooking!.bookingNumber.isNotEmpty) {
-        try {
-          bookingTracking = await api.fetchBookingTracking(
-              current, latestBooking!.bookingNumber);
-        } catch (_) {}
+      final bookingNumber = latestBooking?.bookingNumber ?? '';
+      final futures = await Future.wait([
+        api.fetchServiceVisits(current, customerId: selectedCustomerId),
+        api.fetchRequests(current, customerId: selectedCustomerId),
+        api.fetchTickets(current, customerId: selectedCustomerId),
+        api.fetchNotifications(current),
+        if (bookingNumber.isNotEmpty)
+          api
+              .fetchBookingTracking(current, bookingNumber)
+              .then<BookingTrackingData?>((v) => v)
+              .catchError((_) => null),
+      ]);
+      installerVisits = futures[0] as List<InstallerVisitItem>;
+      requests = futures[1] as List<RequestItem>;
+      tickets = futures[2] as List<SupportTicketItem>;
+      notifications = futures[3] as List<NotificationItem>;
+      if (bookingNumber.isNotEmpty && futures.length > 4) {
+        final tracking = futures[4] as BookingTrackingData?;
+        if (tracking != null) bookingTracking = tracking;
       }
-      tickets = await api.fetchTickets(current, customerId: selectedCustomerId);
-      notifications = await api.fetchNotifications(current);
     } catch (e) {
       error = e.toString();
     } finally {
@@ -1183,6 +1220,50 @@ class AppState extends ChangeNotifier {
       bookingError = e.toString();
       error = bookingError;
       return null;
+    } finally {
+      bookingBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> submitConnectionLead({
+    required String fullName,
+    required String mobile,
+    String? email,
+    required String address,
+    required String pinCode,
+    required double lat,
+    required double lng,
+    String? planCode,
+    String? planName,
+    int? durationMonths,
+    String? durationLabel,
+    String? preferredSlotCode,
+    String? preferredSlotLabel,
+  }) async {
+    bookingBusy = true;
+    bookingError = null;
+    notifyListeners();
+    try {
+      return await api.submitConnectionLead(
+        fullName: fullName,
+        mobile: mobile,
+        email: email,
+        address: address,
+        pinCode: pinCode,
+        lat: lat,
+        lng: lng,
+        planCode: planCode,
+        planName: planName,
+        durationMonths: durationMonths,
+        durationLabel: durationLabel,
+        preferredSlotCode: preferredSlotCode,
+        preferredSlotLabel: preferredSlotLabel,
+      );
+    } catch (e) {
+      bookingError = e.toString();
+      error = bookingError;
+      rethrow;
     } finally {
       bookingBusy = false;
       notifyListeners();

@@ -49,11 +49,7 @@ class _PaymentsHistoryScreenState extends State<PaymentsHistoryScreen> {
             SliverToBoxAdapter(
               child: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF13051F), Color(0xFF3B0D7A), Color(0xFFA855F7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Color(0xFF8224E3),
                 ),
                 child: SafeArea(
                   bottom: false,

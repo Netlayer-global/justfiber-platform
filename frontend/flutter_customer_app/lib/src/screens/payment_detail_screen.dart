@@ -1,15 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
 import '../core/theme.dart';
 import '../widgets/pressable_scale.dart';
+import 'document_viewer_screen.dart';
 import 'support_history_screen.dart';
 
 class PaymentDetailScreen extends StatelessWidget {
@@ -207,21 +205,21 @@ class PaymentDetailScreen extends StatelessWidget {
                                 fontSize: 15,
                                 color: Colors.white)),
                         const SizedBox(height: 14),
-                        if (payment.viewUrl.isNotEmpty)
+                        if (receiptReady)
                           _actionTile(
                             icon: Icons.receipt_long_rounded,
                             title: 'Open receipt',
-                            sub: 'View inside the app',
+                            sub: payment.pdfUrl.isNotEmpty
+                                ? 'View payment receipt PDF'
+                                : 'View inside the app',
                             onTap: () => _openDocument(
-                                context, appState, 'Receipt', payment.viewUrl),
-                          ),
-                        if (payment.pdfUrl.isNotEmpty)
-                          _actionTile(
-                            icon: Icons.picture_as_pdf_rounded,
-                            title: 'Open receipt PDF',
-                            sub: 'View payment receipt PDF',
-                            onTap: () => _openDocument(context, appState,
-                                'Receipt PDF', payment.pdfUrl),
+                              context,
+                              appState,
+                              'Receipt',
+                              payment.pdfUrl.isNotEmpty
+                                  ? payment.pdfUrl
+                                  : payment.viewUrl,
+                            ),
                           ),
                         _actionTile(
                           icon: Icons.copy_rounded,
@@ -355,26 +353,14 @@ class PaymentDetailScreen extends StatelessWidget {
     final baseUrl = appState.api.baseUrl.replaceAll(RegExp(r'/$'), '');
     final fullUrl =
         relativeUrl.startsWith('http') ? relativeUrl : '$baseUrl$relativeUrl';
-    try {
-      final response = await http.get(
-        Uri.parse(fullUrl),
-        headers: {'Authorization': 'Bearer ${session.accessToken}'},
-      );
-      if (response.statusCode == 200) {
-        final file = File(
-            '${Directory.systemTemp.path}/${title.replaceAll(' ', '_')}.pdf');
-        await file.writeAsBytes(response.bodyBytes);
-        await Share.shareXFiles([XFile(file.path)], subject: title);
-      } else {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Could not open document (${response.statusCode}).')));
-      }
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open document.')));
-    }
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DocumentViewerScreen(
+        title: title,
+        url: fullUrl,
+        accessToken: session.accessToken,
+      ),
+    ));
+    await appState.refresh();
   }
 
   Future<void> _shareDocument(AppState appState) async {

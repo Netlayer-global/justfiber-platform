@@ -3,7 +3,7 @@ import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
 import { DashboardSnapshot } from "../../models/DashboardSnapshot.js";
 import { permissions } from "../../config/permissions.js";
-import { requireAuth, requirePermission } from "../../common/auth.js";
+import { adminCanAccessAllZones, assertAdminZoneAccess, requireAuth, requirePermission } from "../../common/auth.js";
 import { Customer } from "../../models/Customer.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
@@ -20,29 +20,78 @@ async function fetchLatestSnapshot(snapshotType) {
   return snapshot?.metrics || null;
 }
 
+function buildCustomerZoneFilter(zoneCode = "") {
+  const normalized = String(zoneCode || "").trim();
+  if (!normalized) return {};
+  return {
+    $or: [
+      { zoneCode: normalized },
+      { billingZoneCode: normalized },
+      { "billingSnapshot.billingZoneCode": normalized },
+      { "billingSnapshot.zoneCode": normalized }
+    ]
+  };
+}
+
+async function resolveDashboardScope(req) {
+  const zoneCode = assertAdminZoneAccess(req.admin, req.query?.zoneCode);
+  const customerFilter = buildCustomerZoneFilter(zoneCode);
+  if (!zoneCode) {
+    return {
+      zoneCode,
+      customerFilter,
+      customerIdFilter: {},
+      invoiceFilter: {},
+      canUseGlobalSnapshot: adminCanAccessAllZones(req.admin)
+    };
+  }
+
+  const customerIds = await Customer.distinct("customerId", customerFilter);
+  const customerIdFilter = { customerId: { $in: customerIds } };
+  return {
+    zoneCode,
+    customerFilter,
+    customerIdFilter,
+    invoiceFilter: {
+      $or: [
+        { billingZoneCode: zoneCode },
+        { "metadata.billingZoneCode": zoneCode },
+        customerIdFilter
+      ]
+    },
+    canUseGlobalSnapshot: false
+  };
+}
+
 dashboardRouter.get(
   "/executive",
-  asyncHandler(async (_req, res) => {
-    const liveCustomerIdsPromise = DeviceOperationalCache.distinct("customerId", {
-      customerId: { $nin: [null, ""] },
+  asyncHandler(async (req, res) => {
+    const scope = await resolveDashboardScope(req);
+    const liveDeviceFilter = {
+      ...scope.customerIdFilter,
+      customerId: {
+        ...(scope.customerIdFilter.customerId || {}),
+        $nin: [null, ""]
+      },
       $or: [
         { onlineStatus: "online" },
         { "wanInfo.sessionStatus": { $in: ["up", "UP", "Up"] } },
         { "wanInfo.ipv4Address": { $exists: true, $nin: ["", null] } },
         { "wanInfo.ipAddress": { $exists: true, $nin: ["", null] } }
       ]
-    });
+    };
+    const liveCustomerIdsPromise = DeviceOperationalCache.distinct("customerId", liveDeviceFilter);
 
     const [snapshot, customers, suspended, inactive, activeUsers, devicesOffline, openCriticalTickets, liveCustomerIds, activeCustomerIds] = await Promise.all([
-      fetchLatestSnapshot("executive"),
-      Customer.countDocuments(),
-      Customer.countDocuments({ operationalStatus: "suspended" }),
-      Customer.countDocuments({ operationalStatus: "inactive" }),
-      Customer.countDocuments({ operationalStatus: { $nin: ["suspended", "inactive"] } }),
-      DeviceOperationalCache.countDocuments({ onlineStatus: "offline" }),
-      SupportTicket.countDocuments({ status: { $in: ["open", "assigned", "in_progress"] }, priority: "critical" }),
+      scope.canUseGlobalSnapshot ? fetchLatestSnapshot("executive") : Promise.resolve(null),
+      Customer.countDocuments(scope.customerFilter),
+      Customer.countDocuments({ ...scope.customerFilter, operationalStatus: "suspended" }),
+      Customer.countDocuments({ ...scope.customerFilter, operationalStatus: "inactive" }),
+      Customer.countDocuments({ ...scope.customerFilter, operationalStatus: { $nin: ["suspended", "inactive"] } }),
+      DeviceOperationalCache.countDocuments({ ...scope.customerIdFilter, onlineStatus: "offline" }),
+      SupportTicket.countDocuments({ ...scope.customerIdFilter, status: { $in: ["open", "assigned", "in_progress"] }, priority: "critical" }),
       liveCustomerIdsPromise,
-      Customer.distinct("customerId", { operationalStatus: { $nin: ["suspended", "inactive"] } })
+      Customer.distinct("customerId", { ...scope.customerFilter, operationalStatus: { $nin: ["suspended", "inactive"] } })
     ]);
 
     const activeCustomerIdSet = new Set(
@@ -71,19 +120,20 @@ dashboardRouter.get(
 
 dashboardRouter.get(
   "/network",
-  asyncHandler(async (_req, res) => {
-    const snapshot = await fetchLatestSnapshot("network");
+  asyncHandler(async (req, res) => {
+    const scope = await resolveDashboardScope(req);
+    const snapshot = scope.canUseGlobalSnapshot ? await fetchLatestSnapshot("network") : null;
     if (snapshot) {
       return ok(res, snapshot);
     }
 
     const [bngsUp, bngsDown, oltsUp, totalNodes, devicesOnline, devicesOffline] = await Promise.all([
-      NetworkNodeStatus.countDocuments({ nodeType: "bng", status: "up" }),
-      NetworkNodeStatus.countDocuments({ nodeType: "bng", status: { $in: ["down", "degraded"] } }),
-      NetworkNodeStatus.countDocuments({ nodeType: "olt", status: "up" }),
-      NetworkNodeStatus.countDocuments(),
-      DeviceOperationalCache.countDocuments({ onlineStatus: "online" }),
-      DeviceOperationalCache.countDocuments({ onlineStatus: "offline" })
+      scope.zoneCode ? Promise.resolve(0) : NetworkNodeStatus.countDocuments({ nodeType: "bng", status: "up" }),
+      scope.zoneCode ? Promise.resolve(0) : NetworkNodeStatus.countDocuments({ nodeType: "bng", status: { $in: ["down", "degraded"] } }),
+      scope.zoneCode ? Promise.resolve(0) : NetworkNodeStatus.countDocuments({ nodeType: "olt", status: "up" }),
+      scope.zoneCode ? Promise.resolve(0) : NetworkNodeStatus.countDocuments(),
+      DeviceOperationalCache.countDocuments({ ...scope.customerIdFilter, onlineStatus: "online" }),
+      DeviceOperationalCache.countDocuments({ ...scope.customerIdFilter, onlineStatus: "offline" })
     ]);
 
     return ok(res, {
@@ -99,22 +149,23 @@ dashboardRouter.get(
 
 dashboardRouter.get(
   "/billing",
-  asyncHandler(async (_req, res) => {
-    const snapshot = await fetchLatestSnapshot("billing");
+  asyncHandler(async (req, res) => {
+    const scope = await resolveDashboardScope(req);
+    const snapshot = scope.canUseGlobalSnapshot ? await fetchLatestSnapshot("billing") : null;
     if (snapshot) {
       return ok(res, snapshot);
     }
 
     const [totalInvoices, overdueInvoices, paidTransactions, dueAmount, collectedAmount] = await Promise.all([
-      BillingInvoice.countDocuments(),
-      BillingInvoice.countDocuments({ paymentStatus: "overdue" }),
-      PaymentTransaction.countDocuments({ status: "success" }),
+      BillingInvoice.countDocuments(scope.invoiceFilter),
+      BillingInvoice.countDocuments({ ...scope.invoiceFilter, paymentStatus: "overdue" }),
+      PaymentTransaction.countDocuments({ ...scope.customerIdFilter, status: "success" }),
       BillingInvoice.aggregate([
-        { $match: { paymentStatus: { $in: ["pending", "overdue"] } } },
+        { $match: { ...scope.invoiceFilter, paymentStatus: { $in: ["pending", "overdue"] } } },
         { $group: { _id: null, total: { $sum: "$totalAmount" } } }
       ]),
       PaymentTransaction.aggregate([
-        { $match: { status: "success" } },
+        { $match: { ...scope.customerIdFilter, status: "success" } },
         { $group: { _id: null, total: { $sum: "$amount" } } }
       ])
     ]);

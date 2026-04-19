@@ -56,8 +56,7 @@ import type {
 export function getApiBaseUrl() {
   const configured = process.env.NEXT_PUBLIC_API_BASE_URL
   if (configured && configured.trim()) return configured
-  if (typeof window !== 'undefined') return window.location.origin
-  return ''
+  return 'https://api.justfiber.in'
 }
 
 let authToken: string | null = null

@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme.dart';
+
 class AppCard extends StatelessWidget {
-  const AppCard({super.key, required this.child, this.gradient, this.padding = const EdgeInsets.all(20)});
+  const AppCard({
+    super.key,
+    required this.child,
+    this.gradient,
+    this.color,
+    this.borderColor,
+    this.padding = const EdgeInsets.all(20),
+  });
 
   final Widget child;
   final Gradient? gradient;
+  final Color? color;
+  final Color? borderColor;
   final EdgeInsetsGeometry padding;
 
   @override
@@ -13,11 +24,13 @@ class AppCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         gradient: gradient,
-        color: gradient == null ? Colors.white.withOpacity(0.84) : null,
+        color: gradient == null ? (color ?? kSurface) : null,
         borderRadius: BorderRadius.circular(28),
-        border: gradient == null ? Border.all(color: Colors.white.withOpacity(0.65)) : null,
+        border:
+            gradient == null ? Border.all(color: borderColor ?? kBorder) : null,
         boxShadow: const [
-          BoxShadow(color: Color(0x148126CF), blurRadius: 24, offset: Offset(0, 16)),
+          BoxShadow(
+              color: Color(0x338B1CF6), blurRadius: 28, offset: Offset(0, 16)),
         ],
       ),
       child: child,

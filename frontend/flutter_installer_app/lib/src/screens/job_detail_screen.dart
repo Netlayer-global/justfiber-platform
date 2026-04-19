@@ -3,11 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_state.dart';
 import '../core/models.dart';
+import '../core/theme.dart';
 import '../widgets/app_card.dart';
 import '../widgets/field_background.dart';
 import 'serial_scan_screen.dart';
@@ -48,9 +50,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   final _serialController = TextEditingController();
   final _otpController = TextEditingController();
   final _replaceSerialController = TextEditingController();
-  final _complaintNoteController = TextEditingController(text: 'Visited site and started complaint handling.');
-  final _deferNoteController = TextEditingController(text: 'Customer unavailable. Follow-up required from field team.');
-  final _cancelNoteController = TextEditingController(text: 'Installation could not be completed. Cancelled after field review.');
+  final _complaintNoteController = TextEditingController(
+      text: 'Visited site and started complaint handling.');
+  final _deferNoteController = TextEditingController(
+      text: 'Customer unavailable. Follow-up required from field team.');
+  final _cancelNoteController = TextEditingController(
+      text:
+          'Installation could not be completed. Cancelled after field review.');
   final _imagePicker = ImagePicker();
   final _workflowController = PageController();
   String _complaintResolutionCode = 'ont_replace';
@@ -112,9 +118,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   void _scheduleDetailRefreshIfNeeded() {
     _detailRefreshTimer?.cancel();
     final status = (_detail?['status'] ?? '').toString();
-    final configStatus = (_detail?['activation']?['configStatus'] ?? '').toString();
-    final shouldPoll =
-        status == 'activation_in_progress' ||
+    final configStatus =
+        (_detail?['activation']?['configStatus'] ?? '').toString();
+    final shouldPoll = status == 'activation_in_progress' ||
         configStatus == 'pending' ||
         configStatus == 'retried';
     if (!shouldPoll) return;
@@ -130,14 +136,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     setState(() => _busy = true);
     try {
       final detail = await _appState.api.fetchJobDetail(session, widget.job.id);
-      final diagnostics = await _appState.api.fetchDiagnostics(session, widget.job.id).catchError((_) => <String, dynamic>{});
-      final previewModel = await _appState.api.fetchProvisioningPreview(session, widget.job.id).catchError((_) => null);
+      final diagnostics = await _appState.api
+          .fetchDiagnostics(session, widget.job.id)
+          .catchError((_) => <String, dynamic>{});
+      ProvisioningPreview? previewModel;
+      try {
+        previewModel = await _appState.api
+            .fetchProvisioningPreview(session, widget.job.id);
+      } catch (_) {
+        previewModel = null;
+      }
       if (!mounted) return;
       setState(() {
         _detail = detail;
         _diagnostics = diagnostics;
         _preview = previewModel == null
-            ? <String, dynamic>{}
+            ? null
             : {
                 'brand': previewModel.brand,
                 'vlanId': previewModel.vlanId,
@@ -161,7 +175,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   'password': previewModel.wifiPassword,
                 },
               };
-        final serial = (detail['deviceContext']?['finalSerialNumber'] ?? detail['deviceContext']?['manualSerialNumber'] ?? '')
+        final serial = (detail['deviceContext']?['finalSerialNumber'] ??
+                detail['deviceContext']?['manualSerialNumber'] ??
+                '')
             .toString();
         if (serial.isNotEmpty && _serialController.text.trim().isEmpty) {
           _serialController.text = serial;
@@ -169,7 +185,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       });
       _scheduleDetailRefreshIfNeeded();
     } catch (e) {
-      _show('${e.toString()}');
+      _show(e.toString());
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -195,7 +211,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
-  Future<bool> _runAndClose(Future<dynamic> Function() action, String success) async {
+  Future<bool> _runAndClose(
+      Future<dynamic> Function() action, String success) async {
     final ok = await _run(action, success);
     if (!mounted || !ok) return ok;
     Navigator.of(context).pop(true);
@@ -210,8 +227,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
     setState(() => _busy = true);
     try {
-      await _appState.api.verifyCompletionOtp(_appState.session!, widget.job.id, otp);
-      final result = await _appState.api.completeJob(_appState.session!, widget.job.id);
+      await _appState.api
+          .verifyCompletionOtp(_appState.session!, widget.job.id, otp);
+      final result =
+          await _appState.api.completeJob(_appState.session!, widget.job.id);
       await _appState.refresh();
       await _loadAll();
       if (!mounted) return;
@@ -237,8 +256,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
     setState(() => _busy = true);
     try {
-      await _appState.api.verifyComplaintOtp(_appState.session!, widget.job.id, otp);
-      final result = await _appState.api.resolveComplaint(_appState.session!, widget.job.id);
+      await _appState.api
+          .verifyComplaintOtp(_appState.session!, widget.job.id, otp);
+      final result = await _appState.api
+          .resolveComplaint(_appState.session!, widget.job.id);
       await _appState.refresh();
       await _loadAll();
       if (!mounted) return;
@@ -257,9 +278,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Future<void> _showInstallCompletionSheet(Map<String, dynamic> result) async {
-    final activationInvoice = (result['activationInvoice'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final customer = (result['customer'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final subscriberService = (result['subscriberService'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final activationInvoice =
+        (result['activationInvoice'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
+    final customer = (result['customer'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final subscriberService =
+        (result['subscriberService'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
     final installSummary = <String>[
       'Customer: ${customer['fullName'] ?? '-'}',
       'Customer ID: ${customer['customerId'] ?? '-'}',
@@ -273,7 +299,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: kSurface2,
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -283,29 +309,41 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             children: [
               Text(
                 'Installation completed',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: kText),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Customer handover is complete. Review the service and invoice summary before closing this job.',
-                style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+                style: TextStyle(color: kMuted, height: 1.45),
               ),
               const SizedBox(height: 16),
               _row('Customer', '${customer['fullName'] ?? '-'}'),
               _row('Customer ID', '${customer['customerId'] ?? '-'}'),
-              _row('Service ID', '${subscriberService['serviceId'] ?? customer['serviceId'] ?? '-'}'),
-              _row('Radius username', '${subscriberService['radiusUsername'] ?? '-'}'),
-              _row('ONT serial', '${subscriberService['ontSerialNumber'] ?? '-'}'),
+              _row('Service ID',
+                  '${subscriberService['serviceId'] ?? customer['serviceId'] ?? '-'}'),
+              _row('Radius username',
+                  '${subscriberService['radiusUsername'] ?? '-'}'),
+              _row('ONT serial',
+                  '${subscriberService['ontSerialNumber'] ?? '-'}'),
               _row('Invoice status', '${activationInvoice['status'] ?? '-'}'),
-              _row('Invoice number', '${activationInvoice['invoiceNumber'] ?? activationInvoice['invoiceId'] ?? '-'}'),
-              _row('Invoice total', activationInvoice['totalAmount'] == null ? '-' : 'Rs ${activationInvoice['totalAmount']}'),
+              _row('Invoice number',
+                  '${activationInvoice['invoiceNumber'] ?? activationInvoice['invoiceId'] ?? '-'}'),
+              _row(
+                  'Invoice total',
+                  activationInvoice['totalAmount'] == null
+                      ? '-'
+                      : 'Rs ${activationInvoice['totalAmount']}'),
               const SizedBox(height: 14),
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
                 children: [
                   OutlinedButton(
-                    onPressed: () => _copyText('Installation summary copied', installSummary),
+                    onPressed: () => _copyText(
+                        'Installation summary copied', installSummary),
                     child: const Text('Copy summary'),
                   ),
                   if ((activationInvoice['pdfUrl'] ?? '').toString().isNotEmpty)
@@ -333,11 +371,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Future<void> _showComplaintResolutionSheet(Map<String, dynamic> result) async {
-    final job = (result['job'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final complaint = (job['complaint'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final deviceContext = (job['deviceContext'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final subscriberService = (result['subscriberService'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+  Future<void> _showComplaintResolutionSheet(
+      Map<String, dynamic> result) async {
+    final job = (result['job'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final complaint = (job['complaint'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final deviceContext =
+        (job['deviceContext'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
+    final subscriberService =
+        (result['subscriberService'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
     final complaintSummary = <String>[
       'Resolution code: ${complaint['resolutionCode'] ?? '-'}',
       'Resolution note: ${complaint['note'] ?? '-'}',
@@ -349,7 +394,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: kSurface2,
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -359,23 +404,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             children: [
               Text(
                 'Complaint resolved',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: kText),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Resolution is saved. Confirm the fix summary and replacement audit before leaving the site.',
-                style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+                style: TextStyle(color: kMuted, height: 1.45),
               ),
               const SizedBox(height: 16),
               _row('Resolution code', '${complaint['resolutionCode'] ?? '-'}'),
               _row('Resolution note', '${complaint['note'] ?? '-'}'),
-              _row('Replaced device', complaint['replacedDevice'] == true ? 'Yes' : 'No'),
+              _row('Replaced device',
+                  complaint['replacedDevice'] == true ? 'Yes' : 'No'),
               _row('Old serial', '${deviceContext['oldSerialNumber'] ?? '-'}'),
-              _row('New serial', '${deviceContext['finalSerialNumber'] ?? '-'}'),
+              _row(
+                  'New serial', '${deviceContext['finalSerialNumber'] ?? '-'}'),
               _row('Service status', '${subscriberService['status'] ?? '-'}'),
               const SizedBox(height: 14),
               OutlinedButton(
-                onPressed: () => _copyText('Complaint summary copied', complaintSummary),
+                onPressed: () =>
+                    _copyText('Complaint summary copied', complaintSummary),
                 child: const Text('Copy summary'),
               ),
               const SizedBox(height: 14),
@@ -402,7 +453,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: kSurface2,
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -412,12 +463,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: kText),
               ),
               const SizedBox(height: 8),
               Text(
                 subtitle,
-                style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+                style: const TextStyle(color: kMuted, height: 1.45),
               ),
               const SizedBox(height: 16),
               ...items.map(
@@ -428,13 +482,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     children: [
                       const Padding(
                         padding: EdgeInsets.only(top: 2),
-                        child: Icon(Icons.radio_button_checked_rounded, size: 16, color: Color(0xFF8224E3)),
+                        child: Icon(Icons.radio_button_checked_rounded,
+                            size: 16, color: kPrimaryLight),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           item,
-                          style: const TextStyle(color: Color(0xFF0F172A), height: 1.4),
+                          style: const TextStyle(color: kText, height: 1.4),
                         ),
                       ),
                     ],
@@ -495,7 +550,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required String newSerial,
   }) {
     final items = <String>[];
-    if (resolutionCode == 'ont_replace' && (oldSerial.isNotEmpty || newSerial.isNotEmpty)) {
+    if (resolutionCode == 'ont_replace' &&
+        (oldSerial.isNotEmpty || newSerial.isNotEmpty)) {
       items.add('Replacement audit captured');
     }
     if (resolutionCode == 'port_reprovision') {
@@ -532,13 +588,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       11: 'Nov',
       12: 'Dec',
     }[local.month]!;
-    final hour = local.hour == 0 ? 12 : (local.hour > 12 ? local.hour - 12 : local.hour);
+    final hour =
+        local.hour == 0 ? 12 : (local.hour > 12 ? local.hour - 12 : local.hour);
     final minute = local.minute.toString().padLeft(2, '0');
     final suffix = local.hour >= 12 ? 'PM' : 'AM';
     return '${local.day} $month, $hour:$minute $suffix';
   }
 
-  String _visitUrgencyLabel(String status, String priority, String scheduledAt) {
+  String _visitUrgencyLabel(
+      String status, String priority, String scheduledAt) {
     if (priority.toLowerCase() == 'critical') return 'Immediate';
     if (priority.toLowerCase() == 'high') return 'Priority';
     if (status == 'deferred') return 'Revisit pending';
@@ -576,28 +634,32 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: kSurface2,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 24 + MediaQuery.of(context).viewInsets.bottom),
+              padding: EdgeInsets.fromLTRB(
+                  20, 20, 20, 24 + MediaQuery.of(context).viewInsets.bottom),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Mark follow-up required',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: kText),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Use this when the visit cannot be completed right now. The job will stay open for follow-up and your availability will be released.',
-                    style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+                    style: TextStyle(color: kMuted, height: 1.45),
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _deferReason,
+                    initialValue: _deferReason,
                     items: _deferReasons
                         .map((reason) => DropdownMenuItem<String>(
                               value: reason,
@@ -611,7 +673,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             setSheetState(() => _deferReason = value);
                             setState(() => _deferReason = value);
                           },
-                    decoration: const InputDecoration(labelText: 'Follow-up reason'),
+                    decoration:
+                        const InputDecoration(labelText: 'Follow-up reason'),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -620,7 +683,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     maxLines: 5,
                     decoration: const InputDecoration(
                       labelText: 'Field note',
-                      hintText: 'Explain what blocked completion and what should happen next.',
+                      hintText:
+                          'Explain what blocked completion and what should happen next.',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -682,28 +746,32 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: kSurface2,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 24 + MediaQuery.of(context).viewInsets.bottom),
+              padding: EdgeInsets.fromLTRB(
+                  20, 20, 20, 24 + MediaQuery.of(context).viewInsets.bottom),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Cancel installation job',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: const Color(0xFF0F172A)),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: kText),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Use this only when the installation should not continue. Admin can review the cancelled booking and process refund handling separately.',
-                    style: TextStyle(color: Color(0xFF64748B), height: 1.45),
+                    style: TextStyle(color: kMuted, height: 1.45),
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _cancelReason,
+                    initialValue: _cancelReason,
                     items: _cancelReasons
                         .map((reason) => DropdownMenuItem<String>(
                               value: reason,
@@ -717,7 +785,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             setSheetState(() => _cancelReason = value);
                             setState(() => _cancelReason = value);
                           },
-                    decoration: const InputDecoration(labelText: 'Cancellation reason'),
+                    decoration:
+                        const InputDecoration(labelText: 'Cancellation reason'),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -726,7 +795,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     maxLines: 5,
                     decoration: const InputDecoration(
                       labelText: 'Cancellation note',
-                      hintText: 'Explain why the installation was cancelled and what admin should review for refund.',
+                      hintText:
+                          'Explain why the installation was cancelled and what admin should review for refund.',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -767,16 +837,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Future<void> _refreshPreviewAndDiagnostics({String successMessage = 'ONT details refreshed'}) async {
+  Future<void> _refreshPreviewAndDiagnostics(
+      {String successMessage = 'ONT details refreshed'}) async {
     final session = _appState.session;
     if (session == null) return;
     setState(() => _busy = true);
     try {
       final serial = _serialController.text.trim();
-      final savedSerial =
-          (_detail?['deviceContext']?['finalSerialNumber'] ?? _detail?['deviceContext']?['manualSerialNumber'] ?? '')
-              .toString()
-              .trim();
+      final savedSerial = (_detail?['deviceContext']?['finalSerialNumber'] ??
+              _detail?['deviceContext']?['manualSerialNumber'] ??
+              '')
+          .toString()
+          .trim();
       if (serial.isNotEmpty && serial != savedSerial) {
         await _appState.api.setManualSerial(session, widget.job.id, serial);
       }
@@ -794,7 +866,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   void _show(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openUri(String url, {String? fallback}) async {
@@ -828,7 +901,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       controller.text = scanned.trim();
     });
     if (refreshOntDetails) {
-      await _refreshPreviewAndDiagnostics(successMessage: 'ONT details refreshed');
+      await _refreshPreviewAndDiagnostics(
+          successMessage: 'ONT details refreshed');
       return;
     }
     _show('Serial scanned: ${scanned.trim()}');
@@ -868,7 +942,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (!_hasCapturedProofPhotos()) {
       await _showRequirementsSheet(
         title: 'Proof capture pending',
-        subtitle: 'Before proof submission, capture both required field photos.',
+        subtitle:
+            'Before proof submission, capture both required field photos.',
         items: const [
           'Capture the router photo from the customer site.',
           'Capture the cable/photo link proof from the customer site.',
@@ -906,34 +981,66 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final detail = _detail;
-    final snapshot = (detail?['customerSnapshot'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final activation = (detail?['activation'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final complaint = (detail?['complaint'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final deviceContext = (detail?['deviceContext'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final proof = (detail?['proof'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final otpState = (detail?['otp'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final timeline = (detail?['timeline'] as List?)?.whereType<Map>().map((item) => item.cast<String, dynamic>()).toList() ?? const <Map<String, dynamic>>[];
-    final optical = (detail?['opticalReadings'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final snapshot =
+        (detail?['customerSnapshot'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
+    final activation =
+        (detail?['activation'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
+    final complaint = (detail?['complaint'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final deviceContext =
+        (detail?['deviceContext'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
+    final proof = (detail?['proof'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final otpState = (detail?['otp'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final timeline = (detail?['timeline'] as List?)
+            ?.whereType<Map>()
+            .map((item) => item.cast<String, dynamic>())
+            .toList() ??
+        const <Map<String, dynamic>>[];
+    final optical =
+        (detail?['opticalReadings'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
     final preview = _preview ?? const <String, dynamic>{};
     final diagnostics = _diagnostics ?? const <String, dynamic>{};
-    final checklist = (diagnostics['checklist'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final recommendations = (diagnostics['recommendations'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[];
-    final customerName = (snapshot['fullName'] ?? widget.job.customerName).toString();
-    final customerAddress = (snapshot['address'] ?? widget.job.customerAddress).toString();
+    final checklist =
+        (diagnostics['checklist'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
+    final recommendations = (diagnostics['recommendations'] as List?)
+            ?.map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList() ??
+        const <String>[];
+    final customerName =
+        (snapshot['fullName'] ?? widget.job.customerName).toString();
+    final customerAddress =
+        (snapshot['address'] ?? widget.job.customerAddress).toString();
     final customerId = (detail?['customerId'] ?? '').toString();
     final serviceId = (detail?['serviceId'] ?? '').toString();
     final phone = (snapshot['phone'] ?? '').toString();
     final planName = (snapshot['planName'] ?? '-').toString();
-    final scheduledAt = (detail?['scheduledAt'] ?? widget.job.scheduledAt).toString();
+    final scheduledAt =
+        (detail?['scheduledAt'] ?? widget.job.scheduledAt).toString();
     final priority = (detail?['priority'] ?? widget.job.priority).toString();
     final status = (detail?['status'] ?? widget.job.status).toString();
-    final isComplaint = (detail?['type'] ?? widget.job.jobType).toString() == 'complaint';
+    final isComplaint =
+        (detail?['type'] ?? widget.job.jobType).toString() == 'complaint';
     final configStatus = (activation['configStatus'] ?? '-').toString();
-    final wifi = (preview['wifi'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final pppoe = (preview['pppoe'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final prepared = (activation['preparedCredentials'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final preparedWifi = (prepared['wifi'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final preparedPppoe = (prepared['pppoe'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final wifi = (preview['wifi'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final pppoe = (preview['pppoe'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final prepared =
+        (activation['preparedCredentials'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
+    final preparedWifi = (prepared['wifi'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final preparedPppoe =
+        (prepared['pppoe'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
     final wifiSsid24 = _firstNonBlankText([
       wifi['ssid24'],
       activation['credentials']?['wifi']?['ssid24'],
@@ -960,34 +1067,73 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       preparedPppoe['password'],
     ]);
     final singleWifiName = wifiSsid24 != '-' && wifiSsid24 == wifiSsid5;
-    final planCode = widget.job.planCode.isEmpty ? (preview['planCode'] ?? '').toString() : widget.job.planCode;
-    final planCategory = widget.job.planCategory.isEmpty ? (preview['planCategory'] ?? 'home').toString() : widget.job.planCategory;
-    final planPrice = widget.job.monthlyPrice > 0 ? widget.job.monthlyPrice : double.tryParse('${preview['monthlyPrice'] ?? 0}') ?? 0;
-    final planDownload = widget.job.downloadSpeedMbps > 0 ? widget.job.downloadSpeedMbps : double.tryParse('${preview['speedMbps'] ?? 0}') ?? 0;
-    final planUpload = widget.job.uploadSpeedMbps > 0 ? widget.job.uploadSpeedMbps : double.tryParse('${preview['uploadSpeedMbps'] ?? 0}') ?? 0;
-    final planDataLimit = widget.job.dataLimitGb > 0 ? widget.job.dataLimitGb : double.tryParse('${preview['dataLimitGb'] ?? 0}') ?? 0;
-    final planFupSpeed = widget.job.fupSpeedMbps > 0 ? widget.job.fupSpeedMbps : double.tryParse('${preview['fupSpeedMbps'] ?? 0}') ?? 0;
-    final planDataPolicy = widget.job.dataPolicy.isNotEmpty ? widget.job.dataPolicy : (preview['dataPolicy'] ?? 'unlimited').toString();
-    final planOtc = widget.job.otcCharge > 0 ? widget.job.otcCharge : double.tryParse('${preview['otcCharge'] ?? 0}') ?? 0;
-    final planInstall = widget.job.installationCharge > 0 ? widget.job.installationCharge : double.tryParse('${preview['installationCharge'] ?? 0}') ?? 0;
+    final planCode = widget.job.planCode.isEmpty
+        ? (preview['planCode'] ?? '').toString()
+        : widget.job.planCode;
+    final planCategory = widget.job.planCategory.isEmpty
+        ? (preview['planCategory'] ?? 'home').toString()
+        : widget.job.planCategory;
+    final planPrice = widget.job.monthlyPrice > 0
+        ? widget.job.monthlyPrice
+        : double.tryParse('${preview['monthlyPrice'] ?? 0}') ?? 0;
+    final planDownload = widget.job.downloadSpeedMbps > 0
+        ? widget.job.downloadSpeedMbps
+        : double.tryParse('${preview['speedMbps'] ?? 0}') ?? 0;
+    final planUpload = widget.job.uploadSpeedMbps > 0
+        ? widget.job.uploadSpeedMbps
+        : double.tryParse('${preview['uploadSpeedMbps'] ?? 0}') ?? 0;
+    final planDataLimit = widget.job.dataLimitGb > 0
+        ? widget.job.dataLimitGb
+        : double.tryParse('${preview['dataLimitGb'] ?? 0}') ?? 0;
+    final planFupSpeed = widget.job.fupSpeedMbps > 0
+        ? widget.job.fupSpeedMbps
+        : double.tryParse('${preview['fupSpeedMbps'] ?? 0}') ?? 0;
+    final planDataPolicy = widget.job.dataPolicy.isNotEmpty
+        ? widget.job.dataPolicy
+        : (preview['dataPolicy'] ?? 'unlimited').toString();
+    final planOtc = widget.job.otcCharge > 0
+        ? widget.job.otcCharge
+        : double.tryParse('${preview['otcCharge'] ?? 0}') ?? 0;
+    final planInstall = widget.job.installationCharge > 0
+        ? widget.job.installationCharge
+        : double.tryParse('${preview['installationCharge'] ?? 0}') ?? 0;
     final planTags = widget.job.tags.isNotEmpty
         ? widget.job.tags
-        : ((preview['tags'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[]);
+        : ((preview['tags'] as List?)
+                ?.map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList() ??
+            const <String>[]);
     final planBenefits = widget.job.staticBenefits.isNotEmpty
         ? widget.job.staticBenefits
-        : ((preview['staticBenefits'] as List?)?.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() ?? const <String>[]);
-    final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-    final linkedSerial = (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '').toString();
-    final linkedDeviceId = (device['deviceId'] ?? deviceContext['finalDeviceId'] ?? '').toString();
+        : ((preview['staticBenefits'] as List?)
+                ?.map((item) => item.toString())
+                .where((item) => item.isNotEmpty)
+                .toList() ??
+            const <String>[]);
+    final device = (diagnostics['device'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final linkedSerial =
+        (device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '')
+            .toString();
+    final linkedDeviceId =
+        (device['deviceId'] ?? deviceContext['finalDeviceId'] ?? '').toString();
     final linkedProductClass = (device['productClass'] ?? '').toString();
-    final onsiteLocation = (deviceContext['onsiteLocation'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    final onsiteLocation =
+        (deviceContext['onsiteLocation'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
     final onsiteAddress = (onsiteLocation['address'] ?? '').toString();
     final onsiteCheckedInAt = (onsiteLocation['checkedInAt'] ?? '').toString();
-    final deferReason = (deviceContext['deferReason'] ?? detail?['subStatus'] ?? '').toString();
+    final deferReason =
+        (deviceContext['deferReason'] ?? detail?['subStatus'] ?? '').toString();
     final deferNote = (deviceContext['deferNote'] ?? '').toString();
-    final cancelReason = (deviceContext['cancelReason'] ?? detail?['subStatus'] ?? '').toString();
+    final cancelReason =
+        (deviceContext['cancelReason'] ?? detail?['subStatus'] ?? '')
+            .toString();
     final cancelNote = (deviceContext['cancelNote'] ?? '').toString();
-    final activationLive = status == 'active' || configStatus == 'verified' || configStatus == 'pushed';
+    final activationLive = status == 'active' ||
+        configStatus == 'verified' ||
+        configStatus == 'pushed';
     final handoverPack = <String>[
       if (customerName.isNotEmpty) 'Customer: $customerName',
       if (singleWifiName)
@@ -1028,7 +1174,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     ].join('\n');
     final visitUrgency = _visitUrgencyLabel(status, priority, scheduledAt);
     final visitTimeWindow = _timeWindowLabel(scheduledAt);
-    final complaintResolution = (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
+    final complaintResolution =
+        (complaint['resolutionCode'] ?? _complaintResolutionCode).toString();
     final oldSerial = (deviceContext['oldSerialNumber'] ?? '').toString();
     final newSerial = (deviceContext['finalSerialNumber'] ?? '').toString();
     final proofUploadedAt = (proof['uploadedAt'] ?? '').toString();
@@ -1036,8 +1183,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       'Router photo: ${_routerPhotoPath == null ? 'Pending capture' : 'Captured'}',
       'Cable photo: ${_cablePhotoPath == null ? 'Pending capture' : 'Captured'}',
       'Proof uploaded: ${proofUploadedAt.isEmpty ? '-' : _shortDateTime(proofUploadedAt)}',
-      if (_routerPhotoCapturedAt != null) 'Router captured: ${_shortDateTime(_routerPhotoCapturedAt!.toIso8601String())}',
-      if (_cablePhotoCapturedAt != null) 'Cable captured: ${_shortDateTime(_cablePhotoCapturedAt!.toIso8601String())}',
+      if (_routerPhotoCapturedAt != null)
+        'Router captured: ${_shortDateTime(_routerPhotoCapturedAt!.toIso8601String())}',
+      if (_cablePhotoCapturedAt != null)
+        'Cable captured: ${_shortDateTime(_cablePhotoCapturedAt!.toIso8601String())}',
     ].join('\n');
     final checklistSavedAt = (checklist['savedAt'] ?? '').toString();
     final checklistSaved = checklist.isNotEmpty;
@@ -1056,8 +1205,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final latestTimelineEvent = latestTimelineItem == null
         ? ''
         : (latestTimelineItem['event'] ?? '').toString().replaceAll('.', ' ');
-    final latestTimelineNote = latestTimelineItem == null ? '' : (latestTimelineItem['note'] ?? '').toString();
-    final latestTimelineAt = latestTimelineItem == null ? '' : (latestTimelineItem['at'] ?? '').toString();
+    final latestTimelineNote = latestTimelineItem == null
+        ? ''
+        : (latestTimelineItem['note'] ?? '').toString();
+    final latestTimelineAt = latestTimelineItem == null
+        ? ''
+        : (latestTimelineItem['at'] ?? '').toString();
     final complaintWatchouts = isComplaint
         ? _complaintWatchouts(
             resolutionCode: complaintResolution,
@@ -1076,8 +1229,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final canReplaceOnt = _canReplaceOnt(status);
     final canRebootComplaint = _canRebootComplaint(status);
     final canSendComplaintOtp = _canSendComplaintOtp(status);
-    final canResolveComplaint = _canResolveComplaint(status, _otpController.text.trim());
-    final canSubmitProof = _canSubmitProof(status, _hasCapturedProofPhotos());
+    final canResolveComplaint =
+        _canResolveComplaint(status, _otpController.text.trim());
+    final activationBlockers = _activationBlockers(
+      status: status,
+      serial: _serialController.text.trim(),
+      pppoeUsername: pppoeUsername,
+      wifiSsid24: wifiSsid24,
+      wifiPassword: wifiPassword,
+    );
+    final canRunActivation = canActivate && activationBlockers.isEmpty;
+    final canSubmitProof =
+        _canSubmitProof(status, _hasCapturedProofPhotos(), activationLive);
     final canSendInstallOtp = _canSendInstallOtp(status, proofUploaded);
     final canCompleteInstall = _canCompleteInstall(
       status,
@@ -1099,15 +1262,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       body: FieldBackground(
         child: SafeArea(
           child: RefreshIndicator(
-            color: const Color(0xFF8224E3),
-            backgroundColor: const Color(0xFFF7F8FC),
+            color: kPrimaryLight,
+            backgroundColor: kBg,
             onRefresh: _loadAll,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
               children: [
                 AppCard(
-                  color: const Color(0xFFFFFFFF),
-                  borderColor: const Color(0x140F172A),
+                  color: kSurface,
+                  borderColor: kBorder,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1118,13 +1281,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             width: 52,
                             height: 52,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF5F7FB),
+                              color: kSurface2,
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0x140F172A)),
+                              border: Border.all(color: kBorder),
                             ),
                             child: Icon(
-                              isComplaint ? Icons.build_circle_outlined : Icons.router_rounded,
-                              color: const Color(0xFF8224E3),
+                              isComplaint
+                                  ? Icons.build_circle_outlined
+                                  : Icons.router_rounded,
+                              color: kPrimaryLight,
                               size: 28,
                             ),
                           ),
@@ -1139,47 +1304,58 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFEFF6FF),
-                                        borderRadius: BorderRadius.circular(999),
+                                        color: kPrimary.withValues(alpha: 0.18),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
                                       ),
                                       child: Text(
-                                        isComplaint ? 'COMPLAINT JOB' : 'INSTALLATION JOB',
-                                        style: theme.textTheme.labelSmall?.copyWith(
-                                          color: const Color(0xFF8224E3),
+                                        isComplaint
+                                            ? 'COMPLAINT JOB'
+                                            : 'INSTALLATION JOB',
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                          color: kPrimaryLight,
                                           letterSpacing: 1.8,
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF8FAFC),
-                                        borderRadius: BorderRadius.circular(999),
-                                        border: Border.all(color: const Color(0x1F334155)),
+                                        color: kSurface2,
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                        border: Border.all(
+                                            color: const Color(0x1F334155)),
                                       ),
                                       child: Text(
                                         status.replaceAll('_', ' '),
                                         style: const TextStyle(
-                                          color: Color(0xFF0F172A),
+                                          color: kText,
                                           fontWeight: FontWeight.w700,
                                           fontSize: 12,
                                         ),
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF8FAFC),
-                                        borderRadius: BorderRadius.circular(999),
-                                        border: Border.all(color: const Color(0x1F334155)),
+                                        color: kSurface2,
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                        border: Border.all(
+                                            color: const Color(0x1F334155)),
                                       ),
                                       child: Text(
                                         'Step $nextStepNumber of $totalSteps',
                                         style: const TextStyle(
-                                          color: Color(0xFF475569),
+                                          color: kMuted,
                                           fontWeight: FontWeight.w700,
                                           fontSize: 12,
                                         ),
@@ -1190,15 +1366,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 const SizedBox(height: 12),
                                 Text(
                                   customerName,
-                                  style: theme.textTheme.headlineSmall?.copyWith(
-                                    color: const Color(0xFF0F172A),
+                                  style:
+                                      theme.textTheme.headlineSmall?.copyWith(
+                                    color: kText,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   customerAddress,
-                                  style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+                                  style: const TextStyle(
+                                      color: kMuted, height: 1.45),
                                 ),
                               ],
                             ),
@@ -1221,7 +1399,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           if (scheduledAt.isNotEmpty)
                             SizedBox(
                               width: 190,
-                              child: _chip('Scheduled', _shortDateTime(scheduledAt)),
+                              child: _chip(
+                                  'Scheduled', _shortDateTime(scheduledAt)),
                             ),
                         ],
                       ),
@@ -1243,9 +1422,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: kSurface2,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0x120F172A)),
+                          border: Border.all(color: kBorder),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1253,7 +1432,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             Text(
                               'Next field action',
                               style: theme.textTheme.titleMedium?.copyWith(
-                                color: const Color(0xFF0F172A),
+                                color: kText,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -1266,7 +1445,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 activationLive: activationLive,
                                 proofUploaded: proofUploaded,
                               ),
-                              style: const TextStyle(color: Color(0xFF64748B), height: 1.45),
+                              style:
+                                  const TextStyle(color: kMuted, height: 1.45),
                             ),
                             const SizedBox(height: 12),
                             _stageTimeline(status, isComplaint: isComplaint),
@@ -1296,7 +1476,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             icon: const Icon(Icons.badge_outlined, size: 18),
                             label: const Text('Copy customer'),
                           ),
-                          if (widget.job.mapUrl.isNotEmpty || (widget.job.latitude != null && widget.job.longitude != null))
+                          if (widget.job.mapUrl.isNotEmpty ||
+                              (widget.job.latitude != null &&
+                                  widget.job.longitude != null))
                             OutlinedButton.icon(
                               onPressed: () => _openUri(
                                 widget.job.mapUrl.isNotEmpty
@@ -1309,7 +1491,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                           if (phone.isNotEmpty)
                             OutlinedButton.icon(
-                              onPressed: () => _openUri('tel:$phone', fallback: 'Call action not available'),
+                              onPressed: () => _openUri('tel:$phone',
+                                  fallback: 'Call action not available'),
                               icon: const Icon(Icons.call_outlined, size: 18),
                               label: const Text('Call customer'),
                             ),
@@ -1319,24 +1502,27 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 'Customer address copied',
                                 customerAddress,
                               ),
-                              icon: const Icon(Icons.content_copy_outlined, size: 18),
+                              icon: const Icon(Icons.content_copy_outlined,
+                                  size: 18),
                               label: const Text('Copy address'),
                             ),
                           if (!isComplaint && _canCancelInstall(status))
                             OutlinedButton.icon(
-                              onPressed: _busy ? null : _showCancelInstallationSheet,
+                              onPressed:
+                                  _busy ? null : _showCancelInstallationSheet,
                               icon: const Icon(Icons.cancel_outlined, size: 18),
                               label: const Text('Cancel installation'),
                             ),
                         ],
                       ),
-                      if (onsiteAddress.isNotEmpty || onsiteCheckedInAt.isNotEmpty) ...[
+                      if (onsiteAddress.isNotEmpty ||
+                          onsiteCheckedInAt.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF0FDF4),
+                            color: const Color(0x2210B981),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: const Color(0xFFBBF7D0)),
                           ),
@@ -1351,8 +1537,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              _row('Checked in', onsiteCheckedInAt.isEmpty ? '-' : _shortDateTime(onsiteCheckedInAt)),
-                              _row('Location', onsiteAddress.isEmpty ? '-' : onsiteAddress),
+                              _row(
+                                  'Checked in',
+                                  onsiteCheckedInAt.isEmpty
+                                      ? '-'
+                                      : _shortDateTime(onsiteCheckedInAt)),
+                              _row('Location',
+                                  onsiteAddress.isEmpty ? '-' : onsiteAddress),
                             ],
                           ),
                         ),
@@ -1363,9 +1554,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: kSurface2,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0x120F172A)),
+                            border: Border.all(color: kBorder),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1373,27 +1564,41 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               Text(
                                 'Latest field update',
                                 style: theme.textTheme.titleMedium?.copyWith(
-                                  color: const Color(0xFF0F172A),
+                                  color: kText,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              _row('Event', latestTimelineEvent.isEmpty ? 'timeline update' : latestTimelineEvent),
-                              _row('Note', latestTimelineNote.isEmpty ? '-' : latestTimelineNote),
-                              _row('At', latestTimelineAt.isEmpty ? '-' : _shortDateTime(latestTimelineAt)),
+                              _row(
+                                  'Event',
+                                  latestTimelineEvent.isEmpty
+                                      ? 'timeline update'
+                                      : latestTimelineEvent),
+                              _row(
+                                  'Note',
+                                  latestTimelineNote.isEmpty
+                                      ? '-'
+                                      : latestTimelineNote),
+                              _row(
+                                  'At',
+                                  latestTimelineAt.isEmpty
+                                      ? '-'
+                                      : _shortDateTime(latestTimelineAt)),
                             ],
                           ),
                         ),
                       ],
-                      if (status == 'deferred' || deferReason.isNotEmpty || deferNote.isNotEmpty) ...[
+                      if (status == 'deferred' ||
+                          deferReason.isNotEmpty ||
+                          deferNote.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFFBEB),
+                            color: const Color(0x22F59E0B),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFFCD34D)),
+                            border: Border.all(color: const Color(0x66F59E0B)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1407,7 +1612,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ),
                               const SizedBox(height: 10),
                               _row('Reason', _deferReasonLabel(deferReason)),
-                              _row('Field note', deferNote.isEmpty ? '-' : deferNote),
+                              _row('Field note',
+                                  deferNote.isEmpty ? '-' : deferNote),
                               const SizedBox(height: 12),
                               Wrap(
                                 spacing: 10,
@@ -1418,13 +1624,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                       onPressed: _busy
                                           ? null
                                           : () => _run(
-                                                () => _appState.api.resumeFollowUp(_appState.session!, widget.job.id),
+                                                () => _appState.api
+                                                    .resumeFollowUp(
+                                                        _appState.session!,
+                                                        widget.job.id),
                                                 'Follow-up resumed',
                                               ),
                                       child: const Text('Resume revisit'),
                                     ),
                                   OutlinedButton(
-                                    onPressed: _busy ? null : _showDeferJobSheet,
+                                    onPressed:
+                                        _busy ? null : _showDeferJobSheet,
                                     child: const Text('Update follow-up note'),
                                   ),
                                 ],
@@ -1433,15 +1643,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                         ),
                       ],
-                      if (!isComplaint && (status == 'cancelled' || cancelReason.isNotEmpty || cancelNote.isNotEmpty)) ...[
+                      if (!isComplaint &&
+                          (status == 'cancelled' ||
+                              cancelReason.isNotEmpty ||
+                              cancelNote.isNotEmpty)) ...[
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFEF2F2),
+                            color: const Color(0x22EF4444),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                            border: Border.all(color: const Color(0x66EF4444)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1454,21 +1667,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              _row('Reason', cancelReason.isEmpty ? '-' : _cancelReasonLabel(cancelReason)),
-                              _row('Field note', cancelNote.isEmpty ? '-' : cancelNote),
+                              _row(
+                                  'Reason',
+                                  cancelReason.isEmpty
+                                      ? '-'
+                                      : _cancelReasonLabel(cancelReason)),
+                              _row('Field note',
+                                  cancelNote.isEmpty ? '-' : cancelNote),
                             ],
                           ),
                         ),
                       ],
-                      if (isComplaint && (complaint.isNotEmpty || complaintWatchouts.isNotEmpty)) ...[
+                      if (isComplaint &&
+                          (complaint.isNotEmpty ||
+                              complaintWatchouts.isNotEmpty)) ...[
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: kSurface2,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0x120F172A)),
+                            border: Border.all(color: kBorder),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1476,19 +1696,25 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               Text(
                                 'Complaint watchouts',
                                 style: theme.textTheme.titleMedium?.copyWith(
-                                  color: const Color(0xFF0F172A),
+                                  color: kText,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              _row('Issue type', _complaintResolutionLabel(complaintResolution)),
-                              _row('Current note', '${complaint['note'] ?? _complaintNoteController.text.trim()}'),
+                              _row(
+                                  'Issue type',
+                                  _complaintResolutionLabel(
+                                      complaintResolution)),
+                              _row('Current note',
+                                  '${complaint['note'] ?? _complaintNoteController.text.trim()}'),
                               if (complaintWatchouts.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
-                                  children: complaintWatchouts.map(_miniPill).toList(),
+                                  children: complaintWatchouts
+                                      .map(_miniPill)
+                                      .toList(),
                                 ),
                               ],
                             ],
@@ -1499,497 +1725,165 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                _workflowPager(
+                  context,
+                  status: status,
+                  isComplaint: isComplaint,
+                  phone: phone,
+                  planName: planName.isEmpty ? '-' : planName,
+                  configStatus: configStatus,
+                  optical: optical,
+                  diagnostics: diagnostics,
+                  device: device,
+                  preview: preview,
+                  activation: activation,
+                  pppoeUsername: pppoeUsername,
+                  wifiSsid24: wifiSsid24,
+                  wifiSsid5: wifiSsid5,
+                  wifiPassword: wifiPassword,
+                  canAccept: canAccept,
+                  canStartTravel: canStartTravel,
+                  canStartOnsite: canStartOnsite,
+                  canActivate: canRunActivation,
+                  canRetry: canRetry,
+                  canStartComplaint: canStartComplaint,
+                  canReplaceOnt: canReplaceOnt,
+                  canRebootComplaint: canRebootComplaint,
+                  canSendComplaintOtp: canSendComplaintOtp,
+                  canResolveComplaint: canResolveComplaint,
+                  canSubmitProof: canSubmitProof,
+                  canSendInstallOtp: canSendInstallOtp,
+                  canCompleteInstall: canCompleteInstall,
+                  activationLive: activationLive,
+                  proofUploaded: proofUploaded,
+                  activationBlockers: activationBlockers,
+                ),
+                const SizedBox(height: 16),
                 AppCard(
-                  color: const Color(0xFFFFFFFF),
+                  color: kSurface,
                   borderColor: const Color(0x228224E3),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Technical panels', style: theme.textTheme.titleLarge),
+                      Text('Technical panels',
+                          style: theme.textTheme.titleLarge),
                       const SizedBox(height: 8),
                       const Text(
                         'Open this only when you need diagnostics, raw timeline, or the full field control set.',
-                        style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+                        style: TextStyle(color: kMuted, height: 1.45),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
-                        onPressed: () => setState(() => _showAdvancedPanels = !_showAdvancedPanels),
-                        child: Text(_showAdvancedPanels ? 'Hide advanced panels' : 'Show advanced panels'),
+                        onPressed: () => setState(
+                            () => _showAdvancedPanels = !_showAdvancedPanels),
+                        child: Text(_showAdvancedPanels
+                            ? 'Hide advanced panels'
+                            : 'Show advanced panels'),
                       ),
                     ],
                   ),
                 ),
                 if (_showAdvancedPanels) ...[
-                const SizedBox(height: 16),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (linkedSerial.isNotEmpty) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F4FF),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x558224E3)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.router_rounded, color: Color(0xFF8224E3)),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Router linked: $linkedSerial',
-                                  style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-                      Text('Field actions', style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 14),
-                      _stageTimeline(status, isComplaint: isComplaint),
-                      const SizedBox(height: 14),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFFFFF),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0x228224E3)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isComplaint ? 'Current complaint stage' : 'Current install stage',
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _nextActionText(
-                                status: status,
-                                isComplaint: isComplaint,
-                                linkedSerial: linkedSerial,
-                                activationLive: activationLive,
-                                proofUploaded: proofUploaded,
-                              ),
-                              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      _nextActionCard(
-                        context,
-                        status: status,
-                        configStatus: configStatus,
-                        isComplaint: isComplaint,
-                        canAccept: canAccept,
-                        canStartTravel: canStartTravel,
-                        canStartOnsite: canStartOnsite,
-                        canActivate: canActivate,
-                        canRetry: canRetry,
-                        canStartComplaint: canStartComplaint,
-                        canReplaceOnt: canReplaceOnt,
-                        canRebootComplaint: canRebootComplaint,
-                        canSendComplaintOtp: canSendComplaintOtp,
-                        canResolveComplaint: canResolveComplaint,
-                        canSubmitProof: canSubmitProof,
-                        canSendInstallOtp: canSendInstallOtp,
-                        canCompleteInstall: canCompleteInstall,
-                        proofUploaded: proofUploaded,
-                        nextStepNumber: nextStepNumber,
-                        totalSteps: totalSteps,
-                      ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: _serialController,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(labelText: 'ONT serial number'),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          OutlinedButton(
-                            onPressed: _busy
-                                ? null
-                                : () => _scanSerial(
-                                      controller: _serialController,
-                                      title: 'Scan ONT serial',
-                                      subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
-                                      refreshOntDetails: true,
-                                    ),
-                            child: const Text('Scan barcode'),
-                          ),
-                          OutlinedButton(
-                            onPressed: _busy ? null : () => _refreshPreviewAndDiagnostics(successMessage: 'Preview refreshed'),
-                            child: const Text('Load preview'),
-                          ),
-                          OutlinedButton(
-                            onPressed: _busy ? null : () => _refreshPreviewAndDiagnostics(successMessage: 'Diagnostics refreshed'),
-                            child: const Text('Diagnostics'),
-                          ),
-                          FilledButton(
-                            onPressed: _busy || !canActivate
-                                ? null
-                                : () {
-                                    final serial = _serialController.text.trim();
-                                    if (serial.isEmpty) {
-                                      _show('Enter ONT serial first');
-                                      return;
-                                    }
-                                    _startActivationCountdown();
-                                    _run(() => _appState.runActivationFlow(widget.job.id, serial), 'Activation requested');
-                                  },
-                            child: Text(_busy ? 'Working...' : 'Activate'),
-                          ),
-                          if (canRetry)
-                            OutlinedButton(
-                              onPressed: _busy || !canRetry
-                                  ? null
-                                  : () => _run(
-                                        () => _appState.api.retryActivation(
-                                          _appState.session!,
-                                          widget.job.id,
-                                          note: 'Retry from installer app after partial or failed activation',
-                                        ),
-                                        'Retry requested',
-                                      ),
-                              child: const Text('Retry config'),
-                            ),
-                        ],
-                      ),
-                      if (_activationCountdown > 0) ...[
-                        const SizedBox(height: 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F4FF),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x338224E3)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Configuring router',
-                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Waiting for backend config push and ONT read-back. Approx time left: ${_activationCountdown}s',
-                                style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                              ),
-                              const SizedBox(height: 12),
-                              LinearProgressIndicator(
-                                value: (90 - _activationCountdown) / 90,
-                                minHeight: 8,
-                                backgroundColor: const Color(0xFFF7F8FC),
-                                valueColor: const AlwaysStoppedAnimation(Color(0xFF8224E3)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      if (activationLive) ...[
-                        const SizedBox(height: 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F4FF),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x558224E3)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.check_circle_rounded, color: Color(0xFF8224E3)),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Internet is active. Customer notification should be triggered from backend activation flow.',
-                                  style: const TextStyle(color: Color(0xFF131313), height: 1.4, fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Plan and commercial summary', style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 12),
-                      _row('Plan lane', planCategory),
-                      _row('Plan code', planCode.isEmpty ? '-' : planCode),
-                      _row('Download', planDownload > 0 ? '${planDownload.toStringAsFixed(0)} Mbps' : '-'),
-                      _row('Upload', planUpload > 0 ? '${planUpload.toStringAsFixed(0)} Mbps' : '-'),
-                      _row('Monthly price', planPrice > 0 ? 'Rs ${planPrice.toStringAsFixed(0)}' : '-'),
-                      _row('Data policy', _dataPolicyLabel(planDataPolicy)),
-                      _row('Data cap', planDataPolicy == 'unlimited' ? 'Unlimited' : (planDataLimit > 0 ? '${planDataLimit.toStringAsFixed(0)} GB' : '-')),
-                      _row('FUP speed', planFupSpeed > 0 ? '${planFupSpeed.toStringAsFixed(0)} Mbps' : '-'),
-                      _row('OTC', planOtc > 0 ? 'Rs ${planOtc.toStringAsFixed(0)}' : '-'),
-                      _row('Installation', planInstall > 0 ? 'Rs ${planInstall.toStringAsFixed(0)}' : '-'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(device.isNotEmpty ? 'Router linked' : 'Provisioning details', style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 12),
-                      _row('Brand', (preview['brand'] ?? '-').toString()),
-                      _row('PPPoE user', pppoeUsername),
-                      _row('PPPoE password', pppoePassword),
-                      _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? '-').toString()),
-                      _row('NAT', ((preview['natEnabled'] ?? activation['credentials']?['natEnabled']) == true) ? 'Enabled' : 'Pending'),
-                      _row(singleWifiName ? 'Wi-Fi SSID' : 'SSID 2.4G', wifiSsid24),
-                      if (!singleWifiName) _row('SSID 5G', wifiSsid5),
-                      _row('Wi-Fi password', wifiPassword),
-                      _row('Config status', configStatus),
-                      _row('Internet', status == 'active' ? 'Active' : 'Pending'),
-                      if (activationLive) ...[
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Text(
-                              'Customer handover',
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8F4FF),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: const Color(0x228224E3)),
-                              ),
-                              child: const Text(
-                                'Live',
-                                style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F4FF),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x228224E3)),
-                          ),
-                          child: const Text(
-                            'Share Wi-Fi names, Wi-Fi password, and PPPoE details with the customer before closing the visit.',
-                            style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            FilledButton(
-                              onPressed: (wifiSsid24 == '-' && wifiSsid5 == '-') && (pppoeUsername == '-' && pppoePassword == '-')
-                                  ? null
-                                  : () => _copyText(
-                                        'Customer handover copied',
-                                        handoverPack,
-                                      ),
-                              child: const Text('Copy handover pack'),
-                            ),
-                            OutlinedButton(
-                              onPressed: pppoeUsername == '-' && pppoePassword == '-' ? null : () => _copyText(
-                                'PPPoE credentials copied',
-                                'Username: $pppoeUsername\nPassword: $pppoePassword',
-                              ),
-                              child: const Text('Copy PPPoE'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Optical and device', style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 12),
-                      _row('RX power', '${optical['rxPower'] ?? diagnostics['optical']?['rxPower'] ?? '-'}'),
-                      _row('TX power', '${optical['txPower'] ?? diagnostics['optical']?['txPower'] ?? '-'}'),
-                      _row('Health', '${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}'),
-                      _row('Router serial', '${device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '-'}'),
-                      _row('Device ID', linkedDeviceId.isEmpty ? '-' : linkedDeviceId),
-                      _row('Model', linkedProductClass.isEmpty ? '-' : linkedProductClass),
-                      _row('Router online', '${device['onlineStatus'] ?? 'unknown'}'),
-                      _row('Provisioning state', '${device['provisioningState'] ?? 'pending'}'),
-                      if (deviceRefsPack.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            OutlinedButton(
-                              onPressed: () => _copyText('Device references copied', deviceRefsPack),
-                              child: const Text('Copy device refs'),
-                            ),
-                            OutlinedButton(
-                              onPressed: () => _copyText('Diagnostics snapshot copied', diagnosticsPack),
-                              child: const Text('Copy diagnostics'),
-                            ),
-                          ],
-                        ),
-                      ],
-                      if (recommendations.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          'Field recommendations',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: recommendations.take(4).map(_miniPill).toList(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Field timeline', style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 12),
-                      if (timeline.isEmpty)
-                        const Text(
-                          'No field updates recorded yet.',
-                          style: TextStyle(color: Color(0xFF6E6A67)),
-                        )
-                      else
-                        ...timeline.reversed.take(8).map(_timelineRow),
-                    ],
-                  ),
-                ),
-                if (isComplaint) ...[
                   const SizedBox(height: 16),
                   AppCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text('Complaint workflow', style: theme.textTheme.titleLarge),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8F4FF),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: const Color(0x228224E3)),
-                              ),
-                              child: const Text(
-                                'Guided',
-                                style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F4FF),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x228224E3)),
-                          ),
-                          child: const Text(
-                            'Choose the issue type, record the complaint note, replace ONT if needed, and verify customer OTP before resolution.',
-                            style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (complaint.isNotEmpty || deviceContext['oldSerialNumber'] != null || deviceContext['finalSerialNumber'] != null) ...[
+                        if (linkedSerial.isNotEmpty) ...[
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFFFFF),
+                              color: kSurface2,
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0x228224E3)),
+                              border:
+                                  Border.all(color: const Color(0x558224E3)),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Text(
-                                  'Replacement summary',
-                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                const Icon(Icons.router_rounded,
+                                    color: kPrimaryLight),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Router linked: $linkedSerial',
+                                    style: const TextStyle(
+                                        color: kText,
+                                        fontWeight: FontWeight.w800),
+                                  ),
                                 ),
-                                const SizedBox(height: 10),
-                                _row('Resolution code', complaintResolution.replaceAll('_', ' ')),
-                                _row('Old serial', '${deviceContext['oldSerialNumber'] ?? '-'}'),
-                                _row('New serial', '${deviceContext['finalSerialNumber'] ?? '-'}'),
-                                _row('Complaint note', '${complaint['note'] ?? _complaintNoteController.text.trim()}'),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                         ],
-                        Text(
-                          'Issue type',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _complaintResolutionCodes
-                              .map(
-                                (code) => ChoiceChip(
-                                  label: Text(code.replaceAll('_', ' ')),
-                                  selected: _complaintResolutionCode == code,
-                                  onSelected: _busy
-                                      ? null
-                                      : (selected) {
-                                          if (!selected) return;
-                                          setState(() => _complaintResolutionCode = code);
-                                        },
+                        Text('Field actions',
+                            style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 14),
+                        _stageTimeline(status, isComplaint: isComplaint),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: kSurface,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0x228224E3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isComplaint
+                                    ? 'Current complaint stage'
+                                    : 'Current install stage',
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _nextActionText(
+                                  status: status,
+                                  isComplaint: isComplaint,
+                                  linkedSerial: linkedSerial,
+                                  activationLive: activationLive,
+                                  proofUploaded: proofUploaded,
                                 ),
-                              )
-                              .toList(),
+                                style: const TextStyle(
+                                    color: kMuted, height: 1.45),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _complaintNoteController,
-                          onChanged: (_) => setState(() {}),
-                          decoration: const InputDecoration(labelText: 'Complaint note'),
+                        const SizedBox(height: 14),
+                        _nextActionCard(
+                          context,
+                          status: status,
+                          configStatus: configStatus,
+                          isComplaint: isComplaint,
+                          canAccept: canAccept,
+                          canStartTravel: canStartTravel,
+                          canStartOnsite: canStartOnsite,
+                          canActivate: canRunActivation,
+                          canRetry: canRetry,
+                          canStartComplaint: canStartComplaint,
+                          canReplaceOnt: canReplaceOnt,
+                          canRebootComplaint: canRebootComplaint,
+                          canSendComplaintOtp: canSendComplaintOtp,
+                          canResolveComplaint: canResolveComplaint,
+                          canSubmitProof: canSubmitProof,
+                          canSendInstallOtp: canSendInstallOtp,
+                          canCompleteInstall: canCompleteInstall,
+                          proofUploaded: proofUploaded,
+                          nextStepNumber: nextStepNumber,
+                          totalSteps: totalSteps,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         TextField(
-                          controller: _replaceSerialController,
+                          controller: _serialController,
                           onChanged: (_) => setState(() {}),
-                          decoration: const InputDecoration(labelText: 'Replacement ONT serial'),
+                          decoration: const InputDecoration(
+                              labelText: 'ONT serial number'),
                         ),
                         const SizedBox(height: 12),
                         Wrap(
@@ -2000,79 +1894,965 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               onPressed: _busy
                                   ? null
                                   : () => _scanSerial(
-                                        controller: _replaceSerialController,
-                                        title: 'Scan replacement ONT',
-                                        subtitle: 'Scan the replacement router barcode or QR code to capture the new serial for complaint resolution.',
+                                        controller: _serialController,
+                                        title: 'Scan ONT serial',
+                                        subtitle:
+                                            'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                                        refreshOntDetails: true,
                                       ),
                               child: const Text('Scan barcode'),
                             ),
                             OutlinedButton(
-                              onPressed: _busy || !canStartComplaint
+                              onPressed: _busy
                                   ? null
-                                  : () => _run(
-                                        () => _appState.api.startComplaint(
-                                          _appState.session!,
-                                          widget.job.id,
-                                          resolutionCode: _complaintResolutionCode,
-                                          note: _complaintNoteController.text.trim().isEmpty
-                                              ? 'Installer started complaint work'
-                                              : _complaintNoteController.text.trim(),
-                                        ),
-                                        'Complaint workflow started',
-                                      ),
-                              child: const Text('Start complaint'),
+                                  : () => _refreshPreviewAndDiagnostics(
+                                      successMessage: 'Preview refreshed'),
+                              child: const Text('Load preview'),
                             ),
                             OutlinedButton(
-                              onPressed: _busy || !canReplaceOnt
+                              onPressed: _busy
                                   ? null
-                                  : () {
-                                      final serial = _replaceSerialController.text.trim();
-                                      if (serial.isEmpty) {
-                                        _show('Enter replacement ONT serial');
-                                        return;
-                                      }
-                                      _run(
-                                        () => _appState.api.replaceDevice(
-                                          _appState.session!,
-                                          widget.job.id,
-                                          newSerialNumber: serial,
-                                          reason: _complaintNoteController.text.trim().isEmpty
-                                              ? 'ONT replaced from installer app'
-                                              : _complaintNoteController.text.trim(),
-                                        ),
-                                        'ONT replacement saved',
-                                      );
-                                    },
-                              child: const Text('Replace ONT'),
-                            ),
-                            OutlinedButton(
-                              onPressed: _busy || !canRebootComplaint
-                                  ? null
-                                  : () => _run(
-                                        () => _appState.api.rebootComplaintDevice(_appState.session!, widget.job.id),
-                                        'ONT reboot requested',
-                                      ),
-                              child: const Text('Reboot ONT'),
-                            ),
-                            OutlinedButton(
-                              onPressed: _busy || !canSendComplaintOtp
-                                  ? null
-                                  : () async {
-                                      setState(() => _busy = true);
-                                      try {
-                                        final otp = await _appState.api.sendComplaintOtp(_appState.session!, widget.job.id);
-                                        _show(otp == null ? 'Complaint OTP sent' : 'Complaint OTP: $otp');
-                                        await _loadAll();
-                                      } catch (e) {
-                                        _show(e.toString());
-                                      } finally {
-                                        if (mounted) setState(() => _busy = false);
-                                      }
-                                    },
-                              child: const Text('Send OTP'),
+                                  : () => _refreshPreviewAndDiagnostics(
+                                      successMessage: 'Diagnostics refreshed'),
+                              child: const Text('Diagnostics'),
                             ),
                             FilledButton(
-                              onPressed: _busy || !canResolveComplaint
+                              onPressed: _busy || !canActivate
+                                  ? null
+                                  : () {
+                                      final serial =
+                                          _serialController.text.trim();
+                                      if (serial.isEmpty) {
+                                        _show('Enter ONT serial first');
+                                        return;
+                                      }
+                                      _startActivationCountdown();
+                                      _run(
+                                          () => _appState.runActivationFlow(
+                                              widget.job.id, serial),
+                                          'Activation requested');
+                                    },
+                              child: Text(_busy ? 'Working...' : 'Activate'),
+                            ),
+                            if (canRetry)
+                              OutlinedButton(
+                                onPressed: _busy || !canRetry
+                                    ? null
+                                    : () => _run(
+                                          () => _appState.api.retryActivation(
+                                            _appState.session!,
+                                            widget.job.id,
+                                            note:
+                                                'Retry from installer app after partial or failed activation',
+                                          ),
+                                          'Retry requested',
+                                        ),
+                                child: const Text('Retry config'),
+                              ),
+                          ],
+                        ),
+                        if (_activationCountdown > 0) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: kSurface2,
+                              borderRadius: BorderRadius.circular(18),
+                              border:
+                                  Border.all(color: const Color(0x338224E3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Configuring router',
+                                  style: theme.textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Waiting for backend config push and ONT read-back. Approx time left: ${_activationCountdown}s',
+                                  style: const TextStyle(
+                                      color: kMuted, height: 1.45),
+                                ),
+                                const SizedBox(height: 12),
+                                LinearProgressIndicator(
+                                  value: (90 - _activationCountdown) / 90,
+                                  minHeight: 8,
+                                  backgroundColor: kBg,
+                                  valueColor:
+                                      AlwaysStoppedAnimation(kPrimaryLight),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (activationLive) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: kSurface2,
+                              borderRadius: BorderRadius.circular(18),
+                              border:
+                                  Border.all(color: const Color(0x558224E3)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.check_circle_rounded,
+                                    color: kPrimaryLight),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Internet is active. Customer notification should be triggered from backend activation flow.',
+                                    style: TextStyle(
+                                        color: kText,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Plan and commercial summary',
+                            style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        _row('Plan lane', planCategory),
+                        _row('Plan code', planCode.isEmpty ? '-' : planCode),
+                        _row(
+                            'Download',
+                            planDownload > 0
+                                ? '${planDownload.toStringAsFixed(0)} Mbps'
+                                : '-'),
+                        _row(
+                            'Upload',
+                            planUpload > 0
+                                ? '${planUpload.toStringAsFixed(0)} Mbps'
+                                : '-'),
+                        _row(
+                            'Monthly price',
+                            planPrice > 0
+                                ? 'Rs ${planPrice.toStringAsFixed(0)}'
+                                : '-'),
+                        _row('Data policy', _dataPolicyLabel(planDataPolicy)),
+                        _row(
+                            'Data cap',
+                            planDataPolicy == 'unlimited'
+                                ? 'Unlimited'
+                                : (planDataLimit > 0
+                                    ? '${planDataLimit.toStringAsFixed(0)} GB'
+                                    : '-')),
+                        _row(
+                            'FUP speed',
+                            planFupSpeed > 0
+                                ? '${planFupSpeed.toStringAsFixed(0)} Mbps'
+                                : '-'),
+                        _row(
+                            'OTC',
+                            planOtc > 0
+                                ? 'Rs ${planOtc.toStringAsFixed(0)}'
+                                : '-'),
+                        _row(
+                            'Installation',
+                            planInstall > 0
+                                ? 'Rs ${planInstall.toStringAsFixed(0)}'
+                                : '-'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                            device.isNotEmpty
+                                ? 'Router linked'
+                                : 'Provisioning details',
+                            style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        _row('Brand', (preview['brand'] ?? '-').toString()),
+                        _row('PPPoE user', pppoeUsername),
+                        _row('PPPoE password', pppoePassword),
+                        _row(
+                            'VLAN',
+                            (preview['vlanId'] ??
+                                    activation['credentials']?['vlanId'] ??
+                                    '-')
+                                .toString()),
+                        _row(
+                            'NAT',
+                            ((preview['natEnabled'] ??
+                                        activation['credentials']
+                                            ?['natEnabled']) ==
+                                    true)
+                                ? 'Enabled'
+                                : 'Pending'),
+                        _row(singleWifiName ? 'Wi-Fi SSID' : 'SSID 2.4G',
+                            wifiSsid24),
+                        if (!singleWifiName) _row('SSID 5G', wifiSsid5),
+                        _row('Wi-Fi password', wifiPassword),
+                        _row('Config status', configStatus),
+                        _row('Internet',
+                            status == 'active' ? 'Active' : 'Pending'),
+                        if (activationLive) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Text(
+                                'Customer handover',
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: kSurface2,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                      color: const Color(0x228224E3)),
+                                ),
+                                child: const Text(
+                                  'Live',
+                                  style: TextStyle(
+                                      color: kPrimaryLight,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: kSurface2,
+                              borderRadius: BorderRadius.circular(18),
+                              border:
+                                  Border.all(color: const Color(0x228224E3)),
+                            ),
+                            child: const Text(
+                              'Share Wi-Fi names, Wi-Fi password, and PPPoE details with the customer before closing the visit.',
+                              style: TextStyle(color: kMuted, height: 1.45),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              FilledButton(
+                                onPressed:
+                                    (wifiSsid24 == '-' && wifiSsid5 == '-') &&
+                                            (pppoeUsername == '-' &&
+                                                pppoePassword == '-')
+                                        ? null
+                                        : () => _copyText(
+                                              'Customer handover copied',
+                                              handoverPack,
+                                            ),
+                                child: const Text('Copy handover pack'),
+                              ),
+                              OutlinedButton(
+                                onPressed:
+                                    pppoeUsername == '-' && pppoePassword == '-'
+                                        ? null
+                                        : () => _copyText(
+                                              'PPPoE credentials copied',
+                                              'Username: $pppoeUsername\nPassword: $pppoePassword',
+                                            ),
+                                child: const Text('Copy PPPoE'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Optical and device',
+                            style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        _row('RX power',
+                            '${optical['rxPower'] ?? diagnostics['optical']?['rxPower'] ?? '-'}'),
+                        _row('TX power',
+                            '${optical['txPower'] ?? diagnostics['optical']?['txPower'] ?? '-'}'),
+                        _row('Health',
+                            '${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}'),
+                        _row('Router serial',
+                            '${device['serialNumber'] ?? deviceContext['finalSerialNumber'] ?? '-'}'),
+                        _row('Device ID',
+                            linkedDeviceId.isEmpty ? '-' : linkedDeviceId),
+                        _row(
+                            'Model',
+                            linkedProductClass.isEmpty
+                                ? '-'
+                                : linkedProductClass),
+                        _row('Router online',
+                            '${device['onlineStatus'] ?? 'unknown'}'),
+                        _row('Provisioning state',
+                            '${device['provisioningState'] ?? 'pending'}'),
+                        if (deviceRefsPack.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: () => _copyText(
+                                    'Device references copied', deviceRefsPack),
+                                child: const Text('Copy device refs'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () => _copyText(
+                                    'Diagnostics snapshot copied',
+                                    diagnosticsPack),
+                                child: const Text('Copy diagnostics'),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (recommendations.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Field recommendations',
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children:
+                                recommendations.take(4).map(_miniPill).toList(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Field timeline',
+                            style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        if (timeline.isEmpty)
+                          const Text(
+                            'No field updates recorded yet.',
+                            style: TextStyle(color: kMuted),
+                          )
+                        else
+                          ...timeline.reversed.take(8).map(_timelineRow),
+                      ],
+                    ),
+                  ),
+                  if (isComplaint) ...[
+                    const SizedBox(height: 16),
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text('Complaint workflow',
+                                  style: theme.textTheme.titleLarge),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: kSurface2,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                      color: const Color(0x228224E3)),
+                                ),
+                                child: const Text(
+                                  'Guided',
+                                  style: TextStyle(
+                                      color: kPrimaryLight,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: kSurface2,
+                              borderRadius: BorderRadius.circular(18),
+                              border:
+                                  Border.all(color: const Color(0x228224E3)),
+                            ),
+                            child: const Text(
+                              'Choose the issue type, record the complaint note, replace ONT if needed, and verify customer OTP before resolution.',
+                              style: TextStyle(color: kMuted, height: 1.45),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (complaint.isNotEmpty ||
+                              deviceContext['oldSerialNumber'] != null ||
+                              deviceContext['finalSerialNumber'] != null) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: kSurface,
+                                borderRadius: BorderRadius.circular(18),
+                                border:
+                                    Border.all(color: const Color(0x228224E3)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Replacement summary',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _row('Resolution code',
+                                      complaintResolution.replaceAll('_', ' ')),
+                                  _row('Old serial',
+                                      '${deviceContext['oldSerialNumber'] ?? '-'}'),
+                                  _row('New serial',
+                                      '${deviceContext['finalSerialNumber'] ?? '-'}'),
+                                  _row('Complaint note',
+                                      '${complaint['note'] ?? _complaintNoteController.text.trim()}'),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          Text(
+                            'Issue type',
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _complaintResolutionCodes
+                                .map(
+                                  (code) => ChoiceChip(
+                                    label: Text(code.replaceAll('_', ' ')),
+                                    selected: _complaintResolutionCode == code,
+                                    onSelected: _busy
+                                        ? null
+                                        : (selected) {
+                                            if (!selected) return;
+                                            setState(() =>
+                                                _complaintResolutionCode =
+                                                    code);
+                                          },
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _complaintNoteController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(
+                                labelText: 'Complaint note'),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _replaceSerialController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(
+                                labelText: 'Replacement ONT serial'),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () => _scanSerial(
+                                          controller: _replaceSerialController,
+                                          title: 'Scan replacement ONT',
+                                          subtitle:
+                                              'Scan the replacement router barcode or QR code to capture the new serial for complaint resolution.',
+                                        ),
+                                child: const Text('Scan barcode'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canStartComplaint
+                                    ? null
+                                    : () => _run(
+                                          () => _appState.api.startComplaint(
+                                            _appState.session!,
+                                            widget.job.id,
+                                            resolutionCode:
+                                                _complaintResolutionCode,
+                                            note: _complaintNoteController.text
+                                                    .trim()
+                                                    .isEmpty
+                                                ? 'Installer started complaint work'
+                                                : _complaintNoteController.text
+                                                    .trim(),
+                                          ),
+                                          'Complaint workflow started',
+                                        ),
+                                child: const Text('Start complaint'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canReplaceOnt
+                                    ? null
+                                    : () {
+                                        final serial = _replaceSerialController
+                                            .text
+                                            .trim();
+                                        if (serial.isEmpty) {
+                                          _show('Enter replacement ONT serial');
+                                          return;
+                                        }
+                                        _run(
+                                          () => _appState.api.replaceDevice(
+                                            _appState.session!,
+                                            widget.job.id,
+                                            newSerialNumber: serial,
+                                            reason: _complaintNoteController
+                                                    .text
+                                                    .trim()
+                                                    .isEmpty
+                                                ? 'ONT replaced from installer app'
+                                                : _complaintNoteController.text
+                                                    .trim(),
+                                          ),
+                                          'ONT replacement saved',
+                                        );
+                                      },
+                                child: const Text('Replace ONT'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canRebootComplaint
+                                    ? null
+                                    : () => _run(
+                                          () => _appState.api
+                                              .rebootComplaintDevice(
+                                                  _appState.session!,
+                                                  widget.job.id),
+                                          'ONT reboot requested',
+                                        ),
+                                child: const Text('Reboot ONT'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canSendComplaintOtp
+                                    ? null
+                                    : () async {
+                                        setState(() => _busy = true);
+                                        try {
+                                          final otp = await _appState.api
+                                              .sendComplaintOtp(
+                                                  _appState.session!,
+                                                  widget.job.id);
+                                          _show(otp == null
+                                              ? 'Complaint OTP sent'
+                                              : 'Complaint OTP: $otp');
+                                          await _loadAll();
+                                        } catch (e) {
+                                          _show(e.toString());
+                                        } finally {
+                                          if (mounted)
+                                            setState(() => _busy = false);
+                                        }
+                                      },
+                                child: const Text('Send OTP'),
+                              ),
+                              FilledButton(
+                                onPressed: _busy || !canResolveComplaint
+                                    ? null
+                                    : () {
+                                        final otp = _otpController.text.trim();
+                                        if (otp.length != 6) {
+                                          _show('Enter 6-digit OTP');
+                                          return;
+                                        }
+                                        _resolveComplaintFlow();
+                                      },
+                                child: const Text('Resolve complaint'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () => _copyText(
+                                    'Complaint summary copied',
+                                    complaintSummaryPack),
+                                child: const Text('Copy complaint summary'),
+                              ),
+                            ],
+                          ),
+                          if (otpPurpose.isNotEmpty ||
+                              otpVerifiedAt.isNotEmpty ||
+                              otpExpiresAt.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: kSurface2,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: kBorder),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'OTP state',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _row('Purpose', _otpPurposeLabel(otpPurpose)),
+                                  _row(
+                                      'Expires',
+                                      otpExpiresAt.isEmpty
+                                          ? '-'
+                                          : _shortDateTime(otpExpiresAt)),
+                                  _row(
+                                      'Verified',
+                                      otpVerifiedAt.isEmpty
+                                          ? '-'
+                                          : _shortDateTime(otpVerifiedAt)),
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: kSurface,
+                              borderRadius: BorderRadius.circular(18),
+                              border:
+                                  Border.all(color: const Color(0x228224E3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Complaint closure checklist',
+                                  style: theme.textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 10),
+                                _checkRow(
+                                    'Issue identified',
+                                    complaint['note'] != null ||
+                                        _complaintNoteController.text
+                                            .trim()
+                                            .isNotEmpty),
+                                _checkRow('Resolution selected',
+                                    _complaintResolutionCode.isNotEmpty),
+                                _checkRow(
+                                    'ONT replaced if needed',
+                                    deviceContext['finalSerialNumber'] !=
+                                            null ||
+                                        !canReplaceOnt),
+                                _checkRow('Customer OTP entered',
+                                    _otpController.text.trim().length == 6),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text('Installation completion',
+                                  style: theme.textTheme.titleLarge),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: kSurface2,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                      color: const Color(0x228224E3)),
+                                ),
+                                child: const Text(
+                                  'Final stage',
+                                  style: TextStyle(
+                                      color: kPrimaryLight,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: kSurface2,
+                              borderRadius: BorderRadius.circular(18),
+                              border:
+                                  Border.all(color: const Color(0x228224E3)),
+                            ),
+                            child: const Text(
+                              'Capture router and cable proof, submit the proof payload, then verify customer OTP to complete installation cleanly.',
+                              style: TextStyle(color: kMuted, height: 1.45),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: kSurface2,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: kBorder),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Checklist state',
+                                  style: theme.textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 10),
+                                _row('Checklist saved',
+                                    checklistSaved ? 'Yes' : 'Pending'),
+                                _row(
+                                    'Saved at',
+                                    checklistSavedAt.isEmpty
+                                        ? '-'
+                                        : _shortDateTime(checklistSavedAt)),
+                                if (recommendations.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: recommendations
+                                        .take(3)
+                                        .map(_miniPill)
+                                        .toList(),
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                OutlinedButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _run(
+                                            () => _appState.api.saveChecklist(
+                                                _appState.session!,
+                                                widget.job.id),
+                                            'Checklist saved',
+                                          ),
+                                  child: Text(checklistSaved
+                                      ? 'Update checklist'
+                                      : 'Save checklist'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _miniPill(_routerPhotoPath == null
+                                  ? 'Router photo pending'
+                                  : 'Router photo captured'),
+                              _miniPill(_cablePhotoPath == null
+                                  ? 'Cable photo pending'
+                                  : 'Cable photo captured'),
+                              _miniPill(proofUploaded
+                                  ? 'Proof uploaded'
+                                  : 'Proof not uploaded'),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _row(
+                              'Router photo',
+                              _routerPhotoPath == null
+                                  ? 'Pending capture'
+                                  : 'Captured'),
+                          _row(
+                              'Cable photo',
+                              _cablePhotoPath == null
+                                  ? 'Pending capture'
+                                  : 'Captured'),
+                          _row(
+                              'Proof uploaded',
+                              proofUploadedAt.isEmpty
+                                  ? '-'
+                                  : _shortDateTime(proofUploadedAt)),
+                          const SizedBox(height: 8),
+                          if (_routerPhotoPath != null ||
+                              _cablePhotoPath != null) ...[
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                if (_routerPhotoPath != null)
+                                  _proofPreviewCard(
+                                      'Router photo', _routerPhotoPath!),
+                                if (_cablePhotoPath != null)
+                                  _proofPreviewCard(
+                                      'Cable photo', _cablePhotoPath!),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () =>
+                                        _captureProofPhoto(routerPhoto: true),
+                                child: Text(_routerPhotoPath != null
+                                    ? 'Retake router photo'
+                                    : 'Capture router photo'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () =>
+                                        _captureProofPhoto(routerPhoto: false),
+                                child: Text(_cablePhotoPath != null
+                                    ? 'Retake cable photo'
+                                    : 'Capture cable photo'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canSubmitProof
+                                    ? null
+                                    : _submitCapturedProof,
+                                child: Text(proof.isNotEmpty
+                                    ? 'Update proof'
+                                    : 'Submit proof'),
+                              ),
+                              OutlinedButton(
+                                onPressed: _busy || !canSendInstallOtp
+                                    ? null
+                                    : () async {
+                                        setState(() => _busy = true);
+                                        try {
+                                          final otp = await _appState.api
+                                              .sendCompletionOtp(
+                                                  _appState.session!,
+                                                  widget.job.id);
+                                          _show(otp == null
+                                              ? 'Completion OTP sent'
+                                              : 'Completion OTP: $otp');
+                                          await _loadAll();
+                                        } catch (e) {
+                                          _show(e.toString());
+                                        } finally {
+                                          if (mounted)
+                                            setState(() => _busy = false);
+                                        }
+                                      },
+                                child: const Text('Send OTP'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () => _copyText(
+                                    'Proof summary copied', proofSummaryPack),
+                                child: const Text('Copy proof summary'),
+                              ),
+                            ],
+                          ),
+                          if (otpPurpose.isNotEmpty ||
+                              otpVerifiedAt.isNotEmpty ||
+                              otpExpiresAt.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: kSurface2,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: kBorder),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'OTP state',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _row('Purpose', _otpPurposeLabel(otpPurpose)),
+                                  _row(
+                                      'Expires',
+                                      otpExpiresAt.isEmpty
+                                          ? '-'
+                                          : _shortDateTime(otpExpiresAt)),
+                                  _row(
+                                      'Verified',
+                                      otpVerifiedAt.isEmpty
+                                          ? '-'
+                                          : _shortDateTime(otpVerifiedAt)),
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (_routerPhotoCapturedAt != null ||
+                              _cablePhotoCapturedAt != null) ...[
+                            const SizedBox(height: 10),
+                            if (_routerPhotoCapturedAt != null)
+                              _row(
+                                  'Router captured',
+                                  _shortDateTime(_routerPhotoCapturedAt!
+                                      .toIso8601String())),
+                            if (_cablePhotoCapturedAt != null)
+                              _row(
+                                  'Cable captured',
+                                  _shortDateTime(_cablePhotoCapturedAt!
+                                      .toIso8601String())),
+                          ],
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _otpController,
+                            onChanged: (_) => setState(() {}),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                                labelText: 'Customer OTP'),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: _busy || !canCompleteInstall
                                   ? null
                                   : () {
                                       final otp = _otpController.text.trim();
@@ -2080,277 +2860,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                         _show('Enter 6-digit OTP');
                                         return;
                                       }
-                                      _resolveComplaintFlow();
+                                      _completeInstallationFlow();
                                     },
-                              child: const Text('Resolve complaint'),
-                            ),
-                            OutlinedButton(
-                              onPressed: () => _copyText('Complaint summary copied', complaintSummaryPack),
-                              child: const Text('Copy complaint summary'),
-                            ),
-                          ],
-                        ),
-                        if (otpPurpose.isNotEmpty || otpVerifiedAt.isNotEmpty || otpExpiresAt.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0x120F172A)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'OTP state',
-                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 10),
-                                _row('Purpose', _otpPurposeLabel(otpPurpose)),
-                                _row('Expires', otpExpiresAt.isEmpty ? '-' : _shortDateTime(otpExpiresAt)),
-                                _row('Verified', otpVerifiedAt.isEmpty ? '-' : _shortDateTime(otpVerifiedAt)),
-                              ],
+                              child: const Text('Complete installation'),
                             ),
                           ),
                         ],
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFFFFF),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x228224E3)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Complaint closure checklist',
-                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              const SizedBox(height: 10),
-                              _checkRow('Issue identified', complaint['note'] != null || _complaintNoteController.text.trim().isNotEmpty),
-                              _checkRow('Resolution selected', _complaintResolutionCode.isNotEmpty),
-                              _checkRow('ONT replaced if needed', deviceContext['finalSerialNumber'] != null || !canReplaceOnt),
-                              _checkRow('Customer OTP entered', _otpController.text.trim().length == 6),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ] else ...[
-                  const SizedBox(height: 16),
-                  AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text('Installation completion', style: theme.textTheme.titleLarge),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8F4FF),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: const Color(0x228224E3)),
-                              ),
-                              child: const Text(
-                                'Final stage',
-                                style: TextStyle(color: Color(0xFF8224E3), fontWeight: FontWeight.w700, fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F4FF),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x228224E3)),
-                          ),
-                          child: const Text(
-                            'Capture router and cable proof, submit the proof payload, then verify customer OTP to complete installation cleanly.',
-                            style: TextStyle(color: Color(0xFF6E6A67), height: 1.45),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0x120F172A)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Checklist state',
-                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              const SizedBox(height: 10),
-                              _row('Checklist saved', checklistSaved ? 'Yes' : 'Pending'),
-                              _row('Saved at', checklistSavedAt.isEmpty ? '-' : _shortDateTime(checklistSavedAt)),
-                              if (recommendations.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: recommendations.take(3).map(_miniPill).toList(),
-                                ),
-                              ],
-                              const SizedBox(height: 12),
-                              OutlinedButton(
-                                onPressed: _busy
-                                    ? null
-                                    : () => _run(
-                                          () => _appState.api.saveChecklist(_appState.session!, widget.job.id),
-                                          'Checklist saved',
-                                        ),
-                                child: Text(checklistSaved ? 'Update checklist' : 'Save checklist'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _miniPill(_routerPhotoPath == null ? 'Router photo pending' : 'Router photo captured'),
-                            _miniPill(_cablePhotoPath == null ? 'Cable photo pending' : 'Cable photo captured'),
-                            _miniPill(proofUploaded ? 'Proof uploaded' : 'Proof not uploaded'),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _row('Router photo', _routerPhotoPath == null ? 'Pending capture' : 'Captured'),
-                        _row('Cable photo', _cablePhotoPath == null ? 'Pending capture' : 'Captured'),
-                        _row('Proof uploaded', proofUploadedAt.isEmpty ? '-' : _shortDateTime(proofUploadedAt)),
-                        const SizedBox(height: 8),
-                        if (_routerPhotoPath != null || _cablePhotoPath != null) ...[
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              if (_routerPhotoPath != null) _proofPreviewCard('Router photo', _routerPhotoPath!),
-                              if (_cablePhotoPath != null) _proofPreviewCard('Cable photo', _cablePhotoPath!),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            OutlinedButton(
-                              onPressed: _busy
-                                  ? null
-                                  : () => _captureProofPhoto(routerPhoto: true),
-                              child: Text(_routerPhotoPath != null ? 'Retake router photo' : 'Capture router photo'),
-                            ),
-                            OutlinedButton(
-                              onPressed: _busy
-                                  ? null
-                                  : () => _captureProofPhoto(routerPhoto: false),
-                              child: Text(_cablePhotoPath != null ? 'Retake cable photo' : 'Capture cable photo'),
-                            ),
-                            OutlinedButton(
-                              onPressed: _busy || !canSubmitProof
-                                  ? null
-                                  : _submitCapturedProof,
-                              child: Text(proof.isNotEmpty ? 'Update proof' : 'Submit proof'),
-                            ),
-                            OutlinedButton(
-                              onPressed: _busy || !canSendInstallOtp
-                                  ? null
-                                  : () async {
-                                      setState(() => _busy = true);
-                                      try {
-                                        final otp = await _appState.api.sendCompletionOtp(_appState.session!, widget.job.id);
-                                        _show(otp == null ? 'Completion OTP sent' : 'Completion OTP: $otp');
-                                        await _loadAll();
-                                      } catch (e) {
-                                        _show(e.toString());
-                                      } finally {
-                                        if (mounted) setState(() => _busy = false);
-                                      }
-                                    },
-                              child: const Text('Send OTP'),
-                            ),
-                            OutlinedButton(
-                              onPressed: () => _copyText('Proof summary copied', proofSummaryPack),
-                              child: const Text('Copy proof summary'),
-                            ),
-                          ],
-                        ),
-                        if (otpPurpose.isNotEmpty || otpVerifiedAt.isNotEmpty || otpExpiresAt.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: const Color(0x120F172A)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'OTP state',
-                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 10),
-                                _row('Purpose', _otpPurposeLabel(otpPurpose)),
-                                _row('Expires', otpExpiresAt.isEmpty ? '-' : _shortDateTime(otpExpiresAt)),
-                                _row('Verified', otpVerifiedAt.isEmpty ? '-' : _shortDateTime(otpVerifiedAt)),
-                              ],
-                            ),
-                          ),
-                        ],
-                        if (_routerPhotoCapturedAt != null || _cablePhotoCapturedAt != null) ...[
-                          const SizedBox(height: 10),
-                          if (_routerPhotoCapturedAt != null)
-                            _row('Router captured', _shortDateTime(_routerPhotoCapturedAt!.toIso8601String())),
-                          if (_cablePhotoCapturedAt != null)
-                            _row('Cable captured', _shortDateTime(_cablePhotoCapturedAt!.toIso8601String())),
-                        ],
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _otpController,
-                          onChanged: (_) => setState(() {}),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: 'Customer OTP'),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _busy || !canCompleteInstall
-                                ? null
-                                : () {
-                                    final otp = _otpController.text.trim();
-                                    if (otp.length != 6) {
-                                      _show('Enter 6-digit OTP');
-                                      return;
-                                    }
-                                    _completeInstallationFlow();
-                                  },
-                            child: const Text('Complete installation'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
                 ],
               ],
             ),
@@ -2364,16 +2882,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: kSurface2,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x120F172A)),
+        border: Border.all(color: kBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+          Text(label, style: const TextStyle(color: kMuted, fontSize: 12)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w700)),
+          Text(value,
+              style:
+                  const TextStyle(color: kText, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -2383,14 +2903,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: kSurface2,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x120F172A)),
+        border: Border.all(color: kBorder),
       ),
       child: Text(
         label,
         style: const TextStyle(
-          color: Color(0xFF0F172A),
+          color: kText,
           fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
@@ -2406,12 +2926,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(color: Color(0xFF6E6A67))),
+            child: Text(label, style: const TextStyle(color: kMuted)),
           ),
           Expanded(
             child: Text(
               value.isEmpty ? '-' : value,
-              style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+              style: const TextStyle(color: kText, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -2424,7 +2944,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       width: 140,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4FF),
+        color: kSurface2,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -2439,9 +2959,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 File(path),
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFFF2ECE6),
+                  color: kSurface2,
                   alignment: Alignment.center,
-                  child: const Icon(Icons.image_not_supported_rounded, color: Color(0xFF6E6A67)),
+                  child: const Icon(Icons.image_not_supported_rounded,
+                      color: kMuted),
                 ),
               ),
             ),
@@ -2449,7 +2970,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w700),
+            style: const TextStyle(color: kText, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -2487,13 +3008,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool canCompleteInstall,
     required bool activationLive,
     required bool proofUploaded,
+    required List<String> activationBlockers,
   }) {
     final singleWifiName = wifiSsid24 != '-' && wifiSsid24 == wifiSsid5;
     final pages = isComplaint
         ? ['Brief', 'Onsite', 'Resolve', 'Close']
         : ['Details', 'ONT', 'Health', 'Activate', 'Proof', 'Close'];
     return AppCard(
-      color: const Color(0xFFFFFFFF),
+      color: kSurface,
       borderColor: const Color(0x228224E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2501,17 +3023,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           Text(
             'GUIDED WORKFLOW',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF64748B),
-              letterSpacing: 2,
-              fontWeight: FontWeight.w700,
-            ),
+                  color: kMuted,
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w700,
+                ),
           ),
           const SizedBox(height: 10),
           Text('Field steps', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
           const Text(
             'Swipe between the task pages and finish one operational stage at a time.',
-            style: TextStyle(color: Color(0xFF64748B), height: 1.4),
+            style: TextStyle(color: kMuted, height: 1.4),
           ),
           const SizedBox(height: 12),
           Row(
@@ -2519,15 +3041,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               pages.length,
               (index) => Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(right: index == pages.length - 1 ? 0 : 8),
+                  padding:
+                      EdgeInsets.only(right: index == pages.length - 1 ? 0 : 8),
                   child: Container(
                     height: 72,
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     decoration: BoxDecoration(
-                      color: _workflowPage == index ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                      color: _workflowPage == index
+                          ? kPrimary.withValues(alpha: 0.18)
+                          : kSurface2,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: _workflowPage == index ? const Color(0xFFC084FC) : const Color(0x120F172A),
+                        color: _workflowPage == index
+                            ? const Color(0xFFC084FC)
+                            : kBorder,
                       ),
                     ),
                     child: Column(
@@ -2535,7 +3063,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         Text(
                           '${index + 1}',
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFF94A3B8),
+                            color: _workflowPage == index
+                                ? kPrimaryLight
+                                : kSubtle,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -2546,7 +3076,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: _workflowPage == index ? const Color(0xFF8224E3) : const Color(0xFF64748B),
+                            color:
+                                _workflowPage == index ? kPrimaryLight : kMuted,
                             fontWeight: FontWeight.w700,
                             fontSize: 11,
                           ),
@@ -2560,7 +3091,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           ),
           const SizedBox(height: 14),
           SizedBox(
-            height: 280,
+            height: isComplaint ? 520 : 640,
             child: PageView(
               controller: _workflowController,
               onPageChanged: (value) => setState(() => _workflowPage = value),
@@ -2568,7 +3099,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ? [
                       _workflowStageCard(
                         title: 'Customer briefing',
-                        subtitle: 'Review customer, address, map, and ticket type before moving.',
+                        subtitle:
+                            'Review customer, address, map, and ticket type before moving.',
                         children: [
                           _row('Plan', planName),
                           _row('Customer', phone.isEmpty ? '-' : phone),
@@ -2576,7 +3108,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              if (widget.job.mapUrl.isNotEmpty || (widget.job.latitude != null && widget.job.longitude != null))
+                              if (widget.job.mapUrl.isNotEmpty ||
+                                  (widget.job.latitude != null &&
+                                      widget.job.longitude != null))
                                 OutlinedButton(
                                   onPressed: () => _openUri(
                                     widget.job.mapUrl.isNotEmpty
@@ -2588,13 +3122,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 ),
                               if (phone.isNotEmpty)
                                 OutlinedButton(
-                                  onPressed: () => _openUri('tel:$phone', fallback: 'Call action not available'),
+                                  onPressed: () => _openUri('tel:$phone',
+                                      fallback: 'Call action not available'),
                                   child: const Text('Call customer'),
                                 ),
                               FilledButton(
                                 onPressed: _busy || !canAccept
                                     ? null
-                                    : () => _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Complaint accepted'),
+                                    : () => _run(
+                                        () => _appState.api.acceptJob(
+                                            _appState.session!, widget.job.id),
+                                        'Complaint accepted'),
                                 child: const Text('Accept complaint'),
                               ),
                             ],
@@ -2603,7 +3141,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       _workflowStageCard(
                         title: 'Reach and start complaint',
-                        subtitle: 'Travel, reach site, and start the complaint workflow.',
+                        subtitle:
+                            'Travel, reach site, and start the complaint workflow.',
                         children: [
                           _row('Current stage', status.replaceAll('_', ' ')),
                           Wrap(
@@ -2613,21 +3152,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               OutlinedButton(
                                 onPressed: _busy || !canStartTravel
                                     ? null
-                                    : () => _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started'),
+                                    : () => _run(
+                                        () => _appState.api.startTravel(
+                                            _appState.session!, widget.job.id),
+                                        'Travel started'),
                                 child: const Text('Start travel'),
                               ),
                               OutlinedButton(
                                 onPressed: _busy || !canStartOnsite
                                     ? null
                                     : () => _run(() async {
-                                          await _appState.api.startOnsite(_appState.session!, widget.job.id);
-                                          if (widget.job.latitude != null && widget.job.longitude != null) {
+                                          await _appState.api.startOnsite(
+                                              _appState.session!,
+                                              widget.job.id);
+                                          if (widget.job.latitude != null &&
+                                              widget.job.longitude != null) {
                                             await _appState.api.checkinLocation(
                                               _appState.session!,
                                               widget.job.id,
                                               lat: widget.job.latitude!,
                                               lng: widget.job.longitude!,
-                                              address: widget.job.customerAddress,
+                                              address:
+                                                  widget.job.customerAddress,
                                             );
                                           }
                                         }, 'Onsite started'),
@@ -2640,10 +3186,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                           () => _appState.api.startComplaint(
                                             _appState.session!,
                                             widget.job.id,
-                                            resolutionCode: _complaintResolutionCode,
-                                            note: _complaintNoteController.text.trim().isEmpty
+                                            resolutionCode:
+                                                _complaintResolutionCode,
+                                            note: _complaintNoteController.text
+                                                    .trim()
+                                                    .isEmpty
                                                 ? 'Installer started complaint work'
-                                                : _complaintNoteController.text.trim(),
+                                                : _complaintNoteController.text
+                                                    .trim(),
                                           ),
                                           'Complaint workflow started',
                                         ),
@@ -2655,12 +3205,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       _workflowStageCard(
                         title: 'Replace and test',
-                        subtitle: 'Scan replacement ONT, replace it, and trigger customer OTP.',
+                        subtitle:
+                            'Scan replacement ONT, replace it, and trigger customer OTP.',
                         children: [
                           TextField(
                             controller: _replaceSerialController,
                             onChanged: (_) => setState(() {}),
-                            decoration: const InputDecoration(labelText: 'Replacement ONT serial'),
+                            decoration: const InputDecoration(
+                                labelText: 'Replacement ONT serial'),
                           ),
                           const SizedBox(height: 10),
                           Wrap(
@@ -2673,7 +3225,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                     : () => _scanSerial(
                                           controller: _replaceSerialController,
                                           title: 'Scan replacement ONT',
-                                          subtitle: 'Scan the replacement router barcode or QR code to capture the new serial.',
+                                          subtitle:
+                                              'Scan the replacement router barcode or QR code to capture the new serial.',
                                         ),
                                 child: const Text('Scan barcode'),
                               ),
@@ -2681,30 +3234,39 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 onPressed: _busy || !canReplaceOnt
                                     ? null
                                     : () {
-                                          final serial = _replaceSerialController.text.trim();
-                                          if (serial.isEmpty) {
-                                            _show('Enter replacement ONT serial');
-                                            return;
-                                          }
-                                          _run(
-                                            () => _appState.api.replaceDevice(
-                                              _appState.session!,
-                                              widget.job.id,
-                                              newSerialNumber: serial,
-                                              reason: _complaintNoteController.text.trim().isEmpty
-                                                  ? 'ONT replaced from installer app'
-                                                  : _complaintNoteController.text.trim(),
-                                            ),
-                                            'ONT replacement saved',
-                                          );
-                                        },
+                                        final serial = _replaceSerialController
+                                            .text
+                                            .trim();
+                                        if (serial.isEmpty) {
+                                          _show('Enter replacement ONT serial');
+                                          return;
+                                        }
+                                        _run(
+                                          () => _appState.api.replaceDevice(
+                                            _appState.session!,
+                                            widget.job.id,
+                                            newSerialNumber: serial,
+                                            reason: _complaintNoteController
+                                                    .text
+                                                    .trim()
+                                                    .isEmpty
+                                                ? 'ONT replaced from installer app'
+                                                : _complaintNoteController.text
+                                                    .trim(),
+                                          ),
+                                          'ONT replacement saved',
+                                        );
+                                      },
                                 child: const Text('Replace ONT'),
                               ),
                               OutlinedButton(
                                 onPressed: _busy || !canRebootComplaint
                                     ? null
                                     : () => _run(
-                                          () => _appState.api.rebootComplaintDevice(_appState.session!, widget.job.id),
+                                          () => _appState.api
+                                              .rebootComplaintDevice(
+                                                  _appState.session!,
+                                                  widget.job.id),
                                           'ONT reboot requested',
                                         ),
                                 child: const Text('Reboot ONT'),
@@ -2713,17 +3275,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 onPressed: _busy || !canSendComplaintOtp
                                     ? null
                                     : () async {
-                                          setState(() => _busy = true);
-                                          try {
-                                            final otp = await _appState.api.sendComplaintOtp(_appState.session!, widget.job.id);
-                                            _show(otp == null ? 'Complaint OTP sent' : 'Complaint OTP: $otp');
-                                            await _loadAll();
-                                          } catch (e) {
-                                            _show(e.toString());
-                                          } finally {
-                                            if (mounted) setState(() => _busy = false);
-                                          }
-                                        },
+                                        setState(() => _busy = true);
+                                        try {
+                                          final otp = await _appState.api
+                                              .sendComplaintOtp(
+                                                  _appState.session!,
+                                                  widget.job.id);
+                                          _show(otp == null
+                                              ? 'Complaint OTP sent'
+                                              : 'Complaint OTP: $otp');
+                                          await _loadAll();
+                                        } catch (e) {
+                                          _show(e.toString());
+                                        } finally {
+                                          if (mounted)
+                                            setState(() => _busy = false);
+                                        }
+                                      },
                                 child: const Text('Send OTP'),
                               ),
                             ],
@@ -2732,26 +3300,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       _workflowStageCard(
                         title: 'OTP and closure',
-                        subtitle: 'Take customer OTP and resolve the complaint.',
+                        subtitle:
+                            'Take customer OTP and resolve the complaint.',
                         children: [
                           TextField(
                             controller: _otpController,
                             onChanged: (_) => setState(() {}),
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Customer OTP'),
+                            decoration: const InputDecoration(
+                                labelText: 'Customer OTP'),
                           ),
                           const SizedBox(height: 10),
                           FilledButton(
                             onPressed: _busy || !canResolveComplaint
                                 ? null
                                 : () async {
-                                      final otp = _otpController.text.trim();
-                                      if (otp.length != 6) {
-                                        _show('Enter 6-digit OTP');
-                                        return;
-                                      }
-                                      await _resolveComplaintFlow();
-                                    },
+                                    final otp = _otpController.text.trim();
+                                    if (otp.length != 6) {
+                                      _show('Enter 6-digit OTP');
+                                      return;
+                                    }
+                                    await _resolveComplaintFlow();
+                                  },
                             child: const Text('Resolve complaint'),
                           ),
                         ],
@@ -2760,7 +3330,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   : [
                       _workflowStageCard(
                         title: '1. Job details',
-                        subtitle: 'Review customer, address, map, and job scope before moving.',
+                        subtitle:
+                            'Review customer, address, map, and job scope before moving.',
                         children: [
                           _row('Plan', planName),
                           _row('Customer', phone.isEmpty ? '-' : phone),
@@ -2768,7 +3339,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              if (widget.job.mapUrl.isNotEmpty || (widget.job.latitude != null && widget.job.longitude != null))
+                              if (widget.job.mapUrl.isNotEmpty ||
+                                  (widget.job.latitude != null &&
+                                      widget.job.longitude != null))
                                 OutlinedButton(
                                   onPressed: () => _openUri(
                                     widget.job.mapUrl.isNotEmpty
@@ -2780,13 +3353,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 ),
                               if (phone.isNotEmpty)
                                 OutlinedButton(
-                                  onPressed: () => _openUri('tel:$phone', fallback: 'Call action not available'),
+                                  onPressed: () => _openUri('tel:$phone',
+                                      fallback: 'Call action not available'),
                                   child: const Text('Call customer'),
                                 ),
                               FilledButton(
                                 onPressed: _busy || !canAccept
                                     ? null
-                                    : () => _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Job accepted'),
+                                    : () => _run(
+                                        () => _appState.api.acceptJob(
+                                            _appState.session!, widget.job.id),
+                                        'Job accepted'),
                                 child: const Text('Accept job'),
                               ),
                             ],
@@ -2795,13 +3372,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       _workflowStageCard(
                         title: '2. ONT scan',
-                        subtitle: 'Reach site, mark onsite, then scan or type the ONT serial.',
+                        subtitle:
+                            'Reach site, mark onsite, then scan or type the ONT serial.',
                         children: [
                           _row('Current stage', status.replaceAll('_', ' ')),
                           TextField(
                             controller: _serialController,
                             onChanged: (_) => setState(() {}),
-                            decoration: const InputDecoration(labelText: 'ONT serial number'),
+                            decoration: const InputDecoration(
+                                labelText: 'ONT serial number'),
                           ),
                           const SizedBox(height: 10),
                           Wrap(
@@ -2811,21 +3390,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               OutlinedButton(
                                 onPressed: _busy || !canStartTravel
                                     ? null
-                                    : () => _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started'),
+                                    : () => _run(
+                                        () => _appState.api.startTravel(
+                                            _appState.session!, widget.job.id),
+                                        'Travel started'),
                                 child: const Text('Start travel'),
                               ),
                               OutlinedButton(
                                 onPressed: _busy || !canStartOnsite
                                     ? null
                                     : () => _run(() async {
-                                          await _appState.api.startOnsite(_appState.session!, widget.job.id);
-                                          if (widget.job.latitude != null && widget.job.longitude != null) {
+                                          await _appState.api.startOnsite(
+                                              _appState.session!,
+                                              widget.job.id);
+                                          if (widget.job.latitude != null &&
+                                              widget.job.longitude != null) {
                                             await _appState.api.checkinLocation(
                                               _appState.session!,
                                               widget.job.id,
                                               lat: widget.job.latitude!,
                                               lng: widget.job.longitude!,
-                                              address: widget.job.customerAddress,
+                                              address:
+                                                  widget.job.customerAddress,
                                             );
                                           }
                                         }, 'Onsite started'),
@@ -2837,7 +3423,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                     : () => _scanSerial(
                                           controller: _serialController,
                                           title: 'Scan ONT serial',
-                                          subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                                          subtitle:
+                                              'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
                                           refreshOntDetails: true,
                                         ),
                                 child: const Text('Scan barcode'),
@@ -2848,14 +3435,24 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       _workflowStageCard(
                         title: '3. ONT details',
-                        subtitle: 'Verify optical levels, linked router state, and provisioning health before activation.',
+                        subtitle:
+                            'Verify optical levels, linked router state, and provisioning health before activation.',
                         children: [
-                          _row('Scanned serial', _serialController.text.trim().isEmpty ? '-' : _serialController.text.trim()),
-                          _row('RX power', '${optical['rxPower'] ?? diagnostics['optical']?['rxPower'] ?? '-'}'),
-                          _row('TX power', '${optical['txPower'] ?? diagnostics['optical']?['txPower'] ?? '-'}'),
-                          _row('Health', '${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}'),
-                          _row('Router online', '${device['onlineStatus'] ?? 'unknown'}'),
-                          _row('Provisioning state', '${device['provisioningState'] ?? 'pending'}'),
+                          _row(
+                              'Scanned serial',
+                              _serialController.text.trim().isEmpty
+                                  ? '-'
+                                  : _serialController.text.trim()),
+                          _row('RX power',
+                              '${optical['rxPower'] ?? diagnostics['optical']?['rxPower'] ?? '-'}'),
+                          _row('TX power',
+                              '${optical['txPower'] ?? diagnostics['optical']?['txPower'] ?? '-'}'),
+                          _row('Health',
+                              '${optical['healthStatus'] ?? diagnostics['optical']?['healthStatus'] ?? 'unknown'}'),
+                          _row('Router online',
+                              '${device['onlineStatus'] ?? 'unknown'}'),
+                          _row('Provisioning state',
+                              '${device['provisioningState'] ?? 'pending'}'),
                           const SizedBox(height: 10),
                           Wrap(
                             spacing: 10,
@@ -2864,13 +3461,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               OutlinedButton(
                                 onPressed: _busy
                                     ? null
-                                    : () => _refreshPreviewAndDiagnostics(successMessage: 'Preview refreshed'),
+                                    : () => _refreshPreviewAndDiagnostics(
+                                        successMessage: 'Preview refreshed'),
                                 child: const Text('Load preview'),
                               ),
                               OutlinedButton(
                                 onPressed: _busy
                                     ? null
-                                    : () => _refreshPreviewAndDiagnostics(successMessage: 'Diagnostics refreshed'),
+                                    : () => _refreshPreviewAndDiagnostics(
+                                        successMessage:
+                                            'Diagnostics refreshed'),
                                 child: const Text('Refresh ONT details'),
                               ),
                             ],
@@ -2879,13 +3479,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       _workflowStageCard(
                         title: '4. Activation',
-                        subtitle: 'Push router config, watch provisioning, and retry if backend config fails.',
+                        subtitle:
+                            'Push router config, watch provisioning, and retry if backend config fails.',
                         children: [
+                          if (activationBlockers.isNotEmpty) ...[
+                            _blockerPanel(
+                              title: 'Activation blockers',
+                              items: activationBlockers,
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           _row('Current stage', status.replaceAll('_', ' ')),
                           _row('Config status', configStatus),
                           _row('PPPoE', pppoeUsername),
-                          _row('VLAN', (preview['vlanId'] ?? activation['credentials']?['vlanId'] ?? activation['preparedCredentials']?['vlanId'] ?? '-').toString()),
-                          _row(singleWifiName ? 'Wi-Fi SSID' : 'Wi-Fi 2.4G', wifiSsid24),
+                          _row(
+                              'VLAN',
+                              (preview['vlanId'] ??
+                                      activation['credentials']?['vlanId'] ??
+                                      activation['preparedCredentials']
+                                          ?['vlanId'] ??
+                                      '-')
+                                  .toString()),
+                          _row(singleWifiName ? 'Wi-Fi SSID' : 'Wi-Fi 2.4G',
+                              wifiSsid24),
                           if (!singleWifiName) _row('Wi-Fi 5G', wifiSsid5),
                           _row('Wi-Fi password', wifiPassword),
                           Wrap(
@@ -2896,14 +3512,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 onPressed: _busy || !canActivate
                                     ? null
                                     : () {
-                                          final serial = _serialController.text.trim();
-                                          if (serial.isEmpty) {
-                                            _show('Enter ONT serial first');
-                                            return;
-                                          }
-                                          _startActivationCountdown();
-                                          _run(() => _appState.runActivationFlow(widget.job.id, serial), 'Activation requested');
-                                        },
+                                        final serial =
+                                            _serialController.text.trim();
+                                        if (serial.isEmpty) {
+                                          _show('Enter ONT serial first');
+                                          return;
+                                        }
+                                        _startActivationCountdown();
+                                        _run(
+                                            () => _appState.runActivationFlow(
+                                                widget.job.id, serial),
+                                            'Activation requested');
+                                      },
                                 child: const Text('Activate'),
                               ),
                               if (canRetry)
@@ -2914,7 +3534,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                             () => _appState.api.retryActivation(
                                               _appState.session!,
                                               widget.job.id,
-                                              note: 'Retry from installer app after partial or failed activation',
+                                              note:
+                                                  'Retry from installer app after partial or failed activation',
                                             ),
                                             'Retry requested',
                                           ),
@@ -2924,7 +3545,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                           if (_activationCountdown > 0) ...[
                             const SizedBox(height: 12),
-                            _row('Activation wait', '${_activationCountdown}s remaining'),
+                            _row('Activation wait',
+                                '${_activationCountdown}s remaining'),
                           ],
                         ],
                       ),
@@ -2934,13 +3556,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ? 'Capture router and cable proof after internet becomes active.'
                             : 'Activation must be live before proof can be closed.',
                         children: [
-                          if (_routerPhotoPath != null || _cablePhotoPath != null) ...[
+                          if (_routerPhotoPath != null ||
+                              _cablePhotoPath != null) ...[
                             Wrap(
                               spacing: 10,
                               runSpacing: 10,
                               children: [
-                                if (_routerPhotoPath != null) _proofPreviewCard('Router photo', _routerPhotoPath!),
-                                if (_cablePhotoPath != null) _proofPreviewCard('Cable photo', _cablePhotoPath!),
+                                if (_routerPhotoPath != null)
+                                  _proofPreviewCard(
+                                      'Router photo', _routerPhotoPath!),
+                                if (_cablePhotoPath != null)
+                                  _proofPreviewCard(
+                                      'Cable photo', _cablePhotoPath!),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -2950,18 +3577,30 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             runSpacing: 10,
                             children: [
                               OutlinedButton(
-                                onPressed: _busy ? null : () => _captureProofPhoto(routerPhoto: true),
-                                child: Text(_routerPhotoPath != null ? 'Retake router photo' : 'Capture router photo'),
+                                onPressed: _busy
+                                    ? null
+                                    : () =>
+                                        _captureProofPhoto(routerPhoto: true),
+                                child: Text(_routerPhotoPath != null
+                                    ? 'Retake router photo'
+                                    : 'Capture router photo'),
                               ),
                               OutlinedButton(
-                                onPressed: _busy ? null : () => _captureProofPhoto(routerPhoto: false),
-                                child: Text(_cablePhotoPath != null ? 'Retake cable photo' : 'Capture cable photo'),
+                                onPressed: _busy
+                                    ? null
+                                    : () =>
+                                        _captureProofPhoto(routerPhoto: false),
+                                child: Text(_cablePhotoPath != null
+                                    ? 'Retake cable photo'
+                                    : 'Capture cable photo'),
                               ),
                               OutlinedButton(
                                 onPressed: _busy || !canSubmitProof
                                     ? null
                                     : _submitCapturedProof,
-                                child: Text(proofUploaded ? 'Update proof' : 'Submit proof'),
+                                child: Text(proofUploaded
+                                    ? 'Update proof'
+                                    : 'Submit proof'),
                               ),
                             ],
                           ),
@@ -2981,17 +3620,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 onPressed: _busy || !canSendInstallOtp
                                     ? null
                                     : () async {
-                                          setState(() => _busy = true);
-                                          try {
-                                            final otp = await _appState.api.sendCompletionOtp(_appState.session!, widget.job.id);
-                                            _show(otp == null ? 'Completion OTP sent' : 'Completion OTP: $otp');
-                                            await _loadAll();
-                                          } catch (e) {
-                                            _show(e.toString());
-                                          } finally {
-                                            if (mounted) setState(() => _busy = false);
-                                          }
-                                        },
+                                        setState(() => _busy = true);
+                                        try {
+                                          final otp = await _appState.api
+                                              .sendCompletionOtp(
+                                                  _appState.session!,
+                                                  widget.job.id);
+                                          _show(otp == null
+                                              ? 'Completion OTP sent'
+                                              : 'Completion OTP: $otp');
+                                          await _loadAll();
+                                        } catch (e) {
+                                          _show(e.toString());
+                                        } finally {
+                                          if (mounted)
+                                            setState(() => _busy = false);
+                                        }
+                                      },
                                 child: const Text('Send OTP'),
                               ),
                             ],
@@ -3001,20 +3646,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             controller: _otpController,
                             onChanged: (_) => setState(() {}),
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Customer OTP'),
+                            decoration: const InputDecoration(
+                                labelText: 'Customer OTP'),
                           ),
                           const SizedBox(height: 10),
                           FilledButton(
                             onPressed: _busy || !canCompleteInstall
                                 ? null
                                 : () async {
-                                      final otp = _otpController.text.trim();
-                                      if (otp.length != 6) {
-                                        _show('Enter 6-digit OTP');
-                                        return;
-                                      }
-                                      await _completeInstallationFlow();
-                                    },
+                                    final otp = _otpController.text.trim();
+                                    if (otp.length != 6) {
+                                      _show('Enter 6-digit OTP');
+                                      return;
+                                    }
+                                    await _completeInstallationFlow();
+                                  },
                             child: const Text('Complete installation'),
                           ),
                         ],
@@ -3063,7 +3709,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
+        color: kSurface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x228224E3)),
       ),
@@ -3075,12 +3721,56 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+              style: const TextStyle(color: kMuted, height: 1.45),
             ),
             const SizedBox(height: 14),
             ...children,
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _blockerPanel({required String title, required List<String> items}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0x22F59E0B),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x66F59E0B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: const Color(0xFFFBBF24),
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 10),
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      color: Color(0xFFFBBF24), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(color: kMuted, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3139,7 +3829,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
+        color: kSurface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x558224E3)),
       ),
@@ -3149,7 +3839,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           Text(
             isComplaint ? 'GUIDED COMPLAINT FLOW' : 'GUIDED INSTALL FLOW',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF6E6A67),
+              color: kMuted,
               letterSpacing: 2.8,
               fontWeight: FontWeight.w700,
             ),
@@ -3157,19 +3847,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           const SizedBox(height: 10),
           Text(
             'Step $nextStepNumber of $totalSteps',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
           Text(
             nextSubtitle,
-            style: const TextStyle(color: Color(0xFF6E6A67), height: 1.45),
+            style: const TextStyle(color: kMuted, height: 1.45),
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: nextStepNumber / totalSteps,
             minHeight: 8,
-            backgroundColor: const Color(0xFFF7F8FC),
-            valueColor: const AlwaysStoppedAnimation(Color(0xFF8224E3)),
+            backgroundColor: kBg,
+            valueColor: AlwaysStoppedAnimation(kPrimaryLight),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -3177,17 +3868,24 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             runSpacing: 10,
             children: [
               FilledButton(
-                onPressed: _busy ? null : () => _handleNextPrimaryAction(status, configStatus, isComplaint, proofUploaded),
+                onPressed: _busy
+                    ? null
+                    : () => _handleNextPrimaryAction(
+                        status, configStatus, isComplaint, proofUploaded),
                 child: Text(nextLabel),
               ),
-              if (!isComplaint && (status == 'onsite' || status == 'ont_scanned' || status == 'failed'))
+              if (!isComplaint &&
+                  (status == 'onsite' ||
+                      status == 'ont_scanned' ||
+                      status == 'failed'))
                 OutlinedButton(
                   onPressed: _busy
                       ? null
                       : () => _scanSerial(
                             controller: _serialController,
                             title: 'Scan ONT serial',
-                            subtitle: 'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
+                            subtitle:
+                                'Scan the router barcode or QR code to auto-fill the ONT serial before activation.',
                             refreshOntDetails: true,
                           ),
                   child: const Text('Scan serial'),
@@ -3214,7 +3912,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             width: 10,
             height: 10,
             decoration: const BoxDecoration(
-              color: Color(0xFF8224E3),
+              color: kPrimaryLight,
               shape: BoxShape.circle,
             ),
           ),
@@ -3223,7 +3921,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F4FF),
+                color: kSurface2,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0x228224E3)),
               ),
@@ -3232,19 +3930,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 children: [
                   Text(
                     event.isEmpty ? 'timeline update' : event,
-                    style: const TextStyle(color: Color(0xFF131313), fontWeight: FontWeight.w800),
+                    style: const TextStyle(
+                        color: kText, fontWeight: FontWeight.w800),
                   ),
                   if (note.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
                       note,
-                      style: const TextStyle(color: Color(0xFF6E6A67), height: 1.4),
+                      style: const TextStyle(color: kMuted, height: 1.4),
                     ),
                   ],
                   const SizedBox(height: 8),
                   Text(
                     '${actor.isEmpty ? 'system' : actor} • ${at.isEmpty ? '-' : at}',
-                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        color: kMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -3261,15 +3963,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       child: Row(
         children: [
           Icon(
-            done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            done
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
             size: 18,
-            color: done ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+            color: done ? kPrimaryLight : kMuted,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: Color(0xFF6E6A67), fontWeight: FontWeight.w600),
+              style:
+                  const TextStyle(color: kMuted, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -3334,7 +4039,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: done ? const Color(0xFFF1E8FF) : const Color(0xFFF8F4FF),
+            color: done ? kPrimary.withValues(alpha: 0.18) : kSurface2,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: done ? const Color(0x558224E3) : const Color(0x221F2937),
@@ -3343,7 +4048,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           child: Text(
             stages[index].$2,
             style: TextStyle(
-              color: done ? const Color(0xFF8224E3) : const Color(0xFF6E6A67),
+              color: done ? kPrimaryLight : kMuted,
               fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
@@ -3359,7 +4064,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   bool _canStartOnsite(String status) => status == 'enroute';
 
-  bool _canActivate(String status) => ['onsite', 'ont_scanned', 'failed'].contains(status);
+  bool _canActivate(String status) =>
+      ['onsite', 'ont_scanned', 'failed'].contains(status);
 
   bool _canRetry(String status, String configStatus) {
     if (status == 'active') {
@@ -3371,29 +4077,48 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return ['pending', 'failed', 'pushed', 'retried'].contains(configStatus);
   }
 
-  bool _canStartComplaint(String status) => ['assigned', 'accepted', 'enroute', 'onsite'].contains(status);
+  bool _canStartComplaint(String status) =>
+      ['assigned', 'accepted', 'enroute', 'onsite'].contains(status);
 
-  bool _canReplaceOnt(String status) => ['onsite', 'complaint_in_progress', 'ont_scanned'].contains(status);
+  bool _canReplaceOnt(String status) =>
+      ['onsite', 'complaint_in_progress', 'ont_scanned'].contains(status);
 
-  bool _canRebootComplaint(String status) => ['accepted', 'enroute', 'onsite', 'complaint_in_progress', 'active'].contains(status);
+  bool _canRebootComplaint(String status) => [
+        'accepted',
+        'enroute',
+        'onsite',
+        'complaint_in_progress',
+        'active'
+      ].contains(status);
 
-  bool _canSendComplaintOtp(String status) => ['complaint_in_progress', 'onsite', 'active'].contains(status);
+  bool _canSendComplaintOtp(String status) =>
+      ['complaint_in_progress', 'onsite', 'active'].contains(status);
 
   bool _canResolveComplaint(String status, String otp) =>
-      ['complaint_in_progress', 'active', 'onsite'].contains(status) && otp.length == 6;
+      ['complaint_in_progress', 'active', 'onsite'].contains(status) &&
+      otp.length == 6;
 
-  bool _canSubmitProof(String status, bool proofPhotosReady) =>
-      ['active', 'activation_in_progress', 'onsite', 'ont_scanned'].contains(status) && proofPhotosReady;
+  bool _canSubmitProof(
+          String status, bool proofPhotosReady, bool activationLive) =>
+      ['active', 'activation_in_progress'].contains(status) &&
+      activationLive &&
+      proofPhotosReady;
 
   bool _canSendInstallOtp(String status, bool proofUploaded) =>
       ['active', 'activation_in_progress'].contains(status) && proofUploaded;
 
-  bool _canDeferJob(String status) => !['completed', 'cancelled', 'deferred'].contains(status);
+  bool _canDeferJob(String status) =>
+      !['completed', 'cancelled', 'deferred'].contains(status);
 
-  bool _canCancelInstall(String status) => !['completed', 'cancelled'].contains(status);
+  bool _canCancelInstall(String status) =>
+      !['completed', 'cancelled'].contains(status);
 
-  bool _canCompleteInstall(String status, String otp, bool proofUploaded, bool activationLive) =>
-      ['active', 'activation_in_progress'].contains(status) && activationLive && proofUploaded && otp.length == 6;
+  bool _canCompleteInstall(
+          String status, String otp, bool proofUploaded, bool activationLive) =>
+      ['active', 'activation_in_progress'].contains(status) &&
+      activationLive &&
+      proofUploaded &&
+      otp.length == 6;
 
   List<String> _missingInstallRequirements({
     required bool activationLive,
@@ -3402,13 +4127,41 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }) {
     final items = <String>[];
     if (!activationLive) {
-      items.add('Wait for the router to come online and internet activation to go live.');
+      items.add(
+          'Wait for the router to come online and internet activation to go live.');
     }
     if (!proofUploaded) {
-      items.add('Capture router and cable proof, then submit the proof payload.');
+      items.add(
+          'Capture router and cable proof, then submit the proof payload.');
     }
     if (otp.trim().length != 6) {
       items.add('Collect and verify the 6-digit customer completion OTP.');
+    }
+    return items;
+  }
+
+  List<String> _activationBlockers({
+    required String status,
+    required String serial,
+    required String pppoeUsername,
+    required String wifiSsid24,
+    required String wifiPassword,
+  }) {
+    final items = <String>[];
+    if (!_canActivate(status)) {
+      items.add('Move job to onsite stage before running router activation.');
+    }
+    if (serial.trim().isEmpty) {
+      items.add('Scan or enter ONT serial number.');
+    }
+    if (pppoeUsername == '-' || pppoeUsername.trim().isEmpty) {
+      items.add('Load provisioning preview so PPPoE username is ready.');
+    }
+    if (wifiSsid24 == '-' || wifiSsid24.trim().isEmpty) {
+      items.add('Load provisioning preview so Wi-Fi SSID is ready.');
+    }
+    if (wifiPassword == '-' || wifiPassword.trim().isEmpty) {
+      items.add('Load provisioning preview so Wi-Fi password is ready.');
     }
     return items;
   }
@@ -3419,7 +4172,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }) {
     final items = <String>[];
     if (!['complaint_in_progress', 'active', 'onsite'].contains(status)) {
-      items.add('Move the visit into an active complaint stage before closing it.');
+      items.add(
+          'Move the visit into an active complaint stage before closing it.');
     }
     if (otp.trim().length != 6) {
       items.add('Collect and verify the 6-digit complaint closure OTP.');
@@ -3444,12 +4198,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           return 3;
         case 'onsite':
           return 4;
-      case 'complaint_in_progress':
-        return otpReady ? 7 : 6;
-      case 'deferred':
-        return 4;
-      case 'completed':
-        return 7;
+        case 'complaint_in_progress':
+          return otpReady ? 7 : 6;
+        case 'deferred':
+          return 4;
+        case 'completed':
+          return 7;
         default:
           return 4;
       }
@@ -3583,15 +4337,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
-  Future<void> _handleNextPrimaryAction(String status, String configStatus, bool isComplaint, bool proofUploaded) async {
+  Future<void> _handleNextPrimaryAction(String status, String configStatus,
+      bool isComplaint, bool proofUploaded) async {
     if (_busy) return;
     if (isComplaint) {
       if (_canAccept(status)) {
-        await _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Complaint accepted');
+        await _run(
+            () => _appState.api.acceptJob(_appState.session!, widget.job.id),
+            'Complaint accepted');
         return;
       }
       if (_canStartTravel(status)) {
-        await _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started');
+        await _run(
+            () => _appState.api.startTravel(_appState.session!, widget.job.id),
+            'Travel started');
         return;
       }
       if (_canStartOnsite(status)) {
@@ -3645,7 +4404,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (_canSendComplaintOtp(status)) {
         setState(() => _busy = true);
         try {
-          final otp = await _appState.api.sendComplaintOtp(_appState.session!, widget.job.id);
+          final otp = await _appState.api
+              .sendComplaintOtp(_appState.session!, widget.job.id);
           _show(otp == null ? 'Complaint OTP sent' : 'Complaint OTP: $otp');
           await _loadAll();
         } catch (e) {
@@ -3666,7 +4426,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (complaintRequirements.isNotEmpty) {
         await _showRequirementsSheet(
           title: 'Complaint closeout pending',
-          subtitle: 'Before leaving the site, please finish these complaint closure steps.',
+          subtitle:
+              'Before leaving the site, please finish these complaint closure steps.',
           items: complaintRequirements,
         );
         return;
@@ -3676,11 +4437,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
 
     if (_canAccept(status)) {
-      await _run(() => _appState.api.acceptJob(_appState.session!, widget.job.id), 'Job accepted');
+      await _run(
+          () => _appState.api.acceptJob(_appState.session!, widget.job.id),
+          'Job accepted');
       return;
     }
     if (_canStartTravel(status)) {
-      await _run(() => _appState.api.startTravel(_appState.session!, widget.job.id), 'Travel started');
+      await _run(
+          () => _appState.api.startTravel(_appState.session!, widget.job.id),
+          'Travel started');
       return;
     }
     if (_canStartOnsite(status)) {
@@ -3716,17 +4481,25 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         return;
       }
       _startActivationCountdown();
-      await _run(() => _appState.runActivationFlow(widget.job.id, serial), 'Activation requested');
+      await _run(() => _appState.runActivationFlow(widget.job.id, serial),
+          'Activation requested');
       return;
     }
-    if (_canSubmitProof(status, _hasCapturedProofPhotos())) {
+    if (_canSubmitProof(
+      status,
+      _hasCapturedProofPhotos(),
+      status == 'active' ||
+          configStatus == 'verified' ||
+          configStatus == 'pushed',
+    )) {
       await _submitCapturedProof();
       return;
     }
     if (_canSendInstallOtp(status, proofUploaded)) {
       setState(() => _busy = true);
       try {
-        final otp = await _appState.api.sendCompletionOtp(_appState.session!, widget.job.id);
+        final otp = await _appState.api
+            .sendCompletionOtp(_appState.session!, widget.job.id);
         _show(otp == null ? 'Completion OTP sent' : 'Completion OTP: $otp');
         await _loadAll();
       } catch (e) {
@@ -3740,21 +4513,27 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       status,
       _otpController.text.trim(),
       proofUploaded,
-      status == 'active' || configStatus == 'verified' || configStatus == 'pushed',
+      status == 'active' ||
+          configStatus == 'verified' ||
+          configStatus == 'pushed',
     )) {
       await _completeInstallationFlow();
       return;
     }
     final installRequirements = _missingInstallRequirements(
-      activationLive: status == 'active' || configStatus == 'verified' || configStatus == 'pushed',
+      activationLive: status == 'active' ||
+          configStatus == 'verified' ||
+          configStatus == 'pushed',
       proofUploaded: proofUploaded,
       otp: _otpController.text.trim(),
     );
     if (installRequirements.isNotEmpty &&
-        ['onsite', 'ont_scanned', 'activation_in_progress', 'active'].contains(status)) {
+        ['onsite', 'ont_scanned', 'activation_in_progress', 'active']
+            .contains(status)) {
       await _showRequirementsSheet(
         title: 'Installation closeout pending',
-        subtitle: 'Before closing this job, please finish these handover steps.',
+        subtitle:
+            'Before closing this job, please finish these handover steps.',
         items: installRequirements,
       );
       return;
@@ -3770,27 +4549,45 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     required bool proofUploaded,
   }) {
     if (isComplaint) {
-      if (status == 'deferred') return 'Visit marked for follow-up. Check the defer note and wait for reassignment or revisit.';
-      if (status == 'assigned') return 'Accept the complaint visit first, then start travel to customer location.';
-      if (status == 'accepted') return 'Start travel and head to the customer site.';
-      if (status == 'enroute') return 'Mark onsite after you reach customer location and begin complaint work.';
-      if (status == 'onsite') return 'Start complaint workflow, replace ONT if needed, then send OTP for resolution.';
-      if (status == 'complaint_in_progress') return 'Finish replacement/config checks, send OTP, verify it, then resolve the complaint.';
-      if (status == 'completed') return 'Complaint is closed. Review the final device and timeline details.';
+      if (status == 'deferred')
+        return 'Visit marked for follow-up. Check the defer note and wait for reassignment or revisit.';
+      if (status == 'assigned')
+        return 'Accept the complaint visit first, then start travel to customer location.';
+      if (status == 'accepted')
+        return 'Start travel and head to the customer site.';
+      if (status == 'enroute')
+        return 'Mark onsite after you reach customer location and begin complaint work.';
+      if (status == 'onsite')
+        return 'Start complaint workflow, replace ONT if needed, then send OTP for resolution.';
+      if (status == 'complaint_in_progress')
+        return 'Finish replacement/config checks, send OTP, verify it, then resolve the complaint.';
+      if (status == 'completed')
+        return 'Complaint is closed. Review the final device and timeline details.';
       return 'Open the complaint flow and continue the next field action.';
     }
 
-    if (status == 'deferred') return 'Visit marked for follow-up. Check the defer note and return when the blocker is cleared.';
-    if (status == 'assigned') return 'Accept the installation job to take ownership from dispatch.';
-    if (status == 'accepted') return 'Start travel and proceed to the customer location.';
-    if (status == 'enroute') return 'Mark onsite once you reach the site and are ready to start installation.';
-    if (status == 'onsite' && linkedSerial.isEmpty) return 'Scan or enter the ONT serial, then load diagnostics and run activation.';
-    if (status == 'onsite' && linkedSerial.isNotEmpty) return 'Router is linked. Run activation and wait for backend config push.';
-    if (status == 'ont_scanned') return 'Router linked. Run activation and monitor the provisioning countdown.';
-    if (status == 'activation_in_progress') return 'Wait for config push. If config fails, use retry. If internet comes up, move to proof and OTP.';
-    if (activationLive && !proofUploaded) return 'Internet is active. Capture router/cable proof, submit it, then send customer OTP.';
-    if (activationLive && proofUploaded) return 'Proof is uploaded. Send completion OTP, verify it with customer, then complete installation.';
-    if (status == 'completed') return 'Installation is closed. Review PPPoE, Wi-Fi, proof, and completion timestamps.';
+    if (status == 'deferred')
+      return 'Visit marked for follow-up. Check the defer note and return when the blocker is cleared.';
+    if (status == 'assigned')
+      return 'Accept the installation job to take ownership from dispatch.';
+    if (status == 'accepted')
+      return 'Start travel and proceed to the customer location.';
+    if (status == 'enroute')
+      return 'Mark onsite once you reach the site and are ready to start installation.';
+    if (status == 'onsite' && linkedSerial.isEmpty)
+      return 'Scan or enter the ONT serial, then load diagnostics and run activation.';
+    if (status == 'onsite' && linkedSerial.isNotEmpty)
+      return 'Router is linked. Run activation and wait for backend config push.';
+    if (status == 'ont_scanned')
+      return 'Router linked. Run activation and monitor the provisioning countdown.';
+    if (status == 'activation_in_progress')
+      return 'Wait for config push. If config fails, use retry. If internet comes up, move to proof and OTP.';
+    if (activationLive && !proofUploaded)
+      return 'Internet is active. Capture router/cable proof, submit it, then send customer OTP.';
+    if (activationLive && proofUploaded)
+      return 'Proof is uploaded. Send completion OTP, verify it with customer, then complete installation.';
+    if (status == 'completed')
+      return 'Installation is closed. Review PPPoE, Wi-Fi, proof, and completion timestamps.';
     return 'Continue the next installer step from this job workflow.';
   }
 }
