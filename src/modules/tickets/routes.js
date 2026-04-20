@@ -256,13 +256,6 @@ ticketsRouter.post(
       throw new ApiError(409, "Ticket customer does not have a zone. Set customer zone before field assignment.");
     }
 
-    if (ticket.installerJobId) {
-      const existingJob = await InstallerJob.findById(ticket.installerJobId).lean();
-      if (existingJob && !["completed", "cancelled", "failed"].includes(existingJob.status)) {
-        return ok(res, { ticket, job: existingJob, reused: true });
-      }
-    }
-
     let targetInstaller = null;
     let installersToNotify = [];
 
@@ -297,6 +290,70 @@ ticketsRouter.post(
 
     ticket.zoneCode = zoneCode;
     ticket.zoneName = zoneName;
+
+    if (ticket.installerJobId) {
+      const existingJob = await InstallerJob.findById(ticket.installerJobId);
+      if (existingJob && !["completed", "cancelled", "failed"].includes(existingJob.status)) {
+        existingJob.status = "assigned";
+        existingJob.installerId = targetInstaller?._id;
+        existingJob.assignment = {
+          ...(existingJob.assignment || {}),
+          assignedAt: new Date(),
+          assignedBy: req.admin._id,
+          autoAssigned: payload.mode === "zone_pool",
+          poolVisible: payload.mode === "zone_pool",
+          claimedAt: undefined,
+          claimedBy: undefined,
+          zone: zoneCode
+        };
+        existingJob.timeline.push({
+          event: payload.mode === "zone_pool" ? "job.zone_pool_reopened" : "job.reassigned",
+          actorType: "admin",
+          actorId: req.admin._id,
+          note:
+            payload.note ||
+            (payload.mode === "zone_pool"
+              ? `Complaint reopened to ${zoneCode} installer pool`
+              : `Complaint reassigned to ${targetInstaller.fullName}`)
+        });
+        await existingJob.save();
+
+        if (targetInstaller) {
+          targetInstaller.availabilityStatus = "busy";
+          await targetInstaller.save();
+        }
+
+        ticket.status = "assigned";
+        ticket.assignedTeam = "field_ops";
+        ticket.assignedInstallerId = targetInstaller?._id;
+        ticket.installerAssignmentMode = payload.mode;
+        ticket.timeline.push({
+          type: payload.mode === "zone_pool" ? "installer_pool_reopened" : "installer_reassigned",
+          actorType: "admin",
+          actorId: req.admin._id,
+          note:
+            payload.note ||
+            (payload.mode === "zone_pool"
+              ? `Visible to ${installersToNotify.length} installers in ${zoneCode}`
+              : `Reassigned to ${targetInstaller.fullName}`)
+        });
+        await ticket.save();
+
+        await notifyInstallers(
+          installersToNotify,
+          existingJob,
+          ticket,
+          payload.mode === "zone_pool" ? "Complaint reopened to zone" : "Complaint reassigned"
+        );
+        await auditFromRequest(req, {
+          action: "ticket.installer_reassigned",
+          entityType: "ticket",
+          entityId: ticket._id.toString(),
+          metadata: { mode: payload.mode, zoneCode, installerId: targetInstaller?._id?.toString() }
+        });
+        return ok(res, { ticket, job: existingJob, reassigned: true });
+      }
+    }
 
     const job = await InstallerJob.create({
       jobNumber: `CMP-${Date.now()}`,

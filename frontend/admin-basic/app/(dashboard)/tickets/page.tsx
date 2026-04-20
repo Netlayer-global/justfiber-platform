@@ -254,9 +254,11 @@ export default function TicketsPage() {
                       onChange={(event) => setNoteByTicket((current) => ({ ...current, [ticket.id]: event.target.value }))}
                     />
 
-                    {!ticket.installerJobId && !isClosed ? (
+                    {!isClosed ? (
                       <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Assign installer</div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                          {ticket.installerJobId ? 'Reassign installer' : 'Assign installer'}
+                        </div>
                         <select
                           className="input w-full"
                           value={selectedInstallerByTicket[ticket.id] || ''}
@@ -273,7 +275,7 @@ export default function TicketsPage() {
                         </select>
                         <div className="grid gap-2 sm:grid-cols-2">
                           <button className="btn-primary" disabled={isBusy} onClick={() => void assignTicket(ticket, 'manual')}>
-                            Manual assign
+                            {ticket.installerJobId ? 'Manual reassign' : 'Manual assign'}
                           </button>
                           <button className="btn-secondary" disabled={isBusy || !ticket.zoneCode} onClick={() => void assignTicket(ticket, 'zone_pool')}>
                             Auto to zone

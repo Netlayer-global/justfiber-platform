@@ -826,6 +826,19 @@ function mapInstaller(installer: any): Installer {
   }
 }
 
+function renderSafeText(value: any, fallback = ''): string {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (typeof value === 'object') {
+    if (value._id) return String(value._id)
+    if (value.id) return String(value.id)
+    if (value.fullName) return String(value.fullName)
+    if (value.name) return String(value.name)
+    if (value.code) return String(value.code)
+  }
+  return fallback
+}
+
 function mapJob(job: any): Job {
   const installerObject = job.installerId && typeof job.installerId === 'object' ? job.installerId : null
   const installerId =
@@ -838,9 +851,9 @@ function mapJob(job: any): Job {
         .sort((a: any, b: any) => new Date(b.at).getTime() - new Date(a.at).getTime())[0]
     : null
   return {
-    id: job._id || job.jobNumber || '',
-    jobNumber: job.jobNumber || job._id || '',
-    type: job.type || 'installation',
+    id: renderSafeText(job._id || job.jobNumber),
+    jobNumber: renderSafeText(job.jobNumber || job._id),
+    type: renderSafeText(job.type, 'installation'),
     status:
       job.status === 'assigned' ? 'pending' :
       job.status === 'accepted' || job.status === 'travel_started' || job.status === 'onsite_started'
@@ -850,42 +863,42 @@ function mapJob(job: any): Job {
           : job.status === 'cancelled'
             ? 'cancelled'
             : 'pending',
-    rawStatus: job.status || 'assigned',
-    customerId: job.customerId || '',
-    customerName: job.customerSnapshot?.fullName || '',
-    customerPhone: job.customerSnapshot?.phone || '',
+    rawStatus: renderSafeText(job.status, 'assigned'),
+    customerId: renderSafeText(job.customerId),
+    customerName: renderSafeText(job.customerSnapshot?.fullName),
+    customerPhone: renderSafeText(job.customerSnapshot?.phone),
     installerId,
-    installerName: job.installerName || installerObject?.fullName || installerObject?.installerCode || '',
-    priority: job.priority || 'medium',
-    address: job.customerSnapshot?.address || '',
-    planName: job.customerSnapshot?.planName || '',
-    mapUrl: job.customerSnapshot?.location?.mapUrl
+    installerName: renderSafeText(job.installerName || installerObject?.fullName || installerObject?.installerCode),
+    priority: renderSafeText(job.priority, 'medium') as Job['priority'],
+    address: renderSafeText(job.customerSnapshot?.address),
+    planName: renderSafeText(job.customerSnapshot?.planName),
+    mapUrl: renderSafeText(job.customerSnapshot?.location?.mapUrl)
       || (job.customerSnapshot?.location?.lat != null && job.customerSnapshot?.location?.lng != null
         ? `https://maps.google.com/?q=${job.customerSnapshot.location.lat},${job.customerSnapshot.location.lng}`
         : ''),
-    finalSerialNumber: job.deviceContext?.finalSerialNumber || job.deviceContext?.manualSerialNumber || '',
-    configStatus: job.activation?.configStatus || '',
-    proofUploadedAt: job.proof?.uploadedAt || '',
+    finalSerialNumber: renderSafeText(job.deviceContext?.finalSerialNumber || job.deviceContext?.manualSerialNumber),
+    configStatus: renderSafeText(job.activation?.configStatus),
+    proofUploadedAt: renderSafeText(job.proof?.uploadedAt),
     routerPhotoUploaded: Boolean(job.proof?.routerPhotoUrl),
     cablePhotoUploaded: Boolean(job.proof?.cablePhotoUrl),
     extraPhotoCount: Array.isArray(job.proof?.extraPhotos) ? job.proof.extraPhotos.length : 0,
-    completionOtpVerifiedAt: job.otp?.verifiedAt || '',
-    completionOtpDemo: job.adminPreview?.completionOtpDemo || '',
-    completionOtpSmsPreview: job.adminPreview?.completionOtpSmsPreview || '',
-    wifiSsid24: job.activation?.preparedCredentials?.wifi?.ssid24 || '',
-    wifiSsid5: job.activation?.preparedCredentials?.wifi?.ssid5 || '',
-    wifiPassword: job.activation?.credentials?.wifi?.password || job.activation?.preparedCredentials?.wifi?.password || '',
-    pppoeUsername: job.activation?.credentials?.pppoeUsername || job.activation?.preparedCredentials?.pppoe?.username || '',
-    pppoePassword: job.activation?.credentials?.pppoePassword || job.activation?.preparedCredentials?.pppoe?.password || '',
-    activationSmsPreview: job.adminPreview?.activationSmsPreview || '',
-    complaintResolutionCode: job.complaint?.resolutionCode || '',
-    complaintResolutionNote: job.complaint?.note || '',
+    completionOtpVerifiedAt: renderSafeText(job.otp?.verifiedAt),
+    completionOtpDemo: renderSafeText(job.adminPreview?.completionOtpDemo),
+    completionOtpSmsPreview: renderSafeText(job.adminPreview?.completionOtpSmsPreview),
+    wifiSsid24: renderSafeText(job.activation?.preparedCredentials?.wifi?.ssid24),
+    wifiSsid5: renderSafeText(job.activation?.preparedCredentials?.wifi?.ssid5),
+    wifiPassword: renderSafeText(job.activation?.credentials?.wifi?.password || job.activation?.preparedCredentials?.wifi?.password),
+    pppoeUsername: renderSafeText(job.activation?.credentials?.pppoeUsername || job.activation?.preparedCredentials?.pppoe?.username),
+    pppoePassword: renderSafeText(job.activation?.credentials?.pppoePassword || job.activation?.preparedCredentials?.pppoe?.password),
+    activationSmsPreview: renderSafeText(job.adminPreview?.activationSmsPreview),
+    complaintResolutionCode: renderSafeText(job.complaint?.resolutionCode),
+    complaintResolutionNote: renderSafeText(job.complaint?.note),
     complaintReplacedDevice: Boolean(job.complaint?.replacedDevice),
-    oldSerialNumber: job.deviceContext?.oldSerialNumber || '',
-    latestEventCode: latestTimeline?.event || '',
-    latestEventNote: latestTimeline?.note || latestTimeline?.event || '',
-    scheduledDate: job.scheduledDate || job.assignment?.assignedAt,
-    completedDate: job.completedAt,
+    oldSerialNumber: renderSafeText(job.deviceContext?.oldSerialNumber),
+    latestEventCode: renderSafeText(latestTimeline?.event),
+    latestEventNote: renderSafeText(latestTimeline?.note || latestTimeline?.event),
+    scheduledDate: renderSafeText(job.scheduledDate || job.assignment?.assignedAt),
+    completedDate: renderSafeText(job.completedAt),
   }
 }
 
