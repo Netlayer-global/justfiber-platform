@@ -81,10 +81,7 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     subheader: 'SYSTEM',
-    items: [
-      { href: '/my-zone-details', label: 'My Zone Details', icon: MapPinned },
-      { href: '/settings', label: 'Settings', icon: Settings },
-    ],
+    items: [{ href: '/my-zone-details', label: 'My Zone Details', icon: MapPinned }],
   },
 ]
 
@@ -147,18 +144,8 @@ function SidebarContent({
       </div>
 
       <div className="border-t border-purple-200 p-4">
-        <div className="rounded-xl bg-purple-100 p-4">
-          <div className="text-sm font-semibold text-slate-900">Upgrade workspace</div>
-          <div className="mt-1 text-xs leading-6 text-slate-500">
-            Keep finance, network, and field operations in one clean control surface.
-          </div>
-          <button
-            onClick={onLogout}
-            className="mt-4 inline-flex items-center gap-2 rounded-md bg-purple-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-purple-800"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
+        <div className="rounded-xl bg-purple-50 p-4 text-xs leading-6 text-slate-500">
+          Finance, network, tickets, and field operations are grouped in the menu above.
         </div>
       </div>
     </div>
@@ -364,6 +351,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="ml-auto flex items-center gap-3">
                 <button className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
                   <Bell className="h-5 w-5" />
+                </button>
+                <Link
+                  href="/settings"
+                  className={`hidden items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition sm:inline-flex ${
+                    pathname === '/settings'
+                      ? 'border-purple-300 bg-purple-50 text-purple-700'
+                      : 'border-purple-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="hidden items-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 sm:inline-flex"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
                 </button>
                 <div className="relative hidden md:block">
                   <button

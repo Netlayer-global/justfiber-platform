@@ -209,16 +209,16 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
 
 const WORKSPACE_META: Record<WorkspaceKey, { title: string; description: string }> = {
   zone: {
-    title: 'Sub-zones',
-    description: 'Create sub-zones, create zone logins, manage zone admin contact, and control zone-only settings.',
+    title: 'Sub-zone control',
+    description: 'Create sub-zones, create locked zone logins, and decide what each sub-zone can use.',
   },
   billing: {
-    title: 'Billing & Invoice',
-    description: 'Keep invoice organization, billing address, billing period, billing rules, prefixes, and payment tagging in one flow.',
+    title: 'Invoice and CAF',
+    description: 'Invoice template, invoice prefix, GST, billing rules, CAF template, and CAF prefix live here.',
   },
   system: {
-    title: 'System Settings',
-    description: 'Keep core organization defaults, user fields, integrations, and advanced platform switches in one place.',
+    title: 'Organization and apps',
+    description: 'Organization details, external apps, BBPS, API access, and admin password policy.',
   },
 }
 
@@ -226,55 +226,43 @@ const WORKSPACE_NAV: Record<WorkspaceKey, WorkspaceNavItem[]> = {
   zone: [
     {
       id: 'zone-operations',
-      title: 'Zone Operations',
-      description: 'Sub-zone creation, zone logins, and zone governance.',
+      title: 'Create Sub-zone and Login',
+      description: 'Create child zones, assign permissions, and create username/password for that zone.',
       sections: ['franchise_configuration'],
-    },
-    {
-      id: 'router-visibility',
-      title: 'Router Visibility',
-      description: 'Control router, OLT, CPE, IP, and analytics visibility for zone users.',
-      sections: ['router_visibility'],
     },
   ],
   billing: [
     {
       id: 'invoice-setup',
-      title: 'Invoice Setup',
-      description: 'Organization profile, invoice template, and billing rules.',
+      title: 'Invoice Template and GST',
+      description: 'Organization billing profile, invoice template, prefix, GST, billing period, and rules.',
       sections: ['invoice_template'],
     },
     {
-      id: 'billing-numbers',
-      title: 'Prefixes and Payments',
-      description: 'Invoice prefixes, payment tags, and numbering rules.',
-      sections: ['prefix_settings', 'tag_payment_gateway'],
+      id: 'caf-setup',
+      title: 'CAF Template and Prefix',
+      description: 'CAF numbering prefix and start date used by customer onboarding documents.',
+      sections: ['prefix_settings'],
     },
   ],
   system: [
     {
-      id: 'basic-settings',
-      title: 'Basic Settings',
-      description: 'General, express, and miscellaneous platform defaults.',
-      sections: ['general', 'express_configuration', 'miscellaneous'],
-    },
-    {
-      id: 'profile-fields',
-      title: 'Profile Fields',
-      description: 'Customer profile fields and additional data blocks.',
-      sections: ['user_fields', 'additional_fields'],
+      id: 'organization',
+      title: 'Organization',
+      description: 'Company name, zone identity, contact details, timezone, currency, and sender identity.',
+      sections: ['general'],
     },
     {
       id: 'integrations',
-      title: 'Integrations',
-      description: 'External integrations and API-facing controls.',
-      sections: ['external_integrations', 'api_settings'],
+      title: 'External Apps and BBPS',
+      description: 'SMS, WhatsApp, ACS, payment gateway, BBPS, API access, and external app controls.',
+      sections: ['external_integrations', 'express_configuration', 'tag_payment_gateway', 'api_settings'],
     },
     {
-      id: 'advanced-controls',
-      title: 'Advanced Controls',
-      description: 'Support SLA, rules, and inventory controls.',
-      sections: ['helpdesk_sla', 'helpdesk_rules', 'inventory_configuration'],
+      id: 'admin-security',
+      title: 'Admin User and Password Control',
+      description: 'Password complexity, reset policy, admin login policy, and scoped admin behavior.',
+      sections: ['miscellaneous'],
     },
   ],
 }
@@ -380,6 +368,7 @@ function getSectionMeta(section: string): SectionMeta {
 function getWorkspaceForSection(section: string): WorkspaceKey {
   const meta = getSectionMeta(section)
   if (meta.group === 'Zone & Franchise') return 'zone'
+  if (section === 'external_integrations' || section === 'api_settings' || section === 'tag_payment_gateway' || section === 'express_configuration' || section === 'miscellaneous' || section === 'general') return 'system'
   if (meta.group === 'Billing & Finance' || section === 'invoice_template') return 'billing'
   return 'system'
 }
@@ -666,7 +655,6 @@ export default function SettingsPage() {
   const [sectionValue, setSectionValue] = useState<SectionValue>({})
   const [sectionUpdatedAt, setSectionUpdatedAt] = useState<string | null>(null)
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceKey>('system')
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSectionLoading, setIsSectionLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -715,10 +703,12 @@ export default function SettingsPage() {
   })
 
   const visibleCatalog = useMemo(() => {
+    const allowedSections = new Set(WORKSPACE_NAV.zone.concat(WORKSPACE_NAV.billing, WORKSPACE_NAV.system).flatMap((item) => item.sections))
     return catalog
       .filter((item) => {
+        if (!allowedSections.has(item.section)) return false
         const meta = getSectionMeta(item.section)
-        if (meta.advanced && !showAdvanced) return false
+        if (meta.advanced) return false
         return true
       })
       .sort((left, right) => {
@@ -729,7 +719,7 @@ export default function SettingsPage() {
         if (leftGroupIndex !== rightGroupIndex) return leftGroupIndex - rightGroupIndex
         return leftMeta.title.localeCompare(rightMeta.title)
       })
-  }, [catalog, showAdvanced])
+  }, [catalog])
 
   const workspaceSections = useMemo(() => {
     return {
@@ -742,12 +732,6 @@ export default function SettingsPage() {
   const activeWorkspaceSections = workspaceSections[activeWorkspace]
   const activeWorkspaceNav = useMemo(() => {
     const availableSections = new Set(activeWorkspaceSections.map((item) => item.section))
-    const fallbackItems = activeWorkspaceSections.map((item) => ({
-      id: item.section,
-      title: getSectionMeta(item.section).title,
-      description: getSectionMeta(item.section).description,
-      sections: [item.section],
-    }))
 
     const curated = WORKSPACE_NAV[activeWorkspace]
       .map((item) => ({
@@ -756,9 +740,7 @@ export default function SettingsPage() {
       }))
       .filter((item) => item.sections.length)
 
-    const coveredSections = new Set(curated.flatMap((item) => item.sections))
-    const fallback = fallbackItems.filter((item) => !coveredSections.has(item.sections[0]))
-    return [...curated, ...fallback]
+    return curated
   }, [activeWorkspace, activeWorkspaceSections])
   const activeNavItem = useMemo(
     () => activeWorkspaceNav.find((item) => item.sections.includes(activeSection)) || activeWorkspaceNav[0] || null,
@@ -1530,12 +1512,12 @@ export default function SettingsPage() {
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Settings</div>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900">Admin settings</h1>
             <div className="mt-2 max-w-3xl text-sm text-slate-500">
-              Use one simple flow: pick a workspace, pick a section, update the form, then save.
+              Clean setup desk for organization, integrations, invoice, CAF, admin access, and sub-zone control only.
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button type="button" className="btn-secondary" onClick={openSubZoneWorkspace}>
-              Open sub-zone
+              Create sub-zone
             </button>
             <button
               type="button"
@@ -1543,12 +1525,13 @@ export default function SettingsPage() {
               onClick={handleCopyLaunchPack}
               disabled={!canAccessAllZones || !activeZoneFranchise || isCopyingLaunchPack}
             >
-              {isCopyingLaunchPack ? 'Copying...' : 'Copy parent settings now'}
+              {isCopyingLaunchPack ? 'Copying...' : 'Copy parent settings'}
             </button>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
-          {(Object.entries(WORKSPACE_META) as Array<[WorkspaceKey, { title: string; description: string }]>).map(([workspace, meta]) => {
+          {(['system', 'billing', 'zone'] as WorkspaceKey[]).map((workspace) => {
+            const meta = WORKSPACE_META[workspace]
             const active = activeWorkspace === workspace
             return (
               <button
@@ -1921,17 +1904,6 @@ export default function SettingsPage() {
         <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Sections</div>
-            {activeWorkspace === 'system' ? (
-              <label className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={showAdvanced}
-                  onChange={(event) => setShowAdvanced(event.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-purple-700 focus:ring-purple-700"
-                />
-                Show advanced sections
-              </label>
-            ) : null}
             <div className="mt-4 space-y-2">
               {activeWorkspaceNav.map((item) => {
                 const active = item.sections.includes(activeSection)
@@ -2002,6 +1974,38 @@ export default function SettingsPage() {
                 </div>
               ) : null}
             </section>
+
+            {activeNavItem?.id === 'admin-security' ? (
+              <section className="rounded-[24px] border border-purple-200 bg-purple-50 p-5">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">Admin users and passwords</div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      Create admin users, disable access, and reset passwords from the dedicated user control screen.
+                    </div>
+                  </div>
+                  <a href="/user-management" className="btn-primary text-center">
+                    Open admin users
+                  </a>
+                </div>
+              </section>
+            ) : null}
+
+            {activeNavItem?.id === 'caf-setup' ? (
+              <section className="rounded-[24px] border border-purple-200 bg-purple-50 p-5">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">CAF template designer</div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      Use this settings tab for CAF prefix and numbering. Open CAF Templates to manage the document design.
+                    </div>
+                  </div>
+                  <a href="/caf-templates" className="btn-primary text-center">
+                    Open CAF templates
+                  </a>
+                </div>
+              </section>
+            ) : null}
 
             {isSectionLoading ? (
               <div className="card p-8 text-center">
