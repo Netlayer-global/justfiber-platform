@@ -827,6 +827,11 @@ function mapInstaller(installer: any): Installer {
 }
 
 function mapJob(job: any): Job {
+  const installerObject = job.installerId && typeof job.installerId === 'object' ? job.installerId : null
+  const installerId =
+    installerObject?._id ||
+    installerObject?.id ||
+    (typeof job.installerId === 'string' ? job.installerId : job.installerId ? String(job.installerId) : undefined)
   const latestTimeline = Array.isArray(job.timeline)
     ? [...job.timeline]
         .filter((item: any) => item?.at)
@@ -849,8 +854,8 @@ function mapJob(job: any): Job {
     customerId: job.customerId || '',
     customerName: job.customerSnapshot?.fullName || '',
     customerPhone: job.customerSnapshot?.phone || '',
-    installerId: job.installerId || undefined,
-    installerName: job.installerName || '',
+    installerId,
+    installerName: job.installerName || installerObject?.fullName || installerObject?.installerCode || '',
     priority: job.priority || 'medium',
     address: job.customerSnapshot?.address || '',
     planName: job.customerSnapshot?.planName || '',
