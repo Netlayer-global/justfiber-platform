@@ -1504,6 +1504,197 @@ export default function SettingsPage() {
     })
   }
 
+  function renderSimpleSettingsPanel() {
+    const textInput = (
+      label: string,
+      path: PathSegment[],
+      value: string | number,
+      placeholder = '',
+      type: 'text' | 'number' | 'date' = 'text'
+    ) => (
+      <label className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
+        <input
+          className="input"
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => handleValueChange(path, type === 'number' ? Number(event.target.value || 0) : event.target.value)}
+        />
+      </label>
+    )
+
+    const toggleInput = (label: string, path: PathSegment[], checked: boolean, description: string) => (
+      <label className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+        <div>
+          <div className="text-sm font-semibold text-slate-900">{label}</div>
+          <div className="mt-1 text-xs text-slate-500">{description}</div>
+        </div>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => handleValueChange(path, event.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-slate-300 text-purple-700 focus:ring-purple-700"
+        />
+      </label>
+    )
+
+    if (activeSection === 'general') {
+      return (
+        <section className="card p-5">
+          <div className="mb-5">
+            <div className="text-sm font-semibold text-slate-900">Organization profile</div>
+            <div className="mt-1 text-sm text-slate-500">Only identity fields used across invoices, apps, and operator screens.</div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {textInput('Organization name', ['organizationName'], sectionValue.organizationName || '', 'JustFiber')}
+            {textInput('Main zone name', ['zoneName'], sectionValue.zoneName || '', 'default')}
+            {textInput('Support email', ['email'], sectionValue.email || '', 'support@justfiber.in')}
+            {textInput('Support phone', ['phone'], sectionValue.phone || '', 'Customer care number')}
+            {textInput('Email sender name', ['emailSenderName'], sectionValue.emailSenderName || '', 'JustFiber')}
+            {textInput('Timezone', ['timezone'], sectionValue.timezone || 'Asia/Kolkata')}
+            {textInput('Currency', ['currency'], sectionValue.currency || 'INR')}
+            {textInput('ISD code', ['isdCode'], sectionValue.isdCode || '91')}
+          </div>
+        </section>
+      )
+    }
+
+    if (activeSection === 'external_integrations') {
+      const providers = [
+        ['sms', 'SMS gateway'],
+        ['whatsapp', 'WhatsApp gateway'],
+        ['email', 'Email gateway'],
+        ['acsGateway', 'ACS / GenieACS'],
+        ['paymentGateway', 'Payment gateway'],
+        ['webhooks', 'Webhooks'],
+      ]
+      return (
+        <section className="card p-5">
+          <div className="mb-5">
+            <div className="text-sm font-semibold text-slate-900">External apps</div>
+            <div className="mt-1 text-sm text-slate-500">Enable only connected production apps. Everything else stays hidden.</div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {providers.map(([key, label]) => {
+              const value = sectionValue[key] || {}
+              return (
+                <div key={key} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                  {toggleInput(label, [key, 'enabled'], Boolean(value.enabled), 'Turn this integration on or off.')}
+                  <div className="mt-3">
+                    {textInput('Provider key', [key, 'providerKey'], value.providerKey || '', key === 'paymentGateway' ? 'razorpay' : '')}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )
+    }
+
+    if (activeSection === 'express_configuration') {
+      const bbps = sectionValue.bbps || {}
+      return (
+        <section className="card p-5">
+          <div className="mb-5">
+            <div className="text-sm font-semibold text-slate-900">BBPS and quick billing behavior</div>
+            <div className="mt-1 text-sm text-slate-500">BBPS stays inside external apps, with only production fields visible.</div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {toggleInput('Use zone billing address on invoices', ['useZoneBillingAddressForInvoices'], Boolean(sectionValue.useZoneBillingAddressForInvoices), 'Invoices will use active zone legal billing address.')}
+            {toggleInput('Customer can choose gateway', ['allowCustomerGatewayChoice'], Boolean(sectionValue.allowCustomerGatewayChoice), 'Let customer app choose payment gateway where available.')}
+            {toggleInput('Send full unpaid amount to BBPS', ['bbps', 'sendFullUnpaidAmount'], Boolean(bbps.sendFullUnpaidAmount), 'BBPS bill amount will include full unpaid balance.')}
+            {toggleInput('Enable BBPS split payment', ['bbps', 'splitEnabled'], Boolean(bbps.splitEnabled), 'Use only if BBPS settlement split is configured.')}
+            {textInput('BBPS encryption type', ['bbps', 'encryptionType'], bbps.encryptionType || 'jar')}
+            {textInput('BBPS output format', ['bbps', 'outputFormat'], bbps.outputFormat || 'Base64')}
+            {textInput('Corporate account number', ['bbps', 'corporateAccountNumber'], bbps.corporateAccountNumber || '')}
+            {textInput('Split payment account ID', ['bbps', 'splitPaymentAccountId'], bbps.splitPaymentAccountId || '')}
+          </div>
+        </section>
+      )
+    }
+
+    if (activeSection === 'tag_payment_gateway') {
+      return (
+        <section className="card p-5">
+          <div className="mb-5">
+            <div className="text-sm font-semibold text-slate-900">Payment and BBPS mapping</div>
+            <div className="mt-1 text-sm text-slate-500">Map payment collection tags and BBPS account tags for the active zone.</div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {toggleInput('Enable payment mapping', ['enabled'], Boolean(sectionValue.enabled), 'Use these tags for admin and customer payments.')}
+            {textInput('Zone code', ['zone'], sectionValue.zone || activeZoneCode || 'default')}
+            {textInput('Admin payments tag', ['adminPaymentsTag'], sectionValue.adminPaymentsTag || 'RAZORPAY_CUSTOMER:razorpay')}
+            {textInput('BBPS account tag', ['bbpsAccountTag'], sectionValue.bbpsAccountTag || '')}
+          </div>
+        </section>
+      )
+    }
+
+    if (activeSection === 'api_settings') {
+      return (
+        <section className="card p-5">
+          <div className="mb-5">
+            <div className="text-sm font-semibold text-slate-900">API access</div>
+            <div className="mt-1 text-sm text-slate-500">Keep this small: token label, upload keys, and trusted IP list.</div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {textInput('API token label', ['apiTokenLabel'], sectionValue.apiTokenLabel || 'default')}
+            {toggleInput('Allow upload keys', ['uploadKeysEnabled'], Boolean(sectionValue.uploadKeysEnabled), 'Enable only when an external app needs upload credentials.')}
+            <label className="space-y-2 lg:col-span-2">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Allowed IPs</div>
+              <textarea
+                className="min-h-[120px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#5B6CFF]/40 focus:ring-4 focus:ring-[#5B6CFF]/10"
+                placeholder="One IP per line"
+                value={(sectionValue.allowedIps || []).join('\n')}
+                onChange={(event) => handleValueChange(['allowedIps'], event.target.value.split('\n').map((item) => item.trim()).filter(Boolean))}
+              />
+            </label>
+          </div>
+        </section>
+      )
+    }
+
+    if (activeSection === 'miscellaneous') {
+      const adminSecurity = sectionValue.adminSecurity || {}
+      const loginPolicies = sectionValue.loginPolicies || {}
+      return (
+        <section className="card p-5">
+          <div className="mb-5">
+            <div className="text-sm font-semibold text-slate-900">Admin user and password control</div>
+            <div className="mt-1 text-sm text-slate-500">Password rules and login behavior. User creation/reset is available from User Management.</div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {toggleInput('Strong password required', ['adminSecurity', 'passwordComplexity'], Boolean(adminSecurity.passwordComplexity), 'Require secure passwords for admin accounts.')}
+            {toggleInput('Password reset allowed', ['adminSecurity', 'resetEnabled'], Boolean(adminSecurity.resetEnabled), 'Allow password reset from admin control screens.')}
+            {toggleInput('Zone-scoped admins only', ['adminSecurity', 'locationScopedAdminsOnly'], Boolean(adminSecurity.locationScopedAdminsOnly), 'Sub-zone users stay locked to assigned zone.')}
+            {toggleInput('Permit login without MAC', ['loginPolicies', 'permitLoginWithoutMac'], Boolean(loginPolicies.permitLoginWithoutMac), 'Use only if network workflow allows it.')}
+            {toggleInput('Permit login without IP', ['loginPolicies', 'permitLoginWithoutIp'], Boolean(loginPolicies.permitLoginWithoutIp), 'Use only if IP binding is not mandatory.')}
+            {toggleInput('Accept any password', ['loginPolicies', 'acceptAnyPassword'], Boolean(loginPolicies.acceptAnyPassword), 'Dangerous for production. Keep disabled unless testing.')}
+          </div>
+        </section>
+      )
+    }
+
+    if (activeSection === 'prefix_settings') {
+      const caf = sectionValue.caf || {}
+      return (
+        <section className="card p-5">
+          <div className="mb-5">
+            <div className="text-sm font-semibold text-slate-900">CAF template and prefix</div>
+            <div className="mt-1 text-sm text-slate-500">Only CAF numbering lives here. Document design opens from CAF Templates.</div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {textInput('CAF prefix', ['caf', 'prefix'], caf.prefix || 'CAF-')}
+            {textInput('CAF start date', ['caf', 'startDate'], caf.startDate || '2025-01-01', '', 'date')}
+          </div>
+        </section>
+      )
+    }
+
+    return null
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -2691,7 +2882,7 @@ export default function SettingsPage() {
                     </>
                     ) : null}
                   </section>
-                ) : (
+                ) : renderSimpleSettingsPanel() || (
                   <section className="card p-5">
                     <div className="grid gap-4 lg:grid-cols-2">
                       {Object.entries(sectionValue).map(([fieldKey, fieldValue]) => (
