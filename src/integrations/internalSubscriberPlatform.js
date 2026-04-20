@@ -6,9 +6,10 @@ import { ConnectionBooking } from "../models/ConnectionBooking.js";
 import { Customer } from "../models/Customer.js";
 import { CustomerUser } from "../models/CustomerUser.js";
 import { PlanCatalog } from "../models/PlanCatalog.js";
+import { PaymentTransaction } from "../models/PaymentTransaction.js";
 import { SubscriberService } from "../models/SubscriberService.js";
 import { buildPppoeCredentials } from "../common/networkProvisioning.js";
-import { syncCustomerBillingState } from "../common/billingAccounting.js";
+import { reconcilePaymentToInvoice, syncCustomerBillingState } from "../common/billingAccounting.js";
 import { internalBillingEngine } from "./internalBillingEngine.js";
 
 function deriveNumericSuffix(value) {
@@ -152,37 +153,70 @@ function buildBillCycle(now = new Date()) {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-async function settleActivationInvoiceIfPaid({ customerId, billCycle, paymentReference }) {
-  if (!customerId || !billCycle) return null;
-  const invoice = await BillingInvoice.findOne({
-    customerId,
-    billCycle,
-    paymentStatus: { $in: ["pending", "overdue"] }
-  });
-  if (!invoice) {
-    return null;
-  }
-  invoice.paymentStatus = "paid";
-  invoice.status = "settled";
-  invoice.metadata = {
-    ...(invoice.metadata || {}),
-    activationPaymentReconciledAt: new Date(),
-    activationPaymentReference: paymentReference || ""
-  };
-  await invoice.save();
-  await Customer.updateOne(
-    { customerId },
+async function reconcileActivationPayment({ booking, invoice, customerId, serviceId }) {
+  if (!booking || !invoice || booking.payment?.status !== "paid") return null;
+  const paymentReference =
+    (booking.payment?.provider === "razorpay" && booking.payment?.reference) ||
+    booking.payment?.paymentId ||
+    booking.payment?.reference ||
+    `BOOKING-${booking.bookingNumber}-${invoice.invoiceId}`;
+  const amount = Number(booking.payment?.amount || booking.selectedPlan?.totalAmount || invoice.totalAmount || 0);
+  if (!paymentReference || !Number.isFinite(amount) || amount <= 0) return null;
+
+  const payment = await PaymentTransaction.findOneAndUpdate(
+    {
+      $or: [
+        { transactionId: paymentReference },
+        { "metadata.bookingNumber": booking.bookingNumber, customerId }
+      ]
+    },
     {
       $set: {
-        "billingSnapshot.dueAmount": 0,
-        "billingSnapshot.lastPaymentStatus": "paid",
-        "billingSnapshot.lastPaidAt": new Date(),
-        "invoiceSummary.lastInvoiceNumber": invoice.invoiceNumber || invoice.invoiceId
+        transactionId: paymentReference,
+        customerId,
+        serviceId,
+        invoiceId: invoice.invoiceId,
+        provider: booking.payment?.provider || "booking_payment",
+        amount,
+        currency: "INR",
+        status: booking.payment?.provider === "razorpay" ? "captured" : "success",
+        paidAt: booking.payment?.paidAt || new Date(),
+        method: booking.payment?.method || (booking.payment?.provider === "razorpay" ? "onlinePayment" : "bookingPayment"),
+        reference: booking.payment?.reference || paymentReference,
+        reconciliationStatus: "pending",
+        unallocatedAmount: amount,
+        metadata: {
+          bookingNumber: booking.bookingNumber,
+          source: "booking_activation_payment",
+          originalCustomerToken: booking.personalDetails?.mobile || booking.bookingNumber,
+          bookingPaymentId: booking.payment?.paymentId || "",
+          bookingReference: booking.payment?.reference || "",
+          canonicalCustomerId: customerId,
+          canonicalServiceId: serviceId
+        }
       }
-    }
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
   );
-  await syncCustomerBillingState(customerId);
-  return invoice;
+
+  return reconcilePaymentToInvoice({
+    payment,
+    invoice,
+    confidenceScore: 1,
+    matchReason: "Booking payment collected before installer activation",
+    matchedBy: "booking_activation",
+    reconciliationMode: "booking_activation_paid",
+    ledgerSource: "booking_activation_payment",
+    ledgerNote: "Booking payment reconciled against activation invoice",
+    ledgerMetadata: {
+      bookingNumber: booking.bookingNumber,
+      paymentReference
+    },
+    invoiceMetadata: {
+      activationPaymentReconciledAt: new Date(),
+      activationPaymentReference: paymentReference
+    }
+  });
 }
 
 function buildInvoicePayload({ customer, plan, booking, serviceId }) {
@@ -508,10 +542,11 @@ export class InternalSubscriberPlatform {
         }
       );
       if (booking?.payment?.status === "paid") {
-        await settleActivationInvoiceIfPaid({
+        await reconcileActivationPayment({
+          booking,
+          invoice: await BillingInvoice.findOne({ customerId: identifiers.customerId, billCycle: buildBillCycle() }),
           customerId: identifiers.customerId,
-          billCycle: buildBillCycle(),
-          paymentReference: booking.payment?.paymentId || booking.payment?.reference
+          serviceId: identifiers.serviceId
         });
       }
     }
@@ -604,7 +639,27 @@ export class InternalSubscriberPlatform {
       activationJobId: installerJob._id?.toString?.() || String(installerJob._id || "")
     });
 
+    if (invoiceResult.skipped && invoiceResult.invoiceId && booking?.payment?.status === "paid") {
+      const existingInvoice = await BillingInvoice.findOne({ invoiceId: invoiceResult.invoiceId });
+      if (existingInvoice && String(existingInvoice.paymentStatus || "").toLowerCase() !== "paid") {
+        await reconcileActivationPayment({
+          booking,
+          invoice: existingInvoice,
+          customerId,
+          serviceId
+        });
+      }
+    }
+
     if (!invoiceResult.skipped && invoiceResult.invoice) {
+      if (booking?.payment?.status === "paid") {
+        await reconcileActivationPayment({
+          booking,
+          invoice: invoiceResult.invoice,
+          customerId,
+          serviceId
+        });
+      }
       await InstallerJob.updateOne(
         { _id: installerJob._id },
         {
