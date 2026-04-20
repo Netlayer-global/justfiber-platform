@@ -60,6 +60,16 @@ export default function BillingPage() {
     status: '',
     provider: '',
   })
+  const [isCollectingPayment, setIsCollectingPayment] = useState(false)
+  const [paymentDraft, setPaymentDraft] = useState({
+    customerId: '',
+    invoiceId: '',
+    serviceId: '',
+    amount: '',
+    method: 'cash',
+    reference: '',
+    note: '',
+  })
   const refundPayments = payments.filter((payment) => payment.method === 'refund' || (payment.provider || '').includes('refund'))
   const exportBaseUrl = getApiBaseUrl()
   const effectiveExportFilters = useMemo(
@@ -724,6 +734,65 @@ export default function BillingPage() {
     if (source === 'manual_admin') return 'bg-fuchsia-500/15 text-fuchsia-300'
     return 'bg-white/5 text-slate-300'
   }
+
+  function prefillPaymentFromInvoice(invoice: BillingData) {
+    setBillingSectionTab('payments')
+    setPaymentDraft({
+      customerId: invoice.customerId || '',
+      invoiceId: invoice.invoiceId || invoice.invoiceNumber || '',
+      serviceId: invoice.serviceId || '',
+      amount: String(invoice.totalAmount || invoice.amount || ''),
+      method: 'cash',
+      reference: invoice.invoiceNumber || invoice.invoiceId || '',
+      note: 'Counter collection',
+    })
+    toast.success('Payment form ready')
+  }
+
+  async function collectPayment() {
+    const amount = Number(paymentDraft.amount || 0)
+    if (!paymentDraft.customerId.trim()) {
+      toast.error('Customer ID is required')
+      return
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Enter a valid payment amount')
+      return
+    }
+    try {
+      setIsCollectingPayment(true)
+      const res = await adminAPI.collectBillingPayment({
+        customerId: paymentDraft.customerId.trim(),
+        invoiceId: paymentDraft.invoiceId.trim() || undefined,
+        serviceId: paymentDraft.serviceId.trim() || undefined,
+        amount,
+        method: paymentDraft.method,
+        reference: paymentDraft.reference.trim() || undefined,
+        note: paymentDraft.note.trim() || undefined,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to collect payment')
+        return
+      }
+      const mode = String((res.data as any)?.settlementMode || '')
+      toast.success(mode === 'partial' ? 'Partial payment posted' : mode === 'settled' ? 'Payment collected and invoice settled' : 'Payment collected for manual review')
+      setPaymentDraft({
+        customerId: '',
+        invoiceId: '',
+        serviceId: '',
+        amount: '',
+        method: 'cash',
+        reference: '',
+        note: '',
+      })
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to collect payment:', error)
+      toast.error('Failed to collect payment')
+    } finally {
+      setIsCollectingPayment(false)
+    }
+  }
   const invoiceTaxParts = (item: BillingData) => {
     const taxBreakdown = Array.isArray(item.taxBreakdown) ? item.taxBreakdown : []
     const cgst = taxBreakdown.find((part) => /cgst/i.test(part.label || ''))
@@ -1318,6 +1387,71 @@ export default function BillingPage() {
       {billingSectionTab === 'payments' ? (
           <div className="space-y-4">
           <div className="card p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">ISP payment counter</div>
+                <div className="mt-1 text-xl font-semibold text-slate-900">Collect payment</div>
+                <div className="mt-1 text-sm text-slate-500">
+                  Cash, bank, UPI, cheque, or adjustment entry. Select invoice to auto-settle; partial amount posts ledger credit.
+                </div>
+              </div>
+              <button className="btn-primary" onClick={() => void collectPayment()} disabled={isCollectingPayment}>
+                {isCollectingPayment ? 'Posting...' : 'Post payment'}
+              </button>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <input
+                className="input"
+                placeholder="Customer ID"
+                value={paymentDraft.customerId}
+                onChange={(e) => setPaymentDraft((prev) => ({ ...prev, customerId: e.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Invoice ID / number"
+                value={paymentDraft.invoiceId}
+                onChange={(e) => setPaymentDraft((prev) => ({ ...prev, invoiceId: e.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Service ID optional"
+                value={paymentDraft.serviceId}
+                onChange={(e) => setPaymentDraft((prev) => ({ ...prev, serviceId: e.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Amount"
+                type="number"
+                value={paymentDraft.amount}
+                onChange={(e) => setPaymentDraft((prev) => ({ ...prev, amount: e.target.value }))}
+              />
+              <select
+                className="input"
+                value={paymentDraft.method}
+                onChange={(e) => setPaymentDraft((prev) => ({ ...prev, method: e.target.value }))}
+              >
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="bank_transfer">Bank transfer</option>
+                <option value="cheque">Cheque</option>
+                <option value="card">Card</option>
+                <option value="adjustment">Adjustment</option>
+              </select>
+              <input
+                className="input"
+                placeholder="Reference / UTR"
+                value={paymentDraft.reference}
+                onChange={(e) => setPaymentDraft((prev) => ({ ...prev, reference: e.target.value }))}
+              />
+              <input
+                className="input md:col-span-2"
+                placeholder="Counter note"
+                value={paymentDraft.note}
+                onChange={(e) => setPaymentDraft((prev) => ({ ...prev, note: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="card p-5">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <input
                 className="input"
@@ -1615,6 +1749,14 @@ export default function BillingPage() {
                       {(item.paymentStatus || item.status) !== 'paid' ? (
                         <button
                           className="text-xs text-emerald-600"
+                          onClick={() => prefillPaymentFromInvoice(item)}
+                        >
+                          Collect
+                        </button>
+                      ) : null}
+                      {(item.paymentStatus || item.status) !== 'paid' ? (
+                        <button
+                          className="text-xs text-slate-600"
                           onClick={() => void markInvoicePaid(item.invoiceId)}
                         >
                           Mark Paid

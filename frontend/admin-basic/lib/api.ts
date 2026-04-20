@@ -2594,6 +2594,20 @@ export const adminAPI = {
     request(`/api/v1/admin/billing/payments/${transactionId}/retry-reminder`, {
       method: 'POST',
     }),
+  collectBillingPayment: (data: {
+    customerId: string
+    invoiceId?: string
+    serviceId?: string
+    amount: number
+    method: string
+    reference?: string
+    note?: string
+    paidAt?: string
+  }) =>
+    request(`/api/v1/admin/billing/payments/collect`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   assignBillingCollectionOwner: (customerId: string, adminId?: string) =>
     request(`/api/v1/admin/billing/collections/${customerId}/assign`, {
       method: 'POST',

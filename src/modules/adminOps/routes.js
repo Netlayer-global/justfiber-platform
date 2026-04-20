@@ -4009,6 +4009,184 @@ adminOpsRouter.post(
 );
 
 adminOpsRouter.post(
+  "/billing/payments/collect",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const customerId = String(req.body?.customerId || "").trim();
+    const amount = Number(req.body?.amount || 0);
+    if (!customerId) {
+      throw new ApiError(400, "Customer ID is required");
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ApiError(400, "Valid positive payment amount is required");
+    }
+
+    const customer = await Customer.findOne({ customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    const customerZoneCode = customer.billingZoneCode || customer.billingSnapshot?.billingZoneCode || customer.zoneCode;
+    assertAdminZoneAccess(req.admin, customerZoneCode);
+
+    const transactionId = String(req.body?.transactionId || `RCPT-${Date.now()}`).trim();
+    const existingPayment = await PaymentTransaction.findOne({ transactionId }).lean();
+    if (existingPayment) {
+      throw new ApiError(409, "Payment transaction already exists");
+    }
+
+    const method = String(req.body?.method || "cash").trim().toLowerCase();
+    const reference = String(req.body?.reference || transactionId).trim();
+    const invoiceId = String(req.body?.invoiceId || "").trim();
+    const paidAt = req.body?.paidAt ? new Date(req.body.paidAt) : new Date();
+    const payment = await PaymentTransaction.create({
+      transactionId,
+      customerId: customer.customerId,
+      serviceId: req.body?.serviceId || customer.serviceId,
+      invoiceId: invoiceId || undefined,
+      provider: req.body?.provider || "manual_collection",
+      amount,
+      currency: req.body?.currency || "INR",
+      status: "success",
+      paidAt,
+      method,
+      reference,
+      reconciliationStatus: "pending",
+      unallocatedAmount: amount,
+      metadata: {
+        source: "admin_payment_collection",
+        collectedAt: new Date(),
+        collectedByAdminId: req.admin?._id,
+        note: req.body?.note || "",
+        counter: req.body?.counter || "admin_billing"
+      }
+    });
+
+    const match = await findBestInvoiceForPayment(payment, invoiceId || undefined);
+    let invoice = match?.invoice || null;
+    let ledgerEntry = null;
+    let settlementMode = "unallocated";
+
+    if (invoice) {
+      assertAdminZoneAccess(req.admin, invoice.billingZoneCode || customerZoneCode);
+      const invoiceTotal = Number(invoice.totalAmount || invoice.amount || 0);
+      if (amount + 0.01 >= invoiceTotal) {
+        const settlement = await reconcilePaymentToInvoice({
+          payment,
+          invoice,
+          confidenceScore: invoiceId ? 1 : match.confidenceScore,
+          matchReason: invoiceId ? "Payment collected against selected invoice" : match.matchReason,
+          matchedBy: invoiceId ? "counter_invoice_selected" : match.matchedBy,
+          reconciliationMode: invoiceId ? "counter_collection_explicit" : "counter_collection_smart_match",
+          reconciledByAdminId: req.admin?._id,
+          ledgerSource: "admin_counter_collection",
+          ledgerNote: `Counter payment received by ${method}`,
+          ledgerMetadata: { requestId: req.requestId, method, note: req.body?.note || "" }
+        });
+        invoice = settlement.invoice;
+        ledgerEntry = settlement.ledgerEntry;
+        settlementMode = "settled";
+      } else {
+        invoice.status = "partially_paid";
+        invoice.paymentStatus = "partially_paid";
+        invoice.metadata = {
+          ...(invoice.metadata || {}),
+          lastPaymentId: payment.transactionId,
+          lastPaymentAmount: amount,
+          lastPaymentSource: "admin_counter_collection",
+          lastPartialPaymentAt: new Date()
+        };
+        await invoice.save();
+
+        payment.invoiceId = invoice.invoiceId;
+        payment.reconciledInvoiceId = invoice.invoiceId;
+        payment.reconciledAt = new Date();
+        payment.reconciledByAdminId = req.admin?._id;
+        payment.reconciliationStatus = "matched";
+        payment.unallocatedAmount = 0;
+        payment.allocations = [{
+          invoiceId: invoice.invoiceId,
+          amount,
+          allocatedAt: new Date(),
+          mode: "counter_collection_partial"
+        }];
+        payment.metadata = {
+          ...(payment.metadata || {}),
+          reconciliationMode: "counter_collection_partial",
+          reconciliationConfidence: 1,
+          reconciliationMatchReason: "Partial payment collected against selected invoice",
+          reconciliationMatchedBy: "counter_invoice_selected"
+        };
+        await payment.save();
+
+        ledgerEntry = await createLedgerEntry({
+          customerId: customer.customerId,
+          serviceId: payment.serviceId || invoice.serviceId,
+          invoiceId: invoice.invoiceId,
+          paymentId: payment.transactionId,
+          category: "payment",
+          direction: "credit",
+          amount,
+          reference,
+          note: `Partial counter payment received by ${method}`,
+          source: "admin_counter_collection",
+          createdByAdminId: req.admin?._id,
+          metadata: { requestId: req.requestId, method, note: req.body?.note || "" },
+          postedAt: paidAt
+        });
+        settlementMode = "partial";
+      }
+    } else {
+      payment.reconciliationStatus = "manual_review";
+      payment.metadata = {
+        ...(payment.metadata || {}),
+        reconciliationMode: "counter_collection_unallocated",
+        reconciliationConfidence: 0,
+        reconciliationMatchReason: "No open invoice selected or matched"
+      };
+      await payment.save();
+
+      ledgerEntry = await createLedgerEntry({
+        customerId: customer.customerId,
+        serviceId: payment.serviceId || customer.serviceId,
+        paymentId: payment.transactionId,
+        category: "payment",
+        direction: "credit",
+        amount,
+        reference,
+        note: `Unallocated counter payment received by ${method}`,
+        source: "admin_counter_collection",
+        createdByAdminId: req.admin?._id,
+        metadata: { requestId: req.requestId, method, note: req.body?.note || "" },
+        postedAt: paidAt
+      });
+    }
+
+    const syncedCustomer = await syncCustomerBillingState(customer.customerId, customer);
+    await auditFromRequest(req, {
+      action: "billing.payment.collected",
+      entityType: "payment_transaction",
+      entityId: payment.transactionId,
+      metadata: {
+        customerId: customer.customerId,
+        invoiceId: invoice?.invoiceId || "",
+        amount,
+        method,
+        settlementMode
+      }
+    });
+
+    return ok(res, {
+      payment,
+      invoice,
+      ledgerEntry,
+      customer: syncedCustomer,
+      settlementMode,
+      receiptUrl: `/api/v1/admin/billing/payments/${encodeURIComponent(payment.transactionId)}/receipt`
+    }, { created: true });
+  })
+);
+
+adminOpsRouter.post(
   "/billing/payments/:transactionId/reconcile",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
