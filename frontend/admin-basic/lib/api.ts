@@ -718,12 +718,21 @@ function mapDevice(device: any): Device {
 function mapTicket(ticket: any): Ticket {
   return {
     id: ticket._id || ticket.ticketNumber || '',
+    ticketNumber: ticket.ticketNumber || '',
     subject: ticket.subject || ticket.title || ticket.category || ticket.ticketNumber || 'Ticket',
     description: ticket.description || ticket.resolutionSummary || '',
     status: ticket.status || 'open',
     priority: ticket.priority || 'medium',
     customerId: ticket.customerId || '',
+    serviceId: ticket.serviceId || '',
+    category: ticket.category || '',
+    source: ticket.source || '',
+    zoneCode: ticket.zoneCode || '',
+    zoneName: ticket.zoneName || '',
     assignedTo: ticket.assignedToAdminId || ticket.assignedTeam,
+    assignedInstallerId: ticket.assignedInstallerId || '',
+    installerJobId: ticket.installerJobId || '',
+    installerAssignmentMode: ticket.installerAssignmentMode || '',
     createdAt: ticket.createdAt || new Date().toISOString(),
   }
 }
@@ -2019,6 +2028,14 @@ export const adminAPI = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+  assignTicketInstaller: (id: string, data: { mode: 'manual' | 'zone_pool'; installerId?: string; note?: string }) =>
+    request<{ ticket: Ticket; job?: Job; notifiedInstallers?: number; reused?: boolean }>(
+      `/api/v1/admin/tickets/${id}/installer-assignment`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
   getSupportQueue: async () => {
     const res = await request<any>('/api/v1/admin/support/queue')
     return {

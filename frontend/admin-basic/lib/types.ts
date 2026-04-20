@@ -638,12 +638,21 @@ export interface AdminPlanChangeResult {
 
 export interface Ticket {
   id: string
+  ticketNumber?: string
   subject: string
   description: string
   status: 'open' | 'assigned' | 'in_progress' | 'resolved' | 'closed' | string
-  priority: 'low' | 'medium' | 'high'
+  priority: 'low' | 'medium' | 'high' | 'critical'
   customerId: string
+  serviceId?: string
+  category?: string
+  source?: string
+  zoneCode?: string
+  zoneName?: string
   assignedTo?: string
+  assignedInstallerId?: string
+  installerJobId?: string
+  installerAssignmentMode?: 'manual' | 'zone_pool' | string
   createdAt: string
 }
 

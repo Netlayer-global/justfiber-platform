@@ -28,6 +28,7 @@ import { buildBillingNotificationContent, notificationDispatcher } from "../../i
 import { razorpayClient } from "../../integrations/razorpayClient.js";
 import { env } from "../../config/env.js";
 import { ServiceRequest } from "../../models/ServiceRequest.js";
+import { SupportTicket } from "../../models/SupportTicket.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
 import { AuditLog } from "../../models/AuditLog.js";
@@ -53,6 +54,89 @@ import { AdminActionRequest } from "../../models/AdminActionRequest.js";
 export const adminOpsRouter = Router();
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const WAIVER_APPROVAL_THRESHOLD = 1000;
+
+function resolveSupportZone(customer = {}) {
+  const zoneCode = String(
+    customer.billingZoneCode ||
+      customer.billingSnapshot?.billingZoneCode ||
+      customer.zoneCode ||
+      customer.zoneContext?.zoneCode ||
+      ""
+  ).trim();
+  const zoneName =
+    customer.billingZoneName ||
+    customer.billingSnapshot?.billingZoneName ||
+    customer.zoneName ||
+    customer.zoneContext?.zoneName ||
+    zoneCode;
+  return { zoneCode, zoneName };
+}
+
+async function backfillComplaintTickets(limit = 100) {
+  const complaintRequests = await ServiceRequest.find({ type: "complaint" })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+  if (!complaintRequests.length) return;
+
+  const requestIds = complaintRequests.map((item) => item._id);
+  const requestNotes = complaintRequests.map((item) => `Created from service request ${item.requestNumber}`);
+  const existingTickets = await SupportTicket.find({
+    $or: [
+      { sourceRequestId: { $in: requestIds } },
+      { "timeline.note": { $in: requestNotes } }
+    ]
+  })
+    .select({ sourceRequestId: 1, timeline: 1 })
+    .lean();
+  const existingRequestIds = new Set(existingTickets.map((item) => String(item.sourceRequestId || "")));
+  const existingNotes = new Set(
+    existingTickets.flatMap((item) => (Array.isArray(item.timeline) ? item.timeline.map((entry) => entry.note) : []))
+  );
+  const missingRequests = complaintRequests.filter((item) => (
+    !existingRequestIds.has(String(item._id)) &&
+    !existingNotes.has(`Created from service request ${item.requestNumber}`)
+  ));
+  if (!missingRequests.length) return;
+
+  const customers = await Customer.find({
+    customerId: { $in: missingRequests.map((item) => item.customerId).filter(Boolean) }
+  })
+    .lean();
+  const customersById = new Map(customers.map((customer) => [customer.customerId, customer]));
+
+  await SupportTicket.insertMany(
+    missingRequests.map((request, index) => {
+      const customer = customersById.get(request.customerId) || {};
+      const { zoneCode, zoneName } = resolveSupportZone(customer);
+      return {
+        ticketNumber: `TKT-${Date.now()}-${index}`,
+        customerId: request.customerId || "UNLINKED",
+        serviceId: request.serviceId,
+        sourceRequestId: request._id,
+        source: "customer_app",
+        category: "complaint",
+        priority: "medium",
+        status: request.status === "completed" ? "resolved" : request.status === "closed" ? "closed" : "open",
+        subject: request.payload?.subject || "Customer complaint",
+        description: request.payload?.note || request.payload?.description || "Complaint raised from customer app",
+        zoneCode,
+        zoneName,
+        timeline: [
+          {
+            type: "created",
+            actorType: "customer",
+            actorId: request.customerUserId,
+            note: `Created from service request ${request.requestNumber}`
+          }
+        ]
+      };
+    }),
+    { ordered: false }
+  ).catch((error) => {
+    if (error?.code !== 11000) throw error;
+  });
+}
 const WRITEOFF_APPROVAL_THRESHOLD = 2000;
 
 adminOpsRouter.use(requireAuth);
@@ -2975,6 +3059,7 @@ adminOpsRouter.get(
   "/support/queue",
   requirePermission(permissions.ticketRead),
   asyncHandler(async (req, res) => {
+    await backfillComplaintTickets(100);
     const status = String(req.query?.status || "").trim();
     const requestType = String(req.query?.type || "").trim();
     const ticketFilter = {};

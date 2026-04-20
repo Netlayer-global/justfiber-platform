@@ -248,7 +248,7 @@ function buildOpticalSnapshot(job, device) {
 }
 
 async function getInstallerJobOrThrow(jobId, installerId) {
-  const job = await InstallerJob.findOne({ _id: jobId, installerId });
+  const job = await InstallerJob.findOne(buildInstallerJobAccessFilter(jobId, installerId));
   if (!job) {
     throw new ApiError(404, "Installer job not found");
   }
@@ -297,19 +297,79 @@ function buildTicketLookup(ticketId) {
   };
 }
 
+function normalizeZoneCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function installerZoneCandidates(installer) {
+  const zones = Array.isArray(installer?.assignedZones) ? installer.assignedZones : [];
+  return [...new Set(zones.flatMap((zone) => {
+    const raw = String(zone || "").trim();
+    const upper = normalizeZoneCode(raw);
+    return [raw, upper, raw.toLowerCase()].filter(Boolean);
+  }))];
+}
+
+function unclaimedInstallerFilter() {
+  return {
+    $or: [
+      { installerId: null },
+      { installerId: { $exists: false } }
+    ]
+  };
+}
+
+function buildPooledComplaintFilter(installer) {
+  const zones = installerZoneCandidates(installer);
+  if (!zones.length) {
+    return null;
+  }
+  return {
+    type: "complaint",
+    status: "assigned",
+    "assignment.poolVisible": true,
+    "assignment.zone": { $in: zones },
+    ...unclaimedInstallerFilter()
+  };
+}
+
+function buildInstallerJobsFilter(installer) {
+  const pooledFilter = buildPooledComplaintFilter(installer);
+  return {
+    $or: [
+      { installerId: installer._id },
+      ...(pooledFilter ? [pooledFilter] : [])
+    ]
+  };
+}
+
+function buildInstallerJobAccessFilter(jobId, installerOrId) {
+  const hasInstallerObject = installerOrId && Array.isArray(installerOrId.assignedZones);
+  const installerId = hasInstallerObject ? installerOrId._id : installerOrId;
+  const pooledFilter = hasInstallerObject ? buildPooledComplaintFilter(installerOrId) : null;
+  return {
+    _id: jobId,
+    $or: [
+      { installerId },
+      ...(pooledFilter ? [pooledFilter] : [])
+    ]
+  };
+}
+
 installerAppRouter.get(
   "/dashboard",
   asyncHandler(async (req, res) => {
     const installerId = req.installer._id;
+    const activeJobFilter = buildInstallerJobsFilter(req.installer);
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
     const [todayNewInstallationJobs, pendingJobs, completedJobs, todayComplaints, pendingComplaints] = await Promise.all([
       InstallerJob.countDocuments({ installerId, type: "installation", createdAt: { $gte: todayStart } }),
-      InstallerJob.countDocuments({ installerId, status: { $in: ["assigned", "accepted", "enroute", "onsite", "activation_in_progress", "complaint_in_progress"] } }),
+      InstallerJob.countDocuments({ ...activeJobFilter, status: { $in: ["assigned", "accepted", "enroute", "onsite", "activation_in_progress", "complaint_in_progress"] } }),
       InstallerJob.countDocuments({ installerId, status: "completed" }),
-      InstallerJob.countDocuments({ installerId, type: "complaint", createdAt: { $gte: todayStart } }),
-      InstallerJob.countDocuments({ installerId, type: "complaint", status: { $in: ["assigned", "accepted", "enroute", "onsite", "complaint_in_progress"] } })
+      InstallerJob.countDocuments({ ...activeJobFilter, type: "complaint", createdAt: { $gte: todayStart } }),
+      InstallerJob.countDocuments({ ...activeJobFilter, type: "complaint", status: { $in: ["assigned", "accepted", "enroute", "onsite", "complaint_in_progress"] } })
     ]);
 
     return ok(res, {
@@ -384,7 +444,7 @@ installerAppRouter.get(
   "/jobs",
   asyncHandler(async (req, res) => {
     const { page, limit, skip } = buildPagination(req.query);
-    const filter = { installerId: req.installer._id };
+    const filter = buildInstallerJobsFilter(req.installer);
     if (req.query.type) filter.type = req.query.type;
     if (req.query.status) filter.status = req.query.status;
     const [items, total] = await Promise.all([
@@ -398,7 +458,7 @@ installerAppRouter.get(
 installerAppRouter.get(
   "/jobs/:jobId",
   asyncHandler(async (req, res) => {
-    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer);
     const device = await resolveJobDevice(job);
     const detail = job.toObject();
     if (device?.deviceId && !detail.deviceContext?.finalDeviceId) {
@@ -464,10 +524,63 @@ installerAppRouter.get(
 installerAppRouter.post(
   "/jobs/:jobId/accept",
   asyncHandler(async (req, res) => {
-    const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
-    job.status = "accepted";
-    pushTimeline(job, "job.accepted", req.installer._id, "Installer accepted the job");
-    await job.save();
+    let job = await getInstallerJobOrThrow(req.params.jobId, req.installer);
+    if (!job.installerId) {
+      if (req.installer.availabilityStatus !== "available") {
+        throw new ApiError(409, "Set yourself available before accepting a pooled complaint");
+      }
+      const claimedJob = await InstallerJob.findOneAndUpdate(
+        buildInstallerJobAccessFilter(req.params.jobId, req.installer),
+        {
+          $set: {
+            installerId: req.installer._id,
+            status: "accepted",
+            "assignment.claimedAt": new Date(),
+            "assignment.claimedBy": req.installer._id
+          },
+          $push: {
+            timeline: {
+              event: "job.accepted",
+              actorType: "installer",
+              actorId: req.installer._id,
+              note: "Installer accepted pooled complaint",
+              at: new Date()
+            }
+          }
+        },
+        { new: true }
+      );
+      if (!claimedJob) {
+        throw new ApiError(409, "This complaint has already been accepted by another installer");
+      }
+      job = claimedJob;
+    } else {
+      job.status = "accepted";
+      pushTimeline(job, "job.accepted", req.installer._id, "Installer accepted the job");
+      await job.save();
+    }
+    req.installer.availabilityStatus = "busy";
+    await req.installer.save();
+    if (job.ticketId) {
+      await SupportTicket.updateOne(
+        buildTicketLookup(job.ticketId),
+        {
+          $set: {
+            status: "in_progress",
+            assignedInstallerId: req.installer._id,
+            installerAssignmentMode: job.assignment?.poolVisible ? "zone_pool" : "manual"
+          },
+          $push: {
+            timeline: {
+              type: "installer_accepted",
+              actorType: "installer",
+              actorId: req.installer._id,
+              note: "Installer accepted the complaint"
+            }
+          }
+        }
+      );
+    }
     if (job.type === "installation") {
       const booking = await updateBookingProgress(job, { status: "assigned" });
       if (booking) {

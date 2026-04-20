@@ -13,6 +13,12 @@ export const assignTicketSchema = z.object({
   assignedToAdminId: z.string().min(8)
 });
 
+export const assignInstallerTicketSchema = z.object({
+  mode: z.enum(["manual", "zone_pool"]).default("zone_pool"),
+  installerId: z.string().min(8).optional(),
+  note: z.string().min(2).max(1000).optional()
+});
+
 export const resolveTicketSchema = z.object({
   resolutionSummary: z.string().min(5).max(2000)
 });

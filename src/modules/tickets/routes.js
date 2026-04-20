@@ -5,9 +5,20 @@ import { ok } from "../../common/response.js";
 import { requireAuth, requirePermission } from "../../common/auth.js";
 import { permissions } from "../../config/permissions.js";
 import { SupportTicket } from "../../models/SupportTicket.js";
+import { Installer } from "../../models/Installer.js";
+import { InstallerJob } from "../../models/InstallerJob.js";
+import { InstallerNotification } from "../../models/InstallerNotification.js";
+import { Customer } from "../../models/Customer.js";
 import { buildPagination } from "../../common/pagination.js";
 import { ApiError } from "../../common/ApiError.js";
-import { createTicketSchema, assignTicketSchema, resolveTicketSchema, updateTicketSchema, closeTicketSchema } from "./schemas.js";
+import {
+  createTicketSchema,
+  assignTicketSchema,
+  assignInstallerTicketSchema,
+  resolveTicketSchema,
+  updateTicketSchema,
+  closeTicketSchema
+} from "./schemas.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
@@ -27,6 +38,68 @@ async function notifyTicketCustomer(ticket, { type, title, body, payload }) {
       title,
       body,
       payload,
+    }))
+  );
+}
+
+function normalizeZone(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function resolveCustomerZone(customer, ticket) {
+  const zoneCode = normalizeZone(
+    ticket?.zoneCode ||
+      customer?.billingZoneCode ||
+      customer?.billingSnapshot?.billingZoneCode ||
+      customer?.zoneCode ||
+      customer?.zoneContext?.zoneCode
+  );
+  const zoneName =
+    ticket?.zoneName ||
+    customer?.billingZoneName ||
+    customer?.billingSnapshot?.billingZoneName ||
+    customer?.zoneName ||
+    customer?.zoneContext?.zoneName ||
+    zoneCode;
+  return { zoneCode, zoneName };
+}
+
+function buildCustomerSnapshot(customer, ticket) {
+  const address = customer?.rawAddress
+    ? [
+        customer.rawAddress.line1,
+        customer.rawAddress.line2,
+        customer.rawAddress.area,
+        customer.rawAddress.city,
+        customer.rawAddress.state,
+        customer.rawAddress.pinCode
+      ].filter(Boolean).join(", ")
+    : customer?.address || customer?.installationAddress || "";
+
+  return {
+    fullName: customer?.fullName || customer?.name || customer?.customerName || ticket.customerId,
+    phone: customer?.phone || customer?.mobile || customer?.contactNumber || "",
+    address,
+    planName: customer?.planName || customer?.plan?.name || customer?.billingSnapshot?.planName || "",
+    zoneCode: ticket.zoneCode,
+    zoneName: ticket.zoneName
+  };
+}
+
+async function notifyInstallers(installers, job, ticket, title) {
+  if (!installers.length) return;
+  await InstallerNotification.insertMany(
+    installers.map((installer) => ({
+      installerId: installer._id,
+      type: "complaint_assigned",
+      title,
+      body: `${ticket.customerId} | ${ticket.subject} | ${job.jobNumber}`,
+      payload: {
+        installerJobId: job._id,
+        jobNumber: job.jobNumber,
+        ticketId: ticket._id,
+        ticketNumber: ticket.ticketNumber
+      }
     }))
   );
 }
@@ -161,6 +234,152 @@ ticketsRouter.post(
       payload: { ticketId: ticket._id.toString(), ticketNumber: ticket.ticketNumber, status: ticket.status }
     });
     return ok(res, ticket);
+  })
+);
+
+ticketsRouter.post(
+  "/:ticketId/installer-assignment",
+  requirePermission(permissions.ticketAssign),
+  asyncHandler(async (req, res) => {
+    const payload = assignInstallerTicketSchema.parse(req.body || {});
+    const ticket = await SupportTicket.findById(req.params.ticketId);
+    if (!ticket) {
+      throw new ApiError(404, "Ticket not found");
+    }
+    if (["resolved", "closed"].includes(ticket.status)) {
+      throw new ApiError(409, "Resolved or closed tickets cannot be assigned to installers");
+    }
+
+    const customer = await Customer.findOne({ customerId: ticket.customerId }).lean();
+    const { zoneCode, zoneName } = resolveCustomerZone(customer, ticket);
+    if (!zoneCode) {
+      throw new ApiError(409, "Ticket customer does not have a zone. Set customer zone before field assignment.");
+    }
+
+    if (ticket.installerJobId) {
+      const existingJob = await InstallerJob.findById(ticket.installerJobId).lean();
+      if (existingJob && !["completed", "cancelled", "failed"].includes(existingJob.status)) {
+        return ok(res, { ticket, job: existingJob, reused: true });
+      }
+    }
+
+    let targetInstaller = null;
+    let installersToNotify = [];
+
+    if (payload.mode === "manual") {
+      if (!payload.installerId) {
+        throw new ApiError(400, "installerId is required for manual assignment");
+      }
+      targetInstaller = await Installer.findById(payload.installerId);
+      if (!targetInstaller || targetInstaller.status !== "active") {
+        throw new ApiError(404, "Active installer not found");
+      }
+      if (targetInstaller.availabilityStatus === "on_leave") {
+        throw new ApiError(409, "Installer is on leave");
+      }
+      const installerZones = (targetInstaller.assignedZones || []).map(normalizeZone);
+      if (installerZones.length && !installerZones.includes(zoneCode)) {
+        throw new ApiError(409, "Installer is not assigned to this customer zone");
+      }
+      installersToNotify = [targetInstaller];
+    } else {
+      const zoneInstallers = await Installer.find({
+        status: "active",
+        availabilityStatus: { $ne: "on_leave" }
+      });
+      installersToNotify = zoneInstallers.filter((installer) =>
+        (installer.assignedZones || []).map(normalizeZone).includes(zoneCode)
+      );
+      if (!installersToNotify.length) {
+        throw new ApiError(409, "No active installers found for this zone");
+      }
+    }
+
+    ticket.zoneCode = zoneCode;
+    ticket.zoneName = zoneName;
+
+    const job = await InstallerJob.create({
+      jobNumber: `CMP-${Date.now()}`,
+      type: "complaint",
+      status: "assigned",
+      customerId: ticket.customerId,
+      serviceId: ticket.serviceId,
+      ticketId: ticket._id.toString(),
+      installerId: targetInstaller?._id,
+      priority: ticket.priority === "critical" ? "urgent" : ticket.priority === "high" ? "high" : "medium",
+      customerSnapshot: buildCustomerSnapshot(customer, ticket),
+      complaint: {
+        category: ticket.category,
+        subject: ticket.subject,
+        description: ticket.description,
+        ticketNumber: ticket.ticketNumber
+      },
+      assignment: {
+        assignedAt: new Date(),
+        assignedBy: req.admin._id,
+        autoAssigned: payload.mode === "zone_pool",
+        poolVisible: payload.mode === "zone_pool",
+        zone: zoneCode
+      },
+      timeline: [
+        {
+          event: payload.mode === "zone_pool" ? "job.zone_pool_assigned" : "job.assigned",
+          actorType: "admin",
+          actorId: req.admin._id,
+          note:
+            payload.note ||
+            (payload.mode === "zone_pool"
+              ? `Complaint opened to ${zoneCode} installer pool`
+              : `Complaint assigned to ${targetInstaller.fullName}`)
+        }
+      ]
+    });
+
+    if (targetInstaller) {
+      targetInstaller.availabilityStatus = "busy";
+      await targetInstaller.save();
+    }
+
+    ticket.status = "assigned";
+    ticket.assignedTeam = "field_ops";
+    ticket.assignedInstallerId = targetInstaller?._id;
+    ticket.installerJobId = job._id;
+    ticket.installerAssignmentMode = payload.mode;
+    ticket.timeline.push({
+      type: payload.mode === "zone_pool" ? "installer_pool_assigned" : "installer_assigned",
+      actorType: "admin",
+      actorId: req.admin._id,
+      note:
+        payload.note ||
+        (payload.mode === "zone_pool"
+          ? `Visible to ${installersToNotify.length} installers in ${zoneCode}`
+          : `Assigned to ${targetInstaller.fullName}`)
+    });
+    await ticket.save();
+
+    await notifyInstallers(
+      installersToNotify,
+      job,
+      ticket,
+      payload.mode === "zone_pool" ? "New zone complaint" : "New complaint job"
+    );
+    await notifyTicketCustomer(ticket, {
+      type: "ticket_assigned",
+      title: "Complaint assigned",
+      body:
+        payload.mode === "zone_pool"
+          ? "Your complaint has been opened to the field team."
+          : "Your complaint has been assigned to a field engineer.",
+      payload: { ticketId: ticket._id.toString(), ticketNumber: ticket.ticketNumber, installerJobId: job._id.toString() }
+    });
+    await auditFromRequest(req, {
+      action: "ticket.installer_assigned",
+      entityType: "ticket",
+      entityId: ticket._id.toString(),
+      metadata: { mode: payload.mode, zoneCode, installerId: targetInstaller?._id?.toString() }
+    });
+
+    return ok(res, { ticket, job, notifiedInstallers: installersToNotify.length }, { created: true });
   })
 );
 

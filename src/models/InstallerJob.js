@@ -38,12 +38,15 @@ const installerJobSchema = new mongoose.Schema(
     customerId: { type: String, required: true, index: true },
     serviceId: { type: String, index: true },
     ticketId: { type: String, index: true },
-    installerId: { type: mongoose.Schema.Types.ObjectId, ref: "Installer", required: true, index: true },
+    installerId: { type: mongoose.Schema.Types.ObjectId, ref: "Installer", index: true },
     priority: { type: String, enum: ["low", "medium", "high", "urgent"], default: "medium", index: true },
     assignment: {
       assignedAt: Date,
       assignedBy: mongoose.Schema.Types.ObjectId,
       autoAssigned: Boolean,
+      poolVisible: Boolean,
+      claimedAt: Date,
+      claimedBy: mongoose.Schema.Types.ObjectId,
       zone: String
     },
     customerSnapshot: mongoose.Schema.Types.Mixed,
@@ -61,5 +64,6 @@ const installerJobSchema = new mongoose.Schema(
 
 installerJobSchema.index({ installerId: 1, status: 1, createdAt: -1 });
 installerJobSchema.index({ type: 1, status: 1, createdAt: -1 });
+installerJobSchema.index({ "assignment.zone": 1, type: 1, status: 1, createdAt: -1 });
 
 export const InstallerJob = mongoose.model("InstallerJob", installerJobSchema);

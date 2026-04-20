@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import { SupportDiagnosticItem, SupportQueueRequest, Ticket } from '@/lib/types'
+import { Installer, SupportDiagnosticItem, SupportQueueRequest, Ticket } from '@/lib/types'
 import { AlertCircle, ClipboardList, Loader, ShieldCheck, Ticket as TicketIcon } from 'lucide-react'
 
 function extractSnapshot(description: string) {
@@ -30,7 +30,9 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [requests, setRequests] = useState<SupportQueueRequest[]>([])
   const [diagnostics, setDiagnostics] = useState<SupportDiagnosticItem[]>([])
-  const [supportTab, setSupportTab] = useState<'triage' | 'tickets' | 'requests'>('triage')
+  const [installers, setInstallers] = useState<Installer[]>([])
+  const [selectedInstallerByTicket, setSelectedInstallerByTicket] = useState<Record<string, string>>({})
+  const [supportTab, setSupportTab] = useState<'triage' | 'tickets' | 'requests'>('tickets')
   const [search, setSearch] = useState('')
   const [ticketStatusFilter, setTicketStatusFilter] = useState('')
   const [requestStatusFilter, setRequestStatusFilter] = useState('')
@@ -46,11 +48,17 @@ export default function TicketsPage() {
   async function loadTickets() {
     try {
       setIsLoading(true)
-      const response = await adminAPI.getSupportQueue()
+      const [response, installersResponse] = await Promise.all([
+        adminAPI.getSupportQueue(),
+        adminAPI.getInstallers(1, 200),
+      ])
       if (response.success && response.data) {
         setTickets(response.data.tickets)
         setRequests(response.data.requests)
         setDiagnostics(Array.isArray(response.data.diagnostics) ? response.data.diagnostics : [])
+      }
+      if (installersResponse.success && installersResponse.data) {
+        setInstallers(installersResponse.data.items)
       }
     } catch (error) {
       console.error('[support-workbench] Failed to load tickets:', error)
@@ -96,6 +104,48 @@ export default function TicketsPage() {
     }
   }
 
+  function installersForTicket(ticket: Ticket) {
+    const zone = String(ticket.zoneCode || '').trim().toUpperCase()
+    return installers
+      .filter((installer) => installer.status === 'active' && installer.availabilityStatus !== 'on_leave')
+      .filter((installer) => {
+        if (!zone) return true
+        const zones = (installer.assignedZones || []).map((item) => String(item || '').trim().toUpperCase())
+        return !zones.length || zones.includes(zone)
+      })
+  }
+
+  async function assignTicketToInstaller(ticket: Ticket, mode: 'manual' | 'zone_pool') {
+    try {
+      setTicketBusyId(ticket.id)
+      const installerId = selectedInstallerByTicket[ticket.id]
+      if (mode === 'manual' && !installerId) {
+        window.alert('Select installer first')
+        return
+      }
+      const note =
+        window.prompt(
+          'Optional field assignment note',
+          mode === 'zone_pool' ? 'Opened to zone installer pool' : 'Assigned to selected installer'
+        ) || undefined
+      const response = await adminAPI.assignTicketInstaller(ticket.id, {
+        mode,
+        ...(mode === 'manual' ? { installerId } : {}),
+        note,
+      })
+      if (!response.success) {
+        window.alert(response.error || 'Assignment failed')
+        return
+      }
+      await loadTickets()
+    } catch (error) {
+      console.error('[support-workbench] Failed to assign ticket installer:', error)
+      window.alert('Assignment failed')
+    } finally {
+      setTicketBusyId(null)
+    }
+  }
+
   const filteredDiagnostics = useMemo(() => {
     const query = search.trim().toLowerCase()
     return diagnostics.filter((item) => {
@@ -119,7 +169,7 @@ export default function TicketsPage() {
     return tickets.filter((ticket) => {
       const matchesSearch =
         !query ||
-        [ticket.subject, ticket.customerId, ticket.description, ticket.assignedTo]
+        [ticket.subject, ticket.customerId, ticket.description, ticket.assignedTo, ticket.zoneCode, ticket.zoneName, ticket.ticketNumber]
           .some((value) => String(value || '').toLowerCase().includes(query))
       const matchesStatus = !ticketStatusFilter || ticket.status === ticketStatusFilter
       return matchesSearch && matchesStatus
@@ -405,6 +455,15 @@ export default function TicketsPage() {
                           {ticket.customerId ? (
                             <div className="mt-1 text-xs text-slate-400">Customer: {ticket.customerId}</div>
                           ) : null}
+                          <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-400">
+                            {ticket.ticketNumber ? <span>{ticket.ticketNumber}</span> : null}
+                            {ticket.zoneCode ? <span>Zone: {ticket.zoneName || ticket.zoneCode}</span> : null}
+                            {ticket.installerJobId ? (
+                              <span className="rounded-full bg-green-50 px-2 py-0.5 font-medium text-green-700">
+                                Field job linked
+                              </span>
+                            ) : null}
+                          </div>
                           {extractRecommendation(ticket.description) ? (
                             <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
                               {extractRecommendation(ticket.description)}
@@ -451,7 +510,7 @@ export default function TicketsPage() {
                         </td>
                         <td className="table-cell">{new Date(ticket.createdAt).toLocaleDateString()}</td>
                         <td className="table-cell">
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex max-w-[360px] flex-wrap gap-2">
                             {ticket.customerId ? (
                               <Link className="btn-secondary" href={`/customers/${encodeURIComponent(ticket.customerId)}?tab=billing`}>
                                 Customer
@@ -474,6 +533,42 @@ export default function TicketsPage() {
                               <option value="resolved">Resolved</option>
                               <option value="closed">Closed</option>
                             </select>
+                            {!['resolved', 'closed'].includes(ticket.status) ? (
+                              <>
+                                <select
+                                  className="min-w-[180px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
+                                  value={selectedInstallerByTicket[ticket.id] || ''}
+                                  disabled={ticketBusyId === ticket.id || Boolean(ticket.installerJobId)}
+                                  onChange={(event) =>
+                                    setSelectedInstallerByTicket((current) => ({
+                                      ...current,
+                                      [ticket.id]: event.target.value,
+                                    }))
+                                  }
+                                >
+                                  <option value="">Select installer</option>
+                                  {installersForTicket(ticket).map((installer) => (
+                                    <option key={installer.id} value={installer.id}>
+                                      {installer.name} ({installer.availabilityStatus || 'available'})
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  className="btn-secondary"
+                                  disabled={ticketBusyId === ticket.id || Boolean(ticket.installerJobId)}
+                                  onClick={() => void assignTicketToInstaller(ticket, 'manual')}
+                                >
+                                  Manual assign
+                                </button>
+                                <button
+                                  className="btn-secondary"
+                                  disabled={ticketBusyId === ticket.id || Boolean(ticket.installerJobId)}
+                                  onClick={() => void assignTicketToInstaller(ticket, 'zone_pool')}
+                                >
+                                  Auto to zone
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         </td>
                       </tr>

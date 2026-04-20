@@ -3834,10 +3834,24 @@ customerPortalRouter.post(
       customerUser: req.customerUser,
       requestedCustomerId: getRequestedCustomerId(req)
     }).then((item) => item.toObject ? item.toObject() : item);
+    const zoneCode =
+      customer?.billingZoneCode ||
+      customer?.billingSnapshot?.billingZoneCode ||
+      customer?.zoneCode ||
+      customer?.zoneContext?.zoneCode ||
+      "";
+    const zoneName =
+      customer?.billingZoneName ||
+      customer?.billingSnapshot?.billingZoneName ||
+      customer?.zoneName ||
+      customer?.zoneContext?.zoneName ||
+      "";
     const ticket = await SupportTicket.create({
-      ticketNumber: `TKT-${Date.now()}`,
+      ticketNumber: `TKT-${Date.now()}-${crypto.randomInt(1000, 9999)}`,
       customerId: customer?.customerId || "UNLINKED",
       serviceId: customer?.serviceId,
+      zoneCode,
+      zoneName,
       source: "customer_app",
       category: payload.category,
       priority: "medium",
@@ -3898,6 +3912,43 @@ customerPortalRouter.post(
       payload: { note: payload.note, ...(payload.payload || {}) },
       timeline: [{ event: "request.created", actorType: "customer", actorId: req.customerUser._id.toString(), at: new Date() }]
     });
+    if (payload.type === "complaint") {
+      const customerObject = customer.toObject ? customer.toObject() : customer;
+      const zoneCode =
+        customerObject?.billingZoneCode ||
+        customerObject?.billingSnapshot?.billingZoneCode ||
+        customerObject?.zoneCode ||
+        customerObject?.zoneContext?.zoneCode ||
+        "";
+      const zoneName =
+        customerObject?.billingZoneName ||
+        customerObject?.billingSnapshot?.billingZoneName ||
+        customerObject?.zoneName ||
+        customerObject?.zoneContext?.zoneName ||
+        "";
+      await SupportTicket.create({
+        ticketNumber: `TKT-${Date.now()}-${crypto.randomInt(1000, 9999)}`,
+        customerId: customer.customerId,
+        serviceId: customer.serviceId,
+        sourceRequestId: request._id,
+        zoneCode,
+        zoneName,
+        source: "customer_app",
+        category: "complaint",
+        priority: "medium",
+        status: "open",
+        subject: payload.payload?.subject || "Customer complaint",
+        description: payload.note || "Complaint raised from customer app",
+        timeline: [
+          {
+            type: "created",
+            actorType: "customer",
+            actorId: req.customerUser._id.toString(),
+            note: `Created from service request ${request.requestNumber}`
+          }
+        ]
+      });
+    }
     return ok(res, request, { created: true });
   })
 );
