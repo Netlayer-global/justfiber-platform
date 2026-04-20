@@ -943,6 +943,7 @@ function mapAdminUser(item: any): AdminUserSummary {
     zoneCode: item.zoneCode || '',
     zoneName: item.zoneName || '',
     canAccessAllZones: Boolean(item.canAccessAllZones),
+    permissionOverrides: item.permissionOverrides || { allow: [], deny: [] },
     mfaEnabled: Boolean(item.mfaEnabled),
     lastLoginAt: item.lastLoginAt || '',
     passwordChangedAt: item.passwordChangedAt || '',
@@ -1427,6 +1428,7 @@ export const adminAPI = {
     zoneCode?: string
     zoneName?: string
     canAccessAllZones?: boolean
+    permissionOverrides?: { allow?: string[]; deny?: string[] }
   }) => {
     const payload = {
       ...data,

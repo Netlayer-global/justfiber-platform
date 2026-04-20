@@ -41,6 +41,10 @@ export interface AdminUserSummary {
   zoneCode?: string
   zoneName?: string
   canAccessAllZones?: boolean
+  permissionOverrides?: {
+    allow?: string[]
+    deny?: string[]
+  }
   mfaEnabled?: boolean
   lastLoginAt?: string
   passwordChangedAt?: string

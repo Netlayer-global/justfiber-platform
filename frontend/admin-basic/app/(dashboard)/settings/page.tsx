@@ -98,6 +98,58 @@ type SubZoneDraft = {
   inheritRouterVisibility: boolean
   useParentRouters: boolean
   canCreateSubZone: boolean
+  allowCustomerManagement: boolean
+  allowBilling: boolean
+  allowTickets: boolean
+  allowJobs: boolean
+  allowNetwork: boolean
+  allowSettings: boolean
+}
+
+const SUB_ZONE_PERMISSION_GROUPS = [
+  {
+    key: 'allowCustomerManagement',
+    label: 'Customer management',
+    permissions: ['customer.read', 'customer.update', 'customer.suspend', 'customer.resume', 'customer.retry_provisioning'],
+  },
+  {
+    key: 'allowBilling',
+    label: 'Billing and invoices',
+    permissions: ['billing.read'],
+  },
+  {
+    key: 'allowTickets',
+    label: 'Tickets and complaints',
+    permissions: ['ticket.read', 'ticket.write', 'ticket.assign', 'ticket.resolve'],
+  },
+  {
+    key: 'allowJobs',
+    label: 'Installer jobs',
+    permissions: ['installer.read', 'installer.job.read', 'installer.job.manage'],
+  },
+  {
+    key: 'allowNetwork',
+    label: 'Network and devices',
+    permissions: ['device.read', 'device.apply_preset'],
+  },
+  {
+    key: 'allowSettings',
+    label: 'Settings access',
+    permissions: ['config.read', 'config.update', 'admin.user.manage'],
+  },
+] as const
+
+function buildSubZonePermissionOverrides(draft: SubZoneDraft) {
+  const deny = SUB_ZONE_PERMISSION_GROUPS
+    .filter((group) => !Boolean(draft[group.key as keyof SubZoneDraft]))
+    .flatMap((group) => [...group.permissions])
+  if (!draft.canCreateSubZone) {
+    deny.push('config.update', 'admin.user.manage')
+  }
+  return {
+    allow: [] as string[],
+    deny: Array.from(new Set(deny)),
+  }
 }
 
 const SECTION_META: Record<string, SectionMeta> = {
@@ -299,7 +351,7 @@ const initialSubZoneDraft: SubZoneDraft = {
   adminPhone: '',
   adminUsername: '',
   adminPassword: '',
-  adminRole: 'ops_admin',
+  adminRole: 'zone_admin',
   inheritBillingProfile: true,
   inheritInvoiceTemplate: true,
   inheritPlans: true,
@@ -307,6 +359,12 @@ const initialSubZoneDraft: SubZoneDraft = {
   inheritRouterVisibility: true,
   useParentRouters: false,
   canCreateSubZone: false,
+  allowCustomerManagement: true,
+  allowBilling: true,
+  allowTickets: true,
+  allowJobs: true,
+  allowNetwork: false,
+  allowSettings: false,
 }
 
 function titleCase(value: string) {
@@ -681,7 +739,7 @@ export default function SettingsPage() {
     email: '',
     phone: '',
     password: '',
-    role: 'ops_admin',
+    role: 'zone_admin',
   })
   const [passwordResetDraft, setPasswordResetDraft] = useState<Record<string, string>>({})
   const [invoiceEditorTemplateKey, setInvoiceEditorTemplateKey] = useState('')
@@ -795,7 +853,7 @@ export default function SettingsPage() {
     setSubZoneDraft((current) => ({
       ...current,
       adminFullName: current.adminFullName || (activeZoneLabel ? `${activeZoneLabel} Admin` : ''),
-      adminRole: current.adminRole || 'ops_admin',
+      adminRole: current.adminRole || 'zone_admin',
     }))
   }, [activeZoneCode, activeZoneLabel])
 
@@ -1084,6 +1142,9 @@ export default function SettingsPage() {
           canCreateSubZone: subZoneDraft.canCreateSubZone,
           useParentRouters: subZoneDraft.useParentRouters,
         },
+        permissionProfile: Object.fromEntries(
+          SUB_ZONE_PERMISSION_GROUPS.map((group) => [group.key, Boolean(subZoneDraft[group.key as keyof SubZoneDraft])])
+        ),
         adminAccounts: (subZoneDraft.adminEmail.trim() || subZoneDraft.adminUsername.trim())
           ? [{
               fullName: subZoneDraft.adminFullName.trim() || `${subZoneDraft.subZoneName.trim()} Admin`,
@@ -1141,10 +1202,11 @@ export default function SettingsPage() {
           email: subZoneDraft.adminEmail.trim(),
           phone: subZoneDraft.adminPhone.trim(),
           password: subZoneDraft.adminPassword.trim(),
-          roles: [subZoneDraft.adminRole || 'ops_admin'],
+          roles: [subZoneDraft.adminRole || 'zone_admin'],
           zoneCode: franchiseCode,
           zoneName: subZoneDraft.subZoneName.trim(),
           canAccessAllZones: false,
+          permissionOverrides: buildSubZonePermissionOverrides(subZoneDraft),
         })
         if (!adminRes.success) {
           toast.error(adminRes.error || 'Sub-zone created but login creation failed')
@@ -1191,7 +1253,7 @@ export default function SettingsPage() {
         email: zoneLoginDraft.email.trim(),
         phone: zoneLoginDraft.phone.trim(),
         password: zoneLoginDraft.password,
-        roles: [zoneLoginDraft.role || 'ops_admin'],
+        roles: [zoneLoginDraft.role || 'zone_admin'],
         zoneCode: activeZoneCode,
         zoneName: activeZoneLabel,
         canAccessAllZones: false,
@@ -1894,12 +1956,38 @@ export default function SettingsPage() {
                   value={subZoneDraft.adminRole}
                   onChange={(event) => setSubZoneDraft((current) => ({ ...current, adminRole: event.target.value }))}
                 >
-                  {(adminRoles.length ? adminRoles : [{ code: 'ops_admin', name: 'Operations Admin', id: 'ops_admin', permissions: [] }]).map((role) => (
+                  {(adminRoles.length ? adminRoles : [{ code: 'zone_admin', name: 'Zone Admin', id: 'zone_admin', permissions: [] }]).map((role) => (
                     <option key={role.code} value={role.code}>
                       {role.name}
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
+                <div className="text-sm font-semibold text-slate-900">Allowed work for this sub-zone</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  Disabled items are denied on the generated login even if the selected role contains those permissions.
+                </div>
+                <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm text-slate-600">
+                  {SUB_ZONE_PERMISSION_GROUPS.map((group) => (
+                    <label key={group.key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(subZoneDraft[group.key as keyof SubZoneDraft])}
+                        onChange={(event) => setSubZoneDraft((current) => ({ ...current, [group.key]: event.target.checked }))}
+                      />
+                      <span>{group.label}</span>
+                    </label>
+                  ))}
+                  <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(subZoneDraft.canCreateSubZone)}
+                      onChange={(event) => setSubZoneDraft((current) => ({ ...current, canCreateSubZone: event.target.checked }))}
+                    />
+                    <span>Create child sub-zones</span>
+                  </label>
+                </div>
               </div>
               <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm text-slate-600">
                 {[
@@ -1976,7 +2064,7 @@ export default function SettingsPage() {
                 value={zoneLoginDraft.role}
                 onChange={(event) => setZoneLoginDraft((current) => ({ ...current, role: event.target.value }))}
               >
-                {(adminRoles.length ? adminRoles : [{ code: 'ops_admin', name: 'Operations Admin', id: 'ops_admin', permissions: [] }]).map((role) => (
+                {(adminRoles.length ? adminRoles : [{ code: 'zone_admin', name: 'Zone Admin', id: 'zone_admin', permissions: [] }]).map((role) => (
                   <option key={role.code} value={role.code}>
                     {role.name}
                   </option>

@@ -29,7 +29,13 @@ const createUserSchema = z.object({
   phone: optionalTrimmedString,
   zoneCode: optionalTrimmedString,
   zoneName: optionalTrimmedString,
-  canAccessAllZones: z.boolean().optional()
+  canAccessAllZones: z.boolean().optional(),
+  permissionOverrides: z
+    .object({
+      allow: z.array(z.string()).optional(),
+      deny: z.array(z.string()).optional()
+    })
+    .optional()
 });
 
 const updateUserStatusSchema = z.object({
@@ -58,6 +64,7 @@ const adminUserSafeSelect = {
   zoneCode: 1,
   zoneName: 1,
   canAccessAllZones: 1,
+  permissionOverrides: 1,
   createdBy: 1,
   createdAt: 1,
   updatedAt: 1,
@@ -118,6 +125,7 @@ adminUsersRouter.post(
       phone: payload.phone,
       passwordHash,
       roles: payload.roles,
+      permissionOverrides: payload.permissionOverrides || { allow: [], deny: [] },
       zoneCode: userZoneCode,
       zoneName: userZoneName,
       canAccessAllZones: canManageAllZones ? Boolean(payload.canAccessAllZones) : false,
@@ -132,6 +140,7 @@ adminUsersRouter.post(
         username: user.username,
         email: user.email,
         roles: user.roles,
+        permissionOverrides: user.permissionOverrides,
         zoneCode: user.zoneCode,
         zoneName: user.zoneName,
         canAccessAllZones: user.canAccessAllZones

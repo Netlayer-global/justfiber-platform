@@ -121,6 +121,23 @@ export const systemRoles = [
     ]
   },
   {
+    code: "zone_admin",
+    name: "Zone Admin",
+    permissions: [
+      permissions.dashboardRead,
+      permissions.customerRead,
+      permissions.customerUpdate,
+      permissions.billingRead,
+      permissions.ticketRead,
+      permissions.ticketWrite,
+      permissions.ticketAssign,
+      permissions.ticketResolve,
+      permissions.installerRead,
+      permissions.installerJobRead,
+      permissions.installerJobManage
+    ]
+  },
+  {
     code: "installer",
     name: "Installer",
     permissions: [
