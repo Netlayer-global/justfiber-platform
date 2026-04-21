@@ -218,16 +218,25 @@ function buildInvoiceHtml(invoice) {
   const taxRows = summaryRows.taxRows
     .map((part) => `<tr><td style="padding:10px 0;color:#475569;">${part.label}</td><td style="padding:10px 0;text-align:right;color:#0f172a;">${formatMoney(part.amount)}</td></tr>`)
     .join("");
+  const customerBlock = [
+    `Customer ID: ${invoice.customerId}`,
+    `Bill cycle: ${invoice.billCycle || "-"}`,
+    `Place: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`
+  ].join("<br/>");
+  const companyBlock = [
+    "JustFiber",
+    "Customer Billing Desk",
+    "Website: justfiber.in"
+  ].join("<br/>");
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber || invoice.invoiceId}</title></head>
   <body style="font-family:Arial,sans-serif;background:#f3f0fb;margin:0;padding:24px;color:#23262d;">
     <div style="width:760px;margin:0 auto;background:#ffffff;box-shadow:0 24px 60px rgba(15,23,42,0.14);padding:32px 34px 24px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div style="display:flex;gap:12px;align-items:flex-start;">
-          <div>
-            <div style="font-size:28px;font-weight:800;">JustFiber</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:4px;">Customer tax invoice</div>
-          </div>
+        <div>
+          <div style="font-size:28px;font-weight:800;">JustFiber</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px;">Customer tax invoice</div>
+          <div style="margin-top:10px;width:72px;height:4px;background:#8224e3;border-radius:999px;"></div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:18px;margin-top:18px;">
@@ -237,9 +246,11 @@ function buildInvoiceHtml(invoice) {
       </div>
       <div style="display:flex;justify-content:space-between;gap:24px;margin-top:26px;">
         <div style="width:44%;">
-          <div style="font-size:24px;font-weight:700;">Invoice to:</div>
+          <div style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">Company Details</div>
+          <div style="margin-top:8px;font-size:13px;line-height:1.65;color:#4b5563;">${companyBlock}</div>
+          <div style="margin-top:18px;font-size:24px;font-weight:700;">Invoice to:</div>
           <div style="margin-top:12px;font-size:22px;font-weight:700;">${invoice.customerId}</div>
-          <div style="margin-top:8px;font-size:15px;line-height:1.7;color:#4b5563;">Customer billing account<br/>Customer ID: ${invoice.customerId}<br/>Bill cycle: ${invoice.billCycle || "-"}<br/>Place: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</div>
+          <div style="margin-top:8px;font-size:15px;line-height:1.7;color:#4b5563;">Customer billing account<br/>${customerBlock}</div>
         </div>
         <div style="width:40%;padding-top:8px;">
           <div style="display:grid;grid-template-columns:94px 1fr;gap:8px 10px;font-size:15px;line-height:1.55;align-items:start;">

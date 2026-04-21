@@ -610,19 +610,25 @@ function buildInvoiceHtml(invoice, customer, branding) {
     safe(customer?.fullName || invoice.customerId),
     `Customer ID: ${safe(invoice.customerId)}`,
     `Plan: ${safe(planSummary.planName)}`,
-    `Cycle: ${safe(planSummary.durationLabel)}`
+    `Cycle: ${safe(planSummary.durationLabel)}`,
+    `Place: ${safe(invoice.placeOfSupply || invoice.billingStateName || "-")}`
+  ].join("<br/>");
+  const companyBlock = [
+    safe(appliedBranding.companyName || "Brand Name"),
+    safe(appliedBranding.companyAddress || ""),
+    appliedBranding.gstNumber ? `GSTIN: ${safe(appliedBranding.gstNumber)}` : "",
+    appliedBranding.phoneNumber ? `Phone: ${safe(appliedBranding.phoneNumber)}` : "",
+    appliedBranding.supportEmail ? `Email: ${safe(appliedBranding.supportEmail)}` : ""
   ].join("<br/>");
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber}</title></head>
   <body style="font-family:Arial,sans-serif;background:#f3f0fb;margin:0;padding:24px;color:#23262d;">
     <div style="width:760px;margin:0 auto;background:#ffffff;box-shadow:0 24px 60px rgba(15,23,42,0.14);padding:32px 34px 24px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div style="display:flex;gap:12px;align-items:flex-start;">
-          ${appliedBranding.logoBuffer ? `<img src="data:image/png;base64,${appliedBranding.logoBuffer.toString("base64")}" style="width:42px;height:42px;object-fit:contain;" />` : ""}
-          <div>
-            <div style="font-size:28px;font-weight:800;">${safe(appliedBranding.companyName || "Brand Name")}</div>
-            <div style="font-size:11px;color:#6b7280;margin-top:4px;">${safe(appliedBranding.website || appliedBranding.supportEmail || "TAGLINE SPACE HERE")}</div>
-          </div>
+        <div>
+          <div style="font-size:28px;font-weight:800;">${safe(appliedBranding.companyName || "Brand Name")}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px;">${safe(appliedBranding.website || appliedBranding.supportEmail || "TAGLINE SPACE HERE")}</div>
+          <div style="margin-top:10px;width:72px;height:4px;background:#8224e3;border-radius:999px;"></div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:18px;margin-top:18px;">
@@ -632,7 +638,9 @@ function buildInvoiceHtml(invoice, customer, branding) {
       </div>
       <div style="display:flex;justify-content:space-between;gap:24px;margin-top:26px;">
         <div style="width:44%;">
-          <div style="font-size:24px;font-weight:700;">Invoice to:</div>
+          <div style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">Company Details</div>
+          <div style="margin-top:8px;font-size:13px;line-height:1.65;color:#4b5563;">${companyBlock}</div>
+          <div style="margin-top:18px;font-size:24px;font-weight:700;">Invoice to:</div>
           <div style="margin-top:12px;font-size:22px;font-weight:700;">${safe(customer?.fullName || invoice.customerId)}</div>
           <div style="margin-top:8px;font-size:15px;line-height:1.7;color:#4b5563;">${addressBlock}</div>
         </div>
