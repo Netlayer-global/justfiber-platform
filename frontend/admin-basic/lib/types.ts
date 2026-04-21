@@ -195,6 +195,13 @@ export interface Customer {
   billingNotes?: BillingNote[]
   serviceRequests?: CustomerServiceRequest[]
   bookings?: CustomerBooking[]
+  cafDocument?: {
+    cafNumber?: string
+    generatedAt?: string
+    templateKey?: string
+    templateName?: string
+    pdfUrl?: string
+  } | null
   rawAddress?: {
     line1?: string
     line2?: string

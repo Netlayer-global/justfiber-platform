@@ -1,4 +1,5 @@
 import { Router } from "express";
+import PDFDocument from "pdfkit";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
 import { assertAdminZoneAccess, requireAuth, requirePermission } from "../../common/auth.js";
@@ -38,6 +39,7 @@ import { buildPppoeCredentials } from "../../common/networkProvisioning.js";
 import { AccessProfile } from "../../models/AccessProfile.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
 import { BngNode } from "../../models/BngNode.js";
+import { SystemConfig } from "../../models/SystemConfig.js";
 import { DashboardSnapshot } from "../../models/DashboardSnapshot.js";
 import { AppBanner } from "../../models/AppBanner.js";
 import { AddonCatalog } from "../../models/AddonCatalog.js";
@@ -316,6 +318,180 @@ function toCustomerStatus(operationalStatus) {
   return "active";
 }
 
+async function getCustomerCafSettings() {
+  const [prefixConfig, templateConfig] = await Promise.all([
+    SystemConfig.findOne({ key: "settings.prefix_settings" }).lean(),
+    SystemConfig.findOne({ key: "settings.additional_fields" }).lean()
+  ]);
+
+  const prefixValue = prefixConfig?.value?.caf?.prefix || "CAF-";
+  const templates = Array.isArray(templateConfig?.value?.cafTemplates) ? templateConfig.value.cafTemplates : [];
+  const selectedTemplate = templates[0] || {};
+
+  return {
+    prefix: String(prefixValue || "CAF-").trim() || "CAF-",
+    template: {
+      key: selectedTemplate.key || "default_caf",
+      templateName: selectedTemplate.templateName || "Standard CAF",
+      brandName: selectedTemplate.brandName || selectedTemplate.companyName || "JustFiber",
+      cafTitle: selectedTemplate.cafTitle || "Customer Application Form",
+      accentColor: selectedTemplate.accentColor || "#1d4ed8",
+      companyAddress: selectedTemplate.companyAddress || selectedTemplate.registeredOffice || "",
+      website: selectedTemplate.website || "https://justfiber.in",
+      termsUrl: selectedTemplate.termsUrl || selectedTemplate.website || "https://justfiber.in/terms-and-conditions",
+      footerLeftLabel: selectedTemplate.footerLeftLabel || "ERP Name",
+      footerLeftValue: selectedTemplate.footerLeftValue || "JustFiber ERP",
+      footerRightLabel: selectedTemplate.footerRightLabel || "Sales Executive",
+      footerRightValue: selectedTemplate.footerRightValue || "Assigned Agent",
+      declarationText:
+        selectedTemplate.declarationText ||
+        "I confirm that I have read the general terms and conditions given in the link below and accept them."
+    }
+  };
+}
+
+function buildCustomerCafNumber(prefix, customerId) {
+  const cleanPrefix = String(prefix || "CAF-").trim() || "CAF-";
+  return `${cleanPrefix}${String(customerId || "").replace(/^CAF[-/]?/i, "")}`;
+}
+
+function buildCustomerCafDocument({ existingCustomer, customerId, template }) {
+  const existing = existingCustomer?.cafDocument || {};
+  return {
+    cafNumber: existing.cafNumber || buildCustomerCafNumber(template.prefix, customerId),
+    generatedAt: existing.generatedAt || new Date(),
+    templateKey: existing.templateKey || template.template.key || "default_caf",
+    templateName: existing.templateName || template.template.templateName || "Standard CAF"
+  };
+}
+
+function formatDisplayDate(value) {
+  if (!value) return "N/A";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "N/A";
+  return parsed.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function renderCustomerCafPdf({ customer, plan, template }) {
+  const pdf = new PDFDocument({ size: "A4", margin: 42 });
+  const accent = template?.accentColor || "#1d4ed8";
+  const rightX = 380;
+
+  const sectionHeader = (label) => {
+    pdf.moveDown(0.8);
+    const y = pdf.y;
+    pdf.roundedRect(42, y, 511, 22, 8).fill(accent);
+    pdf.fillColor("#ffffff").font("Helvetica-Bold").fontSize(10).text(label, 54, y + 7);
+    pdf.fillColor("#0f172a");
+    pdf.moveDown(1.2);
+  };
+
+  const tripleRow = (items) => {
+    const startY = pdf.y;
+    const widths = [160, 160, 160];
+    let x = 42;
+    items.forEach(([label, value], index) => {
+      pdf.font("Helvetica-Bold").fontSize(8).fillColor("#64748b").text(label.toUpperCase(), x, startY, { width: widths[index] });
+      pdf.font("Helvetica").fontSize(10).fillColor("#0f172a").text(value || "N/A", x, startY + 14, { width: widths[index] });
+      x += widths[index] + 15;
+    });
+    pdf.y = startY + 34;
+  };
+
+  const row = (label, value) => {
+    const y = pdf.y;
+    pdf.font("Helvetica-Bold").fontSize(9).fillColor("#64748b").text(label, 42, y, { width: 155 });
+    pdf.font("Helvetica").fontSize(10).fillColor("#0f172a").text(value || "N/A", 200, y, { width: 353 });
+    pdf.moveTo(42, y + 18).lineTo(553, y + 18).strokeColor("#e2e8f0").stroke();
+    pdf.y = y + 24;
+  };
+
+  const planName = customer.planName || plan?.name || customer.planCode || "Selected Plan";
+  const planPrice = Number(plan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0);
+  const planValidity = customer.invoiceSummary?.billCycle || "monthly";
+  const address = customer.address || {};
+  const billingAddress = [address.line1, address.line2, address.area, address.city, address.state, address.pinCode].filter(Boolean).join(", ");
+  const permanentAddress = customer.cafDocument?.permanentAddress || billingAddress || "N/A";
+
+  pdf.rect(0, 0, 595, 842).fill("#ffffff");
+  pdf.fillColor("#0f172a");
+
+  pdf.font("Helvetica-Bold").fontSize(18).fillColor("#0f172a").text(template.brandName || "JustFiber", 42, 42, { width: 300 });
+  pdf.font("Helvetica").fontSize(9).fillColor("#64748b").text(template.companyAddress || "", 42, 68, { width: 300 });
+  pdf.font("Helvetica").fontSize(9).fillColor("#64748b").text(template.website || "", 42, 92, { width: 300 });
+
+  pdf.roundedRect(rightX, 42, 173, 62, 12).fill("#f8fafc");
+  pdf.fillColor("#64748b").font("Helvetica-Bold").fontSize(8).text(template.cafTitle || "Customer Application Form", rightX + 14, 55, { width: 145, align: "right" });
+  pdf.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text(customer.cafDocument?.cafNumber || "CAF", rightX + 14, 70, { width: 145, align: "right" });
+  pdf.fillColor("#64748b").font("Helvetica").fontSize(8).text(`Date created: ${formatDisplayDate(customer.cafDocument?.generatedAt || customer.createdAt)}`, rightX + 14, 88, { width: 145, align: "right" });
+
+  pdf.y = 132;
+  pdf.fillColor("#0f172a").font("Helvetica-Bold").fontSize(16).text(customer.fullName || "Customer");
+  pdf.moveDown(0.5);
+  tripleRow([
+    ["Date of Birth", customer.cafDocument?.dateOfBirth || "N/A"],
+    ["Sex", customer.cafDocument?.gender || "N/A"],
+    ["Marital Status", customer.cafDocument?.maritalStatus || "N/A"]
+  ]);
+  tripleRow([
+    ["Mobile", customer.phone || customer.mobile || "N/A"],
+    ["Email", customer.email || "N/A"],
+    ["Customer ID", customer.customerId || "N/A"]
+  ]);
+
+  sectionHeader("Address for Billing and Installation");
+  row("Address", billingAddress || "N/A");
+  tripleRow([
+    ["City", address.city || "N/A"],
+    ["State", address.state || customer.zoneStateName || "N/A"],
+    ["Pin Code", address.pinCode || "N/A"]
+  ]);
+
+  sectionHeader("Permanent Address");
+  row("Address", permanentAddress);
+  tripleRow([
+    ["City", customer.cafDocument?.permanentCity || address.city || "N/A"],
+    ["State", customer.cafDocument?.permanentState || address.state || customer.zoneStateName || "N/A"],
+    ["Pin Code", customer.cafDocument?.permanentPinCode || address.pinCode || "N/A"]
+  ]);
+
+  sectionHeader("Plan Details");
+  row("Plan Offer", planName);
+  row("Plan Validity", String(planValidity).replace(/^\w/, (char) => char.toUpperCase()));
+  row("Plan Price", `Rs ${planPrice.toFixed(2)}`);
+
+  sectionHeader("Proof of Identity");
+  tripleRow([
+    ["Document Type", customer.cafDocument?.identityType || "N/A"],
+    ["Expiry Date", customer.cafDocument?.identityExpiry || "N/A"],
+    ["Identity Proof No", customer.cafDocument?.identityProofNo || "N/A"]
+  ]);
+
+  sectionHeader("Proof of Address");
+  tripleRow([
+    ["Document Type", customer.cafDocument?.addressProofType || "N/A"],
+    ["Expiry Date", customer.cafDocument?.addressProofExpiry || "N/A"],
+    ["Address Proof No", customer.cafDocument?.addressProofNo || "N/A"]
+  ]);
+
+  pdf.moveDown(0.8);
+  pdf.roundedRect(42, pdf.y, 511, 52, 12).fill("#f8fafc");
+  pdf.fillColor("#334155").font("Helvetica").fontSize(9).text(template.declarationText || "", 56, pdf.y - 42 + 14, { width: 480 });
+  pdf.fillColor(accent).font("Helvetica-Bold").fontSize(9).text(template.termsUrl || "", 56, pdf.y - 42 + 34, { width: 480 });
+  pdf.moveDown(3.2);
+
+  pdf.moveTo(42, pdf.y).lineTo(553, pdf.y).dash(3, { space: 3 }).strokeColor("#cbd5e1").stroke().undash();
+  pdf.moveDown(0.8);
+  pdf.font("Helvetica-Bold").fontSize(8).fillColor("#64748b").text((template.footerLeftLabel || "ERP Name").toUpperCase(), 42, pdf.y, { width: 200 });
+  pdf.font("Helvetica-Bold").fontSize(8).fillColor("#64748b").text((template.footerRightLabel || "Sales Executive").toUpperCase(), 353, pdf.y, { width: 200, align: "right" });
+  pdf.moveDown(0.3);
+  pdf.font("Helvetica-Bold").fontSize(10).fillColor("#0f172a").text(template.footerLeftValue || "JustFiber ERP", 42, pdf.y, { width: 200 });
+  pdf.font("Helvetica-Bold").fontSize(10).fillColor("#0f172a").text(template.footerRightValue || "Assigned Agent", 353, pdf.y - 10, { width: 200, align: "right" });
+
+  pdf.end();
+  return pdf;
+}
+
 async function buildCustomerResponse(customer) {
   const subscriberService = await SubscriberService.findOne({
     $or: [
@@ -354,6 +530,12 @@ async function buildCustomerResponse(customer) {
 
   return {
     ...customer,
+    cafDocument: customer.cafDocument
+      ? {
+          ...customer.cafDocument,
+          pdfUrl: `/api/v1/admin/customers/${encodeURIComponent(customer.customerId)}/caf/pdf`
+        }
+      : null,
     pppoeUsername: subscriberService?.radiusUsername || customer.pppoeUsername || null,
     radiusService: subscriberService
         ? {
@@ -487,6 +669,7 @@ customersRouter.post(
     const customerId = payload.customerId || buildManualIdentifier("CUS");
     const accountNumber = payload.accountNumber || buildManualIdentifier("ACC");
     const serviceId = payload.serviceId || buildManualIdentifier("SRV");
+    const existingCustomer = await Customer.findOne({ customerId }).lean();
     const generatedPppoe = buildPppoeCredentials(customerId, plan.provisioning || {});
     const radiusUsername = String(payload.radiusUsername || generatedPppoe.username).trim();
     const radiusPassword = String(payload.radiusPassword || generatedPppoe.password).trim();
@@ -538,6 +721,12 @@ customersRouter.post(
       ).trim() || undefined;
     const resolvedZoneStateCode = String(payload.zoneStateCode || "").trim() || undefined;
     const resolvedZoneStateName = String(payload.zoneStateName || payload.address.state || "").trim() || undefined;
+    const cafSettings = await getCustomerCafSettings();
+    const cafDocument = buildCustomerCafDocument({
+      existingCustomer,
+      customerId,
+      template: cafSettings
+    });
 
     const customer = await Customer.findOneAndUpdate(
       { customerId },
@@ -594,6 +783,7 @@ customersRouter.post(
             billCycle: billingProfile?.cycle || "monthly",
             billMode: billMode === "postpaid" ? "Postpaid" : "Prepaid"
           },
+          cafDocument,
           lastSyncedAt: new Date()
         }
       },
@@ -619,7 +809,17 @@ customersRouter.post(
           metadata: {
             source: "admin_manual_create",
             radiusPassword,
-            networkProfile
+            networkProfile,
+            planCode: plan?.planCode || "",
+            planName: plan?.name || "",
+            monthlyPrice: Number(plan?.monthlyPrice || 0),
+            quarterlyPrice: Number(plan?.quarterlyPrice || 0),
+            halfYearlyPrice: Number(plan?.halfYearlyPrice || 0),
+            yearlyPrice: Number(plan?.yearlyPrice || 0),
+            recurringAmount: Number(plan?.monthlyPrice || 0),
+            billingBreakup: plan?.billingBreakup || {},
+            routerModel: plan?.routerModel || "",
+            routerRental: Number(plan?.routerRental || 0) || 0
           }
         }
       },
@@ -646,15 +846,35 @@ customersRouter.post(
       action: "customer.created_manual",
       entityType: "customer",
       entityId: customer.customerId,
-      metadata: {
-        serviceId,
-        radiusUsername,
-        planCode: plan.planCode,
-        createRadius: payload.createRadius !== false
-      }
-    });
+        metadata: {
+          serviceId,
+          radiusUsername,
+          planCode: plan.planCode,
+          createRadius: payload.createRadius !== false,
+          cafNumber: cafDocument.cafNumber
+        }
+      });
 
     return ok(res, await buildCustomerResponse(customer), { created: true });
+  })
+);
+
+customersRouter.get(
+  "/:customerId/caf/pdf",
+  requirePermission(permissions.customerRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    assertCustomerZoneAccess(req, customer);
+    const [plan, cafSettings] = await Promise.all([
+      customer.planCode ? PlanCatalog.findOne({ planCode: customer.planCode, archivedAt: { $exists: false } }).lean() : null,
+      getCustomerCafSettings()
+    ]);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=\"${customer.cafDocument?.cafNumber || customer.customerId}.pdf\"`);
+    return renderCustomerCafPdf({ customer, plan, template: cafSettings.template }).pipe(res);
   })
 );
 

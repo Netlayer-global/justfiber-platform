@@ -642,7 +642,7 @@ export default function BillingPage() {
   }
 
   async function deleteInvoice(invoiceId: string) {
-    const confirmed = window.confirm('Delete this invoice? Paid invoices cannot be deleted. This action will remove invoice ledger entries.')
+    const confirmed = window.confirm('Delete this invoice? This will remove the invoice, unlink any attached payment allocation, and refresh the customer ledger.')
     if (!confirmed) return
     try {
       const res = await adminAPI.deleteInvoice(invoiceId)
@@ -655,6 +655,23 @@ export default function BillingPage() {
     } catch (error) {
       console.error('[v0] Failed to delete invoice:', error)
       toast.error('Failed to delete invoice')
+    }
+  }
+
+  async function regenerateInvoice(invoiceId: string) {
+    const confirmed = window.confirm('Regenerate this invoice breakdown? Invoice number and payment status will stay same, only charge split will be rebuilt.')
+    if (!confirmed) return
+    try {
+      const res = await adminAPI.regenerateInvoice(invoiceId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to regenerate invoice')
+        return
+      }
+      toast.success('Invoice regenerated')
+      await loadBilling()
+    } catch (error) {
+      console.error('[v0] Failed to regenerate invoice:', error)
+      toast.error('Failed to regenerate invoice')
     }
   }
 
@@ -1745,6 +1762,12 @@ export default function BillingPage() {
                         onClick={() => void dispatchInvoice(item.invoiceId)}
                       >
                         Dispatch
+                      </button>
+                      <button
+                        className="text-xs text-violet-600"
+                        onClick={() => void regenerateInvoice(item.invoiceId)}
+                      >
+                        Regenerate
                       </button>
                       {(item.paymentStatus || item.status) !== 'paid' ? (
                         <button

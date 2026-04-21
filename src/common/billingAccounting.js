@@ -81,6 +81,22 @@ export async function createLedgerEntry({
   });
 }
 
+export async function rebuildCustomerLedgerBalances(customerId) {
+  if (!customerId) return [];
+  const entries = await BillingLedgerEntry.find({ customerId }).sort({ postedAt: 1, createdAt: 1, _id: 1 });
+  let runningBalance = 0;
+  for (const entry of entries) {
+    runningBalance = computeBalanceAfter({
+      currentBalance: runningBalance,
+      direction: entry.direction,
+      amount: entry.amount
+    });
+    entry.balanceAfter = runningBalance;
+    await entry.save();
+  }
+  return entries;
+}
+
 export async function findBestInvoiceForPayment(payment, explicitInvoiceId = "") {
   if (explicitInvoiceId) {
     const invoice = await BillingInvoice.findOne({

@@ -141,6 +141,13 @@ function normalizeZoneCode(value) {
 
 function buildInvoiceSummaryRows(invoice = {}) {
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
+  const rawChargeRows = hasLineItems
+    ? (invoice.lineItems || []).map((part) => ({
+        label: part.description || part.code || "Charge",
+        amount: Number(part.amount || 0),
+        category: part.category || "other"
+      }))
+    : [];
   const taxableSubtotal = Number(
     (
       hasLineItems
@@ -153,13 +160,30 @@ function buildInvoiceSummaryRows(invoice = {}) {
     amount: Number(part.amount || 0)
   }));
   const taxTotal = Number(taxRows.reduce((sum, row) => sum + Number(row.amount || 0), 0).toFixed(2));
+  const categoryTotals = rawChargeRows.reduce((acc, row) => {
+    const key = row.category || "other";
+    acc[key] = Number(((acc[key] || 0) + Number(row.amount || 0)).toFixed(2));
+    return acc;
+  }, {});
   return {
-    chargeRows: hasLineItems
-      ? (invoice.lineItems || []).map((part) => ({
-          label: part.description || part.code || "Charge",
-          amount: Number(part.amount || 0)
-        }))
-      : [],
+    serviceSummaryRows: [
+      { label: "Connectivity Services", amount: Number(categoryTotals.connectivity || 0) },
+      { label: "Platform Services", amount: Number(categoryTotals.platform || 0) },
+      { label: "Router / Device Charges", amount: Number(categoryTotals.device || 0) }
+    ].filter((item) => item.amount > 0),
+    chargeRows: rawChargeRows.map((part) => ({
+      label: part.label,
+      amount: Number(part.amount || 0),
+      category: part.category,
+      categoryLabel:
+        part.category === "connectivity"
+          ? "Internet"
+          : part.category === "platform"
+            ? "Platform"
+            : part.category === "device"
+              ? "Router"
+              : "Charge"
+    })),
     taxableSubtotal,
     taxRows,
     taxTotal
@@ -184,8 +208,11 @@ async function resolvePaymentGatewayForCustomer(customer) {
 
 function buildInvoiceHtml(invoice) {
   const summaryRows = buildInvoiceSummaryRows(invoice);
-  const lineRows = summaryRows.chargeRows
+  const serviceRows = summaryRows.serviceSummaryRows
     .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.label}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
+    .join("");
+  const lineRows = summaryRows.chargeRows
+    .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.label}</td><td style="padding:8px;border:1px solid #ccc;">${part.categoryLabel}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
     .join("");
   const taxRows = summaryRows.taxRows
     .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.label}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
@@ -197,11 +224,16 @@ function buildInvoiceHtml(invoice) {
     <p>Customer: ${invoice.customerId}</p>
     <p>Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</p>
     <table style="border-collapse:collapse;width:420px;margin-top:16px">
+      ${serviceRows}
+      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">Current Charges</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${summaryRows.taxableSubtotal.toFixed(2)}</td></tr>
+    </table>
+    <table style="border-collapse:collapse;width:420px;margin-top:16px">
+      <tr><th style="padding:8px;border:1px solid #ccc;text-align:left;">Charge</th><th style="padding:8px;border:1px solid #ccc;text-align:left;">Type</th><th style="padding:8px;border:1px solid #ccc;text-align:right;">Amount</th></tr>
       ${lineRows}
-      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">Subtotal</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${summaryRows.taxableSubtotal.toFixed(2)}</td></tr>
+      <tr><td colspan="2" style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">Subtotal</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${summaryRows.taxableSubtotal.toFixed(2)}</td></tr>
       ${taxRows}
-      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">GST Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${summaryRows.taxTotal.toFixed(2)}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;">Amount Payable</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
+      <tr><td colspan="2" style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">GST Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${summaryRows.taxTotal.toFixed(2)}</td></tr>
+      <tr><td colspan="2" style="padding:8px;border:1px solid #ccc;font-weight:700;">Amount Payable</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
     </table>
   </body></html>`;
 }
@@ -325,13 +357,26 @@ function renderInvoicePdf(invoice, profile, customer) {
     ["Status", invoice.paymentStatus || "-"]
   ]);
   y += 18;
-  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Invoice Summary", 40, y);
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Bill Summary", 40, y);
+  y += 20;
+  y = drawBreakdownTable(
+    doc,
+    y,
+    summaryRows.serviceSummaryRows.length ? summaryRows.serviceSummaryRows : [{ label: "Current Charges", amount: summaryRows.taxableSubtotal }],
+    "Current Charges",
+    Number(summaryRows.taxableSubtotal || 0)
+  );
+  y += 18;
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Detailed Current Charges", 40, y);
   y += 20;
   drawBreakdownTable(
     doc,
     y,
     [
-      ...summaryRows.chargeRows,
+      ...summaryRows.chargeRows.map((part) => ({
+        label: `${part.categoryLabel}: ${part.label}`,
+        amount: Number(part.amount || 0)
+      })),
       { label: "Subtotal", amount: summaryRows.taxableSubtotal },
       ...summaryRows.taxRows,
       { label: "GST Total", amount: summaryRows.taxTotal }

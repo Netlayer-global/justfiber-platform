@@ -35,6 +35,7 @@ const billingInvoiceSchema = new mongoose.Schema(
         new mongoose.Schema(
           {
             code: String,
+            category: String,
             description: String,
             quantity: { type: Number, default: 1 },
             unitAmount: Number,

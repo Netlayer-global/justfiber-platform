@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { adminAPI } from '@/lib/api'
+import { adminAPI, openProtectedDocument } from '@/lib/api'
 import type { BngNode, Customer, Plan } from '@/lib/types'
 import { Eye, Loader, Plus, RefreshCw, Search } from 'lucide-react'
 import { toast } from 'sonner'
@@ -182,6 +182,11 @@ function CustomersContent() {
       }
 
       toast.success(`Created ${res.data.name}. Opening customer...`)
+      if (res.data.cafDocument?.pdfUrl) {
+        void openProtectedDocument(res.data.cafDocument.pdfUrl).catch((error) => {
+          console.error('[customers] Failed to open CAF document:', error)
+        })
+      }
       setIsCreateOpen(false)
       resetCreateForm()
       await loadWorkspace()

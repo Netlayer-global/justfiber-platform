@@ -496,6 +496,15 @@ function mapCustomer(customer: any): Customer {
     serviceRequests: Array.isArray(customer.serviceRequests)
       ? customer.serviceRequests.map(mapCustomerServiceRequest)
       : undefined,
+    cafDocument: customer.cafDocument
+      ? {
+          cafNumber: customer.cafDocument.cafNumber || '',
+          generatedAt: customer.cafDocument.generatedAt || customer.cafDocument.createdAt || undefined,
+          templateKey: customer.cafDocument.templateKey || '',
+          templateName: customer.cafDocument.templateName || '',
+          pdfUrl: customer.cafDocument.pdfUrl || '',
+        }
+      : null,
     radiusService: customer.radiusService
       ? {
           serviceId: customer.radiusService.serviceId || '',
@@ -2645,6 +2654,10 @@ export const adminAPI = {
     }),
   dispatchInvoice: async (invoiceId: string) =>
     request(`/api/v1/admin/billing/invoices/${invoiceId}/dispatch`, {
+      method: 'POST',
+    }),
+  regenerateInvoice: async (invoiceId: string) =>
+    request(`/api/v1/admin/billing/invoices/${invoiceId}/regenerate`, {
       method: 'POST',
     }),
   deleteInvoice: async (invoiceId: string) =>

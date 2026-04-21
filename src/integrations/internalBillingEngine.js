@@ -201,7 +201,8 @@ function deriveAmount(service, plan = null) {
     return explicitTotalAmount;
   }
   const platformFee = resolvePlatformFeeForDuration(service, durationMonths, plan);
-  const resolved = Number(planCharge || 0) + Number(platformFee || 0);
+  const routerFee = resolveRouterFeeForDuration(service, durationMonths, plan);
+  const resolved = Number(planCharge || 0) + Number(platformFee || 0) + Number(routerFee || 0);
   return Number.isFinite(resolved) && resolved > 0 ? Number(resolved.toFixed(2)) : 0;
 }
 
@@ -222,9 +223,29 @@ function resolvePlatformFeeForDuration(service = {}, durationMonths = 1, plan = 
   return Number.isFinite(resolved) && resolved > 0 ? resolved : 0;
 }
 
-function buildInvoiceLineItems(service, plan, totalAmount, durationMonths, billCycleLabel = "") {
+function resolveRouterFeeForDuration(service = {}, durationMonths = 1, plan = null) {
+  const monthly =
+    Number(
+      service?.metadata?.routerRental ??
+      service?.routerRental ??
+      plan?.routerRental ??
+      0
+    ) || 0;
+  const resolved =
+    durationMonths >= 12
+      ? monthly * 12
+      : durationMonths >= 6
+        ? monthly * 6
+        : durationMonths >= 3
+          ? monthly * 3
+          : monthly;
+  return Number.isFinite(resolved) && resolved > 0 ? Number(resolved.toFixed(2)) : 0;
+}
+
+function buildInvoiceLineItems(service, plan, taxableAmount, totalAmount, durationMonths, billCycleLabel = "") {
+  const safeTaxableAmount = Number(taxableAmount || 0);
   const safeTotal = Number(totalAmount || 0);
-  if (!Number.isFinite(safeTotal) || safeTotal <= 0) {
+  if (!Number.isFinite(safeTaxableAmount) || safeTaxableAmount <= 0) {
     return [];
   }
   const breakup = service?.billingBreakup || service?.metadata?.billingBreakup || plan?.billingBreakup || {};
@@ -233,34 +254,58 @@ function buildInvoiceLineItems(service, plan, totalAmount, durationMonths, billC
     "Broadband plan";
   const internetLabel = String(breakup?.internetLabel || planName).trim() || planName;
   const platformLabel = String(breakup?.platformLabel || "Platform fee").trim() || "Platform fee";
+  const routerLabel = String(service?.metadata?.routerModel || plan?.routerModel || "Router charge").trim() || "Router charge";
   const platformFee = Math.min(safeTotal, resolvePlatformFeeForDuration(service, durationMonths, plan));
-  const internetCharge = Number((safeTotal - platformFee).toFixed(2));
-  const items = [];
-  if (internetCharge > 0) {
-    items.push({
+  const routerFee = Math.min(Math.max(0, safeTotal - platformFee), resolveRouterFeeForDuration(service, durationMonths, plan));
+  const internetCharge = Number((safeTotal - platformFee - routerFee).toFixed(2));
+  const grossItems = [
+    {
       code: "internet_service",
+      category: "connectivity",
       description: `${internetLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
-      quantity: 1,
-      unitAmount: internetCharge,
-      amount: internetCharge
-    });
-  }
-  if (platformFee > 0) {
-    items.push({
+      grossAmount: internetCharge
+    },
+    {
       code: "platform_fee",
-      description: platformLabel,
+      category: "platform",
+      description: `${platformLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
+      grossAmount: platformFee
+    },
+    {
+      code: "router_charge",
+      category: "device",
+      description: `${routerLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
+      grossAmount: routerFee
+    }
+  ].filter((item) => Number(item.grossAmount || 0) > 0);
+  const items = [];
+  let allocatedAmount = 0;
+  grossItems.forEach((item, index) => {
+    const isLast = index === grossItems.length - 1;
+    const proportionalAmount =
+      safeTotal > 0
+        ? Number(((Number(item.grossAmount || 0) / safeTotal) * safeTaxableAmount).toFixed(2))
+        : 0;
+    const netAmount = isLast ? Number((safeTaxableAmount - allocatedAmount).toFixed(2)) : proportionalAmount;
+    allocatedAmount += isLast ? netAmount : proportionalAmount;
+    if (netAmount <= 0) return;
+    items.push({
+      code: item.code,
+      category: item.category,
+      description: item.description,
       quantity: 1,
-      unitAmount: Number(platformFee.toFixed(2)),
-      amount: Number(platformFee.toFixed(2))
+      unitAmount: Number(netAmount.toFixed(2)),
+      amount: Number(netAmount.toFixed(2))
     });
-  }
+  });
   if (!items.length) {
     items.push({
       code: "service_charge",
+      category: "connectivity",
       description: "Broadband service charge",
       quantity: 1,
-      unitAmount: safeTotal,
-      amount: safeTotal
+      unitAmount: safeTaxableAmount,
+      amount: safeTaxableAmount
     });
   }
   return items;
@@ -649,7 +694,14 @@ export class InternalBillingEngine {
       billingProfile?.taxMode === "india_gst"
         ? buildGstAmounts(totalAmount, billingProfile, customer)
         : buildInvoiceAmounts(totalAmount, billingProfile?.taxPercent ?? 18);
-    const lineItems = buildInvoiceLineItems(service, plan, totalAmount, durationMonths, options.billCycleLabel || resolveBillCycleLabel(durationMonths));
+    const lineItems = buildInvoiceLineItems(
+      service,
+      plan,
+      amounts.amount,
+      totalAmount,
+      durationMonths,
+      options.billCycleLabel || resolveBillCycleLabel(durationMonths)
+    );
     const numbering = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle });
     const zoneCode = customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || zoneMapping?.zoneCode || "";
     const zoneName = customer?.billingZoneName || customer?.billingSnapshot?.billingZoneName || zoneMapping?.zoneName || "";

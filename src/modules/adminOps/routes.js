@@ -45,6 +45,7 @@ import {
   findBestInvoiceForPayment,
   markInvoicePaid,
   reconcilePaymentToInvoice,
+  rebuildCustomerLedgerBalances,
   syncInvoiceLifecycle,
   syncCustomerBillingState
 } from "../../common/billingAccounting.js";
@@ -404,6 +405,13 @@ function resolveInvoicePlanSummary(invoice = {}) {
 
 function buildInvoiceSummaryRows(invoice = {}) {
   const hasLineItems = Array.isArray(invoice.lineItems) && invoice.lineItems.length > 0;
+  const rawChargeRows = hasLineItems
+    ? (invoice.lineItems || []).map((item) => ({
+        label: item.description || item.code || "Charge",
+        amount: Number(item.amount || 0),
+        category: item.category || "other"
+      }))
+    : [];
   const taxableSubtotal = Number(
     (
       hasLineItems
@@ -416,18 +424,149 @@ function buildInvoiceSummaryRows(invoice = {}) {
     amount: Number(part.amount || 0)
   }));
   const taxTotal = Number(taxRows.reduce((sum, row) => sum + Number(row.amount || 0), 0).toFixed(2));
+  const categoryTotals = rawChargeRows.reduce((acc, row) => {
+    const key = row.category || "other";
+    acc[key] = Number(((acc[key] || 0) + Number(row.amount || 0)).toFixed(2));
+    return acc;
+  }, {});
   return {
     hasLineItems,
     taxableSubtotal,
     taxTotal,
-    chargeRows: hasLineItems
-      ? (invoice.lineItems || []).map((item) => ({
-          label: item.description || item.code || "Charge",
-          amount: Number(item.amount || 0)
-        }))
-      : [],
+    serviceSummaryRows: [
+      { label: "Connectivity Services", amount: Number(categoryTotals.connectivity || 0) },
+      { label: "Platform Services", amount: Number(categoryTotals.platform || 0) },
+      { label: "Router / Device Charges", amount: Number(categoryTotals.device || 0) }
+    ].filter((item) => item.amount > 0),
+    chargeRows: rawChargeRows.map((item) => ({
+      label: item.label,
+      amount: Number(item.amount || 0),
+      category: item.category,
+      categoryLabel:
+        item.category === "connectivity"
+          ? "Internet"
+          : item.category === "platform"
+            ? "Platform"
+            : item.category === "device"
+              ? "Router"
+              : "Charge"
+    })),
     taxRows
   };
+}
+
+function resolveInvoiceDurationMonths(invoice = {}, subscriberService = null) {
+  const metadata = invoice?.metadata || {};
+  return Math.max(
+    1,
+    Number(
+      metadata.durationMonths ||
+      subscriberService?.billingPeriodMonths ||
+      subscriberService?.metadata?.durationMonths ||
+      1
+    )
+  );
+}
+
+function resolveInvoicePlatformFee(service = {}, durationMonths = 1, plan = null) {
+  const breakup = service?.billingBreakup || service?.metadata?.billingBreakup || plan?.billingBreakup || {};
+  const monthly = Number(breakup?.monthlyPlatformFee || 0);
+  const quarterly = Number(breakup?.quarterlyPlatformFee || 0);
+  const halfYearly = Number(breakup?.halfYearlyPlatformFee || 0);
+  const yearly = Number(breakup?.yearlyPlatformFee || 0);
+  const resolved =
+    durationMonths >= 12
+      ? yearly || monthly * 12
+      : durationMonths >= 6
+        ? halfYearly || monthly * 6
+        : durationMonths >= 3
+          ? quarterly || monthly * 3
+          : monthly;
+  return Number.isFinite(resolved) && resolved > 0 ? Number(resolved.toFixed(2)) : 0;
+}
+
+function resolveInvoiceRouterFee(service = {}, durationMonths = 1, plan = null) {
+  const monthly = Number(service?.metadata?.routerRental ?? service?.routerRental ?? plan?.routerRental ?? 0) || 0;
+  const resolved =
+    durationMonths >= 12
+      ? monthly * 12
+      : durationMonths >= 6
+        ? monthly * 6
+        : durationMonths >= 3
+          ? monthly * 3
+          : monthly;
+  return Number.isFinite(resolved) && resolved > 0 ? Number(resolved.toFixed(2)) : 0;
+}
+
+function rebuildInvoiceLineItems(invoice = {}, service = {}, plan = null) {
+  const taxableAmount = Number(invoice.amount || 0);
+  const totalAmount = Number(invoice.totalAmount || 0);
+  const durationMonths = resolveInvoiceDurationMonths(invoice, service);
+  if (!Number.isFinite(taxableAmount) || taxableAmount <= 0) return [];
+  const breakup = service?.billingBreakup || service?.metadata?.billingBreakup || plan?.billingBreakup || {};
+  const metadata = invoice?.metadata || {};
+  const planName = String(metadata.planName || metadata.planCode || plan?.name || plan?.planCode || "Broadband plan").trim() || "Broadband plan";
+  const billCycleLabel = String(metadata.billCycleLabel || "").trim();
+  const internetLabel = String(breakup?.internetLabel || planName).trim() || planName;
+  const platformLabel = String(breakup?.platformLabel || "Platform fee").trim() || "Platform fee";
+  const routerLabel = String(service?.metadata?.routerModel || plan?.routerModel || "Router charge").trim() || "Router charge";
+  const platformFee = Math.min(totalAmount, resolveInvoicePlatformFee(service, durationMonths, plan));
+  const routerFee = Math.min(Math.max(0, totalAmount - platformFee), resolveInvoiceRouterFee(service, durationMonths, plan));
+  const internetCharge = Number((totalAmount - platformFee - routerFee).toFixed(2));
+  const grossItems = [
+    {
+      code: "internet_service",
+      category: "connectivity",
+      description: `${internetLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
+      grossAmount: internetCharge
+    },
+    {
+      code: "platform_fee",
+      category: "platform",
+      description: `${platformLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
+      grossAmount: platformFee
+    },
+    {
+      code: "router_charge",
+      category: "device",
+      description: `${routerLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
+      grossAmount: routerFee
+    }
+  ].filter((item) => Number(item.grossAmount || 0) > 0);
+
+  if (!grossItems.length) {
+    return [
+      {
+        code: "service_charge",
+        category: "connectivity",
+        description: "Broadband service charge",
+        quantity: 1,
+        unitAmount: Number(taxableAmount.toFixed(2)),
+        amount: Number(taxableAmount.toFixed(2))
+      }
+    ];
+  }
+
+  let allocated = 0;
+  return grossItems.reduce((items, item, index) => {
+    const isLast = index === grossItems.length - 1;
+    const proportionalAmount =
+      totalAmount > 0
+        ? Number(((Number(item.grossAmount || 0) / totalAmount) * taxableAmount).toFixed(2))
+        : 0;
+    const amount = isLast ? Number((taxableAmount - allocated).toFixed(2)) : proportionalAmount;
+    allocated += isLast ? amount : proportionalAmount;
+    if (amount <= 0) return items;
+    items.push({
+      code: item.code,
+      category: item.category,
+      description: item.description,
+      quantity: 1,
+      unitAmount: Number(amount.toFixed(2)),
+      amount: Number(amount.toFixed(2))
+    });
+    return items;
+  }, []);
 }
 
 function buildInvoiceHtml(invoice, customer, branding) {
@@ -441,6 +580,12 @@ function buildInvoiceHtml(invoice, customer, branding) {
     appliedBranding.companyState ? `State: ${appliedBranding.companyState}` : ""
   ].filter(Boolean).join(" | ");
   const lineRows = summaryRows.chargeRows
+    .map(
+      (item) =>
+        `<tr><td style="padding:14px 18px;border-top:1px solid #e2e8f0;">${item.label}</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;">${item.categoryLabel}</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;">Rs ${Number(item.amount || 0).toFixed(2)}</td></tr>`
+    )
+    .join("");
+  const serviceSummaryRows = summaryRows.serviceSummaryRows
     .map(
       (item) =>
         `<tr><td style="padding:14px 18px;border-top:1px solid #e2e8f0;">${item.label}</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;">Rs ${Number(item.amount || 0).toFixed(2)}</td></tr>`
@@ -525,16 +670,29 @@ function buildInvoiceHtml(invoice, customer, branding) {
         <table style="border-collapse:separate;border-spacing:0;width:100%;margin-top:22px;overflow:hidden;border:1px solid #dbe4ee;border-radius:22px">
           <thead>
             <tr>
+              <th style="padding:16px 18px;background:#0f172a;color:#fff;text-align:left;font-size:13px">Bill Summary</th>
+              <th style="padding:16px 18px;background:#0f172a;color:#fff;text-align:right;font-size:13px">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${serviceSummaryRows}
+            <tr><td style="padding:16px 18px;border-top:1px solid #cbd5e1;font-weight:800;background:#eef4ff;">Current Charges</td><td style="padding:16px 18px;border-top:1px solid #cbd5e1;text-align:right;font-weight:800;background:#eef4ff;">Rs ${summaryRows.taxableSubtotal.toFixed(2)}</td></tr>
+          </tbody>
+        </table>
+        <table style="border-collapse:separate;border-spacing:0;width:100%;margin-top:22px;overflow:hidden;border:1px solid #dbe4ee;border-radius:22px">
+          <thead>
+            <tr>
               <th style="padding:16px 18px;background:#111c3d;color:#fff;text-align:left;font-size:13px">Charge</th>
+              <th style="padding:16px 18px;background:#111c3d;color:#fff;text-align:left;font-size:13px">Type</th>
               <th style="padding:16px 18px;background:#111c3d;color:#fff;text-align:right;font-size:13px">Amount</th>
             </tr>
           </thead>
           <tbody>
             ${lineRows}
-            <tr><td style="padding:14px 18px;border-top:1px solid #e2e8f0;font-weight:700;background:#fcfdff;">Subtotal</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;font-weight:700;background:#fcfdff;">Rs ${summaryRows.taxableSubtotal.toFixed(2)}</td></tr>
+            <tr><td colspan="2" style="padding:14px 18px;border-top:1px solid #e2e8f0;font-weight:700;background:#fcfdff;">Subtotal</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;font-weight:700;background:#fcfdff;">Rs ${summaryRows.taxableSubtotal.toFixed(2)}</td></tr>
             ${taxRows}
-            <tr><td style="padding:14px 18px;border-top:1px solid #e2e8f0;font-weight:700;background:#f8fbff;">GST Total</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;font-weight:700;background:#f8fbff;">Rs ${summaryRows.taxTotal.toFixed(2)}</td></tr>
-            <tr><td style="padding:16px 18px;border-top:1px solid #cbd5e1;font-weight:800;background:#eef4ff;">Amount Payable</td><td style="padding:16px 18px;border-top:1px solid #cbd5e1;text-align:right;font-weight:800;background:#eef4ff;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
+            <tr><td colspan="2" style="padding:14px 18px;border-top:1px solid #e2e8f0;font-weight:700;background:#f8fbff;">GST Total</td><td style="padding:14px 18px;border-top:1px solid #e2e8f0;text-align:right;font-weight:700;background:#f8fbff;">Rs ${summaryRows.taxTotal.toFixed(2)}</td></tr>
+            <tr><td colspan="2" style="padding:16px 18px;border-top:1px solid #cbd5e1;font-weight:800;background:#eef4ff;">Amount Payable</td><td style="padding:16px 18px;border-top:1px solid #cbd5e1;text-align:right;font-weight:800;background:#eef4ff;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
           </tbody>
         </table>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
@@ -666,6 +824,45 @@ function drawBreakdownTable(doc, startY, rows, totalLabel, totalAmount) {
   return y + 28;
 }
 
+function drawDetailedChargeTable(doc, startY, rows, summaryRows, taxRows, totalAmount) {
+  let y = startY;
+  doc.rect(40, y, 295, 26).fill("#0f172a");
+  doc.rect(335, y, 90, 26).fill("#0f172a");
+  doc.rect(425, y, 130, 26).fill("#0f172a");
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(10);
+  doc.text("Charge", 52, y + 8);
+  doc.text("Type", 347, y + 8);
+  doc.text("Amount", 437, y + 8, { width: 105, align: "right" });
+  y += 26;
+  rows.forEach((row, index) => {
+    const fill = index % 2 === 0 ? "#f8fafc" : "#ffffff";
+    doc.rect(40, y, 295, 24).fill(fill).stroke("#dbe4ee");
+    doc.rect(335, y, 90, 24).fill(fill).stroke("#dbe4ee");
+    doc.rect(425, y, 130, 24).fill(fill).stroke("#dbe4ee");
+    doc.fillColor("#0f172a").font("Helvetica").fontSize(10).text(row.label, 52, y + 7, { width: 270 });
+    doc.text(row.categoryLabel || "-", 347, y + 7, { width: 66 });
+    doc.text(`Rs ${Number(row.amount || 0).toFixed(2)}`, 437, y + 7, { width: 105, align: "right" });
+    y += 24;
+  });
+  const subtotal = Number(summaryRows.taxableSubtotal || 0);
+  const taxTotal = Number(summaryRows.taxTotal || 0);
+  const footerRows = [
+    { label: "Subtotal", amount: subtotal },
+    ...taxRows,
+    { label: "GST Total", amount: taxTotal },
+    { label: "Amount Payable", amount: Number(totalAmount || 0), emphasized: true }
+  ];
+  footerRows.forEach((row, index) => {
+    const fill = row.emphasized ? "#e0ecff" : index % 2 === 0 ? "#fcfdff" : "#f8fbff";
+    doc.rect(40, y, 385, 26).fill(fill).stroke("#dbe4ee");
+    doc.rect(425, y, 130, 26).fill(fill).stroke("#dbe4ee");
+    doc.fillColor("#0f172a").font(row.emphasized ? "Helvetica-Bold" : "Helvetica-Bold").fontSize(10.5).text(row.label, 52, y + 8);
+    doc.text(`Rs ${Number(row.amount || 0).toFixed(2)}`, 437, y + 8, { width: 105, align: "right" });
+    y += 26;
+  });
+  return y;
+}
+
 function drawPdfFooter(doc, branding, generatedText) {
   doc.moveTo(40, 760).lineTo(555, 760).stroke("#dbe4ee");
   doc.fillColor(branding.muted).font("Helvetica").fontSize(9);
@@ -721,20 +918,19 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     ["Status", invoice.paymentStatus || "-"]
   ]);
   y += 18;
-  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Invoice Summary", 40, y);
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Bill Summary", 40, y);
   y += 20;
-  drawBreakdownTable(
+  y = drawBreakdownTable(
     doc,
     y,
-    [
-      ...summaryRows.chargeRows,
-      { label: "Subtotal", amount: summaryRows.taxableSubtotal },
-      ...summaryRows.taxRows,
-      { label: "GST Total", amount: summaryRows.taxTotal }
-    ],
-    "Amount Payable",
-    Number(invoice.totalAmount || 0)
+    summaryRows.serviceSummaryRows.length ? summaryRows.serviceSummaryRows : [{ label: "Current Charges", amount: summaryRows.taxableSubtotal }],
+    "Current Charges",
+    Number(summaryRows.taxableSubtotal || 0)
   );
+  y += 18;
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Detailed Current Charges", 40, y);
+  y += 20;
+  drawDetailedChargeTable(doc, y, summaryRows.chargeRows, summaryRows, summaryRows.taxRows, Number(invoice.totalAmount || 0));
   drawPdfFooter(doc, branding, `Generated on ${new Date(invoice.generatedAt || Date.now()).toLocaleString("en-IN")}`);
   doc.end();
   return doc;
@@ -3845,6 +4041,71 @@ adminOpsRouter.post(
 );
 
 adminOpsRouter.post(
+  "/billing/invoices/:invoiceId/regenerate",
+  requirePermission(permissions.billingRead),
+  asyncHandler(async (req, res) => {
+    const invoice = await BillingInvoice.findOne({
+      $or: [{ invoiceId: req.params.invoiceId }, { invoiceNumber: req.params.invoiceId }]
+    });
+    if (!invoice) {
+      throw new ApiError(404, "Invoice not found");
+    }
+    const customer = await Customer.findOne({ customerId: invoice.customerId }).lean();
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    assertAdminZoneAccess(req.admin, customer.billingZoneCode || customer.billingSnapshot?.billingZoneCode || customer.zoneCode);
+    const subscriberService = invoice.serviceId
+      ? await SubscriberService.findOne({ serviceId: invoice.serviceId }).lean()
+      : await SubscriberService.findOne({ customerId: invoice.customerId }).lean();
+    const planCode = String(invoice.metadata?.planCode || subscriberService?.metadata?.planCode || customer.planCode || "").trim();
+    const planName = String(invoice.metadata?.planName || subscriberService?.metadata?.planName || customer.planName || "").trim();
+    const plan =
+      (planCode && await PlanCatalog.findOne({ planCode, archivedAt: { $exists: false } }).lean()) ||
+      (planName && await PlanCatalog.findOne({ name: planName, archivedAt: { $exists: false } }).lean()) ||
+      null;
+
+    const serviceContext = {
+      ...(subscriberService || {}),
+      metadata: {
+        ...(subscriberService?.metadata || {}),
+        ...(invoice.metadata || {}),
+      },
+      billingBreakup:
+        subscriberService?.billingBreakup ||
+        subscriberService?.metadata?.billingBreakup ||
+        invoice.metadata?.billingBreakup ||
+        plan?.billingBreakup ||
+        {}
+    };
+
+    invoice.lineItems = rebuildInvoiceLineItems(invoice.toObject ? invoice.toObject() : invoice, serviceContext, plan);
+    invoice.markModified("lineItems");
+    invoice.metadata = {
+      ...(invoice.metadata || {}),
+      regeneratedAt: new Date(),
+      regeneratedByAdminId: req.admin?._id || null,
+      planCode: plan?.planCode || invoice.metadata?.planCode || "",
+      planName: plan?.name || invoice.metadata?.planName || ""
+    };
+    invoice.markModified("metadata");
+    await invoice.save();
+
+    await auditFromRequest(req, {
+      action: "billing.invoice.regenerated",
+      entityType: "billing_invoice",
+      entityId: invoice.invoiceId,
+      metadata: {
+        invoiceNumber: invoice.invoiceNumber,
+        customerId: invoice.customerId
+      }
+    });
+
+    return ok(res, invoice.toObject());
+  })
+);
+
+adminOpsRouter.post(
   "/billing/invoices/:invoiceId/mark-paid",
   requirePermission(permissions.billingRead),
   asyncHandler(async (req, res) => {
@@ -3897,16 +4158,41 @@ adminOpsRouter.delete(
     if (!invoice) {
       throw new ApiError(404, "Invoice not found");
     }
-    if (String(invoice.paymentStatus || "").toLowerCase() === "paid" || String(invoice.status || "").toLowerCase() === "settled") {
-      throw new ApiError(400, "Paid invoices cannot be deleted");
-    }
 
     const deletedInvoiceId = invoice.invoiceId;
     const deletedInvoiceNumber = invoice.invoiceNumber;
     const customerId = invoice.customerId;
+    const wasPaid = String(invoice.paymentStatus || "").toLowerCase() === "paid" || String(invoice.status || "").toLowerCase() === "settled";
+
+    const linkedPayments = await PaymentTransaction.find({
+      $or: [
+        { invoiceId: invoice.invoiceId },
+        { reconciledInvoiceId: invoice.invoiceId },
+        { "allocations.invoiceId": invoice.invoiceId }
+      ]
+    });
+
+    for (const payment of linkedPayments) {
+      const nextAllocations = (Array.isArray(payment.allocations) ? payment.allocations : []).filter(
+        (allocation) => allocation?.invoiceId !== invoice.invoiceId
+      );
+      payment.allocations = nextAllocations;
+      payment.invoiceId = payment.invoiceId === invoice.invoiceId ? undefined : payment.invoiceId;
+      payment.reconciledInvoiceId = payment.reconciledInvoiceId === invoice.invoiceId ? undefined : payment.reconciledInvoiceId;
+      payment.reconciledAt = nextAllocations.length ? payment.reconciledAt : null;
+      payment.reconciliationStatus = nextAllocations.length ? "reconciled" : "manual_review";
+      payment.unallocatedAmount = Number(
+        Math.max(
+          0,
+          Number(payment.amount || 0) - nextAllocations.reduce((sum, allocation) => sum + Number(allocation?.amount || 0), 0)
+        ).toFixed(2)
+      );
+      await payment.save();
+    }
 
     await BillingLedgerEntry.deleteMany({ invoiceId: invoice.invoiceId, category: "invoice" });
     await invoice.deleteOne();
+    await rebuildCustomerLedgerBalances(customerId);
 
     const customer = await Customer.findOne({ customerId });
     if (customer) {
@@ -3919,14 +4205,17 @@ adminOpsRouter.delete(
       entityId: deletedInvoiceId,
       metadata: {
         invoiceNumber: deletedInvoiceNumber,
-        customerId
+        customerId,
+        wasPaid,
+        linkedPaymentsUpdated: linkedPayments.length
       }
     });
 
     return ok(res, {
       deleted: true,
       invoiceId: deletedInvoiceId,
-      invoiceNumber: deletedInvoiceNumber
+      invoiceNumber: deletedInvoiceNumber,
+      wasPaid
     });
   })
 );

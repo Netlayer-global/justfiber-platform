@@ -370,7 +370,9 @@ export class InternalSubscriberPlatform {
             halfYearlyPrice: Number(plan?.halfYearlyPrice || booking.selectedPlan?.halfYearlyPrice || 0),
             yearlyPrice: Number(plan?.yearlyPrice || booking.selectedPlan?.yearlyPrice || 0),
             recurringAmount: resolveRecurringAmount(plan || booking.selectedPlan || {}),
-            billingBreakup: normalizeBillingBreakup(plan || booking.selectedPlan || {})
+            billingBreakup: normalizeBillingBreakup(plan || booking.selectedPlan || {}),
+            routerModel: plan?.routerModel || booking.selectedPlan?.routerModel || "",
+            routerRental: Number(plan?.routerRental || booking.selectedPlan?.routerRental || 0) || 0
           }
         }
       },
@@ -518,7 +520,9 @@ export class InternalSubscriberPlatform {
             halfYearlyPrice: Number(booking?.selectedPlan?.halfYearlyPrice || installerJob.customerSnapshot?.halfYearlyPrice || 0),
             yearlyPrice: Number(booking?.selectedPlan?.yearlyPrice || installerJob.customerSnapshot?.yearlyPrice || 0),
             recurringAmount: resolveRecurringAmount(booking?.selectedPlan || installerJob.customerSnapshot || {}),
-            billingBreakup: normalizeBillingBreakup(booking?.selectedPlan || installerJob.customerSnapshot || {})
+            billingBreakup: normalizeBillingBreakup(booking?.selectedPlan || installerJob.customerSnapshot || {}),
+            routerModel: booking?.selectedPlan?.routerModel || installerJob.customerSnapshot?.routerModel || "",
+            routerRental: Number(booking?.selectedPlan?.routerRental || installerJob.customerSnapshot?.routerRental || 0) || 0
           }
         }
       }

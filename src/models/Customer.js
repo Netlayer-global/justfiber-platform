@@ -26,6 +26,7 @@ const customerSchema = new mongoose.Schema(
     billingSnapshot: mongoose.Schema.Types.Mixed,
     invoiceSummary: mongoose.Schema.Types.Mixed,
     address: mongoose.Schema.Types.Mixed,
+    cafDocument: mongoose.Schema.Types.Mixed,
     lastSyncedAt: Date
   },
   { timestamps: true }
