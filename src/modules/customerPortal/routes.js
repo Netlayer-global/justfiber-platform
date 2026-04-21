@@ -208,33 +208,66 @@ async function resolvePaymentGatewayForCustomer(customer) {
 
 function buildInvoiceHtml(invoice) {
   const summaryRows = buildInvoiceSummaryRows(invoice);
-  const serviceRows = summaryRows.serviceSummaryRows
-    .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.label}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
+  const formatMoney = (amount) => `Rs ${Number(amount || 0).toFixed(2)}`;
+  const serviceRows = (summaryRows.serviceSummaryRows.length ? summaryRows.serviceSummaryRows : [{ label: "Current Charges", amount: summaryRows.taxableSubtotal }])
+    .map((part) => `<tr><td style="padding:12px 0;color:#334155;">${part.label}</td><td style="padding:12px 0;text-align:right;font-weight:700;color:#0f172a;">${formatMoney(part.amount)}</td></tr>`)
     .join("");
   const lineRows = summaryRows.chargeRows
-    .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.label}</td><td style="padding:8px;border:1px solid #ccc;">${part.categoryLabel}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
+    .map((part) => `<tr><td style="padding:15px 18px;border-top:1px solid #e2e8f0;"><div style="font-weight:700;color:#0f172a;">${part.label}</div><div style="margin-top:4px;font-size:12px;color:#64748b">${part.categoryLabel} charge</div></td><td style="padding:15px 18px;border-top:1px solid #e2e8f0;color:#475569;">1</td><td style="padding:15px 18px;border-top:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f172a;">${formatMoney(part.amount)}</td></tr>`)
     .join("");
   const taxRows = summaryRows.taxRows
-    .map((part) => `<tr><td style="padding:8px;border:1px solid #ccc;">${part.label}</td><td style="padding:8px;border:1px solid #ccc;text-align:right;">Rs ${Number(part.amount || 0).toFixed(2)}</td></tr>`)
+    .map((part) => `<tr><td style="padding:10px 0;color:#475569;">${part.label}</td><td style="padding:10px 0;text-align:right;color:#0f172a;">${formatMoney(part.amount)}</td></tr>`)
     .join("");
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber || invoice.invoiceId}</title></head>
-  <body style="font-family:Arial,sans-serif;padding:24px;color:#111">
-    <h1>Invoice ${invoice.invoiceNumber || invoice.invoiceId}</h1>
-    <p>Customer: ${invoice.customerId}</p>
-    <p>Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</p>
-    <table style="border-collapse:collapse;width:420px;margin-top:16px">
-      ${serviceRows}
-      <tr><td style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">Current Charges</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${summaryRows.taxableSubtotal.toFixed(2)}</td></tr>
-    </table>
-    <table style="border-collapse:collapse;width:420px;margin-top:16px">
-      <tr><th style="padding:8px;border:1px solid #ccc;text-align:left;">Charge</th><th style="padding:8px;border:1px solid #ccc;text-align:left;">Type</th><th style="padding:8px;border:1px solid #ccc;text-align:right;">Amount</th></tr>
-      ${lineRows}
-      <tr><td colspan="2" style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">Subtotal</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${summaryRows.taxableSubtotal.toFixed(2)}</td></tr>
-      ${taxRows}
-      <tr><td colspan="2" style="padding:8px;border:1px solid #ccc;font-weight:700;background:#f8fafc;">GST Total</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;background:#f8fafc;">Rs ${summaryRows.taxTotal.toFixed(2)}</td></tr>
-      <tr><td colspan="2" style="padding:8px;border:1px solid #ccc;font-weight:700;">Amount Payable</td><td style="padding:8px;border:1px solid #ccc;text-align:right;font-weight:700;">Rs ${Number(invoice.totalAmount || 0).toFixed(2)}</td></tr>
-    </table>
+  <body style="font-family:Arial,sans-serif;padding:26px;color:#0f172a;background:#eef4fb">
+    <div style="max-width:960px;margin:0 auto;background:#ffffff;border:1px solid #dbe4ee;border-radius:28px;overflow:hidden;box-shadow:0 18px 42px rgba(15,23,42,0.08)">
+      <div style="padding:36px 38px 28px;border-bottom:1px solid #e2e8f0;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)">
+        <div style="display:flex;justify-content:space-between;gap:28px;align-items:flex-start">
+          <div>
+            <div style="font-size:30px;font-weight:800;line-height:1.05;color:#0f172a">JustFiber</div>
+            <div style="margin-top:10px;font-size:13px;line-height:1.7;color:#475569">Customer invoice copy with itemized broadband, platform, tax, and device charges.</div>
+          </div>
+          <div style="min-width:280px;text-align:right">
+            <div style="font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#64748b">Tax Invoice</div>
+            <div style="margin-top:10px;font-size:28px;font-weight:800;color:#0f172a">${invoice.invoiceNumber || invoice.invoiceId}</div>
+            <div style="margin-top:12px;font-size:13px;color:#475569">Due ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:28px 38px 38px">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:24px;align-items:start">
+          <table style="border-collapse:separate;border-spacing:0;width:100%;overflow:hidden;border:1px solid #dbe4ee;border-radius:20px">
+            <thead>
+              <tr>
+                <th style="padding:15px 18px;background:#0f172a;color:#fff;text-align:left;font-size:13px">Description</th>
+                <th style="padding:15px 18px;background:#0f172a;color:#fff;text-align:left;font-size:13px;width:82px">Qty</th>
+                <th style="padding:15px 18px;background:#0f172a;color:#fff;text-align:right;font-size:13px;width:150px">Amount</th>
+              </tr>
+            </thead>
+            <tbody>${lineRows}</tbody>
+          </table>
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="border:1px solid #dbe4ee;border-radius:20px;padding:20px;background:#ffffff">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Service Summary</div>
+              <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:14px">
+                ${serviceRows}
+                <tr><td style="padding:12px 0;border-top:1px solid #dbe4ee;font-weight:800;color:#0f172a;">Subtotal Before Tax</td><td style="padding:12px 0;border-top:1px solid #dbe4ee;text-align:right;font-weight:800;color:#0f172a;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
+              </table>
+            </div>
+            <div style="border:1px solid #dbe4ee;border-radius:20px;padding:20px;background:#f8fbff">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Total Summary</div>
+              <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:14px">
+                <tr><td style="padding:10px 0;color:#475569;">Subtotal</td><td style="padding:10px 0;text-align:right;color:#0f172a;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
+                ${taxRows}
+                <tr><td style="padding:10px 0;border-top:1px solid #dbe4ee;font-weight:700;color:#0f172a;">GST Total</td><td style="padding:10px 0;border-top:1px solid #dbe4ee;text-align:right;font-weight:700;color:#0f172a;">${formatMoney(summaryRows.taxTotal)}</td></tr>
+                <tr><td style="padding:14px 0 0;font-size:18px;font-weight:800;color:#0f172a;">Amount Payable</td><td style="padding:14px 0 0;text-align:right;font-size:22px;font-weight:800;color:#0f6cbd;">${formatMoney(invoice.totalAmount)}</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </body></html>`;
 }
 
@@ -329,16 +362,17 @@ function drawBreakdownTable(doc, startY, rows, totalLabel, totalAmount) {
   return y + 28;
 }
 
-function drawPdfFooter(doc, branding, generatedText) {
-  doc.moveTo(40, 760).lineTo(555, 760).stroke("#dbe4ee");
+function drawPdfFooter(doc, branding, generatedText, startY = 720) {
+  const safeStartY = Math.max(680, Math.min(startY, 748));
+  doc.moveTo(40, safeStartY).lineTo(555, safeStartY).stroke("#dbe4ee");
   doc.fillColor(branding.muted).font("Helvetica").fontSize(9);
-  doc.text(generatedText, 40, 772);
+  doc.text(generatedText, 40, safeStartY + 12);
   doc.text(
     [branding.gstNumber ? `GSTIN: ${branding.gstNumber}` : "", branding.companyState ? `State: ${branding.companyState}` : ""]
       .filter(Boolean)
       .join(" | "),
     40,
-    786,
+    safeStartY + 12,
     { width: 515, align: "right" }
   );
 }
@@ -347,8 +381,13 @@ function renderInvoicePdf(invoice, profile, customer) {
   const branding = pickBillingBranding(profile);
   const summaryRows = buildInvoiceSummaryRows(invoice);
   const doc = new PDFDocument({ margin: 40, size: "A4" });
-  drawPdfHeader(doc, branding, "Tax Invoice", invoice.invoiceNumber || invoice.invoiceId);
-  let y = drawKeyValueGrid(doc, 130, [
+  doc.roundedRect(40, 34, 515, 104, 16).fillAndStroke("#f8fbff", "#dbe4ee");
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(24).text(branding.companyName, 56, 54);
+  doc.fillColor("#475569").font("Helvetica").fontSize(10).text("Customer tax invoice", 56, 84);
+  doc.fillColor("#64748b").font("Helvetica-Bold").fontSize(9).text("TAX INVOICE", 370, 54, { width: 155, align: "right" });
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(18).text(invoice.invoiceNumber || invoice.invoiceId, 330, 70, { width: 195, align: "right" });
+  doc.fillColor("#475569").font("Helvetica").fontSize(9.5).text(`Due ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}`, 330, 96, { width: 195, align: "right" });
+  let y = drawKeyValueGrid(doc, 158, [
     ["Customer", customer?.fullName || invoice.customerId],
     ["Customer ID", invoice.customerId],
     ["Bill Cycle", invoice.billCycle || "-"],
@@ -357,24 +396,12 @@ function renderInvoicePdf(invoice, profile, customer) {
     ["Status", invoice.paymentStatus || "-"]
   ]);
   y += 18;
-  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Bill Summary", 40, y);
-  y += 20;
-  y = drawBreakdownTable(
-    doc,
-    y,
-    summaryRows.serviceSummaryRows.length ? summaryRows.serviceSummaryRows : [{ label: "Current Charges", amount: summaryRows.taxableSubtotal }],
-    "Current Charges",
-    Number(summaryRows.taxableSubtotal || 0)
-  );
-  y += 18;
-  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(13).text("Detailed Current Charges", 40, y);
-  y += 20;
-  drawBreakdownTable(
+  const bottomY = drawBreakdownTable(
     doc,
     y,
     [
       ...summaryRows.chargeRows.map((part) => ({
-        label: `${part.categoryLabel}: ${part.label}`,
+        label: `${part.label} (${part.categoryLabel})`,
         amount: Number(part.amount || 0)
       })),
       { label: "Subtotal", amount: summaryRows.taxableSubtotal },
@@ -384,7 +411,7 @@ function renderInvoicePdf(invoice, profile, customer) {
     "Amount Payable",
     Number(invoice.totalAmount || 0)
   );
-  drawPdfFooter(doc, branding, `Generated on ${new Date(invoice.generatedAt || Date.now()).toLocaleString("en-IN")}`);
+  drawPdfFooter(doc, branding, `Generated on ${new Date(invoice.generatedAt || Date.now()).toLocaleString("en-IN")}`, bottomY + 26);
   doc.end();
   return doc;
 }
