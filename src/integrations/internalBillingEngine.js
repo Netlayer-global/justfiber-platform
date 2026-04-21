@@ -455,9 +455,9 @@ function buildInvoiceAmounts(totalAmount, taxPercent) {
   if (!Number.isFinite(safeTotal) || safeTotal <= 0) {
     return { amount: 0, taxAmount: 0, totalAmount: 0, taxBreakdown: [] };
   }
-  const amount = Number((safeTotal / (1 + safeTaxPercent / 100)).toFixed(2));
-  const taxAmount = Number((safeTotal - amount).toFixed(2));
-  return { amount, taxAmount, totalAmount: safeTotal, taxBreakdown: [] };
+  const amount = Number(safeTotal.toFixed(2));
+  const taxAmount = Number((amount * safeTaxPercent / 100).toFixed(2));
+  return { amount, taxAmount, totalAmount: Number((amount + taxAmount).toFixed(2)), taxBreakdown: [] };
 }
 
 function buildGstAmounts(totalAmount, billingProfile, customer) {
@@ -496,8 +496,8 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
       : (override?.igstPercent ?? billingProfile?.interstateIgstPercent ?? billingProfile?.taxPercent ?? 18)
   );
 
-  const amount = Number((safeTotal / (1 + effectiveTaxPercent / 100)).toFixed(2));
-  const taxAmount = Number((safeTotal - amount).toFixed(2));
+  const amount = Number(safeTotal.toFixed(2));
+  const taxAmount = Number((amount * effectiveTaxPercent / 100).toFixed(2));
 
   let taxBreakdown;
   if (isIntrastate) {
@@ -517,7 +517,7 @@ function buildGstAmounts(totalAmount, billingProfile, customer) {
   return {
     amount,
     taxAmount,
-    totalAmount: safeTotal,
+    totalAmount: Number((amount + taxAmount).toFixed(2)),
     taxBreakdown,
     billingStateCode: customerStateCode,
     billingStateName: customerStateName,
