@@ -200,9 +200,8 @@ function deriveAmount(service, plan = null) {
   if (Number.isFinite(explicitTotalAmount) && explicitTotalAmount > 0) {
     return explicitTotalAmount;
   }
-  const platformFee = resolvePlatformFeeForDuration(service, durationMonths, plan);
   const routerFee = resolveRouterFeeForDuration(service, durationMonths, plan);
-  const resolved = Number(planCharge || 0) + Number(platformFee || 0) + Number(routerFee || 0);
+  const resolved = Number(planCharge || 0) + Number(routerFee || 0);
   return Number.isFinite(resolved) && resolved > 0 ? Number(resolved.toFixed(2)) : 0;
 }
 
@@ -255,49 +254,47 @@ function buildInvoiceLineItems(service, plan, taxableAmount, totalAmount, durati
   const internetLabel = String(breakup?.internetLabel || planName).trim() || planName;
   const platformLabel = String(breakup?.platformLabel || "Platform fee").trim() || "Platform fee";
   const routerLabel = String(service?.metadata?.routerModel || plan?.routerModel || "Router charge").trim() || "Router charge";
-  const platformFee = Math.min(safeTotal, resolvePlatformFeeForDuration(service, durationMonths, plan));
-  const routerFee = Math.min(Math.max(0, safeTotal - platformFee), resolveRouterFeeForDuration(service, durationMonths, plan));
-  const internetCharge = Number((safeTotal - platformFee - routerFee).toFixed(2));
-  const grossItems = [
-    {
+  const routerFee = Math.min(safeTotal, resolveRouterFeeForDuration(service, durationMonths, plan));
+  const planGrossAmount = Math.max(0, Number((safeTotal - routerFee).toFixed(2)));
+  const items = [];
+  const taxableRouterFee =
+    safeTotal > 0 && routerFee > 0
+      ? Number(((routerFee / safeTotal) * safeTaxableAmount).toFixed(2))
+      : 0;
+  const taxablePlanAmount = Math.max(0, Number((safeTaxableAmount - taxableRouterFee).toFixed(2)));
+  const internetAmount = Number((taxablePlanAmount * 0.25).toFixed(2));
+  const platformAmount = Number((taxablePlanAmount - internetAmount).toFixed(2));
+
+  if (internetAmount > 0) {
+    items.push({
       code: "internet_service",
       category: "connectivity",
       description: `${internetLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
-      grossAmount: internetCharge
-    },
-    {
+      quantity: 1,
+      unitAmount: internetAmount,
+      amount: internetAmount
+    });
+  }
+  if (platformAmount > 0) {
+    items.push({
       code: "platform_fee",
       category: "platform",
       description: `${platformLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
-      grossAmount: platformFee
-    },
-    {
+      quantity: 1,
+      unitAmount: platformAmount,
+      amount: platformAmount
+    });
+  }
+  if (taxableRouterFee > 0) {
+    items.push({
       code: "router_charge",
       category: "device",
       description: `${routerLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
-      grossAmount: routerFee
-    }
-  ].filter((item) => Number(item.grossAmount || 0) > 0);
-  const items = [];
-  let allocatedAmount = 0;
-  grossItems.forEach((item, index) => {
-    const isLast = index === grossItems.length - 1;
-    const proportionalAmount =
-      safeTotal > 0
-        ? Number(((Number(item.grossAmount || 0) / safeTotal) * safeTaxableAmount).toFixed(2))
-        : 0;
-    const netAmount = isLast ? Number((safeTaxableAmount - allocatedAmount).toFixed(2)) : proportionalAmount;
-    allocatedAmount += isLast ? netAmount : proportionalAmount;
-    if (netAmount <= 0) return;
-    items.push({
-      code: item.code,
-      category: item.category,
-      description: item.description,
       quantity: 1,
-      unitAmount: Number(netAmount.toFixed(2)),
-      amount: Number(netAmount.toFixed(2))
+      unitAmount: taxableRouterFee,
+      amount: taxableRouterFee
     });
-  });
+  }
   if (!items.length) {
     items.push({
       code: "service_charge",

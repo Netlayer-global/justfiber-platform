@@ -510,31 +510,16 @@ function rebuildInvoiceLineItems(invoice = {}, service = {}, plan = null) {
   const internetLabel = String(breakup?.internetLabel || planName).trim() || planName;
   const platformLabel = String(breakup?.platformLabel || "Platform fee").trim() || "Platform fee";
   const routerLabel = String(service?.metadata?.routerModel || plan?.routerModel || "Router charge").trim() || "Router charge";
-  const platformFee = Math.min(totalAmount, resolveInvoicePlatformFee(service, durationMonths, plan));
-  const routerFee = Math.min(Math.max(0, totalAmount - platformFee), resolveInvoiceRouterFee(service, durationMonths, plan));
-  const internetCharge = Number((totalAmount - platformFee - routerFee).toFixed(2));
-  const grossItems = [
-    {
-      code: "internet_service",
-      category: "connectivity",
-      description: `${internetLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
-      grossAmount: internetCharge
-    },
-    {
-      code: "platform_fee",
-      category: "platform",
-      description: `${platformLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
-      grossAmount: platformFee
-    },
-    {
-      code: "router_charge",
-      category: "device",
-      description: `${routerLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
-      grossAmount: routerFee
-    }
-  ].filter((item) => Number(item.grossAmount || 0) > 0);
+  const routerFee = Math.min(totalAmount, resolveInvoiceRouterFee(service, durationMonths, plan));
+  const taxableRouterFee =
+    totalAmount > 0 && routerFee > 0
+      ? Number(((routerFee / totalAmount) * taxableAmount).toFixed(2))
+      : 0;
+  const taxablePlanAmount = Math.max(0, Number((taxableAmount - taxableRouterFee).toFixed(2)));
+  const internetAmount = Number((taxablePlanAmount * 0.25).toFixed(2));
+  const platformAmount = Number((taxablePlanAmount - internetAmount).toFixed(2));
 
-  if (!grossItems.length) {
+  if (internetAmount <= 0 && platformAmount <= 0 && taxableRouterFee <= 0) {
     return [
       {
         code: "service_charge",
@@ -547,26 +532,38 @@ function rebuildInvoiceLineItems(invoice = {}, service = {}, plan = null) {
     ];
   }
 
-  let allocated = 0;
-  return grossItems.reduce((items, item, index) => {
-    const isLast = index === grossItems.length - 1;
-    const proportionalAmount =
-      totalAmount > 0
-        ? Number(((Number(item.grossAmount || 0) / totalAmount) * taxableAmount).toFixed(2))
-        : 0;
-    const amount = isLast ? Number((taxableAmount - allocated).toFixed(2)) : proportionalAmount;
-    allocated += isLast ? amount : proportionalAmount;
-    if (amount <= 0) return items;
+  const items = [];
+  if (internetAmount > 0) {
     items.push({
-      code: item.code,
-      category: item.category,
-      description: item.description,
+      code: "internet_service",
+      category: "connectivity",
+      description: `${internetLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
       quantity: 1,
-      unitAmount: Number(amount.toFixed(2)),
-      amount: Number(amount.toFixed(2))
+      unitAmount: internetAmount,
+      amount: internetAmount
     });
-    return items;
-  }, []);
+  }
+  if (platformAmount > 0) {
+    items.push({
+      code: "platform_fee",
+      category: "platform",
+      description: `${platformLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
+      quantity: 1,
+      unitAmount: platformAmount,
+      amount: platformAmount
+    });
+  }
+  if (taxableRouterFee > 0) {
+    items.push({
+      code: "router_charge",
+      category: "device",
+      description: `${routerLabel}${billCycleLabel ? ` - ${billCycleLabel}` : ""}`,
+      quantity: 1,
+      unitAmount: taxableRouterFee,
+      amount: taxableRouterFee
+    });
+  }
+  return items;
 }
 
 function buildInvoiceHtml(invoice, customer, branding) {
