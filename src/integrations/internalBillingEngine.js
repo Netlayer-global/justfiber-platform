@@ -6,6 +6,7 @@ import { PlanCatalog } from "../models/PlanCatalog.js";
 import { SubscriberService } from "../models/SubscriberService.js";
 import { SystemConfig } from "../models/SystemConfig.js";
 import { deriveInvoiceLifecycle, syncInvoiceLifecycle } from "../common/billingAccounting.js";
+import { splitPlanTaxableAmount } from "../common/invoicePolicy.js";
 
 const ADVANCE_INVOICE_LEAD_DAYS = 7;
 
@@ -255,15 +256,13 @@ function buildInvoiceLineItems(service, plan, taxableAmount, totalAmount, durati
   const platformLabel = String(breakup?.platformLabel || "Platform fee").trim() || "Platform fee";
   const routerLabel = String(service?.metadata?.routerModel || plan?.routerModel || "Router charge").trim() || "Router charge";
   const routerFee = Math.min(safeTotal, resolveRouterFeeForDuration(service, durationMonths, plan));
-  const planGrossAmount = Math.max(0, Number((safeTotal - routerFee).toFixed(2)));
   const items = [];
   const taxableRouterFee =
     safeTotal > 0 && routerFee > 0
       ? Number(((routerFee / safeTotal) * safeTaxableAmount).toFixed(2))
       : 0;
   const taxablePlanAmount = Math.max(0, Number((safeTaxableAmount - taxableRouterFee).toFixed(2)));
-  const internetAmount = Number((taxablePlanAmount * 0.25).toFixed(2));
-  const platformAmount = Number((taxablePlanAmount - internetAmount).toFixed(2));
+  const { internetAmount, platformAmount } = splitPlanTaxableAmount(taxablePlanAmount);
 
   if (internetAmount > 0) {
     items.push({

@@ -33,6 +33,7 @@ import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { CustomerUser } from "../../models/CustomerUser.js";
 import { AuditLog } from "../../models/AuditLog.js";
 import { getCustomerPortalDemoOtp, normalizeCustomerPortalOtpKey } from "../../common/customerPortalOtpStore.js";
+import { splitPlanTaxableAmount } from "../../common/invoicePolicy.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { SubscriberService } from "../../models/SubscriberService.js";
 import { BngNode } from "../../models/BngNode.js";
@@ -516,8 +517,7 @@ function rebuildInvoiceLineItems(invoice = {}, service = {}, plan = null) {
       ? Number(((routerFee / totalAmount) * taxableAmount).toFixed(2))
       : 0;
   const taxablePlanAmount = Math.max(0, Number((taxableAmount - taxableRouterFee).toFixed(2)));
-  const internetAmount = Number((taxablePlanAmount * 0.25).toFixed(2));
-  const platformAmount = Number((taxablePlanAmount - internetAmount).toFixed(2));
+  const { internetAmount, platformAmount } = splitPlanTaxableAmount(taxablePlanAmount);
 
   if (internetAmount <= 0 && platformAmount <= 0 && taxableRouterFee <= 0) {
     return [
