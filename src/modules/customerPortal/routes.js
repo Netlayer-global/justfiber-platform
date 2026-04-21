@@ -209,62 +209,81 @@ async function resolvePaymentGatewayForCustomer(customer) {
 function buildInvoiceHtml(invoice) {
   const summaryRows = buildInvoiceSummaryRows(invoice);
   const formatMoney = (amount) => `Rs ${Number(amount || 0).toFixed(2)}`;
-  const serviceRows = (summaryRows.serviceSummaryRows.length ? summaryRows.serviceSummaryRows : [{ label: "Current Charges", amount: summaryRows.taxableSubtotal }])
-    .map((part) => `<tr><td style="padding:12px 0;color:#334155;">${part.label}</td><td style="padding:12px 0;text-align:right;font-weight:700;color:#0f172a;">${formatMoney(part.amount)}</td></tr>`)
-    .join("");
-  const lineRows = summaryRows.chargeRows
-    .map((part) => `<tr><td style="padding:15px 18px;border-top:1px solid #e2e8f0;"><div style="font-weight:700;color:#0f172a;">${part.label}</div><div style="margin-top:4px;font-size:12px;color:#64748b">${part.categoryLabel} charge</div></td><td style="padding:15px 18px;border-top:1px solid #e2e8f0;color:#475569;">1</td><td style="padding:15px 18px;border-top:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f172a;">${formatMoney(part.amount)}</td></tr>`)
+  const rows = summaryRows.chargeRows.length
+    ? summaryRows.chargeRows
+    : [{ label: invoice.billCycle || "Broadband plan", categoryLabel: "Charge", amount: Number(summaryRows.taxableSubtotal || 0) }];
+  const lineRows = rows
+    .map((part, index) => `<tr><td style="padding:12px 10px;border-bottom:1px solid #eceef2;text-align:center;">${index + 1}</td><td style="padding:12px 10px;border-bottom:1px solid #eceef2;"><div style="font-weight:700;color:#23262d;">${part.label}</div><div style="margin-top:4px;font-size:11px;color:#6b7280">${part.categoryLabel} charge</div></td><td style="padding:12px 10px;border-bottom:1px solid #eceef2;text-align:right;">${formatMoney(part.amount)}</td><td style="padding:12px 10px;border-bottom:1px solid #eceef2;text-align:center;">1</td><td style="padding:12px 10px;border-bottom:1px solid #eceef2;text-align:right;font-weight:700;">${formatMoney(part.amount)}</td></tr>`)
     .join("");
   const taxRows = summaryRows.taxRows
     .map((part) => `<tr><td style="padding:10px 0;color:#475569;">${part.label}</td><td style="padding:10px 0;text-align:right;color:#0f172a;">${formatMoney(part.amount)}</td></tr>`)
     .join("");
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber || invoice.invoiceId}</title></head>
-  <body style="font-family:Arial,sans-serif;padding:26px;color:#0f172a;background:#eef4fb">
-    <div style="max-width:960px;margin:0 auto;background:#ffffff;border:1px solid #dbe4ee;border-radius:28px;overflow:hidden;box-shadow:0 18px 42px rgba(15,23,42,0.08)">
-      <div style="padding:36px 38px 28px;border-bottom:1px solid #e2e8f0;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)">
-        <div style="display:flex;justify-content:space-between;gap:28px;align-items:flex-start">
+  <body style="font-family:Arial,sans-serif;background:#f3f0fb;margin:0;padding:24px;color:#23262d;">
+    <div style="width:760px;margin:0 auto;background:#ffffff;box-shadow:0 24px 60px rgba(15,23,42,0.14);padding:32px 34px 24px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
           <div>
-            <div style="font-size:30px;font-weight:800;line-height:1.05;color:#0f172a">JustFiber</div>
-            <div style="margin-top:10px;font-size:13px;line-height:1.7;color:#475569">Customer invoice copy with itemized broadband, platform, tax, and device charges.</div>
-          </div>
-          <div style="min-width:280px;text-align:right">
-            <div style="font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#64748b">Tax Invoice</div>
-            <div style="margin-top:10px;font-size:28px;font-weight:800;color:#0f172a">${invoice.invoiceNumber || invoice.invoiceId}</div>
-            <div style="margin-top:12px;font-size:13px;color:#475569">Due ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</div>
+            <div style="font-size:28px;font-weight:800;">JustFiber</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:4px;">Customer tax invoice</div>
           </div>
         </div>
       </div>
-      <div style="padding:28px 38px 38px">
-        <div style="display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:24px;align-items:start">
-          <table style="border-collapse:separate;border-spacing:0;width:100%;overflow:hidden;border:1px solid #dbe4ee;border-radius:20px">
-            <thead>
-              <tr>
-                <th style="padding:15px 18px;background:#0f172a;color:#fff;text-align:left;font-size:13px">Description</th>
-                <th style="padding:15px 18px;background:#0f172a;color:#fff;text-align:left;font-size:13px;width:82px">Qty</th>
-                <th style="padding:15px 18px;background:#0f172a;color:#fff;text-align:right;font-size:13px;width:150px">Amount</th>
-              </tr>
-            </thead>
-            <tbody>${lineRows}</tbody>
-          </table>
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <div style="border:1px solid #dbe4ee;border-radius:20px;padding:20px;background:#ffffff">
-              <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Service Summary</div>
-              <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:14px">
-                ${serviceRows}
-                <tr><td style="padding:12px 0;border-top:1px solid #dbe4ee;font-weight:800;color:#0f172a;">Subtotal Before Tax</td><td style="padding:12px 0;border-top:1px solid #dbe4ee;text-align:right;font-weight:800;color:#0f172a;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
-              </table>
-            </div>
-            <div style="border:1px solid #dbe4ee;border-radius:20px;padding:20px;background:#f8fbff">
-              <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#64748b">Total Summary</div>
-              <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:14px">
-                <tr><td style="padding:10px 0;color:#475569;">Subtotal</td><td style="padding:10px 0;text-align:right;color:#0f172a;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
-                ${taxRows}
-                <tr><td style="padding:10px 0;border-top:1px solid #dbe4ee;font-weight:700;color:#0f172a;">GST Total</td><td style="padding:10px 0;border-top:1px solid #dbe4ee;text-align:right;font-weight:700;color:#0f172a;">${formatMoney(summaryRows.taxTotal)}</td></tr>
-                <tr><td style="padding:14px 0 0;font-size:18px;font-weight:800;color:#0f172a;">Amount Payable</td><td style="padding:14px 0 0;text-align:right;font-size:22px;font-weight:800;color:#0f6cbd;">${formatMoney(invoice.totalAmount)}</td></tr>
-              </table>
-            </div>
+      <div style="display:flex;align-items:center;gap:18px;margin-top:18px;">
+        <div style="height:18px;background:#8224e3;flex:1;border-radius:999px;"></div>
+        <div style="font-size:50px;line-height:1;font-weight:300;color:#30343b;letter-spacing:.02em;">INVOICE</div>
+        <div style="height:18px;background:#8224e3;width:74px;border-radius:999px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:24px;margin-top:26px;">
+        <div style="width:44%;">
+          <div style="font-size:24px;font-weight:700;">Invoice to:</div>
+          <div style="margin-top:12px;font-size:22px;font-weight:700;">${invoice.customerId}</div>
+          <div style="margin-top:8px;font-size:15px;line-height:1.7;color:#4b5563;">Customer billing account<br/>Customer ID: ${invoice.customerId}<br/>Bill cycle: ${invoice.billCycle || "-"}<br/>Place: ${invoice.placeOfSupply || invoice.billingStateName || "-"}</div>
+        </div>
+        <div style="width:40%;padding-top:8px;">
+          <div style="display:grid;grid-template-columns:94px 1fr;gap:8px 10px;font-size:15px;line-height:1.55;align-items:start;">
+            <div style="font-weight:700;">Invoice#</div><div style="text-align:right;word-break:break-word;font-weight:700;color:#8224e3;">${invoice.invoiceNumber || invoice.invoiceId}</div>
+            <div style="font-weight:700;">Date</div><div style="text-align:right;">${invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-"}</div>
+            <div style="font-weight:700;">Due Date</div><div style="text-align:right;">${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}</div>
+            <div style="font-weight:700;">Status</div><div style="text-align:right;text-transform:capitalize;">${invoice.paymentStatus || "-"}</div>
           </div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-top:26px;font-size:15px;">
+        <thead>
+          <tr style="background:#2d3138;color:#ffffff;">
+            <th style="padding:12px 10px;text-align:center;width:58px;">SL.</th>
+            <th style="padding:12px 10px;text-align:left;">Item Description</th>
+            <th style="padding:12px 10px;text-align:right;width:120px;">Price</th>
+            <th style="padding:12px 10px;text-align:center;width:70px;">Qty.</th>
+            <th style="padding:12px 10px;text-align:right;width:130px;">Total</th>
+          </tr>
+        </thead>
+        <tbody>${lineRows}</tbody>
+      </table>
+      <div style="border-top:1px solid #d1d5db;margin-top:22px;padding-top:18px;display:flex;justify-content:space-between;gap:28px;">
+        <div style="width:48%;">
+          <div style="font-size:20px;font-weight:700;">Thank you for your business</div>
+          <div style="margin-top:18px;font-size:17px;font-weight:700;">Terms & Conditions</div>
+          <div style="margin-top:8px;font-size:13px;line-height:1.7;color:#4b5563;">Please pay before the due date to avoid service interruption.</div>
+        </div>
+        <div style="width:34%;margin-left:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:16px;">
+            <tr><td style="padding:7px 0;font-weight:700;">Sub Total:</td><td style="padding:7px 0;text-align:right;font-weight:700;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
+            ${taxRows}
+          </table>
+          <div style="margin-top:14px;background:#8224e3;color:#ffffff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-size:24px;font-weight:800;border-radius:8px;">
+            <span>Total:</span>
+            <span>${formatMoney(invoice.totalAmount)}</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;">
+        <div style="font-size:13px;color:#374151;">JustFiber &nbsp; | &nbsp; Customer Billing Desk &nbsp; | &nbsp; justfiber.in</div>
+        <div style="min-width:180px;text-align:center;">
+          <div style="height:2px;background:#8224e3;width:100%;margin-bottom:8px;"></div>
+          <div style="font-size:15px;font-weight:700;">Authorised Sign</div>
         </div>
       </div>
     </div>
@@ -381,37 +400,87 @@ function renderInvoicePdf(invoice, profile, customer) {
   const branding = pickBillingBranding(profile);
   const summaryRows = buildInvoiceSummaryRows(invoice);
   const doc = new PDFDocument({ margin: 40, size: "A4" });
-  doc.roundedRect(40, 34, 515, 104, 16).fillAndStroke("#f8fbff", "#dbe4ee");
-  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(24).text(branding.companyName, 56, 54);
-  doc.fillColor("#475569").font("Helvetica").fontSize(10).text("Customer tax invoice", 56, 84);
-  doc.fillColor("#64748b").font("Helvetica-Bold").fontSize(9).text("TAX INVOICE", 370, 54, { width: 155, align: "right" });
-  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(18).text(invoice.invoiceNumber || invoice.invoiceId, 330, 70, { width: 195, align: "right" });
-  doc.fillColor("#475569").font("Helvetica").fontSize(9.5).text(`Due ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"}`, 330, 96, { width: 195, align: "right" });
-  let y = drawKeyValueGrid(doc, 158, [
-    ["Customer", customer?.fullName || invoice.customerId],
-    ["Customer ID", invoice.customerId],
-    ["Bill Cycle", invoice.billCycle || "-"],
-    ["Due Date", invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-"],
-    ["Place of Supply", invoice.placeOfSupply || invoice.billingStateName || "-"],
-    ["Status", invoice.paymentStatus || "-"]
-  ]);
-  y += 18;
-  const bottomY = drawBreakdownTable(
-    doc,
-    y,
-    [
-      ...summaryRows.chargeRows.map((part) => ({
-        label: `${part.label} (${part.categoryLabel})`,
-        amount: Number(part.amount || 0)
-      })),
-      { label: "Subtotal", amount: summaryRows.taxableSubtotal },
-      ...summaryRows.taxRows,
-      { label: "GST Total", amount: summaryRows.taxTotal }
-    ],
-    "Amount Payable",
-    Number(invoice.totalAmount || 0)
+  const accent = "#8224e3";
+  const dark = "#2d3138";
+  const formatMoney = (amount) => `Rs ${Number(amount || 0).toFixed(2)}`;
+  const rows = summaryRows.chargeRows.length
+    ? summaryRows.chargeRows
+    : [{ label: invoice.billCycle || "Broadband plan", categoryLabel: "Charge", amount: Number(summaryRows.taxableSubtotal || 0) }];
+
+  doc.rect(0, 0, 595, 842).fill("#f3f0fb");
+  doc.rect(90, 34, 420, 760).fill("#ffffff");
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(18).text(branding.companyName, 110, 58);
+  doc.fillColor("#7b8088").font("Helvetica").fontSize(7).text("Customer tax invoice", 110, 78);
+  doc.roundedRect(110, 104, 182, 14, 7).fill(accent);
+  doc.fillColor(dark).font("Helvetica").fontSize(30).text("INVOICE", 332, 96);
+  doc.roundedRect(462, 104, 40, 14, 7).fill(accent);
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(14).text("Invoice to:", 112, 146);
+  doc.font("Helvetica-Bold").fontSize(13).text(customer?.fullName || invoice.customerId, 112, 168, { width: 170 });
+  doc.font("Helvetica").fontSize(9.5).fillColor("#5b6068").text(
+    [`Customer ID: ${invoice.customerId}`, `Bill cycle: ${invoice.billCycle || "-"}`, `Place: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`].join("\n"),
+    112,
+    186,
+    { width: 170, lineGap: 2 }
   );
-  drawPdfFooter(doc, branding, `Generated on ${new Date(invoice.generatedAt || Date.now()).toLocaleString("en-IN")}`, bottomY + 26);
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(10.5).text("Invoice#", 332, 150);
+  doc.fillColor(accent).font("Helvetica-Bold").fontSize(9.5).text(invoice.invoiceNumber || invoice.invoiceId, 392, 150, { width: 98, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(10.5).text("Date", 332, 170);
+  doc.font("Helvetica").fontSize(10.5).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", 392, 170, { width: 98, align: "right" });
+  doc.font("Helvetica-Bold").fontSize(10.5).text("Due", 332, 190);
+  doc.font("Helvetica").fontSize(10.5).text(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-", 392, 190, { width: 98, align: "right" });
+
+  const tableX = 110;
+  const tableY = 238;
+  const widths = [34, 196, 78, 44, 90];
+  const headers = ["SL.", "Item Description", "Price", "Qty.", "Total"];
+  let x = tableX;
+  widths.forEach((width, index) => {
+    doc.rect(x, tableY, width, 24).fill(dark);
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(9).text(headers[index], x + 6, tableY + 8, {
+      width: width - 12,
+      align: index === 1 ? "left" : index === 3 ? "center" : "right"
+    });
+    x += width;
+    doc.fillColor(dark);
+  });
+  let rowY = tableY + 24;
+  rows.slice(0, 8).forEach((row, index) => {
+    const rowHeight = 36;
+    x = tableX;
+    widths.forEach((width) => {
+      doc.rect(x, rowY, width, rowHeight).fillAndStroke("#ffffff", "#eceef2");
+      x += width;
+    });
+    doc.fillColor(dark).font("Helvetica-Bold").fontSize(9).text(String(index + 1), tableX + 6, rowY + 13, { width: widths[0] - 12, align: "center" });
+    doc.text(row.label || "-", tableX + widths[0] + 8, rowY + 9, { width: widths[1] - 16 });
+    doc.fillColor("#6b7280").font("Helvetica").fontSize(7.5).text(row.categoryLabel || "Charge", tableX + widths[0] + 8, rowY + 21, { width: widths[1] - 16 });
+    doc.fillColor(dark).font("Helvetica").fontSize(9).text(formatMoney(row.amount), tableX + widths[0] + widths[1] + 6, rowY + 13, { width: widths[2] - 12, align: "right" });
+    doc.text("1", tableX + widths[0] + widths[1] + widths[2] + 6, rowY + 13, { width: widths[3] - 12, align: "center" });
+    doc.font("Helvetica-Bold").text(formatMoney(row.amount), tableX + widths[0] + widths[1] + widths[2] + widths[3] + 6, rowY + 13, { width: widths[4] - 12, align: "right" });
+    rowY += rowHeight;
+  });
+  doc.moveTo(110, 540).lineTo(490, 540).stroke("#d9dce1");
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(12).text("Thank you for your business", 112, 556);
+  doc.font("Helvetica-Bold").fontSize(11).text("Terms & Conditions", 112, 586);
+  doc.fillColor("#5b6068").font("Helvetica").fontSize(8).text("Please pay before the due date to avoid service interruption.", 112, 602, { width: 164, lineGap: 2 });
+  const totalsX = 356;
+  let totalsY = 562;
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(10);
+  doc.text("Sub Total:", totalsX, totalsY, { width: 86 });
+  doc.text(formatMoney(summaryRows.taxableSubtotal), totalsX + 86, totalsY, { width: 74, align: "right" });
+  totalsY += 18;
+  (summaryRows.taxRows || []).forEach((taxRow) => {
+    doc.text(`${taxRow.label}:`, totalsX, totalsY, { width: 86 });
+    doc.text(formatMoney(taxRow.amount), totalsX + 86, totalsY, { width: 74, align: "right" });
+    totalsY += 18;
+  });
+  doc.roundedRect(342, totalsY + 6, 148, 28, 6).fill(accent);
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(13).text("Total:", 356, totalsY + 15, { width: 44 });
+  doc.text(formatMoney(invoice.totalAmount), 398, totalsY + 15, { width: 78, align: "right" });
+  doc.moveTo(110, 748).lineTo(310, 748).stroke(accent);
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(8.5).text("JustFiber   |   Customer Billing Desk   |   justfiber.in", 112, 756, { width: 240 });
+  doc.moveTo(394, 748).lineTo(490, 748).stroke(accent);
+  doc.font("Helvetica-Bold").fontSize(9).text("Authorised Sign", 400, 756, { width: 84, align: "center" });
   doc.end();
   return doc;
 }

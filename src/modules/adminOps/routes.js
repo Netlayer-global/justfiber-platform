@@ -614,7 +614,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
   ].join("<br/>");
   return `<!doctype html>
   <html><head><meta charset="utf-8"/><title>${invoice.invoiceNumber}</title></head>
-  <body style="font-family:Arial,sans-serif;background:#efefef;margin:0;padding:24px;color:#23262d;">
+  <body style="font-family:Arial,sans-serif;background:#f3f0fb;margin:0;padding:24px;color:#23262d;">
     <div style="width:760px;margin:0 auto;background:#ffffff;box-shadow:0 24px 60px rgba(15,23,42,0.14);padding:32px 34px 24px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div style="display:flex;gap:12px;align-items:flex-start;">
@@ -626,19 +626,19 @@ function buildInvoiceHtml(invoice, customer, branding) {
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:18px;margin-top:18px;">
-        <div style="height:22px;background:#ffc61a;flex:1;"></div>
-        <div style="font-size:56px;line-height:1;font-weight:300;color:#30343b;">INVOICE</div>
-        <div style="height:22px;background:#ffc61a;width:74px;"></div>
+        <div style="height:18px;background:#8224e3;flex:1;border-radius:999px;"></div>
+        <div style="font-size:50px;line-height:1;font-weight:300;color:#30343b;letter-spacing:.02em;">INVOICE</div>
+        <div style="height:18px;background:#8224e3;width:74px;border-radius:999px;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;gap:24px;margin-top:26px;">
-        <div style="width:46%;">
+        <div style="width:44%;">
           <div style="font-size:24px;font-weight:700;">Invoice to:</div>
           <div style="margin-top:12px;font-size:22px;font-weight:700;">${safe(customer?.fullName || invoice.customerId)}</div>
           <div style="margin-top:8px;font-size:15px;line-height:1.7;color:#4b5563;">${addressBlock}</div>
         </div>
-        <div style="width:36%;padding-top:8px;">
-          <div style="display:grid;grid-template-columns:110px 1fr;gap:10px;font-size:16px;line-height:1.7;">
-            <div style="font-weight:700;">Invoice#</div><div style="text-align:right;">${safe(invoice.invoiceNumber)}</div>
+        <div style="width:40%;padding-top:8px;">
+          <div style="display:grid;grid-template-columns:94px 1fr;gap:8px 10px;font-size:15px;line-height:1.55;align-items:start;">
+            <div style="font-weight:700;">Invoice#</div><div style="text-align:right;word-break:break-word;font-weight:700;color:#8224e3;">${safe(invoice.invoiceNumber)}</div>
             <div style="font-weight:700;">Date</div><div style="text-align:right;">${safe(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-")}</div>
             <div style="font-weight:700;">Due Date</div><div style="text-align:right;">${safe(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-")}</div>
             <div style="font-weight:700;">Status</div><div style="text-align:right;text-transform:capitalize;">${safe(invoice.paymentStatus || "-")}</div>
@@ -670,7 +670,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
             <tr><td style="padding:7px 0;font-weight:700;">Sub Total:</td><td style="padding:7px 0;text-align:right;font-weight:700;">${formatMoney(summaryRows.taxableSubtotal)}</td></tr>
             ${taxRows}
           </table>
-          <div style="margin-top:14px;background:#ffc61a;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-size:24px;font-weight:800;">
+          <div style="margin-top:14px;background:#8224e3;color:#ffffff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-size:24px;font-weight:800;border-radius:8px;">
             <span>Total:</span>
             <span>${formatMoney(invoice.totalAmount)}</span>
           </div>
@@ -679,7 +679,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;">
         <div style="font-size:13px;color:#374151;">${safe(appliedBranding.phoneNumber || "Phone #")} &nbsp; | &nbsp; ${safe(appliedBranding.companyAddress || "Address")} &nbsp; | &nbsp; ${safe(appliedBranding.website || "Website")}</div>
         <div style="min-width:180px;text-align:center;">
-          <div style="height:2px;background:#ffc61a;width:100%;margin-bottom:8px;"></div>
+          <div style="height:2px;background:#8224e3;width:100%;margin-bottom:8px;"></div>
           <div style="font-size:15px;font-weight:700;">Authorised Sign</div>
         </div>
       </div>
@@ -959,14 +959,14 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   const planSummary = resolveInvoicePlanSummary(invoice);
   const summaryRows = buildInvoiceSummaryRows(invoice);
   const doc = new PDFDocument({ margin: 40, size: "A4" });
-  const accent = "#ffc61a";
+  const accent = "#8224e3";
   const dark = "#2d3138";
   const formatMoney = (amount) => `Rs ${Number(amount || 0).toFixed(2)}`;
   const rows = summaryRows.chargeRows.length
     ? summaryRows.chargeRows
     : [{ label: planSummary.planName, categoryLabel: "Charge", amount: Number(summaryRows.taxableSubtotal || 0) }];
 
-  doc.rect(0, 0, 595, 842).fill("#efefef");
+  doc.rect(0, 0, 595, 842).fill("#f3f0fb");
   doc.rect(90, 34, 420, 760).fill("#ffffff");
   if (branding.logoBuffer) {
     try {
@@ -975,9 +975,9 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   }
   doc.fillColor(dark).font("Helvetica-Bold").fontSize(18).text(branding.companyName || "Brand Name", branding.logoBuffer ? 144 : 110, 58);
   doc.fillColor("#7b8088").font("Helvetica").fontSize(7).text(branding.website || branding.supportEmail || "TAGLINE SPACE HERE", branding.logoBuffer ? 144 : 110, 78);
-  doc.rect(110, 104, 182, 14).fill(accent);
-  doc.fillColor(dark).font("Helvetica").fontSize(32).text("INVOICE", 332, 96);
-  doc.rect(462, 104, 40, 14).fill(accent);
+  doc.roundedRect(110, 104, 182, 14, 7).fill(accent);
+  doc.fillColor(dark).font("Helvetica").fontSize(30).text("INVOICE", 332, 96);
+  doc.roundedRect(462, 104, 40, 14, 7).fill(accent);
   doc.fillColor(dark).font("Helvetica-Bold").fontSize(14).text("Invoice to:", 112, 146);
   doc.font("Helvetica-Bold").fontSize(13).text(customer?.fullName || invoice.customerId, 112, 168, { width: 170 });
   doc.font("Helvetica").fontSize(9.5).fillColor("#5b6068").text(
@@ -991,12 +991,12 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     186,
     { width: 170, lineGap: 2 }
   );
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text("Invoice#", 340, 150);
-  doc.font("Helvetica").fontSize(11).text(invoice.invoiceNumber || invoice.invoiceId, 420, 150, { width: 70, align: "right" });
-  doc.font("Helvetica-Bold").fontSize(11).text("Date", 340, 168);
-  doc.font("Helvetica").fontSize(11).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", 420, 168, { width: 70, align: "right" });
-  doc.font("Helvetica-Bold").fontSize(11).text("Due", 340, 186);
-  doc.font("Helvetica").fontSize(11).text(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-", 420, 186, { width: 70, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(10.5).text("Invoice#", 332, 150);
+  doc.fillColor(accent).font("Helvetica-Bold").fontSize(9.5).text(invoice.invoiceNumber || invoice.invoiceId, 392, 150, { width: 98, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(10.5).text("Date", 332, 170);
+  doc.font("Helvetica").fontSize(10.5).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", 392, 170, { width: 98, align: "right" });
+  doc.font("Helvetica-Bold").fontSize(10.5).text("Due", 332, 190);
+  doc.font("Helvetica").fontSize(10.5).text(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-", 392, 190, { width: 98, align: "right" });
 
   const tableX = 110;
   const tableY = 238;
@@ -1054,8 +1054,8 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     doc.text(formatMoney(taxRow.amount), totalsX + 86, totalsY, { width: 74, align: "right" });
     totalsY += 18;
   });
-  doc.rect(342, totalsY + 6, 148, 28).fill(accent);
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(13).text("Total:", 356, totalsY + 15, { width: 44 });
+  doc.roundedRect(342, totalsY + 6, 148, 28, 6).fill(accent);
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(13).text("Total:", 356, totalsY + 15, { width: 44 });
   doc.text(formatMoney(invoice.totalAmount), 398, totalsY + 15, { width: 78, align: "right" });
   doc.moveTo(110, 748).lineTo(310, 748).stroke(accent);
   doc.fillColor(dark).font("Helvetica-Bold").fontSize(8.5).text(
