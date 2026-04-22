@@ -1028,56 +1028,60 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
     branding.phoneNumber ? `Phone ${branding.phoneNumber}` : branding.supportPhone ? `Phone ${branding.supportPhone}` : "",
     branding.supportEmail ? `Email ${branding.supportEmail}` : ""
   ].filter(Boolean);
+  const companyText = companyLines.join("\n");
+  doc.font("Helvetica").fontSize(9);
+  const companyDetailsHeight = companyText ? doc.heightOfString(companyText, { width: 240, lineGap: 2 }) : 0;
 
   doc.rect(0, 0, 595, 842).fill("#ffffff");
   if (branding.logoBuffer) {
     try {
-      doc.image(branding.logoBuffer, 42, 40, { fit: [56, 40], align: "left", valign: "center" });
+      doc.image(branding.logoBuffer, 42, 42, { fit: [34, 34], align: "left", valign: "center" });
     } catch {}
   }
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(24).text(branding.companyName || "Brand Name", branding.logoBuffer ? 106 : 42, 44);
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(18).text(branding.companyName || "Brand Name", branding.logoBuffer ? 88 : 42, 44, { width: 246 });
   doc.fillColor(accent).rect(42, 88, 96, 5).fill();
-  doc.fillColor("#4b5563").font("Helvetica").fontSize(10).text(companyLines.join("\n"), 42, 102, { width: 240, lineGap: 2 });
-  doc.fillColor(accent).font("Helvetica-Bold").fontSize(24).text("TAX INVOICE", 360, 44, { width: 193, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(10).text(`# ${invoice.invoiceNumber || invoice.invoiceId}`, 360, 76, { width: 193, align: "right" });
-  doc.font("Helvetica").fontSize(10).text("Balance Due", 420, 106, { width: 133, align: "right" });
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(18).text(formatMoney(balanceDue), 360, 120, { width: 193, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica").fontSize(9).text(companyText, 42, 100, { width: 240, lineGap: 2 });
+  doc.fillColor(accent).font("Helvetica-Bold").fontSize(17).text("TAX INVOICE", 356, 46, { width: 197, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(8.5).text(`# ${invoice.invoiceNumber || invoice.invoiceId}`, 356, 70, { width: 197, align: "right" });
+  doc.font("Helvetica").fontSize(9).text("Balance Due", 420, 98, { width: 133, align: "right" });
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(16).text(formatMoney(balanceDue), 356, 112, { width: 197, align: "right" });
 
-  doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(10).text("Bill To", 42, 176);
-  doc.fillColor(dark).font("Helvetica-Bold").fontSize(11).text(customer?.fullName || invoice.customerId, 42, 192, { width: 250 });
-  doc.fillColor("#374151").font("Helvetica").fontSize(9.5).text(
-    [
-      ...customerAddress,
-      customer?.mobile ? `Phone: ${customer.mobile}` : "",
-      customer?.email ? `Email: ${customer.email}` : "",
-      `Customer ID: ${invoice.customerId}`,
-      `Plan: ${planSummary.planName}`
-    ].filter(Boolean).join("\n"),
-    42,
-    208,
-    { width: 250, lineGap: 2 }
-  );
-  doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(10).text("Ship To", 42, 290);
-  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(
-    [customer?.fullName || invoice.customerId, ...customerAddress].filter(Boolean).join("\n") || (invoice.placeOfSupply || invoice.billingStateName || "-"),
-    42,
-    306,
-    { width: 250, lineGap: 2 }
-  );
-  doc.fillColor("#374151").font("Helvetica-Bold").fontSize(10).text(`Place Of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`, 42, 360, { width: 250 });
+  const billToY = Math.max(160, 100 + companyDetailsHeight + 18);
+  doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(9.5).text("Bill To", 42, billToY);
+  doc.fillColor(dark).font("Helvetica-Bold").fontSize(10.5).text(customer?.fullName || invoice.customerId, 42, billToY + 14, { width: 250 });
+  const billToText = [
+    ...customerAddress,
+    customer?.mobile ? `Phone: ${customer.mobile}` : "",
+    customer?.email ? `Email: ${customer.email}` : "",
+    `Customer ID: ${invoice.customerId}`,
+    `Plan: ${planSummary.planName}`
+  ].filter(Boolean).join("\n");
+  doc.font("Helvetica").fontSize(8.8);
+  const billToHeight = billToText ? doc.heightOfString(billToText, { width: 250, lineGap: 2 }) : 0;
+  doc.fillColor("#374151").font("Helvetica").fontSize(8.8).text(billToText, 42, billToY + 30, { width: 250, lineGap: 2 });
+
+  const shipToY = billToY + 30 + billToHeight + 18;
+  doc.fillColor("#6b7280").font("Helvetica-Bold").fontSize(9.5).text("Ship To", 42, shipToY);
+  const shipToText = [customer?.fullName || invoice.customerId, ...customerAddress].filter(Boolean).join("\n") || (invoice.placeOfSupply || invoice.billingStateName || "-");
+  const shipToHeight = shipToText ? doc.heightOfString(shipToText, { width: 250, lineGap: 2 }) : 0;
+  doc.fillColor(dark).font("Helvetica").fontSize(8.8).text(shipToText, 42, shipToY + 14, { width: 250, lineGap: 2 });
+
+  const placeSupplyY = shipToY + 14 + shipToHeight + 14;
+  doc.fillColor("#374151").font("Helvetica-Bold").fontSize(9.2).text(`Place Of Supply: ${invoice.placeOfSupply || invoice.billingStateName || "-"}`, 42, placeSupplyY, { width: 250 });
 
   const infoX = 360;
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(10).text("Invoice Date :", infoX, 208, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(10).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", infoX + 94, 208, { width: 99, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(10).text("Terms :", infoX, 228, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(10).text(planSummary.durationLabel || "-", infoX + 94, 228, { width: 99, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(10).text("Due Date :", infoX, 248, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(10).text(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-", infoX + 94, 248, { width: 99, align: "right" });
-  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(10).text("Status :", infoX, 268, { width: 92 });
-  doc.fillColor(dark).font("Helvetica").fontSize(10).text(String(invoice.paymentStatus || "-"), infoX + 94, 268, { width: 99, align: "right" });
+  const infoY = billToY + 12;
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Invoice Date :", infoX, infoY, { width: 92 });
+  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString("en-IN") : "-", infoX + 94, infoY, { width: 99, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Terms :", infoX, infoY + 20, { width: 92 });
+  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(planSummary.durationLabel || "-", infoX + 94, infoY + 20, { width: 99, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Due Date :", infoX, infoY + 40, { width: 92 });
+  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("en-IN") : "-", infoX + 94, infoY + 40, { width: 99, align: "right" });
+  doc.fillColor("#4b5563").font("Helvetica-Bold").fontSize(9.5).text("Status :", infoX, infoY + 60, { width: 92 });
+  doc.fillColor(dark).font("Helvetica").fontSize(9.5).text(String(invoice.paymentStatus || "-"), infoX + 94, infoY + 60, { width: 99, align: "right" });
 
   const tableX = 42;
-  const tableY = 394;
+  const tableY = Math.max(placeSupplyY + 28, infoY + 92);
   const widths = [24, 183, 54, 34, 60, 52, 52, 52];
   const headers = ["#", "Item & Description", "HSN/SAC", "Qty", "Rate", "CGST", "SGST", "Amount"];
   let x = tableX;
