@@ -122,6 +122,24 @@ If Certbot creates a certificate under a different primary folder, update `ssl_c
 
 ## Deploy Steps
 
+Fast path:
+
+```bash
+cd /opt/justfiber-platform
+bash deploy/ubuntu/update-live.sh
+```
+
+This script does:
+
+- `git pull origin main`
+- `npm install`
+- `npm install --prefix frontend/admin-basic`
+- `npm run ui:admin:build`
+- restart `netlayer-admin-api`, `netlayer-admin-worker`, `justfiber-admin-web`
+- print active service state, current commit, and API health
+
+Manual path:
+
 ```bash
 cd /opt/justfiber-platform
 git pull origin main
