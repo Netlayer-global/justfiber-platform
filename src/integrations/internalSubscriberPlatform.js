@@ -26,6 +26,34 @@ function buildIdentifiers(bookingNumber) {
   };
 }
 
+function resolveExistingIdentifiers(installerJob, booking = null) {
+  if (booking?.assignment?.provisionedIds?.customerId && booking?.assignment?.provisionedIds?.serviceId) {
+    return booking.assignment.provisionedIds;
+  }
+
+  const existingCustomerId =
+    installerJob?.customerSnapshot?.customerId ||
+    installerJob?.customerId ||
+    null;
+  const existingServiceId =
+    installerJob?.customerSnapshot?.serviceId ||
+    installerJob?.serviceId ||
+    null;
+  const existingAccountNumber =
+    installerJob?.customerSnapshot?.accountNumber ||
+    null;
+
+  if (existingCustomerId && existingServiceId) {
+    return {
+      customerId: existingCustomerId,
+      accountNumber: existingAccountNumber || `AC-${deriveNumericSuffix(existingCustomerId)}`,
+      serviceId: existingServiceId
+    };
+  }
+
+  return buildIdentifiers(booking?.bookingNumber || installerJob?.customerId || installerJob?.serviceId);
+}
+
 function normalizePlanNetworkProfile(plan = {}, accessProfile = null) {
   const speedMbps = Number(plan?.speedMbps || accessProfile?.downMbps || 0) || 0;
   const uploadSpeedMbps =
@@ -262,7 +290,7 @@ export class InternalSubscriberPlatform {
       };
     }
 
-    const identifiers = booking.assignment?.provisionedIds || buildIdentifiers(booking.bookingNumber);
+    const identifiers = resolveExistingIdentifiers(jobRecord, booking);
     const plan =
       (booking.selectedPlan?.planCode && (await PlanCatalog.findOne({ planCode: booking.selectedPlan.planCode }).lean())) ||
       (await PlanCatalog.findOne({ name: booking.selectedPlan?.planName }).lean());
@@ -420,7 +448,7 @@ export class InternalSubscriberPlatform {
     const booking =
       (await ConnectionBooking.findOne({ bookingNumber: installerJob.customerId })) ||
       (await ConnectionBooking.findOne({ bookingNumber: installerJob.activation?.bookingNumber }));
-    const identifiers = booking?.assignment?.provisionedIds || buildIdentifiers(installerJob.customerId);
+    const identifiers = resolveExistingIdentifiers(installerJob, booking);
     const subscriberService = await SubscriberService.findOne({ serviceId: identifiers.serviceId });
     const billingProfile = subscriberService?.billingProfileCode
       ? await BillingProfile.findOne({ code: subscriberService.billingProfileCode, active: true }).lean()
