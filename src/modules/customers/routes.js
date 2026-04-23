@@ -49,6 +49,7 @@ import { LeadKycDocument } from "../../models/LeadKycDocument.js";
 import { NetworkNodeStatus } from "../../models/NetworkNodeStatus.js";
 import { SalesAgent } from "../../models/SalesAgent.js";
 import { applyBillingNoteAdjustment } from "../../common/billingAccounting.js";
+import { internalBillingEngine } from "../../integrations/internalBillingEngine.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
@@ -311,6 +312,12 @@ function buildBookingTracking(status, existingTracking = {}, note) {
 
 function buildManualIdentifier(prefix) {
   return `${prefix}-${Date.now().toString().slice(-8)}`;
+}
+
+function addMonths(date, months) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + Math.max(1, Number(months || 1)));
+  return next;
 }
 
 function toCustomerStatus(operationalStatus) {
@@ -724,6 +731,10 @@ customersRouter.post(
     const resolvedZoneStateCode = String(payload.zoneStateCode || "").trim() || undefined;
     const resolvedZoneStateName = String(payload.zoneStateName || payload.address.state || "").trim() || undefined;
     const cafSettings = await getCustomerCafSettings();
+    const startDate = payload.startDate ? new Date(`${payload.startDate}T00:00:00`) : new Date();
+    const durationMonths = Math.max(1, Number(plan?.provisioning?.durationMonths || 1));
+    const nextBillingDate = addMonths(startDate, durationMonths);
+    const remainingDays = Math.max(1, Math.ceil((nextBillingDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
     const cafDocument = buildCustomerCafDocument({
       existingCustomer,
       customerId,
@@ -749,6 +760,7 @@ customersRouter.post(
           zoneStateName: resolvedZoneStateName,
           jazeStatus: "manual_admin",
           operationalStatus: toCustomerStatus(payload.operationalStatus),
+          expiryAt: nextBillingDate,
           billingZoneCode: resolvedZoneCode,
           billingZoneName: resolvedZoneName,
           billingStateCode: resolvedZoneStateCode,
@@ -765,12 +777,14 @@ customersRouter.post(
             lastInvoiceAmount: Number(plan.monthlyPrice || 0),
             currency: billingProfile?.currency || "INR",
             dueAmount: 0,
-            remainingDays: 30,
+            remainingDays,
             speedMbps: networkProfile.speedMbps,
             uploadSpeedMbps: networkProfile.uploadSpeedMbps,
             dataPolicy: networkProfile.dataPolicy,
             dataLimitGb: networkProfile.dataLimitGb || null,
             fupSpeedMbps: networkProfile.fupSpeedMbps || null,
+            serviceStartDate: startDate,
+            nextBillingDate,
             billMode,
             zoneCode: resolvedZoneCode,
             zoneName: resolvedZoneName,
@@ -805,12 +819,16 @@ customersRouter.post(
           billingProfileCode: billingProfile?.code || payload.billingProfileCode || "",
           bngNodeCode: bngNode?.nodeCode || payload.bngNodeCode || "",
           status: payload.createRadius === false ? "draft" : "active",
-          activatedAt: payload.createRadius === false ? null : new Date(),
+          activatedAt: payload.createRadius === false ? null : startDate,
           suspendedAt: null,
+          billingPeriodMonths: durationMonths,
+          nextBillingDate,
+          expiresAt: nextBillingDate,
           notes: "Created manually from admin console",
           metadata: {
             source: "admin_manual_create",
             radiusPassword,
+            startDate,
             networkProfile,
             planCode: plan?.planCode || "",
             planName: plan?.name || "",
@@ -818,7 +836,15 @@ customersRouter.post(
             quarterlyPrice: Number(plan?.quarterlyPrice || 0),
             halfYearlyPrice: Number(plan?.halfYearlyPrice || 0),
             yearlyPrice: Number(plan?.yearlyPrice || 0),
-            recurringAmount: Number(plan?.monthlyPrice || 0),
+            durationMonths,
+            recurringAmount:
+              durationMonths >= 12
+                ? Number(plan?.yearlyPrice || plan?.monthlyPrice || 0)
+                : durationMonths >= 6
+                  ? Number(plan?.halfYearlyPrice || plan?.monthlyPrice || 0)
+                  : durationMonths >= 3
+                    ? Number(plan?.quarterlyPrice || plan?.monthlyPrice || 0)
+                    : Number(plan?.monthlyPrice || 0),
             billingBreakup: plan?.billingBreakup || {},
             routerModel: plan?.routerModel || "",
             routerRental: Number(plan?.routerRental || 0) || 0
@@ -841,6 +867,19 @@ customersRouter.post(
           source: "admin_manual_create",
           networkProfile
         }
+      });
+    }
+
+    const subscriberService = await SubscriberService.findOne({ serviceId }).lean();
+    if (subscriberService) {
+      await internalBillingEngine.generateInvoiceForService(subscriberService, {
+        generatedAt: startDate,
+        billingAnchorDate: startDate,
+        durationMonths,
+        source: "admin_manual_create",
+        sourceEvent: "admin_manual_create"
+      }).catch((error) => {
+        console.error("[customers] Failed to generate initial invoice:", error);
       });
     }
 

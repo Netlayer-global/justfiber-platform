@@ -278,6 +278,7 @@ export interface ManualCustomerCreatePayload {
   customerId?: string
   accountNumber?: string
   serviceId?: string
+  startDate?: string
   fullName: string
   phone: string
   email?: string | null

@@ -61,6 +61,7 @@ export const manualCreateCustomerSchema = z.object({
   customerId: z.string().min(3).max(40).optional(),
   accountNumber: z.string().min(3).max(40).optional(),
   serviceId: z.string().min(3).max(40).optional(),
+  startDate: z.string().date().optional(),
   fullName: z.string().min(2).max(200),
   phone: z.string().min(8).max(20),
   email: z.string().email().nullable().optional(),

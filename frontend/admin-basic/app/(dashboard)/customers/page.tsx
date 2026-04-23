@@ -41,6 +41,7 @@ function CustomersContent() {
   const [lookup, setLookup] = useState('')
   const [activeZone, setActiveZone] = useState({ key: 'default', label: 'JustFiber HQ' })
   const [createForm, setCreateForm] = useState({
+    startDate: new Date().toISOString().slice(0, 10),
     fullName: '',
     phone: '',
     email: '',
@@ -80,6 +81,7 @@ function CustomersContent() {
   function resetCreateForm() {
     setCreateForm((current) => ({
       ...current,
+      startDate: new Date().toISOString().slice(0, 10),
       fullName: '',
       phone: '',
       email: '',
@@ -155,6 +157,7 @@ function CustomersContent() {
         customerId: createForm.customerId.trim() || undefined,
         accountNumber: createForm.accountNumber.trim() || undefined,
         serviceId: createForm.serviceId.trim() || undefined,
+        startDate: createForm.startDate || undefined,
         fullName: createForm.fullName.trim(),
         phone: normalizePhone(createForm.phone),
         email: createForm.email.trim() || undefined,
@@ -399,6 +402,15 @@ function CustomersContent() {
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Email</label>
                   <input className="input w-full" type="email" value={createForm.email} onChange={(e) => setCreateForm((current) => ({ ...current, email: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Start date</label>
+                  <input
+                    className="input w-full"
+                    type="date"
+                    value={createForm.startDate}
+                    onChange={(e) => setCreateForm((current) => ({ ...current, startDate: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Plan</label>
