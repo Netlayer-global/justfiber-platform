@@ -172,6 +172,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
+  const [attachCustomerId, setAttachCustomerId] = useState('')
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([])
   const [actionLogs, setActionLogs] = useState<Array<{ id: string; label: string; status: 'success' | 'warning'; at: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -185,11 +186,6 @@ export default function DevicesPage() {
   useEffect(() => {
     void loadDevices()
   }, [])
-
-  useEffect(() => {
-    if (!selectedDeviceId) return
-    void refreshSelectedDevice(false, true)
-  }, [selectedDeviceId])
 
   function logAction(label: string, status: 'success' | 'warning' = 'success') {
     setActionLogs((current) => [
@@ -324,6 +320,32 @@ export default function DevicesPage() {
     }
   }
 
+  async function attachSelectedDeviceToCustomer() {
+    if (!selectedDevice) return
+    const customerId = attachCustomerId.trim()
+    if (!customerId) {
+      toast.error('Enter customer ID first')
+      return
+    }
+    try {
+      setIsRunningAction(true)
+      const res = await adminAPI.attachCustomerDevice(customerId, selectedDevice.deviceId || selectedDevice.id)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to attach device')
+        return
+      }
+      toast.success(`Attached ${selectedDevice.deviceId || selectedDevice.id} to ${customerId}`)
+      logAction(`Attached ${selectedDevice.deviceId || selectedDevice.id} to ${customerId}`)
+      await loadDevices(selectedDevice.id)
+    } catch (error) {
+      console.error('[devices] Failed to attach device:', error)
+      toast.error('Failed to attach device')
+      logAction(`Attach failed for ${selectedDevice.deviceId || selectedDevice.id}`, 'warning')
+    } finally {
+      setIsRunningAction(false)
+    }
+  }
+
   function toggleBulkSelection(deviceId: string) {
     setSelectedDeviceIds((current) =>
       current.includes(deviceId) ? current.filter((item) => item !== deviceId) : [...current, deviceId]
@@ -440,6 +462,10 @@ export default function DevicesPage() {
     filteredDevices.find((device) => device.id === selectedDeviceId) ||
     devices.find((device) => device.id === selectedDeviceId) ||
     null
+
+  useEffect(() => {
+    setAttachCustomerId(selectedDevice?.customerId || '')
+  }, [selectedDevice?.id, selectedDevice?.customerId])
 
   const onlineCount = devices.filter((device) => device.status === 'online').length
   const offlineCount = devices.filter((device) => device.status === 'offline').length
@@ -831,6 +857,25 @@ export default function DevicesPage() {
                     No linked customer profile
                   </div>
                 )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold text-slate-900">Attach to customer</h3>
+                  <HardDrive className="h-4 w-4 text-slate-500" />
+                </div>
+                <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                  <input
+                    className="input"
+                    placeholder="Enter customer ID like CUST-594911"
+                    value={attachCustomerId}
+                    onChange={(event) => setAttachCustomerId(event.target.value)}
+                  />
+                  <button type="button" className="btn-secondary" disabled={isRunningAction} onClick={() => void attachSelectedDeviceToCustomer()}>
+                    {isRunningAction ? 'Attaching...' : 'Attach'}
+                  </button>
+                </div>
+                <p className="text-sm text-slate-500">Use this after selecting a device from the left roster.</p>
               </div>
 
               <div className="grid gap-4 xl:grid-cols-2">
