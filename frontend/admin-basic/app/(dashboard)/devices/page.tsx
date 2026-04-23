@@ -756,7 +756,16 @@ export default function DevicesPage() {
               return (
                 <div
                   key={device.id}
-                  className={`w-full rounded-xl border px-4 py-3 transition ${
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedDeviceId(device.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setSelectedDeviceId(device.id)
+                    }
+                  }}
+                  className={`w-full cursor-pointer rounded-xl border px-4 py-3 transition ${
                     selectedDevice?.id === device.id
                 ? 'border-purple-700 bg-purple-50'
                 : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-slate-50'
@@ -767,13 +776,17 @@ export default function DevicesPage() {
                       <input
                         type="checkbox"
                         checked={selectedDeviceIds.includes(device.id)}
+                        onClick={(event) => event.stopPropagation()}
                         onChange={() => toggleBulkSelection(device.id)}
                       />
                       Select
                     </label>
                     <button
                       type="button"
-                      onClick={() => setSelectedDeviceId(device.id)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setSelectedDeviceId(device.id)
+                      }}
                       className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white"
                     >
                       Inspect
