@@ -616,6 +616,12 @@ export class GenieacsClient {
     if (natEnabled !== undefined && natEnabled !== null) {
       push(profile.natPath, natEnabled, "xsd:boolean", Boolean, { configMultiPath: normalizedBrand === "dasan" });
     }
+    if (Array.isArray(profile.wifiSecurity24Path) && profile.wifiSecurity24Path.length > 0) {
+      push(profile.wifiSecurity24Path, true, undefined, () => undefined, { wifiMultiPath: true });
+    }
+    if (Array.isArray(profile.wifiSecurity5Path) && profile.wifiSecurity5Path.length > 0) {
+      push(profile.wifiSecurity5Path, true, undefined, () => undefined, { wifiMultiPath: true });
+    }
     if (unifyWifiAliases) {
       push([...profile.ssid24Path, ...profile.ssid5Path], normalizedSsid24, undefined, (input) => input, { wifiMultiPath: true });
       push([...profile.pass24Path, ...profile.pass5Path], normalizedPass24, undefined, (input) => input, { wifiMultiPath: true });
@@ -629,11 +635,15 @@ export class GenieacsClient {
     if (values.length > 0) {
       const nonWifiValues = values.filter((entry) => !wifiValues.includes(entry));
       if (nonWifiValues.length > 0) {
-        await this.setParameterValues(deviceId, nonWifiValues, { connectionRequest: true });
+        for (const entry of nonWifiValues) {
+          await this.setParameterValues(deviceId, [entry], { connectionRequest: true });
+        }
       }
 
       if (wifiValues.length > 0) {
-        await this.setParameterValues(deviceId, wifiValues, { connectionRequest: true });
+        for (const entry of wifiValues) {
+          await this.setParameterValues(deviceId, [entry], { connectionRequest: true });
+        }
       }
     }
 
