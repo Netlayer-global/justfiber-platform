@@ -996,6 +996,51 @@ customersRouter.delete(
   })
 );
 
+customersRouter.post(
+  "/:customerId/attach-device",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId });
+    if (!customer) {
+      throw new ApiError(404, "Customer not found");
+    }
+    assertCustomerZoneAccess(req, customer);
+
+    const deviceId = String(req.body?.deviceId || "").trim();
+    if (!deviceId) {
+      throw new ApiError(400, "Device ID is required");
+    }
+
+    const device = await DeviceOperationalCache.findOne({ deviceId });
+    if (!device) {
+      throw new ApiError(404, "Device not found");
+    }
+    if (device.customerId && device.customerId !== customer.customerId) {
+      throw new ApiError(409, `Device already attached to ${device.customerId}`);
+    }
+
+    device.customerId = customer.customerId;
+    device.serviceId = customer.serviceId;
+    await device.save();
+
+    await auditFromRequest(req, {
+      action: "customer.device_attached",
+      entityType: "customer",
+      entityId: customer.customerId,
+      metadata: {
+        deviceId: device.deviceId,
+        serialNumber: device.serialNumber || null,
+        serviceId: customer.serviceId || null
+      }
+    });
+
+    const updatedCustomer = await Customer.findOne({ customerId: customer.customerId });
+    return ok(res, await buildCustomerResponse(updatedCustomer.toObject()), {
+      attachedDeviceId: device.deviceId
+    });
+  })
+);
+
 customersRouter.get(
   "/:customerId",
   requirePermission(permissions.customerRead),

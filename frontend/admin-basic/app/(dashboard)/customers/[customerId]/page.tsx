@@ -6,7 +6,7 @@ import { useParams, usePathname, useRouter } from 'next/navigation'
 import { Loader, RefreshCw, Wifi, Router, Network, PlugZap, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { adminAPI, openProtectedDocument } from '@/lib/api'
-import type { Customer, CustomerDevice } from '@/lib/types'
+import type { Customer, CustomerDevice, Device } from '@/lib/types'
 
 type TabKey = 'overview' | 'billing' | 'devices'
 
@@ -137,6 +137,8 @@ export default function CustomerDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [deviceForms, setDeviceForms] = useState<Record<string, DeviceForm>>({})
+  const [attachDeviceQuery, setAttachDeviceQuery] = useState('')
+  const [attachCandidates, setAttachCandidates] = useState<Device[]>([])
   const [staticIpForm, setStaticIpForm] = useState({ currentIpv4: '', ipv4Pool: '' })
   const staticIpError = useMemo(() => {
     if (staticIpForm.currentIpv4.trim() && !isLikelyIpv4(staticIpForm.currentIpv4)) return 'Enter a valid IPv4 address'
@@ -454,6 +456,35 @@ export default function CustomerDetailPage() {
     })
   }
 
+  async function loadAttachCandidates(search?: string) {
+    try {
+      const res = await adminAPI.getDevices(1, 30, { search: search?.trim() || undefined })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to load router inventory')
+        return
+      }
+      const currentCustomerId = customer?.customerId || customer?.id
+      setAttachCandidates((res.data?.items || []).filter((device) => !device.customerId || device.customerId === currentCustomerId))
+    } catch (error) {
+      console.error('[customer-detail] Failed to load router inventory:', error)
+      toast.error('Failed to load router inventory')
+    }
+  }
+
+  async function handleAttachRouter(deviceId: string) {
+    if (!customer) return
+    await runBusy('attach-router', async () => {
+      const res = await adminAPI.attachCustomerDevice(customer.customerId || customer.id, deviceId)
+      if (!res.success || !res.data) {
+        toast.error(res.error || 'Failed to attach router')
+        return
+      }
+      setCustomer(normalizeCustomer(res.data))
+      toast.success(`Router ${deviceId} attached`)
+      await loadAttachCandidates(attachDeviceQuery)
+    })
+  }
+
   async function copyValue(value: string, label: string) {
     if (!value.trim()) {
       toast.error(`No ${label.toLowerCase()} available`)
@@ -766,6 +797,55 @@ export default function CustomerDetailPage() {
 
         {activeTab === 'devices' ? (
           <div className="space-y-4">
+            <div className="card p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Attach Router</h2>
+                  <p className="mt-1 text-sm text-slate-500">Search router or ONT by device ID or serial and attach it to this customer.</p>
+                </div>
+                <button type="button" className="btn-secondary" onClick={() => void loadAttachCandidates(attachDeviceQuery)} disabled={busyKey === 'attach-router'}>
+                  Load Inventory
+                </button>
+              </div>
+              <div className="flex flex-col gap-3 md:flex-row">
+                <input
+                  className="input flex-1"
+                  placeholder="Search by device ID or serial number"
+                  value={attachDeviceQuery}
+                  onChange={(e) => setAttachDeviceQuery(e.target.value)}
+                />
+                <button type="button" className="btn-secondary" onClick={() => void loadAttachCandidates(attachDeviceQuery)} disabled={busyKey === 'attach-router'}>
+                  Search
+                </button>
+              </div>
+              {attachCandidates.length ? (
+                <div className="space-y-2">
+                  {attachCandidates.slice(0, 8).map((device) => (
+                    <div key={device.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                      <div className="text-sm text-slate-600">
+                        <div className="font-semibold text-slate-900">{formatValue(device.deviceId || device.name)}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Serial {formatValue(device.serialNumber)} | {formatValue(device.productClass || device.type)} | {device.customerId ? `Mapped ${device.customerId}` : 'Unbound'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => void handleAttachRouter(device.deviceId || device.id)}
+                        disabled={busyKey === 'attach-router' || Boolean(device.customerId && device.customerId !== (customer.customerId || customer.id))}
+                      >
+                        {busyKey === 'attach-router' ? 'Attaching...' : 'Attach'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  Search inventory to load attachable routers.
+                </div>
+              )}
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="card p-5 space-y-4">
                 <div className="flex items-center gap-2">

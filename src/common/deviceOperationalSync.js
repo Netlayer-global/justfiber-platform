@@ -305,6 +305,16 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.ExternalIPAddress"
   ]);
   const rxPower = firstValue(summary, [
+    "Device.Optical.Interface.1.RXPower",
+    "Device.Optical.Interface.1.RxPower",
+    "Device.Optical.Interface.1.OpticalRxPower",
+    "Device.Optical.Interface.1.ReceivedPower",
+    "Device.PON.Interface.1.RXPower",
+    "Device.PON.Interface.1.RxPower",
+    "Device.PON.Interface.1.OpticalRxPower",
+    "Device.XPON.Interface.1.RXPower",
+    "Device.XPON.Interface.1.RxPower",
+    "Device.XPON.Interface.1.OpticalRxPower",
     "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.RXPower",
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_DZS_WANGponLinkConfig.RXPower",
@@ -335,6 +345,16 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "VirtualParameters.OpticalRxPower"
   ]) ?? discoverOpticalMetric(summary, "rx");
   const txPower = firstValue(summary, [
+    "Device.Optical.Interface.1.TXPower",
+    "Device.Optical.Interface.1.TxPower",
+    "Device.Optical.Interface.1.OpticalTxPower",
+    "Device.Optical.Interface.1.TransmitPower",
+    "Device.PON.Interface.1.TXPower",
+    "Device.PON.Interface.1.TxPower",
+    "Device.PON.Interface.1.OpticalTxPower",
+    "Device.XPON.Interface.1.TXPower",
+    "Device.XPON.Interface.1.TxPower",
+    "Device.XPON.Interface.1.OpticalTxPower",
     "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.TXPower",
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_DZS_WANGponLinkConfig.TXPower",

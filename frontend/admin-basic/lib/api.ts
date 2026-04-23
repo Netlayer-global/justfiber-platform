@@ -1641,6 +1641,16 @@ export const adminAPI = {
     }>(`/api/v1/admin/customers/${id}`, {
       method: 'DELETE',
     }),
+  attachCustomerDevice: async (customerId: string, deviceId: string) => {
+    const res = await request<any>(`/api/v1/admin/customers/${customerId}/attach-device`, {
+      method: 'POST',
+      body: JSON.stringify({ deviceId }),
+    })
+    return {
+      ...res,
+      data: res.data ? mapCustomer(res.data) : undefined,
+    }
+  },
   cleanupDemoData: () =>
     request<{
       cleaned: boolean

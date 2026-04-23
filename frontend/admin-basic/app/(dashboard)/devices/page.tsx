@@ -47,6 +47,17 @@ function formatPower(value: unknown) {
   return Number.isFinite(num) ? `${num} dBm` : '-'
 }
 
+function pickOpticalMetric(opticalInfo: Record<string, any> | undefined, keys: string[]) {
+  if (!opticalInfo) return undefined
+  for (const key of keys) {
+    const value = opticalInfo[key]
+    if (value !== null && value !== undefined && String(value).trim() !== '') {
+      return value
+    }
+  }
+  return undefined
+}
+
 function isDzsDevice(device?: Device) {
   const fingerprint = [
     device?.deviceId,
@@ -64,6 +75,24 @@ function isDzsDevice(device?: Device) {
 function formatOpticalPower(device: Device | undefined, value: unknown) {
   const formatted = formatPower(value)
   if (formatted !== '-') return formatted
+  const fallbackValue = pickOpticalMetric(device?.opticalInfo, [
+    'opticalRxPower',
+    'receivedPower',
+    'receivedOpticalPower',
+    'ontRxPower',
+    'oltRxPower',
+    'rxPowerDbm',
+    'rx',
+    'opticalTxPower',
+    'transmitPower',
+    'transmitOpticalPower',
+    'ontTxPower',
+    'oltTxPower',
+    'txPowerDbm',
+    'tx',
+  ])
+  const fallbackFormatted = formatPower(fallbackValue)
+  if (fallbackFormatted !== '-') return fallbackFormatted
   if (isDzsDevice(device)) return 'Telemetry unavailable'
   return '-'
 }
@@ -172,18 +201,12 @@ export default function DevicesPage() {
   async function loadDevices(preferredDeviceId?: string) {
     try {
       setIsLoading(true)
-      let res = await adminAPI.getDevices(1, 200, { live: true, liveLimit: 200, sync: true, syncLimit: 100 })
-      if (!res.success) {
-        const cachedRes = await adminAPI.getDevices(1, 200, { sync: true, syncLimit: 100 })
+      let res = await adminAPI.getDevices(1, 200)
+      if ((!res.success || !res.data?.items?.length) && !preferredDeviceId) {
+        const cachedRes = await adminAPI.getDevices(1, 200, { sync: true, syncLimit: 80 })
         if (cachedRes.success) {
           res = cachedRes
-          toast.info('Showing cached device inventory because live Genie inventory could not be loaded')
-        }
-      } else if (res.success && !res.data?.items?.length) {
-        const cachedRes = await adminAPI.getDevices(1, 200, { sync: true, syncLimit: 100 })
-        if (cachedRes.success && cachedRes.data?.items?.length) {
-          res = cachedRes
-          toast.info('Showing cached device inventory because live Genie inventory is empty')
+          toast.info('Device inventory refreshed from cache sync')
         }
       }
       if (!res.success || !res.data?.items) {
@@ -217,7 +240,7 @@ export default function DevicesPage() {
           return
         }
       }
-      const res = await adminAPI.getDevice(selectedDeviceId, { sync: syncFromGenie, live: true })
+      const res = await adminAPI.getDevice(selectedDeviceId, { sync: syncFromGenie, live: syncFromGenie || !silent })
       if (!res.success || !res.data) {
         toast.error(res.error || 'Failed to load device detail')
         return
