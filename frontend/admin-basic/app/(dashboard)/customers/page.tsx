@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { adminAPI, openProtectedDocument } from '@/lib/api'
 import type { BngNode, Customer, Plan } from '@/lib/types'
-import { Eye, Loader, Plus, RefreshCw, Search } from 'lucide-react'
+import { Eye, Loader, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 function formatDate(value?: string) {
@@ -35,6 +35,7 @@ function CustomersContent() {
   const [bngNodes, setBngNodes] = useState<BngNode[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [lookup, setLookup] = useState('')
@@ -199,6 +200,26 @@ function CustomersContent() {
     }
   }
 
+  async function handleDeleteCustomer(customer: Customer) {
+    const confirmed = window.confirm(`Delete ${customer.name} (${customer.customerId || customer.id})?\n\nThis will remove linked invoices, tickets, payments, PPPoE service, and related records.`)
+    if (!confirmed) return
+    try {
+      setDeletingCustomerId(customer.id)
+      const res = await adminAPI.deleteCustomer(customer.customerId || customer.id)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete customer')
+        return
+      }
+      toast.success(`${customer.name} deleted`)
+      await loadWorkspace()
+    } catch (error) {
+      console.error('[customers] Failed to delete customer:', error)
+      toast.error('Failed to delete customer')
+    } finally {
+      setDeletingCustomerId(null)
+    }
+  }
+
   const quickLookupResults = useMemo(() => {
     const needle = lookup.trim().toLowerCase()
     return [...customers]
@@ -321,6 +342,15 @@ function CustomersContent() {
                     <Link href={`/all-users/${customer.id}/edit`} className="text-slate-500 hover:text-slate-900">
                       Edit
                     </Link>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void handleDeleteCustomer(customer)}
+                      disabled={deletingCustomerId === customer.id}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {deletingCustomerId === customer.id ? 'Deleting...' : 'Delete'}
+                    </button>
                   </div>
                 </div>
               ))}

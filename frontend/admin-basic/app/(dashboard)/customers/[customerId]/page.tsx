@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { Loader, RefreshCw, Wifi, Router, Network, PlugZap } from 'lucide-react'
+import { Loader, RefreshCw, Wifi, Router, Network, PlugZap, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { adminAPI, openProtectedDocument } from '@/lib/api'
 import type { Customer, CustomerDevice } from '@/lib/types'
@@ -439,6 +439,21 @@ export default function CustomerDetailPage() {
     })
   }
 
+  async function handleDeleteCustomer() {
+    if (!customer) return
+    const confirmed = window.confirm(`Delete ${customer.name} (${customer.customerId || customer.id})?\n\nThis will remove linked invoices, tickets, payments, PPPoE service, and related records.`)
+    if (!confirmed) return
+    await runBusy('delete-customer', async () => {
+      const res = await adminAPI.deleteCustomer(customer.customerId || customer.id)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete customer')
+        return
+      }
+      toast.success(`${customer.name} deleted`)
+      router.push('/customers')
+    })
+  }
+
   async function copyValue(value: string, label: string) {
     if (!value.trim()) {
       toast.error(`No ${label.toLowerCase()} available`)
@@ -543,6 +558,10 @@ export default function CustomerDetailPage() {
             <button type="button" className="btn-secondary" onClick={() => void handleDisconnectSession()} disabled={busyKey === 'disconnect-session'}>
               <PlugZap className="mr-2 h-4 w-4" />
               Disconnect
+            </button>
+            <button type="button" className="btn-secondary text-rose-600" onClick={() => void handleDeleteCustomer()} disabled={busyKey === 'delete-customer'}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {busyKey === 'delete-customer' ? 'Deleting...' : 'Delete Customer'}
             </button>
           </div>
         </div>
