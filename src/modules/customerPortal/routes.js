@@ -1575,21 +1575,77 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
   ) || installers.find((item) =>
     targetCity && toLower(item.assignedCity) === targetCity
   ) || installers[0];
+  const installerPlanSnapshot = buildBookingPlanSnapshot(plan, payload, booking.selectedPlan || {});
+  const customerSnapshot = {
+    fullName: payload.fullName,
+    phone: payload.mobile,
+    address: payload.fullAddress,
+    location: { lat: payload.lat, lng: payload.lng },
+    preferredSlot: payload.preferredSlotCode
+      ? {
+          code: payload.preferredSlotCode,
+          label: payload.preferredSlotLabel || payload.preferredSlotCode,
+          date: payload.preferredDate || null
+        }
+      : null,
+    ...installerPlanSnapshot
+  };
   if (!installer) {
+    const pooledJob = await InstallerJob.create({
+      jobNumber: `JOB-${Date.now()}`,
+      type: "installation",
+      status: "assigned",
+      customerId: booking.bookingNumber,
+      serviceId: booking.bookingNumber,
+      priority: "medium",
+      assignment: {
+        assignedAt: new Date(),
+        autoAssigned: true,
+        poolVisible: true,
+        zone: targetZoneCode || null
+      },
+      customerSnapshot,
+      timeline: [
+        {
+          event: "job.created",
+          actorType: "system",
+          actorId: "booking-engine",
+          note: `Installation job created from booking ${booking.bookingNumber} and exposed to zone pool`
+        }
+      ]
+    });
     booking.status = "awaiting_assignment";
+    booking.assignment = {
+      ...(booking.assignment || {}),
+      assignedAt: new Date(),
+      autoAssigned: true,
+      zone: targetZoneCode || null,
+      jobId: pooledJob._id
+    };
     booking.tracking = {
       currentStep: "payment_confirmed",
       steps: [
         { code: "booking_placed", status: "done", at: booking.createdAt || new Date() },
         { code: "payment_confirmed", status: "done", at: new Date() },
-        { code: "installer_assigned", status: "pending", at: null }
+        { code: "installer_assigned", status: "pending", at: null, jobId: pooledJob._id }
       ]
     };
     await booking.save();
+    if (booking.customerUserId) {
+      await CustomerNotification.create({
+        customerUserId: booking.customerUserId,
+        type: "installation_job_created",
+        title: "Installation request created",
+        body: `Your installation job has been created for booking ${booking.bookingNumber}. Installer assignment is in progress.`,
+        payload: {
+          bookingNumber: booking.bookingNumber,
+          installerJobId: pooledJob._id
+        }
+      });
+    }
     return booking;
   }
 
-  const installerPlanSnapshot = buildBookingPlanSnapshot(plan, payload, booking.selectedPlan || {});
   const installerJob = await InstallerJob.create({
     jobNumber: `JOB-${Date.now()}`,
     type: "installation",
@@ -1597,20 +1653,7 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
     serviceId: booking.bookingNumber,
     installerId: installer._id,
     priority: "medium",
-    customerSnapshot: {
-      fullName: payload.fullName,
-      phone: payload.mobile,
-      address: payload.fullAddress,
-      location: { lat: payload.lat, lng: payload.lng },
-      preferredSlot: payload.preferredSlotCode
-        ? {
-            code: payload.preferredSlotCode,
-            label: payload.preferredSlotLabel || payload.preferredSlotCode,
-            date: payload.preferredDate || null
-          }
-        : null,
-      ...installerPlanSnapshot
-    },
+    customerSnapshot,
     timeline: [
       {
         event: "job.assigned",
@@ -1626,7 +1669,8 @@ async function assignInstallerIfAvailable({ booking, payload, plan, feasibility 
     installerId: installer._id,
     assignedAt: new Date(),
     autoAssigned: true,
-    zone: targetZoneCode || installer.assignedZones?.[0] || null
+    zone: targetZoneCode || installer.assignedZones?.[0] || null,
+    jobId: installerJob._id
   };
   booking.tracking = {
     currentStep: "installer_assigned",

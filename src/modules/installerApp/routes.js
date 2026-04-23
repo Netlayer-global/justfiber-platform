@@ -319,13 +319,13 @@ function unclaimedInstallerFilter() {
   };
 }
 
-function buildPooledComplaintFilter(installer) {
+function buildPooledJobFilter(installer, type) {
   const zones = installerZoneCandidates(installer);
   if (!zones.length) {
     return null;
   }
   return {
-    type: "complaint",
+    type,
     status: "assigned",
     "assignment.poolVisible": true,
     "assignment.zone": { $in: zones },
@@ -334,11 +334,13 @@ function buildPooledComplaintFilter(installer) {
 }
 
 function buildInstallerJobsFilter(installer) {
-  const pooledFilter = buildPooledComplaintFilter(installer);
+  const pooledComplaintFilter = buildPooledJobFilter(installer, "complaint");
+  const pooledInstallationFilter = buildPooledJobFilter(installer, "installation");
   return {
     $or: [
       { installerId: installer._id },
-      ...(pooledFilter ? [pooledFilter] : [])
+      ...(pooledComplaintFilter ? [pooledComplaintFilter] : []),
+      ...(pooledInstallationFilter ? [pooledInstallationFilter] : [])
     ]
   };
 }
@@ -346,12 +348,14 @@ function buildInstallerJobsFilter(installer) {
 function buildInstallerJobAccessFilter(jobId, installerOrId) {
   const hasInstallerObject = installerOrId && Array.isArray(installerOrId.assignedZones);
   const installerId = hasInstallerObject ? installerOrId._id : installerOrId;
-  const pooledFilter = hasInstallerObject ? buildPooledComplaintFilter(installerOrId) : null;
+  const pooledComplaintFilter = hasInstallerObject ? buildPooledJobFilter(installerOrId, "complaint") : null;
+  const pooledInstallationFilter = hasInstallerObject ? buildPooledJobFilter(installerOrId, "installation") : null;
   return {
     _id: jobId,
     $or: [
       { installerId },
-      ...(pooledFilter ? [pooledFilter] : [])
+      ...(pooledComplaintFilter ? [pooledComplaintFilter] : []),
+      ...(pooledInstallationFilter ? [pooledInstallationFilter] : [])
     ]
   };
 }
@@ -527,7 +531,7 @@ installerAppRouter.post(
     let job = await getInstallerJobOrThrow(req.params.jobId, req.installer);
     if (!job.installerId) {
       if (req.installer.availabilityStatus !== "available") {
-        throw new ApiError(409, "Set yourself available before accepting a pooled complaint");
+        throw new ApiError(409, "Set yourself available before accepting a pooled job");
       }
       const claimedJob = await InstallerJob.findOneAndUpdate(
         buildInstallerJobAccessFilter(req.params.jobId, req.installer),
@@ -543,7 +547,7 @@ installerAppRouter.post(
               event: "job.accepted",
               actorType: "installer",
               actorId: req.installer._id,
-              note: "Installer accepted pooled complaint",
+              note: "Installer accepted pooled job",
               at: new Date()
             }
           }
@@ -551,7 +555,7 @@ installerAppRouter.post(
         { new: true }
       );
       if (!claimedJob) {
-        throw new ApiError(409, "This complaint has already been accepted by another installer");
+        throw new ApiError(409, "This job has already been accepted by another installer");
       }
       job = claimedJob;
     } else {
@@ -582,7 +586,18 @@ installerAppRouter.post(
       );
     }
     if (job.type === "installation") {
-      const booking = await updateBookingProgress(job, { status: "assigned" });
+      const booking = await updateBookingProgress(job, {
+        status: "assigned",
+        assignment: {
+          installerId: req.installer._id,
+          installerName: req.installer.fullName || req.installer.installerCode || "Installer",
+          installerPhone: req.installer.phone || "",
+          assignedAt: job.assignment?.assignedAt || new Date(),
+          autoAssigned: Boolean(job.assignment?.autoAssigned),
+          zone: job.assignment?.zone || null,
+          jobId: job._id
+        }
+      });
       if (booking) {
         await notifyBookingCustomer(
           booking,
