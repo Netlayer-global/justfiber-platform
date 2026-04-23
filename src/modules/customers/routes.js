@@ -950,6 +950,29 @@ customersRouter.post(
       });
     }
 
+    const portalIdentityClauses = [
+      ...(payload.phone ? [{ mobile: payload.phone }] : []),
+      ...(payload.email ? [{ email: payload.email }] : [])
+    ];
+    if (portalIdentityClauses.length) {
+      await CustomerUser.findOneAndUpdate(
+        { $or: portalIdentityClauses },
+        {
+          $set: {
+            fullName: payload.fullName,
+            mobile: payload.phone || undefined,
+            email: payload.email || undefined,
+            authMode: payload.phone ? "mobile_otp" : "email_otp",
+            state: customer.operationalStatus === "suspended" ? "suspended_customer" : "active_customer"
+          },
+          $addToSet: {
+            linkedCustomerIds: customerId
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
+
     await auditFromRequest(req, {
       action: "customer.created_manual",
       entityType: "customer",
