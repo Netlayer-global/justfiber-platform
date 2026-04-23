@@ -20,7 +20,8 @@ import {
 } from "./schemas.js";
 import { ApiError } from "../../common/ApiError.js";
 import { auditFromRequest } from "../../common/audit.js";
-import { allowedPresets } from "../../integrations/genieacsClient.js";
+import { allowedPresets, genieacsClient } from "../../integrations/genieacsClient.js";
+import { summarizeGenieDevice } from "../../common/deviceOperationalSync.js";
 import { buildPagination } from "../../common/pagination.js";
 import { BillingInvoice } from "../../models/BillingInvoice.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
@@ -1011,9 +1012,27 @@ customersRouter.post(
       throw new ApiError(400, "Device ID is required");
     }
 
-    const device = await DeviceOperationalCache.findOne({ deviceId });
+    let device = await DeviceOperationalCache.findOne({ deviceId });
     if (!device) {
-      throw new ApiError(404, "Device not found");
+      const liveSummary = await genieacsClient.getRichDeviceSummary({ deviceId });
+      if (!liveSummary) {
+        throw new ApiError(404, "Device not found");
+      }
+      const parsed = summarizeGenieDevice(liveSummary, deviceId);
+      device = await DeviceOperationalCache.create({
+        customerId: customer.customerId,
+        serviceId: customer.serviceId || customer.customerId,
+        deviceId,
+        serialNumber: parsed.serialNumber,
+        productClass: parsed.productClass,
+        lastInformAt: parsed.lastInformAt,
+        onlineStatus: parsed.onlineStatus || "unknown",
+        provisioningState: "attached_from_live",
+        wanInfo: parsed.wanInfo || {},
+        wifiInfo: parsed.wifiInfo || {},
+        lanInfo: parsed.lanInfo || {},
+        opticalInfo: parsed.opticalInfo || {},
+      });
     }
     if (device.customerId && device.customerId !== customer.customerId) {
       throw new ApiError(409, `Device already attached to ${device.customerId}`);

@@ -194,6 +194,17 @@ export default function DevicesPage() {
     ].slice(0, 8))
   }
 
+  function mergeDeviceList(primary: Device[], secondary: Device[]) {
+    const merged = new Map<string, Device>()
+    for (const device of [...primary, ...secondary]) {
+      const key = device.deviceId || device.id
+      if (!key) continue
+      const existing = merged.get(key)
+      merged.set(key, existing ? { ...existing, ...device } : device)
+    }
+    return Array.from(merged.values())
+  }
+
   async function loadDevices(preferredDeviceId?: string) {
     try {
       setIsLoading(true)
@@ -209,14 +220,29 @@ export default function DevicesPage() {
         toast.error(res.error || 'Failed to load device inventory')
         return
       }
-      setDevices(res.data.items)
+      const cachedItems = res.data.items
+      setDevices(cachedItems)
       setSelectedDeviceId((current) => {
         const nextPreferred = preferredDeviceId || current
-        if (nextPreferred && res.data?.items.some((item) => item.id === nextPreferred)) {
+        if (nextPreferred && cachedItems.some((item) => item.id === nextPreferred)) {
           return nextPreferred
         }
-        return res.data?.items[0]?.id || ''
+        return cachedItems[0]?.id || ''
       })
+      setIsLoading(false)
+
+      const liveRes = await adminAPI.getDevices(1, 200, { live: true, liveLimit: 200 })
+      if (liveRes.success && liveRes.data?.items?.length) {
+        const mergedItems = mergeDeviceList(cachedItems, liveRes.data.items)
+        setDevices(mergedItems)
+        setSelectedDeviceId((current) => {
+          const nextPreferred = preferredDeviceId || current
+          if (nextPreferred && mergedItems.some((item) => item.id === nextPreferred)) {
+            return nextPreferred
+          }
+          return mergedItems[0]?.id || ''
+        })
+      }
     } catch (error) {
       console.error('[devices] Failed to load inventory:', error)
       toast.error('Failed to load device inventory')
