@@ -106,7 +106,11 @@ const BRAND_OVERRIDES = {
       `${DEVICE_WIFI_24}.SSID`
     ],
     pass24Path: [
-      `${IGD_WIFI_24}.KeyPassphrase`
+      ...buildNokiaPasswordPaths("ssid24"),
+      `${DEVICE_AP_24}.KeyPassphrase`,
+      `${DEVICE_AP_24}.PreSharedKey.1.KeyPassphrase`,
+      `${IGD_WIFI_24}.KeyPassphrase`,
+      `${IGD_WIFI_24}.PreSharedKey.1.KeyPassphrase`
     ],
     ssid5Path: [
       `${IGD_WIFI_5}.SSID`,
@@ -114,7 +118,11 @@ const BRAND_OVERRIDES = {
       `${DEVICE_WIFI_5}.SSID`
     ],
     pass5Path: [
-      `${IGD_WIFI_5}.KeyPassphrase`
+      ...buildNokiaPasswordPaths("ssid5"),
+      `${DEVICE_AP_5}.KeyPassphrase`,
+      `${DEVICE_AP_5}.PreSharedKey.1.KeyPassphrase`,
+      `${IGD_WIFI_5}.KeyPassphrase`,
+      `${IGD_WIFI_5}.PreSharedKey.1.KeyPassphrase`
     ]
   },
   dasan: {

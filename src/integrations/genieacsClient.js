@@ -606,14 +606,15 @@ export class GenieacsClient {
         }
       }
     };
-    const isDasan = String(brand || "").toLowerCase() === "dasan";
-    push(profile.pppoeUsernamePath, pppoeUsername, undefined, (input) => input, { configMultiPath: isDasan });
-    push(profile.pppoePasswordPath, pppoePassword, undefined, (input) => input, { configMultiPath: isDasan });
+    const normalizedBrand = String(brand || "").toLowerCase();
+    const multiPathPppoe = ["dasan", "nokia", "zte", "syrotech", "tp-link", "secureeye", "gx", "zyxel"].includes(normalizedBrand);
+    push(profile.pppoeUsernamePath, pppoeUsername, undefined, (input) => input, { configMultiPath: multiPathPppoe });
+    push(profile.pppoePasswordPath, pppoePassword, undefined, (input) => input, { configMultiPath: multiPathPppoe });
     if (vlanId !== undefined && vlanId !== null && vlanId !== "") {
       push(profile.vlanPath, vlanId, "xsd:unsignedInt", Number);
     }
     if (natEnabled !== undefined && natEnabled !== null) {
-      push(profile.natPath, natEnabled, "xsd:boolean", Boolean, { configMultiPath: isDasan });
+      push(profile.natPath, natEnabled, "xsd:boolean", Boolean, { configMultiPath: normalizedBrand === "dasan" });
     }
     if (unifyWifiAliases) {
       push([...profile.ssid24Path, ...profile.ssid5Path], normalizedSsid24, undefined, (input) => input, { wifiMultiPath: true });
