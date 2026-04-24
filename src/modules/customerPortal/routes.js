@@ -1025,7 +1025,7 @@ async function upsertCustomerAppLead({
     ? (booking.payment?.status === "paid" ? "converted" : "payment_pending")
     : (feasibility.feasible ? "feasible" : "new");
   const leadSource = String(payload.source || source || "customer_app_booking").trim();
-  const existingLead = identityFilters.length
+  const existingLead = booking && identityFilters.length
     ? await Lead.findOne({
         $or: identityFilters,
         status: { $nin: ["converted", "dropped"] },
