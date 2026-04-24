@@ -226,7 +226,7 @@ class InstallerApiClient {
             .map((item) => item.toString())
             .where((item) => item.isNotEmpty)
             .toList(),
-        jobType: (map['jobType'] ?? 'installation').toString(),
+        jobType: (map['jobType'] ?? map['type'] ?? 'installation').toString(),
         priority: (map['priority'] ?? 'medium').toString(),
         scheduledAt:
             (map['scheduledDate'] ?? map['assignment']?['assignedAt'] ?? '')
@@ -241,6 +241,16 @@ class InstallerApiClient {
         configStatus: (map['activation']?['configStatus'] ?? '').toString(),
         finalSerialNumber: (map['deviceContext']?['finalSerialNumber'] ??
                 map['deviceContext']?['manualSerialNumber'] ??
+                '')
+            .toString(),
+        rxPowerText: (map['opticalReadings']?['rxPower'] ??
+                map['opticalReadings']?['opticalRxPower'] ??
+                map['opticalReadings']?['receivedPower'] ??
+                '')
+            .toString(),
+        opticalHealth: (map['opticalReadings']?['healthStatus'] ??
+                map['opticalReadings']?['opticalHealth'] ??
+                map['opticalReadings']?['status'] ??
                 '')
             .toString(),
         latitude: double.tryParse(

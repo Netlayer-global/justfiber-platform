@@ -66,6 +66,8 @@ class InstallerJob {
     required this.latestEventCode,
     required this.configStatus,
     required this.finalSerialNumber,
+    required this.rxPowerText,
+    required this.opticalHealth,
     required this.latitude,
     required this.longitude,
     required this.mapUrl,
@@ -99,6 +101,8 @@ class InstallerJob {
   final String latestEventCode;
   final String configStatus;
   final String finalSerialNumber;
+  final String rxPowerText;
+  final String opticalHealth;
   final double? latitude;
   final double? longitude;
   final String mapUrl;

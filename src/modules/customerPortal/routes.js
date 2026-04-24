@@ -2031,7 +2031,9 @@ customerPortalRouter.post(
     });
     const resolvedPlan = payload.planCode
       ? await PlanCatalog.findOne({ planCode: payload.planCode }).lean()
-      : null;
+      : (payload.planName
+          ? await PlanCatalog.findOne({ name: payload.planName }).lean()
+          : null);
     const { lead, salesAgent } = await upsertCustomerAppLead({
       customerUser,
       payload,

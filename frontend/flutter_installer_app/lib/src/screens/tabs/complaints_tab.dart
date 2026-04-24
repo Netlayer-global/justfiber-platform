@@ -7,14 +7,14 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../job_detail_screen.dart';
 
-class JobsTab extends StatefulWidget {
-  const JobsTab({super.key});
+class ComplaintsTab extends StatefulWidget {
+  const ComplaintsTab({super.key});
 
   @override
-  State<JobsTab> createState() => _JobsTabState();
+  State<ComplaintsTab> createState() => _ComplaintsTabState();
 }
 
-class _JobsTabState extends State<JobsTab> {
+class _ComplaintsTabState extends State<ComplaintsTab> {
   String _search = '';
   final _searchCtrl = TextEditingController();
 
@@ -46,9 +46,9 @@ class _JobsTabState extends State<JobsTab> {
   Widget build(BuildContext context) {
     final appState = InstallerStateScope.of(context);
     final all = appState.jobs
-        .where((j) => _normalizedJobType(j) == 'installation')
+        .where((j) => _normalizedJobType(j) == 'complaint')
         .toList();
-    final jobs = _filterSearch(all);
+    final complaints = _filterSearch(all);
 
     final pending =
         all.where((j) => j.status.toLowerCase() == 'assigned').length;
@@ -56,14 +56,13 @@ class _JobsTabState extends State<JobsTab> {
         .where((j) =>
             j.status.toLowerCase().contains('enroute') ||
             j.status.toLowerCase().contains('onsite') ||
-            j.status.toLowerCase().contains('progress') ||
-            j.status.toLowerCase().contains('activat'))
+            j.status.toLowerCase().contains('progress'))
         .length;
-    final done =
+    final resolved =
         all.where((j) => j.status.toLowerCase().contains('complet')).length;
 
     return RefreshIndicator(
-      color: kPrimaryLight,
+      color: const Color(0xFFFBBF24),
       backgroundColor: kSurface,
       onRefresh: appState.refresh,
       child: CustomScrollView(
@@ -74,7 +73,7 @@ class _JobsTabState extends State<JobsTab> {
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B0A73), Color(0xFF6B21A8)],
+                  colors: [Color(0xFF78350F), Color(0xFFB45309)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -90,7 +89,7 @@ class _JobsTabState extends State<JobsTab> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Installations',
+                              'Complaints',
                               style: GoogleFonts.inter(
                                 color: Colors.white,
                                 fontSize: 24,
@@ -122,12 +121,12 @@ class _JobsTabState extends State<JobsTab> {
                       Row(
                         children: [
                           _stat('$pending', 'Pending',
-                              const Color(0xFF818CF8)),
+                              const Color(0xFFFCD34D)),
                           const SizedBox(width: 10),
-                          _stat('$active', 'Active',
-                              const Color(0xFF38BDF8)),
+                          _stat('$active', 'On-Site',
+                              const Color(0xFFFB923C)),
                           const SizedBox(width: 10),
-                          _stat('$done', 'Done',
+                          _stat('$resolved', 'Resolved',
                               const Color(0xFF34D399)),
                         ],
                       ),
@@ -191,7 +190,7 @@ class _JobsTabState extends State<JobsTab> {
                   style:
                       GoogleFonts.inter(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Search installations…',
+                    hintText: 'Search complaints…',
                     hintStyle:
                         GoogleFonts.inter(color: kSubtle, fontSize: 13),
                     prefixIcon: const Icon(Icons.search_rounded,
@@ -215,8 +214,8 @@ class _JobsTabState extends State<JobsTab> {
             ),
           ),
 
-          // ── Job list ────────────────────────────────────────────
-          if (jobs.isEmpty)
+          // ── List ────────────────────────────────────────────────
+          if (complaints.isEmpty)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(18, 20, 18, 40),
               sliver: SliverToBoxAdapter(
@@ -229,13 +228,13 @@ class _JobsTabState extends State<JobsTab> {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.router_outlined,
+                      const Icon(Icons.build_circle_outlined,
                           color: kSubtle, size: 44),
                       const SizedBox(height: 12),
                       Text(
                         all.isEmpty
-                            ? 'No installation jobs assigned'
-                            : 'No installations match your search',
+                            ? 'No complaint jobs assigned'
+                            : 'No complaints match your search',
                         style: GoogleFonts.inter(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -263,9 +262,9 @@ class _JobsTabState extends State<JobsTab> {
                 delegate: SliverChildBuilderDelegate(
                   (context, i) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _InstallCard(job: jobs[i]),
+                    child: _ComplaintCard(job: complaints[i]),
                   ),
-                  childCount: jobs.length,
+                  childCount: complaints.length,
                 ),
               ),
             ),
@@ -353,13 +352,13 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-// ─── Install Card ─────────────────────────────────────────────────────────────
+// ─── Complaint Card ───────────────────────────────────────────────────────────
 
-class _InstallCard extends StatelessWidget {
-  const _InstallCard({required this.job});
+class _ComplaintCard extends StatelessWidget {
+  const _ComplaintCard({required this.job});
   final InstallerJob job;
 
-  static const _indigo = Color(0xFF818CF8);
+  static const _amber = Color(0xFFFBBF24);
 
   @override
   Widget build(BuildContext context) {
@@ -367,6 +366,10 @@ class _InstallCard extends StatelessWidget {
     final priorityInfo = _priorityInfo(job.priority);
     final isDeferred = job.status.toLowerCase().contains('defer');
     final isCancelled = job.status.toLowerCase().contains('cancel');
+    final rxPower = job.rxPowerText.trim().isEmpty ? '-' : job.rxPowerText.trim();
+    final serial = job.finalSerialNumber.trim().isEmpty ? '-' : job.finalSerialNumber.trim();
+    final config = job.configStatus.trim().isEmpty ? 'Not synced' : job.configStatus.trim().replaceAll('_', ' ');
+    final optical = job.opticalHealth.trim().isEmpty ? 'Unknown' : job.opticalHealth.trim().replaceAll('_', ' ');
 
     return GestureDetector(
       onTap: () async {
@@ -381,10 +384,10 @@ class _InstallCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: kSurface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _indigo.withValues(alpha: 0.2)),
+          border: Border.all(color: _amber.withValues(alpha: 0.22)),
           boxShadow: [
             BoxShadow(
-              color: _indigo.withValues(alpha: 0.05),
+              color: _amber.withValues(alpha: 0.05),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -397,7 +400,7 @@ class _InstallCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               decoration: BoxDecoration(
-                color: _indigo.withValues(alpha: 0.06),
+                color: _amber.withValues(alpha: 0.06),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(18)),
               ),
@@ -407,13 +410,13 @@ class _InstallCard extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: _indigo.withValues(alpha: 0.12),
+                      color: _amber.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(11),
                       border: Border.all(
-                          color: _indigo.withValues(alpha: 0.3)),
+                          color: _amber.withValues(alpha: 0.3)),
                     ),
-                    child: const Icon(Icons.router_rounded,
-                        color: _indigo, size: 20),
+                    child: const Icon(Icons.build_circle_rounded,
+                        color: _amber, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -481,8 +484,7 @@ class _InstallCard extends StatelessWidget {
                   ],
                   // Map button
                   if (job.mapUrl.isNotEmpty ||
-                      (job.latitude != null &&
-                          job.longitude != null)) ...[
+                      (job.latitude != null && job.longitude != null)) ...[
                     _heroBtn(
                       icon: Icons.map_rounded,
                       color: const Color(0xFF38BDF8),
@@ -521,12 +523,22 @@ class _InstallCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _infoRow(Icons.location_on_rounded, job.customerAddress,
-                      maxLines: 2),
-                  if (job.planName.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    _infoRow(Icons.wifi_rounded, job.planName),
-                  ],
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_rounded,
+                          color: kMuted, size: 13),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          job.customerAddress,
+                          style: GoogleFonts.inter(
+                              color: kMuted, fontSize: 12, height: 1.3),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                   // Defer note
                   if (isDeferred && job.deferNote.isNotEmpty) ...[
                     const SizedBox(height: 4),
@@ -539,6 +551,17 @@ class _InstallCard extends StatelessWidget {
                     _noteRow(Icons.cancel_outlined, job.cancelNote,
                         const Color(0xFFFCA5A5)),
                   ],
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _metricChip('Router', serial, Icons.router_rounded),
+                      _metricChip('RX Power', rxPower, Icons.network_check_rounded),
+                      _metricChip('Optical', optical, Icons.wifi_tethering_rounded),
+                      _metricChip('Config', config, Icons.settings_ethernet_rounded),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -567,10 +590,10 @@ class _InstallCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: _indigo.withValues(alpha: 0.1),
+                      color: _amber.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: _indigo.withValues(alpha: 0.3)),
+                          color: _amber.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -578,14 +601,14 @@ class _InstallCard extends StatelessWidget {
                         Text(
                           'Open Job',
                           style: GoogleFonts.inter(
-                            color: _indigo,
+                            color: _amber,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(width: 4),
                         const Icon(Icons.arrow_forward_rounded,
-                            color: _indigo, size: 13),
+                            color: _amber, size: 13),
                       ],
                     ),
                   ),
@@ -598,38 +621,50 @@ class _InstallCard extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(IconData icon, String text, {int maxLines = 1}) =>
-      Row(
+  Widget _metricChip(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x1AFBBF24)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: kMuted, size: 13),
+          Icon(icon, color: _amber, size: 14),
           const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: GoogleFonts.inter(
-                  color: kMuted, fontSize: 12, height: 1.3),
-              maxLines: maxLines,
-              overflow: TextOverflow.ellipsis,
+          Text(
+            '$label: $value',
+            style: GoogleFonts.inter(
+              color: const Color(0xFFE2E8F0),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
-      );
+      ),
+    );
+  }
 
-  Widget _noteRow(IconData icon, String text, Color color) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 12),
-          const SizedBox(width: 5),
-          Expanded(
-            child: Text(
-              text,
-              style: GoogleFonts.inter(
-                  color: color, fontSize: 11, height: 1.3),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+  Widget _noteRow(IconData icon, String text, Color color) => Padding(
+        padding: const EdgeInsets.only(top: 0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 12),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                text,
+                style: GoogleFonts.inter(
+                    color: color, fontSize: 11, height: 1.3),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
 
   Widget _heroBtn({
@@ -676,8 +711,7 @@ class _InstallCard extends StatelessWidget {
     if (s.contains('onsite') || s.contains('progress')) {
       return ('ON-SITE', const Color(0xFFF59E0B));
     }
-    if (s.contains('activat')) return ('ACTIVATING', const Color(0xFFF59E0B));
-    if (s.contains('complet')) return ('DONE', const Color(0xFF10B981));
+    if (s.contains('complet')) return ('RESOLVED', const Color(0xFF10B981));
     if (s.contains('defer')) return ('DEFERRED', const Color(0xFFE879F9));
     if (s.contains('cancel')) return ('CANCELLED', const Color(0xFFEF4444));
     return (status.toUpperCase(), kMuted);
