@@ -19,6 +19,8 @@ import type {
   ServiceZone,
   DashboardStats,
   CustomerOtpLookup,
+  SalesBookingItem,
+  SalesLeadItem,
   InstallerMessageTemplates,
   BillingData,
   BillingOverview,
@@ -213,6 +215,65 @@ export async function openProtectedDocument(endpoint: string) {
   const objectUrl = URL.createObjectURL(blob)
   window.open(objectUrl, '_blank', 'noopener,noreferrer')
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+}
+
+function mapSalesLead(lead: any): SalesLeadItem {
+  return {
+    id: lead._id || lead.leadNumber || '',
+    leadNumber: lead.leadNumber || lead._id || '',
+    fullName: lead.fullName || '',
+    mobile: lead.mobile || '',
+    email: lead.email || '',
+    address: lead.address || '',
+    pinCode: lead.pinCode || '',
+    source: lead.source || '',
+    status: lead.status || 'new',
+    zoneId: lead.zoneId || '',
+    feasible: Boolean(lead.feasible),
+    selectedPlan: lead.selectedPlan
+      ? {
+          planCode: lead.selectedPlan.planCode || '',
+          planName: lead.selectedPlan.planName || '',
+          amount: Number(lead.selectedPlan.amount || 0),
+          durationMonths: Number(lead.selectedPlan.durationMonths || 0) || undefined,
+          durationLabel: lead.selectedPlan.durationLabel || '',
+        }
+      : null,
+    createdAt: lead.createdAt,
+  }
+}
+
+function mapSalesBooking(booking: any): SalesBookingItem {
+  return {
+    id: booking._id || booking.bookingNumber || '',
+    bookingNumber: booking.bookingNumber || booking._id || '',
+    leadId: booking.leadId ? String(booking.leadId) : '',
+    source: booking.source || '',
+    status: booking.status || 'initiated',
+    payment: booking.payment
+      ? {
+          status: booking.payment.status || '',
+          amount: Number(booking.payment.amount || 0),
+        }
+      : null,
+    selectedPlan: booking.selectedPlan
+      ? {
+          planCode: booking.selectedPlan.planCode || '',
+          planName: booking.selectedPlan.planName || '',
+          totalAmount: Number(booking.selectedPlan.totalAmount || 0),
+        }
+      : null,
+    personalDetails: booking.personalDetails
+      ? {
+          fullName: booking.personalDetails.fullName || '',
+          mobile: booking.personalDetails.mobile || '',
+          email: booking.personalDetails.email || '',
+          fullAddress: booking.personalDetails.fullAddress || '',
+          pinCode: booking.personalDetails.pinCode || '',
+        }
+      : null,
+    createdAt: booking.createdAt,
+  }
 }
 
 function mapPlan(plan: any): Plan {
@@ -1394,6 +1455,20 @@ export const adminAPI = {
         : undefined,
     }
   },
+  getSalesLeads: async () => {
+    const res = await request<any[]>('/api/v1/admin/sales/leads')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapSalesLead) : [],
+    }
+  },
+  getSalesBookings: async () => {
+    const res = await request<any[]>('/api/v1/admin/sales/bookings')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapSalesBooking) : [],
+    }
+  },
   getCustomerDemoOtp: async (lookup: string) => {
     const encoded = encodeURIComponent(lookup)
     const primary = await request<CustomerOtpLookup>(`/api/v1/admin/customer-auth/demo-otp?mobile=${encoded}`)
@@ -1536,6 +1611,9 @@ export const adminAPI = {
         addons: data.addons,
         provisioning: data.provisioning,
         merchandising: data.merchandising,
+        visibleInCustomerApp: data.visibleInCustomerApp,
+        visibleInSalesApp: data.visibleInSalesApp,
+        visibleInProvisioning: data.visibleInProvisioning,
         planScope: data.planScope,
         zoneContext: data.zoneContext,
         active: data.status !== 'inactive',
@@ -1579,6 +1657,9 @@ export const adminAPI = {
         addons: data.addons,
         provisioning: data.provisioning,
         merchandising: data.merchandising,
+        visibleInCustomerApp: data.visibleInCustomerApp,
+        visibleInSalesApp: data.visibleInSalesApp,
+        visibleInProvisioning: data.visibleInProvisioning,
         planScope: data.planScope,
         zoneContext: data.zoneContext,
         active: data.status ? data.status !== 'inactive' : undefined,
@@ -1689,6 +1770,8 @@ export const adminAPI = {
           ? {
               currentIpv4: data.radiusService.currentIpv4 ?? null,
               ipv4Pool: data.radiusService.ipv4Pool ?? null,
+              bngNodeCode: data.radiusService.bngNodeCode ?? null,
+              autoSelectBng: (data.radiusService as any).autoSelectBng ?? undefined,
             }
           : undefined,
       }),

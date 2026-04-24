@@ -78,6 +78,9 @@ type PlanFormState = {
   featured: boolean
   recommended: boolean
   spotlightLabel: string
+  visibleInCustomerApp: boolean
+  visibleInSalesApp: boolean
+  visibleInProvisioning: boolean
   planScope: 'global' | 'zone'
   sortOrder: string
 }
@@ -142,6 +145,9 @@ const initialForm: PlanFormState = {
   featured: false,
   recommended: false,
   spotlightLabel: '',
+  visibleInCustomerApp: true,
+  visibleInSalesApp: true,
+  visibleInProvisioning: true,
   planScope: 'global',
   sortOrder: '1',
 }
@@ -237,6 +243,9 @@ function toForm(plan?: Plan | null): PlanFormState {
     featured: Boolean(plan.merchandising?.featured),
     recommended: Boolean(plan.merchandising?.recommended),
     spotlightLabel: plan.merchandising?.spotlightLabel || '',
+    visibleInCustomerApp: plan.visibleInCustomerApp !== false,
+    visibleInSalesApp: plan.visibleInSalesApp !== false,
+    visibleInProvisioning: plan.visibleInProvisioning !== false,
     planScope: plan.planScope || 'global',
     sortOrder: String(plan.sortOrder || 1),
   }
@@ -449,6 +458,9 @@ function PlansContent() {
         recommended: form.recommended,
         spotlightLabel: form.spotlightLabel.trim(),
       },
+      visibleInCustomerApp: form.visibleInCustomerApp,
+      visibleInSalesApp: form.visibleInSalesApp,
+      visibleInProvisioning: form.visibleInProvisioning,
       planScope: form.planScope,
       zoneContext:
         form.planScope === 'zone'
@@ -499,6 +511,48 @@ function PlansContent() {
     } catch (error) {
       console.error('[plans] Failed to toggle plan status:', error)
       toast.error('Failed to update plan status')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function togglePlanVisibility(
+    plan: Plan,
+    target: 'customer' | 'sales' | 'provisioning'
+  ) {
+    try {
+      setIsSaving(true)
+      const patch =
+        target === 'customer'
+          ? { visibleInCustomerApp: !(plan.visibleInCustomerApp !== false) }
+          : target === 'sales'
+            ? { visibleInSalesApp: !(plan.visibleInSalesApp !== false) }
+            : { visibleInProvisioning: !(plan.visibleInProvisioning !== false) }
+      const res = await adminAPI.updatePlan(plan.planCode || plan.id, {
+        ...plan,
+        ...patch,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to update plan visibility')
+        return
+      }
+      toast.success(
+        target === 'customer'
+          ? patch.visibleInCustomerApp
+            ? 'Plan shown in customer app'
+            : 'Plan hidden from customer app'
+          : target === 'sales'
+            ? patch.visibleInSalesApp
+              ? 'Plan shown in sales app'
+              : 'Plan hidden from sales app'
+            : patch.visibleInProvisioning
+              ? 'Plan kept in provisioning'
+              : 'Plan hidden from provisioning'
+      )
+      await loadPlans()
+    } catch (error) {
+      console.error('[plans] Failed to toggle plan visibility:', error)
+      toast.error('Failed to update plan visibility')
     } finally {
       setIsSaving(false)
     }
@@ -723,6 +777,29 @@ function PlansContent() {
 
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 space-y-4">
             <div>
+              <div className="text-sm font-semibold text-slate-900">App visibility</div>
+              <div className="mt-1 text-sm text-slate-500">
+                Decide where this plan should appear. Hidden plans stay available in admin but will not show in the selected app.
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                <input type="checkbox" checked={form.visibleInCustomerApp} onChange={(e) => setForm({ ...form, visibleInCustomerApp: e.target.checked })} />
+                Show in customer app
+              </label>
+              <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                <input type="checkbox" checked={form.visibleInSalesApp} onChange={(e) => setForm({ ...form, visibleInSalesApp: e.target.checked })} />
+                Show in sales app
+              </label>
+              <label className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                <input type="checkbox" checked={form.visibleInProvisioning} onChange={(e) => setForm({ ...form, visibleInProvisioning: e.target.checked })} />
+                Keep for provisioning
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 space-y-4">
+            <div>
               <div className="text-sm font-semibold text-slate-900">Invoice breakup</div>
               <div className="mt-1 text-sm text-slate-500">
                 Use invoice split only if you need separate platform and internet lines.
@@ -913,8 +990,13 @@ function PlansContent() {
                   <div className="mt-2 text-lg font-semibold text-slate-900">{plan.speed} Mbps</div>
                 </div>
                 <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Visibility</div>
-                  <div className="mt-2 text-lg font-semibold text-slate-900">{plan.visibleInCustomerApp ? 'Visible' : 'Hidden'}</div>
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Apps</div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">
+                    Customer: {plan.visibleInCustomerApp ? 'On' : 'Off'}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    Sales: {plan.visibleInSalesApp ? 'On' : 'Off'}
+                  </div>
                 </div>
               </div>
 
@@ -922,6 +1004,33 @@ function PlansContent() {
                 <button type="button" onClick={() => beginEdit(plan)} className="btn-secondary inline-flex items-center gap-2">
                   <Pencil className="h-4 w-4" />
                   Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void togglePlanVisibility(plan, 'customer')}
+                  disabled={isSaving}
+                  className={`btn-secondary inline-flex items-center gap-2 ${plan.visibleInCustomerApp ? 'border-emerald-200 text-emerald-700' : 'border-slate-200 text-slate-600'}`}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {plan.visibleInCustomerApp ? 'Customer app on' : 'Customer app off'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void togglePlanVisibility(plan, 'sales')}
+                  disabled={isSaving}
+                  className={`btn-secondary inline-flex items-center gap-2 ${plan.visibleInSalesApp ? 'border-emerald-200 text-emerald-700' : 'border-slate-200 text-slate-600'}`}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {plan.visibleInSalesApp ? 'Sales app on' : 'Sales app off'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void togglePlanVisibility(plan, 'provisioning')}
+                  disabled={isSaving}
+                  className={`btn-secondary inline-flex items-center gap-2 ${plan.visibleInProvisioning ? 'border-emerald-200 text-emerald-700' : 'border-slate-200 text-slate-600'}`}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {plan.visibleInProvisioning ? 'Provisioning on' : 'Provisioning off'}
                 </button>
                 <button
                   type="button"

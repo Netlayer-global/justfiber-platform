@@ -117,6 +117,9 @@ const planSchema = z.object({
     recommended: z.boolean().optional(),
     spotlightLabel: z.string().optional()
   }).optional(),
+  visibleInCustomerApp: z.boolean().optional(),
+  visibleInSalesApp: z.boolean().optional(),
+  visibleInProvisioning: z.boolean().optional(),
   planScope: z.enum(["global", "zone"]).optional(),
   zoneContext: z.object({
     zoneCode: z.string().min(2).optional(),
@@ -180,9 +183,9 @@ function decoratePlanCatalogItem(plan, activeZoneCode = "") {
     ...plan,
     provisioningIssues,
     provisioningReady,
-    visibleInCustomerApp: liveInApps,
-    visibleInSalesApp: liveInApps,
-    visibleInProvisioning: liveInApps,
+    visibleInCustomerApp: liveInApps && plan.visibleInCustomerApp !== false,
+    visibleInSalesApp: liveInApps && plan.visibleInSalesApp !== false,
+    visibleInProvisioning: liveInApps && plan.visibleInProvisioning !== false,
     resolvedZoneScope
   };
 }

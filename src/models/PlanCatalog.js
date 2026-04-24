@@ -76,6 +76,9 @@ const planCatalogSchema = new mongoose.Schema(
       recommended: { type: Boolean, default: false },
       spotlightLabel: String
     },
+    visibleInCustomerApp: { type: Boolean, default: true },
+    visibleInSalesApp: { type: Boolean, default: true },
+    visibleInProvisioning: { type: Boolean, default: true },
     planScope: { type: String, enum: ["global", "zone"], default: "global" },
     zoneContext: {
       zoneCode: String,

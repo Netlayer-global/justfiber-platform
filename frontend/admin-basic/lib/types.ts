@@ -347,6 +347,53 @@ export interface CustomerBooking {
   createdAt?: string
 }
 
+export interface SalesLeadItem {
+  id: string
+  leadNumber: string
+  fullName?: string
+  mobile?: string
+  email?: string
+  address?: string
+  pinCode?: string
+  source?: string
+  status?: string
+  zoneId?: string
+  feasible?: boolean
+  selectedPlan?: {
+    planCode?: string
+    planName?: string
+    amount?: number
+    durationMonths?: number
+    durationLabel?: string
+  } | null
+  createdAt?: string
+}
+
+export interface SalesBookingItem {
+  id: string
+  bookingNumber: string
+  leadId?: string
+  source?: string
+  status?: string
+  payment?: {
+    status?: string
+    amount?: number
+  } | null
+  selectedPlan?: {
+    planCode?: string
+    planName?: string
+    totalAmount?: number
+  } | null
+  personalDetails?: {
+    fullName?: string
+    mobile?: string
+    email?: string
+    fullAddress?: string
+    pinCode?: string
+  } | null
+  createdAt?: string
+}
+
 export interface Device {
   id: string
   deviceId?: string
