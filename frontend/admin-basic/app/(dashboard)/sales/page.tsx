@@ -26,6 +26,14 @@ function formatMoney(value?: number) {
   return `Rs ${Number(value || 0).toFixed(0)}`
 }
 
+function sourceChipClass(source?: string) {
+  const normalized = String(source || '').trim()
+  if (normalized === 'customer_app_booking') return 'bg-sky-100 text-sky-700'
+  if (normalized === 'customer_app_feasibility' || normalized === 'app_new_user') return 'bg-violet-100 text-violet-700'
+  if (normalized === 'field_sales') return 'bg-amber-100 text-amber-700'
+  return 'bg-slate-100 text-slate-700'
+}
+
 function normalizePhone(value?: string) {
   return String(value || '').replace(/\D+/g, '')
 }
@@ -222,9 +230,9 @@ export default function SalesPage() {
                           {[lead.leadNumber, lead.mobile || '-', lead.email || 'No email'].join(' | ')}
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 lg:max-w-[45%] lg:justify-end">
                         <span className="rounded-full bg-purple-100 px-3 py-1 text-[11px] font-medium text-purple-700">{lead.status || 'new'}</span>
-                        <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white">{formatSource(lead.source)}</span>
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-medium ${sourceChipClass(lead.source)}`}>{formatSource(lead.source)}</span>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-600">
                           {lead.feasible ? 'Feasible' : 'Needs check'}
                         </span>
@@ -304,9 +312,9 @@ export default function SalesPage() {
                           {[booking.bookingNumber, booking.personalDetails?.mobile || linkedLead?.mobile || '-', booking.personalDetails?.email || linkedLead?.email || 'No email'].join(' | ')}
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 lg:max-w-[45%] lg:justify-end">
                         <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-medium text-emerald-700">{booking.status || 'initiated'}</span>
-                        <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white">{formatSource(linkedLead?.source || booking.source)}</span>
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-medium ${sourceChipClass(linkedLead?.source || booking.source)}`}>{formatSource(linkedLead?.source || booking.source)}</span>
                       </div>
                     </div>
 
