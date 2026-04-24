@@ -215,19 +215,30 @@ export default function SalesPage() {
                 const planName = firstValue(
                   lead.selectedPlan?.planName,
                   lead.selectedPlan?.planCode,
+                  lead.requestedPlanName,
+                  lead.requestedPlanCode,
                   matchedBooking?.selectedPlan?.planName,
                   matchedBooking?.selectedPlan?.planCode,
                 )
-                const amount = firstValue(lead.selectedPlan?.amount, matchedBooking?.selectedPlan?.totalAmount, matchedBooking?.payment?.amount)
+                const amount = firstValue(
+                  lead.selectedPlan?.amount,
+                  lead.requestedPlanAmount,
+                  matchedBooking?.selectedPlan?.totalAmount,
+                  matchedBooking?.payment?.amount,
+                )
                 const duration = firstValue(
                   lead.selectedPlan?.durationLabel,
                   lead.selectedPlan?.durationMonths ? `${lead.selectedPlan.durationMonths} months` : '',
+                  lead.requestedDurationLabel,
+                  lead.requestedDurationMonths ? `${lead.requestedDurationMonths} months` : '',
                   matchedBooking?.selectedPlan?.durationLabel,
                   matchedBooking?.selectedPlan?.durationMonths ? `${matchedBooking.selectedPlan.durationMonths} months` : '',
                 )
                 const preferredSlot = firstValue(
                   lead.selectedPlan?.preferredSlot?.label,
                   lead.selectedPlan?.preferredSlot?.code,
+                  lead.requestedPreferredSlotLabel,
+                  lead.requestedPreferredSlotCode,
                   matchedBooking?.personalDetails?.preferredSlot?.label,
                   matchedBooking?.personalDetails?.preferredSlot?.code,
                 )

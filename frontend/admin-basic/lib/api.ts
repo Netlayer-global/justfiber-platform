@@ -231,6 +231,13 @@ function mapSalesLead(lead: any): SalesLeadItem {
     status: lead.status || 'new',
     zoneId: lead.zoneId || '',
     feasible: Boolean(lead.feasible),
+    requestedPlanCode: lead.requestedPlanCode || '',
+    requestedPlanName: lead.requestedPlanName || '',
+    requestedPlanAmount: Number(lead.requestedPlanAmount || 0) || undefined,
+    requestedDurationMonths: Number(lead.requestedDurationMonths || 0) || undefined,
+    requestedDurationLabel: lead.requestedDurationLabel || '',
+    requestedPreferredSlotCode: lead.requestedPreferredSlotCode || '',
+    requestedPreferredSlotLabel: lead.requestedPreferredSlotLabel || '',
     selectedPlan: lead.selectedPlan
       ? {
           planCode: lead.selectedPlan.planCode || '',

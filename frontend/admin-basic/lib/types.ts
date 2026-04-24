@@ -359,6 +359,13 @@ export interface SalesLeadItem {
   status?: string
   zoneId?: string
   feasible?: boolean
+  requestedPlanCode?: string
+  requestedPlanName?: string
+  requestedPlanAmount?: number
+  requestedDurationMonths?: number
+  requestedDurationLabel?: string
+  requestedPreferredSlotCode?: string
+  requestedPreferredSlotLabel?: string
   selectedPlan?: {
     planCode?: string
     planName?: string
