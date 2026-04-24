@@ -170,6 +170,44 @@ function formatCurrency(amount?: number) {
   return `Rs ${Number(amount || 0).toFixed(0)}`
 }
 
+function VisibilityToggle({
+  label,
+  checked,
+  onClick,
+  disabled,
+}: {
+  label: string
+  checked: boolean
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-3 rounded-full border px-3 py-2 text-sm font-medium transition ${
+        checked
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          : 'border-slate-200 bg-white text-slate-600'
+      } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+    >
+      <span>{label}</span>
+      <span
+        className={`relative h-6 w-11 rounded-full transition ${
+          checked ? 'bg-emerald-500' : 'bg-slate-300'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
+            checked ? 'left-[22px]' : 'left-0.5'
+          }`}
+        />
+      </span>
+    </button>
+  )
+}
+
 function renderCategoryLabel(category?: Plan['category']) {
   switch (category) {
     case 'business':
@@ -1005,33 +1043,24 @@ function PlansContent() {
                   <Pencil className="h-4 w-4" />
                   Edit
                 </button>
-                <button
-                  type="button"
+                <VisibilityToggle
+                  label="Customer app"
+                  checked={plan.visibleInCustomerApp !== false}
+                  disabled={isSaving}
                   onClick={() => void togglePlanVisibility(plan, 'customer')}
+                />
+                <VisibilityToggle
+                  label="Sales app"
+                  checked={plan.visibleInSalesApp !== false}
                   disabled={isSaving}
-                  className={`btn-secondary inline-flex items-center gap-2 ${plan.visibleInCustomerApp ? 'border-emerald-200 text-emerald-700' : 'border-slate-200 text-slate-600'}`}
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  {plan.visibleInCustomerApp ? 'Customer app on' : 'Customer app off'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => void togglePlanVisibility(plan, 'sales')}
+                />
+                <VisibilityToggle
+                  label="Provisioning"
+                  checked={plan.visibleInProvisioning !== false}
                   disabled={isSaving}
-                  className={`btn-secondary inline-flex items-center gap-2 ${plan.visibleInSalesApp ? 'border-emerald-200 text-emerald-700' : 'border-slate-200 text-slate-600'}`}
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  {plan.visibleInSalesApp ? 'Sales app on' : 'Sales app off'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => void togglePlanVisibility(plan, 'provisioning')}
-                  disabled={isSaving}
-                  className={`btn-secondary inline-flex items-center gap-2 ${plan.visibleInProvisioning ? 'border-emerald-200 text-emerald-700' : 'border-slate-200 text-slate-600'}`}
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  {plan.visibleInProvisioning ? 'Provisioning on' : 'Provisioning off'}
-                </button>
+                />
                 <button
                   type="button"
                   onClick={() => void movePlan(plan, 'up')}

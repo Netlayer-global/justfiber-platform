@@ -9,6 +9,7 @@ import {
   BarChart3,
   Bell,
   Cable,
+  Briefcase,
   CreditCard,
   FileText,
   HardDrive,
@@ -50,6 +51,7 @@ const NAV_SECTIONS: NavSection[] = [
     subheader: 'COMMERCIAL',
     items: [
       { href: '/plans', label: 'Plans', icon: Cable },
+      { href: '/sales', label: 'Sales', icon: Briefcase },
       { href: '/user-management', label: 'User Management', icon: UserSquare2 },
       { href: '/caf-templates', label: 'CAF Templates', icon: FileText },
       { href: '/customers', label: 'Customers', icon: UserRound },
