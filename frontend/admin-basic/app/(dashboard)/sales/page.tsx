@@ -89,17 +89,32 @@ export default function SalesPage() {
     try {
       if (!leads.length && !bookings.length) setIsLoading(true)
       else setIsRefreshing(true)
-      const [leadsRes, bookingsRes, agentsRes] = await Promise.all([
+      const [leadsRes, bookingsRes, agentsRes] = await Promise.allSettled([
         adminAPI.getSalesLeads(),
         adminAPI.getSalesBookings(),
         adminAPI.getSalesAgents(),
       ])
-      if (!leadsRes.success) throw new Error(leadsRes.error || 'Failed to load sales leads')
-      if (!bookingsRes.success) throw new Error(bookingsRes.error || 'Failed to load sales bookings')
-      if (!agentsRes.success) throw new Error(agentsRes.error || 'Failed to load sales agents')
-      setLeads(leadsRes.data || [])
-      setBookings(bookingsRes.data || [])
-      setAgents(agentsRes.data || [])
+      if (leadsRes.status !== 'fulfilled' || !leadsRes.value.success) {
+        throw new Error(
+          leadsRes.status === 'fulfilled'
+            ? leadsRes.value.error || 'Failed to load sales leads'
+            : 'Failed to load sales leads',
+        )
+      }
+      if (bookingsRes.status !== 'fulfilled' || !bookingsRes.value.success) {
+        throw new Error(
+          bookingsRes.status === 'fulfilled'
+            ? bookingsRes.value.error || 'Failed to load sales bookings'
+            : 'Failed to load sales bookings',
+        )
+      }
+      setLeads(leadsRes.value.data || [])
+      setBookings(bookingsRes.value.data || [])
+      if (agentsRes.status === 'fulfilled' && agentsRes.value.success) {
+        setAgents(agentsRes.value.data || [])
+      } else {
+        setAgents([])
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load sales desk')
     } finally {
@@ -243,7 +258,7 @@ export default function SalesPage() {
                       lead={lead}
                       agents={agents}
                       onAssign={handleAssignLead}
-                      busy={assigningLeadId === lead.id}
+                      busy={assigningLeadId === lead.id || !agents.length}
                     />
                   </div>
                 </div>

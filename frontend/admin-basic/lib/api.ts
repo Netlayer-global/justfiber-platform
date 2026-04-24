@@ -1499,7 +1499,7 @@ export const adminAPI = {
     }
   },
   getSalesAgents: async () => {
-    const res = await request<any[]>('/api/v1/admin/catalog/sales/agents')
+    const res = await request<any[]>('/api/v1/admin/sales/agents')
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapSalesAgent) : [],

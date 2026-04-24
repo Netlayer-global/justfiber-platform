@@ -51,6 +51,15 @@ adminSalesRouter.get(
   })
 );
 
+adminSalesRouter.get(
+  "/sales/agents",
+  requirePermission(permissions.dashboardRead),
+  asyncHandler(async (_req, res) => {
+    const agents = await SalesAgent.find().sort({ createdAt: -1 }).lean();
+    return ok(res, agents);
+  })
+);
+
 adminSalesRouter.patch(
   "/sales/leads/:leadId/assign",
   requirePermission(permissions.customerUpdate),
