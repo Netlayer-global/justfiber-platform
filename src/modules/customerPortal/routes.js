@@ -1053,7 +1053,23 @@ async function upsertCustomerAppLead({
   };
 
   if (existingLead) {
-    Object.assign(existingLead, leadPayload);
+    existingLead.type = leadPayload.type;
+    existingLead.status = leadPayload.status;
+    existingLead.source = leadPayload.source;
+    existingLead.salesAgentId = leadPayload.salesAgentId;
+    existingLead.customerUserId = leadPayload.customerUserId;
+    existingLead.fullName = leadPayload.fullName;
+    existingLead.mobile = leadPayload.mobile;
+    existingLead.email = leadPayload.email;
+    existingLead.address = leadPayload.address;
+    existingLead.pinCode = leadPayload.pinCode;
+    existingLead.gps = leadPayload.gps;
+    existingLead.zoneId = leadPayload.zoneId;
+    existingLead.feasible = leadPayload.feasible;
+    existingLead.notes = leadPayload.notes;
+    existingLead.convertedBookingId = leadPayload.convertedBookingId;
+    existingLead.set("selectedPlan", leadPlanSnapshot || null);
+    existingLead.markModified("selectedPlan");
     await existingLead.save();
     return { lead: existingLead, salesAgent };
   }
