@@ -26,6 +26,14 @@ function formatMoney(value?: number) {
   return `Rs ${Number(value || 0).toFixed(0)}`
 }
 
+function normalizePhone(value?: string) {
+  return String(value || '').replace(/\D+/g, '')
+}
+
+function firstValue<T>(...values: Array<T | null | undefined | ''>) {
+  return values.find((value) => value !== undefined && value !== null && value !== '') as T | undefined
+}
+
 function SalesAssignmentControl({
   lead,
   agents,
@@ -44,11 +52,11 @@ function SalesAssignmentControl({
   }, [lead.salesAgent?.id])
 
   return (
-    <div className="rounded-[18px] border border-slate-200 bg-white p-3">
+    <div className="rounded-[18px] border border-slate-200 bg-white p-4">
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Assigned Sales Person</div>
       <div className="mt-2 text-sm font-semibold text-slate-900">{lead.salesAgent?.fullName || 'Unassigned'}</div>
       <div className="mt-1 text-xs text-slate-500">
-        {lead.salesAgent?.phone || '-'} {lead.salesAgent?.agentCode ? `· ${lead.salesAgent.agentCode}` : ''}
+        {[lead.salesAgent?.phone || '-', lead.salesAgent?.agentCode || ''].filter(Boolean).join(' | ')}
       </div>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <select
@@ -60,16 +68,11 @@ function SalesAssignmentControl({
           <option value="">Unassigned</option>
           {agents.map((agent) => (
             <option key={agent.id} value={agent.id}>
-              {agent.fullName} · {agent.agentCode}
+              {[agent.fullName, agent.agentCode].filter(Boolean).join(' | ')}
             </option>
           ))}
         </select>
-        <button
-          type="button"
-          onClick={() => void onAssign(lead, selectedAgentId || undefined)}
-          disabled={busy}
-          className="btn-primary"
-        >
+        <button type="button" onClick={() => void onAssign(lead, selectedAgentId || undefined)} disabled={busy} className="btn-primary">
           {busy ? 'Saving...' : 'Assign'}
         </button>
       </div>
@@ -95,18 +98,10 @@ export default function SalesPage() {
         adminAPI.getSalesAgents(),
       ])
       if (leadsRes.status !== 'fulfilled' || !leadsRes.value.success) {
-        throw new Error(
-          leadsRes.status === 'fulfilled'
-            ? leadsRes.value.error || 'Failed to load sales leads'
-            : 'Failed to load sales leads',
-        )
+        throw new Error(leadsRes.status === 'fulfilled' ? leadsRes.value.error || 'Failed to load sales leads' : 'Failed to load sales leads')
       }
       if (bookingsRes.status !== 'fulfilled' || !bookingsRes.value.success) {
-        throw new Error(
-          bookingsRes.status === 'fulfilled'
-            ? bookingsRes.value.error || 'Failed to load sales bookings'
-            : 'Failed to load sales bookings',
-        )
+        throw new Error(bookingsRes.status === 'fulfilled' ? bookingsRes.value.error || 'Failed to load sales bookings' : 'Failed to load sales bookings')
       }
       setLeads(leadsRes.value.data || [])
       setBookings(bookingsRes.value.data || [])
@@ -145,22 +140,23 @@ export default function SalesPage() {
   }
 
   const leadRows = useMemo(
-    () =>
-      leads
-        .slice()
-        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-        .slice(0, 30),
+    () => leads.slice().sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 30),
     [leads],
   )
 
   const bookingRows = useMemo(
-    () =>
-      bookings
-        .slice()
-        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-        .slice(0, 30),
+    () => bookings.slice().sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 30),
     [bookings],
   )
+
+  const bookingByMobile = useMemo(() => {
+    const map = new Map<string, SalesBookingItem>()
+    bookingRows.forEach((booking) => {
+      const key = normalizePhone(booking.personalDetails?.mobile)
+      if (key && !map.has(key)) map.set(key, booking)
+    })
+    return map
+  }, [bookingRows])
 
   const leadById = useMemo(() => {
     const map = new Map<string, SalesLeadItem>()
@@ -206,67 +202,82 @@ export default function SalesPage() {
           </div>
           <div className="mt-4 space-y-4">
             {leadRows.length ? (
-              leadRows.map((lead) => (
-                <div key={lead.id} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="text-base font-semibold text-slate-900">{lead.fullName || 'New enquiry'}</div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {lead.leadNumber} · {lead.mobile || '-'} · {lead.email || 'No email'}
+              leadRows.map((lead) => {
+                const matchedBooking = bookings.find((booking) => booking.leadId === lead.id) || bookingByMobile.get(normalizePhone(lead.mobile))
+                const planName = firstValue(lead.selectedPlan?.planName, matchedBooking?.selectedPlan?.planName)
+                const amount = firstValue(lead.selectedPlan?.amount, matchedBooking?.selectedPlan?.totalAmount, matchedBooking?.payment?.amount)
+                const duration = firstValue(
+                  lead.selectedPlan?.durationLabel,
+                  lead.selectedPlan?.durationMonths ? `${lead.selectedPlan.durationMonths} months` : '',
+                )
+                const preferredSlot = firstValue(lead.selectedPlan?.preferredSlot?.label)
+                const fullAddress = firstValue(lead.address, matchedBooking?.personalDetails?.fullAddress)
+
+                return (
+                  <div key={lead.id} className="rounded-[24px] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="text-lg font-semibold text-slate-900">{lead.fullName || 'New enquiry'}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {[lead.leadNumber, lead.mobile || '-', lead.email || 'No email'].join(' | ')}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-purple-100 px-3 py-1 text-[11px] font-medium text-purple-700">{lead.status || 'new'}</span>
+                        <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white">{formatSource(lead.source)}</span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-600">
+                          {lead.feasible ? 'Feasible' : 'Needs check'}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-medium text-purple-700">
-                        {lead.status || 'new'}
-                      </span>
-                      <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white">
-                        {formatSource(lead.source)}
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <div className="rounded-[18px] border border-slate-200 bg-white p-3 text-sm text-slate-700">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Customer Details</div>
-                      <div className="mt-2 space-y-1">
-                        <div>Phone: {lead.mobile || '-'}</div>
-                        <div>Email: {lead.email || '-'}</div>
-                        <div>PIN Code: {lead.pinCode || '-'}</div>
-                        <div>Zone: {lead.zoneId || '-'}</div>
-                        <div>Feasible: {lead.feasible ? 'Yes' : 'No'}</div>
+                    <div className="mt-4 grid gap-3 xl:grid-cols-3">
+                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Customer Details</div>
+                        <div className="mt-3 space-y-1.5">
+                          <div>Phone: {lead.mobile || '-'}</div>
+                          <div>Email: {lead.email || '-'}</div>
+                          <div>PIN Code: {lead.pinCode || matchedBooking?.personalDetails?.pinCode || '-'}</div>
+                          <div>Zone: {lead.zoneId || '-'}</div>
+                          <div>Date: {formatDate(lead.createdAt)}</div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Plan and Schedule</div>
+                        <div className="mt-3 space-y-1.5">
+                          <div>Plan: {planName || 'Not selected yet'}</div>
+                          <div>Amount: {amount ? formatMoney(Number(amount)) : 'Pending selection'}</div>
+                          <div>Duration: {duration || 'Pending selection'}</div>
+                          <div>Preferred Slot: {preferredSlot || 'Not shared yet'}</div>
+                          <div>Booking Ref: {matchedBooking?.bookingNumber || '-'}</div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Booking and Payment</div>
+                        <div className="mt-3 space-y-1.5">
+                          <div>Booking Status: {matchedBooking?.status || 'Lead only'}</div>
+                          <div>Payment: {matchedBooking?.payment?.status || 'Not started'}</div>
+                          <div>Payment Amount: {matchedBooking?.payment?.amount ? formatMoney(matchedBooking.payment.amount) : '-'}</div>
+                          <div>Source: {formatSource(matchedBooking?.source || lead.source)}</div>
+                        </div>
                       </div>
                     </div>
-                    <div className="rounded-[18px] border border-slate-200 bg-white p-3 text-sm text-slate-700">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Plan & Schedule</div>
-                      <div className="mt-2 space-y-1">
-                        <div>Plan: {lead.selectedPlan?.planName || '-'}</div>
-                        <div>Amount: {lead.selectedPlan?.amount ? formatMoney(lead.selectedPlan.amount) : '-'}</div>
-                        <div>Duration: {lead.selectedPlan?.durationLabel || lead.selectedPlan?.durationMonths || '-'}</div>
-                        <div>Preferred Slot: {lead.selectedPlan?.preferredSlot?.label || '-'}</div>
-                        <div>Date: {formatDate(lead.createdAt)}</div>
-                      </div>
+
+                    <div className="mt-3 rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Address</div>
+                      <div className="mt-3 whitespace-pre-wrap break-words">{fullAddress || '-'}</div>
+                    </div>
+
+                    <div className="mt-3">
+                      <SalesAssignmentControl lead={lead} agents={agents} onAssign={handleAssignLead} busy={assigningLeadId === lead.id || !agents.length} />
                     </div>
                   </div>
-
-                  <div className="mt-3 rounded-[18px] border border-slate-200 bg-white p-3 text-sm text-slate-700">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Address</div>
-                    <div className="mt-2 whitespace-pre-wrap break-words">{lead.address || '-'}</div>
-                  </div>
-
-                  <div className="mt-3">
-                    <SalesAssignmentControl
-                      lead={lead}
-                      agents={agents}
-                      onAssign={handleAssignLead}
-                      busy={assigningLeadId === lead.id || !agents.length}
-                    />
-                  </div>
-                </div>
-              ))
+                )
+              })
             ) : (
-              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                No sales leads available yet.
-              </div>
+              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">No sales leads available yet.</div>
             )}
           </div>
         </div>
@@ -281,62 +292,65 @@ export default function SalesPage() {
           <div className="mt-4 space-y-4">
             {bookingRows.length ? (
               bookingRows.map((booking) => {
-                const linkedLead = booking.leadId ? leadById.get(booking.leadId) : null
+                const linkedLead = booking.leadId ? leadById.get(booking.leadId) : undefined
                 return (
-                  <div key={booking.id} className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-start justify-between gap-4">
+                  <div key={booking.id} className="rounded-[24px] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0">
-                        <div className="text-base font-semibold text-slate-900">
+                        <div className="text-lg font-semibold text-slate-900">
                           {booking.personalDetails?.fullName || linkedLead?.fullName || 'New booking'}
                         </div>
                         <div className="mt-1 text-xs text-slate-500">
-                          {booking.bookingNumber} · {booking.personalDetails?.mobile || linkedLead?.mobile || '-'}
+                          {[booking.bookingNumber, booking.personalDetails?.mobile || linkedLead?.mobile || '-', booking.personalDetails?.email || linkedLead?.email || 'No email'].join(' | ')}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
-                          {booking.status || 'initiated'}
-                        </span>
-                        <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white">
-                          {formatSource(linkedLead?.source || booking.source)}
-                        </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-medium text-emerald-700">{booking.status || 'initiated'}</span>
+                        <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white">{formatSource(linkedLead?.source || booking.source)}</span>
                       </div>
                     </div>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-[18px] border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                    <div className="mt-4 grid gap-3 xl:grid-cols-3">
+                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Booking Details</div>
-                        <div className="mt-2 space-y-1">
+                        <div className="mt-3 space-y-1.5">
                           <div>Plan: {booking.selectedPlan?.planName || linkedLead?.selectedPlan?.planName || '-'}</div>
                           <div>Amount: {formatMoney(booking.selectedPlan?.totalAmount || booking.payment?.amount || 0)}</div>
                           <div>Payment: {booking.payment?.status || '-'}</div>
                           <div>Date: {formatDate(booking.createdAt)}</div>
                         </div>
                       </div>
-                      <div className="rounded-[18px] border border-slate-200 bg-white p-3 text-sm text-slate-700">
+
+                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Customer Details</div>
-                        <div className="mt-2 space-y-1">
+                        <div className="mt-3 space-y-1.5">
                           <div>Phone: {booking.personalDetails?.mobile || linkedLead?.mobile || '-'}</div>
                           <div>Email: {booking.personalDetails?.email || linkedLead?.email || '-'}</div>
                           <div>PIN Code: {booking.personalDetails?.pinCode || linkedLead?.pinCode || '-'}</div>
                           <div>Assigned Sales Person: {linkedLead?.salesAgent?.fullName || 'Unassigned'}</div>
                         </div>
                       </div>
+
+                      <div className="rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Follow Up</div>
+                        <div className="mt-3 space-y-1.5">
+                          <div>Lead Ref: {linkedLead?.leadNumber || '-'}</div>
+                          <div>Lead Status: {linkedLead?.status || '-'}</div>
+                          <div>Feasible: {linkedLead?.feasible ? 'Yes' : linkedLead ? 'No' : '-'}</div>
+                          <div>Source: {formatSource(linkedLead?.source || booking.source)}</div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-3 rounded-[18px] border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                    <div className="mt-3 rounded-[18px] border border-slate-200 bg-white p-4 text-sm text-slate-700">
                       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Address</div>
-                      <div className="mt-2 whitespace-pre-wrap break-words">
-                        {booking.personalDetails?.fullAddress || linkedLead?.address || '-'}
-                      </div>
+                      <div className="mt-3 whitespace-pre-wrap break-words">{booking.personalDetails?.fullAddress || linkedLead?.address || '-'}</div>
                     </div>
                   </div>
                 )
               })
             ) : (
-              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                No bookings available yet.
-              </div>
+              <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">No bookings available yet.</div>
             )}
           </div>
         </div>
