@@ -950,6 +950,154 @@ async function pickSalesAgentForFeasibility({ feasibility, pinCode, address }) {
   ) || agents[0];
 }
 
+function buildLeadPlanPreferenceSnapshot({ plan = null, selectedPlan = null, payload = {} } = {}) {
+  const resolvedPlanCode = String(
+    selectedPlan?.planCode
+    || payload.planCode
+    || plan?.planCode
+    || ""
+  ).trim();
+  const resolvedPlanName = String(
+    selectedPlan?.planName
+    || selectedPlan?.name
+    || payload.planName
+    || plan?.name
+    || ""
+  ).trim();
+  const durationMonths = Number(
+    selectedPlan?.durationMonths
+    || payload.durationMonths
+    || 0
+  ) || undefined;
+  const durationLabel = String(
+    selectedPlan?.durationLabel
+    || payload.durationLabel
+    || ""
+  ).trim();
+  const totalAmount = Number(
+    selectedPlan?.totalAmount
+    || selectedPlan?.amount
+    || ((plan?.monthlyPrice || 0) + (plan?.otcCharge || 0))
+    || 0
+  );
+
+  if (!resolvedPlanCode && !resolvedPlanName && !durationMonths && !durationLabel && !totalAmount) {
+    return null;
+  }
+
+  return {
+    planCode: resolvedPlanCode || undefined,
+    planName: resolvedPlanName || undefined,
+    amount: totalAmount > 0 ? totalAmount : undefined,
+    durationMonths,
+    durationLabel: durationLabel || undefined,
+    preferredSlot: payload.preferredSlotCode
+      ? {
+          code: payload.preferredSlotCode,
+          label: payload.preferredSlotLabel || payload.preferredSlotCode
+        }
+      : undefined
+  };
+}
+
+async function upsertCustomerAppLead({
+  customerUser,
+  payload,
+  feasibility,
+  plan = null,
+  selectedPlan = null,
+  booking = null,
+  source = "customer_app_booking",
+  note = "Customer app booking enquiry captured."
+}) {
+  const salesAgent = await pickSalesAgentForFeasibility({
+    feasibility,
+    pinCode: payload.pinCode,
+    address: payload.fullAddress || payload.address
+  });
+  const identityFilters = [
+    customerUser?._id ? { customerUserId: customerUser._id } : null,
+    payload.mobile ? { mobile: payload.mobile } : null,
+    payload.email ? { email: payload.email } : null
+  ].filter(Boolean);
+  const leadPlanSnapshot = buildLeadPlanPreferenceSnapshot({ plan, selectedPlan, payload });
+  const leadStatus = booking
+    ? (booking.payment?.status === "paid" ? "converted" : "payment_pending")
+    : (feasibility.feasible ? "feasible" : "new");
+  const leadSource = String(payload.source || source || "customer_app_booking").trim();
+  const existingLead = identityFilters.length
+    ? await Lead.findOne({
+        $or: identityFilters,
+        status: { $nin: ["converted", "dropped"] },
+        type: "self_booked"
+      }).sort({ createdAt: -1 })
+    : null;
+
+  const leadPayload = {
+    type: "self_booked",
+    status: leadStatus,
+    source: leadSource,
+    salesAgentId: salesAgent?._id || null,
+    customerUserId: customerUser?._id || null,
+    fullName: payload.fullName,
+    mobile: payload.mobile,
+    email: payload.email,
+    address: payload.fullAddress || payload.address,
+    pinCode: payload.pinCode,
+    gps: { lat: payload.lat, lng: payload.lng },
+    zoneId: feasibility?.matchedZone?.zoneCode || feasibility?.matchedZone?.zoneName || null,
+    feasible: feasibility.feasible,
+    selectedPlan: leadPlanSnapshot,
+    notes: note,
+    convertedBookingId: booking?._id || existingLead?.convertedBookingId || undefined
+  };
+
+  if (existingLead) {
+    Object.assign(existingLead, leadPayload);
+    await existingLead.save();
+    return { lead: existingLead, salesAgent };
+  }
+
+  const lead = await Lead.create({
+    leadNumber: `LD${Date.now().toString().slice(-6)}`,
+    ...leadPayload
+  });
+  return { lead, salesAgent };
+}
+
+function buildFeasibilitySelectedPlanFromPayload(payload = {}, resolvedPlan = null) {
+  const planCode = String(payload.planCode || resolvedPlan?.planCode || "").trim();
+  const planName = String(payload.planName || resolvedPlan?.name || "").trim();
+  const durationMonths = Number(payload.durationMonths || 0) || undefined;
+  const durationLabel = String(
+    payload.durationLabel || (durationMonths ? `${durationMonths} month${durationMonths > 1 ? "s" : ""}` : "")
+  ).trim();
+  const totalAmount = Number(
+    resolvedPlan?.monthlyPrice
+    || resolvedPlan?.price
+    || 0
+  ) || undefined;
+
+  if (!planCode && !planName && !durationMonths && !durationLabel && !payload.preferredSlotCode) {
+    return null;
+  }
+
+  return {
+    planCode: planCode || undefined,
+    planName: planName || undefined,
+    durationMonths,
+    durationLabel: durationLabel || undefined,
+    totalAmount,
+    amount: totalAmount,
+    preferredSlot: payload.preferredSlotCode
+      ? {
+          code: payload.preferredSlotCode,
+          label: payload.preferredSlotLabel || payload.preferredSlotCode
+        }
+      : undefined
+  };
+}
+
 async function notifyCustomerAction(customerUserId, type, title, body, payload) {
   await CustomerNotification.create({
     customerUserId,
@@ -1159,6 +1307,21 @@ async function createConnectionBooking({ customerUser, payload }) {
       ]
     }
   });
+
+  const { lead } = await upsertCustomerAppLead({
+    customerUser,
+    payload,
+    feasibility,
+    plan,
+    selectedPlan,
+    booking,
+    source: "customer_app_booking",
+    note: "Customer app booking captured and routed to sales follow-up."
+  });
+  if (lead?._id && !booking.leadId) {
+    booking.leadId = lead._id;
+    await booking.save();
+  }
 
   if (isOfflinePayment) {
     await assignInstallerIfAvailable({ booking, payload, plan, feasibility });
@@ -1831,7 +1994,13 @@ customerPortalRouter.get(
 customerPortalRouter.get(
   "/plans",
   asyncHandler(async (_req, res) => {
-    const plans = await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean();
+    const plans = await PlanCatalog.find({
+      active: true,
+      archivedAt: { $exists: false },
+      visibleInCustomerApp: { $ne: false }
+    })
+      .sort({ sortOrder: 1 })
+      .lean();
     return ok(res, plans);
   })
 );
@@ -1860,27 +2029,18 @@ customerPortalRouter.post(
       address: payload.address,
       pinCode: payload.pinCode
     });
-    const salesAgent = await pickSalesAgentForFeasibility({
+    const resolvedPlan = payload.planCode
+      ? await PlanCatalog.findOne({ planCode: payload.planCode }).lean()
+      : null;
+    const { lead, salesAgent } = await upsertCustomerAppLead({
+      customerUser,
+      payload,
       feasibility,
-      pinCode: payload.pinCode,
-      address: payload.address
-    });
-    const lead = await Lead.create({
-      leadNumber: `LD${Date.now().toString().slice(-6)}`,
-      type: "self_booked",
-      status: feasibility.feasible ? "feasible" : "new",
-      source: "customer_app_feasibility",
-      salesAgentId: salesAgent?._id,
-      customerUserId: customerUser?._id,
-      fullName: payload.fullName,
-      mobile: payload.mobile,
-      email: payload.email,
-      address: payload.address,
-      pinCode: payload.pinCode,
-      gps: { lat: payload.lat, lng: payload.lng },
-      zoneId: feasibility?.matchedZone?.zoneCode || feasibility?.matchedZone?.zoneName || null,
-      feasible: feasibility.feasible,
-      notes: feasibility.feasible
+      plan: resolvedPlan,
+      selectedPlan: buildFeasibilitySelectedPlanFromPayload(payload, resolvedPlan),
+      booking: null,
+      source: payload.source || "customer_app_feasibility",
+      note: feasibility.feasible
         ? "Customer app feasibility inquiry captured."
         : `Customer app inquiry captured for non-serviceable area (${feasibility.serviceStatus || "unknown"}).`
     });

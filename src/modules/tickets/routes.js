@@ -270,10 +270,6 @@ ticketsRouter.post(
       if (targetInstaller.availabilityStatus === "on_leave") {
         throw new ApiError(409, "Installer is on leave");
       }
-      const installerZones = (targetInstaller.assignedZones || []).map(normalizeZone);
-      if (installerZones.length && !installerZones.includes(zoneCode)) {
-        throw new ApiError(409, "Installer is not assigned to this customer zone");
-      }
       installersToNotify = [targetInstaller];
     } else {
       const zoneInstallers = await Installer.find({

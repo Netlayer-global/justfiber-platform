@@ -66,13 +66,15 @@ export default function TicketsPage() {
 
   function installersForTicket(ticket: Ticket) {
     const zone = String(ticket.zoneCode || '').trim().toUpperCase()
-    return installers
+    const activeInstallers = installers
       .filter((installer) => installer.status === 'active' && installer.availabilityStatus !== 'on_leave')
-      .filter((installer) => {
+    const zoneMatched = activeInstallers.filter((installer) => {
         if (!zone) return true
         const zones = (installer.assignedZones || []).map((item) => String(item || '').trim().toUpperCase())
         return zones.includes(zone)
       })
+    if (zoneMatched.length) return zoneMatched
+    return activeInstallers
   }
 
   async function updateTicketStatus(ticket: Ticket, status: string) {
@@ -281,7 +283,11 @@ export default function TicketsPage() {
                             Auto to zone
                           </button>
                         </div>
-                        <div className="text-xs text-slate-500">{zoneInstallers.length} active installer(s) available for this zone.</div>
+                        <div className="text-xs text-slate-500">
+                          {ticket.zoneCode && zoneInstallers.some((installer) => (installer.assignedZones || []).map((item) => String(item || '').trim().toUpperCase()).includes(String(ticket.zoneCode || '').trim().toUpperCase()))
+                            ? `${zoneInstallers.length} active installer(s) available for this zone.`
+                            : `${zoneInstallers.length} active installer(s) available. No strict zone match found, so all active installers are shown for manual assignment.`}
+                        </div>
                       </div>
                     ) : null}
 
