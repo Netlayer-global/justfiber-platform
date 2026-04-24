@@ -24,11 +24,18 @@ function mergeLeadPlanDetails(lead = {}, booking = null, planCatalog = null) {
   const leadPlan = lead?.selectedPlan || {};
   const preferredSlot =
     leadPlan?.preferredSlot
+    || (lead?.requestedPreferredSlotCode
+      ? {
+          code: lead.requestedPreferredSlotCode,
+          label: lead.requestedPreferredSlotLabel || lead.requestedPreferredSlotCode
+        }
+      : null)
     || bookingPlan?.preferredSlot
     || booking?.personalDetails?.preferredSlot
     || null;
   const planAmount =
     leadPlan?.amount
+    || lead?.requestedPlanAmount
     || bookingPlan?.totalAmount
     || bookingPlan?.amount
     || booking?.payment?.amount
@@ -37,18 +44,20 @@ function mergeLeadPlanDetails(lead = {}, booking = null, planCatalog = null) {
     || undefined;
   const durationMonths =
     leadPlan?.durationMonths
+    || lead?.requestedDurationMonths
     || bookingPlan?.durationMonths
     || undefined;
   const durationLabel = String(
     leadPlan?.durationLabel
+    || lead?.requestedDurationLabel
     || bookingPlan?.durationLabel
     || (durationMonths ? `${durationMonths} month${Number(durationMonths) > 1 ? "s" : ""}` : "")
   ).trim();
   return {
     ...lead,
     selectedPlan: {
-      planCode: leadPlan?.planCode || bookingPlan?.planCode || planCatalog?.planCode || undefined,
-      planName: leadPlan?.planName || bookingPlan?.planName || planCatalog?.name || undefined,
+      planCode: leadPlan?.planCode || lead?.requestedPlanCode || bookingPlan?.planCode || planCatalog?.planCode || undefined,
+      planName: leadPlan?.planName || lead?.requestedPlanName || bookingPlan?.planName || planCatalog?.name || undefined,
       amount: planAmount,
       durationMonths,
       durationLabel: durationLabel || undefined,
@@ -133,8 +142,10 @@ adminSalesRouter.get(
         || null;
       const resolvedPlanKey =
         lead?.selectedPlan?.planCode
+        || lead?.requestedPlanCode
         || linkedBooking?.selectedPlan?.planCode
         || lead?.selectedPlan?.planName
+        || lead?.requestedPlanName
         || linkedBooking?.selectedPlan?.planName
         || "";
       return mergeLeadPlanDetails(

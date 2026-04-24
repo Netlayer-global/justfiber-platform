@@ -1048,6 +1048,13 @@ async function upsertCustomerAppLead({
     zoneId: feasibility?.matchedZone?.zoneCode || feasibility?.matchedZone?.zoneName || null,
     feasible: feasibility.feasible,
     selectedPlan: leadPlanSnapshot,
+    requestedPlanCode: leadPlanSnapshot?.planCode || undefined,
+    requestedPlanName: leadPlanSnapshot?.planName || undefined,
+    requestedPlanAmount: leadPlanSnapshot?.amount || undefined,
+    requestedDurationMonths: leadPlanSnapshot?.durationMonths || undefined,
+    requestedDurationLabel: leadPlanSnapshot?.durationLabel || undefined,
+    requestedPreferredSlotCode: leadPlanSnapshot?.preferredSlot?.code || undefined,
+    requestedPreferredSlotLabel: leadPlanSnapshot?.preferredSlot?.label || undefined,
     notes: note,
     convertedBookingId: booking?._id || existingLead?.convertedBookingId || undefined
   };
@@ -1066,6 +1073,13 @@ async function upsertCustomerAppLead({
     existingLead.gps = leadPayload.gps;
     existingLead.zoneId = leadPayload.zoneId;
     existingLead.feasible = leadPayload.feasible;
+    existingLead.requestedPlanCode = leadPayload.requestedPlanCode;
+    existingLead.requestedPlanName = leadPayload.requestedPlanName;
+    existingLead.requestedPlanAmount = leadPayload.requestedPlanAmount;
+    existingLead.requestedDurationMonths = leadPayload.requestedDurationMonths;
+    existingLead.requestedDurationLabel = leadPayload.requestedDurationLabel;
+    existingLead.requestedPreferredSlotCode = leadPayload.requestedPreferredSlotCode;
+    existingLead.requestedPreferredSlotLabel = leadPayload.requestedPreferredSlotLabel;
     existingLead.notes = leadPayload.notes;
     existingLead.convertedBookingId = leadPayload.convertedBookingId;
     existingLead.set("selectedPlan", leadPlanSnapshot || null);
