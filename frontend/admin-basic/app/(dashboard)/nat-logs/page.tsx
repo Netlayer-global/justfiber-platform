@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
@@ -92,7 +93,7 @@ function downloadCsv(rows: NatLogEntry[]) {
   URL.revokeObjectURL(url)
 }
 
-export default function NatLogsPage() {
+function NatLogsPageContent() {
   const searchParams = useSearchParams()
   const [routers, setRouters] = useState<BngNode[]>([])
   const [activeZoneCode, setActiveZoneCode] = useState('default')
@@ -424,5 +425,24 @@ export default function NatLogsPage() {
         )}
       </section>
     </div>
+  )
+}
+
+export default function NatLogsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <section className="card p-6">
+            <div className="flex items-center gap-3 text-slate-500">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Loading NAT logs...
+            </div>
+          </section>
+        </div>
+      }
+    >
+      <NatLogsPageContent />
+    </Suspense>
   )
 }
