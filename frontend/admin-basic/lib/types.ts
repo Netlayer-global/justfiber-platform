@@ -395,6 +395,13 @@ export interface SalesBookingItem {
     planCode?: string
     planName?: string
     totalAmount?: number
+    amount?: number
+    durationMonths?: number
+    durationLabel?: string
+    preferredSlot?: {
+      code?: string
+      label?: string
+    } | null
   } | null
   personalDetails?: {
     fullName?: string
@@ -402,6 +409,10 @@ export interface SalesBookingItem {
     email?: string
     fullAddress?: string
     pinCode?: string
+    preferredSlot?: {
+      code?: string
+      label?: string
+    } | null
   } | null
   createdAt?: string
 }

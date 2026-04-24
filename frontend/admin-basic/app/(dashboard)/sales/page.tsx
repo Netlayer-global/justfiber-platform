@@ -212,13 +212,25 @@ export default function SalesPage() {
             {leadRows.length ? (
               leadRows.map((lead) => {
                 const matchedBooking = bookings.find((booking) => booking.leadId === lead.id) || bookingByMobile.get(normalizePhone(lead.mobile))
-                const planName = firstValue(lead.selectedPlan?.planName, matchedBooking?.selectedPlan?.planName)
+                const planName = firstValue(
+                  lead.selectedPlan?.planName,
+                  lead.selectedPlan?.planCode,
+                  matchedBooking?.selectedPlan?.planName,
+                  matchedBooking?.selectedPlan?.planCode,
+                )
                 const amount = firstValue(lead.selectedPlan?.amount, matchedBooking?.selectedPlan?.totalAmount, matchedBooking?.payment?.amount)
                 const duration = firstValue(
                   lead.selectedPlan?.durationLabel,
                   lead.selectedPlan?.durationMonths ? `${lead.selectedPlan.durationMonths} months` : '',
+                  matchedBooking?.selectedPlan?.durationLabel,
+                  matchedBooking?.selectedPlan?.durationMonths ? `${matchedBooking.selectedPlan.durationMonths} months` : '',
                 )
-                const preferredSlot = firstValue(lead.selectedPlan?.preferredSlot?.label)
+                const preferredSlot = firstValue(
+                  lead.selectedPlan?.preferredSlot?.label,
+                  lead.selectedPlan?.preferredSlot?.code,
+                  matchedBooking?.personalDetails?.preferredSlot?.label,
+                  matchedBooking?.personalDetails?.preferredSlot?.code,
+                )
                 const fullAddress = firstValue(lead.address, matchedBooking?.personalDetails?.fullAddress)
 
                 return (

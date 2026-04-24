@@ -19,20 +19,39 @@ function normalizePhone(value = "") {
   return String(value || "").replace(/\D+/g, "");
 }
 
-function mergeLeadPlanDetails(lead = {}, booking = null) {
+function mergeLeadPlanDetails(lead = {}, booking = null, planCatalog = null) {
   const bookingPlan = booking?.selectedPlan || {};
   const leadPlan = lead?.selectedPlan || {};
-  const preferredSlot = leadPlan?.preferredSlot
+  const preferredSlot =
+    leadPlan?.preferredSlot
+    || bookingPlan?.preferredSlot
     || booking?.personalDetails?.preferredSlot
     || null;
+  const planAmount =
+    leadPlan?.amount
+    || bookingPlan?.totalAmount
+    || bookingPlan?.amount
+    || booking?.payment?.amount
+    || planCatalog?.monthlyPrice
+    || planCatalog?.price
+    || undefined;
+  const durationMonths =
+    leadPlan?.durationMonths
+    || bookingPlan?.durationMonths
+    || undefined;
+  const durationLabel = String(
+    leadPlan?.durationLabel
+    || bookingPlan?.durationLabel
+    || (durationMonths ? `${durationMonths} month${Number(durationMonths) > 1 ? "s" : ""}` : "")
+  ).trim();
   return {
     ...lead,
     selectedPlan: {
-      planCode: leadPlan?.planCode || bookingPlan?.planCode || undefined,
-      planName: leadPlan?.planName || bookingPlan?.planName || undefined,
-      amount: leadPlan?.amount || bookingPlan?.totalAmount || booking?.payment?.amount || undefined,
-      durationMonths: leadPlan?.durationMonths || bookingPlan?.durationMonths || undefined,
-      durationLabel: leadPlan?.durationLabel || bookingPlan?.durationLabel || undefined,
+      planCode: leadPlan?.planCode || bookingPlan?.planCode || planCatalog?.planCode || undefined,
+      planName: leadPlan?.planName || bookingPlan?.planName || planCatalog?.name || undefined,
+      amount: planAmount,
+      durationMonths,
+      durationLabel: durationLabel || undefined,
       preferredSlot: preferredSlot
         ? {
             code: preferredSlot?.code || undefined,
@@ -90,13 +109,39 @@ adminSalesRouter.get(
         bookingByMobile.set(bookingMobile, booking);
       }
     });
+    const planCodes = leads
+      .map((lead) => lead?.selectedPlan?.planCode)
+      .concat(bookings.map((booking) => booking?.selectedPlan?.planCode))
+      .filter(Boolean);
+    const plans = planCodes.length
+      ? await PlanCatalog.find({ planCode: { $in: [...new Set(planCodes)] } }).lean()
+      : [];
+    const planByCode = new Map();
+    plans.forEach((plan) => {
+      if (plan?.planCode) {
+        planByCode.set(String(plan.planCode), plan);
+      }
+      if (plan?.name) {
+        planByCode.set(String(plan.name).toLowerCase(), plan);
+      }
+    });
     const enrichedLeads = leads.map((lead) => {
       const linkedBooking =
         bookingByLeadId.get(String(lead._id))
         || (lead.customerUserId ? bookingByCustomerUserId.get(String(lead.customerUserId)) : null)
         || bookingByMobile.get(normalizePhone(lead.mobile))
         || null;
-      return mergeLeadPlanDetails(lead, linkedBooking);
+      const resolvedPlanKey =
+        lead?.selectedPlan?.planCode
+        || linkedBooking?.selectedPlan?.planCode
+        || lead?.selectedPlan?.planName
+        || linkedBooking?.selectedPlan?.planName
+        || "";
+      return mergeLeadPlanDetails(
+        lead,
+        linkedBooking,
+        planByCode.get(String(resolvedPlanKey)) || planByCode.get(String(resolvedPlanKey).toLowerCase()) || null
+      );
     });
     return ok(res, enrichedLeads);
   })

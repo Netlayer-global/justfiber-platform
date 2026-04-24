@@ -277,7 +277,16 @@ function mapSalesBooking(booking: any): SalesBookingItem {
       ? {
           planCode: booking.selectedPlan.planCode || '',
           planName: booking.selectedPlan.planName || '',
+          amount: Number(booking.selectedPlan.amount || 0),
           totalAmount: Number(booking.selectedPlan.totalAmount || 0),
+          durationMonths: Number(booking.selectedPlan.durationMonths || 0) || undefined,
+          durationLabel: booking.selectedPlan.durationLabel || '',
+          preferredSlot: booking.selectedPlan.preferredSlot
+            ? {
+                code: booking.selectedPlan.preferredSlot.code || '',
+                label: booking.selectedPlan.preferredSlot.label || '',
+              }
+            : null,
         }
       : null,
     personalDetails: booking.personalDetails
@@ -287,6 +296,12 @@ function mapSalesBooking(booking: any): SalesBookingItem {
           email: booking.personalDetails.email || '',
           fullAddress: booking.personalDetails.fullAddress || '',
           pinCode: booking.personalDetails.pinCode || '',
+          preferredSlot: booking.personalDetails.preferredSlot
+            ? {
+                code: booking.personalDetails.preferredSlot.code || '',
+                label: booking.personalDetails.preferredSlot.label || '',
+              }
+            : null,
         }
       : null,
     createdAt: booking.createdAt,
