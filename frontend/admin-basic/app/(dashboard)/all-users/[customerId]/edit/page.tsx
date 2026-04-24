@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { Customer, Plan } from '@/lib/types'
+import type { BngNode, Customer, Plan } from '@/lib/types'
 import { Copy, Loader } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -25,6 +25,7 @@ type FormState = {
   createVoiceBilling: boolean
   currentIpv4: string
   ipv4Pool: string
+  bngNodeCode: string
   operationalStatus: 'active' | 'inactive' | 'suspended'
   zoneCode: string
   zoneName: string
@@ -47,9 +48,25 @@ const emptyForm: FormState = {
   createVoiceBilling: false,
   currentIpv4: '',
   ipv4Pool: '',
+  bngNodeCode: '',
   operationalStatus: 'active',
   zoneCode: '',
   zoneName: '',
+}
+
+function normalizeZoneKey(value: string) {
+  return value.trim().toUpperCase()
+}
+
+function pickZoneBngNode(nodes: BngNode[], zoneCode: string) {
+  const zoneKey = normalizeZoneKey(zoneCode)
+  if (!zoneKey) return nodes[0] || null
+  return (
+    nodes.find((node) => normalizeZoneKey(node.zoneCode || '') === zoneKey) ||
+    nodes.find((node) => normalizeZoneKey(node.groupName || '') === zoneKey) ||
+    nodes[0] ||
+    null
+  )
 }
 
 function isLikelyIpv4(value: string) {
@@ -62,6 +79,7 @@ export default function EditUserPage() {
   const customerId = params.customerId
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [plans, setPlans] = useState<Plan[]>([])
+  const [bngNodes, setBngNodes] = useState<BngNode[]>([])
   const [form, setForm] = useState<FormState>(emptyForm)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -72,7 +90,10 @@ export default function EditUserPage() {
     customer?.devices?.[0]?.wanInfo?.mac ||
     customer?.devices?.[0]?.lanInfo?.macAddress ||
     ''
-  const natLogHref = `/nat-logs?username=${encodeURIComponent(username)}&sourceIp=${encodeURIComponent(form.currentIpv4 || '')}`
+  const natLogHref =
+    `/nat-logs?customerId=${encodeURIComponent(customer?.customerId || customerId || '')}` +
+    `&pppoeUsername=${encodeURIComponent(username)}` +
+    `&privateIp=${encodeURIComponent(form.currentIpv4 || '')}`
   const formErrors = useMemo(() => {
     const errors: Partial<Record<'fullName' | 'phone' | 'planCode' | 'currentIpv4' | 'ipv4Pool', string>> = {}
     if (!form.fullName.trim()) errors.fullName = 'Full name is required'
@@ -94,14 +115,18 @@ export default function EditUserPage() {
   async function loadPage() {
     try {
       setIsLoading(true)
-      const [customerRes, plansRes] = await Promise.all([
+      const [customerRes, plansRes, bngRes] = await Promise.all([
         adminAPI.getCustomer(customerId),
         adminAPI.getPlans(),
+        adminAPI.getBngNodes({ zoneCode: null }),
       ])
       if (!customerRes.success || !customerRes.data) throw new Error(customerRes.error || 'Failed to load user')
       if (!plansRes.success) throw new Error(plansRes.error || 'Failed to load plans')
+      if (!bngRes.success) throw new Error(bngRes.error || 'Failed to load BNG nodes')
+      const activeNodes = bngRes.data || []
       setCustomer(customerRes.data)
       setPlans(plansRes.data?.items || [])
+      setBngNodes(activeNodes)
       setForm({
         fullName: customerRes.data.name || '',
         phone: customerRes.data.phone || '',
@@ -119,6 +144,10 @@ export default function EditUserPage() {
         createVoiceBilling: Boolean(customerRes.data.billingSnapshot?.serviceFlags?.voice),
         currentIpv4: customerRes.data.radiusService?.currentIpv4 || '',
         ipv4Pool: customerRes.data.radiusService?.ipv4Pool || '',
+        bngNodeCode:
+          customerRes.data.radiusService?.bngNodeCode ||
+          pickZoneBngNode(activeNodes, customerRes.data.zoneCode || '')?.nodeCode ||
+          '',
         operationalStatus: customerRes.data.status,
         zoneCode: customerRes.data.zoneCode || '',
         zoneName: customerRes.data.zoneName || '',
@@ -175,6 +204,7 @@ export default function EditUserPage() {
           ...(customer.radiusService || {}),
           currentIpv4: form.currentIpv4 || null,
           ipv4Pool: form.currentIpv4 ? null : form.ipv4Pool || null,
+          bngNodeCode: form.bngNodeCode || undefined,
         },
         zoneCode: form.zoneCode || undefined,
         zoneName: form.zoneName || undefined,
@@ -216,6 +246,7 @@ export default function EditUserPage() {
           ...(current.radiusService || {}),
           currentIpv4: form.currentIpv4 || null,
           ipv4Pool: form.currentIpv4 ? null : form.ipv4Pool || null,
+          bngNodeCode: form.bngNodeCode || undefined,
         },
         zoneCode: form.zoneCode || current.zoneCode,
         zoneName: form.zoneName || current.zoneName,
@@ -473,7 +504,21 @@ export default function EditUserPage() {
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">BNG</div>
-              <input className="input" value={customer.radiusService?.bngNodeCode || ''} disabled />
+              <select
+                className="input"
+                value={form.bngNodeCode}
+                onChange={(e) => {
+                  setSaveMessage(null)
+                  setForm((prev) => ({ ...prev, bngNodeCode: e.target.value }))
+                }}
+              >
+                <option value="">Auto zone BNG</option>
+                {bngNodes.map((node) => (
+                  <option key={node.nodeCode} value={node.nodeCode}>
+                    {node.displayName} ({node.nodeCode})
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="space-y-2">
               <div className="text-sm font-medium text-slate-600">Bound MAC</div>
@@ -505,6 +550,22 @@ export default function EditUserPage() {
             Extra billing, proof, and advanced router actions intentionally hide kiye gaye hain. Is page par sirf daily operator edits rakhe gaye hain.
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                const preferredNode = pickZoneBngNode(bngNodes, form.zoneCode)
+                if (!preferredNode) {
+                  toast.error('No active BNG found for this zone')
+                  return
+                }
+                setSaveMessage(null)
+                setForm((prev) => ({ ...prev, bngNodeCode: preferredNode.nodeCode }))
+                toast.success(`Selected ${preferredNode.displayName}`)
+              }}
+            >
+              Use zone BNG
+            </button>
             <button
               type="button"
               className="btn-secondary"

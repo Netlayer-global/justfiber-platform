@@ -1128,6 +1128,64 @@ async function buildSubscriberContext(logEntry) {
   };
 }
 
+async function enrichNatLogDocs(items) {
+  if (!Array.isArray(items) || !items.length) return [];
+  const usernameSet = new Set();
+  const subscriberIdSet = new Set();
+  const customerIdSet = new Set();
+
+  items.forEach((item) => {
+    const username = String(item.pppoeUsername || "").trim();
+    const subscriberId = String(item.subscriberId || "").trim();
+    const customerId = String(item.customerId || "").trim();
+    if (username) usernameSet.add(username);
+    if (subscriberId) subscriberIdSet.add(subscriberId);
+    if (customerId) customerIdSet.add(customerId);
+  });
+
+  const lookupOr = [];
+  if (usernameSet.size) lookupOr.push({ radiusUsername: { $in: Array.from(usernameSet) } });
+  if (subscriberIdSet.size) lookupOr.push({ serviceId: { $in: Array.from(subscriberIdSet) } });
+  if (customerIdSet.size) lookupOr.push({ customerId: { $in: Array.from(customerIdSet) } });
+  if (!lookupOr.length) return items;
+
+  const services = await SubscriberService.find({ $or: lookupOr })
+    .select({ serviceId: 1, customerId: 1, radiusUsername: 1 })
+    .lean();
+
+  const byUsername = new Map();
+  const byServiceId = new Map();
+  const byCustomerId = new Map();
+  services.forEach((service) => {
+    const username = String(service.radiusUsername || "").trim();
+    const serviceId = String(service.serviceId || "").trim();
+    const customerId = String(service.customerId || "").trim();
+    if (username && !byUsername.has(username)) byUsername.set(username, service);
+    if (serviceId && !byServiceId.has(serviceId)) byServiceId.set(serviceId, service);
+    if (customerId && !byCustomerId.has(customerId)) byCustomerId.set(customerId, service);
+  });
+
+  return items.map((item) => {
+    const username = String(item.pppoeUsername || "").trim();
+    const subscriberId = String(item.subscriberId || "").trim();
+    const customerId = String(item.customerId || "").trim();
+    const linkedService =
+      (subscriberId ? byServiceId.get(subscriberId) : null) ||
+      (username ? byUsername.get(username) : null) ||
+      (customerId ? byCustomerId.get(customerId) : null) ||
+      null;
+
+    if (!linkedService) return item;
+
+    return {
+      ...item,
+      subscriberId: subscriberId || linkedService.serviceId,
+      customerId: customerId || linkedService.customerId,
+      pppoeUsername: username || linkedService.radiusUsername
+    };
+  });
+}
+
 platformFoundationRouter.get(
   "/foundation/overview",
   requirePermission(permissions.configRead),
@@ -1722,7 +1780,8 @@ platformFoundationRouter.post(
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
     const payload = z.array(natLogSchema).min(1).max(500).parse(Array.isArray(req.body) ? req.body : [req.body]);
-    const docs = payload.map((item) => ({
+    const hydratedPayload = await enrichNatLogDocs(payload);
+    const docs = hydratedPayload.map((item) => ({
       ...item,
       loggedAt: new Date(item.loggedAt)
     }));

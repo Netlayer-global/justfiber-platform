@@ -1,5 +1,6 @@
 'use client'
 
+import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { BngNode, NatLogEntry } from '@/lib/types'
@@ -10,6 +11,8 @@ type NatLogFilters = {
   routerIp: string
   timeFrom: string
   timeTo: string
+  customerId: string
+  subscriberId: string
   privateIp: string
   privatePort: string
   publicIp: string
@@ -26,6 +29,8 @@ const initialFilters: NatLogFilters = {
   routerIp: '',
   timeFrom: '',
   timeTo: '',
+  customerId: '',
+  subscriberId: '',
   privateIp: '',
   privatePort: '',
   publicIp: '',
@@ -88,6 +93,7 @@ function downloadCsv(rows: NatLogEntry[]) {
 }
 
 export default function NatLogsPage() {
+  const searchParams = useSearchParams()
   const [routers, setRouters] = useState<BngNode[]>([])
   const [activeZoneCode, setActiveZoneCode] = useState('default')
   const [activeZoneLabel, setActiveZoneLabel] = useState('Default Zone')
@@ -115,7 +121,30 @@ export default function NatLogsPage() {
 
   useEffect(() => {
     void loadInitial()
-  }, [activeZoneCode])
+  }, [activeZoneCode, searchParams])
+
+  const prefilledFilters = useMemo<NatLogFilters>(() => {
+    const queryUsername = searchParams.get('pppoeUsername') || searchParams.get('username') || ''
+    const queryPrivateIp = searchParams.get('privateIp') || searchParams.get('sourceIp') || ''
+    return {
+      ...initialFilters,
+      routerIp: searchParams.get('routerIp') || '',
+      timeFrom: searchParams.get('timeFrom') || '',
+      timeTo: searchParams.get('timeTo') || '',
+      customerId: searchParams.get('customerId') || '',
+      subscriberId: searchParams.get('subscriberId') || '',
+      privateIp: queryPrivateIp,
+      privatePort: searchParams.get('privatePort') || '',
+      publicIp: searchParams.get('publicIp') || '',
+      publicPort: searchParams.get('publicPort') || '',
+      destinationIp: searchParams.get('destinationIp') || '',
+      destinationPort: searchParams.get('destinationPort') || '',
+      translatedDestinationIp: searchParams.get('translatedDestinationIp') || '',
+      translatedDestinationPort: searchParams.get('translatedDestinationPort') || '',
+      protocol: searchParams.get('protocol') || '',
+      pppoeUsername: queryUsername,
+    }
+  }, [searchParams])
 
   const selectedRouter = useMemo(
     () => routers.find((router) => router.managementIp === filters.routerIp || router.radiusClientIp === filters.routerIp) || null,
@@ -149,7 +178,15 @@ export default function NatLogsPage() {
       const routerItems = routersRes.data || []
       setRouters(routerItems)
       const defaultRouter = routerItems[0]?.managementIp || routerItems[0]?.radiusClientIp || ''
-      const nextFilters = { ...initialFilters, routerIp: defaultRouter }
+      const nextFilters = {
+        ...initialFilters,
+        ...prefilledFilters,
+        routerIp:
+          prefilledFilters.routerIp ||
+          (prefilledFilters.customerId || prefilledFilters.subscriberId || prefilledFilters.pppoeUsername || prefilledFilters.privateIp
+            ? ''
+            : defaultRouter),
+      }
       setFilters(nextFilters)
       await loadLogs(nextFilters)
     } catch (error) {
@@ -168,6 +205,8 @@ export default function NatLogsPage() {
         limit: 250,
         routerIp: activeFilters.routerIp || undefined,
         pppoeUsername: activeFilters.pppoeUsername || undefined,
+        customerId: activeFilters.customerId || undefined,
+        subscriberId: activeFilters.subscriberId || undefined,
         privateIp: activeFilters.privateIp || undefined,
         privatePort: activeFilters.privatePort || undefined,
         publicIp: activeFilters.publicIp || undefined,

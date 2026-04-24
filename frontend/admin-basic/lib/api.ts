@@ -2049,13 +2049,15 @@ export const adminAPI = {
       }
     ),
   getNatLogs: async (filters?: {
-    page?: number
-    limit?: number
-    routerIp?: string
-    pppoeUsername?: string
-    privateIp?: string
-    privatePort?: number | string
-    publicIp?: string
+      page?: number
+      limit?: number
+      routerIp?: string
+      pppoeUsername?: string
+      customerId?: string
+      subscriberId?: string
+      privateIp?: string
+      privatePort?: number | string
+      publicIp?: string
     publicPort?: number | string
     destinationIp?: string
     destinationPort?: number | string
@@ -2073,6 +2075,8 @@ export const adminAPI = {
     search.set('limit', String(filters?.limit || 100))
     if (filters?.routerIp) search.set('routerIp', filters.routerIp)
     if (filters?.pppoeUsername) search.set('pppoeUsername', filters.pppoeUsername)
+    if (filters?.customerId) search.set('customerId', filters.customerId)
+    if (filters?.subscriberId) search.set('subscriberId', filters.subscriberId)
     if (filters?.privateIp) search.set('privateIp', filters.privateIp)
     if (filters?.privatePort) search.set('privatePort', String(filters.privatePort))
     if (filters?.publicIp) search.set('publicIp', filters.publicIp)
