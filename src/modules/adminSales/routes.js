@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/asyncHandler.js";
 import { ok } from "../../common/response.js";
+import { ApiError } from "../../common/ApiError.js";
 import { requireAuth, requirePermission } from "../../common/auth.js";
 import { permissions } from "../../config/permissions.js";
 import { AppBanner } from "../../models/AppBanner.js";
@@ -32,7 +33,11 @@ adminSalesRouter.get(
   "/sales/leads",
   requirePermission(permissions.dashboardRead),
   asyncHandler(async (_req, res) => {
-    const leads = await Lead.find().sort({ createdAt: -1 }).limit(100).lean();
+    const leads = await Lead.find()
+      .populate("salesAgentId", "agentCode fullName phone email status assignedAreas")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
     return ok(res, leads);
   })
 );
@@ -43,6 +48,36 @@ adminSalesRouter.get(
   asyncHandler(async (_req, res) => {
     const bookings = await ConnectionBooking.find().sort({ createdAt: -1 }).limit(100).lean();
     return ok(res, bookings);
+  })
+);
+
+adminSalesRouter.patch(
+  "/sales/leads/:leadId/assign",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const lead = await Lead.findById(req.params.leadId);
+    if (!lead) {
+      throw new ApiError(404, "Lead not found");
+    }
+    const nextSalesAgentId = String(req.body?.salesAgentId || "").trim();
+    if (!nextSalesAgentId) {
+      lead.salesAgentId = undefined;
+      await lead.save();
+      const reloadedLead = await Lead.findById(lead._id)
+        .populate("salesAgentId", "agentCode fullName phone email status assignedAreas")
+        .lean();
+      return ok(res, reloadedLead);
+    }
+    const salesAgent = await SalesAgent.findOne({ _id: nextSalesAgentId, status: "active" }).lean();
+    if (!salesAgent) {
+      throw new ApiError(404, "Sales agent not found");
+    }
+    lead.salesAgentId = salesAgent._id;
+    await lead.save();
+    const reloadedLead = await Lead.findById(lead._id)
+      .populate("salesAgentId", "agentCode fullName phone email status assignedAreas")
+      .lean();
+    return ok(res, reloadedLead);
   })
 );
 

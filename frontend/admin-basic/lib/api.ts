@@ -19,6 +19,7 @@ import type {
   ServiceZone,
   DashboardStats,
   CustomerOtpLookup,
+  SalesAgentItem,
   SalesBookingItem,
   SalesLeadItem,
   InstallerMessageTemplates,
@@ -237,6 +238,22 @@ function mapSalesLead(lead: any): SalesLeadItem {
           amount: Number(lead.selectedPlan.amount || 0),
           durationMonths: Number(lead.selectedPlan.durationMonths || 0) || undefined,
           durationLabel: lead.selectedPlan.durationLabel || '',
+          preferredSlot: lead.selectedPlan.preferredSlot
+            ? {
+                code: lead.selectedPlan.preferredSlot.code || '',
+                label: lead.selectedPlan.preferredSlot.label || '',
+              }
+            : null,
+        }
+      : null,
+    salesAgent: lead.salesAgentId
+      ? {
+          id: String(lead.salesAgentId._id || lead.salesAgentId.id || ''),
+          agentCode: lead.salesAgentId.agentCode || '',
+          fullName: lead.salesAgentId.fullName || '',
+          phone: lead.salesAgentId.phone || '',
+          email: lead.salesAgentId.email || '',
+          status: lead.salesAgentId.status || '',
         }
       : null,
     createdAt: lead.createdAt,
@@ -273,6 +290,18 @@ function mapSalesBooking(booking: any): SalesBookingItem {
         }
       : null,
     createdAt: booking.createdAt,
+  }
+}
+
+function mapSalesAgent(agent: any): SalesAgentItem {
+  return {
+    id: agent._id || agent.id || '',
+    agentCode: agent.agentCode || '',
+    fullName: agent.fullName || '',
+    phone: agent.phone || '',
+    email: agent.email || '',
+    status: agent.status || '',
+    assignedAreas: Array.isArray(agent.assignedAreas) ? agent.assignedAreas : [],
   }
 }
 
@@ -1467,6 +1496,23 @@ export const adminAPI = {
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapSalesBooking) : [],
+    }
+  },
+  getSalesAgents: async () => {
+    const res = await request<any[]>('/api/v1/admin/catalog/sales/agents')
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapSalesAgent) : [],
+    }
+  },
+  assignSalesLead: async (leadId: string, salesAgentId?: string) => {
+    const res = await request<any>(`/api/v1/admin/sales/leads/${leadId}/assign`, {
+      method: 'PATCH',
+      body: JSON.stringify({ salesAgentId: salesAgentId || '' }),
+    })
+    return {
+      ...res,
+      data: res.data ? mapSalesLead(res.data) : undefined,
     }
   },
   getCustomerDemoOtp: async (lookup: string) => {

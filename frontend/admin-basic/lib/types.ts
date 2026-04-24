@@ -365,6 +365,18 @@ export interface SalesLeadItem {
     amount?: number
     durationMonths?: number
     durationLabel?: string
+    preferredSlot?: {
+      code?: string
+      label?: string
+    } | null
+  } | null
+  salesAgent?: {
+    id: string
+    agentCode?: string
+    fullName?: string
+    phone?: string
+    email?: string
+    status?: string
   } | null
   createdAt?: string
 }
@@ -392,6 +404,16 @@ export interface SalesBookingItem {
     pinCode?: string
   } | null
   createdAt?: string
+}
+
+export interface SalesAgentItem {
+  id: string
+  agentCode: string
+  fullName: string
+  phone?: string
+  email?: string
+  status?: string
+  assignedAreas?: string[]
 }
 
 export interface Device {
