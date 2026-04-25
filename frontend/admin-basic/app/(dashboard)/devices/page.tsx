@@ -76,15 +76,21 @@ function formatOpticalPower(device: Device | undefined, value: unknown) {
   const formatted = formatPower(value)
   if (formatted !== '-') return formatted
   const fallbackValue = pickOpticalMetric(device?.opticalInfo, [
+    'RXPower',
+    'RxPower',
     'opticalRxPower',
     'receivedPower',
+    'ReceivedPower',
     'receivedOpticalPower',
     'ontRxPower',
     'oltRxPower',
     'rxPowerDbm',
     'rx',
+    'TXPower',
+    'TxPower',
     'opticalTxPower',
     'transmitPower',
+    'TransmitPower',
     'transmitOpticalPower',
     'ontTxPower',
     'oltTxPower',

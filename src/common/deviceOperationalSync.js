@@ -17,16 +17,34 @@ const OPTICAL_PARAMETER_NAMES = [
   "InternetGatewayDevice.X_ALU_OntOpticalParam.RxPower",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalRxPower",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.RxOpticalPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.ReceivedPower",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.TXPower",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.TxPower",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalTxPower",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.TxOpticalPower",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam.TransmitPower",
   "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RXPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RxPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.OpticalRxPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RxOpticalPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.ReceivedPower",
   "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TXPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TxPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.OpticalTxPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TxOpticalPower",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TransmitPower",
   "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.RXPower",
   "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.TXPower",
   "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RXPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RxPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.OpticalRxPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RxOpticalPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.ReceivedPower",
   "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TXPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TxPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.OpticalTxPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TxOpticalPower",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TransmitPower",
   "InternetGatewayDevice.X_DZS_GPON.RXPower",
   "InternetGatewayDevice.X_DZS_GPON.RxPower",
   "InternetGatewayDevice.X_DZS_GPON.OpticalRxPower",
@@ -120,9 +138,9 @@ function discoverOpticalMetric(summary, direction) {
   const normalizedDirection = String(direction || "").toLowerCase();
   const directionTokens =
     normalizedDirection === "tx"
-      ? ["txpower", "txopticalpower", "opticaltxpower"]
-      : ["rxpower", "rxopticalpower", "opticalrxpower"];
-  const primaryHints = ["pon", "optical", "gpon", "xgpon", "wanpon", "ont", "dasan"];
+      ? ["txpower", "txopticalpower", "opticaltxpower", "transmitpower", "olttxpower", "onttxpower"]
+      : ["rxpower", "rxopticalpower", "opticalrxpower", "receivedpower", "oltrxpower", "ontrxpower"];
+  const primaryHints = ["pon", "optical", "gpon", "xgpon", "wanpon", "ont", "dasan", "nokia", "alcl", "alcatel", "alu"];
   const excludedHints = ["wifi", "wlan", "radio", "ssid", "neighbor"];
 
   const matches = collectMatchingPaths(summary, (path, value) => {
@@ -333,13 +351,22 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.X_DZS_GPON.OltRxPower",
     "InternetGatewayDevice.X_DZS_GPON.OntRxPower",
     "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RXPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RxPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.OpticalRxPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RxOpticalPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.ReceivedPower",
     "InternetGatewayDevice.X_ZTE-COM_WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.X_HW_WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RXPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RxPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.OpticalRxPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RxOpticalPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.ReceivedPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.RXPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.RxPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalRxPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.RxOpticalPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.ReceivedPower",
     "InternetGatewayDevice.FAP.Tunnel.1.Stats.RXPower",
     "VirtualParameters.RXPower",
     "VirtualParameters.OpticalRxPower"
@@ -373,13 +400,22 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.X_DZS_GPON.OltTxPower",
     "InternetGatewayDevice.X_DZS_GPON.OntTxPower",
     "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TXPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TxPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.OpticalTxPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TxOpticalPower",
+    "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TransmitPower",
     "InternetGatewayDevice.X_ZTE-COM_WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.X_HW_WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TXPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TxPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.OpticalTxPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TxOpticalPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TransmitPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.TXPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.TxPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalTxPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.TxOpticalPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.TransmitPower",
     "InternetGatewayDevice.FAP.Tunnel.1.Stats.TXPower",
     "VirtualParameters.TXPower",
     "VirtualParameters.OpticalTxPower"
