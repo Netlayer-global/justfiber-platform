@@ -467,6 +467,20 @@ export interface Device {
   opticalInfo?: Record<string, any>
 }
 
+export interface DeviceOpticalSample {
+  id: string
+  deviceId: string
+  customerId?: string
+  serviceId?: string
+  serialNumber?: string
+  productClass?: string
+  measuredAt: string
+  rxPower?: number
+  txPower?: number
+  healthStatus?: string
+  source?: string
+}
+
 export interface BngNode {
   id: string
   nodeCode: string

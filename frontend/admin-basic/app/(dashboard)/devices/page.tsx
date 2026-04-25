@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
-import type { Device } from '@/lib/types'
+import type { Device, DeviceOpticalSample } from '@/lib/types'
 import Link from 'next/link'
 import {
   Activity,
@@ -175,8 +175,62 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   )
 }
 
+function OpticalHistoryChart({ items }: { items: DeviceOpticalSample[] }) {
+  const chartPoints = items
+    .slice()
+    .reverse()
+    .filter((item) => typeof item.rxPower === 'number')
+
+  if (!chartPoints.length) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-500">
+        No optical history recorded yet. Run live refresh or fleet sync to capture samples.
+      </div>
+    )
+  }
+
+  const minRx = Math.min(...chartPoints.map((item) => Number(item.rxPower)))
+  const maxRx = Math.max(...chartPoints.map((item) => Number(item.rxPower)))
+  const spread = Math.max(maxRx - minRx, 1)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex h-32 items-end gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+        {chartPoints.slice(-18).map((item) => {
+          const rx = Number(item.rxPower || 0)
+          const percent = Math.max(((rx - minRx) / spread) * 100, 12)
+          const tone =
+            rx <= -27 ? 'bg-rose-500' : rx <= -24 ? 'bg-amber-500' : 'bg-emerald-500'
+          return (
+            <div key={item.id || item.measuredAt} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
+              <div className={`w-full rounded-t-md ${tone}`} style={{ height: `${percent}%` }} />
+              <div className="text-[10px] text-slate-500">
+                {new Date(item.measuredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <div className="grid gap-2 md:grid-cols-2">
+        {items.slice(0, 8).map((item) => (
+          <div key={item.id || item.measuredAt} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-slate-900">{formatPower(item.rxPower)}</div>
+              <div className="text-xs text-slate-500">{formatDateTime(item.measuredAt)}</div>
+            </div>
+            <div className="mt-1 text-xs text-slate-500">
+              TX {formatPower(item.txPower)} • {formatValue(item.healthStatus)} • {formatValue(item.source)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
+  const [opticalHistory, setOpticalHistory] = useState<DeviceOpticalSample[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
   const [attachCustomerId, setAttachCustomerId] = useState('')
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([])
@@ -192,6 +246,20 @@ export default function DevicesPage() {
   useEffect(() => {
     void loadDevices()
   }, [])
+
+  useEffect(() => {
+    async function loadOpticalHistory() {
+      if (!selectedDeviceId) {
+        setOpticalHistory([])
+        return
+      }
+      const res = await adminAPI.getDeviceOpticalHistory(selectedDeviceId, { days: 7, limit: 120 })
+      if (res.success && Array.isArray(res.data)) {
+        setOpticalHistory(res.data)
+      }
+    }
+    void loadOpticalHistory()
+  }, [selectedDeviceId])
 
   function logAction(label: string, status: 'success' | 'warning' = 'success') {
     setActionLogs((current) => [
@@ -280,6 +348,10 @@ export default function DevicesPage() {
         toast.success(syncFromGenie ? 'Device synced from Genie' : 'Device detail refreshed')
       }
       logAction(syncFromGenie ? `Live sync completed for ${selectedDeviceId}` : `Detail refreshed for ${selectedDeviceId}`)
+      const historyRes = await adminAPI.getDeviceOpticalHistory(selectedDeviceId, { days: 7, limit: 120 })
+      if (historyRes.success && Array.isArray(historyRes.data)) {
+        setOpticalHistory(historyRes.data)
+      }
     } catch (error) {
       console.error('[devices] Failed to refresh device detail:', error)
       if (!silent) {
@@ -1052,6 +1124,14 @@ export default function DevicesPage() {
                     <DetailRow label="LAN gateway" value={formatValue(selectedDevice.lanInfo?.gateway)} />
                   </div>
                 </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold text-slate-900">7-day optical trend</h3>
+                  <Activity className="h-4 w-4 text-slate-500" />
+                </div>
+                <OpticalHistoryChart items={opticalHistory} />
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">

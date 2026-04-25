@@ -1,5 +1,6 @@
 import { genieacsClient } from "../integrations/genieacsClient.js";
 import { DeviceOperationalCache } from "../models/DeviceOperationalCache.js";
+import { DeviceOpticalSample } from "../models/DeviceOpticalSample.js";
 
 const OPTICAL_REFRESH_OBJECTS = [
   "InternetGatewayDevice.X_ALU_OntOpticalParam.",
@@ -232,6 +233,31 @@ function deriveOnlineStatus(lastInformAt) {
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function recordOpticalSample(cacheRecord, parsed, source = "genie_sync") {
+  const rxPower = Number(parsed?.opticalInfo?.rxPower);
+  const txPower = Number(parsed?.opticalInfo?.txPower);
+  const hasRx = Number.isFinite(rxPower);
+  const hasTx = Number.isFinite(txPower);
+  if (!hasRx && !hasTx) return;
+
+  const measuredAt = parsed?.lastInformAt || new Date();
+  const healthStatus =
+    hasRx ? (rxPower > -21 ? "good" : rxPower > -27 ? "warning" : "critical") : "unknown";
+
+  await DeviceOpticalSample.create({
+    deviceId: cacheRecord.deviceId,
+    customerId: cacheRecord.customerId,
+    serviceId: cacheRecord.serviceId,
+    serialNumber: parsed?.serialNumber || cacheRecord.serialNumber || "",
+    productClass: parsed?.productClass || cacheRecord.productClass || "",
+    measuredAt,
+    rxPower: hasRx ? rxPower : null,
+    txPower: hasTx ? txPower : null,
+    healthStatus,
+    source,
+  });
 }
 
 async function requestOpticalTelemetryRefresh(deviceId) {
@@ -607,6 +633,12 @@ export async function syncDeviceFromGenie(cacheRecord) {
       }
     }
   );
+
+  try {
+    await recordOpticalSample(cacheRecord, parsed, "genie_sync");
+  } catch (error) {
+    console.error("[devices] Failed to store optical sample:", cacheRecord.deviceId, error);
+  }
 
   return { ok: true, deviceId: cacheRecord.deviceId, onlineStatus: parsed.onlineStatus };
 }

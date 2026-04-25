@@ -10,6 +10,7 @@ import type {
   CustomerPppoeControlResponse,
   ManualCustomerCreatePayload,
   Device,
+  DeviceOpticalSample,
   BngNode,
   BngNodeTestResult,
   BngNodeCoaDispatchResult,
@@ -931,6 +932,22 @@ function mapDevice(device: any): Device {
     wifiInfo: device.wifiInfo || {},
     lanInfo: device.lanInfo || {},
     opticalInfo: device.opticalInfo || {},
+  }
+}
+
+function mapDeviceOpticalSample(item: any): DeviceOpticalSample {
+  return {
+    id: item._id || '',
+    deviceId: item.deviceId || '',
+    customerId: item.customerId || '',
+    serviceId: item.serviceId || '',
+    serialNumber: item.serialNumber || '',
+    productClass: item.productClass || '',
+    measuredAt: item.measuredAt || item.createdAt || '',
+    rxPower: Number.isFinite(Number(item.rxPower)) ? Number(item.rxPower) : undefined,
+    txPower: Number.isFinite(Number(item.txPower)) ? Number(item.txPower) : undefined,
+    healthStatus: item.healthStatus || '',
+    source: item.source || '',
   }
 }
 
@@ -2074,6 +2091,17 @@ export const adminAPI = {
     return {
       ...res,
       data: res.data ? mapDevice(res.data) : undefined,
+    }
+  },
+  getDeviceOpticalHistory: async (id: string, options?: { days?: number; limit?: number }) => {
+    const params = new URLSearchParams()
+    if (options?.days) params.set('days', String(options.days))
+    if (options?.limit) params.set('limit', String(options.limit))
+    const suffix = params.toString() ? `?${params.toString()}` : ''
+    const res = await request<any[]>(`/api/v1/admin/devices/${encodeURIComponent(id)}/optical-history${suffix}`)
+    return {
+      ...res,
+      data: Array.isArray(res.data) ? res.data.map(mapDeviceOpticalSample) : [],
     }
   },
   syncDevicesFromGenie: (payload?: { deviceId?: string; limit?: number }) =>

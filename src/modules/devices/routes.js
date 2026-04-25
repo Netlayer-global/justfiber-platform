@@ -12,6 +12,7 @@ import { adminActionsQueue } from "../../queues/adminActionsQueue.js";
 import { auditFromRequest } from "../../common/audit.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { getLiveGenieDeviceList, summarizeGenieDevice, syncCachedDevicesFromGenie, syncDeviceFromGenie } from "../../common/deviceOperationalSync.js";
+import { DeviceOpticalSample } from "../../models/DeviceOpticalSample.js";
 
 export const devicesRouter = Router();
 
@@ -70,6 +71,25 @@ devicesRouter.get(
       DeviceOperationalCache.countDocuments(filter)
     ]);
     return ok(res, items, { page, limit, total });
+  })
+);
+
+devicesRouter.get(
+  "/:deviceId/optical-history",
+  requirePermission(permissions.deviceRead),
+  asyncHandler(async (req, res) => {
+    const days = Math.max(1, Math.min(Number(req.query.days || 7), 30));
+    const limit = Math.max(10, Math.min(Number(req.query.limit || 120), 500));
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const items = await DeviceOpticalSample.find({
+      deviceId: req.params.deviceId,
+      measuredAt: { $gte: since },
+    })
+      .sort({ measuredAt: -1 })
+      .limit(limit)
+      .lean();
+
+    return ok(res, items);
   })
 );
 
