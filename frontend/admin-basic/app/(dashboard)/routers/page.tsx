@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 type RouterForm = {
   nodeCode: string
   displayName: string
+  nodeType: 'bng' | 'olt'
   vendor: 'mikrotik' | 'juniper' | 'huawei' | 'other'
   status: 'active' | 'planned' | 'disabled'
   macAddress: string
@@ -25,7 +26,15 @@ type RouterForm = {
   enableIpAuth: boolean
   routerOsUsername: string
   routerOsPassword: string
+  snmpVersion: 'v2c' | 'v3'
   snmpCommunity: string
+  snmpPort: string
+  snmpV3Username: string
+  snmpV3SecurityLevel: 'noAuthNoPriv' | 'authNoPriv' | 'authPriv'
+  snmpV3AuthProtocol: 'MD5' | 'SHA' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512'
+  snmpV3AuthPassword: string
+  snmpV3PrivProtocol: 'DES' | 'AES'
+  snmpV3PrivPassword: string
   apiPort: string
   wwwPort: string
   notes: string
@@ -34,6 +43,7 @@ type RouterForm = {
 const initialForm: RouterForm = {
   nodeCode: '',
   displayName: '',
+  nodeType: 'bng',
   vendor: 'mikrotik',
   status: 'active',
   macAddress: '',
@@ -50,7 +60,15 @@ const initialForm: RouterForm = {
   enableIpAuth: false,
   routerOsUsername: '',
   routerOsPassword: '',
+  snmpVersion: 'v2c',
   snmpCommunity: '',
+  snmpPort: '161',
+  snmpV3Username: '',
+  snmpV3SecurityLevel: 'authPriv',
+  snmpV3AuthProtocol: 'SHA',
+  snmpV3AuthPassword: '',
+  snmpV3PrivProtocol: 'AES',
+  snmpV3PrivPassword: '',
   apiPort: '8728',
   wwwPort: '80',
   notes: '',
@@ -69,6 +87,7 @@ function toForm(node?: BngNode | null): RouterForm {
   return {
     nodeCode: node.nodeCode || '',
     displayName: node.displayName || '',
+    nodeType: node.nodeType || 'bng',
     vendor: node.vendor || 'mikrotik',
     status: node.status || 'active',
     macAddress: node.macAddress || '',
@@ -85,7 +104,15 @@ function toForm(node?: BngNode | null): RouterForm {
     enableIpAuth: Boolean(node.enableIpAuth),
     routerOsUsername: node.routerOsUsername || '',
     routerOsPassword: node.routerOsPassword || '',
+    snmpVersion: node.snmpVersion || 'v2c',
     snmpCommunity: node.snmpCommunity || '',
+    snmpPort: String(node.snmpPort || 161),
+    snmpV3Username: node.snmpV3Username || '',
+    snmpV3SecurityLevel: node.snmpV3SecurityLevel || 'authPriv',
+    snmpV3AuthProtocol: node.snmpV3AuthProtocol || 'SHA',
+    snmpV3AuthPassword: node.snmpV3AuthPassword || '',
+    snmpV3PrivProtocol: node.snmpV3PrivProtocol || 'AES',
+    snmpV3PrivPassword: node.snmpV3PrivPassword || '',
     apiPort: String(node.apiPort || 8728),
     wwwPort: String(node.wwwPort || 80),
     notes: node.notes || '',
@@ -207,6 +234,7 @@ export default function RoutersPage() {
       const res = await adminAPI.saveBngNode({
         nodeCode,
         displayName: form.displayName.trim(),
+        nodeType: form.nodeType,
         vendor: form.vendor,
         status: form.status,
         zoneCode: selectedRouter?.zoneCode || (activeZoneCode !== 'default' ? activeZoneCode : undefined),
@@ -228,7 +256,15 @@ export default function RoutersPage() {
         enableIpAuth: form.enableIpAuth,
         routerOsUsername: form.routerOsUsername.trim(),
         routerOsPassword: form.routerOsPassword.trim(),
+        snmpVersion: form.snmpVersion,
         snmpCommunity: form.snmpCommunity.trim(),
+        snmpPort: Number(form.snmpPort || 161),
+        snmpV3Username: form.snmpV3Username.trim(),
+        snmpV3SecurityLevel: form.snmpV3SecurityLevel,
+        snmpV3AuthProtocol: form.snmpV3AuthProtocol,
+        snmpV3AuthPassword: form.snmpV3AuthPassword.trim(),
+        snmpV3PrivProtocol: form.snmpV3PrivProtocol,
+        snmpV3PrivPassword: form.snmpV3PrivPassword.trim(),
         apiPort: Number(form.apiPort || 8728),
         wwwPort: Number(form.wwwPort || 80),
         notes: form.notes.trim(),
@@ -826,6 +862,13 @@ export default function RoutersPage() {
                 <input className="input" value={form.displayName} placeholder="JustFiber Rewari" onChange={(event) => setForm({ ...form, displayName: event.target.value })} />
               </label>
               <label className="space-y-2">
+                  <div className="text-sm font-semibold text-slate-700">Node type</div>
+                <select className="input" value={form.nodeType} onChange={(event) => setForm({ ...form, nodeType: event.target.value as RouterForm['nodeType'] })}>
+                  <option value="bng">BNG / Router</option>
+                  <option value="olt">OLT</option>
+                </select>
+              </label>
+              <label className="space-y-2">
                   <div className="text-sm font-semibold text-slate-700">Model</div>
                 <select className="input" value={form.vendor} onChange={(event) => setForm({ ...form, vendor: event.target.value as RouterForm['vendor'] })}>
                   <option value="mikrotik">MikroTik (Routers)</option>
@@ -922,10 +965,64 @@ export default function RoutersPage() {
                   <div className="text-sm font-semibold text-slate-700">WWW port</div>
                   <input className="input" type="number" value={form.wwwPort} onChange={(event) => setForm({ ...form, wwwPort: event.target.value })} />
                 </label>
-                <label className="space-y-2 md:col-span-2">
-                  <div className="text-sm font-semibold text-slate-700">Community string</div>
-                  <input className="input" value={form.snmpCommunity} onChange={(event) => setForm({ ...form, snmpCommunity: event.target.value })} />
+                <label className="space-y-2">
+                  <div className="text-sm font-semibold text-slate-700">SNMP version</div>
+                  <select className="input" value={form.snmpVersion} onChange={(event) => setForm({ ...form, snmpVersion: event.target.value as RouterForm['snmpVersion'] })}>
+                    <option value="v2c">SNMP v2c</option>
+                    <option value="v3">SNMP v3</option>
+                  </select>
                 </label>
+                <label className="space-y-2">
+                  <div className="text-sm font-semibold text-slate-700">SNMP port</div>
+                  <input className="input" type="number" value={form.snmpPort} onChange={(event) => setForm({ ...form, snmpPort: event.target.value })} />
+                </label>
+                {form.snmpVersion === 'v2c' ? (
+                  <label className="space-y-2 md:col-span-2">
+                    <div className="text-sm font-semibold text-slate-700">Community string</div>
+                    <input className="input" value={form.snmpCommunity} onChange={(event) => setForm({ ...form, snmpCommunity: event.target.value })} />
+                  </label>
+                ) : (
+                  <>
+                    <label className="space-y-2">
+                      <div className="text-sm font-semibold text-slate-700">SNMP v3 username</div>
+                      <input className="input" value={form.snmpV3Username} onChange={(event) => setForm({ ...form, snmpV3Username: event.target.value })} />
+                    </label>
+                    <label className="space-y-2">
+                      <div className="text-sm font-semibold text-slate-700">Security level</div>
+                      <select className="input" value={form.snmpV3SecurityLevel} onChange={(event) => setForm({ ...form, snmpV3SecurityLevel: event.target.value as RouterForm['snmpV3SecurityLevel'] })}>
+                        <option value="noAuthNoPriv">noAuthNoPriv</option>
+                        <option value="authNoPriv">authNoPriv</option>
+                        <option value="authPriv">authPriv</option>
+                      </select>
+                    </label>
+                    <label className="space-y-2">
+                      <div className="text-sm font-semibold text-slate-700">Auth protocol</div>
+                      <select className="input" value={form.snmpV3AuthProtocol} onChange={(event) => setForm({ ...form, snmpV3AuthProtocol: event.target.value as RouterForm['snmpV3AuthProtocol'] })}>
+                        <option value="MD5">MD5</option>
+                        <option value="SHA">SHA</option>
+                        <option value="SHA224">SHA224</option>
+                        <option value="SHA256">SHA256</option>
+                        <option value="SHA384">SHA384</option>
+                        <option value="SHA512">SHA512</option>
+                      </select>
+                    </label>
+                    <label className="space-y-2">
+                      <div className="text-sm font-semibold text-slate-700">Auth password</div>
+                      <input className="input" type="password" value={form.snmpV3AuthPassword} onChange={(event) => setForm({ ...form, snmpV3AuthPassword: event.target.value })} />
+                    </label>
+                    <label className="space-y-2">
+                      <div className="text-sm font-semibold text-slate-700">Privacy protocol</div>
+                      <select className="input" value={form.snmpV3PrivProtocol} onChange={(event) => setForm({ ...form, snmpV3PrivProtocol: event.target.value as RouterForm['snmpV3PrivProtocol'] })}>
+                        <option value="DES">DES</option>
+                        <option value="AES">AES</option>
+                      </select>
+                    </label>
+                    <label className="space-y-2 md:col-span-2">
+                      <div className="text-sm font-semibold text-slate-700">Privacy password</div>
+                      <input className="input" type="password" value={form.snmpV3PrivPassword} onChange={(event) => setForm({ ...form, snmpV3PrivPassword: event.target.value })} />
+                    </label>
+                  </>
+                )}
                 <label className="space-y-2 md:col-span-2">
                   <div className="text-sm font-semibold text-slate-700">API base URL</div>
                   <input className="input" value={form.apiBaseUrl} onChange={(event) => setForm({ ...form, apiBaseUrl: event.target.value })} />

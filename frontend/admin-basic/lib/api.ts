@@ -52,6 +52,10 @@ import type {
   SupportDiagnosticItem,
   AppBanner,
   NatLogEntry,
+  NetworkMapAssetItem,
+  FiberPathItem,
+  NetworkTopologyLinkItem,
+  NetworkMapAlertItem,
   IpPoolRange,
   KycVerificationRequest,
 } from './types'
@@ -222,7 +226,9 @@ function mapSalesLead(lead: any): SalesLeadItem {
   return {
     id: lead._id || lead.leadNumber || '',
     leadNumber: lead.leadNumber || lead._id || '',
+    leadCategory: lead.leadCategory === 'business' ? 'business' : 'home',
     fullName: lead.fullName || '',
+    companyName: lead.companyName || '',
     mobile: lead.mobile || '',
     email: lead.email || '',
     address: lead.address || '',
@@ -231,6 +237,18 @@ function mapSalesLead(lead: any): SalesLeadItem {
     status: lead.status || 'new',
     zoneId: lead.zoneId || '',
     feasible: Boolean(lead.feasible),
+    requirementSummary: lead.requirementSummary || '',
+    preferredVisitAt: lead.preferredVisitAt || '',
+    notes: lead.notes || '',
+    followUpAt: lead.followUpAt || '',
+    dropReason: lead.dropReason || '',
+    activityLog: Array.isArray(lead.activityLog)
+      ? lead.activityLog.map((entry: any) => ({
+          type: entry?.type || '',
+          message: entry?.message || '',
+          at: entry?.at || '',
+        }))
+      : [],
     requestedPlanCode: lead.requestedPlanCode || '',
     requestedPlanName: lead.requestedPlanName || '',
     requestedPlanAmount: Number(lead.requestedPlanAmount || 0) || undefined,
@@ -480,11 +498,83 @@ function mapNatLogEntry(item: any): NatLogEntry {
   }
 }
 
+function mapNetworkMapAsset(item: any): NetworkMapAssetItem {
+  return {
+    assetId: item.assetId || item._id || '',
+    assetType: item.assetType || '',
+    label: item.label || '',
+    serialNumber: item.serialNumber || '',
+    linkedCustomerId: item.linkedCustomerId || '',
+    linkedDeviceId: item.linkedDeviceId || '',
+    linkedServiceId: item.linkedServiceId || '',
+    zoneCode: item.zoneCode || '',
+    status: item.status || '',
+    portCapacity: Number.isFinite(Number(item.portCapacity)) ? Number(item.portCapacity) : undefined,
+    location: item.location?.lat != null && item.location?.lng != null ? { lat: Number(item.location.lat), lng: Number(item.location.lng) } : null,
+    rxPower: Number.isFinite(Number(item.rxPower)) ? Number(item.rxPower) : undefined,
+    txPower: Number.isFinite(Number(item.txPower)) ? Number(item.txPower) : undefined,
+    metadata: item.metadata || {},
+  }
+}
+
+function mapFiberPath(item: any): FiberPathItem {
+  return {
+    pathId: item.pathId || item._id || '',
+    name: item.name || '',
+    pathType: item.pathType || '',
+    zoneCode: item.zoneCode || '',
+    fromAssetId: item.fromAssetId || '',
+    toAssetId: item.toAssetId || '',
+    status: item.status || '',
+    points: Array.isArray(item.points)
+      ? item.points
+          .filter((point: any) => point?.lat != null && point?.lng != null)
+          .map((point: any) => ({ lat: Number(point.lat), lng: Number(point.lng) }))
+      : [],
+    metadata: item.metadata || {},
+  }
+}
+
+function mapNetworkTopologyLink(item: any): NetworkTopologyLinkItem {
+  return {
+    linkId: item.linkId || item._id || '',
+    zoneCode: item.zoneCode || '',
+    linkType: item.linkType || 'fiber_chain',
+    status: item.status || 'planned',
+    parentAssetId: item.parentAssetId || '',
+    parentPortLabel: item.parentPortLabel || '',
+    childAssetId: item.childAssetId || '',
+    childPortLabel: item.childPortLabel || '',
+    fiberPathId: item.fiberPathId || '',
+    notes: item.notes || '',
+    metadata: item.metadata || {},
+    createdAt: item.createdAt || '',
+    updatedAt: item.updatedAt || '',
+  }
+}
+
+function mapNetworkMapAlert(item: any): NetworkMapAlertItem {
+  return {
+    alertId: item.alertId || item._id || '',
+    kind: item.kind || '',
+    severity: item.severity || 'info',
+    title: item.title || '',
+    message: item.message || '',
+    pathId: item.pathId || '',
+    assetId: item.assetId || '',
+    affectedAssets: Number.isFinite(Number(item.affectedAssets)) ? Number(item.affectedAssets) : undefined,
+    affectedCustomers: Number.isFinite(Number(item.affectedCustomers)) ? Number(item.affectedCustomers) : undefined,
+    rxPower: Number.isFinite(Number(item.rxPower)) ? Number(item.rxPower) : item.rxPower === null ? null : undefined,
+    status: item.status || '',
+  }
+}
+
 function mapBngNode(node: any): BngNode {
   return {
     id: node._id || node.nodeCode || '',
     nodeCode: node.nodeCode || '',
     displayName: node.displayName || node.nodeCode || 'Unnamed router',
+    nodeType: node.nodeType || 'bng',
     vendor: node.vendor || 'mikrotik',
     status: node.status || 'planned',
     zoneCode: node.zoneCode || '',
@@ -504,7 +594,15 @@ function mapBngNode(node: any): BngNode {
     enableIpAuth: Boolean(node.enableIpAuth),
     routerOsUsername: node.routerOsUsername || '',
     routerOsPassword: node.routerOsPassword || '',
+    snmpVersion: node.snmpVersion || 'v2c',
     snmpCommunity: node.snmpCommunity || '',
+    snmpPort: Number(node.snmpPort || 161),
+    snmpV3Username: node.snmpV3Username || '',
+    snmpV3SecurityLevel: node.snmpV3SecurityLevel || 'authPriv',
+    snmpV3AuthProtocol: node.snmpV3AuthProtocol || 'SHA',
+    snmpV3AuthPassword: node.snmpV3AuthPassword || '',
+    snmpV3PrivProtocol: node.snmpV3PrivProtocol || 'AES',
+    snmpV3PrivPassword: node.snmpV3PrivPassword || '',
     apiPort: Number(node.apiPort || 8728),
     wwwPort: Number(node.wwwPort || 80),
     notes: node.notes || '',
@@ -1537,6 +1635,50 @@ export const adminAPI = {
       data: res.data ? mapSalesLead(res.data) : undefined,
     }
   },
+  updateSalesLead: async (
+    leadId: string,
+    data: { status?: string; notes?: string; followUpAt?: string | null; dropReason?: string }
+  ) => {
+    const res = await request<any>(`/api/v1/admin/sales/leads/${leadId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapSalesLead(res.data) : undefined,
+    }
+  },
+  createSalesLead: async (data: {
+    leadCategory?: 'home' | 'business'
+    fullName: string
+    companyName?: string
+    mobile: string
+    alternateMobile?: string
+    email?: string
+    address?: string
+    pinCode?: string
+    zoneId?: string
+    feasible?: boolean
+    requestedPlanCode?: string
+    requestedPlanName?: string
+    requestedPlanAmount?: number
+    requestedDurationMonths?: number
+    requestedDurationLabel?: string
+    requirementSummary?: string
+    preferredVisitAt?: string | null
+    notes?: string
+    salesAgentId?: string
+    status?: string
+  }) => {
+    const res = await request<any>('/api/v1/admin/sales/leads', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapSalesLead(res.data) : undefined,
+    }
+  },
   getCustomerDemoOtp: async (lookup: string) => {
     const encoded = encodeURIComponent(lookup)
     const primary = await request<CustomerOtpLookup>(`/api/v1/admin/customer-auth/demo-otp?mobile=${encoded}`)
@@ -2094,6 +2236,84 @@ export const adminAPI = {
     return {
       ...res,
       data: Array.isArray(res.data) ? res.data.map(mapNatLogEntry) : [],
+    }
+  },
+  getNetworkMap: async (zoneCode?: string | null) => {
+    const query = new URLSearchParams()
+    if (zoneCode && zoneCode !== 'default') query.set('zoneCode', zoneCode)
+    const res = await request<any>(`/api/v1/admin/foundation/network-map${query.toString() ? `?${query.toString()}` : ''}`)
+    return {
+      ...res,
+      data: {
+        assets: Array.isArray(res.data?.assets) ? res.data.assets.map(mapNetworkMapAsset) : [],
+        paths: Array.isArray(res.data?.paths) ? res.data.paths.map(mapFiberPath) : [],
+        topologyLinks: Array.isArray(res.data?.topologyLinks) ? res.data.topologyLinks.map(mapNetworkTopologyLink) : [],
+        alerts: Array.isArray(res.data?.alerts) ? res.data.alerts.map(mapNetworkMapAlert) : [],
+      },
+    }
+  },
+  createNetworkMapAsset: async (data: {
+    assetType: string
+    label: string
+    serialNumber?: string
+    linkedCustomerId?: string
+    linkedDeviceId?: string
+    linkedServiceId?: string
+    zoneCode?: string
+    status?: string
+    portCapacity?: number
+    location: { lat: number; lng: number }
+    rxPower?: number
+    txPower?: number
+    metadata?: Record<string, any>
+  }) => {
+    const res = await request<any>('/api/v1/admin/foundation/network-map/assets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapNetworkMapAsset(res.data) : undefined,
+    }
+  },
+  createFiberPath: async (data: {
+    name: string
+    pathType: string
+    zoneCode?: string
+    fromAssetId?: string
+    toAssetId?: string
+    status?: string
+    points: Array<{ lat: number; lng: number }>
+    metadata?: Record<string, any>
+  }) => {
+    const res = await request<any>('/api/v1/admin/foundation/network-map/paths', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapFiberPath(res.data) : undefined,
+    }
+  },
+  createNetworkTopologyLink: async (data: {
+    zoneCode?: string
+    linkType: 'splitter_port' | 'coupler_port' | 'fiber_chain' | 'uplink' | string
+    status?: 'planned' | 'active' | 'warning' | 'cut' | string
+    parentAssetId: string
+    parentPortLabel?: string
+    childAssetId: string
+    childPortLabel?: string
+    fiberPathId?: string
+    notes?: string
+    metadata?: Record<string, any>
+  }) => {
+    const res = await request<any>('/api/v1/admin/foundation/network-map/topology-links', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    return {
+      ...res,
+      data: res.data ? mapNetworkTopologyLink(res.data) : undefined,
     }
   },
   saveIpPool: async (data: {

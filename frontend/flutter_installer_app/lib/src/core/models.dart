@@ -177,3 +177,89 @@ class InstallerNotificationItem {
   final DateTime? readAt;
   final Map<String, dynamic> payload;
 }
+
+class InstallerFaultAlert {
+  const InstallerFaultAlert({
+    required this.id,
+    required this.kind,
+    required this.severity,
+    required this.title,
+    required this.message,
+    required this.pathId,
+    required this.assetId,
+    required this.affectedAssets,
+    required this.affectedCustomers,
+    required this.rxPower,
+    required this.status,
+    required this.createdAt,
+    required this.impactedItems,
+  });
+
+  final String id;
+  final String kind;
+  final String severity;
+  final String title;
+  final String message;
+  final String pathId;
+  final String assetId;
+  final int affectedAssets;
+  final int affectedCustomers;
+  final double? rxPower;
+  final String status;
+  final DateTime? createdAt;
+  final List<Map<String, dynamic>> impactedItems;
+}
+
+class SalesPlan {
+  const SalesPlan({
+    required this.planCode,
+    required this.planName,
+    required this.planCategory,
+    required this.monthlyPrice,
+    required this.otcCharge,
+    required this.downloadSpeedMbps,
+    required this.uploadSpeedMbps,
+    required this.dataLimitGb,
+    required this.dataPolicy,
+    required this.tags,
+  });
+
+  final String planCode;
+  final String planName;
+  final String planCategory;
+  final double monthlyPrice;
+  final double otcCharge;
+  final double downloadSpeedMbps;
+  final double uploadSpeedMbps;
+  final double dataLimitGb;
+  final String dataPolicy;
+  final List<String> tags;
+}
+
+class SalesLead {
+  const SalesLead({
+    required this.bookingNumber,
+    required this.customerName,
+    required this.customerPhone,
+    required this.customerAddress,
+    required this.planName,
+    required this.planCode,
+    required this.amount,
+    required this.durationMonths,
+    required this.status,
+    required this.paymentMode,
+    required this.createdAt,
+  });
+
+  final String bookingNumber;
+  final String customerName;
+  final String customerPhone;
+  final String customerAddress;
+  final String planName;
+  final String planCode;
+  final double amount;
+  final int durationMonths;
+  final String status;
+  final String paymentMode;
+  final String createdAt;
+}

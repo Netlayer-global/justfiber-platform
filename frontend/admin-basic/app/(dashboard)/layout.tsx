@@ -71,6 +71,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/devices', label: 'Devices', icon: HardDrive },
       { href: '/routers', label: 'Routers', icon: Router },
+      { href: '/network-map', label: 'Network Map', icon: MapPinned },
       { href: '/nat-logs', label: 'NAT Logs', icon: Search },
       { href: '/ip-management', label: 'IP Management', icon: Network },
       { href: '/serviceability', label: 'Serviceability', icon: MapPinned },

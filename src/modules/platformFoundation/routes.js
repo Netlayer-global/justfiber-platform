@@ -17,6 +17,7 @@ import { BngNode } from "../../models/BngNode.js";
 import { CollectionRequest } from "../../models/CollectionRequest.js";
 import { Customer } from "../../models/Customer.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
+import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { DiscountVoucher } from "../../models/DiscountVoucher.js";
 import { FranchiseProfile } from "../../models/FranchiseProfile.js";
 import { IntegrationConnection } from "../../models/IntegrationConnection.js";
@@ -26,6 +27,8 @@ import { InventoryItem } from "../../models/InventoryItem.js";
 import { InventoryLocation } from "../../models/InventoryLocation.js";
 import { IpPoolRange } from "../../models/IpPoolRange.js";
 import { KycVerificationRequest } from "../../models/KycVerificationRequest.js";
+import { NetworkMapAsset } from "../../models/NetworkMapAsset.js";
+import { NetworkTopologyLink } from "../../models/NetworkTopologyLink.js";
 import { NatLogEntry } from "../../models/NatLogEntry.js";
 import { OttSubscription } from "../../models/OttSubscription.js";
 import { PaymentTransaction } from "../../models/PaymentTransaction.js";
@@ -36,6 +39,7 @@ import { SupportTicket } from "../../models/SupportTicket.js";
 import { SystemAnnouncement } from "../../models/SystemAnnouncement.js";
 import { VendorProfile } from "../../models/VendorProfile.js";
 import { AddonCatalog } from "../../models/AddonCatalog.js";
+import { FiberPath } from "../../models/FiberPath.js";
 import { SystemConfig } from "../../models/SystemConfig.js";
 import { buildPagination } from "../../common/pagination.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
@@ -121,6 +125,7 @@ const billingProfileSchema = z.object({
 const bngNodeSchema = z.object({
   nodeCode: z.string().min(2),
   displayName: z.string().min(2),
+  nodeType: z.enum(["bng", "olt"]).default("bng"),
   vendor: z.enum(["mikrotik", "juniper", "huawei", "other"]).default("mikrotik"),
   status: z.enum(["active", "planned", "disabled"]).default("active"),
   zoneCode: z.string().optional(),
@@ -140,7 +145,15 @@ const bngNodeSchema = z.object({
   enableIpAuth: z.boolean().optional(),
   routerOsUsername: z.string().optional(),
   routerOsPassword: z.string().optional(),
+  snmpVersion: z.enum(["v2c", "v3"]).optional(),
   snmpCommunity: z.string().optional(),
+  snmpPort: z.number().int().positive().optional(),
+  snmpV3Username: z.string().optional(),
+  snmpV3SecurityLevel: z.enum(["noAuthNoPriv", "authNoPriv", "authPriv"]).optional(),
+  snmpV3AuthProtocol: z.enum(["MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512"]).optional(),
+  snmpV3AuthPassword: z.string().optional(),
+  snmpV3PrivProtocol: z.enum(["DES", "AES"]).optional(),
+  snmpV3PrivPassword: z.string().optional(),
   apiPort: z.number().int().positive().optional(),
   wwwPort: z.number().int().positive().optional(),
   notes: z.string().optional()
@@ -454,6 +467,49 @@ const natLogSchema = z.object({
   bytesDown: z.number().nonnegative().optional(),
   connectionState: z.string().optional(),
   raw: z.record(z.any()).optional()
+});
+
+const networkMapAssetSchema = z.object({
+  assetType: z.enum(["olt", "splitter", "coupler", "onu", "ont", "router", "joint", "odf"]),
+  label: z.string().min(2).max(160),
+  serialNumber: z.string().max(160).optional(),
+  linkedCustomerId: z.string().max(80).optional(),
+  linkedDeviceId: z.string().max(80).optional(),
+  linkedServiceId: z.string().max(80).optional(),
+  zoneCode: z.string().max(80).optional(),
+  status: z.string().max(40).optional(),
+  portCapacity: z.number().int().positive().max(4096).optional(),
+  location: z.object({
+    lat: z.number(),
+    lng: z.number()
+  }),
+  rxPower: z.number().optional(),
+  txPower: z.number().optional(),
+  metadata: z.record(z.any()).optional()
+});
+
+const fiberPathMapSchema = z.object({
+  name: z.string().min(2).max(160),
+  pathType: z.enum(["backbone", "feeder", "distribution", "drop"]).default("distribution"),
+  zoneCode: z.string().max(80).optional(),
+  fromAssetId: z.string().max(80).optional(),
+  toAssetId: z.string().max(80).optional(),
+  status: z.string().max(40).optional(),
+  points: z.array(z.object({ lat: z.number(), lng: z.number() })).min(2),
+  metadata: z.record(z.any()).optional()
+});
+
+const networkTopologyLinkSchema = z.object({
+  zoneCode: z.string().max(80).optional(),
+  linkType: z.enum(["splitter_port", "coupler_port", "fiber_chain", "uplink"]).default("fiber_chain"),
+  status: z.enum(["planned", "active", "warning", "cut"]).default("planned"),
+  parentAssetId: z.string().min(2).max(80),
+  parentPortLabel: z.string().max(80).optional(),
+  childAssetId: z.string().min(2).max(80),
+  childPortLabel: z.string().max(80).optional(),
+  fiberPathId: z.string().max(80).optional(),
+  notes: z.string().max(500).optional(),
+  metadata: z.record(z.any()).optional()
 });
 
 const vendorSchema = z.object({
@@ -1787,6 +1843,286 @@ platformFoundationRouter.post(
     }));
     const inserted = await NatLogEntry.insertMany(docs, { ordered: false });
     return ok(res, { insertedCount: inserted.length }, { created: true });
+  })
+);
+
+function buildMapAssetId(prefix = "ASSET") {
+  return `${prefix}-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+function buildFiberPathId() {
+  return `FP-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+function buildTopologyLinkId() {
+  return `TL-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+function extractGps(address) {
+  const gps = address?.gps;
+  const lat = Number(gps?.lat);
+  const lng = Number(gps?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+function deriveOpticalColor(device) {
+  const online = String(device?.onlineStatus || "").toLowerCase();
+  if (online === "online") return "green";
+  if (online === "offline") return "red";
+  return "amber";
+}
+
+function buildTopologyChildrenMap(topologyLinks = []) {
+  const outgoing = new Map();
+  for (const link of topologyLinks) {
+    const items = outgoing.get(link.parentAssetId) || [];
+    items.push(link);
+    outgoing.set(link.parentAssetId, items);
+  }
+  return outgoing;
+}
+
+function collectDownstreamAssetIds(rootAssetId, topologyLinks = []) {
+  if (!rootAssetId) return [];
+  const outgoing = buildTopologyChildrenMap(topologyLinks);
+  const visited = new Set();
+  const collected = [];
+
+  function walk(assetId) {
+    const nextLinks = outgoing.get(assetId) || [];
+    for (const link of nextLinks) {
+      if (visited.has(link.childAssetId)) continue;
+      visited.add(link.childAssetId);
+      collected.push(link.childAssetId);
+      walk(link.childAssetId);
+    }
+  }
+
+  visited.add(rootAssetId);
+  collected.push(rootAssetId);
+  walk(rootAssetId);
+  return collected;
+}
+
+function buildNetworkMapAlerts({ assets = [], paths = [], topologyLinks = [] }) {
+  const assetById = new Map(assets.map((asset) => [asset.assetId, asset]));
+  const alerts = [];
+
+  for (const path of paths) {
+    const status = String(path?.status || "").toLowerCase();
+    if (!status.includes("cut")) continue;
+    const impactedIds = collectDownstreamAssetIds(path.toAssetId, topologyLinks);
+    const impactedAssets = impactedIds
+      .map((assetId) => assetById.get(assetId))
+      .filter(Boolean);
+    const affectedCustomers = impactedAssets.filter((asset) => asset?.metadata?.customerName || asset?.linkedCustomerId).length;
+    alerts.push({
+      alertId: `PATH-${path.pathId}`,
+      kind: "path_cut",
+      severity: "critical",
+      title: `${path.name || path.pathId} cut detected`,
+      message: `${impactedAssets.length} assets and ${affectedCustomers} customer endpoints may be impacted`,
+      pathId: path.pathId,
+      assetId: path.toAssetId || "",
+      affectedAssets: impactedAssets.length,
+      affectedCustomers,
+      rxPower: null,
+      status: path.status || "cut"
+    });
+  }
+
+  for (const asset of assets) {
+    const rx = Number(asset?.rxPower);
+    if (!Number.isFinite(rx)) continue;
+    if (rx > -24) continue;
+    alerts.push({
+      alertId: `RX-${asset.assetId}`,
+      kind: "optical_low",
+      severity: rx <= -27 ? "critical" : "warning",
+      title: `${asset.label || asset.assetId} optical power low`,
+      message: `RX power ${rx} dBm for ${asset?.metadata?.customerName || asset.linkedCustomerId || asset.assetType}`,
+      pathId: "",
+      assetId: asset.assetId,
+      affectedAssets: 1,
+      affectedCustomers: asset?.metadata?.customerName || asset.linkedCustomerId ? 1 : 0,
+      rxPower: rx,
+      status: asset.status || ""
+    });
+  }
+
+  return alerts.sort((left, right) => {
+    const severityOrder = { critical: 0, warning: 1, info: 2 };
+    return (severityOrder[left.severity] ?? 9) - (severityOrder[right.severity] ?? 9);
+  });
+}
+
+async function resolveNetworkTopologyEndpoint(assetId) {
+  const normalized = String(assetId || "").trim();
+  if (!normalized) return null;
+
+  const manualAsset = await NetworkMapAsset.findOne({ assetId: normalized }).lean();
+  if (manualAsset) {
+    return manualAsset;
+  }
+
+  if (!normalized.startsWith("DEVICE-")) {
+    return null;
+  }
+
+  const deviceId = normalized.slice("DEVICE-".length);
+  const device = await DeviceOperationalCache.findOne({ deviceId })
+    .select({ customerId: 1, serviceId: 1, deviceId: 1, serialNumber: 1, onlineStatus: 1, opticalInfo: 1, productClass: 1 })
+    .lean();
+  if (!device?.customerId) {
+    return null;
+  }
+
+  const customer = await Customer.findOne({ customerId: device.customerId })
+    .select({ customerId: 1, fullName: 1, mobile: 1, zoneCode: 1 })
+    .lean();
+
+  return {
+    assetId: normalized,
+    assetType: "ont",
+    label: device.serialNumber || device.deviceId || customer?.fullName || normalized,
+    serialNumber: device.serialNumber || "",
+    linkedCustomerId: customer?.customerId || "",
+    linkedDeviceId: device.deviceId,
+    linkedServiceId: device.serviceId,
+    zoneCode: customer?.zoneCode || "",
+    status: deriveOpticalColor(device),
+    metadata: {
+      source: "derived_device",
+      customerName: customer?.fullName || "",
+      customerPhone: customer?.mobile || "",
+      productClass: device.productClass || ""
+    }
+  };
+}
+
+platformFoundationRouter.get(
+  "/foundation/network-map",
+  requirePermission(permissions.deviceRead),
+  asyncHandler(async (req, res) => {
+    const zoneCode = assertAdminZoneAccess(req.admin, req.query.zoneCode);
+    const customerFilter = zoneCode ? { zoneCode } : {};
+    const [customers, deviceCache, manualAssets, fiberPaths, topologyLinks] = await Promise.all([
+      Customer.find(customerFilter)
+        .select({ customerId: 1, fullName: 1, mobile: 1, serviceId: 1, address: 1, zoneCode: 1, planName: 1 })
+        .lean(),
+      DeviceOperationalCache.find({})
+        .select({ customerId: 1, serviceId: 1, deviceId: 1, serialNumber: 1, onlineStatus: 1, opticalInfo: 1, productClass: 1, updatedAt: 1 })
+        .lean(),
+      NetworkMapAsset.find(zoneCode ? { zoneCode } : {}).sort({ createdAt: -1 }).lean(),
+      FiberPath.find(zoneCode ? { zoneCode } : {}).sort({ createdAt: -1 }).lean(),
+      NetworkTopologyLink.find(zoneCode ? { zoneCode } : {}).sort({ createdAt: -1 }).lean()
+    ]);
+
+    const customerById = new Map(customers.map((item) => [item.customerId, item]));
+    const derivedAssets = deviceCache
+      .map((device) => {
+        const customer = customerById.get(device.customerId);
+        const gps = extractGps(customer?.address);
+        if (!customer || !gps) return null;
+        const opticalInfo = device.opticalInfo || {};
+        return {
+          assetId: `DEVICE-${device.deviceId}`,
+          assetType: "ont",
+          label: device.serialNumber || device.deviceId || customer.fullName || customer.customerId,
+          serialNumber: device.serialNumber || "",
+          linkedCustomerId: customer.customerId,
+          linkedDeviceId: device.deviceId,
+          linkedServiceId: device.serviceId,
+          zoneCode: customer.zoneCode || "",
+          status: deriveOpticalColor(device),
+          location: gps,
+          rxPower: Number(opticalInfo.rxPower ?? opticalInfo.opticalRxPower ?? opticalInfo.rx ?? NaN),
+          txPower: Number(opticalInfo.txPower ?? opticalInfo.opticalTxPower ?? opticalInfo.tx ?? NaN),
+          metadata: {
+            source: "derived_device",
+            customerName: customer.fullName,
+            customerPhone: customer.mobile,
+            planName: customer.planName,
+            productClass: device.productClass || "",
+            onlineStatus: device.onlineStatus || "",
+            lastUpdatedAt: device.updatedAt || null
+          }
+        };
+      })
+      .filter(Boolean);
+
+    const alerts = buildNetworkMapAlerts({
+      assets: [...manualAssets, ...derivedAssets],
+      paths: fiberPaths,
+      topologyLinks
+    });
+
+    return ok(res, {
+      assets: [...manualAssets, ...derivedAssets],
+      paths: fiberPaths,
+      topologyLinks,
+      alerts
+    });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/network-map/assets",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = networkMapAssetSchema.parse(req.body || {});
+    const asset = await NetworkMapAsset.create({
+      assetId: buildMapAssetId(payload.assetType.toUpperCase()),
+      ...payload
+    });
+    return ok(res, asset.toObject(), { created: true });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/network-map/paths",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = fiberPathMapSchema.parse(req.body || {});
+    const path = await FiberPath.create({
+      pathId: buildFiberPathId(),
+      ...payload
+    });
+    return ok(res, path.toObject(), { created: true });
+  })
+);
+
+platformFoundationRouter.post(
+  "/foundation/network-map/topology-links",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    const payload = networkTopologyLinkSchema.parse(req.body || {});
+    if (payload.parentAssetId === payload.childAssetId) {
+      throw new Error("Parent asset and child asset must be different");
+    }
+
+    const zoneCode = assertAdminZoneAccess(req.admin, payload.zoneCode);
+    const [parentAsset, childAsset] = await Promise.all([
+      resolveNetworkTopologyEndpoint(payload.parentAssetId),
+      resolveNetworkTopologyEndpoint(payload.childAssetId)
+    ]);
+
+    if (!parentAsset) throw new Error("Parent asset not found");
+    if (!childAsset) throw new Error("Child asset not found");
+    if (zoneCode && parentAsset.zoneCode && parentAsset.zoneCode !== zoneCode) {
+      throw new Error("Parent asset is outside the selected zone");
+    }
+    if (zoneCode && childAsset.zoneCode && childAsset.zoneCode !== zoneCode) {
+      throw new Error("Child asset is outside the selected zone");
+    }
+
+    const link = await NetworkTopologyLink.create({
+      linkId: buildTopologyLinkId(),
+      ...payload,
+      zoneCode: zoneCode || payload.zoneCode || parentAsset.zoneCode || childAsset.zoneCode || undefined
+    });
+    return ok(res, link.toObject(), { created: true });
   })
 );
 

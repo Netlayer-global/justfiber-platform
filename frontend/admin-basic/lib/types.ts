@@ -350,7 +350,9 @@ export interface CustomerBooking {
 export interface SalesLeadItem {
   id: string
   leadNumber: string
+  leadCategory?: 'home' | 'business'
   fullName?: string
+  companyName?: string
   mobile?: string
   email?: string
   address?: string
@@ -359,6 +361,16 @@ export interface SalesLeadItem {
   status?: string
   zoneId?: string
   feasible?: boolean
+  requirementSummary?: string
+  preferredVisitAt?: string
+  notes?: string
+  followUpAt?: string
+  dropReason?: string
+  activityLog?: Array<{
+    type?: string
+    message?: string
+    at?: string
+  }>
   requestedPlanCode?: string
   requestedPlanName?: string
   requestedPlanAmount?: number
@@ -459,6 +471,7 @@ export interface BngNode {
   id: string
   nodeCode: string
   displayName: string
+  nodeType?: 'bng' | 'olt'
   vendor: 'mikrotik' | 'juniper' | 'huawei' | 'other'
   status: 'active' | 'planned' | 'disabled'
   zoneCode?: string
@@ -478,7 +491,15 @@ export interface BngNode {
   enableIpAuth?: boolean
   routerOsUsername?: string
   routerOsPassword?: string
+  snmpVersion?: 'v2c' | 'v3'
   snmpCommunity?: string
+  snmpPort?: number
+  snmpV3Username?: string
+  snmpV3SecurityLevel?: 'noAuthNoPriv' | 'authNoPriv' | 'authPriv'
+  snmpV3AuthProtocol?: 'MD5' | 'SHA' | 'SHA224' | 'SHA256' | 'SHA384' | 'SHA512'
+  snmpV3AuthPassword?: string
+  snmpV3PrivProtocol?: 'DES' | 'AES'
+  snmpV3PrivPassword?: string
   apiPort?: number
   wwwPort?: number
   notes?: string
@@ -1071,6 +1092,65 @@ export interface NatLogEntry {
   bytesDown?: number
   connectionState?: string
   raw?: Record<string, any>
+}
+
+export interface NetworkMapAssetItem {
+  assetId: string
+  assetType: string
+  label: string
+  serialNumber?: string
+  linkedCustomerId?: string
+  linkedDeviceId?: string
+  linkedServiceId?: string
+  zoneCode?: string
+  status?: string
+  portCapacity?: number
+  location?: { lat: number; lng: number } | null
+  rxPower?: number
+  txPower?: number
+  metadata?: Record<string, any>
+}
+
+export interface FiberPathItem {
+  pathId: string
+  name: string
+  pathType: string
+  zoneCode?: string
+  fromAssetId?: string
+  toAssetId?: string
+  status?: string
+  points: Array<{ lat: number; lng: number }>
+  metadata?: Record<string, any>
+}
+
+export interface NetworkTopologyLinkItem {
+  linkId: string
+  zoneCode?: string
+  linkType: 'splitter_port' | 'coupler_port' | 'fiber_chain' | 'uplink' | string
+  status?: 'planned' | 'active' | 'warning' | 'cut' | string
+  parentAssetId: string
+  parentPortLabel?: string
+  childAssetId: string
+  childPortLabel?: string
+  fiberPathId?: string
+  notes?: string
+  metadata?: Record<string, any>
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface NetworkMapAlertItem {
+  alertId: string
+  kind: 'path_cut' | 'optical_low' | string
+  severity: 'critical' | 'warning' | 'info' | string
+  title: string
+  message: string
+  pathId?: string
+  assetId?: string
+  affectedAssets?: number
+  affectedCustomers?: number
+  rxPower?: number | null
+  status?: string
 }
 
 export interface BillingOverview {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,7 @@ const installerApiBase = String.fromEnvironment(
 const _installerLoginKey = 'installer.login';
 const _installerAccessTokenKey = 'installer.access_token';
 const _installerRefreshTokenKey = 'installer.refresh_token';
+const _salesLeadsKey = 'installer.sales_leads';
 
 class InstallerAppState extends ChangeNotifier {
   final api = InstallerApiClient(baseUrl: installerApiBase);
@@ -37,11 +39,15 @@ class InstallerAppState extends ChangeNotifier {
   );
   List<InstallerJob> jobs = const [];
   List<InstallerNotificationItem> notifications = const [];
+  List<InstallerFaultAlert> faultAlerts = const [];
+  List<SalesLead> salesLeads = const [];
+  bool _salesLeadsLoaded = false;
   ProvisioningPreview? preview;
   Map<String, dynamic>? diagnostics;
   String? selectedJobId;
   Timer? _notificationsPoller;
   Set<String> _knownNotificationIds = <String>{};
+  Set<String> _knownFaultAlertIds = <String>{};
 
   InstallerAppState() {
     api.onUnauthorized = _refreshAccessToken;
@@ -58,7 +64,7 @@ class InstallerAppState extends ChangeNotifier {
       await prefs.setString(_installerLoginKey, session!.login);
       await prefs.setString(_installerAccessTokenKey, session!.accessToken);
       await prefs.setString(_installerRefreshTokenKey, session!.refreshToken);
-      await refresh();
+      await Future.wait([refresh(), loadSalesLeads()]);
       _startNotificationsPolling();
       return true;
     } catch (e) {
@@ -81,7 +87,9 @@ class InstallerAppState extends ChangeNotifier {
       profile = await api.fetchProfile(current);
       jobs = await api.fetchJobs(current);
       notifications = await api.fetchNotifications(current);
+      faultAlerts = await api.fetchFaultAlerts(current);
       await _captureNewNotifications(notifications);
+      await _captureNewFaultAlerts(faultAlerts);
       if (selectedJobId != null && selectedJobId!.isNotEmpty) {
         preview = await api.fetchProvisioningPreview(current, selectedJobId!);
         diagnostics = await api.fetchDiagnostics(current, selectedJobId!);
@@ -388,8 +396,12 @@ class InstallerAppState extends ChangeNotifier {
     error = null;
     lastSyncedAt = null;
     _knownNotificationIds = <String>{};
+    _knownFaultAlertIds = <String>{};
     jobs = const [];
     notifications = const [];
+    faultAlerts = const [];
+    salesLeads = const [];
+    _salesLeadsLoaded = false;
     dashboard = const InstallerDashboard(
       todayNewInstallationJobs: 0,
       pendingJobs: 0,
@@ -418,7 +430,7 @@ class InstallerAppState extends ChangeNotifier {
     }
     session = InstallerSession(login: login, accessToken: accessToken, refreshToken: refreshToken);
     notifyListeners();
-    await refresh();
+    await Future.wait([refresh(), loadSalesLeads()]);
     _startNotificationsPolling();
     restoringSession = false;
     notifyListeners();
@@ -429,8 +441,11 @@ class InstallerAppState extends ChangeNotifier {
     if (current == null) return;
     try {
       final nextNotifications = await api.fetchNotifications(current);
+      final nextFaultAlerts = await api.fetchFaultAlerts(current);
       await _captureNewNotifications(nextNotifications);
+      await _captureNewFaultAlerts(nextFaultAlerts);
       notifications = nextNotifications;
+      faultAlerts = nextFaultAlerts;
       lastSyncedAt = DateTime.now();
       notifyListeners();
     } catch (e) {
@@ -471,6 +486,59 @@ class InstallerAppState extends ChangeNotifier {
     );
   }
 
+  Future<void> loadSalesLeads() async {
+    if (_salesLeadsLoaded) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_salesLeadsKey);
+      if (json != null && json.isNotEmpty) {
+        final list = jsonDecode(json) as List;
+        salesLeads = list.map((item) {
+          final map = item as Map<String, dynamic>;
+          return SalesLead(
+            bookingNumber: (map['bookingNumber'] ?? '').toString(),
+            customerName: (map['customerName'] ?? '').toString(),
+            customerPhone: (map['customerPhone'] ?? '').toString(),
+            customerAddress: (map['customerAddress'] ?? '').toString(),
+            planName: (map['planName'] ?? '').toString(),
+            planCode: (map['planCode'] ?? '').toString(),
+            amount: double.tryParse('${map['amount'] ?? 0}') ?? 0,
+            durationMonths: int.tryParse('${map['durationMonths'] ?? 1}') ?? 1,
+            status: (map['status'] ?? 'payment_pending').toString(),
+            paymentMode: (map['paymentMode'] ?? 'cash').toString(),
+            createdAt: (map['createdAt'] ?? '').toString(),
+          );
+        }).toList();
+      }
+    } catch (_) {}
+    _salesLeadsLoaded = true;
+    notifyListeners();
+  }
+
+  Future<void> addSalesLead(SalesLead lead) async {
+    salesLeads = [lead, ...salesLeads];
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = salesLeads
+          .map((l) => {
+                'bookingNumber': l.bookingNumber,
+                'customerName': l.customerName,
+                'customerPhone': l.customerPhone,
+                'customerAddress': l.customerAddress,
+                'planName': l.planName,
+                'planCode': l.planCode,
+                'amount': l.amount,
+                'durationMonths': l.durationMonths,
+                'status': l.status,
+                'paymentMode': l.paymentMode,
+                'createdAt': l.createdAt,
+              })
+          .toList();
+      await prefs.setString(_salesLeadsKey, jsonEncode(encoded));
+    } catch (_) {}
+  }
+
   Future<void> _captureNewNotifications(List<InstallerNotificationItem> nextNotifications) async {
     if (_knownNotificationIds.isEmpty) {
       _knownNotificationIds = nextNotifications.map((item) => item.id).toSet();
@@ -491,6 +559,29 @@ class InstallerAppState extends ChangeNotifier {
     }
 
     _knownNotificationIds = nextNotifications.map((item) => item.id).toSet();
+  }
+
+  Future<void> _captureNewFaultAlerts(List<InstallerFaultAlert> nextFaultAlerts) async {
+    if (_knownFaultAlertIds.isEmpty) {
+      _knownFaultAlertIds = nextFaultAlerts.map((item) => item.id).toSet();
+      return;
+    }
+
+    final freshItems = nextFaultAlerts
+        .where((item) => !_knownFaultAlertIds.contains(item.id))
+        .toList()
+      ..sort((a, b) => (a.createdAt ?? DateTime.now())
+          .compareTo(b.createdAt ?? DateTime.now()));
+
+    for (final item in freshItems) {
+      await InstallerNotificationService.instance.showAlert(
+        id: InstallerNotificationService.instance.stableIdFor('fault-${item.id}'),
+        title: item.title,
+        body: item.message,
+      );
+    }
+
+    _knownFaultAlertIds = nextFaultAlerts.map((item) => item.id).toSet();
   }
 }
 

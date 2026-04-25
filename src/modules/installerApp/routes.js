@@ -10,6 +10,9 @@ import { InstallerNotification } from "../../models/InstallerNotification.js";
 import { InstallerLeaveLog } from "../../models/InstallerLeaveLog.js";
 import { DeviceOperationalCache } from "../../models/DeviceOperationalCache.js";
 import { DeviceReplacementLog } from "../../models/DeviceReplacementLog.js";
+import { FiberPath } from "../../models/FiberPath.js";
+import { NetworkMapAsset } from "../../models/NetworkMapAsset.js";
+import { NetworkTopologyLink } from "../../models/NetworkTopologyLink.js";
 import { OtpEvent } from "../../models/OtpEvent.js";
 import { ConnectionBooking } from "../../models/ConnectionBooking.js";
 import { Customer } from "../../models/Customer.js";
@@ -95,6 +98,226 @@ function buildInstallerRecommendations({ opticalHealth, checklist, device }) {
     recommendations.push("Installation looks healthy. Complete customer handover and close the job.");
   }
   return recommendations;
+}
+
+function deriveInstallerActivationResumeStage(job) {
+  const activation = job?.activation || {};
+  const currentStage = String(activation.stage || "").trim();
+  const configStatus = String(activation.configStatus || "").trim();
+
+  if (currentStage.startsWith("readback_")) return "readback";
+  if (currentStage.startsWith("genie_")) return "genie_push";
+  if (currentStage.startsWith("radius_")) return "radius";
+  if (["pushed", "verified"].includes(configStatus)) return "readback";
+  if (activation.configFallbackError || activation.lastConfigError) {
+    return "genie_push";
+  }
+  return "radius";
+}
+
+function buildActivationStatusPayload(job) {
+  const activation = job?.activation || {};
+  const stage = String(activation.stage || "").trim();
+  const configStatus = String(activation.configStatus || "").trim();
+  const resumeStage = String(activation.resumeStage || deriveInstallerActivationResumeStage(job));
+  const verification = activation.verification || {};
+
+  let failureCode = "";
+  if (stage === "readback_failed") {
+    failureCode = "readback_failed";
+  } else if (stage === "genie_fallback") {
+    failureCode = "config_push_failed";
+  } else if (stage.startsWith("radius_") && configStatus === "failed") {
+    failureCode = "radius_create_failed";
+  } else if (job?.status === "failed") {
+    failureCode = "activation_failed";
+  }
+
+  const stageLabelMap = {
+    radius_create_pending: "Creating PPPoE in FreeRADIUS",
+    radius_create_done: "PPPoE ready in FreeRADIUS",
+    genie_push_pending: "Pushing router config",
+    genie_push_done: "Router config pushed",
+    genie_fallback: "Router config push failed",
+    readback_pending: "Waiting for router read-back",
+    readback_verified: "Router config verified",
+    readback_warning: "Router verification partial",
+    readback_failed: "Router read-back failed",
+    radius_resume_skip: "Skipped RADIUS during resume",
+    genie_resume_skip: "Skipped config push during resume"
+  };
+
+  const resumeStageLabelMap = {
+    radius: "Resume from FreeRADIUS + PPPoE prep",
+    genie_push: "Resume from router config push",
+    readback: "Resume from read-back verification"
+  };
+
+  const recommendedActions = [];
+  if (failureCode === "readback_failed") {
+    recommendedActions.push(
+      "Refresh diagnostics and confirm router is online.",
+      "Verify Wi-Fi SSID changed on the router.",
+      "Resume from read-back verification after router stabilizes."
+    );
+  } else if (failureCode === "config_push_failed") {
+    recommendedActions.push(
+      "Check GenieACS reachability and device inform state.",
+      "Confirm optical health and router serial mapping.",
+      "Resume from router config push after refresh."
+    );
+  } else if (configStatus === "pending" || configStatus === "retried") {
+    recommendedActions.push(
+      "Wait for Wi-Fi write and router confirmation.",
+      "Refresh diagnostics before using resume."
+    );
+  } else if (configStatus === "pushed") {
+    recommendedActions.push(
+      "Wait for PPPoE session to come online.",
+      "If internet stays down, resume from read-back verification."
+    );
+  } else if (configStatus === "verified") {
+    recommendedActions.push(
+      "Finish proof upload and OTP handover."
+    );
+  }
+
+  return {
+    stageCode: stage || "",
+    stageLabel: stageLabelMap[stage] || stage.replaceAll("_", " ") || "",
+    configStatus,
+    resumeStage,
+    resumeStageLabel: resumeStageLabelMap[resumeStage] || resumeStage,
+    failureCode,
+    lastError:
+      activation.configFallbackError ||
+      activation.lastConfigError ||
+      verification?.error ||
+      "",
+    verification: {
+      verified: verification?.verified === true,
+      checks: verification?.checks || {},
+      error: verification?.error || ""
+    },
+    operatorMessage:
+      failureCode === "readback_failed"
+        ? "Router config was pushed but read-back verification failed."
+        : failureCode === "config_push_failed"
+          ? "Router config push failed before verification."
+          : configStatus === "pending" || configStatus === "retried"
+            ? "Wi-Fi is being applied and verified before PPPoE push."
+            : configStatus === "pushed"
+              ? "PPPoE is pushed and internet verification is pending."
+              : configStatus === "verified"
+                ? "Activation verified. Finish the customer handover."
+                : "Activation is ready for the next step.",
+    recommendedActions
+  };
+}
+
+function buildComplaintStatusPayload(job) {
+  const complaint = job?.complaint || {};
+  const otp = job?.otp || {};
+  const deviceContext = job?.deviceContext || {};
+  const status = String(job?.status || "").trim();
+  const resolutionCode = String(complaint.resolutionCode || "").trim();
+  const otpVerified = Boolean(otp?.verifiedAt);
+  const replacedDevice = complaint?.replacedDevice === true;
+  const newSerial = String(deviceContext?.finalSerialNumber || "").trim();
+
+  const stageLabelMap = {
+    assigned: "Complaint assigned",
+    accepted: "Complaint accepted",
+    enroute: "Travelling to customer site",
+    onsite: "Ready to start complaint work",
+    complaint_in_progress: "Complaint work in progress",
+    active: "Complaint fix verified",
+    completed: "Complaint closed",
+    deferred: "Complaint follow-up pending"
+  };
+
+  let failureCode = "";
+  if (status === "onsite" && !resolutionCode) {
+    failureCode = "resolution_pending";
+  } else if (
+    status === "complaint_in_progress" &&
+    resolutionCode === "ont_replace" &&
+    !newSerial
+  ) {
+    failureCode = "replacement_serial_pending";
+  } else if (
+    ["complaint_in_progress", "active", "onsite"].includes(status) &&
+    !otpVerified &&
+    String(otp?.purpose || "") === "complaint_complete"
+  ) {
+    failureCode = "otp_verification_pending";
+  }
+
+  const recommendedActions = [];
+  if (status === "assigned") {
+    recommendedActions.push("Accept the complaint before leaving for the site.");
+  } else if (status === "accepted") {
+    recommendedActions.push("Start travel so the complaint visit becomes active in dispatch.");
+  } else if (status === "enroute") {
+    recommendedActions.push("Reach the customer and mark the visit onsite before diagnostics.");
+  } else if (failureCode === "resolution_pending") {
+    recommendedActions.push(
+      "Select the issue type before starting complaint work.",
+      "Record a short field note for the complaint."
+    );
+  } else if (failureCode === "replacement_serial_pending") {
+    recommendedActions.push(
+      "Scan or enter the replacement ONT serial.",
+      "Save the replacement before moving to OTP closure."
+    );
+  } else if (failureCode === "otp_verification_pending") {
+    recommendedActions.push(
+      "Send the customer complaint OTP.",
+      "Verify the 6-digit OTP before closing the complaint."
+    );
+  } else if (status === "complaint_in_progress") {
+    recommendedActions.push(
+      "Verify the fix on-site and capture the final complaint note.",
+      "Send OTP only after the customer confirms the service is stable."
+    );
+  } else if (status === "active") {
+    recommendedActions.push(
+      "Complaint fix is verified. Collect OTP and resolve the visit."
+    );
+  } else if (status === "completed") {
+    recommendedActions.push("Complaint is closed. Review replacement and closure notes if needed.");
+  }
+
+  return {
+    stageCode: status,
+    stageLabel: stageLabelMap[status] || status.replaceAll("_", " "),
+    failureCode,
+    resolutionCode,
+    resolutionLabel: resolutionCode ? resolutionCode.replaceAll("_", " ") : "",
+    otpVerified,
+    replacedDevice,
+    operatorMessage:
+      status === "assigned"
+        ? "Take ownership of the complaint ticket before field work starts."
+        : status === "accepted"
+          ? "Travel to the customer and keep the complaint visit moving."
+          : status === "enroute"
+            ? "Reach the site and mark the complaint visit onsite."
+            : failureCode === "resolution_pending"
+              ? "Choose the complaint issue type and add a field note before starting."
+              : failureCode === "replacement_serial_pending"
+                ? "Replacement ONT flow is selected. Capture the new serial before closure."
+                : failureCode === "otp_verification_pending"
+                  ? "The fix is underway. OTP verification is still required before complaint closure."
+                  : status === "complaint_in_progress"
+                    ? "Work through the fix, verify customer service, then move to OTP closure."
+                    : status === "active"
+                      ? "Complaint fix looks stable. Complete OTP closure and finish the visit."
+                      : status === "completed"
+                        ? "Complaint has been resolved and closed."
+                        : "Continue the complaint flow from the next guided step.",
+    recommendedActions
+  };
 }
 
 function buildProvisioningPreview(job, device) {
@@ -301,6 +524,121 @@ function normalizeZoneCode(value) {
   return String(value || "").trim().toUpperCase();
 }
 
+function buildInstallerZoneFilter(installer) {
+  const zones = installerZoneCandidates(installer);
+  if (!zones.length) return null;
+  return { zoneCode: { $in: zones } };
+}
+
+function buildTopologyChildrenMap(topologyLinks = []) {
+  const outgoing = new Map();
+  for (const link of topologyLinks) {
+    const items = outgoing.get(link.parentAssetId) || [];
+    items.push(link);
+    outgoing.set(link.parentAssetId, items);
+  }
+  return outgoing;
+}
+
+function collectDownstreamAssetIds(rootAssetId, topologyLinks = []) {
+  if (!rootAssetId) return [];
+  const outgoing = buildTopologyChildrenMap(topologyLinks);
+  const visited = new Set([rootAssetId]);
+  const collected = [rootAssetId];
+
+  function walk(assetId) {
+    const nextLinks = outgoing.get(assetId) || [];
+    for (const link of nextLinks) {
+      if (visited.has(link.childAssetId)) continue;
+      visited.add(link.childAssetId);
+      collected.push(link.childAssetId);
+      walk(link.childAssetId);
+    }
+  }
+
+  walk(rootAssetId);
+  return collected;
+}
+
+function buildInstallerFaultAlerts({ assets = [], paths = [], topologyLinks = [] }) {
+  const assetById = new Map(assets.map((asset) => [asset.assetId, asset]));
+  const alerts = [];
+
+  for (const path of paths) {
+    const status = String(path?.status || "").toLowerCase();
+    if (!status.includes("cut")) continue;
+    const impactedIds = collectDownstreamAssetIds(path.toAssetId, topologyLinks);
+    const impactedAssets = impactedIds
+      .map((assetId) => assetById.get(assetId))
+      .filter(Boolean);
+    const affectedCustomers = impactedAssets.filter((asset) => asset?.metadata?.customerName || asset?.linkedCustomerId).length;
+    alerts.push({
+      alertId: `PATH-${path.pathId}`,
+      kind: "path_cut",
+      severity: "critical",
+      title: `${path.name || path.pathId} cut detected`,
+      message: `${impactedAssets.length} assets and ${affectedCustomers} customer endpoints may be impacted`,
+      pathId: path.pathId,
+      assetId: path.toAssetId || "",
+      affectedAssets: impactedAssets.length,
+      affectedCustomers,
+      impactedItems: impactedAssets.slice(0, 20).map((asset) => ({
+        assetId: asset.assetId,
+        label: asset.label,
+        assetType: asset.assetType,
+        customerName: asset?.metadata?.customerName || "",
+        customerPhone: asset?.metadata?.customerPhone || "",
+        rxPower: asset?.rxPower ?? null,
+        status: asset?.status || "",
+        latitude: Number(asset?.location?.lat ?? asset?.metadata?.lat ?? NaN),
+        longitude: Number(asset?.location?.lng ?? asset?.metadata?.lng ?? NaN),
+        mapUrl: asset?.metadata?.mapUrl || ""
+      })),
+      createdAt: path.updatedAt || path.createdAt || new Date(),
+      status: path.status || "cut"
+    });
+  }
+
+  for (const asset of assets) {
+    const rx = Number(asset?.rxPower);
+    if (!Number.isFinite(rx) || rx > -24) continue;
+    alerts.push({
+      alertId: `RX-${asset.assetId}`,
+      kind: "optical_low",
+      severity: rx <= -27 ? "critical" : "warning",
+      title: `${asset.label || asset.assetId} optical power low`,
+      message: `RX power ${rx} dBm for ${asset?.metadata?.customerName || asset.linkedCustomerId || asset.assetType}`,
+      pathId: "",
+      assetId: asset.assetId,
+      affectedAssets: 1,
+      affectedCustomers: asset?.metadata?.customerName || asset.linkedCustomerId ? 1 : 0,
+      impactedItems: [{
+        assetId: asset.assetId,
+        label: asset.label,
+        assetType: asset.assetType,
+        customerName: asset?.metadata?.customerName || "",
+        customerPhone: asset?.metadata?.customerPhone || "",
+        rxPower: rx,
+        status: asset?.status || "",
+        latitude: Number(asset?.location?.lat ?? asset?.metadata?.lat ?? NaN),
+        longitude: Number(asset?.location?.lng ?? asset?.metadata?.lng ?? NaN),
+        mapUrl: asset?.metadata?.mapUrl || ""
+      }],
+      rxPower: rx,
+      createdAt: asset?.metadata?.lastUpdatedAt || asset.updatedAt || asset.createdAt || new Date(),
+      status: asset.status || ""
+    });
+  }
+
+  return alerts.sort((left, right) => {
+    const severityOrder = { critical: 0, warning: 1, info: 2 };
+    const leftOrder = severityOrder[left.severity] ?? 9;
+    const rightOrder = severityOrder[right.severity] ?? 9;
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+    return new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime();
+  });
+}
+
 function installerZoneCandidates(installer) {
   const zones = Array.isArray(installer?.assignedZones) ? installer.assignedZones : [];
   return [...new Set(zones.flatMap((zone) => {
@@ -474,6 +812,14 @@ installerAppRouter.get(
     if (!detail.opticalReadings?.rxPower && !detail.opticalReadings?.txPower) {
       detail.opticalReadings = buildOpticalSnapshot(job, device);
     }
+    detail.complaint = {
+      ...(detail.complaint || {}),
+      runtime: buildComplaintStatusPayload(detail)
+    };
+    detail.activation = {
+      ...(detail.activation || {}),
+      runtime: buildActivationStatusPayload(detail)
+    };
     return ok(res, detail);
   })
 );
@@ -1076,22 +1422,47 @@ installerAppRouter.post(
   asyncHandler(async (req, res) => {
     const payload = retrySchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
+    const resumeStage = deriveInstallerActivationResumeStage(job);
     job.activation = {
       ...(job.activation || {}),
       configStatus: "retried",
       configRetryCount: (job.activation?.configRetryCount || 0) + 1,
-      lastConfigError: payload.note
+      lastConfigError: payload.note,
+      resumeStage,
+      resumedAt: new Date()
     };
-    pushTimeline(job, "job.activation_retried", req.installer._id, payload.note || "Retry triggered");
+    pushTimeline(
+      job,
+      "job.activation_retried",
+      req.installer._id,
+      payload.note
+        ? `${payload.note} (resume from ${resumeStage})`
+        : `Resume triggered from ${resumeStage}`
+    );
     await job.save();
     await adminActionsQueue.add("installer-activation", {
       installerJobId: job._id.toString(),
       customerId: job.customerId,
       serviceId: job.serviceId,
       finalSerialNumber: job.deviceContext?.finalSerialNumber,
-      finalDeviceId: job.deviceContext?.finalDeviceId
+      finalDeviceId: job.deviceContext?.finalDeviceId,
+      resumeStage
     });
-    return ok(res, job.activation);
+    const activationData =
+      typeof job.activation?.toObject === "function"
+        ? job.activation.toObject()
+        : job.activation || {};
+    return ok(res, {
+      ...activationData,
+      resumeStage,
+      runtime: buildActivationStatusPayload({
+        ...job.toObject(),
+        activation: {
+          ...activationData,
+          resumeStage
+        }
+      })
+    });
   })
 );
 
@@ -1494,8 +1865,11 @@ installerAppRouter.post(
     if (job.type !== "complaint") {
       throw new ApiError(409, "Device reboot is only available for complaint visits");
     }
-    if (!["accepted", "enroute", "onsite", "complaint_in_progress", "active"].includes(job.status)) {
-      throw new ApiError(409, "Device reboot is only allowed during an active complaint visit");
+    if (!["onsite", "complaint_in_progress"].includes(job.status)) {
+      throw new ApiError(409, "Device reboot is only allowed before complaint work begins or during diagnosis");
+    }
+    if (job.otp?.sentAt && job.otp?.purpose === "complaint_complete") {
+      throw new ApiError(409, "Device reboot is not allowed after complaint OTP has been sent");
     }
     const device = await resolveJobDevice(job);
     const targetDeviceId = device?.deviceId || job.deviceContext?.finalDeviceId;
@@ -1588,6 +1962,67 @@ installerAppRouter.get(
   asyncHandler(async (req, res) => {
     const notifications = await InstallerNotification.find({ installerId: req.installer._id }).sort({ createdAt: -1 }).limit(50).lean();
     return ok(res, notifications);
+  })
+);
+
+installerAppRouter.get(
+  "/fault-alerts",
+  asyncHandler(async (req, res) => {
+    const zoneFilter = buildInstallerZoneFilter(req.installer);
+    if (!zoneFilter) {
+      return ok(res, []);
+    }
+
+    const [customers, deviceCache, manualAssets, fiberPaths, topologyLinks] = await Promise.all([
+      Customer.find(zoneFilter)
+        .select({ customerId: 1, fullName: 1, mobile: 1, serviceId: 1, zoneCode: 1, planName: 1 })
+        .lean(),
+      DeviceOperationalCache.find({})
+        .select({ customerId: 1, serviceId: 1, deviceId: 1, serialNumber: 1, onlineStatus: 1, opticalInfo: 1, productClass: 1, updatedAt: 1 })
+        .lean(),
+      NetworkMapAsset.find(zoneFilter).sort({ createdAt: -1 }).lean(),
+      FiberPath.find(zoneFilter).sort({ createdAt: -1 }).lean(),
+      NetworkTopologyLink.find(zoneFilter).sort({ createdAt: -1 }).lean()
+    ]);
+
+    const customerById = new Map(customers.map((item) => [item.customerId, item]));
+    const derivedAssets = deviceCache
+      .map((device) => {
+        const customer = customerById.get(device.customerId);
+        if (!customer) return null;
+        const opticalInfo = device.opticalInfo || {};
+        return {
+          assetId: `DEVICE-${device.deviceId}`,
+          assetType: "ont",
+          label: device.serialNumber || device.deviceId || customer.fullName || customer.customerId,
+          serialNumber: device.serialNumber || "",
+          linkedCustomerId: customer.customerId,
+          linkedDeviceId: device.deviceId,
+          linkedServiceId: device.serviceId,
+          zoneCode: customer.zoneCode || "",
+          status: deriveOpticalColor(device),
+          rxPower: Number(opticalInfo.rxPower ?? opticalInfo.opticalRxPower ?? opticalInfo.rx ?? NaN),
+          txPower: Number(opticalInfo.txPower ?? opticalInfo.opticalTxPower ?? opticalInfo.tx ?? NaN),
+          metadata: {
+            source: "derived_device",
+            customerName: customer.fullName,
+            customerPhone: customer.mobile,
+            planName: customer.planName,
+            productClass: device.productClass || "",
+            onlineStatus: device.onlineStatus || "",
+            lastUpdatedAt: device.updatedAt || null
+          }
+        };
+      })
+      .filter(Boolean);
+
+    const alerts = buildInstallerFaultAlerts({
+      assets: [...manualAssets, ...derivedAssets],
+      paths: fiberPaths,
+      topologyLinks
+    });
+
+    return ok(res, alerts);
   })
 );
 

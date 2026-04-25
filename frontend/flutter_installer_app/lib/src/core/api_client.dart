@@ -338,6 +338,35 @@ class InstallerApiClient {
     }).toList();
   }
 
+  Future<List<InstallerFaultAlert>> fetchFaultAlerts(
+      InstallerSession session) async {
+    final list = _asList(await _request('/api/v1/installer/fault-alerts',
+        token: session.accessToken));
+    return list.map((item) {
+      final map = item as Map<String, dynamic>;
+      return InstallerFaultAlert(
+        id: (map['alertId'] ?? map['_id'] ?? '').toString(),
+        kind: (map['kind'] ?? '').toString(),
+        severity: (map['severity'] ?? 'info').toString(),
+        title: (map['title'] ?? 'Fault alert').toString(),
+        message: (map['message'] ?? '').toString(),
+        pathId: (map['pathId'] ?? '').toString(),
+        assetId: (map['assetId'] ?? '').toString(),
+        affectedAssets:
+            int.tryParse('${map['affectedAssets'] ?? 0}') ?? 0,
+        affectedCustomers:
+            int.tryParse('${map['affectedCustomers'] ?? 0}') ?? 0,
+        rxPower: double.tryParse('${map['rxPower'] ?? ''}'),
+        status: (map['status'] ?? '').toString(),
+        createdAt: DateTime.tryParse('${map['createdAt'] ?? ''}'),
+        impactedItems: _asList(map['impactedItems'])
+            .whereType<Map>()
+            .map((entry) => Map<String, dynamic>.from(entry))
+            .toList(),
+      );
+    }).toList();
+  }
+
   Future<void> acceptJob(InstallerSession session, String jobId) async {
     await _request('/api/v1/installer/jobs/$jobId/accept',
         method: 'POST', token: session.accessToken);
@@ -609,5 +638,75 @@ class InstallerApiClient {
   Future<void> endLeave(InstallerSession session) async {
     await _request('/api/v1/installer/profile/end-leave',
         method: 'POST', token: session.accessToken);
+  }
+
+  Future<List<SalesPlan>> fetchSalesPlans() async {
+    final list = _asList(await _request('/api/v1/customer/plans'));
+    return list.map((item) {
+      final map = item as Map<String, dynamic>;
+      return SalesPlan(
+        planCode: (map['planCode'] ?? '').toString(),
+        planName: (map['name'] ?? map['planName'] ?? '').toString(),
+        planCategory: (map['category'] ?? 'home').toString(),
+        monthlyPrice: double.tryParse('${map['monthlyPrice'] ?? 0}') ?? 0,
+        otcCharge: double.tryParse('${map['otcCharge'] ?? 0}') ?? 0,
+        downloadSpeedMbps: double.tryParse('${map['speedMbps'] ?? 0}') ?? 0,
+        uploadSpeedMbps: double.tryParse('${map['uploadSpeedMbps'] ?? 0}') ?? 0,
+        dataLimitGb: double.tryParse('${map['dataLimitGb'] ?? 0}') ?? 0,
+        dataPolicy: (map['dataPolicy'] ?? 'unlimited').toString(),
+        tags: _asList(map['tags'])
+            .map((t) => t.toString())
+            .where((t) => t.isNotEmpty)
+            .toList(),
+      );
+    }).where((p) => p.planCode.isNotEmpty).toList();
+  }
+
+  Future<SalesLead> createSalesBooking({
+    required String fullName,
+    required String mobile,
+    String? email,
+    required String address,
+    required double lat,
+    required double lng,
+    required String planCode,
+    required String planName,
+    required double totalAmount,
+    required int durationMonths,
+    required String paymentMode,
+  }) async {
+    final data = _asMap(await _request(
+      '/api/v1/customer/bookings/public',
+      method: 'POST',
+      body: {
+        'fullName': fullName,
+        'mobile': mobile,
+        if ((email ?? '').trim().isNotEmpty) 'email': email,
+        'fullAddress': address,
+        'pinCode': '0000',
+        'lat': lat,
+        'lng': lng,
+        'planCode': planCode,
+        'paymentMode': paymentMode,
+        'durationMonths': durationMonths,
+        'source': 'installer_app',
+      },
+    ));
+    final selectedPlan = _asMap(data['selectedPlan']);
+    return SalesLead(
+      bookingNumber: (data['bookingNumber'] ?? '').toString(),
+      customerName: fullName,
+      customerPhone: mobile,
+      customerAddress: address,
+      planName: (selectedPlan['planName'] ?? planName).toString(),
+      planCode: planCode,
+      amount:
+          double.tryParse('${selectedPlan['totalAmount'] ?? totalAmount}') ??
+              totalAmount,
+      durationMonths: durationMonths,
+      status: (data['status'] ?? 'payment_pending').toString(),
+      paymentMode: paymentMode,
+      createdAt: DateTime.now().toIso8601String(),
+    );
   }
 }
