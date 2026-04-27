@@ -250,6 +250,7 @@ function OpticalHistoryChart({ items }: { items: DeviceOpticalSample[] }) {
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [opticalHistory, setOpticalHistory] = useState<DeviceOpticalSample[]>([])
+  const [opticalDebug, setOpticalDebug] = useState<{ parsedOpticalInfo?: Record<string, any>; candidates?: Array<{ path: string; value: unknown }> } | null>(null)
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
   const [attachCustomerId, setAttachCustomerId] = useState('')
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([])
@@ -270,11 +271,18 @@ export default function DevicesPage() {
     async function loadOpticalHistory() {
       if (!selectedDeviceId) {
         setOpticalHistory([])
+        setOpticalDebug(null)
         return
       }
-      const res = await adminAPI.getDeviceOpticalHistory(selectedDeviceId, { days: 7, limit: 120 })
-      if (res.success && Array.isArray(res.data)) {
-        setOpticalHistory(res.data)
+      const [historyRes, debugRes] = await Promise.all([
+        adminAPI.getDeviceOpticalHistory(selectedDeviceId, { days: 7, limit: 120 }),
+        adminAPI.getDeviceOpticalDebug(selectedDeviceId),
+      ])
+      if (historyRes.success && Array.isArray(historyRes.data)) {
+        setOpticalHistory(historyRes.data)
+      }
+      if (debugRes.success && debugRes.data) {
+        setOpticalDebug(debugRes.data)
       }
     }
     void loadOpticalHistory()
@@ -370,6 +378,10 @@ export default function DevicesPage() {
       const historyRes = await adminAPI.getDeviceOpticalHistory(selectedDeviceId, { days: 7, limit: 120 })
       if (historyRes.success && Array.isArray(historyRes.data)) {
         setOpticalHistory(historyRes.data)
+      }
+      const debugRes = await adminAPI.getDeviceOpticalDebug(selectedDeviceId)
+      if (debugRes.success && debugRes.data) {
+        setOpticalDebug(debugRes.data)
       }
     } catch (error) {
       console.error('[devices] Failed to refresh device detail:', error)
@@ -1195,6 +1207,17 @@ export default function DevicesPage() {
                     <pre className="overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">{JSON.stringify(selectedDevice.opticalInfo || {}, null, 2)}</pre>
                   </div>
                 </div>
+                {opticalDebug?.candidates?.length ? (
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <h3 className="font-semibold text-slate-900">Optical candidate paths</h3>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                        {opticalDebug.candidates.length} candidates
+                      </span>
+                    </div>
+                    <pre className="overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">{JSON.stringify(opticalDebug.candidates, null, 2)}</pre>
+                  </div>
+                ) : null}
               </details>
             </>
           ) : (

@@ -18,6 +18,37 @@ export const devicesRouter = Router();
 
 devicesRouter.use(requireAuth);
 
+function readTelemetryNodeValue(node) {
+  if (node === null || node === undefined) return undefined;
+  if (typeof node === "object" && "_value" in node) return node._value;
+  if (typeof node === "object" && "value" in node) return node.value;
+  return node;
+}
+
+function collectOpticalCandidates(root, basePath = "", acc = []) {
+  if (!root || typeof root !== "object") return acc;
+  for (const [key, value] of Object.entries(root)) {
+    const nextPath = basePath ? `${basePath}.${key}` : key;
+    const normalizedPath = nextPath.toLowerCase();
+    const looksOptical =
+      ["optical", "rx", "tx", "pon", "gpon", "xpon", "signal", "downstream", "upstream", "receive", "transmit"].some((token) =>
+        normalizedPath.includes(token)
+      );
+
+    if (looksOptical) {
+      const extracted = readTelemetryNodeValue(value);
+      if (extracted !== undefined && extracted !== null && extracted !== "" && typeof extracted !== "object") {
+        acc.push({ path: nextPath, value: extracted });
+      }
+    }
+
+    if (value && typeof value === "object") {
+      collectOpticalCandidates(value, nextPath, acc);
+    }
+  }
+  return acc;
+}
+
 devicesRouter.get(
   "/",
   requirePermission(permissions.deviceRead),
@@ -71,6 +102,34 @@ devicesRouter.get(
       DeviceOperationalCache.countDocuments(filter)
     ]);
     return ok(res, items, { page, limit, total });
+  })
+);
+
+devicesRouter.get(
+  "/:deviceId/optical-debug",
+  requirePermission(permissions.deviceRead),
+  asyncHandler(async (req, res) => {
+    const cacheRecord = await DeviceOperationalCache.findOne({ deviceId: req.params.deviceId }).lean();
+    const liveSummary = await genieacsClient.getRichDeviceSummary({
+      deviceId: req.params.deviceId,
+      serialNumber: cacheRecord?.serialNumber
+    });
+    if (!liveSummary) {
+      throw new ApiError(404, "Device not found in GenieACS");
+    }
+
+    const parsed = summarizeGenieDevice(liveSummary, req.params.deviceId);
+    const candidates = collectOpticalCandidates(liveSummary)
+      .filter((item) => String(item.path || "").length < 220)
+      .slice(0, 120);
+
+    return ok(res, {
+      deviceId: req.params.deviceId,
+      serialNumber: parsed.serialNumber || cacheRecord?.serialNumber || "",
+      productClass: parsed.productClass || cacheRecord?.productClass || "",
+      parsedOpticalInfo: parsed.opticalInfo || {},
+      candidates
+    });
   })
 );
 

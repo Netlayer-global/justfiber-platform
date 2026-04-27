@@ -2111,6 +2111,8 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapDeviceOpticalSample) : [],
     }
   },
+  getDeviceOpticalDebug: async (id: string) =>
+    request<any>(`/api/v1/admin/devices/${encodeURIComponent(id)}/optical-debug`),
   syncDevicesFromGenie: (payload?: { deviceId?: string; limit?: number }) =>
     request<{
       scanned: number
