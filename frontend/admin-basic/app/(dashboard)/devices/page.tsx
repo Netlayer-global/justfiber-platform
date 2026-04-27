@@ -72,31 +72,44 @@ function isDzsDevice(device?: Device) {
   return fingerprint.includes('dsnw2a') || fingerprint.includes('dzs') || fingerprint.includes('dasan')
 }
 
-function formatOpticalPower(device: Device | undefined, value: unknown) {
+function formatOpticalPower(device: Device | undefined, value: unknown, direction: 'rx' | 'tx' = 'rx') {
   const formatted = formatPower(value)
   if (formatted !== '-') return formatted
-  const fallbackValue = pickOpticalMetric(device?.opticalInfo, [
-    'RXPower',
-    'RxPower',
-    'opticalRxPower',
-    'receivedPower',
-    'ReceivedPower',
-    'receivedOpticalPower',
-    'ontRxPower',
-    'oltRxPower',
-    'rxPowerDbm',
-    'rx',
-    'TXPower',
-    'TxPower',
-    'opticalTxPower',
-    'transmitPower',
-    'TransmitPower',
-    'transmitOpticalPower',
-    'ontTxPower',
-    'oltTxPower',
-    'txPowerDbm',
-    'tx',
-  ])
+  const fallbackValue = pickOpticalMetric(
+    device?.opticalInfo,
+    direction === 'rx'
+      ? [
+          'RXPower',
+          'RxPower',
+          'opticalRxPower',
+          'receivedPower',
+          'ReceivedPower',
+          'receivedOpticalPower',
+          'ontRxPower',
+          'oltRxPower',
+          'downstreamOpticalPower',
+          'downstreamPower',
+          'rxPowerDbm',
+          'rxLevel',
+          'signalLevel',
+          'rx',
+        ]
+      : [
+          'TXPower',
+          'TxPower',
+          'opticalTxPower',
+          'transmitPower',
+          'TransmitPower',
+          'transmitOpticalPower',
+          'ontTxPower',
+          'oltTxPower',
+          'upstreamOpticalPower',
+          'upstreamPower',
+          'txPowerDbm',
+          'txLevel',
+          'tx',
+        ],
+  )
   const fallbackFormatted = formatPower(fallbackValue)
   if (fallbackFormatted !== '-') return fallbackFormatted
   if (isDzsDevice(device)) return 'Telemetry unavailable'
@@ -898,7 +911,7 @@ export default function DevicesPage() {
                   <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-500 xl:grid-cols-4">
                     <div>IP {formatValue(device.ip || device.wanInfo?.ipAddress)}</div>
                     <div>PPPoE {formatValue(device.wanInfo?.pppoeUsernameMasked || device.wanInfo?.pppoeUsername)}</div>
-                    <div>RX {formatOpticalPower(device, device.opticalInfo?.rxPower)}</div>
+                    <div>RX {formatOpticalPower(device, device.opticalInfo?.rxPower, 'rx')}</div>
                     <div>Last sync {formatDateTime(device.updatedAt)}</div>
                   </div>
                 </div>
@@ -936,7 +949,7 @@ export default function DevicesPage() {
               <div className="grid gap-3 md:grid-cols-4">
                 <DetailTile label="IPv4" value={formatValue(selectedDevice.ip || selectedDevice.wanInfo?.ipAddress)} />
                 <DetailTile label="PPPoE" value={formatValue(selectedDevice.wanInfo?.pppoeUsernameMasked || selectedDevice.wanInfo?.pppoeUsername)} />
-                <DetailTile label="RX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.rxPower)} />
+                <DetailTile label="RX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.rxPower, 'rx')} />
                 <DetailTile
                   label="LAN clients"
                   value={selectedClients.length ? String(selectedClients.length) : formatCount(selectedDevice.lanInfo?.leasedClients)}
@@ -1106,8 +1119,8 @@ export default function DevicesPage() {
                   </div>
                   <div className="space-y-3">
                     <DetailRow label="Health" value={formatValue(selectedDevice.opticalInfo?.healthStatus, summarizeOptical(selectedDevice.opticalInfo))} />
-                    <DetailRow label="RX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.rxPower)} />
-                    <DetailRow label="TX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.txPower)} />
+                    <DetailRow label="RX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.rxPower, 'rx')} />
+                    <DetailRow label="TX power" value={formatOpticalPower(selectedDevice, selectedDevice.opticalInfo?.txPower, 'tx')} />
                     <DetailRow label="Last optical update" value={formatDateTime(selectedDevice.opticalInfo?.lastInformAt || selectedDevice.opticalInfo?.measuredAt)} />
                   </div>
                 </div>

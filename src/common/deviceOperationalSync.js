@@ -139,8 +139,8 @@ function discoverOpticalMetric(summary, direction) {
   const normalizedDirection = String(direction || "").toLowerCase();
   const directionTokens =
     normalizedDirection === "tx"
-      ? ["txpower", "txopticalpower", "opticaltxpower", "transmitpower", "olttxpower", "onttxpower"]
-      : ["rxpower", "rxopticalpower", "opticalrxpower", "receivedpower", "oltrxpower", "ontrxpower"];
+      ? ["txpower", "txopticalpower", "opticaltxpower", "transmitpower", "olttxpower", "onttxpower", "upstreampower", "upstreamopticalpower", "txlevel"]
+      : ["rxpower", "rxopticalpower", "opticalrxpower", "receivedpower", "oltrxpower", "ontrxpower", "downstreampower", "downstreamopticalpower", "rxlevel", "signallevel"];
   const primaryHints = ["pon", "optical", "gpon", "xgpon", "wanpon", "ont", "dasan", "nokia", "alcl", "alcatel", "alu"];
   const excludedHints = ["wifi", "wlan", "radio", "ssid", "neighbor"];
 
@@ -353,12 +353,20 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "Device.Optical.Interface.1.RxPower",
     "Device.Optical.Interface.1.OpticalRxPower",
     "Device.Optical.Interface.1.ReceivedPower",
+    "Device.Optical.Interface.1.DownstreamPower",
+    "Device.Optical.Interface.1.DownstreamOpticalPower",
+    "Device.Optical.Interface.1.SignalLevel",
+    "Device.Optical.Interface.1.RxLevel",
     "Device.PON.Interface.1.RXPower",
     "Device.PON.Interface.1.RxPower",
     "Device.PON.Interface.1.OpticalRxPower",
+    "Device.PON.Interface.1.DownstreamPower",
+    "Device.PON.Interface.1.DownstreamOpticalPower",
     "Device.XPON.Interface.1.RXPower",
     "Device.XPON.Interface.1.RxPower",
     "Device.XPON.Interface.1.OpticalRxPower",
+    "Device.XPON.Interface.1.DownstreamPower",
+    "Device.XPON.Interface.1.DownstreamOpticalPower",
     "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.RXPower",
     "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.RXPower",
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_DZS_WANGponLinkConfig.RXPower",
@@ -388,11 +396,17 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.OpticalRxPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RxOpticalPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.ReceivedPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.DownstreamPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.DownstreamOpticalPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.SignalLevel",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.RXPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.RxPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalRxPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.RxOpticalPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.ReceivedPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.DownstreamPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.DownstreamOpticalPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.SignalLevel",
     "InternetGatewayDevice.FAP.Tunnel.1.Stats.RXPower",
     "VirtualParameters.RXPower",
     "VirtualParameters.OpticalRxPower"
@@ -402,12 +416,19 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "Device.Optical.Interface.1.TxPower",
     "Device.Optical.Interface.1.OpticalTxPower",
     "Device.Optical.Interface.1.TransmitPower",
+    "Device.Optical.Interface.1.UpstreamPower",
+    "Device.Optical.Interface.1.UpstreamOpticalPower",
+    "Device.Optical.Interface.1.TxLevel",
     "Device.PON.Interface.1.TXPower",
     "Device.PON.Interface.1.TxPower",
     "Device.PON.Interface.1.OpticalTxPower",
+    "Device.PON.Interface.1.UpstreamPower",
+    "Device.PON.Interface.1.UpstreamOpticalPower",
     "Device.XPON.Interface.1.TXPower",
     "Device.XPON.Interface.1.TxPower",
     "Device.XPON.Interface.1.OpticalTxPower",
+    "Device.XPON.Interface.1.UpstreamPower",
+    "Device.XPON.Interface.1.UpstreamOpticalPower",
     "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.TXPower",
     "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.TXPower",
     "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_DZS_WANGponLinkConfig.TXPower",
@@ -437,11 +458,17 @@ export function summarizeGenieDevice(summary, fallbackDeviceId) {
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.OpticalTxPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TxOpticalPower",
     "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TransmitPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.UpstreamPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.UpstreamOpticalPower",
+    "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TxLevel",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.TXPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.TxPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.OpticalTxPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.TxOpticalPower",
     "InternetGatewayDevice.X_ALU_OntOpticalParam.TransmitPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.UpstreamPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.UpstreamOpticalPower",
+    "InternetGatewayDevice.X_ALU_OntOpticalParam.TxLevel",
     "InternetGatewayDevice.FAP.Tunnel.1.Stats.TXPower",
     "VirtualParameters.TXPower",
     "VirtualParameters.OpticalTxPower"
