@@ -3,6 +3,9 @@ import { DeviceOperationalCache } from "../models/DeviceOperationalCache.js";
 import { DeviceOpticalSample } from "../models/DeviceOpticalSample.js";
 
 const OPTICAL_REFRESH_OBJECTS = [
+  "Device.Optical.Interface.",
+  "Device.PON.Interface.",
+  "Device.XPON.Interface.",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.",
   "InternetGatewayDevice.X_ALU-COM_ONT.Optical.",
   "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig.",
@@ -267,13 +270,29 @@ async function requestOpticalTelemetryRefresh(deviceId) {
   if (!deviceId) return;
 
   for (const objectName of OPTICAL_REFRESH_OBJECTS) {
+    const normalizedObjectName = String(objectName || "").trim();
+    const objectPath =
+      normalizedObjectName.endsWith(".") ? normalizedObjectName.slice(0, -1) : normalizedObjectName;
+
     try {
       await genieacsClient.runTask(deviceId, {
         name: "refreshObject",
-        objectName
+        objectName: normalizedObjectName
       }, { connectionRequest: true });
     } catch {
       // Ignore individual task failures; some models reject unsupported objects.
+    }
+
+    if (objectPath) {
+      try {
+        await genieacsClient.runTask(deviceId, {
+          name: "getParameterNames",
+          parameterPath: objectPath,
+          nextLevel: false
+        }, { connectionRequest: true });
+      } catch {
+        // Some models or Genie versions reject discovery tasks; ignore and continue.
+      }
     }
   }
 
