@@ -320,6 +320,41 @@ function addMonths(date, months) {
   return next;
 }
 
+function normalizedZoneKey(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+async function resolvePreferredBngNode({ explicitNodeCode, zoneCode }) {
+  if (explicitNodeCode) {
+    return BngNode.findOne({ nodeCode: explicitNodeCode, status: "active" }).lean();
+  }
+
+  const zoneKey = normalizedZoneKey(zoneCode);
+  if (zoneKey) {
+    const zoneMatch =
+      (await BngNode.findOne({
+        status: "active",
+        $or: [{ zoneCode: zoneKey }, { groupName: zoneKey }]
+      })
+        .sort({ nodeCode: 1 })
+        .lean()) ||
+      (await BngNode.findOne({
+        status: "active",
+        $or: [
+          { zoneCode: new RegExp(`^${zoneKey}$`, "i") },
+          { groupName: new RegExp(`^${zoneKey}$`, "i") }
+        ]
+      })
+        .sort({ nodeCode: 1 })
+        .lean());
+    if (zoneMatch) {
+      return zoneMatch;
+    }
+  }
+
+  return BngNode.findOne({ status: "active" }).sort({ nodeCode: 1 }).lean();
+}
+
 function toCustomerStatus(operationalStatus) {
   if (operationalStatus === "suspended") return "suspended";
   if (operationalStatus === "inactive") return "inactive";
@@ -380,7 +415,45 @@ function formatDisplayDate(value) {
   return parsed.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-function renderCustomerCafPdf({ customer, plan, template }) {
+function parseInlineImage(value) {
+  const raw = String(value || "").trim();
+  const match = raw.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) return null;
+  try {
+    return Buffer.from(match[2], "base64");
+  } catch {
+    return null;
+  }
+}
+
+function ensurePdfSpace(pdf, neededHeight) {
+  if (pdf.y + neededHeight <= pdf.page.height - pdf.page.margins.bottom) return;
+  pdf.addPage();
+}
+
+function drawKycPreviewGrid(pdf, images) {
+  const visible = images.filter((item) => item?.buffer);
+  if (!visible.length) return;
+  ensurePdfSpace(pdf, 170);
+  const startY = pdf.y;
+  const cellWidth = 155;
+  const cellHeight = 118;
+  const gap = 16;
+
+  visible.slice(0, 3).forEach((item, index) => {
+    const x = 42 + index * (cellWidth + gap);
+    pdf.font("Helvetica-Bold").fontSize(8).fillColor("#64748b").text(String(item.label || "").toUpperCase(), x, startY, { width: cellWidth });
+    pdf.roundedRect(x, startY + 14, cellWidth, cellHeight, 10).strokeColor("#cbd5e1").stroke();
+    try {
+      pdf.image(item.buffer, x + 6, startY + 20, { fit: [cellWidth - 12, cellHeight - 18], align: "center", valign: "center" });
+    } catch {
+      pdf.font("Helvetica").fontSize(8).fillColor("#94a3b8").text("Preview unavailable", x + 12, startY + 58, { width: cellWidth - 24, align: "center" });
+    }
+  });
+  pdf.y = startY + cellHeight + 26;
+}
+
+function renderCustomerCafPdf({ customer, plan, template, kycDoc }) {
   const pdf = new PDFDocument({ size: "A4", margin: 42 });
   const accent = template?.accentColor || "#1d4ed8";
   const rightX = 380;
@@ -420,6 +493,15 @@ function renderCustomerCafPdf({ customer, plan, template }) {
   const address = customer.address || {};
   const billingAddress = [address.line1, address.line2, address.area, address.city, address.state, address.pinCode].filter(Boolean).join(", ");
   const permanentAddress = customer.cafDocument?.permanentAddress || billingAddress || "N/A";
+  const identityType = customer.cafDocument?.identityType || (kycDoc?.documentType ? String(kycDoc.documentType).toUpperCase() : "AADHAAR");
+  const identityProofNo = customer.cafDocument?.identityProofNo || kycDoc?.documentNumber || "N/A";
+  const addressProofType = customer.cafDocument?.addressProofType || identityType;
+  const addressProofNo = customer.cafDocument?.addressProofNo || kycDoc?.documentNumber || "N/A";
+  const kycImages = [
+    { label: "Aadhaar Front", buffer: parseInlineImage(kycDoc?.frontImageUrl) },
+    { label: "Aadhaar Back", buffer: parseInlineImage(kycDoc?.backImageUrl) },
+    { label: "Selfie", buffer: parseInlineImage(kycDoc?.selfieImageUrl) }
+  ];
 
   pdf.rect(0, 0, 595, 842).fill("#ffffff");
   pdf.fillColor("#0f172a");
@@ -470,17 +552,22 @@ function renderCustomerCafPdf({ customer, plan, template }) {
 
   sectionHeader("Proof of Identity");
   tripleRow([
-    ["Document Type", customer.cafDocument?.identityType || "N/A"],
+    ["Document Type", identityType],
     ["Expiry Date", customer.cafDocument?.identityExpiry || "N/A"],
-    ["Identity Proof No", customer.cafDocument?.identityProofNo || "N/A"]
+    ["Identity Proof No", identityProofNo]
   ]);
 
   sectionHeader("Proof of Address");
   tripleRow([
-    ["Document Type", customer.cafDocument?.addressProofType || "N/A"],
+    ["Document Type", addressProofType],
     ["Expiry Date", customer.cafDocument?.addressProofExpiry || "N/A"],
-    ["Address Proof No", customer.cafDocument?.addressProofNo || "N/A"]
+    ["Address Proof No", addressProofNo]
   ]);
+
+  if (kycImages.some((item) => item.buffer)) {
+    sectionHeader("KYC Attachments");
+    drawKycPreviewGrid(pdf, kycImages);
+  }
 
   pdf.moveDown(0.8);
   pdf.roundedRect(42, pdf.y, 511, 52, 12).fill("#f8fafc");
@@ -683,6 +770,7 @@ customersRouter.post(
     const radiusPassword = String(payload.radiusPassword || generatedPppoe.password).trim();
     const generatedWifi = buildWifiCredentials(plan.provisioning || {}, customerId);
 
+    const requestedZoneCode = String(payload.zoneCode || req.admin.zoneCode || "").trim() || undefined;
     const [accessProfile, billingProfile, bngNode] = await Promise.all([
       payload.accessProfileCode
         ? AccessProfile.findOne({ code: payload.accessProfileCode, active: true }).lean()
@@ -692,9 +780,10 @@ customersRouter.post(
       payload.billingProfileCode
         ? BillingProfile.findOne({ code: payload.billingProfileCode, active: true }).lean()
         : BillingProfile.findOne({ active: true }).sort({ code: 1 }).lean(),
-      payload.bngNodeCode
-        ? BngNode.findOne({ nodeCode: payload.bngNodeCode, status: "active" }).lean()
-        : BngNode.findOne({ status: "active" }).sort({ nodeCode: 1 }).lean()
+      resolvePreferredBngNode({
+        explicitNodeCode: payload.bngNodeCode,
+        zoneCode: requestedZoneCode
+      })
     ]);
 
     if (payload.accessProfileCode && !accessProfile) {
@@ -705,6 +794,9 @@ customersRouter.post(
     }
     if (payload.bngNodeCode && !bngNode) {
       throw new ApiError(404, "BNG node not found");
+    }
+    if (bngNode) {
+      assertAdminZoneAccess(req.admin, bngNode.zoneCode || bngNode.groupName || bngNode.nodeCode);
     }
 
     const networkProfile = {
@@ -720,8 +812,11 @@ customersRouter.post(
         ? billingProfile?.defaultBusinessBillMode
         : billingProfile?.defaultHomeBillMode) ||
       (payload.customerType === "business" ? "postpaid" : "prepaid");
-    const scopedZoneCode = assertAdminZoneAccess(req.admin, payload.zoneCode || bngNode?.groupName || bngNode?.nodeCode);
-    const resolvedZoneCode = scopedZoneCode || String(payload.zoneCode || bngNode?.groupName || bngNode?.nodeCode || "").trim() || undefined;
+    const scopedZoneCode = assertAdminZoneAccess(req.admin, requestedZoneCode || bngNode?.zoneCode || bngNode?.groupName || bngNode?.nodeCode);
+    const resolvedZoneCode =
+      scopedZoneCode ||
+      String(requestedZoneCode || bngNode?.zoneCode || bngNode?.groupName || bngNode?.nodeCode || "").trim() ||
+      undefined;
     const resolvedZoneName =
       String(
         scopedZoneCode && req.admin.zoneName && scopedZoneCode === req.admin.zoneCode
@@ -1040,13 +1135,39 @@ customersRouter.get(
       throw new ApiError(404, "Customer not found");
     }
     assertCustomerZoneAccess(req, customer);
-    const [plan, cafSettings] = await Promise.all([
+    const phone = String(customer.phone || customer.mobile || "").replace(/\D/g, "");
+    const [plan, cafSettings, lead, latestMobileKyc] = await Promise.all([
       customer.planCode ? PlanCatalog.findOne({ planCode: customer.planCode, archivedAt: { $exists: false } }).lean() : null,
-      getCustomerCafSettings()
+      getCustomerCafSettings(),
+      phone ? Lead.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
+      phone ? LeadKycDocument.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null)
     ]);
+    const linkedLeadKyc = lead ? await LeadKycDocument.findOne({ leadId: lead._id }).lean() : null;
+    const kycDoc = linkedLeadKyc || latestMobileKyc || null;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${customer.cafDocument?.cafNumber || customer.customerId}.pdf\"`);
-    return renderCustomerCafPdf({ customer, plan, template: cafSettings.template }).pipe(res);
+    return renderCustomerCafPdf({ customer, plan, template: cafSettings.template, kycDoc }).pipe(res);
+  })
+);
+
+customersRouter.get(
+  "/:customerId/lead-kyc",
+  requirePermission(permissions.customerRead),
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findOne({ customerId: req.params.customerId }).lean()
+      || await Customer.findById(req.params.customerId).lean();
+    if (!customer) throw new ApiError(404, "Customer not found");
+    assertCustomerZoneAccess(req, customer);
+    const phone = String(customer.phone || customer.mobile || "").replace(/\D/g, "");
+    const lead = phone
+      ? await Lead.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean()
+      : null;
+    const kycDoc = lead
+      ? await LeadKycDocument.findOne({ leadId: lead._id }).lean()
+      : phone
+        ? await LeadKycDocument.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean()
+        : null;
+    return ok(res, kycDoc || null);
   })
 );
 
@@ -1406,6 +1527,7 @@ customersRouter.patch(
       { new: true }
     );
     let radiusSyncApplied = false;
+    let bngAutoSelected = false;
     if (radiusServicePayload) {
       const subscriberService =
         (await SubscriberService.findOne({ serviceId: customer.serviceId })) ||
@@ -1419,8 +1541,30 @@ customersRouter.patch(
           radiusServicePayload.ipv4Pool === undefined
             ? subscriberService.ipv4Pool || null
             : (radiusServicePayload.ipv4Pool || "").trim() || null;
+        let nextBngNodeCode = subscriberService.bngNodeCode || "";
+        const requestedZoneCode = payload.zoneCode !== undefined ? payload.zoneCode : customer.zoneCode;
+        if (radiusServicePayload.autoSelectBng || radiusServicePayload.bngNodeCode !== undefined || payload.zoneCode !== undefined) {
+          const resolvedBngNode = await resolvePreferredBngNode({
+            explicitNodeCode: (radiusServicePayload.bngNodeCode || "").trim() || undefined,
+            zoneCode: requestedZoneCode
+          });
+          if ((radiusServicePayload.bngNodeCode || "").trim() && !resolvedBngNode) {
+            throw new ApiError(404, "BNG node not found");
+          }
+          if (resolvedBngNode) {
+            assertAdminZoneAccess(
+              req.admin,
+              resolvedBngNode.zoneCode || resolvedBngNode.groupName || resolvedBngNode.nodeCode
+            );
+            nextBngNodeCode = resolvedBngNode.nodeCode;
+            bngAutoSelected =
+              Boolean(radiusServicePayload.autoSelectBng || payload.zoneCode !== undefined) &&
+              !String(radiusServicePayload.bngNodeCode || "").trim();
+          }
+        }
         subscriberService.currentIpv4 = nextCurrentIpv4;
         subscriberService.ipv4Pool = nextCurrentIpv4 ? null : nextIpv4Pool;
+        subscriberService.bngNodeCode = nextBngNodeCode;
         await subscriberService.save();
 
         if (subscriberService.status === "active" && subscriberService.metadata?.radiusPassword) {
@@ -1431,7 +1575,7 @@ customersRouter.patch(
             radiusPassword: subscriberService.metadata.radiusPassword,
             accessProfileCode: subscriberService.accessProfileCode,
             billingProfileCode: subscriberService.billingProfileCode,
-            bngNodeCode: subscriberService.bngNodeCode,
+            bngNodeCode: nextBngNodeCode,
             currentIpv4: subscriberService.currentIpv4,
             ipv4Pool: subscriberService.ipv4Pool,
             metadata: subscriberService.metadata || {}
@@ -1446,7 +1590,7 @@ customersRouter.patch(
       entityId: customer.customerId,
       metadata: Object.keys(payload)
     });
-    return ok(res, await buildCustomerResponse(customer.toObject()), { radiusSyncApplied });
+    return ok(res, await buildCustomerResponse(customer.toObject()), { radiusSyncApplied, bngAutoSelected });
   })
 );
 

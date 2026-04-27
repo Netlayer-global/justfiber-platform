@@ -54,6 +54,17 @@ function formatDuration(seconds: unknown) {
   return `${minutes}m`
 }
 
+function triggerDownload(url: string, filename: string) {
+  if (typeof window === 'undefined') return
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+}
+
 function isLikelyIpv4(value: string) {
   if (!value.trim()) return true
   return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value.trim())
@@ -133,6 +144,7 @@ export default function CustomerDetailPage() {
   const customerId = params.customerId
 
   const [customer, setCustomer] = useState<Customer | null>(null)
+  const [kycDocs, setKycDocs] = useState<{ frontImageUrl?: string; backImageUrl?: string; selfieImageUrl?: string; documentNumber?: string; verificationStatus?: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -178,10 +190,16 @@ export default function CustomerDetailPage() {
     try {
       await runBusy('refresh', async () => {
         setIsLoading(true)
-        const res = await adminAPI.getCustomer(customerId)
+        const [res, kycRes] = await Promise.all([
+          adminAPI.getCustomer(customerId),
+          adminAPI.getCustomerLeadKyc(customerId).catch(() => ({ success: false, data: null })),
+        ])
         if (!res.success || !res.data) {
           toast.error(res.error || 'Failed to load customer')
           return
+        }
+        if (kycRes.success && kycRes.data) {
+          setKycDocs(kycRes.data)
         }
         const nextCustomer = normalizeCustomer(res.data)
         setCustomer(nextCustomer)
@@ -622,6 +640,93 @@ export default function CustomerDetailPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="card p-5 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-slate-900">KYC Documents</h2>
+                  {kycDocs ? (
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      kycDocs.verificationStatus === 'verified' ? 'bg-emerald-100 text-emerald-700'
+                        : kycDocs.verificationStatus === 'rejected' ? 'bg-rose-100 text-rose-700'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {kycDocs.verificationStatus || 'pending'}
+                    </span>
+                  ) : null}
+                </div>
+                {kycDocs ? (
+                  <div className="space-y-4">
+                    {kycDocs.documentNumber ? (
+                      <div className="text-sm text-slate-600">
+                        <span className="font-medium text-slate-900">Aadhaar Number:</span> {kycDocs.documentNumber}
+                      </div>
+                    ) : null}
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {kycDocs.frontImageUrl ? (
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Aadhaar Front</div>
+                          <img src={kycDocs.frontImageUrl} alt="Aadhaar Front" className="w-full rounded-xl border border-slate-200 object-cover" />
+                          <button
+                            type="button"
+                            className="btn-secondary w-full"
+                            onClick={() => triggerDownload(kycDocs.frontImageUrl!, `${customer?.customerId || customer?.id || 'customer'}-aadhaar-front.jpg`)}
+                          >
+                            Download Front
+                          </button>
+                        </div>
+                      ) : null}
+                      {kycDocs.backImageUrl ? (
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Aadhaar Back</div>
+                          <img src={kycDocs.backImageUrl} alt="Aadhaar Back" className="w-full rounded-xl border border-slate-200 object-cover" />
+                          <button
+                            type="button"
+                            className="btn-secondary w-full"
+                            onClick={() => triggerDownload(kycDocs.backImageUrl!, `${customer?.customerId || customer?.id || 'customer'}-aadhaar-back.jpg`)}
+                          >
+                            Download Back
+                          </button>
+                        </div>
+                      ) : null}
+                      {kycDocs.selfieImageUrl ? (
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Selfie</div>
+                          <img src={kycDocs.selfieImageUrl} alt="Selfie" className="w-full rounded-xl border border-slate-200 object-cover" />
+                          <button
+                            type="button"
+                            className="btn-secondary w-full"
+                            onClick={() => triggerDownload(kycDocs.selfieImageUrl!, `${customer?.customerId || customer?.id || 'customer'}-selfie.jpg`)}
+                          >
+                            Download Selfie
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {customer.cafDocument?.pdfUrl ? (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => void openProtectedDocument(customer.cafDocument!.pdfUrl!).catch(() => toast.error('Failed to open CAF'))}
+                        >
+                          Download CAF PDF
+                        </button>
+                      ) : null}
+                      {kycDocs.documentNumber ? (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => void copyValue(kycDocs.documentNumber || '', 'Aadhaar Number')}
+                        >
+                          Copy Aadhaar Number
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">No KYC documents uploaded for this customer yet.</div>
+                )}
               </div>
             </div>
 
