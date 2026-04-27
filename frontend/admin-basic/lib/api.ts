@@ -1642,6 +1642,13 @@ export const adminAPI = {
       data: Array.isArray(res.data) ? res.data.map(mapSalesAgent) : [],
     }
   },
+  deleteSalesBooking: (bookingId: string) =>
+    request<{ deleted: boolean; bookingId: string; bookingNumber: string }>(`/api/v1/admin/sales/bookings/${bookingId}`, { method: 'DELETE' }),
+  generateBookingPaymentLink: (bookingId: string, amount?: number) =>
+    request<{ paymentLink: string; linkId: string; amount: number }>(`/api/v1/admin/sales/bookings/${bookingId}/payment-link`, {
+      method: 'POST',
+      body: JSON.stringify(amount ? { amount } : {}),
+    }),
   assignSalesLead: async (leadId: string, salesAgentId?: string) => {
     const res = await request<any>(`/api/v1/admin/sales/leads/${leadId}/assign`, {
       method: 'PATCH',
@@ -3258,4 +3265,19 @@ export const adminAPI = {
       method: 'POST',
       body: JSON.stringify({ note }),
     }),
+  uploadLeadKyc: async (
+    leadId: string,
+    data: { aadhaarFront?: string; aadhaarBack?: string; selfie?: string; documentNumber?: string }
+  ) =>
+    request<any>(`/api/v1/admin/sales/leads/${encodeURIComponent(leadId)}/kyc`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getLeadKyc: async (leadId: string) =>
+    request<any>(`/api/v1/admin/sales/leads/${encodeURIComponent(leadId)}/kyc`),
+  downloadLeadCaf: async (leadId: string) => {
+    await openProtectedDocument(`/api/v1/admin/sales/leads/${encodeURIComponent(leadId)}/caf/pdf`)
+  },
+  getCustomerLeadKyc: async (customerId: string) =>
+    request<any>(`/api/v1/admin/customers/${encodeURIComponent(customerId)}/lead-kyc`),
 }
