@@ -310,11 +310,12 @@ export default function DevicesPage() {
     try {
       setIsLoading(true)
       let res = await adminAPI.getDevices(1, 200)
-      if ((!res.success || !res.data?.items?.length) && !preferredDeviceId) {
+      const cachedCount = res.success && res.data?.items ? res.data.items.length : 0
+      if ((!res.success || !res.data?.items?.length || cachedCount < 10) && !preferredDeviceId) {
         const cachedRes = await adminAPI.getDevices(1, 200, { sync: true, syncLimit: 80 })
         if (cachedRes.success) {
           res = cachedRes
-          toast.info('Device inventory refreshed from cache sync')
+          toast.info(cachedCount > 0 ? 'Device inventory expanded from Genie sync' : 'Device inventory refreshed from cache sync')
         }
       }
       if (!res.success || !res.data?.items) {
