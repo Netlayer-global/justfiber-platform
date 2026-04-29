@@ -10,6 +10,7 @@ import { adminCanAccessAllZones, assertAdminZoneAccess, assertMainAdminAccess, r
 import { addAdminJob } from "../../common/adminQueue.js";
 import { permissions } from "../../config/permissions.js";
 import { AccessProfile } from "../../models/AccessProfile.js";
+import { AdminUser } from "../../models/AdminUser.js";
 import { AutomationTrigger } from "../../models/AutomationTrigger.js";
 import { AuditLog } from "../../models/AuditLog.js";
 import { BillingProfile } from "../../models/BillingProfile.js";
@@ -40,7 +41,9 @@ import { SystemAnnouncement } from "../../models/SystemAnnouncement.js";
 import { VendorProfile } from "../../models/VendorProfile.js";
 import { AddonCatalog } from "../../models/AddonCatalog.js";
 import { FiberPath } from "../../models/FiberPath.js";
+import { ServiceabilityZone } from "../../models/ServiceabilityZone.js";
 import { SystemConfig } from "../../models/SystemConfig.js";
+import { ApiError } from "../../common/ApiError.js";
 import { buildPagination } from "../../common/pagination.js";
 import { radiusServiceManager } from "../../integrations/radiusServiceManager.js";
 import { mikrotikBngManager } from "../../integrations/mikrotikBngManager.js";
@@ -2382,6 +2385,69 @@ platformFoundationRouter.post(
       adminAccounts: metadata.adminAccounts,
       updatedAt: metadata.adminAccountsUpdatedAt
     }, { saved: true });
+  })
+);
+
+platformFoundationRouter.delete(
+  "/foundation/franchises/:franchiseCode",
+  requirePermission(permissions.configUpdate),
+  asyncHandler(async (req, res) => {
+    assertMainAdminAccess(req.admin);
+    const franchiseCode = String(req.params.franchiseCode || "").trim();
+    if (!franchiseCode) {
+      throw new ApiError(400, "Franchise code is required");
+    }
+
+    const franchise = await FranchiseProfile.findOne({ franchiseCode });
+    if (!franchise) {
+      throw new ApiError(404, "Sub-zone not found");
+    }
+
+    const childCount = await FranchiseProfile.countDocuments({
+      "metadata.parentZoneCode": franchiseCode
+    });
+    if (childCount > 0) {
+      throw new ApiError(409, "Delete child sub-zones first");
+    }
+
+    const zoneCodes = [franchise.zoneCode, franchise.franchiseCode]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+
+    const zoneDeleteResult = await ServiceabilityZone.deleteMany({
+      $or: [
+        { zoneCode: { $in: zoneCodes } },
+        { parentZoneCode: franchiseCode }
+      ]
+    });
+    const adminDeleteResult = await AdminUser.deleteMany({
+      zoneCode: { $in: zoneCodes },
+      canAccessAllZones: { $ne: true }
+    });
+
+    await franchise.deleteOne();
+
+    await auditFromRequest(req, {
+      action: "franchise.deleted",
+      entityType: "franchise",
+      entityId: franchise.franchiseCode,
+      before: {
+        franchiseCode: franchise.franchiseCode,
+        zoneCode: franchise.zoneCode,
+        name: franchise.name
+      },
+      metadata: {
+        deletedZoneCount: zoneDeleteResult.deletedCount || 0,
+        deletedAdminCount: adminDeleteResult.deletedCount || 0
+      }
+    });
+
+    return ok(res, {
+      deleted: true,
+      franchiseCode,
+      deletedZoneCount: zoneDeleteResult.deletedCount || 0,
+      deletedAdminCount: adminDeleteResult.deletedCount || 0
+    });
   })
 );
 

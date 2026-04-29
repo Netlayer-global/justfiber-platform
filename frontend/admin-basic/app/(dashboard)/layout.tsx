@@ -222,8 +222,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [adminProfile, setAdminProfile] = useState<{ fullName?: string; email?: string } | null>(null)
   const [currentZone, setCurrentZone] = useState<{ key: string; label: string }>({
     key: 'default',
-    label: 'JustFiber HQ',
+    label: 'Admin',
   })
+
+  function normalizeZoneLabel(label?: string | null) {
+    const value = String(label || '').trim()
+    if (!value) return 'Admin'
+    const normalized = value.toLowerCase()
+    if (normalized === 'justfiber' || normalized === 'justfiber hq' || normalized === 'default') return 'Admin'
+    return value
+  }
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -253,7 +261,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (storedLabel) {
       setCurrentZone({
         key: storedKey || storedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-        label: storedLabel,
+        label: normalizeZoneLabel(storedLabel),
       })
     }
   }, [])
@@ -297,7 +305,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (general?.zoneName || general?.organizationName) {
         options.push({
           key: general?.zoneName || 'default',
-          label: general?.organizationName || general?.zoneName || 'JustFiber HQ',
+          label: 'Admin',
         })
       }
       franchises.forEach((item: FranchiseProfile) => {
@@ -316,9 +324,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           deduped = deduped.filter((item) => item.key === adminZoneCode)
           if (!deduped.length) {
             deduped = [{ key: adminZoneCode, label: adminZoneLabel || adminZoneCode }]
+            deduped = deduped.map((item) => ({ ...item, label: normalizeZoneLabel(item.label) }))
           }
         }
       }
+      deduped = deduped.map((item) => ({ ...item, label: normalizeZoneLabel(item.label) }))
       setZoneOptions(deduped)
       const storedKey = typeof window !== 'undefined' ? window.localStorage.getItem('justfiber-active-zone-key') : null
       if (!storedKey && deduped[0]) {
@@ -347,7 +357,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       } else {
         const assignedZone = {
           key: meRes.data.zoneCode || 'default',
-          label: meRes.data.zoneName || meRes.data.zoneCode || 'Assigned zone',
+          label: normalizeZoneLabel(meRes.data.zoneName || meRes.data.zoneCode || 'Assigned zone'),
         }
         window.localStorage.setItem('justfiber-admin-zone-code', assignedZone.key)
         window.localStorage.setItem('justfiber-admin-zone-label', assignedZone.label)
@@ -369,12 +379,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setZoneMenuOpen(false)
       return
     }
-    setCurrentZone(item)
+    const nextItem = { ...item, label: normalizeZoneLabel(item.label) }
+    setCurrentZone(nextItem)
     setZoneMenuOpen(false)
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('justfiber-active-zone-key', item.key)
-      window.localStorage.setItem('justfiber-active-zone-label', item.label)
-      window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: item }))
+      window.localStorage.setItem('justfiber-active-zone-key', nextItem.key)
+      window.localStorage.setItem('justfiber-active-zone-label', nextItem.label)
+      window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: nextItem }))
     }
   }
 

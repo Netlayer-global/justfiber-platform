@@ -367,6 +367,16 @@ const initialSubZoneDraft: SubZoneDraft = {
   allowSettings: false,
 }
 
+function normalizeRootZoneLabel(label?: string | null) {
+  const value = String(label || '').trim()
+  if (!value) return 'Admin'
+  const normalized = value.toLowerCase()
+  if (normalized === 'justfiber' || normalized === 'justfiber hq' || normalized === 'default') {
+    return 'Admin'
+  }
+  return value
+}
+
 function titleCase(value: string) {
   return value
     .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -723,6 +733,7 @@ export default function SettingsPage() {
   const [isSavingZoneAdmins, setIsSavingZoneAdmins] = useState(false)
   const [isCreatingZoneLogin, setIsCreatingZoneLogin] = useState(false)
   const [isCreatingSubZone, setIsCreatingSubZone] = useState(false)
+  const [busyDeleteFranchiseCode, setBusyDeleteFranchiseCode] = useState('')
   const [highlightSubZoneWorkspace, setHighlightSubZoneWorkspace] = useState(false)
   const [busyZoneLoginId, setBusyZoneLoginId] = useState('')
   const [zoneLogins, setZoneLogins] = useState<AdminUserSummary[]>([])
@@ -830,6 +841,16 @@ export default function SettingsPage() {
     () => franchises.find((item) => (item.zoneCode || item.franchiseCode) === activeZoneCode) || null,
     [franchises, activeZoneCode]
   )
+  const visibleSubZones = useMemo(
+    () =>
+      franchises.filter((item) => {
+        const parentZoneCode = String(item.metadata?.parentZoneCode || '').trim()
+        if (!parentZoneCode) return false
+        if (activeZoneCode && activeZoneCode !== 'default') return parentZoneCode === activeZoneCode
+        return true
+      }),
+    [franchises, activeZoneCode]
+  )
 
   useEffect(() => {
     const firstAdmin = activeZoneFranchise?.adminAccounts?.[0]
@@ -893,7 +914,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const syncZone = () => {
       setActiveZoneCode(window.localStorage.getItem('justfiber-active-zone-key') || '')
-      setActiveZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || '')
+      setActiveZoneLabel(normalizeRootZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || ''))
     }
     syncZone()
     window.addEventListener('storage', syncZone)
@@ -965,7 +986,7 @@ export default function SettingsPage() {
         window.localStorage.setItem('justfiber-admin-zone-code', '')
         window.localStorage.setItem('justfiber-admin-zone-label', '')
         setActiveZoneCode(window.localStorage.getItem('justfiber-active-zone-key') || 'default')
-        setActiveZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || 'JustFiber HQ')
+        setActiveZoneLabel(normalizeRootZoneLabel(window.localStorage.getItem('justfiber-active-zone-label') || 'Admin'))
       } else {
         setCanAccessAllZones(false)
         window.localStorage.setItem('justfiber-admin-can-access-all-zones', '0')
@@ -973,9 +994,9 @@ export default function SettingsPage() {
         window.localStorage.setItem('justfiber-admin-zone-label', meRes.data.zoneName || '')
         if (meRes.data.zoneCode) {
           window.localStorage.setItem('justfiber-active-zone-key', meRes.data.zoneCode)
-          window.localStorage.setItem('justfiber-active-zone-label', meRes.data.zoneName || meRes.data.zoneCode)
+          window.localStorage.setItem('justfiber-active-zone-label', normalizeRootZoneLabel(meRes.data.zoneName || meRes.data.zoneCode))
           setActiveZoneCode(meRes.data.zoneCode)
-          setActiveZoneLabel(meRes.data.zoneName || meRes.data.zoneCode)
+          setActiveZoneLabel(normalizeRootZoneLabel(meRes.data.zoneName || meRes.data.zoneCode))
         }
       }
     } catch (error) {
@@ -1003,6 +1024,38 @@ export default function SettingsPage() {
       toast.error('Failed to load settings catalog')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleDeleteSubZone(franchise: FranchiseProfile) {
+    const franchiseCode = String(franchise.franchiseCode || franchise.zoneCode || '').trim()
+    if (!franchiseCode) {
+      toast.error('Sub-zone code missing')
+      return
+    }
+    const confirmed = window.confirm(`Delete sub-zone "${franchise.name || franchiseCode}"? This will also remove its zone login and serviceability zone.`)
+    if (!confirmed) return
+
+    try {
+      setBusyDeleteFranchiseCode(franchiseCode)
+      const response = await adminAPI.deleteFranchise(franchiseCode)
+      if (!response.success) {
+        toast.error(response.error || 'Failed to delete sub-zone')
+        return
+      }
+      if (activeZoneCode === franchiseCode && typeof window !== 'undefined') {
+        window.localStorage.setItem('justfiber-active-zone-key', 'default')
+        window.localStorage.setItem('justfiber-active-zone-label', 'Admin')
+        setActiveZoneCode('default')
+        setActiveZoneLabel('Admin')
+      }
+      toast.success('Sub-zone deleted')
+      await Promise.all([loadCatalog(), syncCurrentAdminScope()])
+    } catch (error) {
+      console.error('[settings] Failed to delete sub-zone', error)
+      toast.error('Failed to delete sub-zone')
+    } finally {
+      setBusyDeleteFranchiseCode('')
     }
   }
 
@@ -1804,7 +1857,7 @@ export default function SettingsPage() {
         </div>
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
           {WORKSPACE_META[activeWorkspace].description}
-          {activeZoneLabel ? ` Current zone: ${activeZoneLabel}.` : ''}
+          {activeZoneLabel ? ` Current zone: ${normalizeRootZoneLabel(activeZoneLabel)}.` : ''}
         </div>
       </section>
 
@@ -2007,6 +2060,50 @@ export default function SettingsPage() {
                     <span>{label}</span>
                   </label>
                 ))}
+              </div>
+              <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">Existing sub-zones</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {canAccessAllZones ? 'Delete unused sub-zones from here.' : 'Only main admin can delete sub-zones.'}
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-500">{visibleSubZones.length} total</div>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {visibleSubZones.length ? (
+                    visibleSubZones.map((item) => {
+                      const itemCode = item.zoneCode || item.franchiseCode
+                      const deleting = busyDeleteFranchiseCode === item.franchiseCode
+                      return (
+                        <div key={item.id || item.franchiseCode} className="flex flex-col gap-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="text-sm font-semibold text-slate-900">{item.name || itemCode}</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              Code: {itemCode || '-'} | Parent: {normalizeRootZoneLabel(String(item.metadata?.parentZoneName || item.metadata?.parentZoneCode || activeZoneLabel || 'Admin'))}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              Contact: {item.phone || '-'} | {item.email || 'No email'}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => void handleDeleteSubZone(item)}
+                            disabled={!canAccessAllZones || deleting}
+                          >
+                            {!canAccessAllZones ? 'Main admin only' : deleting ? 'Deleting...' : 'Delete sub-zone'}
+                          </button>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                      No sub-zones found for this admin scope.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : null}

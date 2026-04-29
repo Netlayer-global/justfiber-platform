@@ -41,8 +41,10 @@ function getStoredZoneCode() {
   return window.localStorage.getItem('justfiber-active-zone') || 'default'
 }
 function getStoredZoneLabel() {
-  if (typeof window === 'undefined') return 'JustFiber HQ'
-  return window.localStorage.getItem('justfiber-active-zone-label') || 'JustFiber HQ'
+  const value = typeof window === 'undefined' ? 'Admin' : window.localStorage.getItem('justfiber-active-zone-label') || 'Admin'
+  const normalized = String(value || '').trim().toLowerCase()
+  if (!normalized || normalized === 'justfiber' || normalized === 'justfiber hq' || normalized === 'default') return 'Admin'
+  return String(value)
 }
 
 function formatLeadSource(value?: string) {
@@ -78,7 +80,7 @@ export default function DashboardPage() {
   const [otpValue, setOtpValue] = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError] = useState('')
-  const [currentZoneLabel, setCurrentZoneLabel] = useState('JustFiber HQ')
+  const [currentZoneLabel, setCurrentZoneLabel] = useState('Admin')
   const [currentZoneCode, setCurrentZoneCode] = useState('default')
 
   useEffect(() => {

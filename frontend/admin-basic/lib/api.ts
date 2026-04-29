@@ -2765,15 +2765,19 @@ export const adminAPI = {
       method: 'DELETE',
     }),
   getFranchises: async () => {
-    const res = await request<any[]>('/api/v1/admin/foundation/franchises')
-    return {
-      ...res,
-      data: Array.isArray(res.data) ? res.data.map(mapFranchiseProfile) : [],
-    }
-  },
-  saveFranchise: async (data: {
-    franchiseCode: string
-    name: string
+      const res = await request<any[]>('/api/v1/admin/foundation/franchises')
+      return {
+        ...res,
+        data: Array.isArray(res.data) ? res.data.map(mapFranchiseProfile) : [],
+      }
+    },
+    deleteFranchise: async (franchiseCode: string) =>
+      request(`/api/v1/admin/foundation/franchises/${franchiseCode}`, {
+        method: 'DELETE',
+      }),
+    saveFranchise: async (data: {
+      franchiseCode: string
+      name: string
     zoneCode?: string
     status?: 'active' | 'inactive'
     contactName?: string
