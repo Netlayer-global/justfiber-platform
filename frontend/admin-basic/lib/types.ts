@@ -202,6 +202,23 @@ export interface Customer {
     templateName?: string
     pdfUrl?: string
   } | null
+  kycDocument?: {
+    documentType?: string
+    documentNumber?: string
+    frontImageUrl?: string
+    backImageUrl?: string
+    selfieImageUrl?: string
+    verificationStatus?: string
+    createdAt?: string
+  } | null
+  installationProof?: {
+    routerPhotoUrl?: string
+    cablePhotoUrl?: string
+    extraPhotos?: string[]
+    uploadedAt?: string
+    installerJobId?: string | null
+    installerJobNumber?: string
+  } | null
   rawAddress?: {
     line1?: string
     line2?: string

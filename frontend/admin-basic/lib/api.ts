@@ -728,6 +728,27 @@ function mapCustomer(customer: any): Customer {
           pdfUrl: customer.cafDocument.pdfUrl || '',
         }
       : null,
+    kycDocument: customer.kycDocument
+      ? {
+          documentType: customer.kycDocument.documentType || '',
+          documentNumber: customer.kycDocument.documentNumber || '',
+          frontImageUrl: customer.kycDocument.frontImageUrl || '',
+          backImageUrl: customer.kycDocument.backImageUrl || '',
+          selfieImageUrl: customer.kycDocument.selfieImageUrl || '',
+          verificationStatus: customer.kycDocument.verificationStatus || '',
+          createdAt: customer.kycDocument.createdAt || undefined,
+        }
+      : null,
+    installationProof: customer.installationProof
+      ? {
+          routerPhotoUrl: customer.installationProof.routerPhotoUrl || '',
+          cablePhotoUrl: customer.installationProof.cablePhotoUrl || '',
+          extraPhotos: Array.isArray(customer.installationProof.extraPhotos) ? customer.installationProof.extraPhotos : [],
+          uploadedAt: customer.installationProof.uploadedAt || undefined,
+          installerJobId: customer.installationProof.installerJobId || null,
+          installerJobNumber: customer.installationProof.installerJobNumber || '',
+        }
+      : null,
     radiusService: customer.radiusService
       ? {
           serviceId: customer.radiusService.serviceId || '',

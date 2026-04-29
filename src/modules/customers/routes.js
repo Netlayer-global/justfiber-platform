@@ -599,6 +599,26 @@ function renderCustomerCafPdf({ customer, plan, template, kycDoc }) {
 }
 
 async function buildCustomerResponse(customer) {
+  const normalizedPhone = String(customer.phone || customer.mobile || "").replace(/\D/g, "");
+  const [lead, latestBooking, latestInstallerJob] = await Promise.all([
+    normalizedPhone ? Lead.findOne({ mobile: normalizedPhone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
+    normalizedPhone ? ConnectionBooking.findOne({ "personalDetails.mobile": normalizedPhone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
+    InstallerJob.findOne({
+      $or: [
+        ...(customer.customerId ? [{ customerId: customer.customerId }] : []),
+        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : []),
+      ]
+    }).sort({ createdAt: -1 }).lean()
+  ]);
+  const [leadKyc, bookingKyc] = await Promise.all([
+    lead ? LeadKycDocument.findOne({ leadId: lead._id }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
+    latestBooking ? LeadKycDocument.findOne({ connectionBookingId: latestBooking._id }).sort({ createdAt: -1 }).lean() : Promise.resolve(null)
+  ]);
+  const mobileKyc = normalizedPhone
+    ? await LeadKycDocument.findOne({ mobile: normalizedPhone }).sort({ createdAt: -1 }).lean()
+    : null;
+  const kycDoc = leadKyc || bookingKyc || mobileKyc || null;
+
   const subscriberService = await SubscriberService.findOne({
     $or: [
       ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : []),
@@ -644,6 +664,27 @@ async function buildCustomerResponse(customer) {
       ...(customer.cafDocument || {}),
       pdfUrl: `/api/v1/admin/customers/${encodeURIComponent(customer.customerId)}/caf/pdf`
     },
+    kycDocument: kycDoc
+      ? {
+          documentType: kycDoc.documentType || "aadhaar",
+          documentNumber: kycDoc.documentNumber || "",
+          frontImageUrl: kycDoc.frontImageUrl || "",
+          backImageUrl: kycDoc.backImageUrl || "",
+          selfieImageUrl: kycDoc.selfieImageUrl || "",
+          verificationStatus: kycDoc.verificationStatus || "",
+          createdAt: kycDoc.createdAt || null
+        }
+      : null,
+    installationProof: latestInstallerJob?.proof
+      ? {
+          routerPhotoUrl: latestInstallerJob.proof.routerPhotoUrl || "",
+          cablePhotoUrl: latestInstallerJob.proof.cablePhotoUrl || "",
+          extraPhotos: Array.isArray(latestInstallerJob.proof.extraPhotos) ? latestInstallerJob.proof.extraPhotos : [],
+          uploadedAt: latestInstallerJob.proof.uploadedAt || null,
+          installerJobId: latestInstallerJob._id?.toString?.() || null,
+          installerJobNumber: latestInstallerJob.jobNumber || ""
+        }
+      : null,
     pppoeUsername: subscriberService?.radiusUsername || customer.pppoeUsername || null,
     radiusService: subscriberService
         ? {

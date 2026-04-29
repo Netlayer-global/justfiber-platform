@@ -381,23 +381,96 @@ function SessionsTab({ customer }: { customer: Customer }) {
 }
 
 function DocumentsTab({ customer }: { customer: Customer }) {
+  const docCards = [
+    customer.kycDocument?.frontImageUrl
+      ? { label: 'Aadhaar Front', url: customer.kycDocument.frontImageUrl }
+      : null,
+    customer.kycDocument?.backImageUrl
+      ? { label: 'Aadhaar Back', url: customer.kycDocument.backImageUrl }
+      : null,
+    customer.kycDocument?.selfieImageUrl
+      ? { label: 'Selfie', url: customer.kycDocument.selfieImageUrl }
+      : null,
+    customer.installationProof?.routerPhotoUrl
+      ? { label: 'Router Photo', url: customer.installationProof.routerPhotoUrl }
+      : null,
+    customer.installationProof?.cablePhotoUrl
+      ? { label: 'Cable Photo', url: customer.installationProof.cablePhotoUrl }
+      : null,
+    ...((customer.installationProof?.extraPhotos || []).map((url, index) => ({
+      label: `Extra Photo ${index + 1}`,
+      url,
+    }))),
+  ].filter(Boolean) as Array<{ label: string; url: string }>
+
   return (
-    <Card>
-      {customer.cafDocument?.pdfUrl ? (
+    <div className="space-y-5">
+      <Card>
         <div className="flex items-start gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
             <FileText className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
             <h4 className="font-bold text-slate-900">CAF Document</h4>
-            <p className="text-xs text-slate-500">CAF #{customer.cafDocument.cafNumber} · {customer.cafDocument.templateName}</p>
-            <p className="mt-1 text-xs text-slate-500">Generated {formatDate(customer.cafDocument.generatedAt, true)}</p>
-            <a href={customer.cafDocument.pdfUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex"><Button variant="secondary" size="sm">Open PDF</Button></a>
+            <p className="text-xs text-slate-500">
+              CAF #{customer.cafDocument?.cafNumber || customer.customerId} · {customer.cafDocument?.templateName || 'Standard CAF'}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Generated {formatDate(customer.cafDocument?.generatedAt || customer.createdAt, true)}
+            </p>
+            {customer.cafDocument?.pdfUrl ? (
+              <a href={customer.cafDocument.pdfUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex">
+                <Button variant="secondary" size="sm">Open PDF</Button>
+              </a>
+            ) : (
+              <p className="mt-3 text-xs text-amber-600">CAF link not ready yet. Refresh after backend sync.</p>
+            )}
           </div>
         </div>
-      ) : (
-        <EmptyState icon={FileText} title="No documents" description="CAF and KYC documents will appear here once uploaded." />
-      )}
-    </Card>
+      </Card>
+
+      <Card>
+        <CardTitle>KYC and Installation Photos</CardTitle>
+        {customer.kycDocument ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Field label="Document Type" value={customer.kycDocument.documentType?.toUpperCase()} />
+            <Field label="Document Number" value={customer.kycDocument.documentNumber || '—'} mono />
+            <Field label="Verification" value={customer.kycDocument.verificationStatus || 'pending'} />
+            <Field label="Uploaded" value={formatDate(customer.kycDocument.createdAt, true)} />
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-slate-500">No KYC document linked yet.</p>
+        )}
+
+        {customer.installationProof?.uploadedAt ? (
+          <p className="mt-4 text-xs text-slate-500">
+            Installation proof uploaded {formatDate(customer.installationProof.uploadedAt, true)}
+            {customer.installationProof.installerJobNumber ? ` · Job ${customer.installationProof.installerJobNumber}` : ''}
+          </p>
+        ) : null}
+
+        {docCards.length ? (
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {docCards.map((item) => (
+              <div key={`${item.label}-${item.url.slice(0, 24)}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-100 px-4 py-3">
+                  <div className="text-sm font-semibold text-slate-900">{item.label}</div>
+                </div>
+                <div className="aspect-[4/3] bg-slate-50">
+                  <img src={item.url} alt={item.label} className="h-full w-full object-cover" />
+                </div>
+                <div className="px-4 py-3">
+                  <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex">
+                    <Button variant="secondary" size="sm">Open / Download</Button>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={FileText} title="No photos yet" description="KYC and installation proof images will appear here after upload." />
+        )}
+      </Card>
+    </div>
   )
 }
