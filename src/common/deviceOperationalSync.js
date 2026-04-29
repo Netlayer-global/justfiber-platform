@@ -4,21 +4,38 @@ import { DeviceOpticalSample } from "../models/DeviceOpticalSample.js";
 
 const OPTICAL_REFRESH_OBJECTS = [
   "Device.Optical.Interface.",
+  "Device.Optical.Interface",
   "Device.PON.Interface.",
+  "Device.PON.Interface",
   "Device.XPON.Interface.",
+  "Device.XPON.Interface",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.",
+  "InternetGatewayDevice.X_ALU_OntOpticalParam",
   "InternetGatewayDevice.X_ALU-COM_ONT.Optical.",
+  "InternetGatewayDevice.X_ALU-COM_ONT.Optical",
   "InternetGatewayDevice.X_ALU-COM_GPON.",
+  "InternetGatewayDevice.X_ALU-COM_GPON",
   "InternetGatewayDevice.X_ALU-COM_GPON.Optical.",
+  "InternetGatewayDevice.X_ALU-COM_GPON.Optical",
   "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig.",
+  "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig",
   "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_ALU-COM_WANGponLinkConfig.",
+  "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_ALU-COM_WANGponLinkConfig",
   "InternetGatewayDevice.X_DZS_GPON.",
+  "InternetGatewayDevice.X_DZS_GPON",
   "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig.",
+  "InternetGatewayDevice.WANDevice.1.WANPONInterfaceConfig",
   "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.",
+  "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig",
   "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig.",
+  "InternetGatewayDevice.WANDevice.1.X_GponInterafceConfig",
   "InternetGatewayDevice.WANDevice.1.X_GponInterfaceConfig.",
+  "InternetGatewayDevice.WANDevice.1.X_GponInterfaceConfig",
   "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_DZS_WANGponLinkConfig.",
+  "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_DZS_WANGponLinkConfig",
   "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_DZS_WANGponLinkConfig."
+  ,
+  "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_DZS_WANGponLinkConfig"
 ];
 
 const OPTICAL_PARAMETER_NAMES = [
@@ -401,7 +418,8 @@ async function recordOpticalSample(cacheRecord, parsed, source = "genie_sync") {
 async function requestOpticalTelemetryRefresh(deviceId, summary = null) {
   if (!deviceId) return;
 
-  for (const objectName of OPTICAL_REFRESH_OBJECTS) {
+  const objectNames = [...new Set(OPTICAL_REFRESH_OBJECTS.map((item) => String(item || "").trim()).filter(Boolean))];
+  for (const objectName of objectNames) {
     const normalizedObjectName = String(objectName || "").trim();
 
     try {
@@ -411,18 +429,6 @@ async function requestOpticalTelemetryRefresh(deviceId, summary = null) {
       }, { connectionRequest: true });
     } catch {
       // Ignore individual task failures; some models reject unsupported objects.
-    }
-  }
-
-  const parameterNames = buildSafeOpticalParameterNames(summary);
-  if (parameterNames.length > 0) {
-    try {
-      await genieacsClient.runTask(deviceId, {
-        name: "getParameterValues",
-        parameterNames
-      }, { connectionRequest: true });
-    } catch {
-      // Ignore targeted value fetch failures and fall back to what the device already exposes.
     }
   }
 
