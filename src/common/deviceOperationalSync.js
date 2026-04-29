@@ -38,6 +38,19 @@ const OPTICAL_REFRESH_OBJECTS = [
   "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_DZS_WANGponLinkConfig"
 ];
 
+function existingOpticalRefreshObjects(summary) {
+  const objects = [];
+  for (const candidate of OPTICAL_REFRESH_OBJECTS) {
+    const normalized = String(candidate || "").trim().replace(/\.$/, "");
+    if (!normalized) continue;
+    if (readPath(summary, normalized) !== undefined) {
+      objects.push(normalized);
+      objects.push(`${normalized}.`);
+    }
+  }
+  return [...new Set(objects)];
+}
+
 const OPTICAL_PARAMETER_NAMES = [
   "InternetGatewayDevice.X_ALU_OntOpticalParam.RXPower",
   "InternetGatewayDevice.X_ALU_OntOpticalParam.RxPower",
@@ -418,7 +431,9 @@ async function recordOpticalSample(cacheRecord, parsed, source = "genie_sync") {
 async function requestOpticalTelemetryRefresh(deviceId, summary = null) {
   if (!deviceId) return;
 
-  const objectNames = [...new Set(OPTICAL_REFRESH_OBJECTS.map((item) => String(item || "").trim()).filter(Boolean))];
+  const objectNames = summary
+    ? existingOpticalRefreshObjects(summary)
+    : [...new Set(OPTICAL_REFRESH_OBJECTS.map((item) => String(item || "").trim()).filter(Boolean))];
   for (const objectName of objectNames) {
     const normalizedObjectName = String(objectName || "").trim();
 
