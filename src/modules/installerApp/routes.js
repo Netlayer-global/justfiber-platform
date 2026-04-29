@@ -15,6 +15,7 @@ import { NetworkMapAsset } from "../../models/NetworkMapAsset.js";
 import { NetworkTopologyLink } from "../../models/NetworkTopologyLink.js";
 import { OtpEvent } from "../../models/OtpEvent.js";
 import { ConnectionBooking } from "../../models/ConnectionBooking.js";
+import { LeadKycDocument } from "../../models/LeadKycDocument.js";
 import { Customer } from "../../models/Customer.js";
 import { CustomerNotification } from "../../models/CustomerNotification.js";
 import { PlanCatalog } from "../../models/PlanCatalog.js";
@@ -48,6 +49,7 @@ import { setInstallerDemoOtp } from "../../common/installerOtpStore.js";
 import { genieacsClient } from "../../integrations/genieacsClient.js";
 import { internalSubscriberPlatform } from "../../integrations/internalSubscriberPlatform.js";
 import { summarizeGenieDevice } from "../../common/deviceOperationalSync.js";
+import { razorpayClient } from "../../integrations/razorpayClient.js";
 
 export const installerAppRouter = Router();
 
@@ -339,6 +341,119 @@ function buildProvisioningPreview(job, device) {
   };
 }
 
+async function lookupInstallerDeviceBySerialOrId({
+  serialNumber,
+  deviceId,
+  customerId,
+  serviceId
+} = {}) {
+  const normalizedSerial = normalizeInstallerIdentifier(serialNumber);
+  const normalizedDeviceId = normalizeInstallerIdentifier(deviceId);
+  const candidateDeviceIds = [
+    normalizedDeviceId,
+    normalizedSerial ? `ONT-${normalizedSerial}` : null
+  ].filter(Boolean);
+
+  if (candidateDeviceIds.length) {
+    const cachedById = await DeviceOperationalCache.findOne({
+      deviceId: { $in: candidateDeviceIds }
+    })
+      .sort({ updatedAt: -1, lastInformAt: -1 })
+      .lean();
+    if (cachedById) return cachedById;
+  }
+
+  if (normalizedSerial) {
+    const cachedBySerial = await DeviceOperationalCache.findOne({
+      $or: [
+        { serialNumber: normalizedSerial },
+        { serialNumber: normalizedSerial.toLowerCase() },
+        { serialNumber: normalizedSerial.toUpperCase() }
+      ]
+    })
+      .sort({ updatedAt: -1, lastInformAt: -1 })
+      .lean();
+    if (cachedBySerial) return cachedBySerial;
+  }
+
+  try {
+    const liveSummary = await genieacsClient.getRichDeviceSummary({
+      deviceId: candidateDeviceIds[0],
+      serialNumber: normalizedSerial
+    });
+    if (liveSummary) {
+      const parsed = summarizeGenieDevice(liveSummary, candidateDeviceIds[0]);
+      const liveDevice = {
+        deviceId: parsed.deviceId || candidateDeviceIds[0] || `ONT-${normalizedSerial}`,
+        serialNumber: parsed.serialNumber || normalizedSerial || "",
+        productClass: parsed.productClass || "",
+        customerId: customerId || "",
+        serviceId: serviceId || "",
+        onlineStatus: parsed.onlineStatus || "unknown",
+        provisioningState: "live_only",
+        wanInfo: parsed.wanInfo || {},
+        wifiInfo: parsed.wifiInfo || {},
+        opticalInfo: parsed.opticalInfo || {},
+        lanInfo: parsed.lanInfo || {},
+        ...(parsed.lastInformAt ? { lastInformAt: parsed.lastInformAt } : {})
+      };
+      await DeviceOperationalCache.updateOne(
+        { deviceId: liveDevice.deviceId },
+        { $set: liveDevice },
+        { upsert: true }
+      );
+      return liveDevice;
+    }
+
+    if (normalizedSerial) {
+      const liveDevices = await genieacsClient.listDevices(500);
+      const matchedDevice = Array.isArray(liveDevices)
+        ? liveDevices.find((item) => {
+            const itemId = normalizeInstallerIdentifier(item?._id || item?.DeviceID?.ID);
+            const itemSerial = normalizeInstallerIdentifier(
+              item?.DeviceID?.SerialNumber ||
+                item?.InternetGatewayDevice?.DeviceInfo?.SerialNumber
+            );
+            return itemSerial === normalizedSerial || (itemId && itemId.endsWith(normalizedSerial));
+          })
+        : null;
+
+      if (matchedDevice) {
+        const matchedDeviceId = normalizeInstallerIdentifier(matchedDevice._id || matchedDevice?.DeviceID?.ID);
+        const richMatched = await genieacsClient.getRichDeviceSummary({
+          deviceId: matchedDeviceId,
+          serialNumber: normalizedSerial
+        });
+        const parsed = summarizeGenieDevice(richMatched || matchedDevice, matchedDeviceId);
+        const liveDevice = {
+          deviceId: parsed.deviceId || matchedDeviceId || `ONT-${normalizedSerial}`,
+          serialNumber: parsed.serialNumber || normalizedSerial || "",
+          productClass: parsed.productClass || "",
+          customerId: customerId || "",
+          serviceId: serviceId || "",
+          onlineStatus: parsed.onlineStatus || "unknown",
+          provisioningState: "live_only",
+          wanInfo: parsed.wanInfo || {},
+          wifiInfo: parsed.wifiInfo || {},
+          opticalInfo: parsed.opticalInfo || {},
+          lanInfo: parsed.lanInfo || {},
+          ...(parsed.lastInformAt ? { lastInformAt: parsed.lastInformAt } : {})
+        };
+        await DeviceOperationalCache.updateOne(
+          { deviceId: liveDevice.deviceId },
+          { $set: liveDevice },
+          { upsert: true }
+        );
+        return liveDevice;
+      }
+    }
+  } catch (error) {
+    console.error("[installer] Live Genie lookup failed:", error);
+  }
+
+  return null;
+}
+
 async function resolveJobDevice(job) {
   const finalSerialNumber = normalizeInstallerIdentifier(
     job.deviceContext?.finalSerialNumber ||
@@ -347,35 +462,14 @@ async function resolveJobDevice(job) {
       null
   );
   const finalDeviceId = normalizeInstallerIdentifier(job.deviceContext?.finalDeviceId);
-  const candidateDeviceIds = [
-    finalDeviceId,
-    finalSerialNumber ? `ONT-${finalSerialNumber}` : null
-  ].filter(Boolean);
-
-  if (candidateDeviceIds.length) {
-    const deviceById = await DeviceOperationalCache.findOne({
-      deviceId: { $in: candidateDeviceIds }
-    })
-      .sort({ updatedAt: -1, lastInformAt: -1 })
-      .lean();
-    if (deviceById) {
-      return deviceById;
-    }
-  }
-
-  if (finalSerialNumber) {
-    const deviceBySerial = await DeviceOperationalCache.findOne({
-      $or: [
-        { serialNumber: finalSerialNumber },
-        { serialNumber: finalSerialNumber.toLowerCase() },
-        { serialNumber: finalSerialNumber.toUpperCase() }
-      ]
-    })
-      .sort({ updatedAt: -1, lastInformAt: -1 })
-      .lean();
-    if (deviceBySerial) {
-      return deviceBySerial;
-    }
+  const resolvedLiveOrCached = await lookupInstallerDeviceBySerialOrId({
+    serialNumber: finalSerialNumber,
+    deviceId: finalDeviceId,
+    customerId: job.customerId,
+    serviceId: job.serviceId
+  });
+  if (resolvedLiveOrCached) {
+    return resolvedLiveOrCached;
   }
 
   const fallbackCached = await DeviceOperationalCache.findOne({
@@ -388,57 +482,6 @@ async function resolveJobDevice(job) {
     .lean();
   if (fallbackCached) {
     return fallbackCached;
-  }
-
-  try {
-    const liveSummary = await genieacsClient.getRichDeviceSummary({
-      deviceId: candidateDeviceIds[0],
-      serialNumber: finalSerialNumber
-    });
-    if (liveSummary) {
-      return {
-        ...summarizeGenieDevice(liveSummary, candidateDeviceIds[0]),
-        customerId: job.customerId,
-        serviceId: job.serviceId,
-        provisioningState: "live_only",
-        updatedAt: new Date()
-      };
-    }
-
-    if (finalSerialNumber) {
-      const liveDevices = await genieacsClient.listDevices(500);
-      const matchedDevice = Array.isArray(liveDevices)
-        ? liveDevices.find((item) => {
-            const itemId = normalizeInstallerIdentifier(item?._id || item?.DeviceID?.ID);
-            const itemSerial = normalizeInstallerIdentifier(
-              item?.DeviceID?.SerialNumber ||
-                item?.InternetGatewayDevice?.DeviceInfo?.SerialNumber
-            );
-            return (
-              itemSerial === finalSerialNumber ||
-              (itemId && itemId.endsWith(finalSerialNumber))
-            );
-          })
-        : null;
-
-      if (matchedDevice) {
-        const fallbackDeviceId = normalizeInstallerIdentifier(matchedDevice._id || matchedDevice?.DeviceID?.ID);
-        const richMatched = await genieacsClient.getRichDeviceSummary({
-          deviceId: fallbackDeviceId,
-          serialNumber: finalSerialNumber
-        });
-        const parsed = summarizeGenieDevice(richMatched || matchedDevice, fallbackDeviceId);
-        return {
-          ...parsed,
-          customerId: job.customerId,
-          serviceId: job.serviceId,
-          provisioningState: "live_only",
-          updatedAt: new Date()
-        };
-      }
-    }
-  } catch (error) {
-    console.error("[installer] Live Genie lookup failed:", error);
   }
 
   return null;
@@ -1037,16 +1080,34 @@ installerAppRouter.post(
     if (duplicate) {
       throw new ApiError(409, "Serial number already bound to another customer");
     }
+    const resolvedDevice = await lookupInstallerDeviceBySerialOrId({
+      serialNumber: normalizedSerial,
+      deviceId: payload.deviceId,
+      customerId: job.customerId,
+      serviceId: job.serviceId
+    });
     job.status = "ont_scanned";
     job.deviceContext = {
       ...(job.deviceContext || {}),
       scannedSerialNumber: normalizedSerial,
       finalSerialNumber: normalizedSerial,
-      ...(payload.deviceId ? { finalDeviceId: payload.deviceId } : {})
+      ...((resolvedDevice?.deviceId || payload.deviceId)
+        ? { finalDeviceId: resolvedDevice?.deviceId || payload.deviceId }
+        : {})
     };
     pushTimeline(job, "job.device_scanned", req.installer._id, normalizedSerial);
     await job.save();
-    return ok(res, job);
+    return ok(res, {
+      ...job.toObject(),
+      resolvedDevice: resolvedDevice
+        ? {
+            deviceId: resolvedDevice.deviceId,
+            serialNumber: resolvedDevice.serialNumber,
+            productClass: resolvedDevice.productClass,
+            onlineStatus: resolvedDevice.onlineStatus
+          }
+        : null
+    });
   })
 );
 
@@ -1277,19 +1338,60 @@ installerAppRouter.post(
     const payload = serialSchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
     const normalizedSerial = normalizeInstallerIdentifier(payload.serialNumber);
-    const duplicate = await DeviceOperationalCache.findOne({ serialNumber: normalizedSerial, customerId: { $ne: job.customerId } });
+
+    // Conflict check: is this serial already bound to a different customer?
+    const duplicate = await DeviceOperationalCache.findOne({
+      $or: [
+        { serialNumber: normalizedSerial },
+        { serialNumber: normalizedSerial.toLowerCase() },
+        { serialNumber: normalizedSerial.toUpperCase() }
+      ],
+      customerId: { $ne: job.customerId }
+    });
     if (duplicate) {
-      throw new ApiError(409, "Serial number already bound to another customer");
+      let linkedName = "another customer";
+      try {
+        const linkedCustomer = await Customer.findOne({ customerId: duplicate.customerId })
+          .select("fullName customerId phone")
+          .lean();
+        if (linkedCustomer?.fullName) {
+          linkedName = `${linkedCustomer.fullName} (${linkedCustomer.customerId || duplicate.customerId})`;
+        }
+      } catch (_) {}
+      throw new ApiError(409, `Router already linked to ${linkedName}. Use a different ONT.`, {
+        linkedCustomerId: duplicate.customerId,
+        linkedCustomerName: linkedName
+      });
     }
+
+    // Look up the device in cache (this customer's own device or unlinked)
+    const cachedDevice = await lookupInstallerDeviceBySerialOrId({
+      serialNumber: normalizedSerial,
+      deviceId: payload.deviceId,
+      customerId: job.customerId,
+      serviceId: job.serviceId
+    });
+
+    const resolvedDeviceId = cachedDevice?.deviceId || payload.deviceId || null;
+
     job.status = "ont_scanned";
     job.deviceContext = {
       ...(job.deviceContext || {}),
       manualSerialNumber: normalizedSerial,
       finalSerialNumber: normalizedSerial,
-      ...(payload.deviceId ? { finalDeviceId: payload.deviceId } : {})
+      ...(resolvedDeviceId ? { finalDeviceId: resolvedDeviceId } : {})
     };
     pushTimeline(job, "job.manual_serial", req.installer._id, normalizedSerial);
     await job.save();
+
+    // Link this device in cache to the customer so diagnostics can find it
+    if (cachedDevice?._id) {
+      await DeviceOperationalCache.updateOne(
+        { _id: cachedDevice._id },
+        { $set: { customerId: job.customerId, serviceId: job.serviceId || cachedDevice.serviceId || null } }
+      );
+    }
+
     return ok(res, job);
   })
 );
@@ -2038,5 +2140,90 @@ installerAppRouter.post(
       throw new ApiError(404, "Notification not found");
     }
     return ok(res, notification);
+  })
+);
+
+installerAppRouter.delete(
+  "/bookings/by-number/:bookingNumber",
+  asyncHandler(async (req, res) => {
+    const booking = await ConnectionBooking.findOne({ bookingNumber: req.params.bookingNumber });
+    if (!booking) throw new ApiError(404, "Booking not found");
+    if (booking.source !== "installer_app") throw new ApiError(403, "Not an installer-created booking");
+    const blocked = ["completed", "installed", "active"];
+    if (blocked.includes(String(booking.status || "").toLowerCase())) {
+      throw new ApiError(409, `Cannot delete a booking with status '${booking.status}'`);
+    }
+    await ConnectionBooking.deleteOne({ _id: booking._id });
+    return ok(res, { deleted: true, bookingNumber: booking.bookingNumber });
+  })
+);
+
+installerAppRouter.post(
+  "/bookings/by-number/:bookingNumber/kyc",
+  asyncHandler(async (req, res) => {
+    const booking = await ConnectionBooking.findOne({ bookingNumber: req.params.bookingNumber });
+    if (!booking) throw new ApiError(404, "Booking not found");
+
+    const aadhaarFront = String(req.body?.aadhaarFront || "").trim() || undefined;
+    const aadhaarBack = String(req.body?.aadhaarBack || "").trim() || undefined;
+    const selfie = String(req.body?.selfie || "").trim() || undefined;
+    const documentNumber = String(req.body?.documentNumber || "").trim() || undefined;
+    const mobile = String(booking.personalDetails?.mobile || "").replace(/\D/g, "") || undefined;
+
+    let kycDoc = await LeadKycDocument.findOne({ connectionBookingId: booking._id });
+    let isCreated = false;
+    if (kycDoc) {
+      if (aadhaarFront) kycDoc.frontImageUrl = aadhaarFront;
+      if (aadhaarBack) kycDoc.backImageUrl = aadhaarBack;
+      if (selfie) kycDoc.selfieImageUrl = selfie;
+      if (documentNumber) kycDoc.documentNumber = documentNumber;
+      await kycDoc.save();
+    } else {
+      kycDoc = await LeadKycDocument.create({
+        connectionBookingId: booking._id,
+        leadId: booking.leadId || undefined,
+        mobile,
+        documentType: "aadhaar",
+        frontImageUrl: aadhaarFront,
+        backImageUrl: aadhaarBack,
+        selfieImageUrl: selfie,
+        documentNumber,
+      });
+      isCreated = true;
+    }
+    return ok(res, kycDoc.toObject(), { created: isCreated });
+  })
+);
+
+installerAppRouter.post(
+  "/bookings/by-number/:bookingNumber/payment-link",
+  asyncHandler(async (req, res) => {
+    const booking = await ConnectionBooking.findOne({ bookingNumber: req.params.bookingNumber });
+    if (!booking) throw new ApiError(404, "Booking not found");
+    if (booking.source !== "installer_app") throw new ApiError(403, "Not an installer-created booking");
+    const amount =
+      Number(req.body?.amount || 0) ||
+      Number(booking.selectedPlan?.totalAmount || booking.selectedPlan?.amount || booking.payment?.amount || 0);
+    if (!amount || amount <= 0) throw new ApiError(400, "A valid amount is required to generate the payment link");
+
+    const link = await razorpayClient.createPaymentLink({
+      amount,
+      description: booking.selectedPlan?.planName
+        ? `${booking.selectedPlan.planName} — Booking ${booking.bookingNumber}`
+        : `Booking ${booking.bookingNumber}`,
+      customerName: booking.personalDetails?.fullName || undefined,
+      customerContact: booking.personalDetails?.mobile || undefined,
+      customerEmail: booking.personalDetails?.email || undefined,
+      referenceId: booking.bookingNumber,
+      notes: { bookingId: String(booking._id), bookingNumber: booking.bookingNumber },
+    });
+
+    booking.payment = {
+      ...(booking.payment || {}),
+      razorpayPaymentLinkId: link.id,
+      razorpayPaymentLinkUrl: link.short_url,
+    };
+    await booking.save();
+    return ok(res, { paymentLink: link.short_url, linkId: link.id, amount });
   })
 );
