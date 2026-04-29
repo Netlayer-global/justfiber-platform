@@ -318,8 +318,6 @@ async function requestOpticalTelemetryRefresh(deviceId) {
 
   for (const objectName of OPTICAL_REFRESH_OBJECTS) {
     const normalizedObjectName = String(objectName || "").trim();
-    const objectPath =
-      normalizedObjectName.endsWith(".") ? normalizedObjectName.slice(0, -1) : normalizedObjectName;
 
     try {
       await genieacsClient.runTask(deviceId, {
@@ -329,27 +327,6 @@ async function requestOpticalTelemetryRefresh(deviceId) {
     } catch {
       // Ignore individual task failures; some models reject unsupported objects.
     }
-
-    if (objectPath) {
-      try {
-        await genieacsClient.runTask(deviceId, {
-          name: "getParameterNames",
-          parameterPath: objectPath,
-          nextLevel: false
-        }, { connectionRequest: true });
-      } catch {
-        // Some models or Genie versions reject discovery tasks; ignore and continue.
-      }
-    }
-  }
-
-  try {
-    await genieacsClient.runTask(deviceId, {
-      name: "getParameterValues",
-      parameterNames: OPTICAL_PARAMETER_NAMES
-    }, { connectionRequest: true });
-  } catch {
-    // Ignore explicit parameter fetch failures and fall back to whatever the device exposes.
   }
 
   await wait(3200);
