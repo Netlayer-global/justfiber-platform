@@ -73,6 +73,10 @@ async function findDeviceByQuery(query) {
   return null;
 }
 
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function deviceIdVariants(deviceId) {
   const raw = String(deviceId || "").trim();
   if (!raw) return [];
@@ -150,6 +154,28 @@ function isUsableDeviceSummary(summary) {
         summary._id
       )
   );
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function summaryHasExpectedValue(summary, candidatePaths, expectedValue) {
+  if (!summary || expectedValue === undefined || expectedValue === null || expectedValue === "") {
+    return true;
+  }
+  const normalizedExpected = String(expectedValue).trim();
+  if (!normalizedExpected) {
+    return true;
+  }
+  for (const path of candidatePaths) {
+    const normalizedPath = String(path || "").split("|")[0];
+    const value = extractNodeValue(readNodeAtPath(summary, normalizedPath));
+    if (value !== undefined && value !== null && String(value).trim() === normalizedExpected) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function collectMatchingPaths(root, predicate, basePath = "", acc = []) {
@@ -287,10 +313,31 @@ export class GenieacsClient {
       }
     }
     if (serialNumber) {
-      const bySerial = await findDeviceByQuery({ "DeviceID.SerialNumber": serialNumber });
-      if (bySerial) return bySerial;
-      const byLegacySerial = await findDeviceByQuery({ "InternetGatewayDevice.DeviceInfo.SerialNumber": serialNumber });
-      if (byLegacySerial) return byLegacySerial;
+      const serialVariants = [...new Set([
+        String(serialNumber || "").trim(),
+        String(serialNumber || "").trim().toUpperCase(),
+        String(serialNumber || "").trim().toLowerCase()
+      ].filter(Boolean))];
+
+      for (const variant of serialVariants) {
+        const bySerial = await findDeviceByQuery({ "DeviceID.SerialNumber": variant });
+        if (bySerial) return bySerial;
+        const byLegacySerial = await findDeviceByQuery({ "InternetGatewayDevice.DeviceInfo.SerialNumber": variant });
+        if (byLegacySerial) return byLegacySerial;
+      }
+
+      const escapedSerial = escapeRegex(serialVariants[0]);
+      if (escapedSerial) {
+        const byDeviceIdSuffix = await findDeviceByQuery({
+          "DeviceID.ID": { $regex: `${escapedSerial}$`, $options: "i" }
+        });
+        if (byDeviceIdSuffix) return byDeviceIdSuffix;
+
+        const byInternalIdSuffix = await findDeviceByQuery({
+          _id: { $regex: `${escapedSerial}$`, $options: "i" }
+        });
+        if (byInternalIdSuffix) return byInternalIdSuffix;
+      }
     }
     return null;
   }
@@ -512,6 +559,31 @@ export class GenieacsClient {
     };
   }
 
+  async waitForWifiConfigApplied(deviceId, {
+    ssid24,
+    ssid5,
+    ssid24Paths = [],
+    ssid5Paths = [],
+    attempts = 4,
+    delayMs = 1500
+  } = {}) {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const summary = await this.getRichDeviceSummary({ deviceId });
+      if (!isUsableDeviceSummary(summary)) {
+        await delay(delayMs);
+        continue;
+      }
+      const matched24 = summaryHasExpectedValue(summary, ssid24Paths, ssid24);
+      const matched5 = summaryHasExpectedValue(summary, ssid5Paths, ssid5);
+      if (matched24 && matched5) {
+        return { ok: true, matched24, matched5, attempts: attempt + 1 };
+      }
+      await delay(delayMs);
+    }
+
+    return { ok: false, matched24: false, matched5: false, attempts };
+  }
+
   async pushAccessConfig({
     deviceId,
     brand = "generic",
@@ -541,6 +613,8 @@ export class GenieacsClient {
     const dynamicPass24Paths = discoverDynamicConfigPaths(liveSummary, "pass24");
     const dynamicSsid5Paths = discoverDynamicConfigPaths(liveSummary, "ssid5");
     const dynamicPass5Paths = discoverDynamicConfigPaths(liveSummary, "pass5");
+    const wifiReadbackPaths24 = [...new Set([...(dynamicSsid24Paths || []), ...(profile.ssid24Path || [])])];
+    const wifiReadbackPaths5 = [...new Set([...(dynamicSsid5Paths || []), ...(profile.ssid5Path || [])])];
     const normalizedSsid24 = typeof ssid24 === "string" ? ssid24.trim() : ssid24;
     const normalizedSsid5 = typeof ssid5 === "string" ? ssid5.trim() : ssid5;
     const normalizedPass24 = typeof (wifiPassword24 ?? wifiPassword) === "string"
@@ -558,12 +632,17 @@ export class GenieacsClient {
     });
     const values = [];
     const wifiValues = [];
+    const pppoeValues = [];
     const push = (pathOrPaths, value, valueType, transform = (input) => input, options = {}) => {
       const wifiMultiPath = Boolean(options.wifiMultiPath) || (
         pathOrPaths === profile.ssid24Path ||
         pathOrPaths === profile.pass24Path ||
         pathOrPaths === profile.ssid5Path ||
         pathOrPaths === profile.pass5Path
+      );
+      const pppoeMultiPath = Boolean(options.pppoeMultiPath) || (
+        pathOrPaths === profile.pppoeUsernamePath ||
+        pathOrPaths === profile.pppoePasswordPath
       );
       const configMultiPath = Boolean(options.configMultiPath);
       const dynamicPaths =
@@ -602,14 +681,22 @@ export class GenieacsClient {
           values.push(entry);
           if (wifiMultiPath) {
             wifiValues.push(entry);
+          } else if (pppoeMultiPath) {
+            pppoeValues.push(entry);
           }
         }
       }
     };
     const normalizedBrand = String(brand || "").toLowerCase();
     const multiPathPppoe = ["dasan", "nokia", "zte", "syrotech", "tp-link", "secureeye", "gx", "zyxel"].includes(normalizedBrand);
-    push(profile.pppoeUsernamePath, pppoeUsername, undefined, (input) => input, { configMultiPath: multiPathPppoe });
-    push(profile.pppoePasswordPath, pppoePassword, undefined, (input) => input, { configMultiPath: multiPathPppoe });
+    push(profile.pppoeUsernamePath, pppoeUsername, undefined, (input) => input, {
+      configMultiPath: multiPathPppoe,
+      pppoeMultiPath: true
+    });
+    push(profile.pppoePasswordPath, pppoePassword, undefined, (input) => input, {
+      configMultiPath: multiPathPppoe,
+      pppoeMultiPath: true
+    });
     if (vlanId !== undefined && vlanId !== null && vlanId !== "") {
       push(profile.vlanPath, vlanId, "xsd:unsignedInt", Number);
     }
@@ -633,17 +720,28 @@ export class GenieacsClient {
     }
 
     if (values.length > 0) {
-      const nonWifiValues = values.filter((entry) => !wifiValues.includes(entry));
-      if (nonWifiValues.length > 0) {
-        for (const entry of nonWifiValues) {
-          await this.setParameterValues(deviceId, [entry], { connectionRequest: true });
+      if (wifiValues.length > 0) {
+        await this.setParameterValues(deviceId, wifiValues, { connectionRequest: true });
+        const wifiSync = await this.waitForWifiConfigApplied(deviceId, {
+          ssid24: unifyWifiAliases ? normalizedSsid24 : ssid24,
+          ssid5: unifyWifiAliases ? normalizedSsid24 : ssid5,
+          ssid24Paths: unifyWifiAliases ? [...wifiReadbackPaths24, ...wifiReadbackPaths5] : wifiReadbackPaths24,
+          ssid5Paths: unifyWifiAliases ? [...wifiReadbackPaths24, ...wifiReadbackPaths5] : wifiReadbackPaths5
+        });
+        if (!wifiSync.ok) {
+          throw new Error(`Wi-Fi configuration did not confirm before PPPoE push for ${deviceId}`);
         }
       }
 
-      if (wifiValues.length > 0) {
-        for (const entry of wifiValues) {
-          await this.setParameterValues(deviceId, [entry], { connectionRequest: true });
-        }
+      const otherConfigValues = values.filter(
+        (entry) => !wifiValues.includes(entry) && !pppoeValues.includes(entry)
+      );
+      if (otherConfigValues.length > 0) {
+        await this.setParameterValues(deviceId, otherConfigValues, { connectionRequest: true });
+      }
+
+      if (pppoeValues.length > 0) {
+        await this.setParameterValues(deviceId, pppoeValues, { connectionRequest: true });
       }
     }
 
