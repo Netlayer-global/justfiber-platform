@@ -801,6 +801,7 @@ async function getLinkedCustomerAndDevice({ customerUser, requestedCustomerId })
 }
 
 async function buildCustomerConnectionSummary(customer) {
+  const billingView = await getLiveBillingView(customer);
   const device = await DeviceOperationalCache.findOne({ customerId: customer.customerId }).lean();
   return {
     customerId: customer.customerId,
@@ -811,8 +812,8 @@ async function buildCustomerConnectionSummary(customer) {
     email: customer.email || "",
     planName: customer.planName || "",
     status: customer.operationalStatus || "unknown",
-    dueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
-    paymentStatus: customer.billingSnapshot?.lastPaymentStatus || "unknown",
+    dueAmount: billingView.dueAmount,
+    paymentStatus: billingView.paymentStatus,
     billMode: customer.billingSnapshot?.billMode || "",
     wifiName: device?.wifiInfo?.ssid24Masked || device?.wifiInfo?.ssid24 || device?.wifiInfo?.ssid5Masked || device?.wifiInfo?.ssid5 || "",
     onlineStatus: device?.onlineStatus || "unknown",
@@ -821,6 +822,46 @@ async function buildCustomerConnectionSummary(customer) {
       || customer.address?.line1
       || customer.address?.address
       || "",
+  };
+}
+
+async function getLiveBillingView(customer) {
+  if (!customer?.customerId) {
+    return {
+      dueAmount: 0,
+      paymentStatus: "unknown",
+      latestInvoice: null,
+      openInvoices: [],
+      invoiceCount: 0
+    };
+  }
+
+  const [invoiceCount, latestInvoice, openInvoices] = await Promise.all([
+    BillingInvoice.countDocuments({ customerId: customer.customerId }),
+    BillingInvoice.findOne({ customerId: customer.customerId }).sort({ generatedAt: -1, createdAt: -1 }).lean(),
+    BillingInvoice.find({
+      customerId: customer.customerId,
+      paymentStatus: { $in: ["pending", "overdue", "partially_paid"] }
+    }).lean()
+  ]);
+
+  const dueAmount = openInvoices.length
+    ? openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
+    : invoiceCount > 0
+      ? 0
+      : Number(customer.billingSnapshot?.dueAmount || 0);
+
+  const paymentStatus =
+    dueAmount > 0
+      ? (openInvoices[0]?.paymentStatus || latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "pending")
+      : "paid";
+
+  return {
+    dueAmount: Number(Number(dueAmount || 0).toFixed(2)),
+    paymentStatus,
+    latestInvoice,
+    openInvoices,
+    invoiceCount
   };
 }
 
@@ -1282,12 +1323,15 @@ async function createConnectionBooking({ customerUser, payload }) {
   if (!plan) {
     throw new ApiError(404, "Plan not found");
   }
-  const feasibility = await evaluateFeasibility({
-    lat: payload.lat,
-    lng: payload.lng,
-    address: payload.fullAddress,
-    pinCode: payload.pinCode
-  });
+  const skipFeasibility = payload.source === "installer_app";
+  const feasibility = skipFeasibility
+    ? { feasible: true, serviceStatus: "active", message: "Installer-verified location", matchedZone: null }
+    : await evaluateFeasibility({
+        lat: payload.lat,
+        lng: payload.lng,
+        address: payload.fullAddress,
+        pinCode: payload.pinCode || ""
+      });
   if (!feasibility.feasible) {
     throw new ApiError(409, feasibility.message || "Selected address is not serviceable");
   }
@@ -2056,7 +2100,7 @@ customerPortalRouter.post(
     const feasibility = await evaluateFeasibility({
       lat: payload.lat,
       lng: payload.lng,
-      address: payload.address,
+      address: `${payload.address}, ${payload.pinCode}`,
       pinCode: payload.pinCode
     });
     const resolvedPlan = payload.planCode
@@ -2430,6 +2474,7 @@ customerPortalRouter.get(
     if (!customer) {
       throw new ApiError(404, "Linked customer not found");
     }
+    const billingView = await getLiveBillingView(customer);
     return ok(res, {
       state: "active_customer",
       customerId: customer.customerId,
@@ -2443,9 +2488,10 @@ customerPortalRouter.get(
         || customer.address?.address
         || "",
       remainingDays: customer.expiryAt ? Math.max(0, Math.ceil((new Date(customer.expiryAt) - Date.now()) / (1000 * 60 * 60 * 24))) : null,
-      billDueAmount: Number(customer.billingSnapshot?.dueAmount || 0),
+      billDueAmount: billingView.dueAmount,
       dataLeftMb: 0,
       status: customer.operationalStatus,
+      paymentStatus: billingView.paymentStatus,
       quickActions: ["pay_bill", "wifi_settings", "router_reboot", "raise_complaint", "change_plan"],
       payBill: true,
       viewDetails: true
@@ -2892,14 +2938,20 @@ customerPortalRouter.get(
         0
     );
     const openInvoices = invoices.filter((invoice) => String(invoice.paymentStatus || "").toLowerCase() !== "paid");
-    const dueAmount = openInvoices.length
-      ? openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
-      : Number(customer.billingSnapshot?.dueAmount || 0);
+    const billingView = {
+      dueAmount: openInvoices.length
+        ? openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
+        : invoices.length > 0
+          ? 0
+          : Number(customer.billingSnapshot?.dueAmount || 0),
+      paymentStatus:
+        openInvoices.length > 0
+          ? (openInvoices[0]?.paymentStatus || latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "pending")
+          : "paid"
+    };
     const collections = customer.billingSnapshot?.collections || {};
-    const effectivePaymentStatus =
-      dueAmount > 0
-        ? (latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "pending")
-        : "paid";
+    const dueAmount = billingView.dueAmount;
+    const effectivePaymentStatus = billingView.paymentStatus;
 
     return ok(res, {
       customerId: customer.customerId,
@@ -3032,17 +3084,13 @@ customerPortalRouter.get(
     if (!customer) {
       throw new ApiError(404, "Billing summary not available");
     }
-    const [service, invoiceCount, latestInvoice] = await Promise.all([
+    const [service, billingView] = await Promise.all([
       SubscriberService.findOne({ customerId: customer.customerId, status: { $in: ["active", "suspended", "expired"] } })
         .sort({ updatedAt: -1 })
         .lean(),
-      BillingInvoice.countDocuments({ customerId: customer.customerId }),
-      BillingInvoice.findOne({ customerId: customer.customerId }).sort({ generatedAt: -1, createdAt: -1 }).lean()
+      getLiveBillingView(customer)
     ]);
-    const openInvoices = await BillingInvoice.find({
-      customerId: customer.customerId,
-      paymentStatus: { $in: ["pending", "overdue"] }
-    }).lean();
+    const { invoiceCount, latestInvoice, dueAmount, paymentStatus: effectivePaymentStatus } = billingView;
     const nextBillingDate = service?.nextBillingDate || customer.expiryAt || latestInvoice?.dueDate || null;
     const billCycle =
       service?.billingPeriodMonths
@@ -3052,13 +3100,6 @@ customerPortalRouter.get(
           latestInvoice?.metadata?.billCycleLabel ||
           "Monthly";
     const collections = customer.billingSnapshot?.collections || {};
-    const dueAmount = openInvoices.length
-      ? openInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0)
-      : Number(customer.billingSnapshot?.dueAmount || 0);
-    const effectivePaymentStatus =
-      dueAmount > 0
-        ? (latestInvoice?.paymentStatus || customer.billingSnapshot?.lastPaymentStatus || "pending")
-        : "paid";
     return ok(res, {
       currentPlan: customer.planName,
       dueDate: nextBillingDate,
