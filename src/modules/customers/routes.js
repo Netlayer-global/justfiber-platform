@@ -600,9 +600,14 @@ function renderCustomerCafPdf({ customer, plan, template, kycDoc }) {
 
 async function buildCustomerResponse(customer) {
   const normalizedPhone = String(customer.phone || customer.mobile || "").replace(/\D/g, "");
+  const bookingClauses = [
+    ...(normalizedPhone ? [{ "personalDetails.mobile": normalizedPhone }] : []),
+    ...(customer.customerId ? [{ "assignment.provisionedIds.customerId": customer.customerId }] : []),
+    ...(customer.serviceId ? [{ "assignment.provisionedIds.serviceId": customer.serviceId }] : [])
+  ];
   const [lead, latestBooking, latestInstallerJob] = await Promise.all([
     normalizedPhone ? Lead.findOne({ mobile: normalizedPhone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
-    normalizedPhone ? ConnectionBooking.findOne({ "personalDetails.mobile": normalizedPhone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
+    bookingClauses.length ? ConnectionBooking.findOne({ $or: bookingClauses }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
     InstallerJob.findOne({
       $or: [
         ...(customer.customerId ? [{ customerId: customer.customerId }] : []),

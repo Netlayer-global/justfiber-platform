@@ -381,6 +381,9 @@ function SessionsTab({ customer }: { customer: Customer }) {
 }
 
 function DocumentsTab({ customer }: { customer: Customer }) {
+  const cafPdfUrl =
+    customer.cafDocument?.pdfUrl ||
+    (customer.customerId ? `/api/v1/admin/customers/${encodeURIComponent(customer.customerId)}/caf/pdf` : '')
   const docCards = [
     customer.kycDocument?.frontImageUrl
       ? { label: 'Aadhaar Front', url: customer.kycDocument.frontImageUrl }
@@ -418,8 +421,8 @@ function DocumentsTab({ customer }: { customer: Customer }) {
             <p className="mt-1 text-xs text-slate-500">
               Generated {formatDate(customer.cafDocument?.generatedAt || customer.createdAt, true)}
             </p>
-            {customer.cafDocument?.pdfUrl ? (
-              <a href={customer.cafDocument.pdfUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex">
+            {cafPdfUrl ? (
+              <a href={cafPdfUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex">
                 <Button variant="secondary" size="sm">Open PDF</Button>
               </a>
             ) : (

@@ -719,13 +719,17 @@ function mapCustomer(customer: any): Customer {
     serviceRequests: Array.isArray(customer.serviceRequests)
       ? customer.serviceRequests.map(mapCustomerServiceRequest)
       : undefined,
-    cafDocument: customer.cafDocument
+    cafDocument: customer.customerId || customer.cafDocument
       ? {
-          cafNumber: customer.cafDocument.cafNumber || '',
-          generatedAt: customer.cafDocument.generatedAt || customer.cafDocument.createdAt || undefined,
-          templateKey: customer.cafDocument.templateKey || '',
-          templateName: customer.cafDocument.templateName || '',
-          pdfUrl: customer.cafDocument.pdfUrl || '',
+          cafNumber: customer.cafDocument?.cafNumber || '',
+          generatedAt: customer.cafDocument?.generatedAt || customer.cafDocument?.createdAt || undefined,
+          templateKey: customer.cafDocument?.templateKey || '',
+          templateName: customer.cafDocument?.templateName || '',
+          pdfUrl:
+            customer.cafDocument?.pdfUrl ||
+            (customer.customerId
+              ? `/api/v1/admin/customers/${encodeURIComponent(customer.customerId)}/caf/pdf`
+              : ''),
         }
       : null,
     kycDocument: customer.kycDocument
