@@ -447,6 +447,7 @@ export default function SalesPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null)
   const [updatingLeadId, setUpdatingLeadId] = useState<string | null>(null)
+  const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [leadView, setLeadView] = useState<LeadDeskView>('unassigned')
   const [bookingView, setBookingView] = useState<BookingDeskView>('all')
@@ -603,6 +604,28 @@ export default function SalesPage() {
       toast.error(error instanceof Error ? error.message : 'Failed to delete booking')
     } finally {
       setBookingActionBusy(false)
+    }
+  }
+
+  async function handleDeleteLead(leadId: string, leadNumber: string) {
+    if (!window.confirm(`Delete lead ${leadNumber}? Any non-paid draft booking linked to it will also be removed. This cannot be undone.`)) return
+    try {
+      setDeletingLeadId(leadId)
+      const res = await adminAPI.deleteSalesLead(leadId)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete lead')
+        return
+      }
+      setLeads((current) => current.filter((lead) => lead.id !== leadId))
+      if (Array.isArray(res.data?.removedBookings) && res.data?.removedBookings.length) {
+        const removed = new Set(res.data.removedBookings)
+        setBookings((current) => current.filter((booking) => !removed.has(booking.bookingNumber)))
+      }
+      toast.success(`Lead ${leadNumber} deleted`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete lead')
+    } finally {
+      setDeletingLeadId(null)
     }
   }
 
@@ -1091,6 +1114,14 @@ export default function SalesPage() {
                       onClick={() => void adminAPI.downloadLeadCaf(lead.id).catch(() => toast.error('Failed to download CAF'))}
                     >
                       Download CAF
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={deletingLeadId === lead.id}
+                      onClick={() => void handleDeleteLead(lead.id, lead.leadNumber || lead.id)}
+                    >
+                      {deletingLeadId === lead.id ? 'Deleting...' : 'Delete Lead'}
                     </button>
                   </div>
 

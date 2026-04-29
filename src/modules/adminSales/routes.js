@@ -363,6 +363,51 @@ adminSalesRouter.patch(
 );
 
 adminSalesRouter.delete(
+  "/sales/leads/:leadId",
+  requirePermission(permissions.customerUpdate),
+  asyncHandler(async (req, res) => {
+    const lead = await Lead.findById(req.params.leadId);
+    if (!lead) throw new ApiError(404, "Lead not found");
+
+    const linkedBookings = await ConnectionBooking.find({ leadId: lead._id })
+      .select("bookingNumber status payment")
+      .lean();
+    const blockingBooking = linkedBookings.find((booking) => {
+      const status = String(booking.status || "").toLowerCase();
+      const paymentStatus = String(booking.payment?.status || "").toLowerCase();
+      return (
+        ["completed", "installed", "active", "assigned", "in_progress", "paid"].includes(status) ||
+        paymentStatus === "paid"
+      );
+    });
+    if (blockingBooking) {
+      throw new ApiError(
+        409,
+        `Cannot delete lead while booking ${blockingBooking.bookingNumber || ""} is '${blockingBooking.status || "active"}'`
+      );
+    }
+
+    await Promise.all([
+      ConnectionBooking.deleteMany({ leadId: lead._id }),
+      LeadKycDocument.deleteMany({
+        $or: [
+          { leadId: lead._id },
+          ...(linkedBookings.length ? [{ connectionBookingId: { $in: linkedBookings.map((booking) => booking._id).filter(Boolean) } }] : []),
+        ],
+      }),
+      Lead.deleteOne({ _id: lead._id }),
+    ]);
+
+    return ok(res, {
+      deleted: true,
+      leadId: String(lead._id),
+      leadNumber: lead.leadNumber || "",
+      removedBookings: linkedBookings.map((booking) => booking.bookingNumber).filter(Boolean),
+    });
+  })
+);
+
+adminSalesRouter.delete(
   "/sales/bookings/:bookingId",
   requirePermission(permissions.customerUpdate),
   asyncHandler(async (req, res) => {

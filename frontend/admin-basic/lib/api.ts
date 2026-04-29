@@ -1747,6 +1747,8 @@ export const adminAPI = {
   },
   deleteSalesBooking: (bookingId: string) =>
     request<{ deleted: boolean; bookingId: string; bookingNumber: string }>(`/api/v1/admin/sales/bookings/${bookingId}`, { method: 'DELETE' }),
+  deleteSalesLead: (leadId: string) =>
+    request<{ deleted: boolean; leadId: string; leadNumber: string; removedBookings?: string[] }>(`/api/v1/admin/sales/leads/${leadId}`, { method: 'DELETE' }),
   generateBookingPaymentLink: (bookingId: string, amount?: number) =>
     request<{ paymentLink: string; linkId: string; amount: number }>(`/api/v1/admin/sales/bookings/${bookingId}/payment-link`, {
       method: 'POST',
