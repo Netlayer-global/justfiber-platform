@@ -7,6 +7,22 @@ import type { FranchiseProfile } from '@/lib/types'
 import { Download, Loader } from 'lucide-react'
 import { toast } from 'sonner'
 
+type ZonePermissionDraft = {
+  inheritBillingProfile: boolean
+  inheritInvoiceTemplate: boolean
+  inheritPlans: boolean
+  inheritPaymentGateway: boolean
+  inheritRouterVisibility: boolean
+  useParentRouters: boolean
+  canCreateSubZone: boolean
+  allowCustomerManagement: boolean
+  allowBilling: boolean
+  allowTickets: boolean
+  allowJobs: boolean
+  allowNetwork: boolean
+  allowSettings: boolean
+}
+
 type ZoneRow = {
   companyName: string
   zoneName: string
@@ -25,12 +41,52 @@ type ZoneRow = {
   templateKey: string
 }
 
+const PERMISSION_GROUPS = [
+  { key: 'allowCustomerManagement', label: 'Customer management' },
+  { key: 'allowBilling', label: 'Billing and invoices' },
+  { key: 'allowTickets', label: 'Tickets and complaints' },
+  { key: 'allowJobs', label: 'Installer jobs' },
+  { key: 'allowNetwork', label: 'Network and devices' },
+  { key: 'allowSettings', label: 'Settings access' },
+] as const
+
+const INHERITANCE_GROUPS = [
+  { key: 'inheritBillingProfile', label: 'Billing profile' },
+  { key: 'inheritInvoiceTemplate', label: 'Invoice template' },
+  { key: 'inheritPlans', label: 'Plans' },
+  { key: 'inheritPaymentGateway', label: 'Payment gateway' },
+  { key: 'inheritRouterVisibility', label: 'Router visibility' },
+  { key: 'useParentRouters', label: 'Use parent routers' },
+  { key: 'canCreateSubZone', label: 'Can create child sub-zones' },
+] as const
+
+function buildPermissionDraft(item?: FranchiseProfile | null): ZonePermissionDraft {
+  return {
+    inheritBillingProfile: Boolean(item?.inheritanceProfile?.inheritBillingProfile),
+    inheritInvoiceTemplate: Boolean(item?.inheritanceProfile?.inheritInvoiceTemplate),
+    inheritPlans: Boolean(item?.inheritanceProfile?.inheritPlans),
+    inheritPaymentGateway: Boolean(item?.inheritanceProfile?.inheritPaymentGateway),
+    inheritRouterVisibility: Boolean(item?.inheritanceProfile?.inheritRouterVisibility),
+    useParentRouters: Boolean(item?.inheritanceProfile?.useParentRouters),
+    canCreateSubZone: Boolean(item?.inheritanceProfile?.canCreateSubZone),
+    allowCustomerManagement: Boolean(item?.permissionProfile?.allowCustomerManagement),
+    allowBilling: Boolean(item?.permissionProfile?.allowBilling),
+    allowTickets: Boolean(item?.permissionProfile?.allowTickets),
+    allowJobs: Boolean(item?.permissionProfile?.allowJobs),
+    allowNetwork: Boolean(item?.permissionProfile?.allowNetwork),
+    allowSettings: Boolean(item?.permissionProfile?.allowSettings),
+  }
+}
+
 export default function MyZoneDetailsPage() {
   const [franchises, setFranchises] = useState<FranchiseProfile[]>([])
   const [general, setGeneral] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeZoneKey, setActiveZoneKey] = useState('default')
   const [canAccessAllZones, setCanAccessAllZones] = useState(true)
+  const [editingFranchiseCode, setEditingFranchiseCode] = useState('')
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false)
+  const [permissionDraft, setPermissionDraft] = useState<ZonePermissionDraft>(buildPermissionDraft())
 
   useEffect(() => {
     void loadData()
@@ -119,6 +175,11 @@ export default function MyZoneDetailsPage() {
     }))
   }, [franchises, general])
 
+  const editingFranchise = useMemo(
+    () => franchises.find((item) => item.franchiseCode === editingFranchiseCode) || null,
+    [editingFranchiseCode, franchises]
+  )
+
   function exportRows() {
     const header = ['company_name', 'zone_name', 'api_token', 'email', 'phone', 'street_address1', 'street_address2', 'city', 'state', 'pincode']
     const csv = rows.map((row) => Object.values(row).map((value) => `"${String(value || '').replace(/"/g, '""')}"`).join(','))
@@ -171,6 +232,70 @@ export default function MyZoneDetailsPage() {
     } catch (error) {
       console.error('[my-zone-details] Failed to delete sub-zone:', error)
       toast.error('Failed to delete sub-zone')
+    }
+  }
+
+  function startEditingZone(row: ZoneRow) {
+    const item = franchises.find((entry) => entry.franchiseCode === row.franchiseCode)
+    if (!item) {
+      toast.error('Sub-zone details not found')
+      return
+    }
+    setEditingFranchiseCode(item.franchiseCode)
+    setPermissionDraft(buildPermissionDraft(item))
+  }
+
+  async function saveZonePermissions() {
+    if (!editingFranchise) {
+      toast.error('Select a sub-zone first')
+      return
+    }
+    try {
+      setIsSavingPermissions(true)
+      const metadata = {
+        ...(editingFranchise.metadata && typeof editingFranchise.metadata === 'object' ? editingFranchise.metadata : {}),
+        inheritanceProfile: {
+          inheritBillingProfile: permissionDraft.inheritBillingProfile,
+          inheritInvoiceTemplate: permissionDraft.inheritInvoiceTemplate,
+          inheritPlans: permissionDraft.inheritPlans,
+          inheritPaymentGateway: permissionDraft.inheritPaymentGateway,
+          inheritRouterVisibility: permissionDraft.inheritRouterVisibility,
+          useParentRouters: permissionDraft.useParentRouters,
+          canCreateSubZone: permissionDraft.canCreateSubZone,
+        },
+        permissionProfile: {
+          allowCustomerManagement: permissionDraft.allowCustomerManagement,
+          allowBilling: permissionDraft.allowBilling,
+          allowTickets: permissionDraft.allowTickets,
+          allowJobs: permissionDraft.allowJobs,
+          allowNetwork: permissionDraft.allowNetwork,
+          allowSettings: permissionDraft.allowSettings,
+        },
+      }
+      const res = await adminAPI.saveFranchise({
+        franchiseCode: editingFranchise.franchiseCode,
+        name: editingFranchise.name,
+        zoneCode: editingFranchise.zoneCode,
+        status: editingFranchise.status,
+        contactName: editingFranchise.contactName,
+        phone: editingFranchise.phone,
+        email: editingFranchise.email,
+        address: editingFranchise.address,
+        payoutMode: editingFranchise.payoutMode,
+        commissionPercent: editingFranchise.commissionPercent,
+        metadata,
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Failed to save sub-zone permissions')
+        return
+      }
+      toast.success('Sub-zone permissions updated')
+      await loadData()
+    } catch (error) {
+      console.error('[my-zone-details] Failed to save sub-zone permissions:', error)
+      toast.error('Failed to save sub-zone permissions')
+    } finally {
+      setIsSavingPermissions(false)
     }
   }
 
@@ -247,6 +372,15 @@ export default function MyZoneDetailsPage() {
                           {row.parentZone !== '-' && row.franchiseCode ? (
                             <button
                               type="button"
+                              onClick={() => startEditingZone(row)}
+                              className="rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
+                            >
+                              Edit permissions
+                            </button>
+                          ) : null}
+                          {row.parentZone !== '-' && row.franchiseCode ? (
+                            <button
+                              type="button"
                               onClick={() => void deleteZone(row)}
                               className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
                             >
@@ -267,6 +401,78 @@ export default function MyZoneDetailsPage() {
           </div>
         </section>
       )}
+
+      {editingFranchise ? (
+        <section className="card p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Permission Desk</div>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+                {editingFranchise.name || editingFranchise.franchiseCode}
+              </h2>
+              <div className="mt-2 text-sm text-slate-500">
+                Yahin se sub-zone ka allowed work aur inherited setup update karo.
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setEditingFranchiseCode('')
+                  setPermissionDraft(buildPermissionDraft())
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => void saveZonePermissions()}
+                disabled={isSavingPermissions}
+              >
+                {isSavingPermissions ? 'Saving...' : 'Save permissions'}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-2">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-900">Allowed Work</div>
+              <div className="mt-1 text-xs text-slate-500">Enable the work this sub-zone can perform.</div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {PERMISSION_GROUPS.map((item) => (
+                  <label key={item.key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(permissionDraft[item.key])}
+                      onChange={(event) => setPermissionDraft((current) => ({ ...current, [item.key]: event.target.checked }))}
+                    />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-900">Inheritance and Routing</div>
+              <div className="mt-1 text-xs text-slate-500">Control which parent-zone setup this sub-zone inherits.</div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {INHERITANCE_GROUPS.map((item) => (
+                  <label key={item.key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(permissionDraft[item.key])}
+                      onChange={(event) => setPermissionDraft((current) => ({ ...current, [item.key]: event.target.checked }))}
+                    />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }
