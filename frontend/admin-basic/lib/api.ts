@@ -213,24 +213,48 @@ async function authorizedFetch(endpoint: string, options: RequestInit = {}, allo
 }
 
 export async function openProtectedDocument(endpoint: string) {
-  const previewWindow = window.open('', '_blank', 'noopener,noreferrer')
+  const previewWindow = window.open('', '_blank')
   if (previewWindow) {
     previewWindow.document.write('<!doctype html><title>Loading document</title><body style="font-family: sans-serif; padding: 24px;">Loading document...</body>')
     previewWindow.document.close()
   }
   const response = await authorizedFetch(endpoint, { method: 'GET' })
   if (!response.ok) {
+    const errorText = await response.text().catch(() => '')
     if (previewWindow && !previewWindow.closed) {
-      previewWindow.close()
+      previewWindow.document.write(
+        `<!doctype html><title>Document unavailable</title><body style="font-family: sans-serif; padding: 24px;"><h2 style="margin: 0 0 12px;">Document unavailable</h2><p style="margin: 0; color: #475569;">Request failed with ${response.status}${errorText ? `: ${errorText}` : ''}</p></body>`
+      )
+      previewWindow.document.close()
     }
     throw new Error(`Document request failed with ${response.status}`)
   }
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.toLowerCase().includes('pdf')) {
+    const responseText = await response.text().catch(() => '')
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.document.write(
+        `<!doctype html><title>Unexpected response</title><body style="font-family: sans-serif; padding: 24px;"><h2 style="margin: 0 0 12px;">Unexpected document response</h2><p style="margin: 0 0 8px; color: #475569;">Expected PDF but received <strong>${contentType || 'unknown content type'}</strong>.</p><pre style="white-space: pre-wrap; word-break: break-word; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; color: #0f172a;">${responseText || 'No response body available.'}</pre></body>`
+      )
+      previewWindow.document.close()
+    }
+    throw new Error(`Unexpected document content type: ${contentType || 'unknown'}`)
+  }
   const blob = await response.blob()
+  if (!blob.size) {
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.document.write(
+        '<!doctype html><title>Empty document</title><body style="font-family: sans-serif; padding: 24px;"><h2 style="margin: 0 0 12px;">Empty PDF response</h2><p style="margin: 0; color: #475569;">The server returned an empty PDF. Please try again after refresh.</p></body>'
+      )
+      previewWindow.document.close()
+    }
+    throw new Error('Empty PDF response')
+  }
   const objectUrl = URL.createObjectURL(blob)
   if (previewWindow && !previewWindow.closed) {
     previewWindow.location.href = objectUrl
   } else {
-    window.open(objectUrl, '_blank', 'noopener,noreferrer')
+    window.open(objectUrl, '_blank')
   }
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
 }

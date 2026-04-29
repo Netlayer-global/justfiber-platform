@@ -256,6 +256,7 @@ function BillingTab({ customer }: { customer: Customer }) {
                 <th className="table-header">Status</th>
                 <th className="table-header">Due Date</th>
                 <th className="table-header">Created</th>
+                <th className="table-header text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -266,6 +267,23 @@ function BillingTab({ customer }: { customer: Customer }) {
                   <td className="table-cell"><StatusBadge status={inv.paymentStatus} /></td>
                   <td className="table-cell text-sm">{formatDate(inv.dueDate)}</td>
                   <td className="table-cell text-sm">{formatDate(inv.createdAt || inv.issuedAt)}</td>
+                  <td className="table-cell text-right">
+                    {inv.invoiceId ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          void openProtectedDocument(
+                            `/api/v1/admin/billing/invoices/${encodeURIComponent(inv.invoiceId)}/pdf`
+                          )
+                        }
+                      >
+                        Open PDF
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-slate-400">Not ready</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
