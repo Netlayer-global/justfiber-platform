@@ -597,8 +597,14 @@ async function createInvoiceLedgerEntry(invoice) {
   });
 }
 
-async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle }) {
-  const prefix = normalizeSeriesCode(zoneMapping?.invoicePrefix || billingProfile?.invoicePrefix || "JF", "JF");
+async function buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle, selectedTemplate }) {
+  const prefix = normalizeSeriesCode(
+    zoneMapping?.invoicePrefix ||
+    selectedTemplate?.invoicePrefix ||
+    billingProfile?.invoicePrefix ||
+    "JF",
+    "JF"
+  );
   const zoneSeries = normalizeSeriesCode(zoneMapping?.invoiceSeriesCode || "", "");
   const stateSeries = normalizeSeriesCode(customer?.billingStateCode || customer?.billingSnapshot?.billingStateCode || "", "");
   const profileSeries = normalizeSeriesCode(billingProfile?.invoiceSeriesCode || "MAIN", "MAIN");
@@ -698,7 +704,7 @@ export class InternalBillingEngine {
       durationMonths,
       options.billCycleLabel || resolveBillCycleLabel(durationMonths)
     );
-    const numbering = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle });
+    const numbering = await buildInvoiceNumber({ billingProfile, zoneMapping, customer, billCycle, selectedTemplate });
     const zoneCode = customer?.billingZoneCode || customer?.billingSnapshot?.billingZoneCode || zoneMapping?.zoneCode || "";
     const zoneName = customer?.billingZoneName || customer?.billingSnapshot?.billingZoneName || zoneMapping?.zoneName || "";
     const legalName = selectedTemplate.companyName || zoneMapping?.companyLegalName || billingProfile?.companyLegalName || "";

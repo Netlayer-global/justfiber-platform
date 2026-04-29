@@ -397,9 +397,20 @@ adminCatalogRouter.post(
       payload.zoneContext = undefined;
     }
     ensureActivePlanProvisioning(payload);
-    payload.archivedAt = undefined;
-    await PlanCatalog.updateOne({ planCode: payload.planCode }, { $set: payload }, { upsert: true });
-    const plan = await PlanCatalog.findOne({ planCode: payload.planCode }).lean();
+    const existingPlan = await PlanCatalog.findOne({ planCode: payload.planCode });
+    let plan;
+    if (existingPlan) {
+      plan = await PlanCatalog.findOneAndUpdate(
+        { _id: existingPlan._id },
+        {
+          $set: payload,
+          $unset: { archivedAt: 1 }
+        },
+        { new: true }
+      ).lean();
+    } else {
+      plan = await PlanCatalog.create(payload).then((doc) => doc.toObject());
+    }
     return ok(res, decoratePlanCatalogItem(plan, payload.zoneContext?.zoneCode), { created: true });
   })
 );

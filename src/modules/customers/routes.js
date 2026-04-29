@@ -415,6 +415,17 @@ function formatDisplayDate(value) {
   return parsed.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+function buildDisplayAddressLines(address = {}, fallbackState = "") {
+  return [
+    address.line1 || address.fullAddress || "",
+    address.line2 || "",
+    address.area || "",
+    address.city || "",
+    address.state || fallbackState || "",
+    address.pinCode || ""
+  ].filter(Boolean);
+}
+
 function parseInlineImage(value) {
   const raw = String(value || "").trim();
   const match = raw.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
@@ -491,7 +502,7 @@ function renderCustomerCafPdf({ customer, plan, template, kycDoc }) {
   const planPrice = Number(plan?.monthlyPrice || customer.billingSnapshot?.lastInvoiceAmount || 0);
   const planValidity = customer.invoiceSummary?.billCycle || "monthly";
   const address = customer.address || {};
-  const billingAddress = [address.line1, address.line2, address.area, address.city, address.state, address.pinCode].filter(Boolean).join(", ");
+  const billingAddress = buildDisplayAddressLines(address, customer.zoneStateName).join(", ");
   const permanentAddress = customer.cafDocument?.permanentAddress || billingAddress || "N/A";
   const identityType = customer.cafDocument?.identityType || (kycDoc?.documentType ? String(kycDoc.documentType).toUpperCase() : "AADHAAR");
   const identityProofNo = customer.cafDocument?.identityProofNo || kycDoc?.documentNumber || "N/A";
@@ -625,12 +636,14 @@ async function buildCustomerResponse(customer) {
 
   return {
     ...customer,
-    cafDocument: customer.cafDocument
-      ? {
-          ...customer.cafDocument,
-          pdfUrl: `/api/v1/admin/customers/${encodeURIComponent(customer.customerId)}/caf/pdf`
-        }
-      : null,
+    cafDocument: {
+      cafNumber: customer.cafDocument?.cafNumber || buildCustomerCafNumber("CAF-", customer.customerId),
+      generatedAt: customer.cafDocument?.generatedAt || customer.createdAt || new Date(),
+      templateKey: customer.cafDocument?.templateKey || "default_caf",
+      templateName: customer.cafDocument?.templateName || "Standard CAF",
+      ...(customer.cafDocument || {}),
+      pdfUrl: `/api/v1/admin/customers/${encodeURIComponent(customer.customerId)}/caf/pdf`
+    },
     pppoeUsername: subscriberService?.radiusUsername || customer.pppoeUsername || null,
     radiusService: subscriberService
         ? {
@@ -1136,14 +1149,18 @@ customersRouter.get(
     }
     assertCustomerZoneAccess(req, customer);
     const phone = String(customer.phone || customer.mobile || "").replace(/\D/g, "");
-    const [plan, cafSettings, lead, latestMobileKyc] = await Promise.all([
+    const [plan, cafSettings, lead, latestMobileKyc, latestBooking] = await Promise.all([
       customer.planCode ? PlanCatalog.findOne({ planCode: customer.planCode, archivedAt: { $exists: false } }).lean() : null,
       getCustomerCafSettings(),
       phone ? Lead.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
-      phone ? LeadKycDocument.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null)
+      phone ? LeadKycDocument.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
+      phone ? ConnectionBooking.findOne({ "personalDetails.mobile": phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null)
     ]);
-    const linkedLeadKyc = lead ? await LeadKycDocument.findOne({ leadId: lead._id }).lean() : null;
-    const kycDoc = linkedLeadKyc || latestMobileKyc || null;
+    const [linkedLeadKyc, bookingKyc] = await Promise.all([
+      lead ? LeadKycDocument.findOne({ leadId: lead._id }).lean() : Promise.resolve(null),
+      latestBooking ? LeadKycDocument.findOne({ connectionBookingId: latestBooking._id }).lean() : Promise.resolve(null)
+    ]);
+    const kycDoc = linkedLeadKyc || bookingKyc || latestMobileKyc || null;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=\"${customer.cafDocument?.cafNumber || customer.customerId}.pdf\"`);
     return renderCustomerCafPdf({ customer, plan, template: cafSettings.template, kycDoc }).pipe(res);
@@ -1159,14 +1176,16 @@ customersRouter.get(
     if (!customer) throw new ApiError(404, "Customer not found");
     assertCustomerZoneAccess(req, customer);
     const phone = String(customer.phone || customer.mobile || "").replace(/\D/g, "");
-    const lead = phone
-      ? await Lead.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean()
-      : null;
-    const kycDoc = lead
-      ? await LeadKycDocument.findOne({ leadId: lead._id }).lean()
-      : phone
-        ? await LeadKycDocument.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean()
-        : null;
+    const [lead, latestBooking] = await Promise.all([
+      phone ? Lead.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
+      phone ? ConnectionBooking.findOne({ "personalDetails.mobile": phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null)
+    ]);
+    const [linkedLeadKyc, bookingKyc, mobileKyc] = await Promise.all([
+      lead ? LeadKycDocument.findOne({ leadId: lead._id }).lean() : Promise.resolve(null),
+      latestBooking ? LeadKycDocument.findOne({ connectionBookingId: latestBooking._id }).lean() : Promise.resolve(null),
+      phone ? LeadKycDocument.findOne({ mobile: phone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null)
+    ]);
+    const kycDoc = linkedLeadKyc || bookingKyc || mobileKyc || null;
     return ok(res, kycDoc || null);
   })
 );

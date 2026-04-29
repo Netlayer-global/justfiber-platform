@@ -7,6 +7,7 @@ import { Customer } from "../models/Customer.js";
 import { CustomerUser } from "../models/CustomerUser.js";
 import { PlanCatalog } from "../models/PlanCatalog.js";
 import { PaymentTransaction } from "../models/PaymentTransaction.js";
+import { SystemConfig } from "../models/SystemConfig.js";
 import { SubscriberService } from "../models/SubscriberService.js";
 import { buildPppoeCredentials } from "../common/networkProvisioning.js";
 import { reconcilePaymentToInvoice, syncCustomerBillingState } from "../common/billingAccounting.js";
@@ -23,6 +24,38 @@ function buildIdentifiers(bookingNumber) {
     customerId: `CUST-${suffix}`,
     accountNumber: `AC-${suffix}`,
     serviceId: `SVC-${suffix}`
+  };
+}
+
+async function getCustomerCafSettings() {
+  const [prefixConfig, templateConfig] = await Promise.all([
+    SystemConfig.findOne({ key: "settings.prefix_settings" }).lean(),
+    SystemConfig.findOne({ key: "settings.additional_fields" }).lean()
+  ]);
+
+  const prefixValue = prefixConfig?.value?.caf?.prefix || "CAF-";
+  const templates = Array.isArray(templateConfig?.value?.cafTemplates) ? templateConfig.value.cafTemplates : [];
+  const selectedTemplate = templates[0] || {};
+
+  return {
+    prefix: String(prefixValue || "CAF-").trim() || "CAF-",
+    templateKey: selectedTemplate.key || "default_caf",
+    templateName: selectedTemplate.templateName || "Standard CAF"
+  };
+}
+
+function buildCustomerCafNumber(prefix, customerId) {
+  const cleanPrefix = String(prefix || "CAF-").trim() || "CAF-";
+  return `${cleanPrefix}${String(customerId || "").replace(/^CAF[-/]?/i, "")}`;
+}
+
+function buildCustomerCafDocument(existingCustomer = {}, customerId = "", cafSettings = {}) {
+  const existing = existingCustomer?.cafDocument || {};
+  return {
+    cafNumber: existing.cafNumber || buildCustomerCafNumber(cafSettings.prefix, customerId),
+    generatedAt: existing.generatedAt || new Date(),
+    templateKey: existing.templateKey || cafSettings.templateKey || "default_caf",
+    templateName: existing.templateName || cafSettings.templateName || "Standard CAF"
   };
 }
 
@@ -294,10 +327,11 @@ export class InternalSubscriberPlatform {
     const plan =
       (booking.selectedPlan?.planCode && (await PlanCatalog.findOne({ planCode: booking.selectedPlan.planCode }).lean())) ||
       (await PlanCatalog.findOne({ name: booking.selectedPlan?.planName }).lean());
-    const [accessProfile, billingProfile, bngNode] = await Promise.all([
+    const [accessProfile, billingProfile, bngNode, cafSettings] = await Promise.all([
       pickAccessProfile(plan),
       pickBillingProfile(),
-      pickBngNode()
+      pickBngNode(),
+      getCustomerCafSettings()
     ]);
     const customerType = resolveCustomerType(plan);
     const billMode = resolveBillModeForPlan({ billingProfile, plan });
@@ -313,6 +347,17 @@ export class InternalSubscriberPlatform {
       jobRecord.customerSnapshot?.phone ||
       jobRecord.customerSnapshot?.mobile ||
       undefined;
+    const existingCustomer = await Customer.findOne({ customerId: identifiers.customerId }).lean();
+    const customerAddress = {
+      ...(booking.personalDetails?.fullAddress
+        ? { fullAddress: booking.personalDetails.fullAddress, line1: booking.personalDetails.fullAddress }
+        : {}),
+      ...(booking.personalDetails?.landmark ? { line2: booking.personalDetails.landmark } : {}),
+      ...(booking.personalDetails?.area ? { area: booking.personalDetails.area } : {}),
+      ...(booking.personalDetails?.pinCode ? { pinCode: booking.personalDetails.pinCode } : {}),
+      ...(booking.personalDetails?.city ? { city: booking.personalDetails.city } : {}),
+      ...(booking.personalDetails?.state ? { state: booking.personalDetails.state } : {})
+    };
 
     const customer = await Customer.findOneAndUpdate(
       { customerId: identifiers.customerId },
@@ -329,16 +374,12 @@ export class InternalSubscriberPlatform {
           jazeStatus: "internal_platform",
           operationalStatus: "activation_in_progress",
           expiryAt: serviceExpiryAt,
-          address: {
-            ...(booking.personalDetails?.fullAddress ? { fullAddress: booking.personalDetails.fullAddress } : {}),
-            ...(booking.personalDetails?.pinCode ? { pinCode: booking.personalDetails.pinCode } : {}),
-            ...(booking.personalDetails?.city ? { city: booking.personalDetails.city } : {}),
-            ...(booking.personalDetails?.state ? { state: booking.personalDetails.state } : {})
-          },
+          address: customerAddress,
           billingZoneCode: booking.feasibility?.matchedZone?.zoneCode || booking.feasibility?.matchedZone?.zoneName,
           billingZoneName: booking.feasibility?.matchedZone?.zoneName,
           billingStateCode: booking.personalDetails?.stateCode,
           billingStateName: booking.personalDetails?.state,
+          cafDocument: buildCustomerCafDocument(existingCustomer || jobRecord.customerSnapshot || {}, identifiers.customerId, cafSettings),
           lastSyncedAt: new Date()
         },
         $setOnInsert: {

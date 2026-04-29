@@ -70,7 +70,7 @@ export function createApp() {
   app.use(cors({ origin: resolveCorsOrigin(env.ADMIN_CORS_ORIGIN) }));
   app.use(
     express.json({
-      limit: "1mb",
+      limit: "25mb",
       verify: (req, _res, buf) => {
         if (req.originalUrl === "/api/v1/customer/webhooks/razorpay") {
           req.rawBody = Buffer.from(buf);

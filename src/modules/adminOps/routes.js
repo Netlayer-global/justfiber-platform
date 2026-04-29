@@ -381,6 +381,18 @@ function pickBranding(profile, templateSettings = {}) {
   };
 }
 
+function buildCustomerAddressLines(customer = {}, invoice = {}) {
+  const address = customer?.address || {};
+  return [
+    address.line1 || address.fullAddress || "",
+    address.line2 || "",
+    address.area || "",
+    address.city || "",
+    address.state || customer?.billingStateName || customer?.zoneStateName || invoice?.billingStateName || "",
+    address.pinCode || ""
+  ].filter(Boolean);
+}
+
 function resolveInvoiceBranding(branding, invoice) {
   return {
     ...branding,
@@ -590,14 +602,7 @@ function buildInvoiceHtml(invoice, customer, branding) {
   const cgstPart = summaryRows.taxRows.find((item) => /cgst/i.test(item.label)) || null;
   const sgstPart = summaryRows.taxRows.find((item) => /sgst/i.test(item.label)) || null;
   const balanceDue = invoice.paymentStatus === "paid" ? 0 : Number(invoice.totalAmount || 0);
-  const customerAddress = [
-    customer?.address?.line1,
-    customer?.address?.line2,
-    customer?.address?.area,
-    customer?.address?.city,
-    customer?.billingStateName || customer?.zoneStateName || invoice.billingStateName,
-    customer?.address?.pinCode
-  ]
+  const customerAddress = buildCustomerAddressLines(customer, invoice)
     .filter(Boolean)
     .map((item) => safe(item))
     .join("<br/>");
@@ -1014,14 +1019,7 @@ function renderInvoicePdf(invoice, profile, customer, templateSettings) {
   const cgstPart = summaryRows.taxRows.find((item) => /cgst/i.test(item.label)) || null;
   const sgstPart = summaryRows.taxRows.find((item) => /sgst/i.test(item.label)) || null;
   const balanceDue = invoice.paymentStatus === "paid" ? 0 : Number(invoice.totalAmount || 0);
-  const customerAddress = [
-    customer?.address?.line1,
-    customer?.address?.line2,
-    customer?.address?.area,
-    customer?.address?.city,
-    customer?.billingStateName || customer?.zoneStateName || invoice.billingStateName,
-    customer?.address?.pinCode
-  ].filter(Boolean);
+  const customerAddress = buildCustomerAddressLines(customer, invoice).filter(Boolean);
   const companyLines = [
     branding.companyAddress,
     branding.gstNumber ? `GSTIN ${branding.gstNumber}` : "",
