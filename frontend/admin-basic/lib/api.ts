@@ -213,13 +213,25 @@ async function authorizedFetch(endpoint: string, options: RequestInit = {}, allo
 }
 
 export async function openProtectedDocument(endpoint: string) {
+  const previewWindow = window.open('', '_blank', 'noopener,noreferrer')
+  if (previewWindow) {
+    previewWindow.document.write('<!doctype html><title>Loading document</title><body style="font-family: sans-serif; padding: 24px;">Loading document...</body>')
+    previewWindow.document.close()
+  }
   const response = await authorizedFetch(endpoint, { method: 'GET' })
   if (!response.ok) {
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.close()
+    }
     throw new Error(`Document request failed with ${response.status}`)
   }
   const blob = await response.blob()
   const objectUrl = URL.createObjectURL(blob)
-  window.open(objectUrl, '_blank', 'noopener,noreferrer')
+  if (previewWindow && !previewWindow.closed) {
+    previewWindow.location.href = objectUrl
+  } else {
+    window.open(objectUrl, '_blank', 'noopener,noreferrer')
+  }
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
 }
 
