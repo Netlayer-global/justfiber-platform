@@ -605,16 +605,18 @@ async function buildCustomerResponse(customer) {
     ...(customer.customerId ? [{ "assignment.provisionedIds.customerId": customer.customerId }] : []),
     ...(customer.serviceId ? [{ "assignment.provisionedIds.serviceId": customer.serviceId }] : [])
   ];
-  const [lead, latestBooking, latestInstallerJob] = await Promise.all([
+  const [lead, latestBooking] = await Promise.all([
     normalizedPhone ? Lead.findOne({ mobile: normalizedPhone }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
-    bookingClauses.length ? ConnectionBooking.findOne({ $or: bookingClauses }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
-    InstallerJob.findOne({
-      $or: [
-        ...(customer.customerId ? [{ customerId: customer.customerId }] : []),
-        ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : []),
-      ]
-    }).sort({ createdAt: -1 }).lean()
+    bookingClauses.length ? ConnectionBooking.findOne({ $or: bookingClauses }).sort({ createdAt: -1 }).lean() : Promise.resolve(null)
   ]);
+  const installerJobClauses = [
+    ...(customer.customerId ? [{ customerId: customer.customerId }] : []),
+    ...(customer.serviceId ? [{ serviceId: customer.serviceId }] : []),
+    ...(latestBooking?.bookingNumber ? [{ customerId: latestBooking.bookingNumber }, { "activation.bookingNumber": latestBooking.bookingNumber }] : [])
+  ];
+  const latestInstallerJob = installerJobClauses.length
+    ? await InstallerJob.findOne({ $or: installerJobClauses }).sort({ createdAt: -1 }).lean()
+    : null;
   const [leadKyc, bookingKyc] = await Promise.all([
     lead ? LeadKycDocument.findOne({ leadId: lead._id }).sort({ createdAt: -1 }).lean() : Promise.resolve(null),
     latestBooking ? LeadKycDocument.findOne({ connectionBookingId: latestBooking._id }).sort({ createdAt: -1 }).lean() : Promise.resolve(null)

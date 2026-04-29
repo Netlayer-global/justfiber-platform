@@ -19,7 +19,7 @@ import {
   Trash2,
   Wifi,
 } from 'lucide-react'
-import { adminAPI } from '@/lib/api'
+import { adminAPI, openProtectedDocument } from '@/lib/api'
 import type { Customer } from '@/lib/types'
 import { formatCurrency, formatDate, relativeTime } from '@/lib/utils'
 import { Avatar } from '@/components/ui/avatar'
@@ -45,9 +45,29 @@ export default function CustomerDetailPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await adminAPI.getCustomer(id as string)
-      if (res.success && res.data) setCustomer(res.data as Customer)
-      else setError(typeof res.error === 'string' ? res.error : 'Customer not found')
+      const [res, kycRes] = await Promise.all([
+        adminAPI.getCustomer(id as string),
+        adminAPI.getCustomerLeadKyc(id as string).catch(() => ({ success: false, data: null })),
+      ])
+      if (res.success && res.data) {
+        const merged = {
+          ...(res.data as Customer),
+          kycDocument:
+            (res.data as Customer).kycDocument ||
+            (kycRes.success && kycRes.data
+              ? {
+                  documentType: kycRes.data.documentType || '',
+                  documentNumber: kycRes.data.documentNumber || '',
+                  frontImageUrl: kycRes.data.frontImageUrl || '',
+                  backImageUrl: kycRes.data.backImageUrl || '',
+                  selfieImageUrl: kycRes.data.selfieImageUrl || '',
+                  verificationStatus: kycRes.data.verificationStatus || '',
+                  createdAt: kycRes.data.createdAt || undefined,
+                }
+              : null),
+        }
+        setCustomer(merged)
+      } else setError(typeof res.error === 'string' ? res.error : 'Customer not found')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load customer')
     } finally {
@@ -422,9 +442,15 @@ function DocumentsTab({ customer }: { customer: Customer }) {
               Generated {formatDate(customer.cafDocument?.generatedAt || customer.createdAt, true)}
             </p>
             {cafPdfUrl ? (
-              <a href={cafPdfUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex">
-                <Button variant="secondary" size="sm">Open PDF</Button>
-              </a>
+              <div className="mt-3 inline-flex">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void openProtectedDocument(cafPdfUrl)}
+                >
+                  Open PDF
+                </Button>
+              </div>
             ) : (
               <p className="mt-3 text-xs text-amber-600">CAF link not ready yet. Refresh after backend sync.</p>
             )}
