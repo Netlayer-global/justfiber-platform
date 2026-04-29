@@ -83,6 +83,53 @@ export function normalizeInstallerIdentifier(value) {
   return normalized ? normalized.toUpperCase() : null;
 }
 
+function expandInstallerIdentifierCandidates(value) {
+  const base = normalizeInstallerIdentifier(value);
+  if (!base) {
+    return {
+      raw: null,
+      serialCandidates: [],
+      deviceIdCandidates: []
+    };
+  }
+
+  const variants = new Set([base]);
+  try {
+    variants.add(decodeURIComponent(base));
+  } catch {}
+
+  for (const item of [...variants]) {
+    if (item.includes("%2D")) variants.add(item.replace(/%2D/gi, "-"));
+    if (item.includes("-")) variants.add(item.replace(/-/g, "%2D"));
+  }
+
+  const serialCandidates = new Set();
+  const deviceIdCandidates = new Set();
+
+  for (const item of variants) {
+    const normalized = normalizeInstallerIdentifier(item);
+    if (!normalized) continue;
+    deviceIdCandidates.add(normalized);
+
+    const decoded = normalized.replace(/%2D/gi, "-");
+    const parts = decoded.split("-").map((part) => part.trim()).filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last.length >= 6) {
+      serialCandidates.add(last.toUpperCase());
+    }
+
+    if (/^[A-Z0-9]{8,}$/.test(decoded)) {
+      serialCandidates.add(decoded.toUpperCase());
+    }
+  }
+
+  return {
+    raw: base,
+    serialCandidates: [...serialCandidates],
+    deviceIdCandidates: [...deviceIdCandidates]
+  };
+}
+
 function buildInstallerRecommendations({ opticalHealth, checklist, device }) {
   const recommendations = [];
   if (opticalHealth === "critical") {
@@ -347,12 +394,18 @@ async function lookupInstallerDeviceBySerialOrId({
   customerId,
   serviceId
 } = {}) {
-  const normalizedSerial = normalizeInstallerIdentifier(serialNumber);
-  const normalizedDeviceId = normalizeInstallerIdentifier(deviceId);
-  const candidateDeviceIds = [
-    normalizedDeviceId,
-    normalizedSerial ? `ONT-${normalizedSerial}` : null
-  ].filter(Boolean);
+  const serialInfo = expandInstallerIdentifierCandidates(serialNumber);
+  const deviceInfo = expandInstallerIdentifierCandidates(deviceId);
+  const serialCandidates = [...new Set([
+    ...serialInfo.serialCandidates,
+    ...deviceInfo.serialCandidates
+  ])];
+  const candidateDeviceIds = [...new Set([
+    ...deviceInfo.deviceIdCandidates,
+    ...serialInfo.deviceIdCandidates,
+    ...serialCandidates.map((item) => `ONT-${item}`)
+  ])].filter(Boolean);
+  const preferredSerial = serialCandidates[0] || null;
 
   if (candidateDeviceIds.length) {
     const cachedById = await DeviceOperationalCache.findOne({
@@ -363,12 +416,14 @@ async function lookupInstallerDeviceBySerialOrId({
     if (cachedById) return cachedById;
   }
 
-  if (normalizedSerial) {
+  if (serialCandidates.length) {
     const cachedBySerial = await DeviceOperationalCache.findOne({
       $or: [
-        { serialNumber: normalizedSerial },
-        { serialNumber: normalizedSerial.toLowerCase() },
-        { serialNumber: normalizedSerial.toUpperCase() }
+        ...serialCandidates.flatMap((candidate) => ([
+          { serialNumber: candidate },
+          { serialNumber: candidate.toLowerCase() },
+          { serialNumber: candidate.toUpperCase() }
+        ]))
       ]
     })
       .sort({ updatedAt: -1, lastInformAt: -1 })
@@ -379,13 +434,13 @@ async function lookupInstallerDeviceBySerialOrId({
   try {
     const liveSummary = await genieacsClient.getRichDeviceSummary({
       deviceId: candidateDeviceIds[0],
-      serialNumber: normalizedSerial
+      serialNumber: preferredSerial
     });
     if (liveSummary) {
       const parsed = summarizeGenieDevice(liveSummary, candidateDeviceIds[0]);
       const liveDevice = {
         deviceId: parsed.deviceId || candidateDeviceIds[0] || `ONT-${normalizedSerial}`,
-        serialNumber: parsed.serialNumber || normalizedSerial || "",
+        serialNumber: parsed.serialNumber || preferredSerial || "",
         productClass: parsed.productClass || "",
         customerId: customerId || "",
         serviceId: serviceId || "",
@@ -405,16 +460,17 @@ async function lookupInstallerDeviceBySerialOrId({
       return liveDevice;
     }
 
-    if (normalizedSerial) {
+    if (serialCandidates.length) {
       const liveDevices = await genieacsClient.listDevices(500);
       const matchedDevice = Array.isArray(liveDevices)
         ? liveDevices.find((item) => {
-            const itemId = normalizeInstallerIdentifier(item?._id || item?.DeviceID?.ID);
-            const itemSerial = normalizeInstallerIdentifier(
-              item?.DeviceID?.SerialNumber ||
+          const itemId = normalizeInstallerIdentifier(item?._id || item?.DeviceID?.ID);
+          const itemSerial = normalizeInstallerIdentifier(
+            item?.DeviceID?.SerialNumber ||
                 item?.InternetGatewayDevice?.DeviceInfo?.SerialNumber
-            );
-            return itemSerial === normalizedSerial || (itemId && itemId.endsWith(normalizedSerial));
+          );
+            return serialCandidates.includes(itemSerial) ||
+              serialCandidates.some((candidate) => itemId && itemId.endsWith(candidate));
           })
         : null;
 
@@ -422,12 +478,12 @@ async function lookupInstallerDeviceBySerialOrId({
         const matchedDeviceId = normalizeInstallerIdentifier(matchedDevice._id || matchedDevice?.DeviceID?.ID);
         const richMatched = await genieacsClient.getRichDeviceSummary({
           deviceId: matchedDeviceId,
-          serialNumber: normalizedSerial
+          serialNumber: preferredSerial
         });
         const parsed = summarizeGenieDevice(richMatched || matchedDevice, matchedDeviceId);
         const liveDevice = {
-          deviceId: parsed.deviceId || matchedDeviceId || `ONT-${normalizedSerial}`,
-          serialNumber: parsed.serialNumber || normalizedSerial || "",
+          deviceId: parsed.deviceId || matchedDeviceId || `ONT-${preferredSerial || serialInfo.raw || "UNKNOWN"}`,
+          serialNumber: parsed.serialNumber || preferredSerial || "",
           productClass: parsed.productClass || "",
           customerId: customerId || "",
           serviceId: serviceId || "",
@@ -455,16 +511,15 @@ async function lookupInstallerDeviceBySerialOrId({
 }
 
 async function resolveJobDevice(job) {
-  const finalSerialNumber = normalizeInstallerIdentifier(
+  const finalSerialInfo = expandInstallerIdentifierCandidates(
     job.deviceContext?.finalSerialNumber ||
       job.deviceContext?.manualSerialNumber ||
       job.deviceContext?.scannedSerialNumber ||
       null
   );
-  const finalDeviceId = normalizeInstallerIdentifier(job.deviceContext?.finalDeviceId);
   const resolvedLiveOrCached = await lookupInstallerDeviceBySerialOrId({
-    serialNumber: finalSerialNumber,
-    deviceId: finalDeviceId,
+    serialNumber: finalSerialInfo.raw,
+    deviceId: job.deviceContext?.finalDeviceId,
     customerId: job.customerId,
     serviceId: job.serviceId
   });
