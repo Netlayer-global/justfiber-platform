@@ -368,7 +368,9 @@ async function getCustomerCafSettings() {
   ]);
 
   const prefixValue = prefixConfig?.value?.caf?.prefix || "CAF-";
-  const templates = Array.isArray(templateConfig?.value?.cafTemplates) ? templateConfig.value.cafTemplates : [];
+  const templates = Array.isArray(prefixConfig?.value?.caf?.templates)
+    ? prefixConfig.value.caf.templates
+    : (Array.isArray(templateConfig?.value?.cafTemplates) ? templateConfig.value.cafTemplates : []);
   const selectedTemplate = templates[0] || {};
 
   return {
@@ -376,14 +378,14 @@ async function getCustomerCafSettings() {
     template: {
       key: selectedTemplate.key || "default_caf",
       templateName: selectedTemplate.templateName || "Standard CAF",
-      brandName: selectedTemplate.brandName || selectedTemplate.companyName || "JustFiber",
+      brandName: selectedTemplate.brandName || selectedTemplate.companyName || "Netlayer India Private Limited",
       cafTitle: selectedTemplate.cafTitle || "Customer Application Form",
       accentColor: selectedTemplate.accentColor || "#1d4ed8",
       companyAddress: selectedTemplate.companyAddress || selectedTemplate.registeredOffice || "",
-      website: selectedTemplate.website || "https://justfiber.in",
-      termsUrl: selectedTemplate.termsUrl || selectedTemplate.website || "https://justfiber.in/terms-and-conditions",
+      website: selectedTemplate.website || "https://netlayer.in",
+      termsUrl: selectedTemplate.termsUrl || selectedTemplate.website || "https://netlayer.in/terms-and-conditions",
       footerLeftLabel: selectedTemplate.footerLeftLabel || "ERP Name",
-      footerLeftValue: selectedTemplate.footerLeftValue || "JustFiber ERP",
+      footerLeftValue: selectedTemplate.footerLeftValue || "Netlayer ERP",
       footerRightLabel: selectedTemplate.footerRightLabel || "Sales Executive",
       footerRightValue: selectedTemplate.footerRightValue || "Assigned Agent",
       declarationText:
@@ -517,7 +519,7 @@ function renderCustomerCafPdf({ customer, plan, template, kycDoc }) {
   pdf.rect(0, 0, 595, 842).fill("#ffffff");
   pdf.fillColor("#0f172a");
 
-  pdf.font("Helvetica-Bold").fontSize(18).fillColor("#0f172a").text(template.brandName || "JustFiber", 42, 42, { width: 300 });
+  pdf.font("Helvetica-Bold").fontSize(18).fillColor("#0f172a").text(template.brandName || "Netlayer India Private Limited", 42, 42, { width: 300 });
   pdf.font("Helvetica").fontSize(9).fillColor("#64748b").text(template.companyAddress || "", 42, 68, { width: 300 });
   pdf.font("Helvetica").fontSize(9).fillColor("#64748b").text(template.website || "", 42, 92, { width: 300 });
 
@@ -591,7 +593,7 @@ function renderCustomerCafPdf({ customer, plan, template, kycDoc }) {
   pdf.font("Helvetica-Bold").fontSize(8).fillColor("#64748b").text((template.footerLeftLabel || "ERP Name").toUpperCase(), 42, pdf.y, { width: 200 });
   pdf.font("Helvetica-Bold").fontSize(8).fillColor("#64748b").text((template.footerRightLabel || "Sales Executive").toUpperCase(), 353, pdf.y, { width: 200, align: "right" });
   pdf.moveDown(0.3);
-  pdf.font("Helvetica-Bold").fontSize(10).fillColor("#0f172a").text(template.footerLeftValue || "JustFiber ERP", 42, pdf.y, { width: 200 });
+  pdf.font("Helvetica-Bold").fontSize(10).fillColor("#0f172a").text(template.footerLeftValue || "Netlayer ERP", 42, pdf.y, { width: 200 });
   pdf.font("Helvetica-Bold").fontSize(10).fillColor("#0f172a").text(template.footerRightValue || "Assigned Agent", 353, pdf.y - 10, { width: 200, align: "right" });
 
   pdf.end();

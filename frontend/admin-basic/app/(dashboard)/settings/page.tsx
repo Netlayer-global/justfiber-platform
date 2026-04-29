@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminAPI } from '@/lib/api'
 import type { AdminRoleSummary, AdminUserSummary, BillingProfile, FranchiseProfile, SettingsCatalogItem } from '@/lib/types'
+import { CafTemplateDesigner } from '@/components/settings/caf-template-designer'
 import { Loader2, Save } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -1480,6 +1481,26 @@ export default function SettingsPage() {
         await loadSection(activeSection)
         return
       }
+      if (activeSection === 'prefix_settings') {
+        const latestRes = await adminAPI.getSettingsSection<SectionValue>('prefix_settings')
+        const latestValue = latestRes.success && latestRes.data?.value ? latestRes.data.value : {}
+        const mergedValue = {
+          ...latestValue,
+          ...sectionValue,
+          caf: {
+            ...(latestValue.caf || {}),
+            ...(sectionValue.caf || {}),
+          },
+        }
+        const response = await adminAPI.updateSettingsSection(activeSection, mergedValue)
+        if (!response.success) {
+          toast.error(response.error || 'Failed to save settings')
+          return
+        }
+        toast.success(`${activeMeta.title} saved`)
+        await loadSection(activeSection)
+        return
+      }
       const response = await adminAPI.updateSettingsSection(activeSection, sectionValue)
       if (!response.success) {
         toast.error(response.error || 'Failed to save settings')
@@ -1794,15 +1815,18 @@ export default function SettingsPage() {
     if (activeSection === 'prefix_settings') {
       const caf = sectionValue.caf || {}
       return (
-        <section className="card p-5">
-          <div className="mb-5">
-            <div className="text-sm font-semibold text-slate-900">CAF template and prefix</div>
-            <div className="mt-1 text-sm text-slate-500">Only CAF numbering lives here. Document design opens from CAF Templates.</div>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {textInput('CAF prefix', ['caf', 'prefix'], caf.prefix || 'CAF-')}
-            {textInput('CAF start date', ['caf', 'startDate'], caf.startDate || '2025-01-01', '', 'date')}
-          </div>
+        <section className="space-y-4">
+          <section className="card p-5">
+            <div className="mb-5">
+              <div className="text-sm font-semibold text-slate-900">CAF template and prefix</div>
+              <div className="mt-1 text-sm text-slate-500">CAF numbering and document design now stay together inside settings.</div>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {textInput('CAF prefix', ['caf', 'prefix'], caf.prefix || 'CAF-')}
+              {textInput('CAF start date', ['caf', 'startDate'], caf.startDate || '2025-01-01', '', 'date')}
+            </div>
+          </section>
+          <CafTemplateDesigner embedded />
         </section>
       )
     }
@@ -2362,22 +2386,6 @@ export default function SettingsPage() {
                   </div>
                   <a href="/user-management" className="btn-primary text-center">
                     Open admin users
-                  </a>
-                </div>
-              </section>
-            ) : null}
-
-            {activeNavItem?.id === 'caf-setup' ? (
-              <section className="rounded-[24px] border border-purple-200 bg-purple-50 p-5">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">CAF template designer</div>
-                    <div className="mt-1 text-sm text-slate-600">
-                      Use this settings tab for CAF prefix and numbering. Open CAF Templates to manage the document design.
-                    </div>
-                  </div>
-                  <a href="/caf-templates" className="btn-primary text-center">
-                    Open CAF templates
                   </a>
                 </div>
               </section>
