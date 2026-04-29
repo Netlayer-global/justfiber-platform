@@ -175,6 +175,80 @@ function hasOpticalShell(summary) {
   );
 }
 
+function buildSafeOpticalParameterNames(summary) {
+  const names = new Set();
+
+  if (readPath(summary, "InternetGatewayDevice.X_ALU_OntOpticalParam")) {
+    [
+      "InternetGatewayDevice.X_ALU_OntOpticalParam.RXPower",
+      "InternetGatewayDevice.X_ALU_OntOpticalParam.TXPower",
+      "InternetGatewayDevice.X_ALU_OntOpticalParam.Status"
+    ].forEach((path) => names.add(path));
+  }
+
+  if (readPath(summary, "InternetGatewayDevice.X_ALU-COM_GPON")) {
+    [
+      "InternetGatewayDevice.X_ALU-COM_GPON.RXPower",
+      "InternetGatewayDevice.X_ALU-COM_GPON.TXPower",
+      "InternetGatewayDevice.X_ALU-COM_GPON.SignalLevel",
+      "InternetGatewayDevice.X_ALU-COM_GPON.DownstreamPower",
+      "InternetGatewayDevice.X_ALU-COM_GPON.UpstreamPower"
+    ].forEach((path) => names.add(path));
+  }
+
+  if (readPath(summary, "InternetGatewayDevice.X_ALU-COM_GPON.Optical")) {
+    [
+      "InternetGatewayDevice.X_ALU-COM_GPON.Optical.RXPower",
+      "InternetGatewayDevice.X_ALU-COM_GPON.Optical.TXPower",
+      "InternetGatewayDevice.X_ALU-COM_GPON.Optical.SignalLevel",
+      "InternetGatewayDevice.X_ALU-COM_GPON.Optical.DownstreamPower",
+      "InternetGatewayDevice.X_ALU-COM_GPON.Optical.UpstreamPower"
+    ].forEach((path) => names.add(path));
+  }
+
+  if (readPath(summary, "InternetGatewayDevice.X_ALU-COM_ONT.Optical")) {
+    [
+      "InternetGatewayDevice.X_ALU-COM_ONT.Optical.RXPower",
+      "InternetGatewayDevice.X_ALU-COM_ONT.Optical.TXPower",
+      "InternetGatewayDevice.X_ALU-COM_ONT.Optical.SignalLevel",
+      "InternetGatewayDevice.X_ALU-COM_ONT.Optical.DownstreamPower",
+      "InternetGatewayDevice.X_ALU-COM_ONT.Optical.UpstreamPower"
+    ].forEach((path) => names.add(path));
+  }
+
+  if (readPath(summary, "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig")) {
+    [
+      "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.RXPower",
+      "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.TXPower",
+      "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.SignalLevel",
+      "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.DownstreamPower",
+      "InternetGatewayDevice.WANDevice.1.X_ALU-COM_WANPONInterfaceConfig.UpstreamPower"
+    ].forEach((path) => names.add(path));
+  }
+
+  if (readPath(summary, "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig")) {
+    [
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig.RXPower",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig.TXPower",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig.SignalLevel",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig.DownstreamPower",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.1.X_ALU-COM_WANGponLinkConfig.UpstreamPower"
+    ].forEach((path) => names.add(path));
+  }
+
+  if (readPath(summary, "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_ALU-COM_WANGponLinkConfig")) {
+    [
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_ALU-COM_WANGponLinkConfig.RXPower",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_ALU-COM_WANGponLinkConfig.TXPower",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_ALU-COM_WANGponLinkConfig.SignalLevel",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_ALU-COM_WANGponLinkConfig.DownstreamPower",
+      "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.7.X_ALU-COM_WANGponLinkConfig.UpstreamPower"
+    ].forEach((path) => names.add(path));
+  }
+
+  return [...names];
+}
+
 function collectHostNodes(node) {
   if (!node || typeof node !== "object") return [];
   const hostsRoot =
@@ -313,7 +387,7 @@ async function recordOpticalSample(cacheRecord, parsed, source = "genie_sync") {
   });
 }
 
-async function requestOpticalTelemetryRefresh(deviceId) {
+async function requestOpticalTelemetryRefresh(deviceId, summary = null) {
   if (!deviceId) return;
 
   for (const objectName of OPTICAL_REFRESH_OBJECTS) {
@@ -326,6 +400,18 @@ async function requestOpticalTelemetryRefresh(deviceId) {
       }, { connectionRequest: true });
     } catch {
       // Ignore individual task failures; some models reject unsupported objects.
+    }
+  }
+
+  const parameterNames = buildSafeOpticalParameterNames(summary);
+  if (parameterNames.length > 0) {
+    try {
+      await genieacsClient.runTask(deviceId, {
+        name: "getParameterValues",
+        parameterNames
+      }, { connectionRequest: true });
+    } catch {
+      // Ignore targeted value fetch failures and fall back to what the device already exposes.
     }
   }
 
@@ -717,7 +803,7 @@ export async function getLiveGenieDeviceList(limit = 100) {
 
         let parsed = summarizeGenieDevice(richSummary, device.deviceId);
         if (parsed.opticalInfo?.rxPower == null && parsed.opticalInfo?.txPower == null && hasOpticalShell(richSummary)) {
-          await requestOpticalTelemetryRefresh(device.deviceId);
+          await requestOpticalTelemetryRefresh(device.deviceId, richSummary);
           const retriedSummary = await genieacsClient.getRichDeviceSummary({
             deviceId: device.deviceId,
             serialNumber: device.serialNumber
@@ -772,7 +858,7 @@ export async function syncDeviceFromGenie(cacheRecord) {
 
   let parsed = summarizeGenieDevice(summary, cacheRecord.deviceId);
   if (parsed.opticalInfo?.rxPower == null && parsed.opticalInfo?.txPower == null) {
-    await requestOpticalTelemetryRefresh(cacheRecord.deviceId);
+    await requestOpticalTelemetryRefresh(cacheRecord.deviceId, summary);
     summary = await genieacsClient.getRichDeviceSummary({
       deviceId: cacheRecord.deviceId,
       serialNumber: cacheRecord.serialNumber
@@ -781,7 +867,7 @@ export async function syncDeviceFromGenie(cacheRecord) {
       parsed = summarizeGenieDevice(summary, cacheRecord.deviceId);
     }
     if (summary && parsed.opticalInfo?.rxPower == null && parsed.opticalInfo?.txPower == null && hasOpticalShell(summary)) {
-      await requestOpticalTelemetryRefresh(cacheRecord.deviceId);
+      await requestOpticalTelemetryRefresh(cacheRecord.deviceId, summary);
       summary = await genieacsClient.getRichDeviceSummary({
         deviceId: cacheRecord.deviceId,
         serialNumber: cacheRecord.serialNumber
