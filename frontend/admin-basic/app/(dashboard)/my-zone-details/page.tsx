@@ -29,6 +29,7 @@ type ZoneRow = {
   parentZone: string
   apiToken: string
   franchiseCode?: string
+  isRootZone?: boolean
   email: string
   phone: string
   streetAddress1: string
@@ -137,6 +138,7 @@ export default function MyZoneDetailsPage() {
       parentZone: '-',
       apiToken: general?.zoneName || 'default',
       franchiseCode: '',
+      isRootZone: true,
       email: general?.email || '',
       phone: general?.phone || '',
       streetAddress1: baseAddress,
@@ -155,6 +157,7 @@ export default function MyZoneDetailsPage() {
       parentZone: item.metadata?.parentZoneName || item.metadata?.parentZoneCode || '-',
       apiToken: item.franchiseCode,
       franchiseCode: item.franchiseCode,
+      isRootZone: false,
       email: item.email || general?.email || '',
       phone: item.phone || general?.phone || '',
       streetAddress1: item.address || '',
@@ -369,7 +372,7 @@ export default function MyZoneDetailsPage() {
                           >
                             {activeZoneKey === (row.zoneName || row.apiToken) ? 'Current zone' : 'Switch zone'}
                           </button>
-                          {row.parentZone !== '-' && row.franchiseCode ? (
+                          {!row.isRootZone && row.franchiseCode ? (
                             <button
                               type="button"
                               onClick={() => startEditingZone(row)}
@@ -378,7 +381,7 @@ export default function MyZoneDetailsPage() {
                               Edit permissions
                             </button>
                           ) : null}
-                          {row.parentZone !== '-' && row.franchiseCode ? (
+                          {!row.isRootZone && row.franchiseCode ? (
                             <button
                               type="button"
                               onClick={() => void deleteZone(row)}
