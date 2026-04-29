@@ -12,6 +12,7 @@ type ZoneRow = {
   zoneName: string
   parentZone: string
   apiToken: string
+  franchiseCode?: string
   email: string
   phone: string
   streetAddress1: string
@@ -79,6 +80,7 @@ export default function MyZoneDetailsPage() {
       zoneName: general?.zoneName || 'default',
       parentZone: '-',
       apiToken: general?.zoneName || 'default',
+      franchiseCode: '',
       email: general?.email || '',
       phone: general?.phone || '',
       streetAddress1: baseAddress,
@@ -96,6 +98,7 @@ export default function MyZoneDetailsPage() {
       zoneName: item.zoneCode || item.franchiseCode,
       parentZone: item.metadata?.parentZoneName || item.metadata?.parentZoneCode || '-',
       apiToken: item.franchiseCode,
+      franchiseCode: item.franchiseCode,
       email: item.email || general?.email || '',
       phone: item.phone || general?.phone || '',
       streetAddress1: item.address || '',
@@ -141,6 +144,34 @@ export default function MyZoneDetailsPage() {
       window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: { key: zoneKey, label: row.companyName || zoneKey } }))
     }
     toast.success(`Switched to ${row.companyName || zoneKey}`)
+  }
+
+  async function deleteZone(row: ZoneRow) {
+    const franchiseCode = String(row.franchiseCode || row.apiToken || '').trim()
+    if (!franchiseCode) {
+      toast.error('Delete supported only for saved sub-zones')
+      return
+    }
+    const confirmed = window.confirm(`Delete sub-zone "${row.companyName || franchiseCode}"? This will also remove its zone login and serviceability zone.`)
+    if (!confirmed) return
+    try {
+      const res = await adminAPI.deleteFranchise(franchiseCode)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete sub-zone')
+        return
+      }
+      if (activeZoneKey === (row.zoneName || row.apiToken) && typeof window !== 'undefined') {
+        window.localStorage.setItem('justfiber-active-zone-key', 'default')
+        window.localStorage.setItem('justfiber-active-zone-label', 'Admin')
+        window.dispatchEvent(new CustomEvent('justfiber-zone-change', { detail: { key: 'default', label: 'Admin' } }))
+        setActiveZoneKey('default')
+      }
+      toast.success('Sub-zone deleted')
+      await loadData()
+    } catch (error) {
+      console.error('[my-zone-details] Failed to delete sub-zone:', error)
+      toast.error('Failed to delete sub-zone')
+    }
   }
 
   return (
@@ -205,13 +236,24 @@ export default function MyZoneDetailsPage() {
                     <td className="px-4 py-3">{row.pincode}</td>
                     <td className="px-4 py-3">
                       {canAccessAllZones ? (
-                        <button
-                          type="button"
-                          onClick={() => switchZone(row)}
-                          className={activeZoneKey === (row.zoneName || row.apiToken) ? 'btn-primary' : 'btn-secondary'}
-                        >
-                          {activeZoneKey === (row.zoneName || row.apiToken) ? 'Current zone' : 'Switch zone'}
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => switchZone(row)}
+                            className={activeZoneKey === (row.zoneName || row.apiToken) ? 'btn-primary' : 'btn-secondary'}
+                          >
+                            {activeZoneKey === (row.zoneName || row.apiToken) ? 'Current zone' : 'Switch zone'}
+                          </button>
+                          {row.parentZone !== '-' && row.franchiseCode ? (
+                            <button
+                              type="button"
+                              onClick={() => void deleteZone(row)}
+                              className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                            >
+                              Delete sub-zone
+                            </button>
+                          ) : null}
+                        </div>
                       ) : (
                         <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
                           {activeZoneKey === (row.zoneName || row.apiToken) ? 'Assigned zone' : 'Locked'}
