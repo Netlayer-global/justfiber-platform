@@ -347,6 +347,14 @@ function mapSalesAgent(agent: any): SalesAgentItem {
 }
 
 function mapPlan(plan: any): Plan {
+  const normalizedZoneContext =
+    plan.zoneContext && (plan.zoneContext.zoneCode || plan.zoneContext.zoneName || plan.zoneContext.stateCode)
+      ? {
+          zoneCode: plan.zoneContext.zoneCode || '',
+          zoneName: plan.zoneContext.zoneName || '',
+          stateCode: plan.zoneContext.stateCode || '',
+        }
+      : undefined
   return {
     id: plan.planCode || plan._id || '',
     planCode: plan.planCode || plan._id || '',
@@ -428,13 +436,7 @@ function mapPlan(plan: any): Plan {
       spotlightLabel: plan.merchandising?.spotlightLabel || '',
     },
     planScope: plan.planScope || 'global',
-    zoneContext: plan.zoneContext
-      ? {
-          zoneCode: plan.zoneContext.zoneCode || '',
-          zoneName: plan.zoneContext.zoneName || '',
-          stateCode: plan.zoneContext.stateCode || '',
-        }
-      : undefined,
+    zoneContext: normalizedZoneContext,
     resolvedZoneScope: plan.resolvedZoneScope
       ? {
           zoneCode: plan.resolvedZoneScope.zoneCode || '',
@@ -453,6 +455,16 @@ function mapPlan(plan: any): Plan {
     status: plan.active === false ? 'inactive' : 'active',
     createdAt: plan.createdAt || new Date().toISOString(),
   }
+}
+
+function sanitizeZoneContext(zoneContext?: Partial<Plan['zoneContext']>) {
+  if (!zoneContext) return undefined
+  const next = {
+    zoneCode: zoneContext.zoneCode?.trim() || '',
+    zoneName: zoneContext.zoneName?.trim() || '',
+    stateCode: zoneContext.stateCode?.trim() || '',
+  }
+  return next.zoneCode || next.zoneName || next.stateCode ? next : undefined
 }
 
 function mapAppBanner(item: any): AppBanner {
@@ -1849,7 +1861,7 @@ export const adminAPI = {
         visibleInSalesApp: data.visibleInSalesApp,
         visibleInProvisioning: data.visibleInProvisioning,
         planScope: data.planScope,
-        zoneContext: data.zoneContext,
+        zoneContext: sanitizeZoneContext(data.zoneContext),
         active: data.status !== 'inactive',
         sortOrder: data.sortOrder,
       }),
@@ -1895,7 +1907,7 @@ export const adminAPI = {
         visibleInSalesApp: data.visibleInSalesApp,
         visibleInProvisioning: data.visibleInProvisioning,
         planScope: data.planScope,
-        zoneContext: data.zoneContext,
+        zoneContext: sanitizeZoneContext(data.zoneContext),
         active: data.status ? data.status !== 'inactive' : undefined,
         sortOrder: data.sortOrder,
       }),

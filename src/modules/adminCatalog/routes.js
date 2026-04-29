@@ -198,6 +198,27 @@ function normalizeZoneCode(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+function cleanOptionalString(value) {
+  const normalized = String(value || "").trim();
+  return normalized || undefined;
+}
+
+function sanitizePlanPayload(input = {}) {
+  const payload = { ...input };
+  if (payload.zoneContext) {
+    payload.zoneContext = {
+      ...payload.zoneContext,
+      zoneCode: cleanOptionalString(payload.zoneContext.zoneCode),
+      zoneName: cleanOptionalString(payload.zoneContext.zoneName),
+      stateCode: cleanOptionalString(payload.zoneContext.stateCode)
+    };
+    if (!payload.zoneContext.zoneCode && !payload.zoneContext.zoneName && !payload.zoneContext.stateCode) {
+      payload.zoneContext = undefined;
+    }
+  }
+  return payload;
+}
+
 adminCatalogRouter.get(
   "/sales/agents",
   requirePermission(permissions.configRead),
@@ -376,7 +397,7 @@ adminCatalogRouter.post(
   "/catalog/plans",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
-    const payload = planSchema.parse(req.body);
+    const payload = planSchema.parse(sanitizePlanPayload(req.body));
     payload.planCode = normalizePlanCode(payload.planCode);
     payload.planScope = payload.planScope || "global";
     if (!adminCanAccessAllZones(req.admin)) {
@@ -419,7 +440,7 @@ adminCatalogRouter.patch(
   "/catalog/plans/:planCode",
   requirePermission(permissions.configUpdate),
   asyncHandler(async (req, res) => {
-    const payload = planSchema.partial().parse(req.body || {});
+    const payload = planSchema.partial().parse(sanitizePlanPayload(req.body || {}));
     const existing = await PlanCatalog.findOne({ planCode: req.params.planCode });
     if (!existing) {
       throw new ApiError(404, "Plan not found");
