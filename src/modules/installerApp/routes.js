@@ -388,6 +388,10 @@ function buildProvisioningPreview(job, device) {
   };
 }
 
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 async function lookupInstallerDeviceBySerialOrId({
   serialNumber,
   deviceId,
@@ -429,6 +433,14 @@ async function lookupInstallerDeviceBySerialOrId({
       .sort({ updatedAt: -1, lastInformAt: -1 })
       .lean();
     if (cachedBySerial) return cachedBySerial;
+
+    const suffixRegexes = serialCandidates.map((candidate) => new RegExp(`${escapeRegex(candidate)}$`, "i"));
+    const cachedByDeviceSuffix = await DeviceOperationalCache.findOne({
+      $or: suffixRegexes.map((pattern) => ({ deviceId: pattern }))
+    })
+      .sort({ updatedAt: -1, lastInformAt: -1 })
+      .lean();
+    if (cachedByDeviceSuffix) return cachedByDeviceSuffix;
   }
 
   try {
@@ -439,7 +451,7 @@ async function lookupInstallerDeviceBySerialOrId({
     if (liveSummary) {
       const parsed = summarizeGenieDevice(liveSummary, candidateDeviceIds[0]);
       const liveDevice = {
-        deviceId: parsed.deviceId || candidateDeviceIds[0] || `ONT-${normalizedSerial}`,
+        deviceId: parsed.deviceId || candidateDeviceIds[0] || `ONT-${preferredSerial || serialInfo.raw || "UNKNOWN"}`,
         serialNumber: parsed.serialNumber || preferredSerial || "",
         productClass: parsed.productClass || "",
         customerId: customerId || "",
