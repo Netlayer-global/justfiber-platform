@@ -156,6 +156,17 @@ function collectMatchingPaths(root, predicate, basePath = "", acc = []) {
   return acc;
 }
 
+function isLeafMetricValue(value) {
+  if (value === undefined || value === null || value === "") return false;
+  if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
+    return true;
+  }
+  if (typeof value === "object") {
+    return "_value" in value || "value" in value;
+  }
+  return false;
+}
+
 function firstValue(root, paths) {
   for (const path of paths) {
     const value = readPath(root, path);
@@ -272,7 +283,7 @@ function discoverOpticalMetric(summary, direction) {
   const excludedHints = ["wifi", "wlan", "radio", "ssid", "neighbor"];
 
   const matches = collectMatchingPaths(summary, (path, value) => {
-    if (!value || typeof value !== "object" || !("_value" in value)) {
+    if (!isLeafMetricValue(value)) {
       return false;
     }
     const normalizedPath = String(path || "").toLowerCase();
@@ -293,7 +304,7 @@ function discoverOpticalMetric(summary, direction) {
   }
 
   const fallbackMatches = collectMatchingPaths(summary, (path, value) => {
-    if (!value || typeof value !== "object" || !("_value" in value)) {
+    if (!isLeafMetricValue(value)) {
       return false;
     }
     const normalizedPath = String(path || "").toLowerCase();
