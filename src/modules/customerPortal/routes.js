@@ -3612,7 +3612,11 @@ customerPortalRouter.get(
       customerUser: req.customerUser,
       requestedCustomerId: getRequestedCustomerId(req)
     }).then((item) => item.toObject ? item.toObject() : item);
-    const plans = await PlanCatalog.find({ active: true, archivedAt: { $exists: false } }).sort({ sortOrder: 1 }).lean();
+    const plans = await PlanCatalog.find({
+      active: true,
+      archivedAt: { $exists: false },
+      visibleInCustomerApp: { $ne: false }
+    }).sort({ sortOrder: 1 }).lean();
     return ok(res, {
       currentPlanCode: customer?.planCode || null,
       options: plans.filter((plan) => plan.planCode !== customer?.planCode)

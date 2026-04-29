@@ -665,7 +665,7 @@ class InstallerApiClient {
   }
 
   Future<List<SalesPlan>> fetchSalesPlans() async {
-    final list = _asList(await _request('/api/v1/customer/plans'));
+    final list = _asList(await _request('/api/v1/installer/sales/plans'));
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       return SalesPlan(

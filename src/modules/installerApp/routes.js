@@ -55,6 +55,20 @@ export const installerAppRouter = Router();
 
 installerAppRouter.use(requireInstallerAuth);
 
+installerAppRouter.get(
+  "/sales/plans",
+  asyncHandler(async (_req, res) => {
+    const plans = await PlanCatalog.find({
+      active: true,
+      archivedAt: { $exists: false },
+      visibleInSalesApp: { $ne: false }
+    })
+      .sort({ sortOrder: 1 })
+      .lean();
+    return ok(res, plans);
+  })
+);
+
 function pushTimeline(job, event, actorId, note) {
   job.timeline.push({
     event,
