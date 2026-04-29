@@ -218,7 +218,26 @@ export async function openProtectedDocument(endpoint: string) {
     previewWindow.document.write('<!doctype html><title>Loading document</title><body style="font-family: sans-serif; padding: 24px;">Loading document...</body>')
     previewWindow.document.close()
   }
-  const response = await authorizedFetch(endpoint, { method: 'GET' })
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 30_000)
+  let response: Response
+  try {
+    response = await authorizedFetch(endpoint, { method: 'GET', signal: controller.signal })
+  } catch (error) {
+    window.clearTimeout(timeout)
+    if (previewWindow && !previewWindow.closed) {
+      const message =
+        error instanceof Error && error.name === 'AbortError'
+          ? 'The document request timed out after 30 seconds.'
+          : (error instanceof Error ? error.message : 'The document request failed.')
+      previewWindow.document.write(
+        `<!doctype html><title>Document unavailable</title><body style="font-family: sans-serif; padding: 24px;"><h2 style="margin: 0 0 12px;">Document unavailable</h2><p style="margin: 0; color: #475569;">${message}</p></body>`
+      )
+      previewWindow.document.close()
+    }
+    throw error
+  }
+  window.clearTimeout(timeout)
   if (!response.ok) {
     const errorText = await response.text().catch(() => '')
     if (previewWindow && !previewWindow.closed) {
@@ -252,7 +271,8 @@ export async function openProtectedDocument(endpoint: string) {
   }
   const objectUrl = URL.createObjectURL(blob)
   if (previewWindow && !previewWindow.closed) {
-    previewWindow.location.href = objectUrl
+    previewWindow.location.replace(objectUrl)
+    previewWindow.focus()
   } else {
     window.open(objectUrl, '_blank')
   }
