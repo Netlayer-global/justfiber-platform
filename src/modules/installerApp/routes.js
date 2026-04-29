@@ -522,6 +522,45 @@ async function lookupInstallerDeviceBySerialOrId({
   return null;
 }
 
+async function findLinkedRouterConflict({ serialNumber, deviceId, currentCustomerId } = {}) {
+  const linkedDevice = await lookupInstallerDeviceBySerialOrId({ serialNumber, deviceId });
+  if (linkedDevice?.customerId && linkedDevice.customerId !== currentCustomerId) {
+    return {
+      customerId: linkedDevice.customerId,
+      source: "device_cache",
+      device: linkedDevice
+    };
+  }
+
+  const serialInfo = expandInstallerIdentifierCandidates(serialNumber);
+  const deviceInfo = expandInstallerIdentifierCandidates(deviceId);
+  const serialCandidates = [...new Set([
+    ...serialInfo.serialCandidates,
+    ...deviceInfo.serialCandidates
+  ])];
+
+  if (!serialCandidates.length) return null;
+
+  const linkedService = await SubscriberService.findOne({
+    $or: serialCandidates.flatMap((candidate) => ([
+      { ontSerialNumber: candidate },
+      { ontSerialNumber: candidate.toLowerCase() },
+      { ontSerialNumber: candidate.toUpperCase() }
+    ])),
+    customerId: { $ne: currentCustomerId }
+  })
+    .select("customerId serviceId ontSerialNumber")
+    .lean();
+
+  if (!linkedService?.customerId) return null;
+  return {
+    customerId: linkedService.customerId,
+    serviceId: linkedService.serviceId,
+    serialNumber: linkedService.ontSerialNumber,
+    source: "subscriber_service"
+  };
+}
+
 async function resolveJobDevice(job) {
   const finalSerialInfo = expandInstallerIdentifierCandidates(
     job.deviceContext?.finalSerialNumber ||
@@ -1143,9 +1182,10 @@ installerAppRouter.post(
     const payload = serialSchema.parse(req.body);
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
     const normalizedSerial = normalizeInstallerIdentifier(payload.serialNumber);
-    const duplicate = await lookupInstallerDeviceBySerialOrId({
+    const duplicate = await findLinkedRouterConflict({
       serialNumber: normalizedSerial,
-      deviceId: payload.deviceId
+      deviceId: payload.deviceId,
+      currentCustomerId: job.customerId
     });
     if (duplicate) {
       let linkedName = "another customer";
@@ -1157,12 +1197,10 @@ installerAppRouter.post(
           linkedName = `${linkedCustomer.fullName} (${linkedCustomer.customerId || duplicate.customerId})`;
         }
       } catch (_) {}
-      if (duplicate.customerId && duplicate.customerId !== job.customerId) {
-        throw new ApiError(409, `This router is already linked to ${linkedName}. Use a different ONT.`, {
-          linkedCustomerId: duplicate.customerId,
-          linkedCustomerName: linkedName
-        });
-      }
+      throw new ApiError(409, `This router is already linked to ${linkedName}. Use a different ONT.`, {
+        linkedCustomerId: duplicate.customerId,
+        linkedCustomerName: linkedName
+      });
     }
     const resolvedDevice = await lookupInstallerDeviceBySerialOrId({
       serialNumber: normalizedSerial,
@@ -1421,11 +1459,12 @@ installerAppRouter.post(
     const job = await getInstallerJobOrThrow(req.params.jobId, req.installer._id);
     const normalizedSerial = normalizeInstallerIdentifier(payload.serialNumber);
 
-    const duplicate = await lookupInstallerDeviceBySerialOrId({
+    const duplicate = await findLinkedRouterConflict({
       serialNumber: normalizedSerial,
-      deviceId: payload.deviceId
+      deviceId: payload.deviceId,
+      currentCustomerId: job.customerId
     });
-    if (duplicate?.customerId && duplicate.customerId !== job.customerId) {
+    if (duplicate?.customerId) {
       let linkedName = "another customer";
       try {
         const linkedCustomer = await Customer.findOne({ customerId: duplicate.customerId })
