@@ -58,6 +58,9 @@ class InstallerApiClient {
             .post(_uri(path), headers: headers, body: jsonEncode(body ?? {}))
             .timeout(timeout);
       }
+      if (method == 'DELETE') {
+        return _client.delete(_uri(path), headers: headers).timeout(timeout);
+      }
       return _client.get(_uri(path), headers: headers).timeout(timeout);
     }
 
@@ -129,6 +132,19 @@ class InstallerApiClient {
       data is Map<String, dynamic> ? data : <String, dynamic>{};
   List<dynamic> _asList(dynamic data) => data is List ? data : const [];
 
+  // Handles address stored as plain string or as {fullAddress, pinCode} map
+  String _extractAddress(dynamic raw) {
+    if (raw == null) return '-';
+    if (raw is Map) {
+      final full = raw['fullAddress']?.toString() ?? '';
+      final pin = raw['pinCode']?.toString() ?? '';
+      final parts = [full, if (pin.isNotEmpty && pin != '0000') pin];
+      return parts.where((p) => p.isNotEmpty).join(', ');
+    }
+    final s = raw.toString().trim();
+    return s.isEmpty ? '-' : s;
+  }
+
   Future<InstallerSession> login(String login, String password) async {
     final data = _asMap(await _request('/api/v1/installer/auth/login',
         method: 'POST', body: {'login': login, 'password': password}));
@@ -185,12 +201,16 @@ class InstallerApiClient {
         status: (map['status'] ?? 'assigned').toString(),
         subStatus: (map['subStatus'] ?? '').toString(),
         customerName:
-            (map['customerName'] ?? map['customer']?['fullName'] ?? '-')
+            (map['customerSnapshot']?['fullName'] ??
+             map['customerName'] ??
+             map['customer']?['fullName'] ?? '-')
                 .toString(),
         customerPhone: (map['customerSnapshot']?['phone'] ?? map['phone'] ?? '')
             .toString(),
-        customerAddress:
-            (map['customerAddress'] ?? map['serviceAddress'] ?? '-').toString(),
+        customerAddress: _extractAddress(
+            map['customerSnapshot']?['address'] ??
+            map['customerAddress'] ??
+            map['serviceAddress']),
         planName: (map['customerSnapshot']?['planName'] ?? '').toString(),
         planCode: (map['customerSnapshot']?['planCode'] ?? '').toString(),
         planCategory:
@@ -261,6 +281,10 @@ class InstallerApiClient {
             (map['customerSnapshot']?['location']?['mapUrl'] ?? '').toString(),
         deferNote: (map['deviceContext']?['deferNote'] ?? '').toString(),
         cancelNote: (map['deviceContext']?['cancelNote'] ?? '').toString(),
+        complaintCategory:
+            (map['complaint']?['category'] ?? '').toString(),
+        complaintDescription:
+            (map['complaint']?['description'] ?? '').toString(),
       );
     }).toList();
   }
@@ -662,11 +686,77 @@ class InstallerApiClient {
     }).where((p) => p.planCode.isNotEmpty).toList();
   }
 
+  Future<void> deleteInstallerBooking(
+      InstallerSession session, String bookingNumber) async {
+    await _request(
+      '/api/v1/installer/bookings/by-number/$bookingNumber',
+      method: 'DELETE',
+      token: session.accessToken,
+    );
+  }
+
+  Future<String> generateInstallerPaymentLink(
+      InstallerSession session, String bookingNumber,
+      {double? amount}) async {
+    final data = _asMap(await _request(
+      '/api/v1/installer/bookings/by-number/$bookingNumber/payment-link',
+      method: 'POST',
+      token: session.accessToken,
+      body: amount != null ? {'amount': amount} : {},
+    ));
+    return (data['paymentLink'] ?? '').toString();
+  }
+
+  Future<SalesLead> fetchInstallerBooking(
+      InstallerSession session, String bookingNumber) async {
+    final data = _asMap(await _request(
+      '/api/v1/installer/bookings/by-number/$bookingNumber',
+      token: session.accessToken,
+    ));
+    return SalesLead(
+      bookingNumber: (data['bookingNumber'] ?? bookingNumber).toString(),
+      customerName: (data['customerName'] ?? '').toString(),
+      customerPhone: (data['customerPhone'] ?? '').toString(),
+      customerAddress: (data['customerAddress'] ?? '').toString(),
+      planName: (data['planName'] ?? '').toString(),
+      planCode: (data['planCode'] ?? '').toString(),
+      amount: double.tryParse('${data['amount'] ?? 0}') ?? 0,
+      durationMonths: int.tryParse('${data['durationMonths'] ?? 1}') ?? 1,
+      status: (data['status'] ?? 'payment_pending').toString(),
+      paymentMode: (data['paymentMode'] ?? 'online').toString(),
+      paymentStatus: (data['paymentStatus'] ?? 'pending').toString(),
+      createdAt: (data['createdAt'] ?? '').toString(),
+    );
+  }
+
+  Future<void> uploadBookingKyc(
+    InstallerSession session,
+    String bookingNumber, {
+    String? aadhaarFront,
+    String? aadhaarBack,
+    String? selfie,
+    String? documentNumber,
+  }) async {
+    await _request(
+      '/api/v1/installer/bookings/by-number/$bookingNumber/kyc',
+      method: 'POST',
+      token: session.accessToken,
+      body: {
+        if ((aadhaarFront ?? '').isNotEmpty) 'aadhaarFront': aadhaarFront,
+        if ((aadhaarBack ?? '').isNotEmpty) 'aadhaarBack': aadhaarBack,
+        if ((selfie ?? '').isNotEmpty) 'selfie': selfie,
+        if ((documentNumber ?? '').isNotEmpty) 'documentNumber': documentNumber,
+      },
+      timeout: const Duration(seconds: 45),
+    );
+  }
+
   Future<SalesLead> createSalesBooking({
     required String fullName,
     required String mobile,
     String? email,
     required String address,
+    required String pinCode,
     required double lat,
     required double lng,
     required String planCode,
@@ -683,7 +773,7 @@ class InstallerApiClient {
         'mobile': mobile,
         if ((email ?? '').trim().isNotEmpty) 'email': email,
         'fullAddress': address,
-        'pinCode': '0000',
+        'pinCode': pinCode,
         'lat': lat,
         'lng': lng,
         'planCode': planCode,
@@ -706,6 +796,7 @@ class InstallerApiClient {
       durationMonths: durationMonths,
       status: (data['status'] ?? 'payment_pending').toString(),
       paymentMode: paymentMode,
+      paymentStatus: paymentMode == 'cash' ? 'paid' : 'pending',
       createdAt: DateTime.now().toIso8601String(),
     );
   }

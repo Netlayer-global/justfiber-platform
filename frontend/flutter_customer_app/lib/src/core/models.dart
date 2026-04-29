@@ -197,20 +197,34 @@ class BillingInvoiceItem {
 }
 
 extension BillingPresentation on BillingData {
+  bool get hasActionableDue {
+    if (dueAmount <= 0) return false;
+    final service = serviceStatus.trim().toLowerCase();
+    final lifecycle = invoiceLifecycle.trim().toLowerCase();
+    final payment = paymentStatus.trim().toLowerCase();
+    final latest = latestInvoiceStatus.trim().toLowerCase();
+    final paidSignals =
+        payment == 'paid' || latest == 'paid' || lifecycle == 'settled';
+    if (paidSignals && service == 'active') return false;
+    return true;
+  }
+
+  double get actionableDueAmount => hasActionableDue ? dueAmount : 0;
+
   String get customerStateLabel {
     final service = serviceStatus.trim().toLowerCase();
     final lifecycle = invoiceLifecycle.trim().toLowerCase();
     final payment = paymentStatus.trim().toLowerCase();
-    if (service == 'suspended' && dueAmount > 0) return 'Suspended for non-payment';
+    if (service == 'suspended' && hasActionableDue) return 'Suspended for non-payment';
     if (lastSuspensionWarningAt.isNotEmpty) return 'Suspension risk';
     if (lifecycle == 'overdue' || lastOverdueReminderAt.isNotEmpty) return 'Overdue';
-    if (dueAmount > 0) return 'Due soon';
+    if (hasActionableDue) return 'Due soon';
     if (lifecycle == 'settled' || payment == 'paid') return 'Settled';
     if (service == 'active') return 'In good standing';
     return _humanizeBillingToken(paymentStatus.isNotEmpty ? paymentStatus : invoiceLifecycle);
   }
 
-  String get dueHeadline => dueAmount > 0 ? 'Current due' : customerStateLabel;
+  String get dueHeadline => hasActionableDue ? 'Current due' : customerStateLabel;
 }
 
 extension BillingInvoicePresentation on BillingInvoiceItem {

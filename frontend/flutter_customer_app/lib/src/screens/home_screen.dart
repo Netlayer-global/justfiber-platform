@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/app_state.dart';
+import '../core/models.dart';
 import '../core/theme.dart';
 import 'billing_history_screen.dart';
 import 'plan_catalog_screen.dart';
@@ -40,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final appState = AppStateScope.of(context);
     _handlePendingNavigation(appState);
 
-    final billingBadge = appState.billing.dueAmount > 0 ? 1 : 0;
+    final billingBadge = appState.billing.hasActionableDue ? 1 : 0;
     final unreadNotifs =
         appState.notifications.where((n) => n.readAt.isEmpty).length;
     final openSupport = appState.tickets
@@ -68,29 +69,76 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: kBg,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          final goingRight = _index >= _prevIndex;
-          final begin =
-              goingRight ? const Offset(0.05, 0) : const Offset(-0.05, 0);
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: begin,
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
+      body: Column(
+        children: [
+          if (appState.isOffline)
+            Material(
+              color: const Color(0xFF1A0A00),
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(color: Color(0xFF7C2D12), width: 1)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.wifi_off_rounded,
+                          color: Color(0xFFFB923C), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No internet connection. Pull to refresh when back online.',
+                          style: GoogleFonts.inter(
+                              color: const Color(0xFFFED7AA),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => appState.refresh(),
+                        child: Text('Retry',
+                            style: GoogleFonts.inter(
+                                color: const Color(0xFFFB923C),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_index),
-          child: pages[_index],
-        ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                final goingRight = _index >= _prevIndex;
+                final begin = goingRight
+                    ? const Offset(0.05, 0)
+                    : const Offset(-0.05, 0);
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: begin,
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<int>(_index),
+                child: pages[_index],
+              ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: _BottomNav(
         current: _index,

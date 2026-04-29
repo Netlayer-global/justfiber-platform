@@ -73,6 +73,8 @@ class InstallerJob {
     required this.mapUrl,
     required this.deferNote,
     required this.cancelNote,
+    this.complaintCategory = '',
+    this.complaintDescription = '',
   });
 
   final String id;
@@ -108,6 +110,8 @@ class InstallerJob {
   final String mapUrl;
   final String deferNote;
   final String cancelNote;
+  final String complaintCategory;
+  final String complaintDescription;
 }
 
 class ProvisioningPreview {
@@ -248,6 +252,7 @@ class SalesLead {
     required this.durationMonths,
     required this.status,
     required this.paymentMode,
+    required this.paymentStatus,
     required this.createdAt,
   });
 
@@ -261,5 +266,6 @@ class SalesLead {
   final int durationMonths;
   final String status;
   final String paymentMode;
+  final String paymentStatus;
   final String createdAt;
 }

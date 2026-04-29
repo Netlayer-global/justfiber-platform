@@ -48,6 +48,7 @@ class InstallerAppState extends ChangeNotifier {
   Timer? _notificationsPoller;
   Set<String> _knownNotificationIds = <String>{};
   Set<String> _knownFaultAlertIds = <String>{};
+  Set<String> _knownJobIds = <String>{};
 
   InstallerAppState() {
     api.onUnauthorized = _refreshAccessToken;
@@ -88,12 +89,14 @@ class InstallerAppState extends ChangeNotifier {
       jobs = await api.fetchJobs(current);
       notifications = await api.fetchNotifications(current);
       faultAlerts = await api.fetchFaultAlerts(current);
+      await _captureNewJobs(jobs);
       await _captureNewNotifications(notifications);
       await _captureNewFaultAlerts(faultAlerts);
       if (selectedJobId != null && selectedJobId!.isNotEmpty) {
         preview = await api.fetchProvisioningPreview(current, selectedJobId!);
         diagnostics = await api.fetchDiagnostics(current, selectedJobId!);
       }
+      await _syncSalesLeadsWithServer();
       lastSyncedAt = DateTime.now();
     } catch (e) {
       error = e.toString();
@@ -397,6 +400,7 @@ class InstallerAppState extends ChangeNotifier {
     lastSyncedAt = null;
     _knownNotificationIds = <String>{};
     _knownFaultAlertIds = <String>{};
+    _knownJobIds = <String>{};
     jobs = const [];
     notifications = const [];
     faultAlerts = const [];
@@ -440,18 +444,47 @@ class InstallerAppState extends ChangeNotifier {
     final current = session;
     if (current == null) return;
     try {
-      final nextNotifications = await api.fetchNotifications(current);
-      final nextFaultAlerts = await api.fetchFaultAlerts(current);
+      final results = await Future.wait([
+        api.fetchNotifications(current),
+        api.fetchFaultAlerts(current),
+        api.fetchJobs(current),
+      ]);
+      final nextNotifications = results[0] as List<InstallerNotificationItem>;
+      final nextFaultAlerts = results[1] as List<InstallerFaultAlert>;
+      final nextJobs = results[2] as List<InstallerJob>;
+      await _captureNewJobs(nextJobs);
       await _captureNewNotifications(nextNotifications);
       await _captureNewFaultAlerts(nextFaultAlerts);
       notifications = nextNotifications;
       faultAlerts = nextFaultAlerts;
+      jobs = nextJobs;
+      await _syncSalesLeadsWithServer();
       lastSyncedAt = DateTime.now();
       notifyListeners();
     } catch (e) {
       error = e.toString();
       notifyListeners();
     }
+  }
+
+  Future<void> _captureNewJobs(List<InstallerJob> nextJobs) async {
+    if (_knownJobIds.isEmpty) {
+      _knownJobIds = nextJobs.map((j) => j.id).toSet();
+      return;
+    }
+    final freshJobs = nextJobs
+        .where((j) => !_knownJobIds.contains(j.id))
+        .toList();
+    for (final job in freshJobs) {
+      final isComplaint = job.jobType.toLowerCase().contains('complaint');
+      await InstallerNotificationService.instance.showAlert(
+        id: InstallerNotificationService.instance.stableIdFor('job-${job.id}'),
+        title: isComplaint ? 'New Complaint Assigned' : 'New Installation Assigned',
+        body: '${job.jobNumber} — ${job.customerName}'
+            '${job.customerAddress.isNotEmpty && job.customerAddress != '-' ? '\n${job.customerAddress}' : ''}',
+      );
+    }
+    _knownJobIds = nextJobs.map((j) => j.id).toSet();
   }
 
   Future<String?> _refreshAccessToken() async {
@@ -486,8 +519,8 @@ class InstallerAppState extends ChangeNotifier {
     );
   }
 
-  Future<void> loadSalesLeads() async {
-    if (_salesLeadsLoaded) return;
+  Future<void> loadSalesLeads({bool forceRefresh = false}) async {
+    if (_salesLeadsLoaded && !forceRefresh) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final json = prefs.getString(_salesLeadsKey);
@@ -506,13 +539,76 @@ class InstallerAppState extends ChangeNotifier {
             durationMonths: int.tryParse('${map['durationMonths'] ?? 1}') ?? 1,
             status: (map['status'] ?? 'payment_pending').toString(),
             paymentMode: (map['paymentMode'] ?? 'cash').toString(),
+            paymentStatus: (map['paymentStatus'] ?? 'pending').toString(),
             createdAt: (map['createdAt'] ?? '').toString(),
           );
         }).toList();
       }
     } catch (_) {}
+    await _syncSalesLeadsWithServer();
     _salesLeadsLoaded = true;
     notifyListeners();
+  }
+
+  Future<void> refreshSalesLeads() async {
+    await loadSalesLeads(forceRefresh: true);
+  }
+
+  Future<bool> deleteSalesLead(String bookingNumber) async {
+    final current = session;
+    if (current == null) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await api.deleteInstallerBooking(current, bookingNumber);
+      salesLeads = salesLeads.where((l) => l.bookingNumber != bookingNumber).toList();
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = salesLeads
+          .map((l) => {
+                'bookingNumber': l.bookingNumber,
+                'customerName': l.customerName,
+                'customerPhone': l.customerPhone,
+                'customerAddress': l.customerAddress,
+                'planName': l.planName,
+                'planCode': l.planCode,
+                'amount': l.amount,
+                'durationMonths': l.durationMonths,
+                'status': l.status,
+                'paymentMode': l.paymentMode,
+                'paymentStatus': l.paymentStatus,
+                'createdAt': l.createdAt,
+              })
+          .toList();
+      await prefs.setString(_salesLeadsKey, jsonEncode(encoded));
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> generateSalesPaymentLink(String bookingNumber) async {
+    final current = session;
+    if (current == null) return null;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      final link = await api.generateInstallerPaymentLink(current, bookingNumber);
+      await _syncSalesLeadsWithServer(bookingNumbers: [bookingNumber]);
+      notifyListeners();
+      return link;
+    } catch (e) {
+      error = e.toString();
+      return null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
   }
 
   Future<void> addSalesLead(SalesLead lead) async {
@@ -532,6 +628,75 @@ class InstallerAppState extends ChangeNotifier {
                 'durationMonths': l.durationMonths,
                 'status': l.status,
                 'paymentMode': l.paymentMode,
+                'paymentStatus': l.paymentStatus,
+                'createdAt': l.createdAt,
+              })
+          .toList();
+      await prefs.setString(_salesLeadsKey, jsonEncode(encoded));
+    } catch (_) {}
+  }
+
+  Future<void> _syncSalesLeadsWithServer({List<String>? bookingNumbers}) async {
+    final current = session;
+    if (current == null || salesLeads.isEmpty) return;
+    final targets = bookingNumbers == null || bookingNumbers.isEmpty
+        ? salesLeads.map((lead) => lead.bookingNumber).where((id) => id.isNotEmpty).toList()
+        : bookingNumbers.where((id) => id.isNotEmpty).toList();
+    if (targets.isEmpty) return;
+
+    final byBooking = {
+      for (final lead in salesLeads) lead.bookingNumber: lead,
+    };
+    var changed = false;
+
+    for (final bookingNumber in targets) {
+      try {
+        final fresh = await api.fetchInstallerBooking(current, bookingNumber);
+        final existing = byBooking[bookingNumber];
+        if (existing == null ||
+            existing.status != fresh.status ||
+            existing.paymentStatus != fresh.paymentStatus ||
+            existing.amount != fresh.amount ||
+            existing.planName != fresh.planName ||
+            existing.customerName != fresh.customerName) {
+          byBooking[bookingNumber] = fresh;
+          changed = true;
+        }
+      } catch (e) {
+        final text = e.toString().toLowerCase();
+        if (text.contains('booking not found')) {
+          if (byBooking.remove(bookingNumber) != null) {
+            changed = true;
+          }
+        }
+      }
+    }
+
+    if (!changed) return;
+    salesLeads = salesLeads
+        .map((lead) => byBooking[lead.bookingNumber] ?? lead)
+        .where((lead) => byBooking.containsKey(lead.bookingNumber))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    await _persistSalesLeads();
+  }
+
+  Future<void> _persistSalesLeads() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = salesLeads
+          .map((l) => {
+                'bookingNumber': l.bookingNumber,
+                'customerName': l.customerName,
+                'customerPhone': l.customerPhone,
+                'customerAddress': l.customerAddress,
+                'planName': l.planName,
+                'planCode': l.planCode,
+                'amount': l.amount,
+                'durationMonths': l.durationMonths,
+                'status': l.status,
+                'paymentMode': l.paymentMode,
+                'paymentStatus': l.paymentStatus,
                 'createdAt': l.createdAt,
               })
           .toList();

@@ -2272,6 +2272,42 @@ installerAppRouter.delete(
   })
 );
 
+installerAppRouter.get(
+  "/bookings/by-number/:bookingNumber",
+  asyncHandler(async (req, res) => {
+    const booking = await ConnectionBooking.findOne({ bookingNumber: req.params.bookingNumber }).lean();
+    if (!booking) throw new ApiError(404, "Booking not found");
+    if (booking.source !== "installer_app") throw new ApiError(403, "Not an installer-created booking");
+
+    const paymentStatus = String(booking.payment?.status || "").toLowerCase();
+    const effectiveStatus =
+      paymentStatus === "paid" && String(booking.status || "").toLowerCase() === "payment_pending"
+        ? "paid"
+        : String(booking.status || "initiated");
+
+    return ok(res, {
+      bookingNumber: booking.bookingNumber,
+      customerName: booking.personalDetails?.fullName || "",
+      customerPhone: booking.personalDetails?.mobile || "",
+      customerAddress: booking.personalDetails?.fullAddress || "",
+      planName: booking.selectedPlan?.planName || "",
+      planCode: booking.selectedPlan?.planCode || "",
+      amount: Number(
+        booking.selectedPlan?.totalAmount ||
+          booking.selectedPlan?.amount ||
+          booking.payment?.amount ||
+          0
+      ),
+      durationMonths: Number(booking.selectedPlan?.durationMonths || 1),
+      status: effectiveStatus,
+      paymentMode: booking.payment?.mode || booking.payment?.method || "online",
+      paymentStatus: paymentStatus || "pending",
+      createdAt: booking.createdAt,
+      updatedAt: booking.updatedAt
+    });
+  })
+);
+
 installerAppRouter.post(
   "/bookings/by-number/:bookingNumber/kyc",
   asyncHandler(async (req, res) => {
