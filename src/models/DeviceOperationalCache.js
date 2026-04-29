@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 
 const deviceOperationalCacheSchema = new mongoose.Schema(
   {
-    customerId: { type: String, required: true, index: true },
-    serviceId: { type: String, required: true, index: true },
+    customerId: { type: String, default: "", index: true },
+    serviceId: { type: String, default: "", index: true },
     deviceId: { type: String, required: true, unique: true, index: true },
     serialNumber: { type: String, index: true },
     oui: String,
