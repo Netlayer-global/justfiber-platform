@@ -99,7 +99,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   InstallerAppState get _appState => InstallerStateScope.of(context);
 
-  void _startActivationCountdown([int seconds = 90]) {
+  void _clearActivationCountdown() {
+    _activationTimer?.cancel();
+    if (!mounted) return;
+    setState(() => _activationCountdown = 0);
+  }
+
+  void _startActivationCountdown([int seconds = 180]) {
     _activationTimer?.cancel();
     setState(() => _activationCountdown = seconds);
     _activationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -137,12 +143,43 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         (_detail?['activation']?['configStatus'] ?? '').toString();
     final shouldPoll = status == 'activation_in_progress' ||
         configStatus == 'pending' ||
-        configStatus == 'retried';
+        configStatus == 'retried' ||
+        configStatus == 'pushed';
     if (!shouldPoll) return;
     _detailRefreshTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted || _busy) return;
       _loadAll(quiet: true);
     });
+  }
+
+  bool _isActivationLiveStatus(String status, String configStatus) {
+    return status == 'active' || configStatus == 'verified';
+  }
+
+  bool _isConfigSuccessStatus(String configStatus) {
+    return configStatus == 'pushed' || configStatus == 'verified';
+  }
+
+  bool _shouldShowActivationWait(String status, String configStatus) {
+    return status == 'activation_in_progress' ||
+        configStatus == 'pending' ||
+        configStatus == 'retried';
+  }
+
+  void _syncActivationIndicators(Map<String, dynamic> detail) {
+    final status = (detail['status'] ?? '').toString();
+    final activation =
+        (detail['activation'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final configStatus = (activation['configStatus'] ?? '').toString();
+    if (_shouldShowActivationWait(status, configStatus)) {
+      if (_activationCountdown <= 0) {
+        _startActivationCountdown(180);
+      }
+      return;
+    }
+    if (_activationCountdown > 0) {
+      _clearActivationCountdown();
+    }
   }
 
   Future<void> _loadAll({bool quiet = false}) async {
@@ -215,6 +252,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           }
         }
       });
+      _syncActivationIndicators(detail);
       _scheduleDetailRefreshIfNeeded();
     } catch (e) {
       if (!quiet) _show(e.toString());
@@ -1524,9 +1562,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         (deviceContext['cancelReason'] ?? detail?['subStatus'] ?? '')
             .toString();
     final cancelNote = (deviceContext['cancelNote'] ?? '').toString();
-    final activationLive = status == 'active' ||
-        configStatus == 'verified' ||
-        configStatus == 'pushed';
+    final activationLive = _isActivationLiveStatus(status, configStatus);
+    final configSuccessful = _isConfigSuccessStatus(configStatus);
     final handoverPack = <String>[
       if (customerName.isNotEmpty) 'Customer: $customerName',
       if (singleWifiName)
@@ -2272,6 +2309,35 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                           ),
                         ],
+                        if (configSuccessful && !activationLive) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: kSurface2,
+                              borderRadius: BorderRadius.circular(18),
+                              border:
+                                  Border.all(color: const Color(0x5560A5FA)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.router_rounded,
+                                    color: Color(0xFF60A5FA)),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Config successful. Router config is pushed. Waiting for internet live confirmation.',
+                                    style: TextStyle(
+                                        color: kText,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         if (activationLive) ...[
                           const SizedBox(height: 14),
                           Container(
@@ -2290,7 +2356,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    'Internet is active. Customer notification should be triggered from backend activation flow.',
+                                    'Internet live. Customer notification should be triggered from backend activation flow.',
                                     style: TextStyle(
                                         color: kText,
                                         height: 1.4,
@@ -3301,7 +3367,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final configStatus = (activation['configStatus'] ?? '-').toString();
     final proof = (detail?['proof'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
     final proofUploaded = proof.isNotEmpty;
-    final activationLive = status == 'active' || ['verified', 'pushed'].contains(configStatus);
+    final activationLive = _isActivationLiveStatus(status, configStatus);
     final step = _wizardStep ?? _deriveWizardStep(status, configStatus, isComplaint, proofUploaded, activationLive);
     final totalSteps = isComplaint ? 5 : 7;
 
@@ -4183,6 +4249,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final canRetry = _canRetry(status, configStatus);
     final canRepush = _canRepushConfig(status);
     final serial = _serialController.text.trim();
+    final configSuccessful = _isConfigSuccessStatus(configStatus);
 
     // Stage chips from activation runtime
     final runtime =
@@ -4292,6 +4359,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ])),
           ],
           // Active banner
+          if (configSuccessful && !activationLive) ...[
+            const SizedBox(height: 12),
+            _wCard(
+              borderColor: const Color(0xFF60A5FA).withValues(alpha: 0.4),
+              child: Row(children: [
+                const Icon(Icons.router_rounded,
+                    color: Color(0xFF60A5FA), size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text(
+                  'Config successful. Router config is pushed. Waiting for internet live confirmation.',
+                  style: GoogleFonts.inter(
+                      color: kText, fontSize: 13, fontWeight: FontWeight.w700, height: 1.4),
+                )),
+              ]),
+            ),
+          ],
           if (activationLive) ...[
             const SizedBox(height: 12),
             _wCard(
@@ -4301,7 +4384,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     color: Color(0xFF10B981), size: 20),
                 const SizedBox(width: 12),
                 Expanded(child: Text(
-                  'Internet is live! Proceed to upload proof photos.',
+                  'Internet live! Proceed to upload proof photos.',
                   style: GoogleFonts.inter(
                       color: kText, fontSize: 13, fontWeight: FontWeight.w700, height: 1.4),
                 )),
@@ -5828,7 +5911,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         _show('Enter ONT serial first');
         return;
       }
-      _startActivationCountdown();
+      _startActivationCountdown(180);
       await _run(() => _appState.runActivationFlow(widget.job.id, serial),
           'Activation requested');
       return;
@@ -5836,9 +5919,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (_canSubmitProof(
       status,
       _hasCapturedProofPhotos(),
-      status == 'active' ||
-          configStatus == 'verified' ||
-          configStatus == 'pushed',
+      _isActivationLiveStatus(status, configStatus),
     )) {
       await _submitCapturedProof();
       return;
@@ -5861,17 +5942,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       status,
       _otpController.text.trim(),
       proofUploaded,
-      status == 'active' ||
-          configStatus == 'verified' ||
-          configStatus == 'pushed',
+      _isActivationLiveStatus(status, configStatus),
     )) {
       await _completeInstallationFlow();
       return;
     }
     final installRequirements = _missingInstallRequirements(
-      activationLive: status == 'active' ||
-          configStatus == 'verified' ||
-          configStatus == 'pushed',
+      activationLive: _isActivationLiveStatus(status, configStatus),
       proofUploaded: proofUploaded,
       otp: _otpController.text.trim(),
     );

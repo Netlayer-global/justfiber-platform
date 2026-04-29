@@ -249,6 +249,18 @@ function buildActivationStatusPayload(job) {
     stageCode: stage || "",
     stageLabel: stageLabelMap[stage] || stage.replaceAll("_", " ") || "",
     configStatus,
+    configSuccessful: ["pushed", "verified"].includes(configStatus),
+    internetLive: verification?.verified === true || job?.status === "active",
+    showCountdown:
+      job?.status === "activation_in_progress" ||
+      configStatus === "pending" ||
+      configStatus === "retried",
+    countdownSeconds:
+      job?.status === "activation_in_progress" ||
+      configStatus === "pending" ||
+      configStatus === "retried"
+        ? 180
+        : 0,
     resumeStage,
     resumeStageLabel: resumeStageLabelMap[resumeStage] || resumeStage,
     failureCode,
@@ -268,11 +280,11 @@ function buildActivationStatusPayload(job) {
         : failureCode === "config_push_failed"
           ? "Router config push failed before verification."
           : configStatus === "pending" || configStatus === "retried"
-            ? "Wi-Fi is being applied and verified before PPPoE push."
+            ? "Config push started. Wait 180 seconds while Wi-Fi is applied and PPPoE is pushed."
             : configStatus === "pushed"
-              ? "PPPoE is pushed and internet verification is pending."
+              ? "Config successful. Waiting for internet live confirmation."
               : configStatus === "verified"
-                ? "Activation verified. Finish the customer handover."
+                ? "Internet live. Finish the customer handover."
                 : "Activation is ready for the next step.",
     recommendedActions
   };
